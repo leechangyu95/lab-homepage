@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브 데모 — SAIL</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.demo-wrap{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px;margin:20px 0}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+.controls label{display:block;font-size:13px;color:var(--muted)}
+.controls input[type=range]{width:100%}
+.val{color:var(--accent);font-weight:600}
+canvas{display:block;background:#eaf3ff;border-radius:6px;width:100%;max-width:640px;margin:0 auto;cursor:crosshair}
+button{background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px}
+button:hover{background:var(--accent-d)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="index.html">🌊 Safe Autonomy & Intelligence Lab (SAIL)</a></h1>
+  <nav>
+    <a href="index.html">홈</a>
+    <a href="about.html">소개</a>
+    <a href="members.html">구성원</a>
+    <a href="background/control-basics.html">배경지식</a>
+    <a href="demo.html">데모</a>
+    <a href="gallery.html">갤러리</a>
+    <a href="publications.html">논문</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+<h2>인터랙티브 데모: MPC + CBF 충돌 회피</h2>
+<p>아래 캔버스를 <strong>클릭</strong>하면 그 위치에 장애물이 추가됩니다. 슬라이더로 파라미터를 조절하며
+명목 제어기(목표점으로 직진)와 CBF 안전 필터의 동작을 직접 관찰해보세요.</p>
+
+<div class="demo-wrap">
+<canvas id="cv" width="640" height="400"></canvas>
+
+<div class="controls">
+<label>예측·반응 강도 γ (CBF): <span class="val" id="vG">2.0</span>
+<input type="range" id="g" min="0.2" max="8" step="0.1" value="2.0"></label>
+
+<label>명목 제어 게인 K: <span class="val" id="vK">1.0</span>
+<input type="range" id="k" min="0.1" max="3" step="0.1" value="1.0"></label>
+
+<label>안전 마진 r (px): <span class="val" id="vR">35</span>
+<input type="range" id="r" min="15" max="80" step="1" value="35"></label>
+
+<label>최대 속도 u_max: <span class="val" id="vU">2.5</span>
+<input type="range" id="u" min="0.5" max="6" step="0.1" value="2.5"></label>
+</div>
+
+<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+<button id="reset">리셋</button>
+<button id="clear">장애물 지우기</button>
+<button id="toggleCBF">CBF 끄기/켜기</button>
+<span id="status" style="color:var(--muted);font-size:13px;align-self:center"></span>
+</div>
+</div>
+
+<h3>알고리즘 설명</h3>
+<p>이 데모는 2D 단적분기 로봇 ($\dot{x}=u$) 에 대해 다음을 매 프레임 푼다:</p>
+<ol>
+<li><strong>명목 입력</strong>: $u_{\text{nom}} = K(x_{\text{goal}}-x)$</li>
+<li><strong>각 장애물 $i$</strong>에 대해 $h_i = \|x-x_i\|^2 - r^2$, $\nabla h_i = 2(x-x_i)$</li>
+<li><strong>CBF 제약</strong>: $\nabla h_i^\top u + \gamma h_i \ge 0$</li>
+<li>여러 제약을 동시에 만족하는 $u^*$ 를 활성 제약 사영(active-set projection)으로 계산하여 적용</li>
+</ol>
+<p>γ가 작을수록 더 일찍 회피하고, 클수록 장애물에 가까워질 때까지 직진합니다.
+CBF를 끄면 명목 제어기가 그대로 적용되어 장애물에 부딪힙니다.</p>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W = cv.width, H = cv.height;
+
+let robot = {x: 60, y: 340};
+let goal  = {x: 580, y: 60};
+let obstacles = [{x: 320, y: 200}];
+let cbfOn = true;
+let trail = [];
+
+const gEl=document.getElementById('g'), kEl=document.getElementById('k'),
+      rEl=document.getElementById('r'), uEl=document.getElementById('u');
+const vG=document.getElementById('vG'), vK=document.getElementById('vK'),
+      vR=document.getElementById('vR'), vU=document.getElementById('vU');
+[['g',vG],['k',vK],['r',vR],['u',vU]].forEach(([id,el])=>{
+  document.getElementById(id).addEventListener('input',e=>el.textContent=e.target.value);
+});
+
+cv.addEventListener('click', e=>{
+  const rect = cv.getBoundingClientRect();
+  const sx = cv.width/rect.width, sy = cv.height/rect.height;
+  obstacles.push({x:(e.clientX-rect.left)*sx, y:(e.clientY-rect.top)*sy});
+});
+document.getElementById('reset').onclick=()=>{robot={x:60,y:340};trail=[];};
+document.getElementById('clear').onclick=()=>{obstacles=[];};
+document.getElementById('toggleCBF').onclick=()=>{cbfOn=!cbfOn;};
+
+function clamp(v,m){const n=Math.hypot(v.x,v.y); if(n>m){return{x:v.x/n*m,y:v.y/n*m};}return v;}
+
+function safeFilter(uNom){
+  // Projected gradient: iteratively enforce each linear constraint a^T u >= b
+  let u = {x:uNom.x, y:uNom.y};
+  const gamma = parseFloat(gEl.value);
+  const r = parseFloat(rEl.value);
+  for(let iter=0; iter<8; iter++){
+    let violated = false;
+    for(const o of obstacles){
+      const dx = robot.x - o.x, dy = robot.y - o.y;
+      const h = dx*dx + dy*dy - r*r;
+      // gradient of h wrt x: (2dx, 2dy). Constraint: grad·u + gamma*h >= 0
+      const ax = 2*dx, ay = 2*dy;
+      const lhs = ax*u.x + ay*u.y + gamma*h;
+      if(lhs < 0){
+        violated = true;
+        const norm2 = ax*ax + ay*ay + 1e-9;
+        const lam = -lhs/norm2;
+        u.x += lam*ax; u.y += lam*ay;
+      }
+    }
+    if(!violated) break;
+  }
+  return clamp(u, parseFloat(uEl.value));
+}
+
+function step(){
+  const K = parseFloat(kEl.value);
+  const uNom = {x: K*(goal.x-robot.x)*0.02, y: K*(goal.y-robot.y)*0.02};
+  const u = cbfOn ? safeFilter(uNom) : clamp(uNom, parseFloat(uEl.value));
+  robot.x += u.x; robot.y += u.y;
+  trail.push({x:robot.x,y:robot.y});
+  if(trail.length>500) trail.shift();
+  // 도착 시 정지
+  const d = Math.hypot(goal.x-robot.x, goal.y-robot.y);
+  document.getElementById('status').textContent =
+    (cbfOn?'CBF ON':'CBF OFF') + ' · 목표까지 ' + d.toFixed(0) + ' px · 장애물 ' + obstacles.length + '개';
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='#d6e4ff'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // obstacles
+  const r = parseFloat(rEl.value);
+  for(const o of obstacles){
+    ctx.fillStyle='rgba(198,40,40,0.25)';
+    ctx.beginPath(); ctx.arc(o.x,o.y,r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#c62828'; ctx.stroke();
+  }
+  // goal
+  ctx.fillStyle='#2e7d32';
+  ctx.beginPath(); ctx.arc(goal.x,goal.y,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#2e7d32'; ctx.font='12px sans-serif'; ctx.fillText('GOAL',goal.x+10,goal.y+4);
+  // trail
+  ctx.strokeStyle='#0b5fff'; ctx.lineWidth=2; ctx.beginPath();
+  trail.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.stroke();
+  // robot
+  ctx.fillStyle='#0b5fff';
+  ctx.beginPath(); ctx.arc(robot.x,robot.y,7,0,Math.PI*2); ctx.fill();
+}
+
+function loop(){ step(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+
+<div class="tip">이 데모는 단순 단적분기 로봇이지만, 실제 SAIL 연구에서는 같은 원리를 비선형 선박/쿼드로터 동역학과 Tube-MPC, HJ-Reachability 위에 결합합니다.</div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© Safe Autonomy & Intelligence Lab (SAIL)</p></div></footer>
+</body>
+</html>
