@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>L3. 상태공간 모델 — SAIL Learning</title>
+<title>L3. 상태공간 모델 — Study Page</title>
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -12,7 +12,7 @@
 </head>
 <body>
 <header class="site-header"><div class="wrap">
-  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <h1><a href="../index.html">Study Page</a></h1>
   <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
 </div></header>
 
@@ -24,33 +24,63 @@
   <div class="toc"><h4>목차</h4><ol>
     <li>왜 상태공간인가?</li>
     <li>표준형 ẋ = Ax + Bu</li>
-    <li>예제: 질량-스프링-댐퍼</li>
-    <li>안정성·가제어성·가관측성</li>
+    <li>예제 1 — 질량-스프링-댐퍼</li>
+    <li>예제 2 — 카트 위 도립진자</li>
+    <li>전달함수 ↔ 상태공간</li>
+    <li>안정성: 고유값</li>
+    <li>가제어성</li>
+    <li>가관측성</li>
+    <li>비선형 시스템의 선형화</li>
     <li>이산화 (연속 → 디지털)</li>
+    <li>등속도 / 등가속도 모델</li>
   </ol></div>
 
   <h2>1. 왜 상태공간인가?</h2>
-  <p>로봇은 위치, 속도, 자세, 각속도 등 수십 개 변수를 동시에 갖습니다. 이걸 식 하나마다 따로 쓰면 정신이 없습니다.
-  <strong>상태(state)</strong>라는 벡터에 모두 모아 행렬로 표현하면 깔끔해집니다.</p>
-
-  $$ \dot{\mathbf{x}} = A \mathbf{x} + B \mathbf{u}, \qquad \mathbf{y} = C \mathbf{x} + D \mathbf{u} $$
-
+  <p>고전 제어에서는 라플라스 변환을 거쳐 <strong>전달함수</strong> $G(s) = Y(s)/U(s)$로 시스템을 표현합니다.
+  단순하지만 두 가지 큰 한계가 있습니다.</p>
   <ul>
-    <li>$\mathbf{x}$ — 상태 벡터 (로봇의 모든 정보)</li>
-    <li>$\mathbf{u}$ — 입력 (제어 명령)</li>
-    <li>$\mathbf{y}$ — 출력 (센서로 측정 가능한 값)</li>
-    <li>$A,B,C,D$ — 시스템의 성격을 정하는 행렬</li>
+    <li>입력·출력이 여러 개인 <strong>MIMO 시스템</strong>을 다루기 어렵다</li>
+    <li>비선형성, 시변 파라미터를 다루기 어렵다</li>
+    <li>현대 제어 기법(LQR, MPC, 칼만 필터 등)이 모두 상태공간 표현 위에서 정의됨</li>
   </ul>
 
-  <h2>2. 예제: 질량-스프링-댐퍼</h2>
-  <p>벽에 스프링과 감쇠기로 매달린 물체를 생각해봅시다.</p>
+  <p>상태공간(state-space)은 시스템의 모든 내부 변수를 <strong>상태 벡터 $\mathbf x$</strong> 하나에 모아 1차 미분방정식의 행렬 형태로 적습니다.</p>
+
+  <h2>2. 표준형: $\dot{\mathbf x} = A\mathbf x + B\mathbf u$</h2>
+  $$ \dot{\mathbf{x}} = A \mathbf{x} + B \mathbf{u}, \qquad \mathbf{y} = C \mathbf{x} + D \mathbf{u} $$
+  <ul>
+    <li>$\mathbf x \in \mathbb R^n$ — <strong>상태(state)</strong>: 시스템의 미래를 결정하기 위해 알아야 할 최소한의 정보</li>
+    <li>$\mathbf u \in \mathbb R^m$ — <strong>입력(input)</strong>: 우리가 시스템에 주는 제어 명령</li>
+    <li>$\mathbf y \in \mathbb R^p$ — <strong>출력(output)</strong>: 센서로 측정 가능한 양</li>
+    <li>$A$ — 시스템 행렬, $B$ — 입력 행렬, $C$ — 출력 행렬, $D$ — 직접 전달 행렬 (보통 0)</li>
+  </ul>
+
+  <h3>상태 공간 변환의 5단계 절차</h3>
+  <ol>
+    <li>물리 법칙으로 미분방정식 유도 (뉴턴/라그랑지)</li>
+    <li>상태 변수 $\mathbf x(t)$를 정의 (보통 위치와 그 도함수)</li>
+    <li>고차 미분을 1차 미분의 연립으로 풀어 적기</li>
+    <li>$\dot{\mathbf x}$ 형태로 정리</li>
+    <li>$A, B, C, D$ 행렬을 만든다</li>
+  </ol>
+
+  <h2>3. 예제 1 — 질량-스프링-댐퍼</h2>
+  <p>벽에 스프링(강성 $k$)과 감쇠기(점성 $c$)로 매달린 질량 $m$이 외력 $u$를 받습니다.</p>
   $$ m\ddot{y} + c\dot{y} + k y = u $$
-  <p>상태를 $\mathbf{x} = \begin{bmatrix}y \\ \dot{y}\end{bmatrix}$로 놓으면:</p>
-  $$ \dot{\mathbf{x}} = \begin{bmatrix}0 & 1 \\ -k/m & -c/m\end{bmatrix}\mathbf{x} + \begin{bmatrix}0 \\ 1/m\end{bmatrix}u $$
+
+  <p>상태를 $\mathbf{x} = [y,\;\dot{y}]^\top$로 정의하면:</p>
+  $$ \dot{\mathbf{x}} = \underbrace{\begin{bmatrix}0 & 1 \\ -k/m & -c/m\end{bmatrix}}_{A}\mathbf{x} + \underbrace{\begin{bmatrix}0 \\ 1/m\end{bmatrix}}_{B}u, \quad y = \underbrace{[1\;0]}_{C}\mathbf x $$
+
+  <p>물리적 직감:</p>
+  <ul>
+    <li>$A$의 첫 행 $[0, 1]$은 $\dot y = \dot y$ — 위치의 미분은 속도라는 정의식</li>
+    <li>$A$의 둘째 행 $[-k/m, -c/m]$은 뉴턴의 법칙 $\ddot y = (-ky - c\dot y)/m$를 행렬화한 것</li>
+    <li>$B$는 외력이 가속도에 $1/m$만큼 영향을 준다는 사실</li>
+  </ul>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 질량-스프링-댐퍼</h4>
-    <p>스프링 강성 $k$와 감쇠 $c$를 바꿔보며 시스템 응답을 관찰하세요. 살짝 잡아당겼다 놓는 자유 응답입니다.</p>
+    <h4>🎮 인터랙티브: 질량-스프링-댐퍼 자유 응답</h4>
+    <p>스프링 강성 $k$와 감쇠 $c$를 바꿔보며 시스템 응답을 관찰하세요. 살짝 잡아당겼다가 놓는 자유 응답입니다.</p>
     <canvas id="msd" width="640" height="280"></canvas>
     <div class="controls">
       <label>질량 m <span class="val" id="mV">1</span><input type="range" id="m" min="0.5" max="3" step="0.1" value="1"></label>
@@ -58,6 +88,7 @@
       <label>감쇠 c <span class="val" id="cV">0.5</span><input type="range" id="c" min="0" max="10" step="0.1" value="0.5"></label>
       <button id="kick">잡아당기기</button>
     </div>
+    <p style="font-size:13px;color:#666">감쇠비 ζ = c / (2√(mk)). ζ&lt;1: 언더댐핑(진동), ζ=1: 임계감쇠, ζ&gt;1: 오버댐핑.</p>
   </div>
   <script>
   (function(){
@@ -73,69 +104,383 @@
       yd+=ydd*dt; y+=yd*dt;
       hist.push(y); if(hist.length>300)hist.shift();
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      // wall
       x.fillStyle='#999';x.fillRect(40,80,8,120);
-      // spring
       const px=140+y*40;
       x.strokeStyle='#666';x.lineWidth=2;x.beginPath();x.moveTo(48,140);
       for(let i=0;i<10;i++){x.lineTo(48+(px-48)*i/10,140+(i%2?-10:10));}
       x.lineTo(px,140);x.stroke();
-      // mass
       x.fillStyle='#0b5fff';x.fillRect(px-15,115,30,50);
-      // history plot
       x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
       hist.forEach((v,i)=>{const xx=300+i,yy=140-v*30;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
       x.stroke();
       x.strokeStyle='#ccc';x.beginPath();x.moveTo(300,140);x.lineTo(600,140);x.stroke();
       x.fillStyle='#666';x.font='11px sans-serif';x.fillText('y(t)',610,143);
+      // damping ratio
+      const zeta=cc/(2*Math.sqrt(m*k));
+      x.fillText('ζ = '+zeta.toFixed(2),300,30);
+      x.fillStyle=zeta<1?'#c62828':zeta>1?'#0b5fff':'#2e7d32';
+      x.fillText(zeta<1?'언더댐핑':zeta>1?'오버댐핑':'임계감쇠',360,30);
       requestAnimationFrame(loop);
     }
     upd();loop();
   })();
   </script>
 
-  <p>관찰 포인트: $c$가 작으면 진동이 오래 가고(언더댐핑), 크면 천천히 돌아옵니다(오버댐핑). 딱 그 사이가 <em>임계 감쇠</em>입니다.</p>
+  <h2>4. 예제 2 — 카트 위 도립진자 (Inverted Pendulum on Cart)</h2>
+  <p>로봇공학에서 가장 사랑받는 예제입니다. 카트에 길이 $\ell$, 질량 $m$인 막대가 핀으로 연결되어 있고, 카트에 힘 $u$를 가해 막대가 똑바로 서 있도록 제어합니다.</p>
+  <p>막대 각도 $\phi$가 작다는 가정 하에 $\sin\phi \approx \phi, \cos\phi \approx 1$로 선형화하면:</p>
+  $$ \ddot x = \frac{u - m g \phi}{M}, \quad \ddot \phi = \frac{(M+m)g\phi - u}{M\ell} $$
 
-  <h2>3. 안정성: 고유값 (Eigenvalues)</h2>
-  <p>$A$ 행렬의 고유값 $\lambda$의 실수부가 모두 음수이면 시스템은 안정합니다.</p>
-  $$ \text{안정} \iff \mathrm{Re}(\lambda_i) < 0 \;\; \forall i $$
+  <p>상태 $\mathbf x = [x,\;\dot x,\;\phi,\;\dot\phi]^\top$로 정의하면 4×4 $A$, 4×1 $B$의 깔끔한 선형 시스템이 됩니다.</p>
+  $$ A = \begin{bmatrix} 0 & 1 & 0 & 0 \\ 0 & 0 & -\tfrac{mg}{M} & 0 \\ 0 & 0 & 0 & 1 \\ 0 & 0 & \tfrac{(M+m)g}{M\ell} & 0 \end{bmatrix}, \quad B = \begin{bmatrix} 0 \\ 1/M \\ 0 \\ -1/(M\ell) \end{bmatrix} $$
 
-  <h2>4. 가제어성·가관측성</h2>
-  <ul>
-    <li><strong>가제어성</strong>: 입력 $u$로 임의의 상태에 도달할 수 있는가? &nbsp;
-      $\mathrm{rank}([B, AB, A^2B, \dots]) = n$</li>
-    <li><strong>가관측성</strong>: 출력 $y$만 보고 상태 $x$를 복원할 수 있는가? &nbsp;
-      $\mathrm{rank}([C; CA; CA^2; \dots]) = n$</li>
-  </ul>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 도립진자 자유 거동</h4>
+    <p>막대가 자유 낙하하는 모습입니다. 입력 $u=0$이므로 막대가 떨어집니다. 다음 강의(L8 PID, L13 MPC)에서 이 막대를 똑바로 세우는 제어기를 학습합니다.</p>
+    <canvas id="ip" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>막대 길이 ℓ <span class="val" id="ipLV">1</span><input type="range" id="ipL" min="0.3" max="2" step="0.05" value="1"></label>
+      <label>막대 질량 m <span class="val" id="ipmV">0.3</span><input type="range" id="ipm" min="0.1" max="1" step="0.05" value="0.3"></label>
+      <button id="ipRst">다시 세우기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ip'),x=c.getContext('2d');
+    let s={x:0,xd:0,ph:0.05,phd:0};
+    document.getElementById('ipRst').onclick=()=>{s={x:0,xd:0,ph:0.05,phd:0};};
+    function loop(){
+      const M=1,m=+document.getElementById('ipm').value,L=+document.getElementById('ipL').value,g=9.81,dt=0.02;
+      ['ipL','ipm'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      // full nonlinear dynamics (cart + pendulum, no input)
+      const sP=Math.sin(s.ph),cP=Math.cos(s.ph);
+      const den=M+m*sP*sP;
+      const xdd=(m*sP*(L*s.phd*s.phd+g*cP))/den;
+      const phdd=(-(M+m)*g*sP-m*L*s.phd*s.phd*sP*cP)/(L*den);
+      s.xd+=xdd*dt;s.x+=s.xd*dt;
+      s.phd+=phdd*dt;s.ph+=s.phd*dt;
+      if(s.x<-3)s.x=-3;if(s.x>3)s.x=3;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#999';x.beginPath();x.moveTo(0,220);x.lineTo(c.width,220);x.stroke();
+      // cart
+      const cx=320+s.x*60;
+      x.fillStyle='#0b5fff';x.fillRect(cx-30,200,60,30);
+      x.fillStyle='#222';x.beginPath();x.arc(cx-20,235,5,0,Math.PI*2);x.fill();x.beginPath();x.arc(cx+20,235,5,0,Math.PI*2);x.fill();
+      // pendulum
+      const px=cx+L*100*Math.sin(s.ph),py=200-L*100*Math.cos(s.ph);
+      x.strokeStyle='#c62828';x.lineWidth=4;x.beginPath();x.moveTo(cx,200);x.lineTo(px,py);x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(px,py,8,0,Math.PI*2);x.fill();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('φ = '+(s.ph*180/Math.PI).toFixed(1)+'°',12,30);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
 
-  <h2>5. 이산화 (Discretization)</h2>
-  <p>컴퓨터는 연속 시간으로 적분할 수 없으니 시간 간격 $\Delta t$로 잘라야 합니다.</p>
+  <h2>5. 전달함수 ↔ 상태공간</h2>
+  <p>전달함수 $G(s) = (s+3)/(s^3 + 3s^2 + 5s + 2)$ 같은 식이 주어지면 다음 절차로 상태공간으로 바꿉니다.</p>
+  <ol>
+    <li>$Y(s)/U(s)$의 분모를 0으로 놓고 미분방정식 복원: $\dddot y + 3\ddot y + 5\dot y + 2y = \dot u + 3u$</li>
+    <li>상태 변수 정의: $x_1 = y, x_2 = \dot y, x_3 = \ddot y$</li>
+    <li>1차 연립 형태로:</li>
+  </ol>
+  $$ \dot{\mathbf x} = \begin{bmatrix}0&1&0\\0&0&1\\-2&-5&-3\end{bmatrix}\mathbf x + \begin{bmatrix}0\\0\\1\end{bmatrix}u $$
+  <p>이런 표준 형태를 <em>controllable canonical form</em>이라 부릅니다.</p>
+
+  <h2>6. 안정성 — 고유값으로 보기</h2>
+  <p>입력이 없는 시스템 $\dot{\mathbf x} = A\mathbf x$의 해는 $\mathbf x(t) = e^{At}\mathbf x_0$입니다. 이 식이 $t \to \infty$에서 발산하지 않으려면 $A$의 모든 고유값 $\lambda_i$의 <strong>실수부가 음수</strong>여야 합니다.</p>
+  $$ \text{안정} \iff \mathrm{Re}(\lambda_i) < 0 \;\;\forall i $$
+
+  <p>고유값을 복소평면에 그리면 직관적입니다: 왼쪽 절반에 있으면 안정, 오른쪽으로 가면 발산. 허수 축에서 멀수록 빠르게 진동/감쇠합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 고유값 ↔ 시간 응답</h4>
+    <p>2차 시스템의 두 고유값 위치(실수부 σ, 허수부 ω)를 슬라이더로 옮기면, 그에 따른 시간 응답이 즉시 그려집니다. 왼쪽은 복소평면, 오른쪽은 단위 충격 응답입니다.</p>
+    <canvas id="pole" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>실수부 σ <span class="val" id="sgV">-0.5</span><input type="range" id="sg" min="-2" max="1" step="0.05" value="-0.5"></label>
+      <label>허수부 ω <span class="val" id="omV">2</span><input type="range" id="om" min="0" max="5" step="0.1" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pole'),x=c.getContext('2d');
+    function loop(){
+      const sg=+document.getElementById('sg').value;
+      const om=+document.getElementById('om').value;
+      document.getElementById('sgV').textContent=sg.toFixed(2);
+      document.getElementById('omV').textContent=om.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 좌측: 복소 평면
+      const cx=140,cy=160,scP=50;
+      // 안정 영역 음영
+      x.fillStyle='rgba(46,125,50,0.10)';x.fillRect(20,30,cx-20,260);
+      x.fillStyle='rgba(198,40,40,0.10)';x.fillRect(cx,30,140,260);
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,cy);x.lineTo(280,cy);x.moveTo(cx,30);x.lineTo(cx,290);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('Re(λ)',250,cy-5);x.fillText('Im(λ)',cx+5,40);
+      x.fillText('안정',30,50);x.fillText('불안정',230,50);
+      // 두 켤레 폴
+      x.fillStyle='#0b5fff';
+      x.beginPath();x.arc(cx+sg*scP,cy-om*scP/2,7,0,Math.PI*2);x.fill();
+      x.beginPath();x.arc(cx+sg*scP,cy+om*scP/2,7,0,Math.PI*2);x.fill();
+      // X 표시
+      x.strokeStyle='#fff';x.lineWidth=2;
+      [[sg*scP,-om*scP/2],[sg*scP,om*scP/2]].forEach(p=>{x.beginPath();x.moveTo(cx+p[0]-3,cy+p[1]-3);x.lineTo(cx+p[0]+3,cy+p[1]+3);x.moveTo(cx+p[0]+3,cy+p[1]-3);x.lineTo(cx+p[0]-3,cy+p[1]+3);x.stroke();});
+      // 우측: 시간 응답 y(t) = e^{σt} cos(ωt)
+      const x0=320,y0=160,scX=25,scY=80;
+      x.strokeStyle='#999';x.beginPath();x.moveTo(x0,y0);x.lineTo(x0+300,y0);x.moveTo(x0,30);x.lineTo(x0,290);x.stroke();
+      x.fillStyle='#666';x.fillText('시간 →',x0+250,y0+15);x.fillText('y(t)',x0+5,40);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let t=0;t<=12;t+=0.05){
+        const yv=Math.exp(sg*t)*Math.cos(om*t);
+        const xx=x0+t*scX, yy=y0-yv*scY;
+        if(t===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      // 라벨
+      x.fillStyle=sg<0?'#2e7d32':'#c62828';
+      x.fillText(sg<0?'✓ 안정 (수렴)':'✗ 불안정 (발산)',x0+5,290);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>실험 가이드: σ를 0보다 크게 만들면 응답이 폭발합니다. ω를 키우면 진동이 빨라지고 ω=0이면 진동 없는 지수 감쇠가 됩니다.</p>
+
+  <h2>7. 가제어성 (Controllability)</h2>
+  <p>입력 $\mathbf u$로 임의의 상태에 도달할 수 있느냐의 문제입니다. 답은 다음 가제어성 행렬의 랭크로 결정됩니다.</p>
+  $$ \mathcal C = [B,\;AB,\;A^2 B,\;\dots,\;A^{n-1} B], \qquad \mathrm{rank}(\mathcal C) = n \iff \text{가제어} $$
+
+  <p>$n$은 상태 차원입니다. 랭크가 부족하면 어떤 방향으로는 절대 갈 수 없는 "사각지대"가 생깁니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 가제어성 시각화</h4>
+    <p>두 질량이 직렬로 연결된 시스템에서 어느 질량에 힘을 가하느냐에 따라 가제어성이 달라집니다. 입력 위치를 바꿔보세요.</p>
+    <canvas id="ctrl" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>입력 위치
+        <select id="inputAt">
+          <option value="0">m₁에 힘 가하기 (가제어 ✓)</option>
+          <option value="1">m₂에만 힘 가하기 (가제어 ✓)</option>
+          <option value="2">두 질량을 같은 힘으로 (불가제어 ✗)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ctrl'),x=c.getContext('2d');
+    function rank(M){
+      // simple gaussian elimination on copy
+      const A=M.map(r=>[...r]);const m=A.length,n=A[0].length;let r=0;
+      for(let col=0;col<n&&r<m;col++){
+        let pv=r;for(let i=r+1;i<m;i++)if(Math.abs(A[i][col])>Math.abs(A[pv][col]))pv=i;
+        if(Math.abs(A[pv][col])<1e-9)continue;
+        [A[r],A[pv]]=[A[pv],A[r]];
+        for(let i=r+1;i<m;i++){const f=A[i][col]/A[r][col];for(let j=col;j<n;j++)A[i][j]-=f*A[r][j];}
+        r++;
+      }
+      return r;
+    }
+    function matmul(A,v){return A.map(r=>r.reduce((s,a,i)=>s+a*v[i],0));}
+    function loop(){
+      const sel=+document.getElementById('inputAt').value;
+      // double mass: x = [x1, v1, x2, v2], k=2, m=1, c=0
+      const A=[[0,1,0,0],[-2,0,2,0],[0,0,0,1],[2,0,-2,0]];
+      let B;
+      if(sel==0)B=[0,1,0,0];
+      else if(sel==1)B=[0,0,0,1];
+      else B=[0,1,0,1];
+      const AB=matmul(A,B);
+      const A2B=matmul(A,AB);
+      const A3B=matmul(A,A2B);
+      const C=[B,AB,A2B,A3B];           // rows are columns of [B AB A²B A³B]
+      // we want rank of n×4 matrix; transpose to 4×n then transpose for rank
+      const M=[];for(let i=0;i<4;i++)M.push([C[0][i],C[1][i],C[2][i],C[3][i]]);
+      const r=rank(M);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 그림: 두 질량
+      x.fillStyle='#999';x.fillRect(40,100,8,80);
+      const m1x=180,m2x=380;
+      // 스프링 1
+      x.strokeStyle='#666';x.lineWidth=2;x.beginPath();x.moveTo(48,140);
+      for(let i=0;i<8;i++)x.lineTo(48+(m1x-48)*i/8,140+(i%2?-8:8));x.lineTo(m1x,140);x.stroke();
+      // 스프링 2
+      x.beginPath();x.moveTo(m1x+40,140);
+      for(let i=0;i<8;i++)x.lineTo(m1x+40+(m2x-m1x-40)*i/8,140+(i%2?-8:8));x.lineTo(m2x,140);x.stroke();
+      // 질량
+      x.fillStyle='#0b5fff';x.fillRect(m1x,115,40,50);
+      x.fillStyle='#0b5fff';x.fillRect(m2x,115,40,50);
+      x.fillStyle='#fff';x.font='bold 14px sans-serif';x.textAlign='center';
+      x.fillText('m₁',m1x+20,145);x.fillText('m₂',m2x+20,145);x.textAlign='start';
+      // 입력 화살표
+      x.strokeStyle='#c62828';x.lineWidth=3;
+      function arrow(ax,ay,bx,by){x.beginPath();x.moveTo(ax,ay);x.lineTo(bx,by);x.stroke();
+        x.beginPath();x.moveTo(bx,by);x.lineTo(bx-8,by-4);x.lineTo(bx-8,by+4);x.closePath();x.fillStyle='#c62828';x.fill();}
+      if(sel==0||sel==2)arrow(m1x-40,140,m1x-5,140);
+      if(sel==1||sel==2)arrow(m2x-40,140,m2x-5,140);
+      // 결과 박스
+      const ok=r==4;
+      x.fillStyle=ok?'#e8f5e9':'#ffebee';x.fillRect(450,30,170,180);
+      x.strokeStyle=ok?'#2e7d32':'#c62828';x.strokeRect(450,30,170,180);
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('상태 차원 n = 4',460,55);
+      x.fillText('rank(C) = '+r,460,80);
+      x.fillStyle=ok?'#2e7d32':'#c62828';x.font='bold 14px sans-serif';
+      x.fillText(ok?'✓ 가제어':'✗ 불가제어',460,110);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      const lines=ok?['모든 상태에','도달 가능합니다.']:['두 질량이 같은','입력을 받으면','대칭 모드는','제어 불가.'];
+      lines.forEach((l,i)=>x.fillText(l,460,135+i*15));
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>8. 가관측성 (Observability)</h2>
+  <p>가제어성의 쌍대 개념입니다. 출력 $\mathbf y$만 보고 내부 상태 $\mathbf x$를 복원할 수 있느냐?</p>
+  $$ \mathcal O = \begin{bmatrix} C \\ CA \\ CA^2 \\ \vdots \\ CA^{n-1}\end{bmatrix}, \qquad \mathrm{rank}(\mathcal O) = n \iff \text{가관측} $$
+  <p>가관측이 아니면 어떤 내부 모드는 출력에 전혀 나타나지 않아 추정이 불가능합니다.
+  이 두 개념은 칼만 필터(L4–L5)와 LQR/MPC(L12–L13)의 이론적 토대입니다.</p>
+
+  <div class="tip"><strong>쌍대성(duality)</strong> — 가제어성과 가관측성은 수학적으로 거울상입니다. $(A, B)$가 가제어이면 $(A^\top, B^\top)$가 가관측. 그래서 LQR(제어)과 칼만 필터(추정)는 같은 행렬 Riccati 방정식을 풉니다.</div>
+
+  <h2>9. 비선형 시스템의 선형화 (Linearization)</h2>
+  <p>실제 로봇은 거의 모두 비선형입니다 ($\sin, \cos$, $|v|v$ 등). 그렇다면 상태공간 표현은 의미가 없을까요? 대답은 <strong>평형점(equilibrium) 주변에서는 선형으로 근사할 수 있다</strong>입니다.</p>
+
+  <p>1차 테일러 전개:</p>
+  $$ \dot{\mathbf x} = f(\mathbf x, \mathbf u) \approx f(\mathbf x_e, \mathbf u_e) + \underbrace{\left.\frac{\partial f}{\partial \mathbf x}\right|_e}_{A} (\mathbf x - \mathbf x_e) + \underbrace{\left.\frac{\partial f}{\partial \mathbf u}\right|_e}_{B} (\mathbf u - \mathbf u_e) $$
+  <p>$A$와 $B$가 바로 야코비안 행렬입니다.</p>
+
+  <h3>예시: 모바일 로봇</h3>
+  <p>L2의 $(x,y,\theta)$ 운동학을 평형점 $(x_e, y_e, \theta_e, v_e=0, \delta_e=0)$ 주변에서 선형화하면 깔끔한 행렬이 나옵니다. 정지 상태에서 출발해 작은 명령을 줄 때 로컬 제어기를 만드는 표준 방법입니다.</p>
+
+  <h2>10. 이산화 (Discretization)</h2>
+  <p>컴퓨터는 연속 시간을 다룰 수 없으니 시간 간격 $\Delta t$로 잘라야 합니다. 입력이 $\Delta t$ 동안 일정(zero-order hold)이라 가정하면:</p>
   $$ \mathbf{x}_{k+1} = A_d \mathbf{x}_k + B_d \mathbf{u}_k $$
-  <p>등속도 모델 (constant velocity)의 예:</p>
-  $$ A_d = \begin{bmatrix}1 & \Delta t \\ 0 & 1\end{bmatrix}, \quad B_d = \begin{bmatrix}\Delta t^2/2 \\ \Delta t\end{bmatrix} $$
+  $$ A_d = e^{A\Delta t}, \qquad B_d = \int_0^{\Delta t} e^{A\tau}\,d\tau \cdot B $$
 
-  <h3>코드 예제 (Python)</h3>
+  <p>$e^{At}$는 행렬 지수(matrix exponential)로 다음 급수로 정의됩니다.</p>
+  $$ e^{At} = I + At + \frac{(At)^2}{2!} + \frac{(At)^3}{3!} + \dots $$
+
+  <h2>11. 등속도 / 등가속도 모델</h2>
+  <p>칼만 필터(L4–L5)에서 가장 자주 등장하는 두 모델입니다.</p>
+
+  <h3>등속도 (Constant Velocity)</h3>
+  <p>"속도가 거의 변하지 않는다"는 가정. $\mathbf x = [p,\;\dot p]^\top$.</p>
+  $$ A_d = \begin{bmatrix} 1 & \Delta t \\ 0 & 1 \end{bmatrix} $$
+
+  <h3>등가속도 (Constant Acceleration)</h3>
+  <p>$\mathbf x = [p,\;\dot p,\;\ddot p]^\top$. $A$가 nilpotent ($A^3 = 0$)이라 행렬 지수가 닫힌 형태로 나옵니다.</p>
+  $$ A_d = \begin{bmatrix} 1 & \Delta t & \tfrac12 \Delta t^2 \\ 0 & 1 & \Delta t \\ 0 & 0 & 1 \end{bmatrix} $$
+
+  <p>운동학적으로 익숙한 식 $p_{k+1} = p_k + \dot p_k \Delta t + \tfrac12 \ddot p_k \Delta t^2$가 행렬 첫 행에 그대로 들어 있습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 연속 vs 이산 응답 비교</h4>
+    <p>같은 질량-스프링 시스템을 연속 시간 RK4와 ZOH 이산화로 동시에 시뮬레이션합니다. $\Delta t$가 커지면 이산 모델이 어긋나기 시작합니다.</p>
+    <canvas id="disc" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>샘플링 Δt <span class="val" id="dtV">0.1</span><input type="range" id="dt" min="0.01" max="0.5" step="0.01" value="0.1"></label>
+      <button id="discRst">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('disc'),x=c.getContext('2d');
+    let cont,disc,t,frame=0,contH,discH;
+    function init(){cont=[1,0];disc=[1,0];t=0;contH=[];discH=[];}
+    init();document.getElementById('discRst').onclick=init;
+    function f(s){return [s[1],-2*s[0]-0.3*s[1]];}    // m=1, k=2, c=0.3
+    function loop(){
+      // 5프레임마다 한 번 step
+      if(frame++%5===0){
+        const dt=+document.getElementById('dt').value;
+        // 연속(고정밀 RK4 with small substep)
+        for(let i=0;i<10;i++){
+          const ddt=dt/10;
+          const k1=f(cont);
+          const k2=f([cont[0]+k1[0]*ddt/2,cont[1]+k1[1]*ddt/2]);
+          const k3=f([cont[0]+k2[0]*ddt/2,cont[1]+k2[1]*ddt/2]);
+          const k4=f([cont[0]+k3[0]*ddt,cont[1]+k3[1]*ddt]);
+          cont=[cont[0]+ddt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]),cont[1]+ddt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1])];
+        }
+        // 이산(Euler with full dt = ZOH approximation)
+        const k1=f(disc);
+        disc=[disc[0]+k1[0]*dt,disc[1]+k1[1]*dt];
+        contH.push(cont[0]);discH.push(disc[0]);
+        if(contH.length>200){contH.shift();discH.shift();}
+        t+=dt;
+      }
+      const dtv=+document.getElementById('dt').value;
+      document.getElementById('dtV').textContent=dtv.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#ccc';x.beginPath();x.moveTo(20,140);x.lineTo(620,140);x.stroke();
+      const sx=i=>20+i*3, sy=v=>140-v*60;
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();
+      contH.forEach((v,i)=>{if(i==0)x.moveTo(sx(i),sy(v));else x.lineTo(sx(i),sy(v));});x.stroke();
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      discH.forEach((v,i)=>{if(i==0)x.moveTo(sx(i),sy(v));else x.lineTo(sx(i),sy(v));});x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('🟢 연속 (정확)',20,30);
+      x.fillStyle='#c62828';x.fillText('🔴 이산 Δt='+dtv.toFixed(2)+' (큰 Δt에서 오차 ↑)',20,50);
+      if(t>30)init();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>코드 예제 (Python · scipy)</h2>
   <pre><code>import numpy as np
 from scipy.linalg import expm
 
-# 연속 시스템
+# 연속 시스템: 질량-스프링-댐퍼
 m, k, c = 1.0, 10.0, 0.5
-A = np.array([[0,1],[-k/m, -c/m]])
-B = np.array([[0],[1/m]])
+A = np.array([[0, 1], [-k/m, -c/m]])
+B = np.array([[0], [1/m]])
+C = np.array([[1, 0]])
+D = np.array([[0]])
 
-# 고유값 → 안정성
-print("eigenvalues:", np.linalg.eigvals(A))   # 모두 Re<0 이면 안정
+# 1) 안정성: 고유값
+eig = np.linalg.eigvals(A)
+print("eigenvalues:", eig)
+print("stable?", all(np.real(eig) < 0))
 
-# 이산화 (zero-order hold)
+# 2) 가제어성
+Wc = np.hstack([B, A @ B])
+print("controllable?", np.linalg.matrix_rank(Wc) == 2)
+
+# 3) 가관측성
+Wo = np.vstack([C, C @ A])
+print("observable?", np.linalg.matrix_rank(Wo) == 2)
+
+# 4) 이산화 (zero-order hold)
 dt = 0.05
 Ad = expm(A*dt)
-Bd = np.linalg.inv(A) @ (Ad - np.eye(2)) @ B</code></pre>
+Bd = np.linalg.solve(A, (Ad - np.eye(2)) @ B)
+
+# 5) 시뮬레이션
+x = np.array([1.0, 0.0])
+hist = [x]
+for k in range(200):
+    x = Ad @ x                    # 입력 0
+    hist.append(x)</code></pre>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong><a href="https://underactuated.mit.edu/index.html">Underactuated Robotics</a></strong> (MIT, Tedrake) — 2장이 선형 시스템과 안정성, 6장이 LQR을 다룹니다.</li>
+    <li><strong>Modern Control Engineering</strong> (Ogata) — 상태공간의 정석 교과서.</li>
+    <li><strong>Linear System Theory and Design</strong> (Chen) — 가제어성·가관측성의 깊이 있는 처리.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="02-dynamics.html"><small>← 이전</small>L2. 동역학</a>
     <a href="04-kalman-1d.html" class="next"><small>다음 →</small>L4. 칼만 필터 1D</a>
   </nav>
 </main>
-<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
 </body>
 </html>

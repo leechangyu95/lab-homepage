@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>L4. 칼만 필터 (1D) — SAIL Learning</title>
+<title>L4. 칼만 필터 (1D) — Study Page</title>
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -12,7 +12,7 @@
 </head>
 <body>
 <header class="site-header"><div class="wrap">
-  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <h1><a href="../index.html">Study Page</a></h1>
   <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
 </div></header>
 
@@ -22,40 +22,300 @@
   <p class="lead">잡음 속에서 진실을 찾는 가장 우아한 알고리즘.</p>
 
   <div class="toc"><h4>목차</h4><ol>
-    <li>왜 필터가 필요한가</li>
+    <li>왜 필터가 필요한가?</li>
+    <li>은닉 상태와 측정의 개념</li>
+    <li>분산 · 표준편차 · 정규 분포</li>
+    <li>정확도(Accuracy) vs 정밀도(Precision)</li>
     <li>두 가우시안 합치기</li>
-    <li>예측 - 갱신 두 단계</li>
-    <li>인터랙티브 1D 필터</li>
-    <li>코드 예제</li>
+    <li>예측 - 갱신 사이클</li>
+    <li>예제 1: 정지된 거리 추정</li>
+    <li>예제 2: 등속도 추적</li>
+    <li>칼만 이득의 의미</li>
   </ol></div>
 
   <h2>1. 왜 필터가 필요한가?</h2>
-  <p>센서는 항상 잡음이 섞입니다. GPS는 ±5 m, IMU는 작은 오차가 시간에 따라 누적됩니다.
-  하지만 두 센서를 똑똑하게 합치면, 둘 다보다 정확한 추정이 가능합니다. 그게 칼만 필터입니다.</p>
-  <p>1960년 R. Kalman이 제안했고, 곧 NASA Apollo 우주선의 항법에 쓰여 인류를 달에 데려갔습니다.</p>
+  <p>실제 센서는 항상 잡음을 포함합니다.</p>
+  <ul>
+    <li>GPS는 ±5 m 정도의 위치 오차</li>
+    <li>IMU는 정확하지만 시간이 지나면 드리프트(누적 오차)</li>
+    <li>LiDAR도 환경에 따라 오차가 다름</li>
+  </ul>
+  <p>각 센서는 단독으로는 완벽하지 않지만, <strong>여러 센서를 똑똑하게 합치면</strong> 단독보다 더 정확한 추정을 얻을 수 있습니다. 그게 칼만 필터의 본질입니다.</p>
 
-  <h2>2. 두 가우시안 합치기</h2>
-  <p>두 측정값이 평균 $\mu_1, \mu_2$, 분산 $\sigma_1^2, \sigma_2^2$인 가우시안이라면 합쳐진 결과는:</p>
-  $$ \frac{1}{\sigma^2} = \frac{1}{\sigma_1^2} + \frac{1}{\sigma_2^2}, \quad \mu = \frac{\sigma_2^2 \mu_1 + \sigma_1^2 \mu_2}{\sigma_1^2 + \sigma_2^2} $$
-  <p>분산은 둘 중 어느 것보다도 <strong>작아집니다</strong>. 이게 마법의 핵심입니다.</p>
+  <p>1960년 R. E. Kalman이 제안했고, 곧 NASA의 Apollo 우주선 항법 컴퓨터에 탑재되어 인류를 달에 보냈습니다. 오늘날 거의 모든 자율 시스템(드론, 자동차, 선박, 스마트폰 GPS) 안에 칼만 필터가 돌고 있습니다.</p>
 
-  <h2>3. 예측 - 갱신 두 단계</h2>
-  <h3>① 예측 (Predict)</h3>
-  $$ \hat{x}_{k|k-1} = A \hat{x}_{k-1} + B u_k $$
-  $$ P_{k|k-1} = A P_{k-1} A^\top + Q $$
-  <p>모델로 다음 상태를 예측. 불확실성($P$)은 항상 커집니다.</p>
+  <h2>2. 은닉 상태와 측정</h2>
+  <p>"진짜 상태(true state)"는 우리가 직접 볼 수 없습니다. 보이는 건 잡음이 섞인 측정값(measurement)뿐. 진짜 상태를 <strong>은닉 상태(hidden state)</strong>라 부릅니다.</p>
 
-  <h3>② 갱신 (Update)</h3>
-  $$ K = P_{k|k-1} H^\top (H P_{k|k-1} H^\top + R)^{-1} $$
-  $$ \hat{x}_k = \hat{x}_{k|k-1} + K(z_k - H \hat{x}_{k|k-1}) $$
-  $$ P_k = (I - KH) P_{k|k-1} $$
-  <p>측정값 $z_k$와 비교해 보정. 칼만 이득 $K$는 "측정을 얼마나 믿을지"의 가중치입니다.</p>
+  <table>
+    <thead><tr><th>기호</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>$x$</td><td>진짜 (은닉) 상태 — 우리가 알고 싶은 값</td></tr>
+      <tr><td>$\hat x$</td><td>추정값 (estimate) — 필터가 만든 답</td></tr>
+      <tr><td>$z$</td><td>측정값 (measurement) — 잡음이 섞임</td></tr>
+      <tr><td>$P$</td><td>추정 분산 — "내가 얼마나 확신하는가"</td></tr>
+    </tbody>
+  </table>
 
-  <div class="note"><strong>$K$의 직감</strong> — 측정 잡음 $R$이 작으면 $K$가 1에 가까워져 측정을 신뢰. $R$이 크면 $K$가 0에 가까워져 모델 예측만 따릅니다.</div>
+  <h2>3. 분산 · 표준편차 · 정규 분포</h2>
+  <p>측정 오차는 보통 평균 0의 정규 분포(가우시안)로 모델링합니다.</p>
+  $$ p(z) = \frac{1}{\sigma\sqrt{2\pi}} \exp\!\left(-\frac{(z-\mu)^2}{2\sigma^2}\right) $$
+  <ul>
+    <li>$\mu$ — 평균. 정확하면 진짜 값과 일치.</li>
+    <li>$\sigma^2$ — 분산. 클수록 측정이 흩어진다.</li>
+    <li>$\sigma$ — 표준편차. 직관적으로 "평균 오차"의 크기.</li>
+  </ul>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 1D 위치 추정</h4>
-    <p>로봇이 일정 속도로 움직이고 있고, 노이즈가 섞인 센서로 위치를 측정합니다. 칼만 필터의 추정값(파랑)이 진짜 위치(녹색)에 얼마나 잘 따라가는지 보세요.</p>
+    <h4>🎮 인터랙티브: 정규 분포 모양 바꿔보기</h4>
+    <p>평균과 표준편차를 바꿔보며 가우시안의 모양을 익혀보세요. 1σ 안에 약 68%, 2σ 안에 95%, 3σ 안에 99.7%의 확률이 들어 있습니다.</p>
+    <canvas id="gauss" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>평균 μ <span class="val" id="muV">0</span><input type="range" id="mu" min="-3" max="3" step="0.1" value="0"></label>
+      <label>표준편차 σ <span class="val" id="sgV">1</span><input type="range" id="sg" min="0.3" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gauss'),x=c.getContext('2d');
+    function loop(){
+      const mu=+document.getElementById('mu').value;
+      const sg=+document.getElementById('sg').value;
+      document.getElementById('muV').textContent=mu.toFixed(1);
+      document.getElementById('sgV').textContent=sg.toFixed(1);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const x0=320,y0=220,sx=60;
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,y0);x.lineTo(620,y0);x.moveTo(x0,30);x.lineTo(x0,y0+10);x.stroke();
+      // 1σ, 2σ 음영
+      [[2,'rgba(11,95,255,0.07)'],[1,'rgba(11,95,255,0.13)']].forEach(([k,col])=>{
+        x.fillStyle=col;
+        x.beginPath();x.moveTo(x0+(mu-k*sg)*sx,y0);
+        for(let xx=mu-k*sg;xx<=mu+k*sg;xx+=0.05){
+          const y=Math.exp(-(xx-mu)**2/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));
+          x.lineTo(x0+xx*sx,y0-y*350);
+        }
+        x.lineTo(x0+(mu+k*sg)*sx,y0);x.closePath();x.fill();
+      });
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      for(let xx=-5;xx<=5;xx+=0.05){
+        const y=Math.exp(-(xx-mu)**2/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));
+        const px=x0+xx*sx,py=y0-y*350;
+        if(xx===-5)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();
+      // mean line
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(x0+mu*sx,30);x.lineTo(x0+mu*sx,y0);x.stroke();x.setLineDash([]);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('μ',x0+mu*sx-4,25);
+      x.fillText('1σ ≈ 68%',x0+sg*sx+5,150);
+      x.fillText('2σ ≈ 95%',x0+2*sg*sx+5,180);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 정확도 vs 정밀도</h2>
+  <p>두 단어는 일상에서 비슷하게 쓰지만 추정 이론에서는 분명히 구분합니다. 다트 보드 비유가 제일 직관적입니다.</p>
+
+  <ul>
+    <li><strong>정확(Accurate)</strong> — 평균이 진짜 값(가운데)에 가깝다 (편향이 작다)</li>
+    <li><strong>정밀(Precise)</strong> — 흩어짐이 작다 (분산이 작다)</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정확도 vs 정밀도 다트보드</h4>
+    <p>편향(bias)과 표준편차(σ)를 조절하면 다트 분포가 어떻게 변하는지 보세요. 칼만 필터가 최종적으로 추정하는 것은 "분포의 평균"이므로, 정밀도가 매우 중요합니다.</p>
+    <canvas id="dart" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>편향 (bias) <span class="val" id="biV">0</span><input type="range" id="bi" min="-2" max="2" step="0.1" value="0"></label>
+      <label>표준편차 σ <span class="val" id="dsV">0.5</span><input type="range" id="ds" min="0.1" max="2" step="0.1" value="0.5"></label>
+      <button id="dartRst">다시 던지기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dart'),x=c.getContext('2d');
+    let darts=[];
+    function gen(){
+      const bi=+document.getElementById('bi').value;
+      const sg=+document.getElementById('ds').value;
+      darts=[];
+      for(let i=0;i<30;i++){
+        const r=Math.sqrt(-2*Math.log(Math.random()));
+        const t=2*Math.PI*Math.random();
+        darts.push([bi+r*Math.cos(t)*sg,r*Math.sin(t)*sg]);
+      }
+    }
+    gen();
+    document.getElementById('dartRst').onclick=gen;
+    document.getElementById('bi').oninput=gen;
+    document.getElementById('ds').oninput=gen;
+    function loop(){
+      document.getElementById('biV').textContent=document.getElementById('bi').value;
+      document.getElementById('dsV').textContent=document.getElementById('ds').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320,cy=160,scale=50;
+      // dartboard rings
+      ['#c62828','#fff','#c62828','#fff','#2e7d32'].forEach((col,i)=>{
+        x.fillStyle=col;x.beginPath();x.arc(cx,cy,(5-i)*30,0,Math.PI*2);x.fill();
+        x.strokeStyle='#666';x.stroke();
+      });
+      x.fillStyle='#000';x.beginPath();x.arc(cx,cy,8,0,Math.PI*2);x.fill();
+      // darts
+      darts.forEach(d=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(cx+d[0]*scale,cy+d[1]*scale,4,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.stroke();});
+      // diagnosis
+      const meanX=darts.reduce((s,d)=>s+d[0],0)/darts.length;
+      const meanY=darts.reduce((s,d)=>s+d[1],0)/darts.length;
+      const distMean=Math.hypot(meanX,meanY);
+      const spread=Math.sqrt(darts.reduce((s,d)=>s+(d[0]-meanX)**2+(d[1]-meanY)**2,0)/darts.length);
+      x.fillStyle='#666';x.font='13px sans-serif';
+      x.fillText('정확도 (편향 거리): '+distMean.toFixed(2),20,30);
+      x.fillText('정밀도 (1σ 흩어짐): '+spread.toFixed(2),20,50);
+      const desc=distMean<0.5&&spread<0.6?'✓ 정확하고 정밀':distMean<0.5?'정확하지만 흩어짐':spread<0.6?'정밀하지만 편향':'정확도·정밀도 모두 부족';
+      x.fillStyle='#0742b8';x.font='bold 14px sans-serif';x.fillText(desc,20,75);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>좋은 필터의 목표: 가능한 한 <strong>편향이 작고 분산도 작은</strong> 추정을 만드는 것.</p>
+
+  <h2>5. 두 가우시안 합치기 — 칼만의 핵심</h2>
+  <p>두 측정 $z_1, z_2$가 있고 각각 분산이 $\sigma_1^2, \sigma_2^2$이라면, 둘을 합쳐 만든 새 추정의 평균과 분산은:</p>
+  $$ \hat\mu = \frac{\sigma_2^2 \mu_1 + \sigma_1^2 \mu_2}{\sigma_1^2 + \sigma_2^2}, \qquad \frac{1}{\hat\sigma^2} = \frac{1}{\sigma_1^2} + \frac{1}{\sigma_2^2} $$
+
+  <p>핵심 사실: <strong>합쳐진 분산은 두 입력 분산보다 모두 작습니다</strong>. 즉 두 정보를 똑똑하게 합치면 둘 중 어느 것보다도 더 확실한 답이 나옵니다. 마법의 정체가 이것입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 가우시안 합치기</h4>
+    <p>두 측정의 평균과 분산을 조절하세요. 합쳐진 결과(녹색)가 어떻게 더 좁고 정확해지는지 보세요.</p>
+    <canvas id="merge" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>μ₁ <span class="val" id="m1V">-1</span><input type="range" id="m1" min="-3" max="3" step="0.1" value="-1"></label>
+      <label>σ₁ <span class="val" id="s1V">1</span><input type="range" id="s1" min="0.2" max="2.5" step="0.1" value="1"></label>
+      <label>μ₂ <span class="val" id="m2V">1.5</span><input type="range" id="m2" min="-3" max="3" step="0.1" value="1.5"></label>
+      <label>σ₂ <span class="val" id="s2V">0.7</span><input type="range" id="s2" min="0.2" max="2.5" step="0.1" value="0.7"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('merge'),x=c.getContext('2d');
+    function gauss(xx,mu,sg){return Math.exp(-(xx-mu)**2/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));}
+    function loop(){
+      const m1=+document.getElementById('m1').value,s1=+document.getElementById('s1').value;
+      const m2=+document.getElementById('m2').value,s2=+document.getElementById('s2').value;
+      ['m1','s1','m2','s2'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const sgF=Math.sqrt(1/(1/s1**2+1/s2**2));
+      const muF=(s2**2*m1+s1**2*m2)/(s1**2+s2**2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const x0=320,y0=240,sx=70;
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,y0);x.lineTo(620,y0);x.stroke();
+      function draw(mu,sg,col,fill){
+        x.strokeStyle=col;x.fillStyle=fill;x.lineWidth=2;x.beginPath();
+        let first=true;
+        for(let xx=-5;xx<=5;xx+=0.04){const py=y0-gauss(xx,mu,sg)*350;const px=x0+xx*sx;if(first){x.moveTo(px,py);first=false;}else x.lineTo(px,py);}
+        x.lineTo(x0+5*sx,y0);x.lineTo(x0-5*sx,y0);x.closePath();x.fill();x.stroke();
+      }
+      draw(m1,s1,'#0b5fff','rgba(11,95,255,0.10)');
+      draw(m2,s2,'#ff8c00','rgba(255,140,0,0.10)');
+      draw(muF,sgF,'#2e7d32','rgba(46,125,50,0.20)');
+      x.fillStyle='#0b5fff';x.font='12px sans-serif';
+      x.fillText('🔵 측정 1 (μ='+m1+', σ='+s1+')',20,30);
+      x.fillStyle='#ff8c00';x.fillText('🟠 측정 2 (μ='+m2+', σ='+s2+')',20,50);
+      x.fillStyle='#2e7d32';x.fillText('🟢 합쳐진 결과 (μ='+muF.toFixed(2)+', σ='+sgF.toFixed(2)+')',20,70);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>6. 예측-갱신 사이클</h2>
+  <p>칼만 필터는 매 시각 두 단계를 반복합니다.</p>
+
+  <h3>① 예측 (Predict)</h3>
+  <p>모델로 한 스텝 앞으로 진행. 불확실성은 <em>증가</em>합니다.</p>
+  $$ \hat{x}_{k|k-1} = A \hat{x}_{k-1} + B u_k $$
+  $$ P_{k|k-1} = A P_{k-1} A^\top + Q $$
+
+  <h3>② 갱신 (Update)</h3>
+  <p>측정 $z_k$가 들어오면 두 가우시안(예측 + 측정)을 합칩니다. 불확실성은 <em>감소</em>합니다.</p>
+  $$ K_k = P_{k|k-1} H^\top (H P_{k|k-1} H^\top + R)^{-1} $$
+  $$ \hat{x}_k = \hat{x}_{k|k-1} + K_k (z_k - H \hat{x}_{k|k-1}) $$
+  $$ P_k = (I - K_k H) P_{k|k-1} $$
+
+  <ul>
+    <li>$Q$ — <strong>프로세스 잡음</strong>. 모델을 얼마나 못 믿느냐.</li>
+    <li>$R$ — <strong>측정 잡음</strong>. 센서를 얼마나 못 믿느냐.</li>
+    <li>$K$ — <strong>칼만 이득</strong>. 측정에 얼마나 가중치를 줄지의 비율.</li>
+  </ul>
+
+  <h2>7. 예제 1: 정지된 거리 추정</h2>
+  <p>강의 노트의 예제: 진짜 거리는 50 m, 측정 오차 $\sigma = 5$ m. 10번 측정한 값:</p>
+  <p style="font-family:monospace;font-size:13px;background:#f5f5f5;padding:8px;border-radius:4px">
+  49.03, 48.44, 55.21, 49.98, 50.6, 52.61, 45.87, 42.64, 48.26, 55.84
+  </p>
+  <p>10개를 그냥 평균 내면 49.85 m로 정답에 가깝습니다. 칼만 필터는 측정이 들어올 때마다 추정치를 한 번씩 업데이트하면서 같은 결과로 수렴합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정지된 1D 위치 추정</h4>
+    <p>진짜 위치가 30으로 고정되어 있고, 잡음이 섞인 측정이 매 스텝 들어옵니다. 측정 잡음 $R$과 초기 분산을 조절해 보세요.</p>
+    <canvas id="static" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>측정 잡음 R <span class="val" id="srV">10</span><input type="range" id="sr" min="0.5" max="40" step="0.5" value="10"></label>
+      <button id="staticRst">새로운 시퀀스</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('static'),x=c.getContext('2d');
+    let xh=0,P=100,k=0,frame=0;
+    function init(){xh=0;P=100;k=0;}
+    init();document.getElementById('staticRst').onclick=init;
+    function loop(){
+      if(frame++%15===0){
+        const R=+document.getElementById('sr').value;
+        const z=30+(Math.random()*2-1)*Math.sqrt(R)*1.5;
+        const K=P/(P+R);
+        xh=xh+K*(z-xh);
+        P=(1-K)*P;
+        k++;
+      }
+      const R=+document.getElementById('sr').value;
+      document.getElementById('srV').textContent=R;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.setLineDash([5,5]);x.beginPath();x.moveTo(40,140);x.lineTo(620,140);x.stroke();x.setLineDash([]);
+      // 추정치를 큰 점으로
+      const px=320, py=140-(xh-30)*8;
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(px,py,8,0,Math.PI*2);x.fill();
+      // 1σ 막대
+      x.strokeStyle='#0b5fff';x.lineWidth=2;
+      const sg=Math.sqrt(P)*8;
+      x.beginPath();x.moveTo(px,py-sg);x.lineTo(px,py+sg);x.moveTo(px-8,py-sg);x.lineTo(px+8,py-sg);x.moveTo(px-8,py+sg);x.lineTo(px+8,py+sg);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('🟢 진짜 거리 = 30',40,30);
+      x.fillStyle='#0b5fff';x.fillText('🔵 추정 = '+xh.toFixed(2)+' (±'+Math.sqrt(P).toFixed(2)+')',40,50);
+      x.fillStyle='#666';x.fillText('스텝 k = '+k,40,70);
+      x.fillText('K = P/(P+R) = '+(P/(P+R)).toFixed(3),40,90);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>8. 예제 2: 등속도 추적</h2>
+  <p>이번에는 물체가 속도 1 m/s로 직선 운동합니다. 상태는 위치 하나뿐이지만 모델에서 속도를 가정합니다.</p>
+  <ul>
+    <li>$A = 1$ (속도 1 m/s × $\Delta t$ = 1 m가 매 스텝 더해진다는 것은 입력으로)</li>
+    <li>$B u = v\Delta t$, $u = v$</li>
+    <li>$Q = 2$ (모델 잡음)</li>
+    <li>$R = 4$ (측정 잡음)</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D 칼만 필터 (이동하는 목표)</h4>
+    <p>목표가 사인파처럼 움직입니다. 측정 잡음 $R$과 모델 잡음 $Q$를 조절하며 추정이 어떻게 변하는지 관찰하세요.</p>
     <canvas id="kf" width="640" height="280"></canvas>
     <div class="controls">
       <label>측정 잡음 R <span class="val" id="rV">3</span><input type="range" id="r" min="0.1" max="10" step="0.1" value="3"></label>
@@ -77,9 +337,7 @@
       const R=+sl('r').value,Q=+sl('q').value,dt=0.05,A=1,H=1;
       const truth=20+15*Math.sin(t*0.5);
       const meas=truth+(Math.random()*2-1)*Math.sqrt(R)*1.5;
-      // predict
       const xp=A*xh, Pp=A*P*A+Q;
-      // update
       const K=Pp*H/(H*Pp*H+R);
       xh=xp+K*(meas-H*xp);
       P=(1-K*H)*Pp;
@@ -89,39 +347,98 @@
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
       x.strokeStyle='#eee';for(let i=0;i<c.height;i+=40){x.beginPath();x.moveTo(0,i);x.lineTo(c.width,i);x.stroke();}
       const sx=v=>v*2, sy=v=>140-v*5;
-      // truth
       x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();
       hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.truth);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
-      // measurements
       x.fillStyle='#c62828';
       hist.forEach((h,i)=>{x.beginPath();x.arc(sx(i),sy(h.meas),1.5,0,Math.PI*2);x.fill();});
-      // estimate
       x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
       hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.est);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('K (현재 칼만 이득) = '+K.toFixed(3),12,260);
       requestAnimationFrame(loop);
     }
     upd();loop();
   })();
   </script>
 
-  <p><strong>실험해보세요</strong>: $R$을 매우 크게 하면 추정값이 둔해지고, $R$을 작게 하면 측정 노이즈를 그대로 따라갑니다. $Q$는 모델을 얼마나 믿지 않을지를 정합니다.</p>
+  <h2>9. 칼만 이득 $K$의 직감</h2>
+  <p>$K$는 0과 1 사이의 값으로, "측정을 얼마나 신뢰할지"를 결정합니다.</p>
+  $$ K = \frac{P_\text{predict}}{P_\text{predict} + R} $$
+  <ul>
+    <li>$R$이 작다 → 측정이 정확 → $K \approx 1$ → 측정을 거의 그대로 받아들임</li>
+    <li>$R$이 크다 → 측정이 잡음투성이 → $K \approx 0$ → 모델 예측만 신뢰</li>
+    <li>$P$가 크다 → 추정이 불확실 → $K \uparrow$ → 측정으로 빠르게 보정</li>
+  </ul>
 
-  <h2>4. 코드 예제 (Python)</h2>
+  <div class="demo">
+    <h4>🎮 인터랙티브: $K$의 시간 변화</h4>
+    <p>초기에 분산 $P$가 크므로 $K$가 거의 1입니다(측정을 그대로 받음). 시간이 지나며 $P$가 줄고 $K$도 작아져 안정됩니다.</p>
+    <canvas id="kgain" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="kgRV">5</span><input type="range" id="kgR" min="0.5" max="20" step="0.5" value="5"></label>
+      <label>Q <span class="val" id="kgQV">0.1</span><input type="range" id="kgQ" min="0" max="2" step="0.05" value="0.1"></label>
+      <button id="kgRst">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kgain'),x=c.getContext('2d');
+    let P,Khist,Phist,frame=0;
+    function init(){P=100;Khist=[];Phist=[];}
+    init();document.getElementById('kgRst').onclick=init;
+    function loop(){
+      if(frame++%5===0){
+        const R=+document.getElementById('kgR').value;
+        const Q=+document.getElementById('kgQ').value;
+        // predict
+        P=P+Q;
+        // K
+        const K=P/(P+R);
+        Khist.push(K);Phist.push(P);
+        if(Khist.length>120){Khist.shift();Phist.shift();}
+        // update
+        P=(1-K)*P;
+      }
+      ['kgR','kgQ'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#999';x.beginPath();x.moveTo(40,240);x.lineTo(620,240);x.moveTo(40,30);x.lineTo(40,240);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('스텝 →',560,255);x.fillText('K, P',12,40);
+      // K (0~1) 곡선
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      Khist.forEach((v,i)=>{const xx=40+i*4.8,yy=240-v*180;if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      // P (정규화) 곡선
+      const Pmax=Math.max(...Phist,1);
+      x.strokeStyle='#ff8c00';x.beginPath();
+      Phist.forEach((v,i)=>{const xx=40+i*4.8,yy=240-v/Pmax*180;if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#0b5fff';x.fillText('🔵 K (칼만 이득)',40,30);
+      x.fillStyle='#ff8c00';x.fillText('🟠 P (정규화 분산)',180,30);
+      x.fillStyle='#666';x.fillText('수렴 K ≈ '+(Khist[Khist.length-1]||0).toFixed(3),330,30);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>관찰 포인트: $Q=0$이면 $P$가 점점 줄어 $K\to 0$이 됩니다(측정을 무시하기 시작). $Q$가 크면 모델을 의심해 $K$가 0에 도달하지 못하고 측정에 계속 의존합니다.</p>
+
+  <h2>코드 예제 (Python)</h2>
   <pre><code>import numpy as np
 
+# 시스템 파라미터
 A, H = 1.0, 1.0
 Q, R = 0.1, 4.0          # process / measurement noise
 x_hat, P = 0.0, 1.0      # initial estimate
 
+# 진짜 값 + 잡음 측정
 truth = 50.0
 measurements = truth + np.random.randn(50)*np.sqrt(R)
 
 estimates = []
 for z in measurements:
-    # predict
+    # 1) 예측
     x_hat = A * x_hat
     P     = A * P * A + Q
-    # update
+    # 2) 갱신
     K = P * H / (H * P * H + R)
     x_hat = x_hat + K * (z - H * x_hat)
     P = (1 - K * H) * P
@@ -129,11 +446,18 @@ for z in measurements:
 
 print("최종 추정:", estimates[-1])    # ≈ 50</code></pre>
 
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong><a href="https://www.kalmanfilter.net/default.aspx">Kalman Filter from the Ground Up</a></strong> (Alex Becker) — 강의 노트가 참조하는 무료 온라인 교과서. 단계별 직관 설명이 일품입니다.</li>
+    <li><strong>Probabilistic Robotics</strong> (Thrun, Burgard, Fox) — 로봇 측위·SLAM의 표준 교과서, 2장이 필터의 기초.</li>
+    <li><strong><a href="https://underactuated.mit.edu/state_estimation.html">Underactuated Robotics 12장 — State Estimation</a></strong></li>
+  </ul>
+
   <nav class="prevnext">
     <a href="03-state-space.html"><small>← 이전</small>L3. 상태공간</a>
     <a href="05-kalman-2d.html" class="next"><small>다음 →</small>L5. 칼만 필터 2D</a>
   </nav>
 </main>
-<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
 </body>
 </html>
