@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>제어 장벽 함수 (CBF) — Robotics Lab</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🤖 Robotics & Autonomous Driving Lab</a></h1>
+  <nav>
+    <a href="../index.html">홈</a>
+    <a href="control-basics.html">제어 기초</a>
+    <a href="mpc.html">MPC</a>
+    <a href="cbf.html">CBF</a>
+    <a href="autonomous-driving.html">자율주행</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+<h2>3. 제어 장벽 함수 (Control Barrier Functions)</h2>
+<p>CBF는 시스템이 <strong>안전 집합 안에 영원히 머물도록</strong> 보장하는 수학적 도구입니다.
+"안전성을 부등식 제약 한 줄로 표현하고, 그것을 매 순간 만족시키도록 입력을 살짝 수정한다"는 것이 핵심 아이디어입니다.</p>
+
+<div class="toc"><h4>목차</h4><ol>
+<li>안전 집합과 불변성</li>
+<li>CBF의 정의</li>
+<li>CBF-QP: 안전 필터</li>
+<li>고차 CBF (HOCBF)</li>
+<li>MPC와의 결합</li>
+<li>코드 예제</li>
+</ol></div>
+
+<h3>3.1 안전 집합과 전방 불변성</h3>
+<p>안전 영역을 함수 $h(x)$ 의 0-superlevel set 으로 정의합니다.</p>
+<p>$$\mathcal{C} = \{ x \in \mathbb{R}^n \mid h(x) \ge 0 \}$$</p>
+<p>예: 장애물과의 거리가 $r$ 이상이어야 한다면 $h(x) = \|x - x_{\text{obs}}\|^2 - r^2$.</p>
+<p>안전성 보장 = $\mathcal{C}$ 가 <strong>전방 불변(forward invariant)</strong> = 한 번 안전하면 영원히 안전.</p>
+
+<figure>
+<svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="10" width="380" height="200" fill="#fff" stroke="#ccc"/>
+  <circle cx="280" cy="110" r="60" fill="#ffebee" stroke="#c62828" stroke-width="2"/>
+  <text x="260" y="115" font-size="13" fill="#c62828">장애물</text>
+  <text x="245" y="190" font-size="11" fill="#c62828">h(x) &lt; 0 위험</text>
+
+  <path d="M30,180 Q150,160 220,130" fill="none" stroke="#0b5fff" stroke-width="2.5"/>
+  <circle cx="220" cy="130" r="5" fill="#0b5fff"/>
+  <text x="40" y="175" font-size="11" fill="#0b5fff">로봇 궤적</text>
+
+  <text x="30" y="40" font-size="12" fill="#2e7d32">𝒞 = { h(x) ≥ 0 } 안전 집합</text>
+</svg>
+<figcaption>그림 1. 로봇은 안전 집합 𝒞 안에서만 움직여야 합니다. CBF는 경계를 절대 넘지 않도록 입력을 제한합니다.</figcaption>
+</figure>
+
+<h3>3.2 CBF의 정의</h3>
+<p>제어 시스템 $\dot{x} = f(x) + g(x) u$ 에 대해, $h$ 가 <strong>제어 장벽 함수</strong>라는 것은 다음 조건을 만족하는 입력 $u$ 가 존재한다는 뜻입니다.</p>
+<p>$$\underbrace{L_f h(x)}_{\partial h/\partial x \cdot f} + \underbrace{L_g h(x)}_{\partial h/\partial x \cdot g}\, u + \alpha(h(x)) \ge 0$$</p>
+<p>여기서 $\alpha(\cdot)$ 는 클래스-$\mathcal{K}$ 함수 (대표적으로 $\alpha(h)=\gamma h,\ \gamma>0$).</p>
+
+<div class="note">직관: $\dot{h} \ge -\alpha(h)$. 즉 $h$ 가 0에 가까워질수록(위험할수록) $h$ 의 감소율이 강하게 제한되어, 절대 0 아래로 내려가지 못합니다.</div>
+
+<h3>3.3 CBF-QP: 안전 필터</h3>
+<p>이미 어떤 명목 제어기 $u_{\text{nom}}(x)$ 가 있다고 합시다 (예: PID, LQR, 강화학습 정책). CBF는 이것을 <strong>최소한으로 수정</strong>해서 안전하게 만듭니다.</p>
+<p>$$
+\begin{aligned}
+u^* = \arg\min_{u}\quad & \tfrac{1}{2}\|u - u_{\text{nom}}(x)\|^2 \\
+\text{s.t.}\quad & L_f h(x) + L_g h(x) u + \alpha(h(x)) \ge 0 \\
+& u \in \mathcal{U}
+\end{aligned}
+$$</p>
+<p>이는 입력에 대해 <strong>선형 제약을 가진 QP</strong> 이므로 매우 빠르게(수십 마이크로초) 풀립니다.</p>
+
+<h3>3.4 고차 CBF (High-Order CBF)</h3>
+<p>$h$ 의 1차 미분에 입력 $u$ 가 직접 나타나지 않으면(상대 차수가 2 이상), 고차 CBF를 사용합니다. 예를 들어 위치만으로 정의된 $h$ 와 가속도 입력 차량의 경우</p>
+<p>$$\ddot{h} + \alpha_1 \dot{h} + \alpha_2 h \ge 0$$</p>
+
+<h3>3.5 MPC + CBF</h3>
+<p>우리 연구실이 자주 사용하는 구조:</p>
+<ul>
+<li><strong>MPC</strong>: 장기 성능과 추종을 담당 (예: 차선 추종, 속도 프로파일).</li>
+<li><strong>CBF</strong>: 매 스텝 안전성을 <em>수학적으로 보장</em> (예: 충돌 회피).</li>
+</ul>
+<p>MPC의 각 예측 스텝에 CBF 부등식을 제약으로 추가하거나, MPC 출력을 CBF-QP로 후처리하는 방식이 일반적입니다.</p>
+
+<h3>3.6 코드 예제: CBF 안전 필터</h3>
+<pre><code class="language-python">import numpy as np
+import cvxpy as cp
+
+# 2D 단적분기 로봇: dx = u
+x_obs = np.array([5., 5.])
+r = 1.5
+gamma = 2.0
+
+def h(x):                       # 안전 함수
+    return np.linalg.norm(x - x_obs)**2 - r**2
+
+def grad_h(x):                  # ∂h/∂x
+    return 2 * (x - x_obs)
+
+# 명목 제어기: 목표점으로 직진
+def u_nom(x, goal):
+    return 1.0 * (goal - x)
+
+def safe_filter(x, u_des):
+    u = cp.Variable(2)
+    cons = [grad_h(x) @ u + gamma * h(x) >= 0,
+            cp.norm(u, 'inf') <= 2.0]
+    prob = cp.Problem(cp.Minimize(cp.sum_squares(u - u_des)), cons)
+    prob.solve()
+    return u.value
+
+x = np.array([0., 0.])
+goal = np.array([10., 10.])
+dt = 0.05
+for k in range(400):
+    u_d = u_nom(x, goal)
+    u   = safe_filter(x, u_d)
+    x   = x + u * dt
+print("최종 위치:", x, "  h =", h(x))
+</code></pre>
+
+<div class="tip">위 코드는 명목 제어기가 장애물을 향해 돌진하더라도, CBF-QP가 입력을 자동으로 수정하여 절대 부딪히지 않게 만듭니다. 이것이 "안전 필터"의 핵심입니다.</div>
+
+<div class="prevnext">
+  <a href="mpc.html">← MPC</a>
+  <a href="autonomous-driving.html">다음: 자율주행 →</a>
+</div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© Robotics & Autonomous Driving Lab</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+</body>
+</html>
