@@ -22,34 +22,167 @@
   <p class="lead">로봇이 어떻게 "움직이는지"를 수학으로 표현해봅시다.</p>
 
   <div class="toc"><h4>목차</h4><ol>
-    <li>운동학 vs 동역학</li>
-    <li>좌표계</li>
-    <li>자전거 모델</li>
-    <li>수치 적분: 오일러 vs 룽게-쿠타</li>
+    <li>운동학과 동역학이란?</li>
+    <li>홀로노믹 vs 비홀로노믹 제약</li>
+    <li>좌표계와 자세 표현</li>
+    <li>속도 변환</li>
+    <li>운동학적 자전거 모델</li>
+    <li>동역학적 자전거 모델</li>
+    <li>해상 로봇의 동역학</li>
+    <li>수치 적분: ZOH · Euler · RK4</li>
+    <li>차륜형 로봇의 세 가지 모델</li>
   </ol></div>
 
-  <h2>1. 운동학 vs 동역학</h2>
-  <p><strong>운동학(Kinematics)</strong>은 "어떻게 움직이는가"의 기하학적 묘사입니다. 힘은 따지지 않습니다.<br>
-  <strong>동역학(Dynamics)</strong>은 "왜 그렇게 움직이는가"입니다. 힘과 질량을 다룹니다.</p>
-  <p>고등학교에서 배운 가장 친숙한 동역학 식이 바로 뉴턴의 제2법칙입니다.</p>
-  $$ F = m a, \quad \tau = I \alpha $$
-  <p>병진운동(직선)과 회전운동(돌기)에 똑같이 적용됩니다.</p>
-
-  <h2>2. 좌표계</h2>
-  <p>로봇은 항상 <strong>두 좌표계</strong>를 동시에 씁니다.</p>
+  <h2>1. 운동학과 동역학이란?</h2>
+  <p>로봇의 움직임을 수학으로 묘사할 때 두 시각을 구분합니다.</p>
   <ul>
-    <li><strong>관성 좌표계 (Inertial frame)</strong> — 지도 위 고정된 좌표. 움직이지 않는 기준.</li>
-    <li><strong>본체 좌표계 (Body frame)</strong> — 로봇과 함께 움직이는 좌표. 차의 "앞" 방향.</li>
+    <li><strong>운동학(Kinematics)</strong> — "공간에서 어떻게 움직이는가"의 <em>기하학적</em> 묘사. 위치, 속도, 가속도의 관계만 다루고 <em>힘은 따지지 않습니다</em>. "핸들을 30° 꺾으면 어느 곡선을 그릴까?"가 운동학 질문입니다.</li>
+    <li><strong>운동역학(Kinetics)</strong> — 힘과 모멘트가 어떻게 운동을 만들어내는가. "엔진이 100 N의 힘을 내면 가속도는 얼마인가?"가 운동역학 질문입니다.</li>
+    <li><strong>동역학(Dynamics)</strong> — Kinematics + Kinetics. 보통 동역학이라 하면 이 둘을 합친 것을 가리킵니다.</li>
   </ul>
-  <p>속도는 본체 좌표에서 측정하기 쉽지만(속도계), 위치는 관성 좌표에서 알아야 합니다(지도 위 점). 둘 사이를 변환하는 회전행렬이 필요합니다.</p>
 
-  <h2>3. 자전거 모델 (Bicycle Model)</h2>
-  <p>실제 자동차는 바퀴 4개지만, 좌우 대칭이므로 앞바퀴 1개·뒷바퀴 1개로 단순화한 <strong>자전거 모델</strong>이 자율주행 표준입니다.</p>
+  <p>가장 친숙한 동역학 식이 뉴턴의 제2법칙입니다. 병진(직선) 운동과 회전 운동에 동일한 형태로 적용됩니다.</p>
+  $$ F = m a \qquad (\text{병진}), \qquad \tau = I \alpha \qquad (\text{회전}) $$
+  <ul>
+    <li>$m$ — 질량, "직진하기 싫어하는 정도"</li>
+    <li>$I$ — 관성 모멘트(moment of inertia), "회전하기 싫어하는 정도". 같은 질량이라도 분포가 멀리 퍼져 있으면 $I$가 큽니다(피겨스케이팅 회전 시 팔 오므리기를 떠올려 보세요).</li>
+  </ul>
 
-  $$ \dot{x} = v\cos\theta, \quad \dot{y} = v\sin\theta, \quad \dot{\theta} = \frac{v}{L}\tan\delta $$
+  <p>로봇은 적용 환경에 따라 세 부류로 나뉘고, 각각 표준 모델이 있습니다.</p>
+  <table>
+    <thead><tr><th>분류</th><th>예시</th><th>표준 모델</th></tr></thead>
+    <tbody>
+      <tr><td>지상 (Ground)</td><td>승용차, 모바일 로봇</td><td>Bicycle, Differential drive</td></tr>
+      <tr><td>공중 (Aerial)</td><td>쿼드콥터 드론</td><td>6-DOF rigid body + thrust</td></tr>
+      <tr><td>해상 (Marine)</td><td>자율 운항선, AUV</td><td>Fossen 6-DOF marine model</td></tr>
+    </tbody>
+  </table>
 
-  <p>여기서 $v$는 속도, $\theta$는 차의 방향(heading), $\delta$는 조향각, $L$은 앞·뒷바퀴 사이 거리(축거)입니다.
-  이 세 식만 있으면 핸들과 페달로 차를 움직일 수 있습니다.</p>
+  <h2>2. 홀로노믹 vs 비홀로노믹 제약</h2>
+  <p>모든 로봇은 "갈 수 있는 방향"에 제약을 받습니다. 그 제약이 단순히 위치에 관한 것인지, 아니면 속도에 관한 것인지가 결정적인 차이를 만듭니다.</p>
+
+  <h3>홀로노믹 제약 (Holonomic)</h3>
+  <p>제약식이 위치 좌표만으로 표현되는 경우입니다. 예를 들어 진자의 줄 길이가 일정하다는 제약은 $x^2 + y^2 = L^2$로 위치만 가지고 적을 수 있습니다.
+  홀로노믹 시스템은 <strong>설정 공간(configuration space)에서 도달할 수 있는 곳을 모두 자유롭게 갈 수 있습니다</strong>.</p>
+
+  <h3>비홀로노믹 제약 (Non-holonomic)</h3>
+  <p>제약이 <em>속도</em>를 통해서만 표현되고 적분이 안 되는 경우입니다. 자동차가 대표적입니다.
+  자동차는 옆으로(차체 가로 방향으로) 직접 미끄러질 수 없습니다. 즉</p>
+  $$ \dot{x}\sin\theta - \dot{y}\cos\theta = 0 $$
+  <p>이라는 제약이 있고, 이 식은 $\theta(t)$를 모르고는 적분이 안 됩니다. 그래서 비홀로노믹입니다.</p>
+
+  <div class="tip">
+    <strong>왜 중요한가</strong> — 자동차는 옆으로 못 가지만, 평행 주차를 할 수는 있습니다. 이게 가능한 이유는 비홀로노믹 시스템에서도 적절한 입력 시퀀스를 주면 결국 임의의 위치·자세에 도달할 수 있다는 사실(<em>local controllability</em>) 덕분입니다. Russ Tedrake의 <a href="https://underactuated.mit.edu/index.html">Underactuated Robotics</a> 5장은 이런 시스템의 제어를 깊이 다룹니다.
+  </div>
+
+  <p>비홀로노믹 시스템의 또 다른 예는 항공기와 선박입니다. 둘 다 정지 상태에서 옆으로 갈 수 없습니다. 반면 옴니휠(omni-wheel) 로봇이나 호버크래프트는 모든 방향으로 자유롭게 움직일 수 있어 홀로노믹에 가깝습니다.</p>
+
+  <h2>3. 좌표계와 자세 표현</h2>
+  <p>로봇 운동을 기술할 때는 항상 <strong>두 좌표계</strong>가 동시에 등장합니다.</p>
+
+  <ul>
+    <li><strong>관성 좌표계(Inertial frame, $\{I\}$)</strong> — 공간에 고정된 기준 좌표계. 보통 지구의 한 점을 원점으로 잡습니다. "지도"라고 생각하면 됩니다. 뉴턴의 법칙은 관성 좌표계에서만 직접 성립합니다.</li>
+    <li><strong>본체 좌표계(Body-fixed frame, $\{B\}$)</strong> — 로봇과 함께 움직이는 좌표계. 보통 차량의 무게중심을 원점으로 잡고 $x$축을 진행 방향, $z$축을 위쪽으로 정합니다.</li>
+  </ul>
+
+  <p>왜 두 개나 필요할까요? <strong>측정은 본체에서, 추론은 관성 좌표에서</strong>이기 때문입니다.</p>
+  <ul>
+    <li>속도계, 자이로, IMU는 모두 차에 붙어 있으므로 본체 좌표 값을 줍니다.</li>
+    <li>지도 위 위치, 목표점, 장애물은 관성 좌표에서 정의됩니다.</li>
+    <li>둘 사이를 오가려면 회전 변환이 필요합니다.</li>
+  </ul>
+
+  <h3>2D 회전 변환</h3>
+  <p>본체 좌표 $(u, v)$의 속도(전·후, 좌·우)를 관성 좌표의 $(\dot x, \dot y)$로 바꾸는 식:</p>
+  $$ \begin{bmatrix} \dot x \\ \dot y \end{bmatrix} = \begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \;\cos\theta \end{bmatrix} \begin{bmatrix} u \\ v \end{bmatrix} $$
+  <p>여기서 $\theta$는 차량이 관성 좌표에서 향하고 있는 각도(heading)입니다.</p>
+
+  <h3>3D 자세: Roll-Pitch-Yaw (Euler angles)</h3>
+  <p>3차원에서는 자세를 표현하는 가장 직관적인 방법이 세 축에 대한 회전을 차례로 적용하는 것입니다.</p>
+  <ul>
+    <li><strong>Yaw $\psi$</strong> — $z$축(수직) 회전. 자동차가 좌·우로 도는 것.</li>
+    <li><strong>Pitch $\theta$</strong> — $y$축 회전. 비행기가 머리를 들거나 내리는 것.</li>
+    <li><strong>Roll $\phi$</strong> — $x$축 회전. 비행기가 좌우로 기울어지는 것.</li>
+  </ul>
+  <p>일반적인 항공·선박 표준 순서(ZYX)에서는 $Yaw \to Pitch \to Roll$ 순으로 회전을 적용합니다.</p>
+  $$ R = R_z(\psi)\, R_y(\theta)\, R_x(\phi) $$
+  <p>이 행렬을 본체 좌표 벡터에 곱하면 관성 좌표 벡터가 나옵니다. Euler angles는 직관적이지만 <em>gimbal lock</em>이라는 특이점이 있어, 실제 비행 제어에서는 quaternion이나 회전 행렬을 직접 사용합니다.</p>
+
+  <h2>4. 속도 변환</h2>
+  <p>병진 속도는 위에서 본 회전 행렬로 변환합니다. 각속도(angular velocity)도 관성 좌표 표현 $\boldsymbol\omega$와 본체 좌표 표현 $^B\boldsymbol\omega$가 다르며 회전 행렬로 연결됩니다.</p>
+  $$ \boldsymbol\omega = R \, {}^B\!\boldsymbol\omega $$
+  <p>2D 평면 운동에서는 $\dot\theta$가 곧 yaw 각속도이므로 단순합니다.</p>
+
+  <h2>5. 운동학적 자전거 모델 (Kinematic Bicycle)</h2>
+  <p>실제 자동차는 바퀴가 4개이지만 좌우 대칭이므로, 가운데에 있는 가상의 앞바퀴 1개와 뒷바퀴 1개만 생각하는 <strong>자전거 모델</strong>이 자율주행 분야의 표준입니다.</p>
+
+  <p>가정:</p>
+  <ul>
+    <li>바퀴는 옆으로 미끄러지지 않는다 (no side slip)</li>
+    <li>저속이라 타이어와 도로의 힘은 무시할 수 있다 (=운동학적 모델)</li>
+  </ul>
+
+  <p>상태 변수는 $(x, y, \theta)$ — 평면 위 위치와 heading. 입력은 $(v, \delta)$ — 속도와 조향각. 그러면:</p>
+  $$ \dot x = v\cos\theta, \quad \dot y = v\sin\theta, \quad \dot\theta = \frac{v}{L}\tan\delta $$
+  <p>여기서 $L$은 앞·뒷바퀴 사이 거리(<strong>축거, wheelbase</strong>). 마지막 식에서 회전 반경은</p>
+  $$ R = \frac{L}{\tan\delta} $$
+  <p>으로 결정됩니다. 즉 같은 조향각이라도 축거가 길수록 회전 반경이 커집니다 — 대형 트럭이 코너에서 크게 도는 이유입니다.</p>
+
+  <h2>6. 동역학적 자전거 모델 (Dynamic Bicycle)</h2>
+  <p>고속에서는 타이어와 노면 사이의 횡력(lateral force)이 무시할 수 없을 정도로 커집니다. 이때는 힘을 직접 다루는 <strong>동역학적 자전거 모델</strong>이 필요합니다.</p>
+
+  <p>상태 변수는 운동학 모델보다 늘어나서 $(x, y, \theta, v_x, v_y, \dot\theta)$ — 본체 좌표의 전·후·각속도까지 포함합니다. 입력은 (앞바퀴 조향각 $\delta$, 가속력 $F_x$). 운동 방정식은 다음과 같은 형태입니다.</p>
+  $$ m\,\dot v_y = -m v_x \dot\theta + F_{yf}\cos\delta + F_{yr} $$
+  $$ I_z\,\ddot\theta = l_f\,F_{yf}\cos\delta - l_r\,F_{yr} $$
+  <p>여기서 $F_{yf}, F_{yr}$은 앞·뒷바퀴의 횡력으로, 보통 슬립 각도(slip angle)에 비례하는 선형 모델이나 비선형 Pacejka 타이어 모델로 표현합니다.</p>
+
+  <div class="note">
+    <strong>언제 어느 모델을 쓸까?</strong> 약 5 m/s 이하의 저속(주차장, 좁은 운하, 모바일 로봇)에서는 운동학적 모델로 충분합니다. 고속도로 주행이나 코너 컷팅 같은 동적 상황에서는 동역학적 모델이 필요합니다. 자율주행 연구에서는 보통 <em>운동학 모델</em>로 경로 계획을 하고, <em>동역학 모델</em>로 저수준 제어를 합니다.
+  </div>
+
+  <h2>7. 해상 로봇의 동역학</h2>
+  <p>SAIL 연구실에서 다루는 12인승 자율 운항선 같은 해상 로봇은 자동차보다 훨씬 복잡합니다. 물의 저항, 부력, 추가 질량 같은 효과가 모두 한 식 안에 들어옵니다.</p>
+
+  <p>해양공학의 표준은 <em>Fossen의 6자유도 선박 모델</em>입니다 (전·후·상·하·roll·pitch·yaw 6개 운동).</p>
+  $$ M\,\dot{\boldsymbol\nu} + C(\boldsymbol\nu)\,\boldsymbol\nu + D(\boldsymbol\nu)\,\boldsymbol\nu + g(\boldsymbol\eta) = \boldsymbol\tau $$
+  <ul>
+    <li>$\boldsymbol\nu$ — 본체 좌표의 6차원 속도</li>
+    <li>$\boldsymbol\eta$ — 관성 좌표의 6차원 위치·자세</li>
+    <li>$M$ — 질량 + <em>추가 질량(added mass)</em>. 물체가 움직일 때 주변 물도 함께 가속되므로 실효 질량이 커집니다.</li>
+    <li>$C(\boldsymbol\nu)$ — 코리올리·구심력</li>
+    <li>$D(\boldsymbol\nu)$ — 유체 저항(damping). 보통 선형 항과 $|v|v$ 비선형 항이 함께 있음</li>
+    <li>$g(\boldsymbol\eta)$ — 정수력(부력 - 중력)</li>
+    <li>$\boldsymbol\tau$ — 추진기·러더·핀이 만드는 힘과 모멘트</li>
+  </ul>
+
+  <p>예시 사양: 길이 7.9 m, 폭 2.6 m, 질량 약 2,100 kg, 150 hp 모터. 이런 배가 폭 2.6 m 운하에서 안전하게 다니려면 위 방정식을 정확히 풀어서 제어해야 합니다.</p>
+
+  <h2>8. 수치 적분 — 미분방정식 컴퓨터로 풀기</h2>
+  <p>위에서 본 모든 모델은 $\dot{\mathbf x} = f(\mathbf x, \mathbf u)$ 형태의 연속 시간 미분방정식입니다. 컴퓨터는 연속 시간을 다룰 수 없으니 작은 시간 간격 $\Delta t$로 잘라야 합니다.</p>
+
+  <h3>입력의 가정: Zero-Order Hold (ZOH)</h3>
+  <p>일반적으로 한 번 계산한 제어 입력은 다음 샘플 시각까지 그대로 유지된다고 가정합니다. 이를 <em>0차 유지(zero-order hold)</em>라 하고, 디지털 제어의 표준 가정입니다.</p>
+
+  <h3>오일러 방법 (Euler's Method)</h3>
+  <p>가장 단순한 방법: 현재 점의 기울기를 구해 그대로 한 스텝 전진합니다.</p>
+  $$ \mathbf x_{k+1} = \mathbf x_k + f(\mathbf x_k, \mathbf u_k) \,\Delta t $$
+  <p>구현이 한 줄이지만, 한 스텝의 오차가 $O(\Delta t^2)$이고 누적 오차는 $O(\Delta t)$로 큽니다. 곡선 운동에서 빠르게 발산할 수 있습니다.</p>
+
+  <h3>룽게-쿠타 4차 (Runge-Kutta 4, RK4)</h3>
+  <p>한 스텝 안에서 4번 기울기를 평가해 평균을 냅니다.</p>
+  $$ \begin{aligned}
+  k_1 &= f(\mathbf x_k, \mathbf u_k) \\
+  k_2 &= f(\mathbf x_k + \tfrac{\Delta t}{2} k_1, \mathbf u_k) \\
+  k_3 &= f(\mathbf x_k + \tfrac{\Delta t}{2} k_2, \mathbf u_k) \\
+  k_4 &= f(\mathbf x_k + \Delta t\, k_3, \mathbf u_k) \\
+  \mathbf x_{k+1} &= \mathbf x_k + \tfrac{\Delta t}{6}(k_1 + 2 k_2 + 2 k_3 + k_4)
+  \end{aligned} $$
+  <p>계산량은 4배지만 한 스텝의 오차가 $O(\Delta t^5)$로 극적으로 작아집니다. 대부분의 로봇 시뮬레이터(Drake, MuJoCo, Gazebo)가 RK4 또는 더 정교한 implicit 적분을 디폴트로 씁니다.</p>
+
+  <div class="tip">
+    <strong>핵심 직감</strong> — $\Delta t$를 절반으로 줄이면 Euler의 오차는 1/2이지만 RK4의 오차는 1/16이 됩니다. 그래서 RK4는 큰 $\Delta t$에서도 정확하고, 실시간 시스템에서 계산량을 아낄 수 있습니다.
+    아래 데모에서 직접 확인해보세요.
+  </div>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 자전거 모델 운전하기</h4>
@@ -115,26 +248,21 @@
   })();
   </script>
 
-  <h2>4. 수치 적분: 오일러 vs 룽게-쿠타</h2>
-  <p>위 미분방정식을 컴퓨터로 풀려면 작은 시간 간격 $\Delta t$로 나누어 한 스텝씩 전진해야 합니다.</p>
-
-  <h3>오일러 (가장 단순)</h3>
-  $$ x_{k+1} = x_k + f(x_k, u_k) \,\Delta t $$
-  <p>한 스텝의 변화량을 그대로 더합니다. 빠르지만 부정확합니다.</p>
-
-  <h3>룽게-쿠타 4차 (RK4, 표준)</h3>
-  $$ x_{k+1} = x_k + \frac{\Delta t}{6}(k_1 + 2k_2 + 2k_3 + k_4) $$
-  <p>한 스텝 안에서 4번 기울기를 구해 평균합니다. 4배 느리지만 오차는 수백 배 작습니다.</p>
-
   <h3>코드 예제 (Python)</h3>
   <pre><code>import numpy as np
 import matplotlib.pyplot as plt
 
 def f(x, u, L=2.5):
+    """운동학적 자전거 모델: dx/dt = f(x, u)"""
     v, delta = u
-    return np.array([v*np.cos(x[2]), v*np.sin(x[2]), v/L*np.tan(delta)])
+    return np.array([
+        v*np.cos(x[2]),       # ẋ
+        v*np.sin(x[2]),       # ẏ
+        v/L*np.tan(delta),    # θ̇
+    ])
 
-def euler(x, u, dt): return x + f(x,u)*dt
+def euler(x, u, dt):
+    return x + f(x, u)*dt
 
 def rk4(x, u, dt):
     k1 = f(x, u)
@@ -146,14 +274,12 @@ def rk4(x, u, dt):
 x = np.array([0., 0., 0.])
 traj = [x.copy()]
 for _ in range(200):
-    x = rk4(x, (5.0, 0.1), 0.05)   # v=5 m/s, δ=0.1 rad
+    x = rk4(x, (5.0, 0.1), 0.05)    # v=5 m/s, δ=0.1 rad
     traj.append(x.copy())
 traj = np.array(traj)
 plt.plot(traj[:,0], traj[:,1]); plt.axis('equal'); plt.show()</code></pre>
 
-  <div class="tip"><strong>핵심 직감</strong> — $\Delta t$가 작을수록 두 방법 모두 정확해집니다. 하지만 RK4는 큰 $\Delta t$에서도 잘 버팁니다. 실시간 시스템에서 계산량을 아낄 때 매우 중요합니다.</div>
-
-  <h2>5. 차륜형 로봇의 세 가지 모델</h2>
+  <h2>9. 차륜형 로봇의 세 가지 운동학 모델</h2>
   <p>같은 "바퀴 달린 로봇"이라도 구동 방식에 따라 운동학이 다릅니다.
   <a href="https://github.com/AtsushiSakai/PythonRobotics">PythonRobotics</a>의 차량 모델을 참고해 세 가지를 비교합니다.</p>
 
@@ -235,7 +361,9 @@ plt.plot(traj[:,0], traj[:,1]); plt.axis('equal'); plt.show()</code></pre>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 오일러 vs RK4 정확도</h4>
-    <p>회전하는 단진동 시스템 $\ddot x = -x$(원형 궤도)를 두 방법으로 풉니다. 진짜 답은 단위원이지만 큰 $\Delta t$에서는 오일러가 점점 바깥으로 새 나가고 RK4는 거의 정확합니다.</p>
+    <p>2차 진동 시스템 $\ddot x = -x$ (해석해는 정확한 단위원)을 두 방법으로 적분합니다.
+    Euler는 매 스텝 약간씩 바깥으로 새어나가 나선형으로 발산하고, RK4는 단위원 위에 거의 정확히 머무릅니다.
+    <strong>$\Delta t$를 0.4까지 키워보세요</strong> — Euler가 한 바퀴도 못 도는 것이 보입니다.</p>
     <canvas id="rkc" width="640" height="320"></canvas>
     <div class="controls">
       <label>Δt <span class="val" id="dtV">0.2</span><input type="range" id="dt" min="0.02" max="0.4" step="0.01" value="0.2"></label>
@@ -245,14 +373,12 @@ plt.plot(traj[:,0], traj[:,1]); plt.axis('equal'); plt.show()</code></pre>
   <script>
   (function(){
     const c=document.getElementById('rkc'),x=c.getContext('2d');
-    let eul,rk4,t;
-    function init(){eul=[1,0];rk4=[1,0];t=0;}
+    let eul,rk4,t,eulTrail,rkTrail,frame=0;
+    function init(){eul=[1,0];rk4=[1,0];t=0;eulTrail=[];rkTrail=[];}
     init();document.getElementById('rkR').onclick=init;
     function f(s){return [s[1],-s[0]];}
-    function loop(){
+    function step(){
       const dt=+document.getElementById('dt').value;
-      document.getElementById('dtV').textContent=dt.toFixed(2);
-      // step
       const k1=f(eul);eul=[eul[0]+k1[0]*dt,eul[1]+k1[1]*dt];
       const r=rk4;
       const a1=f(r);
@@ -260,24 +386,48 @@ plt.plot(traj[:,0], traj[:,1]); plt.axis('equal'); plt.show()</code></pre>
       const a3=f([r[0]+a2[0]*dt/2,r[1]+a2[1]*dt/2]);
       const a4=f([r[0]+a3[0]*dt,r[1]+a3[1]*dt]);
       rk4=[r[0]+dt/6*(a1[0]+2*a2[0]+2*a3[0]+a4[0]),r[1]+dt/6*(a1[1]+2*a2[1]+2*a3[1]+a4[1])];
+      eulTrail.push([...eul]);if(eulTrail.length>500)eulTrail.shift();
+      rkTrail.push([...rk4]);if(rkTrail.length>500)rkTrail.shift();
       t+=dt;
+    }
+    function loop(){
+      // 10프레임마다 한 번만 적분 → 약 6 step/sec (sim 1초에 ~10초의 실제 시간)
+      if(frame++%10===0)step();
+      const dt=+document.getElementById('dt').value;
+      document.getElementById('dtV').textContent=dt.toFixed(2);
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
       const cx=320,cy=160,sc=100;
-      // truth circle
+      // 정답 단위원
       x.strokeStyle='#a5d6a7';x.lineWidth=2;x.beginPath();x.arc(cx,cy,sc,0,Math.PI*2);x.stroke();
-      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('🟢 정답 (단위원)',20,30);
-      x.fillStyle='#c62828';x.fillText('🔴 오일러: '+Math.hypot(eul[0],eul[1]).toFixed(3),20,50);
-      x.fillStyle='#0b5fff';x.fillText('🔵 RK4: '+Math.hypot(rk4[0],rk4[1]).toFixed(3),20,70);
-      x.fillStyle='#c62828';x.beginPath();x.arc(cx+eul[0]*sc,cy+eul[1]*sc,5,0,Math.PI*2);x.fill();
-      x.fillStyle='#0b5fff';x.beginPath();x.arc(cx+rk4[0]*sc,cy+rk4[1]*sc,5,0,Math.PI*2);x.fill();
-      if(t>20)init();
+      // 자취
+      x.strokeStyle='rgba(198,40,40,0.5)';x.lineWidth=1.5;x.beginPath();
+      eulTrail.forEach((p,i)=>{const xx=cx+p[0]*sc,yy=cy+p[1]*sc;if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='rgba(11,95,255,0.5)';x.beginPath();
+      rkTrail.forEach((p,i)=>{const xx=cx+p[0]*sc,yy=cy+p[1]*sc;if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      // 텍스트
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('🟢 정답 (반지름 1)',20,30);
+      x.fillStyle='#c62828';x.fillText('🔴 Euler 반지름: '+Math.hypot(eul[0],eul[1]).toFixed(3),20,50);
+      x.fillStyle='#0b5fff';x.fillText('🔵 RK4   반지름: '+Math.hypot(rk4[0],rk4[1]).toFixed(3),20,70);
+      x.fillStyle='#666';x.fillText('시간 t = '+t.toFixed(1)+' s',20,90);
+      // 점
+      x.fillStyle='#c62828';x.beginPath();x.arc(cx+eul[0]*sc,cy+eul[1]*sc,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(cx+rk4[0]*sc,cy+rk4[1]*sc,6,0,Math.PI*2);x.fill();
+      if(t>30)init();
       requestAnimationFrame(loop);
     }
     loop();
   })();
   </script>
 
-  <p>$\Delta t = 0.4$로 두면 오일러는 한 바퀴도 못 돌아 폭발합니다. RK4는 $\Delta t$를 키워도 단위원 근처에 머무릅니다.</p>
+  <p>$\Delta t = 0.4$로 두면 Euler는 한 바퀴도 못 돌아 폭발합니다. RK4는 $\Delta t$를 키워도 단위원 근처에 머무릅니다. 이게 바로 RK4가 표준이 된 이유입니다.</p>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong><a href="https://underactuated.mit.edu/index.html">Underactuated Robotics</a></strong> (MIT, Russ Tedrake) — 라그랑지안 역학, manipulator equations, 비선형 동역학을 자세히 다룹니다. 1·2·3장이 이 강의의 자연스러운 후속 학습입니다.</li>
+    <li><strong>Handbook of Marine Craft Hydrodynamics and Motion Control</strong> (T. Fossen) — 해상 로봇 동역학의 표준 교과서.</li>
+    <li><strong>Vehicle Dynamics and Control</strong> (R. Rajamani) — 동역학적 자전거 모델과 타이어 모델의 정석.</li>
+    <li><strong><a href="https://github.com/AtsushiSakai/PythonRobotics">PythonRobotics</a></strong> — 위의 모든 모델이 짧은 파이썬 코드로 구현되어 있습니다.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="01-intro.html"><small>← 이전</small>L1. 입문</a>
