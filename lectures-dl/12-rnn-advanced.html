@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W12. RNN 심화 & 시계열 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 12. RNN 심화 — GRU · BiLSTM · 시계열 예측</h1>
+  <p class="lead">LSTM의 사촌들과 시계열 예측 응용을 살펴봅니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>GRU — LSTM의 슬림 버전</li>
+    <li>양방향 LSTM (BiLSTM)</li>
+    <li>다층 LSTM</li>
+    <li>시계열 예측</li>
+    <li>인터랙티브 사인파 예측</li>
+  </ol></div>
+
+  <h2>1. GRU (Gated Recurrent Unit)</h2>
+  <p>LSTM의 3개 게이트와 셀 상태를 단순화해, 게이트 2개와 hidden state 하나만 씁니다.</p>
+  $$ r_t = \sigma(W_r [h_{t-1}, x_t]) \quad \text{(리셋)} $$
+  $$ z_t = \sigma(W_z [h_{t-1}, x_t]) \quad \text{(업데이트)} $$
+  $$ h_t = (1 - z_t)\, h_{t-1} + z_t\, \tilde{h}_t $$
+  <p>파라미터가 LSTM보다 약 25–33% 적어 학습이 빠르고 메모리도 덜 듭니다. 성능 차이는 데이터에 따라 다릅니다.</p>
+
+  <h2>2. 양방향 LSTM (BiLSTM)</h2>
+  <p>문장을 왼쪽 → 오른쪽으로 한 번, 오른쪽 → 왼쪽으로 한 번 읽고 두 결과를 이어 붙입니다.</p>
+  $$ h_t = [\,\overrightarrow{h_t}\,;\,\overleftarrow{h_t}\,] $$
+  <p>"그는 _____을 좋아한다"의 빈칸을 채울 때 뒷문장도 활용할 수 있어 매우 유용합니다.</p>
+
+  <h2>3. 다층 LSTM (Stacked LSTM)</h2>
+  <p>한 LSTM의 출력을 다른 LSTM의 입력으로 넣어 층을 쌓습니다.
+  깊이가 늘어날수록 더 복잡한 시퀀스 패턴을 잡을 수 있지만 과적합 위험도 커지므로 보통 <code>dropout=0.3</code>을 함께 씁니다.</p>
+
+  <h2>4. 시계열 예측</h2>
+  <p>대표 응용은 "지난 30분의 값으로 다음 1분 예측"입니다.</p>
+  $$ \hat{y}_{t} = f([x_{t-30}, x_{t-29}, \dots, x_{t-1}]) $$
+  <p>슬라이딩 윈도우로 학습 샘플을 만들고, 마지막 hidden state를 FC 층에 통과시켜 한 값을 예측합니다.</p>
+
+  <table>
+    <thead><tr><th>모델</th><th>파라미터</th><th>속도</th><th>장점</th></tr></thead>
+    <tbody>
+      <tr><td>RNN</td><td>적음</td><td>빠름</td><td>단순, 짧은 시퀀스</td></tr>
+      <tr><td>LSTM</td><td>많음</td><td>중간</td><td>장기 의존성 강함</td></tr>
+      <tr><td>GRU</td><td>중간</td><td>빠름</td><td>LSTM에 가까운 성능</td></tr>
+      <tr><td>BiLSTM</td><td>2배</td><td>느림</td><td>양쪽 문맥 모두</td></tr>
+    </tbody>
+  </table>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 시계열 예측</h4>
+    <p>잡음 섞인 사인파 데이터입니다. 윈도우 크기를 바꾸며 예측이 어떻게 변하는지 보세요. (간이 1층 LSTM 시뮬레이션)</p>
+    <canvas id="ts" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>윈도우 크기 W <span class="val" id="wV">10</span><input type="range" id="w" min="3" max="30" value="10"></label>
+      <label>잡음 강도 <span class="val" id="nV">0.1</span><input type="range" id="n" min="0" max="0.4" step="0.02" value="0.1"></label>
+      <button id="rg">재생성</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ts'),x=c.getContext('2d');
+    let truth=[],noisy=[];
+    function gen(){
+      truth=[];noisy=[];
+      const noise=+document.getElementById('n').value;
+      for(let t=0;t<200;t++){
+        const v=Math.sin(t*0.15)+0.3*Math.sin(t*0.05);
+        truth.push(v);
+        noisy.push(v+(Math.random()-0.5)*noise*2);
+      }
+    }
+    gen();document.getElementById('rg').onclick=gen;document.getElementById('n').onchange=gen;
+    function predict(W){
+      // simple weighted-average (toy LSTM): prediction = recent weighted mean
+      const weights=Array.from({length:W},(_,i)=>(i+1)/(W*(W+1)/2));
+      const pred=[];
+      for(let t=W;t<noisy.length;t++){
+        let s=0;for(let k=0;k<W;k++)s+=weights[k]*noisy[t-W+k];
+        pred.push({t,v:s});
+      }
+      return pred;
+    }
+    function loop(){
+      const W=+document.getElementById('w').value;
+      document.getElementById('wV').textContent=W;
+      document.getElementById('nV').textContent=document.getElementById('n').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const sx=t=>40+t*3, sy=v=>160-v*70;
+      x.strokeStyle='#eee';x.beginPath();x.moveTo(40,160);x.lineTo(640,160);x.stroke();
+      // truth
+      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.beginPath();
+      truth.forEach((v,i)=>{if(i==0)x.moveTo(sx(i),sy(v));else x.lineTo(sx(i),sy(v));});x.stroke();
+      // noisy
+      x.fillStyle='rgba(198,40,40,0.6)';
+      noisy.forEach((v,i)=>{x.beginPath();x.arc(sx(i),sy(v),1.5,0,Math.PI*2);x.fill();});
+      // prediction
+      const pred=predict(W);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      pred.forEach((p,i)=>{if(i==0)x.moveTo(sx(p.t),sy(p.v));else x.lineTo(sx(p.t),sy(p.v));});x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('🟢 실제 · 🔴 잡음 측정 · 🔵 예측',40,295);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>윈도우가 너무 작으면 잡음을 그대로 따라가고, 너무 크면 반응이 둔해집니다.</p>
+
+  <h2>5. PyTorch 코드</h2>
+  <pre><code># 시계열 LSTM
+class TSLSTM(nn.Module):
+    def __init__(self, hidden=32):
+        super().__init__()
+        self.lstm = nn.LSTM(1, hidden, batch_first=True)
+        self.fc = nn.Linear(hidden, 1)
+    def forward(self, x):                # x: (B, T, 1)
+        out, _ = self.lstm(x)
+        return self.fc(out[:, -1, :]).squeeze(1)
+
+# BiLSTM
+self.lstm = nn.LSTM(embed_dim, hidden_dim,
+                    bidirectional=True, batch_first=True)
+self.fc   = nn.Linear(hidden_dim*2, 1)   # 양쪽 출력 결합
+
+# Multi-layer LSTM with dropout
+self.lstm = nn.LSTM(embed_dim, hidden_dim,
+                    num_layers=2, dropout=0.3, batch_first=True)</code></pre>
+
+  <nav class="prevnext">
+    <a href="11-rnn-lstm.html"><small>← 이전</small>W11. RNN & LSTM</a>
+    <a href="13-transformer-llm.html" class="next"><small>다음 →</small>W13. 트랜스포머 & LLM</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+</body>
+</html>

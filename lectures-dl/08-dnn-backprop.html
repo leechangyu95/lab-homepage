@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W8. 심층신경망 & 역전파 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 8. 심층신경망과 역전파</h1>
+  <p class="lead">한 층짜리 MLP를 깊게 쌓고, 역전파 수식을 직접 따라가 봅시다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 깊게 쌓는가</li>
+    <li>순전파 한 줄 정리</li>
+    <li>역전파의 핵심: 연쇄법칙</li>
+    <li>옵티마이저: SGD, Momentum, Adam</li>
+    <li>드롭아웃과 배치 정규화</li>
+    <li>인터랙티브 학습 데모</li>
+  </ol></div>
+
+  <h2>1. 왜 깊게 쌓는가?</h2>
+  <p>은닉층 1개로도 이론적으로는 어떤 함수도 근사할 수 있지만(보편 근사 정리), 실제로는 폭이 폭발적으로 커야 합니다.
+  <strong>층을 깊게</strong> 쌓으면 같은 능력을 훨씬 적은 파라미터로 표현할 수 있습니다.</p>
+
+  <h2>2. 순전파 (Forward Pass)</h2>
+  $$ \mathbf{a}^{[l]} = \sigma\!\bigl(W^{[l]} \mathbf{a}^{[l-1]} + \mathbf{b}^{[l]}\bigr) $$
+  <p>입력 $\mathbf{a}^{[0]}$가 첫 층부터 마지막 층까지 차례대로 변환됩니다.</p>
+
+  <h2>3. 역전파 (Backpropagation)</h2>
+  <p>출력에서 손실 $\mathcal{L}$을 계산한 뒤, <strong>연쇄법칙</strong>으로 모든 $W$에 대한 기울기를 한 번에 구합니다.</p>
+  $$ \frac{\partial \mathcal{L}}{\partial W^{[l]}} = \frac{\partial \mathcal{L}}{\partial \mathbf{a}^{[l]}} \cdot \frac{\partial \mathbf{a}^{[l]}}{\partial \mathbf{z}^{[l]}} \cdot \frac{\partial \mathbf{z}^{[l]}}{\partial W^{[l]}} $$
+  <p>핵심 직감: 마지막 층의 오차를 거꾸로(뒤에서 앞으로) 흘려보내면서 각 가중치가 손실에 얼마나 기여했는지 알아냅니다.</p>
+
+  <h2>4. 옵티마이저</h2>
+  <table>
+    <thead><tr><th>이름</th><th>업데이트 규칙</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>SGD</td><td>$w \leftarrow w - \alpha \nabla_w \mathcal{L}$</td><td>단순, 느림</td></tr>
+      <tr><td>Momentum</td><td>$v \leftarrow \beta v + \nabla_w$, $w \leftarrow w - \alpha v$</td><td>관성으로 가속</td></tr>
+      <tr><td>Adam</td><td>1차·2차 모멘트 적응</td><td>대부분 디폴트</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. 과적합 방지</h2>
+  <ul>
+    <li><strong>드롭아웃</strong> — 학습 중 뉴런을 확률 $p$로 끔. 앙상블 효과.</li>
+    <li><strong>배치 정규화</strong> — 각 층 입력의 평균 0, 분산 1로 정규화.</li>
+    <li><strong>조기 종료</strong> — 검증 손실이 다시 오르면 학습 중단.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 깊은 MLP가 나선형 데이터 학습</h4>
+    <p>2개의 나선이 얽힌 데이터입니다. 깊이와 학습률을 조절하며 결정 경계가 자라는 모습을 보세요.</p>
+    <canvas id="dnn" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>은닉층 폭 H <span class="val" id="hV">10</span><input type="range" id="h" min="3" max="20" value="10"></label>
+      <label>학습률 α <span class="val" id="lrV">0.05</span><input type="range" id="lr" min="0.005" max="0.3" step="0.005" value="0.05"></label>
+      <button id="rst">재학습</button>
+    </div>
+    <p style="font-size:13px;color:#666"><span id="ep"></span></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dnn'),x=c.getContext('2d');
+    let H=10,W1,b1,W2,b2,W3,b3,epoch=0,data=[];
+    function gen(){
+      data=[];
+      for(let i=0;i<60;i++){
+        const r=i/60*3,t=r*1.8;
+        data.push({x:r*Math.cos(t),y:r*Math.sin(t),c:0});
+        data.push({x:-r*Math.cos(t),y:-r*Math.sin(t),c:1});
+      }
+    }
+    function init(){
+      H=+document.getElementById('h').value;gen();
+      W1=Array.from({length:H},()=>[Math.random()*2-1,Math.random()*2-1]);
+      b1=Array.from({length:H},()=>Math.random()*2-1);
+      W2=Array.from({length:H},()=>Array.from({length:H},()=>Math.random()*0.6-0.3));
+      b2=Array.from({length:H},()=>Math.random()*0.6-0.3);
+      W3=Array.from({length:H},()=>Math.random()*0.6-0.3);
+      b3=Math.random()*0.6-0.3;epoch=0;
+    }
+    document.getElementById('rst').onclick=init;
+    document.getElementById('h').onchange=init;
+    init();
+    function fwd(x1,x2){
+      const z1=W1.map((w,i)=>w[0]*x1+w[1]*x2+b1[i]);
+      const a1=z1.map(v=>Math.max(0,v));
+      const z2=W2.map((wr,i)=>wr.reduce((s,w,j)=>s+w*a1[j],0)+b2[i]);
+      const a2=z2.map(v=>Math.max(0,v));
+      const z3=W3.reduce((s,w,i)=>s+w*a2[i],0)+b3;
+      const y=1/(1+Math.exp(-z3));
+      return {a1,a2,z1,z2,y};
+    }
+    function step(){
+      const lr=+document.getElementById('lr').value;
+      data.forEach(d=>{
+        const {a1,a2,z1,z2,y}=fwd(d.x,d.y);
+        const dy=y-d.c;
+        const dW3=a2.map(a=>dy*a),db3=dy;
+        const da2=W3.map(w=>dy*w);
+        const dz2=da2.map((dv,i)=>dv*(z2[i]>0?1:0));
+        const dW2=dz2.map((dv,i)=>a1.map(a=>dv*a));
+        const db2=dz2;
+        const da1=a1.map((_,j)=>dz2.reduce((s,dv,i)=>s+dv*W2[i][j],0));
+        const dz1=da1.map((dv,i)=>dv*(z1[i]>0?1:0));
+        for(let i=0;i<H;i++){
+          W1[i][0]-=lr*dz1[i]*d.x;W1[i][1]-=lr*dz1[i]*d.y;b1[i]-=lr*dz1[i];
+          for(let j=0;j<H;j++)W2[i][j]-=lr*dW2[i][j];
+          b2[i]-=lr*db2[i]; W3[i]-=lr*dW3[i];
+        }
+        b3-=lr*db3;
+      });
+      epoch++;
+    }
+    function loop(){
+      for(let k=0;k<3;k++)step();
+      document.getElementById('hV').textContent=H;
+      document.getElementById('lrV').textContent=document.getElementById('lr').value;
+      document.getElementById('ep').textContent='epoch '+epoch;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const STEP=10,sx=v=>320+v*55,sy=v=>190-v*55;
+      for(let i=0;i<c.width;i+=STEP)for(let j=0;j<c.height;j+=STEP){
+        const u=(i-320)/55,v=(190-j)/55;
+        const yv=fwd(u,v).y;
+        x.fillStyle=yv>0.5?'rgba(255,140,0,'+(yv-0.5)*0.5+')':'rgba(11,95,255,'+(0.5-yv)*0.5+')';
+        x.fillRect(i,j,STEP,STEP);
+      }
+      data.forEach(d=>{x.fillStyle=d.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(sx(d.x),sy(d.y),4,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.stroke();});
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>6. PyTorch 코드</h2>
+  <pre><code>import torch.nn as nn, torch.nn.functional as F
+
+class DNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(784, 128)
+        self.bn1 = nn.BatchNorm1d(128)
+        self.drop = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, 10)
+    def forward(self, x):
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.bn1(self.fc1(x)))
+        x = self.drop(x)
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+opt  = torch.optim.Adam(model.parameters(), lr=1e-3)
+loss = nn.CrossEntropyLoss()</code></pre>
+
+  <nav class="prevnext">
+    <a href="07-mlp.html"><small>← 이전</small>W7. 인공 신경망</a>
+    <a href="09-cnn-basics.html" class="next"><small>다음 →</small>W9. CNN 기초</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+</body>
+</html>

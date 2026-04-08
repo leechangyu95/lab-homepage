@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W10. 전이학습 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 10. CNN 2 — 전이학습 & 데이터 증강</h1>
+  <p class="lead">남이 학습해 놓은 모델의 어깨 위에 올라타서, 적은 데이터로도 좋은 성능을 냅니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>학습된 필터 들여다보기</li>
+    <li>데이터 증강</li>
+    <li>전이학습 (Transfer Learning)</li>
+    <li>ResNet과 잔차 연결</li>
+    <li>인터랙티브 데이터 증강 데모</li>
+  </ol></div>
+
+  <h2>1. 학습된 필터 들여다보기</h2>
+  <p>학습이 끝난 CNN의 첫 층 필터를 그려보면, 보통 <strong>엣지 검출기</strong>나 색상 패치 같은 단순한 패턴이 나옵니다.
+  더 깊은 층의 활성화는 눈, 바퀴, 얼굴처럼 점점 추상적인 부품을 인식합니다.</p>
+  <p>PyTorch에서는 <code>register_forward_hook</code>으로 중간 출력을 캡처할 수 있습니다.</p>
+
+  <h2>2. 데이터 증강 (Data Augmentation)</h2>
+  <p>학습 데이터가 적을 때는 같은 이미지를 약간씩 변형해 가짜 데이터를 만듭니다.</p>
+  <ul>
+    <li>좌우 뒤집기 (RandomHorizontalFlip)</li>
+    <li>약간 회전 (RandomRotation)</li>
+    <li>모서리 자르기 (RandomCrop)</li>
+    <li>색상 변화 (ColorJitter)</li>
+  </ul>
+  <p>모델은 더 다양한 이미지를 보게 되어 일반화 성능이 올라갑니다.</p>
+
+  <h2>3. 전이학습</h2>
+  <p>ImageNet(120만 장)으로 미리 학습된 모델을 가져와, 마지막 분류층만 우리 데이터에 맞춰 재학습합니다.</p>
+  $$ \theta_\text{pretrained} \xrightarrow{\text{fine-tune}} \theta_\text{new task} $$
+  <p>처음부터 학습하는 것보다 보통 <strong>훨씬 적은 데이터·시간</strong>으로 더 높은 정확도를 얻습니다.</p>
+
+  <h2>4. ResNet과 잔차 연결</h2>
+  <p>층이 너무 깊어지면 기울기가 사라져 학습이 안 됩니다. ResNet은 이를 <em>지름길(skip connection)</em>로 해결합니다.</p>
+  $$ \mathbf{y} = \mathcal{F}(\mathbf{x}) + \mathbf{x} $$
+  <p>덧셈 한 줄 덕분에 100층, 1000층까지도 학습이 가능해졌습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 데이터 증강 미리보기</h4>
+    <p>같은 원본 이미지에 다양한 변환이 적용된 결과를 동시에 보여줍니다.</p>
+    <canvas id="aug" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>회전 강도 <span class="val" id="rV">15</span><input type="range" id="r" min="0" max="60" value="15"></label>
+      <label>밝기 변동 <span class="val" id="bV">0.3</span><input type="range" id="b" min="0" max="0.8" step="0.05" value="0.3"></label>
+      <button id="reroll">새로 생성</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('aug'),x=c.getContext('2d');
+    function drawCat(ctx,cx,cy,scale,rot,bright,flip){
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.scale(flip?-scale:scale,scale);
+      const col=v=>'rgb('+Math.min(255,v*bright|0)+','+Math.min(255,v*0.7*bright|0)+','+Math.min(255,v*0.4*bright|0)+')';
+      ctx.fillStyle=col(220);ctx.beginPath();ctx.arc(0,0,38,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=col(220);ctx.beginPath();ctx.moveTo(-30,-25);ctx.lineTo(-15,-50);ctx.lineTo(-5,-25);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(30,-25);ctx.lineTo(15,-50);ctx.lineTo(5,-25);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#222';ctx.beginPath();ctx.arc(-12,-5,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(12,-5,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#e91e63';ctx.beginPath();ctx.arc(0,8,3,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#222';ctx.beginPath();ctx.moveTo(-3,12);ctx.quadraticCurveTo(-8,18,-12,15);ctx.moveTo(3,12);ctx.quadraticCurveTo(8,18,12,15);ctx.stroke();
+      ctx.restore();
+    }
+    let seeds=[];
+    function reroll(){seeds=Array.from({length:8},()=>({rs:Math.random()*2-1,bs:Math.random()*2-1,ss:Math.random()*0.4+0.8,fl:Math.random()<0.5}));}
+    reroll();document.getElementById('reroll').onclick=reroll;
+    function loop(){
+      const rmax=+document.getElementById('r').value*Math.PI/180;
+      const bmax=+document.getElementById('b').value;
+      document.getElementById('rV').textContent=document.getElementById('r').value;
+      document.getElementById('bV').textContent=document.getElementById('b').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('원본',75,30);x.fillText('증강된 8개 변형',280,30);
+      drawCat(x,80,140,1.4,0,1,false);
+      const W=70;
+      seeds.forEach((s,i)=>{
+        const cx=240+(i%4)*95, cy=70+Math.floor(i/4)*130;
+        x.strokeStyle='#e3e6ea';x.strokeRect(cx-45,cy-45,90,90);
+        drawCat(x,cx,cy,s.ss,s.rs*rmax,1+s.bs*bmax,s.fl);
+      });
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>5. PyTorch 코드</h2>
+  <pre><code>from torchvision import transforms, models
+import torch.nn as nn
+
+# 1) 데이터 증강
+train_tf = transforms.Compose([
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomCrop(32, padding=4),
+    transforms.ColorJitter(0.2, 0.2, 0.2),
+    transforms.ToTensor(),
+    transforms.Normalize((0.49,0.48,0.45), (0.25,0.24,0.26)),
+])
+
+# 2) 사전학습된 ResNet18 불러와 마지막 층만 교체
+model = models.resnet18(weights='IMAGENET1K_V1')
+model.fc = nn.Linear(512, 10)             # CIFAR-10용
+
+# 3) 새 fc 층만 빠르게 학습
+opt = torch.optim.Adam(model.fc.parameters(), lr=1e-3)</code></pre>
+
+  <nav class="prevnext">
+    <a href="09-cnn-basics.html"><small>← 이전</small>W9. CNN 기초</a>
+    <a href="11-rnn-lstm.html" class="next"><small>다음 →</small>W11. RNN & LSTM</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+</body>
+</html>

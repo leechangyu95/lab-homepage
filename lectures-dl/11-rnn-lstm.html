@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W11. RNN & LSTM — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 11. RNN과 LSTM — 시퀀스 모델</h1>
+  <p class="lead">시간 순서가 중요한 데이터(문장, 음성, 주가)를 위한 신경망입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 시퀀스 모델인가</li>
+    <li>RNN의 핵심 아이디어</li>
+    <li>RNN의 한계: 장기 의존성</li>
+    <li>LSTM과 게이트</li>
+    <li>텍스트 임베딩</li>
+    <li>인터랙티브 시퀀스 데모</li>
+  </ol></div>
+
+  <h2>1. 왜 시퀀스 모델인가</h2>
+  <p>"<em>나는 어제 영화를 보고 ___ 했다.</em>"의 빈칸을 채우려면 앞 문장 전체를 기억해야 합니다. 이미지처럼 한 번에 들어오는 데이터와 달리, 텍스트와 시계열은 <strong>순서</strong>가 정보입니다.</p>
+
+  <h2>2. RNN (Recurrent Neural Network)</h2>
+  <p>입력을 한 단어씩 처리하면서, <strong>숨은 상태(hidden state)</strong> $h_t$를 다음 스텝으로 넘겨줍니다.</p>
+  $$ h_t = \tanh(W_h h_{t-1} + W_x x_t + b) $$
+  <p>마치 사람이 책을 읽으며 머릿속에 줄거리를 누적하는 것과 같습니다.</p>
+
+  <h2>3. RNN의 한계</h2>
+  <p>긴 문장을 처리하면 앞쪽 정보가 거의 사라집니다(<strong>기울기 소실</strong>). "10페이지 전에 나온 단서"는 잊어버립니다.</p>
+
+  <h2>4. LSTM (Long Short-Term Memory)</h2>
+  <p>LSTM은 hidden state 외에 <strong>셀 상태(cell state) $C_t$</strong>를 따로 두고, 세 개의 <strong>게이트</strong>로 정보를 조절합니다.</p>
+  $$ f_t = \sigma(W_f [h_{t-1}, x_t] + b_f) \quad \text{(망각 게이트)} $$
+  $$ i_t = \sigma(W_i [h_{t-1}, x_t] + b_i) \quad \text{(입력 게이트)} $$
+  $$ o_t = \sigma(W_o [h_{t-1}, x_t] + b_o) \quad \text{(출력 게이트)} $$
+  $$ C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t $$
+  <p>망각 게이트가 "잊을지 말지"를, 입력 게이트가 "새로 기억할지"를 결정합니다. 덕분에 수백 스텝 전 정보도 보존할 수 있습니다.</p>
+
+  <h2>5. 단어 임베딩 (Embedding)</h2>
+  <p>단어를 정수 인덱스로 바꾼 뒤, 학습 가능한 행렬에서 행을 뽑아 밀집 벡터로 만듭니다.</p>
+  $$ \mathbf{e}_i = E[w_i], \quad E \in \mathbb{R}^{|V| \times d} $$
+  <p>비슷한 의미의 단어는 학습 후 비슷한 벡터로 자리 잡습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: LSTM 게이트 시각화</h4>
+    <p>입력 시퀀스가 들어올 때 망각·입력·출력 게이트의 값이 어떻게 변하는지 보여줍니다. 시퀀스를 직접 입력해 보세요.</p>
+    <canvas id="lstm" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>입력 시퀀스 (-1 ~ 1) <input id="seq" type="text" value="0.8, 0.6, -0.5, 0.3, 0.9, -0.7, 0.4, -0.2" style="width:300px"></label>
+      <button id="run">실행</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lstm'),x=c.getContext('2d');
+    let states=[];
+    function run(){
+      const arr=document.getElementById('seq').value.split(',').map(s=>parseFloat(s.trim())||0);
+      states=[];let h=0,C=0;
+      arr.forEach(xi=>{
+        const f=1/(1+Math.exp(-(0.8*h+0.5*xi+0.3)));
+        const i=1/(1+Math.exp(-(0.4*h+1.2*xi-0.2)));
+        const o=1/(1+Math.exp(-(0.6*h+0.7*xi+0.1)));
+        const g=Math.tanh(0.5*h+1.5*xi);
+        C=f*C+i*g; h=o*Math.tanh(C);
+        states.push({xi,f,i,o,C,h});
+      });
+    }
+    document.getElementById('run').onclick=run;run();
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const W=Math.min(70,560/states.length),Y0=30;
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('시간 →',520,310);
+      const labels=['입력 x','f (망각)','i (입력)','o (출력)','C (셀)','h (출력)'];
+      const colors=['#666','#c62828','#0b5fff','#2e7d32','#9c27b0','#ff8c00'];
+      labels.forEach((l,row)=>{
+        x.fillStyle=colors[row];x.fillText(l,10,Y0+row*45+15);
+      });
+      states.forEach((s,t)=>{
+        const cx=120+t*W,vals=[s.xi,s.f,s.i,s.o,Math.tanh(s.C),s.h];
+        vals.forEach((v,row)=>{
+          const cy=Y0+row*45;
+          x.fillStyle=colors[row]+'33';
+          const bw=Math.min(W-6,40);
+          x.fillRect(cx-bw/2,cy,bw,30);
+          const fillH=Math.max(2,Math.abs(v)*28);
+          x.fillStyle=colors[row];
+          if(v>=0)x.fillRect(cx-bw/2,cy+30-fillH,bw,fillH);
+          else x.fillRect(cx-bw/2,cy,bw,fillH);
+          x.fillStyle='#222';x.font='10px monospace';x.textAlign='center';
+          x.fillText(v.toFixed(2),cx,cy+44);x.textAlign='start';
+        });
+      });
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>관찰: 망각 게이트 $f$가 0에 가까우면 셀이 리셋되고, 1에 가까우면 이전 정보가 유지됩니다.</p>
+
+  <h2>6. PyTorch 코드 — 영화 리뷰 감성 분류</h2>
+  <pre><code>import torch.nn as nn
+
+class LSTMClassifier(nn.Module):
+    def __init__(self, vocab_size, embed_dim=128, hidden_dim=64):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, 1)
+
+    def forward(self, x):
+        e = self.embedding(x)                  # (B, T, embed)
+        out, (h, c) = self.lstm(e)             # h: (1, B, hidden)
+        return self.fc(h.squeeze(0)).squeeze(1)
+
+model = LSTMClassifier(vocab_size=10002)
+loss  = nn.BCEWithLogitsLoss()
+opt   = torch.optim.Adam(model.parameters(), lr=1e-3)</code></pre>
+
+  <nav class="prevnext">
+    <a href="10-cnn-transfer.html"><small>← 이전</small>W10. 전이학습</a>
+    <a href="12-rnn-advanced.html" class="next"><small>다음 →</small>W12. RNN 심화</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W13. Transformer & LLM — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 13. Transformer와 LLM</h1>
+  <p class="lead">RNN을 대체하고 ChatGPT·Claude를 가능케 한 핵심 아키텍처입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>RNN의 한계</li>
+    <li>셀프 어텐션(Self-Attention)</li>
+    <li>Q · K · V의 의미</li>
+    <li>멀티 헤드와 트랜스포머 블록</li>
+    <li>대규모 언어모델(LLM)</li>
+    <li>인터랙티브 어텐션 데모</li>
+    <li>HuggingFace로 즉시 사용</li>
+  </ol></div>
+
+  <h2>1. RNN의 한계</h2>
+  <p>RNN/LSTM은 단어를 순서대로만 처리할 수 있어 <strong>병렬화가 안 됩니다</strong>. 또한 매우 긴 문장에서는 여전히 정보가 흐릿해집니다.</p>
+
+  <h2>2. 셀프 어텐션의 핵심 아이디어</h2>
+  <p>한 단어가 문장 안의 <strong>모든 다른 단어</strong>를 동시에 본 뒤, "지금 나에게 가장 중요한 단어가 누구인지" 가중치를 계산합니다.</p>
+
+  $$ \text{Attention}(Q, K, V) = \mathrm{softmax}\!\left(\frac{Q K^\top}{\sqrt{d_k}}\right) V $$
+
+  <h2>3. Q · K · V란?</h2>
+  <ul>
+    <li><strong>Query (Q)</strong> — "내가 찾고 싶은 것"</li>
+    <li><strong>Key (K)</strong> — "내가 가지고 있는 것의 색인"</li>
+    <li><strong>Value (V)</strong> — "실제 내용"</li>
+  </ul>
+  <p>단어 도서관에 비유하면 Q는 검색어, K는 책 제목, V는 책 내용입니다. Q와 K의 내적이 클수록 그 단어의 V가 많이 섞여 들어갑니다.</p>
+
+  <h2>4. 멀티 헤드 & 트랜스포머 블록</h2>
+  <p>여러 개의 어텐션을 병렬로 두면 각 헤드가 다른 종류의 관계(문법, 의미, 위치 등)를 따로 학습합니다.</p>
+  $$ \text{MultiHead}(Q,K,V) = \text{Concat}(\text{head}_1, \dots, \text{head}_h) W^O $$
+  <p>한 트랜스포머 블록 = <code>Self-Attention → 잔차+LayerNorm → FFN → 잔차+LayerNorm</code>. 이걸 12층, 24층, 96층씩 쌓으면 BERT, GPT-3, GPT-4가 됩니다.</p>
+
+  <h2>5. 대규모 언어모델 (LLM)</h2>
+  <p>인터넷 텍스트 수조 개 단어로 트랜스포머를 학습시키면, 다음 단어 예측이라는 단순한 과제만으로도 놀라운 일반 지능이 나타납니다.</p>
+  <ul>
+    <li><strong>BERT</strong> — 양방향, 빈칸 채우기 학습. 이해 과제에 강함.</li>
+    <li><strong>GPT</strong> — 단방향, 다음 단어 예측. 생성 과제에 강함.</li>
+    <li><strong>T5 / BART</strong> — 입력 → 출력 변환 (요약, 번역).</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 어텐션 가중치 히트맵</h4>
+    <p>단어 5~7개의 짧은 문장을 입력하면 단어 간 어텐션 가중치를 시각화합니다. (간이 데모 — 실제 모델 가중치는 아니지만 패턴은 유사)</p>
+    <canvas id="att" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>문장 <input id="sent" type="text" value="The cat sat on the mat" style="width:340px"></label>
+      <button id="rg">갱신</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('att'),x=c.getContext('2d');
+    let words=[],M=[];
+    function update(){
+      words=document.getElementById('sent').value.trim().split(/\s+/).slice(0,10);
+      const n=words.length;
+      // pseudo-attention: nearby + same-category boost + softmax per row
+      const charCat=w=>w.toLowerCase().replace(/[^a-z]/g,'').length%4;
+      M=[];
+      for(let i=0;i<n;i++){
+        const row=[];
+        for(let j=0;j<n;j++){
+          const dist=Math.abs(i-j);
+          const sim=charCat(words[i])==charCat(words[j])?1.5:0;
+          row.push(Math.exp(-dist*0.4+sim+(i==j?0.8:0)));
+        }
+        const s=row.reduce((a,b)=>a+b,0);
+        M.push(row.map(v=>v/s));
+      }
+    }
+    update();document.getElementById('rg').onclick=update;
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const n=words.length;if(n==0){requestAnimationFrame(loop);return;}
+      const cell=Math.min(50,260/n);
+      const x0=200,y0=80;
+      // column labels
+      x.fillStyle='#333';x.font='12px sans-serif';
+      words.forEach((w,j)=>{x.save();x.translate(x0+j*cell+cell/2,y0-5);x.rotate(-Math.PI/4);x.fillText(w,0,0);x.restore();});
+      // row labels
+      words.forEach((w,i)=>{x.textAlign='right';x.fillText(w,x0-8,y0+i*cell+cell/2+4);x.textAlign='start';});
+      // matrix
+      for(let i=0;i<n;i++)for(let j=0;j<n;j++){
+        const v=M[i][j];
+        x.fillStyle='rgba(11,95,255,'+v*1.5+')';
+        x.fillRect(x0+j*cell,y0+i*cell,cell-1,cell-1);
+        if(v>0.15){x.fillStyle='#fff';x.font='10px monospace';x.textAlign='center';x.fillText(v.toFixed(2),x0+j*cell+cell/2,y0+i*cell+cell/2+3);x.textAlign='start';}
+      }
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('각 행: 해당 단어가 다른 단어들에 주는 어텐션 가중치 (합=1)',20,360);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>6. HuggingFace로 즉시 사용</h2>
+  <p>거대한 모델을 직접 학습할 필요는 없습니다. 사전학습된 모델을 단 몇 줄로 불러올 수 있습니다.</p>
+  <pre><code>from transformers import pipeline
+
+# 1) 감성 분석
+clf = pipeline('sentiment-analysis')
+print(clf("This movie was wonderful!"))
+# → [{'label': 'POSITIVE', 'score': 0.9999}]
+
+# 2) 텍스트 생성 (GPT-2)
+gen = pipeline('text-generation', model='gpt2')
+print(gen("AI will change the future", max_length=40)[0]['generated_text'])
+
+# 3) 요약 (DistilBART)
+summarize = pipeline('summarization', model='sshleifer/distilbart-cnn-12-6')
+print(summarize(long_text, max_length=60, min_length=20))
+
+# 4) 질문 응답
+qa = pipeline('question-answering')
+print(qa(question="When was PyTorch released?", context=ctx))
+
+# 5) 제로샷 분류 (학습 없이 새 카테고리 분류)
+zs = pipeline('zero-shot-classification')
+print(zs("이 영화는 정말 재미있었다",
+         candidate_labels=['긍정', '부정', '중립']))</code></pre>
+
+  <h2>7. 프롬프트 엔지니어링</h2>
+  <p>LLM의 성능은 프롬프트 작성 방식에 크게 좌우됩니다.</p>
+  <ul>
+    <li><strong>역할 부여</strong>: "당신은 친절한 수학 선생님입니다…"</li>
+    <li><strong>예시 제시</strong>(few-shot): 원하는 출력 형식의 예 2~3개</li>
+    <li><strong>단계 분해</strong>: "단계별로 차근차근 생각해보세요"</li>
+    <li><strong>명확한 형식 지정</strong>: "JSON 형식으로 답하세요"</li>
+  </ul>
+
+  <div class="tip">
+    <strong>여기까지 마치면</strong>: 머신러닝의 기본부터 최신 LLM의 핵심 원리까지 모두 둘러본 셈입니다.
+    이제 실전 프로젝트(이미지 분류기 만들기, 챗봇 만들기, 시계열 예측)로 손을 움직여 보세요.
+    또는 <a href="../index.html">로봇공학특론</a>의 강화학습·MPC와 결합해 자율 시스템에 응용할 수 있습니다.
+  </div>
+
+  <nav class="prevnext">
+    <a href="12-rnn-advanced.html"><small>← 이전</small>W12. RNN 심화</a>
+    <a href="../dl.html" class="next"><small>완료 🎉</small>주차 목록으로</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+</body>
+</html>

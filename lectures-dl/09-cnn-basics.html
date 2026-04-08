@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W9. CNN 기초 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 9. 합성곱 신경망 (CNN) 기초</h1>
+  <p class="lead">이미지에는 격자 구조가 있습니다. CNN은 그 구조를 활용하는 신경망입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 MLP는 이미지에 약한가</li>
+    <li>합성곱 연산</li>
+    <li>패딩, 스트라이드, 출력 크기</li>
+    <li>풀링</li>
+    <li>인터랙티브 필터 데모</li>
+  </ol></div>
+
+  <h2>1. 왜 MLP가 이미지에 약한가</h2>
+  <p>28×28 = 784개의 픽셀을 펼쳐 MLP에 넣으면 <em>옆 픽셀끼리 가깝다</em>는 사실이 사라집니다.
+  또한 같은 사물이 약간만 옆으로 이동해도 완전히 다른 입력으로 보입니다.</p>
+
+  <h2>2. 합성곱(Convolution) 연산</h2>
+  <p>작은 필터(예: 3×3)가 이미지 위를 슬라이딩하면서 원소별 곱의 합을 계산합니다.</p>
+  $$ O[i,j] = \sum_u \sum_v K[u,v]\, I[i+u, j+v] $$
+  <p>같은 필터가 모든 위치에 적용되므로 <strong>가중치 공유(weight sharing)</strong>가 일어나고, 이동 불변성이 자연스럽게 생깁니다.</p>
+
+  <h2>3. 출력 크기 공식</h2>
+  $$ H_\text{out} = \left\lfloor \frac{H_\text{in} - K + 2P}{S} \right\rfloor + 1 $$
+  <ul>
+    <li>$K$: 커널 크기, $P$: 패딩, $S$: 스트라이드</li>
+    <li>패딩을 $P=(K-1)/2$로 두면 출력 크기가 입력과 같아집니다("same padding").</li>
+  </ul>
+
+  <h2>4. 풀링 (Pooling)</h2>
+  <p>2×2 영역의 최댓값을 뽑는 max pooling이 가장 흔합니다. 크기가 절반으로 줄고, 작은 위치 이동에 더 둔감해집니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 합성곱 필터 만져보기</h4>
+    <p>3×3 필터의 9개 값을 클릭으로 바꾸면 오른쪽 출력 이미지가 즉시 변합니다. 프리셋으로 엣지·블러를 시험해보세요.</p>
+    <canvas id="cnv" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="ed">수직 엣지</button>
+      <button id="eh">수평 엣지</button>
+      <button id="bl">블러</button>
+      <button id="sh">샤프닝</button>
+      <button id="zr" class="alt">0으로</button>
+    </div>
+    <p style="font-size:12px;color:#666">중앙 셀 클릭: +1 / 우클릭: -1</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cnv'),x=c.getContext('2d');
+    // build a synthetic image with shapes
+    const N=32;const img=Array.from({length:N},()=>Array(N).fill(0));
+    for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+      if(i>8&&i<24&&j>10&&j<14)img[i][j]=1;        // vertical bar
+      if(i>14&&i<18&&j>6&&j<26)img[i][j]=1;        // horizontal bar
+      if((i-22)**2+(j-22)**2<16)img[i][j]=1;       // circle
+    }
+    let K=[[0,0,0],[0,1,0],[0,0,0]];
+    const presets={ed:[[-1,0,1],[-2,0,2],[-1,0,1]],eh:[[-1,-2,-1],[0,0,0],[1,2,1]],bl:[[1,1,1],[1,1,1],[1,1,1]].map(r=>r.map(v=>v/9)),sh:[[0,-1,0],[-1,5,-1],[0,-1,0]],zr:[[0,0,0],[0,0,0],[0,0,0]]};
+    Object.keys(presets).forEach(k=>document.getElementById(k).onclick=()=>{K=presets[k].map(r=>[...r]);});
+    function conv(){
+      const out=Array.from({length:N},()=>Array(N).fill(0));
+      for(let i=1;i<N-1;i++)for(let j=1;j<N-1;j++){
+        let s=0;for(let u=-1;u<=1;u++)for(let v=-1;v<=1;v++)s+=K[u+1][v+1]*img[i+u][j+v];
+        out[i][j]=s;
+      }
+      return out;
+    }
+    c.onclick=e=>{
+      const r=c.getBoundingClientRect();const px=(e.clientX-r.left)*c.width/r.width, py=(e.clientY-r.top)*c.height/r.height;
+      // kernel area: 280..400, 80..200 (40px cells)
+      if(px>280&&px<400&&py>80&&py<200){const ci=Math.floor((py-80)/40),cj=Math.floor((px-280)/40);K[ci][cj]+=1;}
+    };
+    c.oncontextmenu=e=>{e.preventDefault();const r=c.getBoundingClientRect();const px=(e.clientX-r.left)*c.width/r.width, py=(e.clientY-r.top)*c.height/r.height;
+      if(px>280&&px<400&&py>80&&py<200){const ci=Math.floor((py-80)/40),cj=Math.floor((px-280)/40);K[ci][cj]-=1;}};
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // input image
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('입력',60,30);
+      for(let i=0;i<N;i++)for(let j=0;j<N;j++){const v=img[i][j];x.fillStyle='rgb('+(v*255)+','+(v*255)+','+(v*255)+')';x.fillRect(20+j*5,40+i*5,5,5);}
+      // kernel
+      x.fillStyle='#666';x.fillText('3×3 필터',300,30);
+      for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+        x.fillStyle='#fff';x.fillRect(280+j*40,80+i*40,40,40);
+        x.strokeStyle='#0b5fff';x.strokeRect(280+j*40,80+i*40,40,40);
+        x.fillStyle='#0742b8';x.font='14px monospace';x.textAlign='center';
+        x.fillText(K[i][j].toFixed(1),300+j*40,105+i*40);x.textAlign='start';
+      }
+      // output
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('출력 (특성 맵)',440,30);
+      const out=conv();
+      let mx=0;out.forEach(r=>r.forEach(v=>{if(Math.abs(v)>mx)mx=Math.abs(v);}));
+      mx=mx||1;
+      for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+        const v=out[i][j]/mx;
+        if(v>=0)x.fillStyle='rgb('+(v*255|0)+','+(v*255|0)+','+(v*255|0)+')';
+        else x.fillStyle='rgb('+(-v*200|0)+',0,0)';
+        x.fillRect(440+j*5,40+i*5,5,5);
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>관찰: 수직 엣지 필터(Sobel x)는 세로선만, 수평 엣지 필터는 가로선만 강하게 반응합니다. CNN은 이런 필터를 스스로 학습합니다.</p>
+
+  <h2>5. PyTorch 코드</h2>
+  <pre><code>import torch.nn as nn, torch.nn.functional as F
+
+class FashionCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.pool  = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.fc1   = nn.Linear(64*7*7, 128)
+        self.fc2   = nn.Linear(128, 10)
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))   # 28→14
+        x = self.pool(F.relu(self.conv2(x)))   # 14→7
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)</code></pre>
+
+  <nav class="prevnext">
+    <a href="08-dnn-backprop.html"><small>← 이전</small>W8. 심층신경망</a>
+    <a href="10-cnn-transfer.html" class="next"><small>다음 →</small>W10. 전이학습</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+</body>
+</html>
