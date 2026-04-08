@@ -71,19 +71,43 @@
     const upd=()=>{['v','d','l'].forEach(k=>sl(k+'V').textContent=sl(k).value);};
     sl('reset').onclick=()=>{s={x:60,y:160,th:0};};
     ['v','d','l'].forEach(k=>sl(k).oninput=upd);
+    let trail=[];
     function loop(){
       const v=+sl('v').value, d=+sl('d').value*Math.PI/180, L=+sl('l').value, dt=0.05;
-      s.x+=v*Math.cos(s.th)*dt*8;
-      s.y+=v*Math.sin(s.th)*dt*8;
+      // 1 m = 8 px (둘 다 같은 스케일)
+      const SCALE=8;
+      s.x+=v*Math.cos(s.th)*dt*SCALE;
+      s.y+=v*Math.sin(s.th)*dt*SCALE;
       s.th+=v/L*Math.tan(d)*dt;
-      if(s.x>c.width)s.x=0;if(s.x<0)s.x=c.width;
-      if(s.y>c.height)s.y=0;if(s.y<0)s.y=c.height;
+      if(s.x>c.width||s.x<0||s.y>c.height||s.y<0){s={x:60,y:160,th:0};trail=[];}
+      trail.push([s.x,s.y]);if(trail.length>400)trail.shift();
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
       x.strokeStyle='#e3e6ea';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
       for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      // 회전 반경 가이드 원 (R = L / tan(δ))
+      if(Math.abs(d)>0.01){
+        const R=L/Math.tan(d)*SCALE;       // 픽셀 단위
+        const cx=s.x-R*Math.sin(s.th), cy=s.y+R*Math.cos(s.th);
+        x.strokeStyle='rgba(255,140,0,0.4)';x.setLineDash([5,5]);x.lineWidth=1.5;
+        x.beginPath();x.arc(cx,cy,Math.abs(R),0,Math.PI*2);x.stroke();x.setLineDash([]);
+        x.fillStyle='#ff8c00';x.beginPath();x.arc(cx,cy,3,0,Math.PI*2);x.fill();
+        x.fillStyle='#666';x.font='12px sans-serif';
+        x.fillText('회전 반경 R = L/tan δ ≈ '+Math.abs(L/Math.tan(d)).toFixed(2)+' m',12,30);
+      }else{
+        x.fillStyle='#666';x.font='12px sans-serif';x.fillText('직진 (δ ≈ 0)',12,30);
+      }
+      // 자취
+      x.strokeStyle='#9eb9ff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.stroke();
+      // 차체: L에 비례한 크기
       x.save();x.translate(s.x,s.y);x.rotate(s.th);
-      x.fillStyle='#0b5fff';x.fillRect(-22,-9,44,18);
-      x.fillStyle='#fff';x.fillRect(15,-7,5,14);
+      const halfL=L*SCALE/2, halfW=Math.max(6,L*SCALE/4);
+      x.fillStyle='#0b5fff';x.fillRect(-halfL,-halfW,halfL*2,halfW*2);
+      // 뒷바퀴
+      x.fillStyle='#222';x.fillRect(-halfL-2,-halfW-3,8,3);x.fillRect(-halfL-2,halfW,8,3);
+      // 앞바퀴 (조향각만큼 회전)
+      x.save();x.translate(halfL,-halfW-1);x.rotate(d);x.fillRect(-4,-1,12,3);x.restore();
+      x.save();x.translate(halfL,halfW+1);x.rotate(d);x.fillRect(-4,-2,12,3);x.restore();
       x.restore();
       requestAnimationFrame(loop);
     }
@@ -163,21 +187,44 @@ plt.plot(traj[:,0], traj[:,1]); plt.axis('equal'); plt.show()</code></pre>
     ['vl','vr','dl'].forEach(k=>sl(k).oninput=upd);
     function loop(){
       const vl=+sl('vl').value,vr=+sl('vr').value,L=+sl('dl').value,dt=0.05;
-      const v=(vr+vl)/2*15,w=(vr-vl)/L;
-      s.x+=v*Math.cos(s.th)*dt;
-      s.y+=v*Math.sin(s.th)*dt;
+      // 1 m = 60 px (보기 좋도록)
+      const SCALE=60;
+      const v=(vr+vl)/2,w=(vr-vl)/L;
+      s.x+=v*Math.cos(s.th)*dt*SCALE;
+      s.y+=v*Math.sin(s.th)*dt*SCALE;
       s.th+=w*dt;
       if(s.x<0||s.x>c.width||s.y<0||s.y>c.height){s.x=320;s.y=160;trail=[];}
-      trail.push([s.x,s.y]);if(trail.length>200)trail.shift();
+      trail.push([s.x,s.y]);if(trail.length>250)trail.shift();
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
       x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
       for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      // 회전 반경 가이드: R = v/w (양 바퀴 속도가 다를 때)
+      if(Math.abs(w)>0.05&&Math.abs(v)>0.05){
+        const R=v/w*SCALE;
+        const cx=s.x-R*Math.sin(s.th),cy=s.y+R*Math.cos(s.th);
+        x.strokeStyle='rgba(255,140,0,0.4)';x.setLineDash([5,5]);x.lineWidth=1.5;
+        x.beginPath();x.arc(cx,cy,Math.abs(R),0,Math.PI*2);x.stroke();x.setLineDash([]);
+        x.fillStyle='#ff8c00';x.beginPath();x.arc(cx,cy,3,0,Math.PI*2);x.fill();
+        x.fillStyle='#666';x.font='12px sans-serif';
+        x.fillText('R = v/ω = ((v_R+v_L)/2) / ((v_R-v_L)/L) ≈ '+Math.abs(v/w).toFixed(2)+' m',12,30);
+      }else if(Math.abs(w)>0.05){
+        x.fillStyle='#666';x.font='12px sans-serif';x.fillText('제자리 회전 (v_R = -v_L)',12,30);
+      }else{
+        x.fillStyle='#666';x.font='12px sans-serif';x.fillText('직진',12,30);
+      }
+      // 자취
       x.strokeStyle='#9eb9ff';x.lineWidth=1.5;x.beginPath();
       trail.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.stroke();
+      // 로봇 (L에 비례한 트랙 폭)
       x.save();x.translate(s.x,s.y);x.rotate(s.th);
-      x.fillStyle='#0b5fff';x.fillRect(-18,-12,36,24);
-      x.fillStyle='#222';x.fillRect(-14,-16,8,4);x.fillRect(6,-16,8,4);x.fillRect(-14,12,8,4);x.fillRect(6,12,8,4);
-      x.fillStyle='#fff';x.beginPath();x.arc(14,0,3,0,Math.PI*2);x.fill();
+      const halfL=L*SCALE/2;            // 트랙 폭의 절반 (좌우 바퀴 사이)
+      const bodyLen=Math.max(20,L*SCALE*0.6);
+      x.fillStyle='#0b5fff';x.fillRect(-bodyLen/2,-halfL,bodyLen,halfL*2);
+      // 좌우 바퀴 (속도에 따라 색 다르게)
+      const wcol=v=>v>=0?'#222':'#c62828';
+      x.fillStyle=wcol(vl);x.fillRect(-bodyLen*0.3,-halfL-4,bodyLen*0.6,4);
+      x.fillStyle=wcol(vr);x.fillRect(-bodyLen*0.3,halfL,bodyLen*0.6,4);
+      x.fillStyle='#fff';x.beginPath();x.arc(bodyLen*0.35,0,3,0,Math.PI*2);x.fill();
       x.restore();
       upd();
       requestAnimationFrame(loop);
