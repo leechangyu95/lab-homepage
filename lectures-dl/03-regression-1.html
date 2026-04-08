@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W3. 선형 회귀 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 3. 회귀 1 — 손실함수와 선형회귀</h1>
+  <p class="lead">"가장 잘 맞는 직선"을 수학으로 정의하고 컴퓨터로 찾아봅시다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>회귀 vs 분류</li>
+    <li>손실 함수: MSE, MAE, R²</li>
+    <li>선형 회귀</li>
+    <li>다항 회귀와 과적합</li>
+    <li>인터랙티브 데모</li>
+  </ol></div>
+
+  <h2>1. 회귀 vs 분류</h2>
+  <p>분류는 카테고리, 회귀는 <strong>연속된 숫자</strong>를 예측합니다. "농어 길이로 무게 맞추기"가 회귀의 전형적 예입니다.</p>
+
+  <h2>2. 손실 함수</h2>
+  <p>예측값 $\hat{y}$가 정답 $y$에서 얼마나 어긋났는지를 한 숫자로 요약합니다.</p>
+  $$ \text{MSE} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2 $$
+  $$ \text{MAE} = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y}_i| $$
+  $$ R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2} $$
+  <ul>
+    <li><strong>MSE</strong> — 큰 오차에 더 큰 벌점. 가장 흔히 사용.</li>
+    <li><strong>MAE</strong> — 절댓값 합. 이상치에 강함.</li>
+    <li><strong>R²</strong> — 1에 가까우면 좋고, 0이면 평균값으로 답한 것과 같음.</li>
+  </ul>
+
+  <h2>3. 선형 회귀</h2>
+  <p>가장 단순한 가설: 데이터가 직선 위에 있다고 가정합니다.</p>
+  $$ \hat{y} = w x + b $$
+  <p>$w$는 기울기, $b$는 y절편입니다. MSE를 최소로 만드는 $(w, b)$를 찾는 게 목표입니다.</p>
+
+  <h2>4. 다항 회귀</h2>
+  <p>직선으로 부족할 때는 곡선을 쓸 수 있습니다.</p>
+  $$ \hat{y} = w_d x^d + w_{d-1} x^{d-1} + \dots + w_1 x + b $$
+  <p>차수 $d$가 클수록 표현력이 강해지지만, 학습 데이터에 너무 맞춰지는 <strong>과적합</strong>이 생깁니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 다항 회귀와 과적합</h4>
+    <p>점들이 농어의 길이(가로) → 무게(세로)를 모방한 데이터입니다. 차수를 1부터 9까지 올려가며 어떻게 변하는지 보세요.</p>
+    <canvas id="poly" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>다항 차수 d <span class="val" id="dV">1</span><input type="range" id="d" min="1" max="9" value="1"></label>
+      <label>학습 R²: <span class="val" id="r2">-</span></label>
+      <button id="resh" class="alt">데이터 새로고침</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('poly'),x=c.getContext('2d');
+    let pts=[];
+    function gen(){pts=[];for(let i=0;i<25;i++){const u=i*0.04+0.05,xx=u,yy=u*u*1.2+0.05+(Math.random()-0.5)*0.18;pts.push([xx,yy]);}}
+    gen();
+    document.getElementById('resh').onclick=gen;
+    function fit(d){
+      const n=pts.length;if(n<d+1)return null;
+      const X=pts.map(p=>{const r=[];for(let k=0;k<=d;k++)r.push(Math.pow(p[0],k));return r;});
+      const Y=pts.map(p=>p[1]);
+      const XT=Array.from({length:d+1},(_,i)=>X.map(r=>r[i]));
+      const XTX=XT.map(row=>XT.map(col=>row.reduce((s,_,k)=>s+row[k]*col[k],0)));
+      const XTY=XT.map(row=>row.reduce((s,_,k)=>s+row[k]*Y[k],0));
+      const A=XTX.map((r,i)=>[...r,XTY[i]]);
+      const N=d+1;
+      for(let i=0;i<N;i++){
+        let mx=i;for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;
+        [A[i],A[mx]]=[A[mx],A[i]];
+        if(Math.abs(A[i][i])<1e-9)return null;
+        for(let k=0;k<N;k++)if(k!=i){const f=A[k][i]/A[i][i];for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];}
+      }
+      return A.map((r,i)=>r[N]/r[i][i]);
+    }
+    function loop(){
+      const d=+document.getElementById('d').value;
+      document.getElementById('dV').textContent=d;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      const sx=v=>40+v*560, sy=v=>360-v*220;
+      const beta=fit(d);
+      if(beta){
+        x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+        for(let u=0;u<=1;u+=0.005){let yy=0;for(let k=0;k<beta.length;k++)yy+=beta[k]*Math.pow(u,k);if(u==0)x.moveTo(sx(u),sy(yy));else x.lineTo(sx(u),sy(yy));}
+        x.stroke();
+        // R^2
+        const ybar=pts.reduce((s,p)=>s+p[1],0)/pts.length;
+        let ss=0,st=0;
+        pts.forEach(p=>{let pr=0;for(let k=0;k<beta.length;k++)pr+=beta[k]*Math.pow(p[0],k);ss+=(p[1]-pr)**2;st+=(p[1]-ybar)**2;});
+        document.getElementById('r2').textContent=(1-ss/st).toFixed(3);
+      }
+      x.fillStyle='#c62828';pts.forEach(p=>{x.beginPath();x.arc(sx(p[0]),sy(p[1]),4,0,Math.PI*2);x.fill();});
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>5. 코드 예제 (scikit-learn)</h2>
+  <pre><code>import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+X = np.array([8.4, 13.7, 15.0, 16.2, 17.4, 18.0, 18.7, 19.0, 22.0, 26.0]).reshape(-1,1)
+y = np.array([5.9, 32.0, 40.0, 51.5, 70.0, 100.0, 78.0, 80.0, 110.0, 175.0])
+
+# 선형 회귀
+lr = LinearRegression()
+lr.fit(X, y)
+print(f"기울기 w = {lr.coef_[0]:.3f}, 절편 b = {lr.intercept_:.3f}")
+print(f"R² = {lr.score(X, y):.3f}")
+
+# 다항(2차) 회귀: x^2 특성 추가
+X_poly = np.column_stack([X, X**2])
+lr2 = LinearRegression()
+lr2.fit(X_poly, y)
+print(f"R² (deg 2) = {lr2.score(X_poly, y):.3f}")</code></pre>
+
+  <nav class="prevnext">
+    <a href="02-data-handling.html"><small>← 이전</small>W2. 데이터 핸들링</a>
+    <a href="04-regression-2.html" class="next"><small>다음 →</small>W4. 로지스틱 회귀</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

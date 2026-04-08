@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W6. 비지도학습 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 6. 비지도학습 — K-Means · DBSCAN · PCA</h1>
+  <p class="lead">정답 라벨 없이도 데이터의 숨은 구조를 찾아냅니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>비지도학습이란</li>
+    <li>K-Means 군집화</li>
+    <li>DBSCAN — 밀도 기반</li>
+    <li>PCA — 차원 축소</li>
+    <li>인터랙티브 K-Means</li>
+  </ol></div>
+
+  <h2>1. 비지도학습이란</h2>
+  <p>지도학습과 달리 정답 $y$가 없습니다. 데이터 $X$만 보고 비슷한 것끼리 묶거나, 핵심 축을 찾는 게 목표입니다.</p>
+
+  <h2>2. K-Means</h2>
+  <p>알고리즘:</p>
+  <ol>
+    <li>K개 중심점(centroid)을 무작위로 놓는다.</li>
+    <li>각 점을 가장 가까운 중심점에 할당.</li>
+    <li>각 군집의 평균으로 중심점을 갱신.</li>
+    <li>변화가 없을 때까지 2–3 반복.</li>
+  </ol>
+  <p>최소화하려는 손실(이너시아):</p>
+  $$ J = \sum_{i=1}^n \min_{j} \|\mathbf{x}_i - \mathbf{c}_j\|^2 $$
+
+  <p>K를 모를 때는 <strong>엘보 방법</strong>: K를 1부터 늘려가며 $J$를 그리고, 꺾이는 지점을 K로 선택합니다.</p>
+
+  <h2>3. DBSCAN</h2>
+  <p>"점이 충분히 몰려 있는 곳을 군집"으로 봅니다.</p>
+  <ul>
+    <li><code>eps</code>: 이웃 반경</li>
+    <li><code>min_samples</code>: 핵심 점이 되기 위한 최소 이웃 수</li>
+  </ul>
+  <p>K-Means가 못 찾는 <em>moons</em>·<em>circles</em> 같은 비구형 군집도 잘 찾고, 이상치는 자동으로 라벨 -1로 표시합니다.</p>
+
+  <h2>4. PCA (주성분 분석)</h2>
+  <p>고차원 데이터의 정보를 가능한 한 보존하면서 차원을 줄이는 기법입니다.</p>
+  $$ \mathbf{X}_\text{pc} = \mathbf{X} \mathbf{W}, \quad \mathbf{W} = [\mathbf{v}_1, \mathbf{v}_2, \dots] $$
+  <p>$\mathbf{v}_i$는 분산이 가장 큰 방향(공분산 행렬의 고유벡터)입니다.</p>
+
+  <ul>
+    <li>PC1 = 데이터가 가장 길게 늘어선 방향</li>
+    <li>PC2 = 그 다음으로 긴 직교 방향</li>
+    <li>설명 분산 비율(explained variance ratio)로 PC가 얼마나 정보를 담는지 확인</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: K-Means 라이브</h4>
+    <p>K를 조절하고 <strong>한 스텝</strong>씩 진행해 보세요. 중심점(★)이 어떻게 이동하는지 관찰합니다.</p>
+    <canvas id="km" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>K <span class="val" id="kV">3</span><input type="range" id="k" min="2" max="6" value="3"></label>
+      <button id="step">한 스텝 진행</button>
+      <button id="run">자동 진행</button>
+      <button id="rst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('km'),x=c.getContext('2d');
+    const colors=['#0b5fff','#ff8c00','#2e7d32','#c62828','#9c27b0','#00838f'];
+    let pts=[],cents=[],running=false;
+    function gen(){
+      pts=[];const C=4;const seeds=[[180,120],[460,140],[200,280],[470,290]];
+      seeds.forEach(s=>{for(let i=0;i<25;i++)pts.push({x:s[0]+Math.random()*60-30,y:s[1]+Math.random()*60-30,a:0});});
+    }
+    function init(){
+      gen();const K=+document.getElementById('k').value;
+      cents=[];for(let i=0;i<K;i++)cents.push({x:100+Math.random()*440,y:60+Math.random()*280});
+    }
+    document.getElementById('rst').onclick=init;
+    document.getElementById('k').onchange=init;
+    document.getElementById('run').onclick=()=>{running=!running;};
+    function step(){
+      pts.forEach(p=>{let bi=0,bd=Infinity;cents.forEach((c,i)=>{const d=(c.x-p.x)**2+(c.y-p.y)**2;if(d<bd){bd=d;bi=i;}});p.a=bi;});
+      cents.forEach((c,i)=>{const grp=pts.filter(p=>p.a==i);if(grp.length){c.x=grp.reduce((s,p)=>s+p.x,0)/grp.length;c.y=grp.reduce((s,p)=>s+p.y,0)/grp.length;}});
+    }
+    document.getElementById('step').onclick=step;
+    init();
+    let t=0;
+    function loop(){
+      if(running&&t++%15==0)step();
+      document.getElementById('kV').textContent=document.getElementById('k').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      pts.forEach(p=>{x.fillStyle=colors[p.a];x.beginPath();x.arc(p.x,p.y,4,0,Math.PI*2);x.fill();});
+      cents.forEach((cv,i)=>{
+        x.fillStyle=colors[i];x.strokeStyle='#000';x.lineWidth=2;
+        x.beginPath();
+        for(let k=0;k<10;k++){const ang=Math.PI/2+k*Math.PI/5,r=k%2?5:12;x.lineTo(cv.x+Math.cos(ang)*r,cv.y-Math.sin(ang)*r);}
+        x.closePath();x.fill();x.stroke();
+      });
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>5. 코드 예제</h2>
+  <pre><code>from sklearn.cluster import KMeans, DBSCAN
+from sklearn.decomposition import PCA
+
+# K-Means + 엘보
+import matplotlib.pyplot as plt
+inertias = []
+for k in range(1, 11):
+    km = KMeans(n_clusters=k, n_init=10, random_state=42).fit(X)
+    inertias.append(km.inertia_)
+plt.plot(range(1,11), inertias, 'o-'); plt.xlabel('K'); plt.show()
+
+# DBSCAN — 비구형 군집 + 이상치
+db = DBSCAN(eps=0.3, min_samples=5).fit(X)
+print(set(db.labels_))   # {-1, 0, 1, 2}  (-1은 노이즈)
+
+# PCA — 고차원 → 2차원 시각화
+pca = PCA(n_components=2)
+X_2d = pca.fit_transform(X)
+print(pca.explained_variance_ratio_)   # 예: [0.72, 0.18]</code></pre>
+
+  <nav class="prevnext">
+    <a href="05-classification.html"><small>← 이전</small>W5. 분류</a>
+    <a href="07-mlp.html" class="next"><small>다음 →</small>W7. 인공 신경망</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W2. 데이터 핸들링 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 2. 데이터 핸들링 & Python 기초</h1>
+  <p class="lead">데이터를 깨끗이 정리하는 것이 모델보다 더 중요할 때가 많습니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>NumPy 한 줄 정리</li>
+    <li>Pandas 한 줄 정리</li>
+    <li>Train / Test 분리</li>
+    <li>표준화 (StandardScaler)</li>
+    <li>전처리의 효과 데모</li>
+  </ol></div>
+
+  <h2>1. NumPy</h2>
+  <p>파이썬 기본 리스트는 느립니다. NumPy의 <code>ndarray</code>는 C로 구현되어 있어 100배 이상 빠릅니다.</p>
+  <pre><code>import numpy as np
+
+a = np.array([1, 2, 3, 4])
+b = np.array([10, 20, 30, 40])
+print(a + b)        # [11 22 33 44]   (요소별 덧셈)
+print(a * 2)        # [2 4 6 8]       (브로드캐스팅)
+print(a.mean())     # 2.5
+print(a[1:3])       # [2 3]           (슬라이싱)</code></pre>
+
+  <h2>2. Pandas</h2>
+  <p><code>DataFrame</code>은 엑셀 시트 같은 표 자료구조입니다.</p>
+  <pre><code>import pandas as pd
+
+df = pd.read_csv('fish.csv')
+print(df.shape)        # (49, 3)
+print(df.head())       # 첫 5행
+print(df.describe())   # 통계 요약 (mean, std, min, max ...)
+df['weight'].hist()    # 히스토그램</code></pre>
+
+  <h2>3. Train / Test 분리</h2>
+  <p>모델을 학습한 데이터로 다시 평가하면 과대평가됩니다. 데이터를 미리 둘로 나눕시다.</p>
+  <pre><code>from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+print(len(X_train), len(X_test))   # 70%, 30%</code></pre>
+  <p><code>stratify=y</code>는 클래스 비율을 유지해 분리합니다.</p>
+
+  <h2>4. 표준화 (Standardization)</h2>
+  <p>특성마다 값의 단위가 다르면 KNN처럼 거리 기반 알고리즘이 망가집니다.
+  예를 들어 길이(cm)는 10~40, 무게(g)는 5~1000이라면 무게가 거리를 지배합니다.</p>
+  $$ z = \frac{x - \mu}{\sigma} $$
+  <p>각 특성을 평균 0, 표준편차 1로 만드는 변환입니다.</p>
+  <pre><code>from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s  = scaler.transform(X_test)   # ← 같은 평균/표준편차로 변환</code></pre>
+
+  <div class="warn"><strong>주의</strong> — 테스트 데이터에는 <code>fit_transform</code>이 아니라 <code>transform</code>만 써야 합니다. 안 그러면 테스트 정보가 학습으로 새어 나갑니다(데이터 누수).</div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 표준화 전 / 후</h4>
+    <p>두 특성의 단위가 매우 다른 데이터입니다. 토글로 표준화 전/후를 비교해보세요.</p>
+    <canvas id="std" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="tg">표준화 토글</button>
+      <span style="font-size:13px;color:#666" id="lbl">현재: 원본</span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('std'),x=c.getContext('2d');
+    let scaled=false;
+    const raw=[];
+    for(let i=0;i<60;i++){
+      const cls=i<30?0:1;
+      const lx=cls==0?15+Math.random()*8:30+Math.random()*10;
+      const wy=cls==0?100+Math.random()*150:400+Math.random()*350;
+      raw.push({lx,wy,c:cls});
+    }
+    document.getElementById('tg').onclick=()=>{scaled=!scaled;document.getElementById('lbl').textContent='현재: '+(scaled?'표준화 후':'원본');};
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // axes
+      x.strokeStyle='#999';x.beginPath();x.moveTo(60,290);x.lineTo(600,290);x.moveTo(60,290);x.lineTo(60,30);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('길이 (cm)',520,310);x.save();x.translate(20,180);x.rotate(-Math.PI/2);x.fillText('무게 (g)',-30,0);x.restore();
+      let pts;
+      if(scaled){
+        const lxs=raw.map(p=>p.lx),wys=raw.map(p=>p.wy);
+        const m1=lxs.reduce((s,v)=>s+v,0)/lxs.length, m2=wys.reduce((s,v)=>s+v,0)/wys.length;
+        const s1=Math.sqrt(lxs.reduce((s,v)=>s+(v-m1)**2,0)/lxs.length);
+        const s2=Math.sqrt(wys.reduce((s,v)=>s+(v-m2)**2,0)/wys.length);
+        pts=raw.map(p=>({lx:(p.lx-m1)/s1,wy:(p.wy-m2)/s2,c:p.c}));
+        // map [-3,3] → canvas
+        pts.forEach(p=>{const px=60+(p.lx+3)*90,py=290-(p.wy+3)*40;x.fillStyle=p.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(px,py,5,0,Math.PI*2);x.fill();});
+      }else{
+        raw.forEach(p=>{const px=60+(p.lx-10)*15,py=290-p.wy*0.3;x.fillStyle=p.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(px,py,5,0,Math.PI*2);x.fill();});
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>원본에서는 두 특성의 스케일이 너무 달라 한 축으로만 데이터가 늘어선 것처럼 보입니다. 표준화 후에는 두 축이 비슷한 범위가 되어 KNN이 제대로 작동합니다.</p>
+
+  <nav class="prevnext">
+    <a href="01-ai-intro.html"><small>← 이전</small>W1. AI의 세계</a>
+    <a href="03-regression-1.html" class="next"><small>다음 →</small>W3. 선형 회귀</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

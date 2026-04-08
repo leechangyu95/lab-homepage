@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W5. 분류 알고리즘 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 5. 분류 — KNN · SVM · Decision Tree</h1>
+  <p class="lead">세 가지 대표적 분류기의 개성과 적용 시나리오를 비교합니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>KNN 다시 보기</li>
+    <li>서포트 벡터 머신</li>
+    <li>결정 트리</li>
+    <li>인터랙티브 결정 경계 비교</li>
+  </ol></div>
+
+  <h2>1. KNN (복습 + 깊이)</h2>
+  <p>이미 W1에서 보았듯이 거리 기반입니다. 핵심 강점은 구현이 단순하고 결정 경계가 데이터의 모양을 따른다는 것. 약점은 학습 데이터 전체를 들고 다녀야 하며 표준화가 필수입니다.</p>
+
+  <h2>2. SVM (Support Vector Machine)</h2>
+  <p>두 클래스를 가르는 직선(또는 곡면) 중에서 <strong>마진(margin)</strong>이 가장 큰 것을 찾습니다.</p>
+  $$ \max \frac{2}{\|\mathbf{w}\|}, \quad \text{s.t. } y_i(\mathbf{w}^\top \mathbf{x}_i + b) \ge 1 $$
+  <p>핵심 아이디어:</p>
+  <ul>
+    <li>마진이 클수록 새 데이터에 강합니다.</li>
+    <li><strong>커널 트릭</strong>으로 비선형 분류도 가능: <em>linear, poly, rbf</em>.</li>
+    <li><strong>C 파라미터</strong>: 마진을 넓게 두느냐(작은 C), 학습 오차를 줄이느냐(큰 C)의 균형.</li>
+  </ul>
+
+  <h2>3. Decision Tree (결정 트리)</h2>
+  <p>"길이 ≥ 20cm 이면 도미, 아니면 다시 무게가 100g 이상인지 묻고…" 같은 IF-THEN 규칙의 연쇄입니다.
+  사람이 읽을 수 있다는 것이 큰 장점입니다.</p>
+  <ul>
+    <li><strong>max_depth</strong>가 작으면 과소적합, 크면 과적합.</li>
+    <li>분할 기준은 보통 <em>지니 불순도</em> 또는 <em>엔트로피</em>.</li>
+  </ul>
+  $$ \text{Gini} = 1 - \sum_c p_c^2 $$
+
+  <table>
+    <thead><tr><th>알고리즘</th><th>강점</th><th>약점</th></tr></thead>
+    <tbody>
+      <tr><td>KNN</td><td>단순, 비선형 OK</td><td>느림, 표준화 필수</td></tr>
+      <tr><td>SVM</td><td>고차원 강함, 마진 보장</td><td>대용량 데이터에 느림</td></tr>
+      <tr><td>Decision Tree</td><td>해석 가능, 전처리 불필요</td><td>과적합 쉬움</td></tr>
+    </tbody>
+  </table>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 결정 경계 비교</h4>
+    <p>같은 데이터를 세 알고리즘이 어떻게 다르게 나누는지 봅니다. 데이터셋과 알고리즘을 바꿔보세요.</p>
+    <canvas id="cls" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>알고리즘
+        <select id="alg"><option value="knn">KNN (k=5)</option><option value="lin">선형 (Logistic)</option><option value="rbf">RBF SVM</option></select>
+      </label>
+      <label>데이터셋
+        <select id="ds"><option value="blobs">blobs</option><option value="moons">moons</option><option value="circles">circles</option></select>
+      </label>
+      <button id="rgn">새로 생성</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cls'),x=c.getContext('2d');
+    let pts=[];
+    function gen(){
+      pts=[];const ds=document.getElementById('ds').value;
+      if(ds=='blobs'){
+        for(let i=0;i<40;i++)pts.push({x:180+Math.random()*100,y:120+Math.random()*100,c:0});
+        for(let i=0;i<40;i++)pts.push({x:380+Math.random()*100,y:200+Math.random()*100,c:1});
+      }else if(ds=='moons'){
+        for(let i=0;i<50;i++){const t=Math.PI*Math.random();pts.push({x:320+Math.cos(t)*120-30,y:200-Math.sin(t)*100,c:0});}
+        for(let i=0;i<50;i++){const t=Math.PI*Math.random();pts.push({x:320+Math.cos(t+Math.PI)*120+30,y:200-Math.sin(t+Math.PI)*100+50,c:1});}
+        pts.forEach(p=>{p.x+=(Math.random()-0.5)*15;p.y+=(Math.random()-0.5)*15;});
+      }else{
+        for(let i=0;i<60;i++){const t=Math.random()*2*Math.PI,r=30+Math.random()*15;pts.push({x:320+Math.cos(t)*r,y:190+Math.sin(t)*r,c:0});}
+        for(let i=0;i<80;i++){const t=Math.random()*2*Math.PI,r=90+Math.random()*15;pts.push({x:320+Math.cos(t)*r,y:190+Math.sin(t)*r,c:1});}
+      }
+    }
+    gen();document.getElementById('rgn').onclick=gen;document.getElementById('ds').onchange=gen;
+    function classify(px,py,alg){
+      if(alg=='knn'){
+        const ds=pts.map(p=>({d:(p.x-px)**2+(p.y-py)**2,c:p.c})).sort((a,b)=>a.d-b.d).slice(0,5);
+        return ds.reduce((s,d)=>s+(d.c==0?1:-1),0)>=0?0:1;
+      }else if(alg=='lin'){
+        // crude logistic via gradient
+        if(!classify._w||classify._gen!=pts.length){let w1=0,w2=0,b=0;for(let it=0;it<200;it++){let g1=0,g2=0,gb=0;pts.forEach(p=>{const z=w1*p.x+w2*p.y+b;const s=1/(1+Math.exp(-z));const e=s-p.c;g1+=e*p.x;g2+=e*p.y;gb+=e;});w1-=0.0001*g1;w2-=0.0001*g2;b-=0.0001*gb;}classify._w={w1,w2,b};classify._gen=pts.length;}
+        const z=classify._w.w1*px+classify._w.w2*py+classify._w.b;return z>0?1:0;
+      }else{
+        // RBF: kernel sum with gamma
+        const g=0.001;
+        let s0=0,s1=0;
+        pts.forEach(p=>{const k=Math.exp(-g*((p.x-px)**2+(p.y-py)**2));if(p.c==0)s0+=k;else s1+=k;});
+        return s0>s1?0:1;
+      }
+    }
+    let lastAlg='';
+    function loop(){
+      const alg=document.getElementById('alg').value;
+      if(alg!=lastAlg){classify._w=null;lastAlg=alg;}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const STEP=10;
+      for(let i=0;i<c.width;i+=STEP)for(let j=0;j<c.height;j+=STEP){
+        const cl=classify(i,j,alg);
+        x.fillStyle=cl==0?'rgba(11,95,255,0.10)':'rgba(255,140,0,0.13)';
+        x.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach(p=>{x.fillStyle=p.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(p.x,p.y,4,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.stroke();});
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>관찰: <em>moons</em>나 <em>circles</em>처럼 비선형 데이터에서는 선형 로지스틱이 실패하고, RBF SVM이나 KNN이 성공합니다.</p>
+
+  <h2>4. 코드 예제</h2>
+  <pre><code>from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+
+knn = KNeighborsClassifier(n_neighbors=5).fit(Xs, y)
+svm = SVC(kernel='rbf', C=1.0, gamma='auto').fit(Xs, y)
+dt  = DecisionTreeClassifier(max_depth=4).fit(X, y)   # 트리는 표준화 불필요
+
+for m in (knn, svm, dt):
+    print(type(m).__name__, m.score(Xs_test, y_test))</code></pre>
+
+  <nav class="prevnext">
+    <a href="04-regression-2.html"><small>← 이전</small>W4. 로지스틱 회귀</a>
+    <a href="06-unsupervised.html" class="next"><small>다음 →</small>W6. 비지도학습</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

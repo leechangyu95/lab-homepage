@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W1. AI의 세계 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 1. AI의 세계</h1>
+  <p class="lead">인공지능이 무엇인지, 그리고 가장 단순한 분류기를 직접 만들어봅시다.</p>
+
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>AI · ML · DL의 차이</li>
+    <li>지도학습과 비지도학습</li>
+    <li>분류 vs 회귀</li>
+    <li>K-최근접 이웃 (KNN)</li>
+    <li>scikit-learn 코드</li>
+  </ol></div>
+
+  <h2>1. AI · ML · DL</h2>
+  <p>세 단어가 자주 헷갈리지만 포함 관계입니다.</p>
+  <ul>
+    <li><strong>AI (인공지능)</strong> — 사람처럼 생각하거나 행동하는 모든 기계. 가장 큰 개념.</li>
+    <li><strong>ML (머신러닝)</strong> — 사람이 규칙을 일일이 짜는 대신 <em>데이터에서 규칙을 배우는</em> 기법.</li>
+    <li><strong>DL (딥러닝)</strong> — 다층 신경망을 사용하는 머신러닝의 한 갈래.</li>
+  </ul>
+
+  <h2>2. 지도학습 vs 비지도학습</h2>
+  <table>
+    <thead><tr><th>분류</th><th>입력</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr><td>지도학습 (Supervised)</td><td>입력 + <em>정답 라벨</em></td><td>도미/빙어 분류, 집값 예측</td></tr>
+      <tr><td>비지도학습 (Unsupervised)</td><td>입력만</td><td>고객 군집화, 이상치 탐지</td></tr>
+    </tbody>
+  </table>
+
+  <p>지도학습은 다시 두 종류로 나뉩니다.</p>
+  <ul>
+    <li><strong>분류 (Classification)</strong> — 카테고리를 예측. "이건 도미? 빙어?"</li>
+    <li><strong>회귀 (Regression)</strong> — 연속된 숫자를 예측. "이 농어의 무게는 몇 g?"</li>
+  </ul>
+
+  <h2>3. K-Nearest Neighbors (KNN)</h2>
+  <p>가장 단순하고 직관적인 분류기입니다. 새 데이터가 들어오면:</p>
+  <ol>
+    <li>학습 데이터 중 가장 <strong>가까운 K개</strong>의 이웃을 찾습니다.</li>
+    <li>그 K개의 클래스를 보고 <strong>다수결</strong>로 결정합니다.</li>
+  </ol>
+
+  $$ \text{class}(\mathbf{x}) = \arg\max_{c} \sum_{i \in N_K(\mathbf{x})} \mathbb{1}(y_i = c) $$
+
+  <p>$N_K(\mathbf{x})$는 $\mathbf{x}$의 K개 최근접 이웃, $\mathbb{1}$은 조건이 참이면 1입니다.</p>
+
+  <div class="note"><strong>K가 작으면</strong> 모델이 너무 민감해져 잡음까지 외우는 <em>과적합</em>, <strong>K가 크면</strong> 너무 둔해지는 <em>과소적합</em>이 일어납니다.</div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: KNN 결정 경계</h4>
+    <p>도미(파랑)와 빙어(주황) 데이터입니다. K를 조절하며 결정 경계가 어떻게 변하는지 보세요. 캔버스를 클릭해 새 데이터를 추가할 수도 있습니다.</p>
+    <canvas id="knn" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>K (이웃 수) <span class="val" id="kV">5</span><input type="range" id="k" min="1" max="29" step="2" value="5"></label>
+      <button id="rst">리셋</button>
+      <span style="font-size:12px;color:#666">🔵 도미 &nbsp; 🟠 빙어 &nbsp; 클릭: 도미 추가, 우클릭: 빙어 추가</span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('knn'),x=c.getContext('2d');
+    let pts=[];
+    // bream cluster (right-top): bigger
+    for(let i=0;i<25;i++)pts.push({x:380+Math.random()*180,y:80+Math.random()*120,c:0});
+    // smelt cluster (left-bottom): smaller
+    for(let i=0;i<15;i++)pts.push({x:80+Math.random()*150,y:230+Math.random()*120,c:1});
+    c.oncontextmenu=e=>{e.preventDefault();const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height,c:1});};
+    c.onclick=e=>{const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height,c:0});};
+    document.getElementById('rst').onclick=()=>{pts=[];for(let i=0;i<25;i++)pts.push({x:380+Math.random()*180,y:80+Math.random()*120,c:0});for(let i=0;i<15;i++)pts.push({x:80+Math.random()*150,y:230+Math.random()*120,c:1});};
+    function loop(){
+      const K=+document.getElementById('k').value;
+      document.getElementById('kV').textContent=K;
+      // background classification
+      const STEP=12;
+      for(let i=0;i<c.width;i+=STEP)for(let j=0;j<c.height;j+=STEP){
+        const ds=pts.map(p=>({d:Math.hypot(p.x-i,p.y-j),c:p.c})).sort((a,b)=>a.d-b.d).slice(0,K);
+        const v=ds.reduce((s,d)=>s+(d.c==0?1:-1),0);
+        x.fillStyle=v>=0?'rgba(11,95,255,0.10)':'rgba(255,140,0,0.12)';
+        x.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach(p=>{x.fillStyle=p.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(p.x,p.y,5,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.stroke();});
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 코드 예제 (scikit-learn)</h2>
+  <pre><code># 도미(0) vs 빙어(1) 분류
+from sklearn.neighbors import KNeighborsClassifier
+
+# 길이(cm), 무게(g)
+fish_data = [[25.4, 242], [26.3, 290], [26.5, 340], [29.0, 363],
+             [9.8, 6.7], [10.5, 7.5], [10.6, 7.0], [11.0, 9.7]]
+fish_label = [0, 0, 0, 0, 1, 1, 1, 1]
+
+kn = KNeighborsClassifier(n_neighbors=3)
+kn.fit(fish_data, fish_label)
+
+print(kn.predict([[30, 600]]))   # → [0]  (도미)
+print(kn.score(fish_data, fish_label))   # → 1.0</code></pre>
+
+  <nav class="prevnext">
+    <a href="../dl.html"><small>← 돌아가기</small>주차 목록</a>
+    <a href="02-data-handling.html" class="next"><small>다음 →</small>W2. 데이터 핸들링</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

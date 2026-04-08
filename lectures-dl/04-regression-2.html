@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W4. 로지스틱 회귀 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 4. 회귀 2 — 다중회귀와 로지스틱 회귀</h1>
+  <p class="lead">여러 특성을 한 번에 다루고, 직선 회귀를 분류기로 변신시킵니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>다중 회귀</li>
+    <li>Ridge / Lasso 규제</li>
+    <li>시그모이드 함수</li>
+    <li>로지스틱 회귀</li>
+    <li>인터랙티브 데모</li>
+  </ol></div>
+
+  <h2>1. 다중 회귀</h2>
+  <p>특성이 한 개가 아니라 여러 개라면, 각 특성마다 가중치 $w_i$를 두면 됩니다.</p>
+  $$ \hat{y} = w_1 x_1 + w_2 x_2 + \dots + w_p x_p + b $$
+  <p>벡터/행렬로 쓰면 $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$로 단순합니다.</p>
+
+  <h2>2. 규제(Regularization): Ridge & Lasso</h2>
+  <p>특성이 많고 데이터가 적으면 모델이 가중치를 멋대로 키워 과적합합니다. 이를 막기 위해 손실함수에 가중치 크기 벌점을 더합니다.</p>
+  $$ \text{Ridge: } J = \text{MSE} + \lambda \sum_i w_i^2 $$
+  $$ \text{Lasso: } J = \text{MSE} + \lambda \sum_i |w_i| $$
+  <ul>
+    <li><strong>Ridge (L2)</strong> — 가중치를 작게 유지. 부드러움.</li>
+    <li><strong>Lasso (L1)</strong> — 일부 가중치를 정확히 0으로 만들어 자동 특성 선택.</li>
+  </ul>
+
+  <h2>3. 시그모이드 함수</h2>
+  <p>선형 회귀의 출력은 $-\infty \sim +\infty$ 어떤 값도 될 수 있습니다. 이걸 0과 1 사이의 <em>확률</em>로 짜내려면 시그모이드를 사용합니다.</p>
+  $$ \sigma(z) = \frac{1}{1 + e^{-z}} $$
+
+  <h2>4. 로지스틱 회귀 (Logistic Regression)</h2>
+  <p>이름엔 "회귀"가 들어가지만 실제로는 <strong>분류기</strong>입니다.</p>
+  $$ P(y=1 \mid \mathbf{x}) = \sigma(\mathbf{w}^\top \mathbf{x} + b) $$
+  <p>출력이 0.5 이상이면 클래스 1, 미만이면 0으로 분류합니다. 손실 함수로는 교차 엔트로피를 씁니다.</p>
+  $$ \mathcal{L} = -\bigl[y \log \hat{y} + (1-y)\log(1-\hat{y})\bigr] $$
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 시그모이드 & 로지스틱 결정 경계</h4>
+    <p>왼쪽: 시그모이드 곡선($w$ 크기에 따라 가팔라짐). 오른쪽: 2D 데이터에서 로지스틱 회귀가 학습한 결정 경계입니다.</p>
+    <canvas id="lg" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>w (시그모이드 가파름) <span class="val" id="wV">1</span><input type="range" id="w" min="0.1" max="5" step="0.1" value="1"></label>
+      <button id="rst">데이터 새로고침</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lg'),x=c.getContext('2d');
+    let pts=[];
+    function gen(){pts=[];for(let i=0;i<40;i++){const cls=i<20?0:1;const px=cls==0?60+Math.random()*100:200+Math.random()*100;const py=cls==0?60+Math.random()*180:80+Math.random()*180;pts.push({x:px,y:py,c:cls});}}
+    gen();document.getElementById('rst').onclick=gen;
+    function fit(){
+      // simple gradient descent on logistic loss
+      let w1=0,w2=0,b=0;const lr=0.001;
+      for(let it=0;it<400;it++){
+        let g1=0,g2=0,gb=0;
+        pts.forEach(p=>{const z=w1*p.x+w2*p.y+b;const s=1/(1+Math.exp(-z));const e=s-p.c;g1+=e*p.x;g2+=e*p.y;gb+=e;});
+        w1-=lr*g1;w2-=lr*g2;b-=lr*gb;
+      }
+      return {w1,w2,b};
+    }
+    let model=fit();let counter=0;
+    function loop(){
+      if(counter++%30==0)model=fit();
+      const w=+document.getElementById('w').value;
+      document.getElementById('wV').textContent=w;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // left: sigmoid
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,160);x.lineTo(300,160);x.moveTo(160,30);x.lineTo(160,290);x.stroke();
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      for(let xx=20;xx<300;xx+=2){const u=(xx-160)/30;const yy=160-(1/(1+Math.exp(-w*u))-0.5)*200;if(xx==20)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('σ(wz)',20,40);
+      // right: 2D logistic
+      x.fillStyle='#666';x.fillText('로지스틱 결정 경계',360,30);
+      // shading
+      const STEP=10;
+      for(let i=320;i<c.width;i+=STEP)for(let j=40;j<c.height;j+=STEP){
+        const z=model.w1*(i-320+50)+model.w2*j+model.b;
+        const s=1/(1+Math.exp(-z));
+        x.fillStyle=s>0.5?'rgba(255,140,0,0.13)':'rgba(11,95,255,0.10)';
+        x.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach(p=>{x.fillStyle=p.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(320+p.x*0.85,p.y,5,0,Math.PI*2);x.fill();});
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>5. 코드 예제</h2>
+  <pre><code>from sklearn.linear_model import LogisticRegression, Ridge, Lasso
+
+# 다중 회귀 + Ridge 규제
+ridge = Ridge(alpha=1.0)
+ridge.fit(X_train, y_train)
+print(ridge.score(X_test, y_test))
+
+# 로지스틱 회귀 (이진 분류)
+log = LogisticRegression()
+log.fit(X_train, y_train)
+print(log.predict([[5.5, 30]]))                  # 0 또는 1
+print(log.predict_proba([[5.5, 30]]))            # [P(0), P(1)]
+print(log.coef_, log.intercept_)</code></pre>
+
+  <nav class="prevnext">
+    <a href="03-regression-1.html"><small>← 이전</small>W3. 선형 회귀</a>
+    <a href="05-classification.html" class="next"><small>다음 →</small>W5. 분류 알고리즘</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
