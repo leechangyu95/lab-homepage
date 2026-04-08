@@ -137,6 +137,128 @@
 pid = PID(kp=5, ki=1, kd=2, dt=0.02)
 u = pid.step(ref=1.0, y=current_y)</code></pre>
 
+  <h2>4. 실전: 차량 경로 추종 제어</h2>
+  <p>PID는 1차원에 좋지만, 자동차가 곡선 경로를 따라가려면 횡방향(좌우) 오차를 핸들 각도로 바꿔주는 전문 제어기가 필요합니다.
+  자율주행 분야의 양대 산맥은 <strong>Pure Pursuit</strong>과 <strong>Stanley</strong>입니다.
+  둘 다 <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathTracking">PythonRobotics PathTracking</a>에 짧게 구현되어 있습니다.</p>
+
+  <h3>4-1. Pure Pursuit (순수 추적)</h3>
+  <p>차량 앞 일정 거리 $L_d$ 떨어진 경로 위 점을 "당근"처럼 바라보고 그쪽으로 핸들을 꺾습니다.</p>
+  $$ \delta = \arctan\!\left(\frac{2 L \sin\alpha}{L_d}\right) $$
+  <p>$L$은 축거, $\alpha$는 차량 진행 방향과 당근 방향 사이 각도입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Pure Pursuit으로 곡선 경로 추종</h4>
+    <p>전방 주시 거리 $L_d$를 바꿔보세요. 너무 짧으면 진동, 너무 길면 코너 컷팅이 일어납니다.</p>
+    <canvas id="pp" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>전방 주시 L_d <span class="val" id="ldV">40</span><input type="range" id="ld" min="10" max="120" value="40"></label>
+      <label>속도 v <span class="val" id="ppvV">2</span><input type="range" id="ppv" min="0.5" max="5" step="0.1" value="2"></label>
+      <button id="ppRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pp'),x=c.getContext('2d');
+    const path=[];for(let t=0;t<=Math.PI*2;t+=0.05){path.push([320+180*Math.cos(t),190+90*Math.sin(t*2)]);}
+    let car;
+    function init(){car={x:path[0][0],y:path[0][1]+30,th:0};}
+    init();document.getElementById('ppRst').onclick=init;
+    function loop(){
+      const Ld=+document.getElementById('ld').value;
+      const v=+document.getElementById('ppv').value;
+      ['ld','ppv'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      // find lookahead point: closest path index then walk forward by Ld
+      let bi=0,bd=Infinity;
+      path.forEach((p,i)=>{const d=(p[0]-car.x)**2+(p[1]-car.y)**2;if(d<bd){bd=d;bi=i;}});
+      let acc=0,li=bi;
+      while(acc<Ld){const ni=(li+1)%path.length;acc+=Math.hypot(path[ni][0]-path[li][0],path[ni][1]-path[li][1]);li=ni;}
+      const target=path[li];
+      const alpha=Math.atan2(target[1]-car.y,target[0]-car.x)-car.th;
+      const L=20;
+      const delta=Math.atan2(2*L*Math.sin(alpha),Ld);
+      car.x+=v*Math.cos(car.th);
+      car.y+=v*Math.sin(car.th);
+      car.th+=v/L*Math.tan(delta);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.beginPath();
+      path.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.closePath();x.stroke();
+      // lookahead point
+      x.fillStyle='#ff8c00';x.beginPath();x.arc(target[0],target[1],6,0,Math.PI*2);x.fill();
+      x.strokeStyle='#ff8c00';x.setLineDash([3,3]);x.beginPath();x.moveTo(car.x,car.y);x.lineTo(target[0],target[1]);x.stroke();x.setLineDash([]);
+      // car
+      x.save();x.translate(car.x,car.y);x.rotate(car.th);
+      x.fillStyle='#0b5fff';x.fillRect(-14,-7,28,14);
+      x.fillStyle='#fff';x.fillRect(8,-5,4,10);
+      x.restore();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h3>4-2. Stanley Controller (Stanford 우승작)</h3>
+  <p>2005년 DARPA Grand Challenge에서 Stanford의 Stanley가 우승할 때 쓴 알고리즘입니다.
+  앞바퀴 위치에서 측정한 <strong>경로 오차 $e$</strong>와 <strong>방향 오차 $\theta_e$</strong>를 합칩니다.</p>
+  $$ \delta = \theta_e + \arctan\!\left(\frac{k\, e}{v}\right) $$
+  <p>$\theta_e$는 차량 방향과 경로 접선 방향의 차이, $k$는 게인, $v$는 속도. 속도가 빠를수록 횡오차 보정이 부드러워집니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Stanley Controller</h4>
+    <p>같은 경로를 Stanley 방식으로 따라갑니다. $k$와 속도를 조절해 보세요.</p>
+    <canvas id="st" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>게인 k <span class="val" id="skV">2</span><input type="range" id="sk" min="0.2" max="8" step="0.1" value="2"></label>
+      <label>속도 v <span class="val" id="svV">2</span><input type="range" id="sv" min="0.5" max="5" step="0.1" value="2"></label>
+      <button id="stRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('st'),x=c.getContext('2d');
+    const path=[];for(let t=0;t<=Math.PI*2;t+=0.05){path.push([320+180*Math.cos(t),190+90*Math.sin(t*2)]);}
+    let car;
+    function init(){car={x:path[0][0],y:path[0][1]+30,th:0};}
+    init();document.getElementById('stRst').onclick=init;
+    function loop(){
+      const k=+document.getElementById('sk').value;
+      const v=+document.getElementById('sv').value;
+      ['sk','sv'].forEach(id=>document.getElementById(id+'V').textContent=document.getElementById(id).value);
+      const L=20;
+      // front axle position
+      const fx=car.x+L/2*Math.cos(car.th),fy=car.y+L/2*Math.sin(car.th);
+      // nearest path point
+      let bi=0,bd=Infinity;
+      path.forEach((p,i)=>{const d=(p[0]-fx)**2+(p[1]-fy)**2;if(d<bd){bd=d;bi=i;}});
+      const ni=(bi+1)%path.length;
+      const tx=path[ni][0]-path[bi][0],ty=path[ni][1]-path[bi][1];
+      const pathTh=Math.atan2(ty,tx);
+      // cross-track error (signed)
+      const dx=fx-path[bi][0],dy=fy-path[bi][1];
+      const e=dx*(-Math.sin(pathTh))+dy*(Math.cos(pathTh));
+      const thE=((pathTh-car.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+      const delta=thE+Math.atan2(-k*e,v*15);
+      car.x+=v*Math.cos(car.th);
+      car.y+=v*Math.sin(car.th);
+      car.th+=v/L*Math.tan(Math.max(-0.6,Math.min(0.6,delta)));
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.beginPath();
+      path.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.closePath();x.stroke();
+      // cross-track marker
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(fx,fy);x.lineTo(path[bi][0],path[bi][1]);x.stroke();x.setLineDash([]);
+      x.save();x.translate(car.x,car.y);x.rotate(car.th);
+      x.fillStyle='#0b5fff';x.fillRect(-14,-7,28,14);
+      x.fillStyle='#fff';x.fillRect(8,-5,4,10);
+      x.restore();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('횡오차 e = '+e.toFixed(1)+' px',12,370);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p><strong>비교</strong>: Pure Pursuit은 부드럽지만 코너에서 안쪽으로 깎입니다(컷팅). Stanley는 횡오차에 직접 반응해 더 정확하지만 잡음에 민감합니다. 둘 다 PythonRobotics에 50줄 이내의 짧은 파이썬 코드로 구현돼 있습니다.</p>
+
   <nav class="prevnext">
     <a href="07-path-planning.html"><small>← 이전</small>L7. 경로 계획</a>
     <a href="09-guidance-cbf.html" class="next"><small>다음 →</small>L9. 유도 & CBF</a>

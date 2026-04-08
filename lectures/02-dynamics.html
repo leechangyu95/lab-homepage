@@ -129,6 +129,109 @@ plt.plot(traj[:,0], traj[:,1]); plt.axis('equal'); plt.show()</code></pre>
 
   <div class="tip"><strong>핵심 직감</strong> — $\Delta t$가 작을수록 두 방법 모두 정확해집니다. 하지만 RK4는 큰 $\Delta t$에서도 잘 버팁니다. 실시간 시스템에서 계산량을 아낄 때 매우 중요합니다.</div>
 
+  <h2>5. 차륜형 로봇의 세 가지 모델</h2>
+  <p>같은 "바퀴 달린 로봇"이라도 구동 방식에 따라 운동학이 다릅니다.
+  <a href="https://github.com/AtsushiSakai/PythonRobotics">PythonRobotics</a>의 차량 모델을 참고해 세 가지를 비교합니다.</p>
+
+  <table>
+    <thead><tr><th>모델</th><th>예시</th><th>운동학</th></tr></thead>
+    <tbody>
+      <tr><td>유니사이클 (Unicycle)</td><td>외바퀴, 단순 이동 로봇</td><td>$\dot x = v\cos\theta,\;\dot y = v\sin\theta,\;\dot\theta = \omega$</td></tr>
+      <tr><td>차동 구동 (Differential)</td><td>룸바, TurtleBot</td><td>$v=(v_R+v_L)/2,\;\omega=(v_R-v_L)/L$</td></tr>
+      <tr><td>자전거 (Bicycle)</td><td>자동차, 자전거</td><td>$\dot\theta = (v/L)\tan\delta$</td></tr>
+    </tbody>
+  </table>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 차동 구동 로봇</h4>
+    <p>좌·우 바퀴 속도를 따로 조절합니다. 두 속도가 같으면 직진, 다르면 회전. 한쪽이 음수면 제자리 회전이 가능합니다 (자동차는 못 함!).</p>
+    <canvas id="diff" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>왼쪽 v_L <span class="val" id="vlV">3</span><input type="range" id="vl" min="-5" max="5" step="0.1" value="3"></label>
+      <label>오른쪽 v_R <span class="val" id="vrV">3</span><input type="range" id="vr" min="-5" max="5" step="0.1" value="3"></label>
+      <label>축거 L <span class="val" id="dlV">0.5</span><input type="range" id="dl" min="0.2" max="1.5" step="0.05" value="0.5"></label>
+      <button id="dRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('diff'),x=c.getContext('2d');
+    let s={x:320,y:160,th:0},trail=[];
+    const sl=id=>document.getElementById(id);
+    const upd=()=>{['vl','vr','dl'].forEach(k=>sl(k+'V').textContent=sl(k).value);};
+    sl('dRst').onclick=()=>{s={x:320,y:160,th:0};trail=[];};
+    ['vl','vr','dl'].forEach(k=>sl(k).oninput=upd);
+    function loop(){
+      const vl=+sl('vl').value,vr=+sl('vr').value,L=+sl('dl').value,dt=0.05;
+      const v=(vr+vl)/2*15,w=(vr-vl)/L;
+      s.x+=v*Math.cos(s.th)*dt;
+      s.y+=v*Math.sin(s.th)*dt;
+      s.th+=w*dt;
+      if(s.x<0||s.x>c.width||s.y<0||s.y>c.height){s.x=320;s.y=160;trail=[];}
+      trail.push([s.x,s.y]);if(trail.length>200)trail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      x.strokeStyle='#9eb9ff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.stroke();
+      x.save();x.translate(s.x,s.y);x.rotate(s.th);
+      x.fillStyle='#0b5fff';x.fillRect(-18,-12,36,24);
+      x.fillStyle='#222';x.fillRect(-14,-16,8,4);x.fillRect(6,-16,8,4);x.fillRect(-14,12,8,4);x.fillRect(6,12,8,4);
+      x.fillStyle='#fff';x.beginPath();x.arc(14,0,3,0,Math.PI*2);x.fill();
+      x.restore();
+      upd();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 오일러 vs RK4 정확도</h4>
+    <p>회전하는 단진동 시스템 $\ddot x = -x$(원형 궤도)를 두 방법으로 풉니다. 진짜 답은 단위원이지만 큰 $\Delta t$에서는 오일러가 점점 바깥으로 새 나가고 RK4는 거의 정확합니다.</p>
+    <canvas id="rkc" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Δt <span class="val" id="dtV">0.2</span><input type="range" id="dt" min="0.02" max="0.4" step="0.01" value="0.2"></label>
+      <button id="rkR">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rkc'),x=c.getContext('2d');
+    let eul,rk4,t;
+    function init(){eul=[1,0];rk4=[1,0];t=0;}
+    init();document.getElementById('rkR').onclick=init;
+    function f(s){return [s[1],-s[0]];}
+    function loop(){
+      const dt=+document.getElementById('dt').value;
+      document.getElementById('dtV').textContent=dt.toFixed(2);
+      // step
+      const k1=f(eul);eul=[eul[0]+k1[0]*dt,eul[1]+k1[1]*dt];
+      const r=rk4;
+      const a1=f(r);
+      const a2=f([r[0]+a1[0]*dt/2,r[1]+a1[1]*dt/2]);
+      const a3=f([r[0]+a2[0]*dt/2,r[1]+a2[1]*dt/2]);
+      const a4=f([r[0]+a3[0]*dt,r[1]+a3[1]*dt]);
+      rk4=[r[0]+dt/6*(a1[0]+2*a2[0]+2*a3[0]+a4[0]),r[1]+dt/6*(a1[1]+2*a2[1]+2*a3[1]+a4[1])];
+      t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320,cy=160,sc=100;
+      // truth circle
+      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.beginPath();x.arc(cx,cy,sc,0,Math.PI*2);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('🟢 정답 (단위원)',20,30);
+      x.fillStyle='#c62828';x.fillText('🔴 오일러: '+Math.hypot(eul[0],eul[1]).toFixed(3),20,50);
+      x.fillStyle='#0b5fff';x.fillText('🔵 RK4: '+Math.hypot(rk4[0],rk4[1]).toFixed(3),20,70);
+      x.fillStyle='#c62828';x.beginPath();x.arc(cx+eul[0]*sc,cy+eul[1]*sc,5,0,Math.PI*2);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(cx+rk4[0]*sc,cy+rk4[1]*sc,5,0,Math.PI*2);x.fill();
+      if(t>20)init();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>$\Delta t = 0.4$로 두면 오일러는 한 바퀴도 못 돌아 폭발합니다. RK4는 $\Delta t$를 키워도 단위원 근처에 머무릅니다.</p>
+
   <nav class="prevnext">
     <a href="01-intro.html"><small>← 이전</small>L1. 입문</a>
     <a href="03-state-space.html" class="next"><small>다음 →</small>L3. 상태공간 모델</a>
