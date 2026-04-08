@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L1. 로봇공학 입문 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 1. 로봇공학 입문</h1>
+  <p class="lead">자율 이동 로봇이 어떻게 "스스로" 움직이는지 큰 그림을 그려봅시다.</p>
+
+  <div class="toc">
+    <h4>이 강의에서 배우는 것</h4>
+    <ol>
+      <li>로봇이란 무엇인가?</li>
+      <li>자율주행의 5단계 파이프라인</li>
+      <li>이 강의의 전체 로드맵</li>
+    </ol>
+  </div>
+
+  <h2>1. 로봇이란?</h2>
+  <p>로봇은 <strong>① 환경을 감지하고(Sense)</strong>, <strong>② 생각하고(Think)</strong>, <strong>③ 행동하는(Act)</strong> 기계입니다.
+  스마트폰은 감지·계산은 잘하지만 스스로 움직이지 않으니 로봇이 아닙니다.
+  반면 청소 로봇, 자율주행차, 자율운항 선박은 세 가지 모두 합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 180" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="50" width="140" height="80" rx="10" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="90" y="85" text-anchor="middle" font-size="14" font-weight="bold" fill="#0742b8">SENSE</text>
+      <text x="90" y="105" text-anchor="middle" font-size="11" fill="#555">카메라·LiDAR·GPS</text>
+      <rect x="230" y="50" width="140" height="80" rx="10" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="300" y="85" text-anchor="middle" font-size="14" font-weight="bold" fill="#e65100">THINK</text>
+      <text x="300" y="105" text-anchor="middle" font-size="11" fill="#555">측위·계획·결정</text>
+      <rect x="440" y="50" width="140" height="80" rx="10" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="510" y="85" text-anchor="middle" font-size="14" font-weight="bold" fill="#1b5e20">ACT</text>
+      <text x="510" y="105" text-anchor="middle" font-size="11" fill="#555">모터·조향·추진</text>
+      <path d="M165,90 L225,90" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <path d="M375,90 L435,90" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#666"/></marker></defs>
+    </svg>
+    <figcaption>그림 1. 로봇의 3요소</figcaption>
+  </figure>
+
+  <h2>2. 자율주행 파이프라인</h2>
+  <p>대부분의 자율 시스템은 다음 5단계로 작동합니다. 각 단계가 곧 이 강의의 주차별 주제입니다.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>단계</th><th>하는 일</th><th>관련 강의</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>인지 (Perception)</td><td>"내 주위에 무엇이 있나?"</td><td>비전 / LiDAR (별도)</td></tr>
+      <tr><td>2</td><td>측위 (Localization)</td><td>"나는 지금 어디에 있나?"</td><td>L4, L5 칼만 필터</td></tr>
+      <tr><td>3</td><td>경로 계획 (Planning)</td><td>"어디로 어떻게 갈까?"</td><td>L7</td></tr>
+      <tr><td>4</td><td>유도 (Guidance)</td><td>"다음 순간 어느 방향으로?"</td><td>L10</td></tr>
+      <tr><td>5</td><td>제어 (Control)</td><td>"바퀴/추진기에 어떤 명령을?"</td><td>L9, L13, L14</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 모든 단계는 <strong>로봇의 동역학 모델</strong>(L2)과 <strong>상태공간 표현</strong>(L3) 위에서 돌아갑니다.
+  그래서 우리는 동역학부터 시작해서 점점 위쪽으로 올라갑니다.</p>
+
+  <h2>3. 실제 사례: 12인승 자율 운항선</h2>
+  <p>SAIL 연구실에서 다루는 대표 사례는 폭 2.6 m, 길이 약 15 m의 운하용 자율 운항선입니다.
+  좁은 운하에서 안전하게 사람을 태우고 이동하려면 위 5단계가 모두 정확하게 맞물려야 합니다.</p>
+
+  <div class="tip">
+    <strong>왜 어렵나?</strong> 운하는 GPS 신호가 약하고(측위 어려움), 좌우 1 m 안에 벽이 있어 충돌 여유가 거의 없으며(제어 정밀도 요구), 다른 배가 갑자기 나타납니다(동적 장애물). 이 강의의 모든 도구가 여기서 동시에 필요합니다.
+  </div>
+
+  <h2>4. 추천 학습 도구</h2>
+  <ul>
+    <li><a href="https://github.com/AtsushiSakai/PythonRobotics">PythonRobotics</a> — 모든 알고리즘이 짧은 파이썬 코드로 구현되어 있는 보물창고.</li>
+    <li>Python + NumPy + Matplotlib — 이 사이트의 모든 코드 예제는 이 셋만으로 돌아갑니다.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="../index.html"><small>← 돌아가기</small>강의 목록</a>
+    <a href="02-dynamics.html" class="next"><small>다음 강의 →</small>L2. 운동학과 동역학</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

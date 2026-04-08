@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L5. 칼만 필터 (2D) — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 5. 칼만 필터 (2D)</h1>
+  <p class="lead">로봇이 평면 위에서 움직일 때 위치를 추정해봅시다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>2D 상태 벡터</li>
+    <li>공분산 타원</li>
+    <li>오도메트리 + GPS 융합</li>
+    <li>EKF / UKF / 파티클 필터</li>
+  </ol></div>
+
+  <h2>1. 2D 상태 벡터</h2>
+  <p>2D 평면에서 움직이는 로봇의 상태는 보통 위치와 속도로 4차원입니다.</p>
+  $$ \mathbf{x} = \begin{bmatrix} x \\ y \\ \dot{x} \\ \dot{y} \end{bmatrix}, \quad
+     A_d = \begin{bmatrix} 1 & 0 & \Delta t & 0 \\ 0 & 1 & 0 & \Delta t \\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \end{bmatrix} $$
+
+  <p>1D 칼만 필터의 모든 식이 그대로 행렬 버전으로 확장됩니다. 차이는 단지 스칼라 → 행렬뿐입니다.</p>
+
+  <h2>2. 공분산 타원 (Covariance Ellipse)</h2>
+  <p>2D에서 불확실성은 한 숫자가 아니라 <strong>2×2 행렬</strong> $P$로 표현됩니다.
+  이 행렬을 시각화하면 <em>타원</em>이 됩니다. 타원이 클수록 모르겠다는 뜻입니다.</p>
+  <ul>
+    <li>예측 단계: 타원이 <strong>커집니다</strong> (시간이 지나면 불확실해짐).</li>
+    <li>갱신 단계: 측정이 들어오면 타원이 <strong>줄어듭니다</strong>.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2D 로봇 측위</h4>
+    <p>로봇(녹색)이 원을 그리며 움직이고, GPS(빨강)는 노이즈가 큽니다. 칼만 필터(파랑)와 공분산 타원을 관찰하세요.</p>
+    <canvas id="kf2" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>GPS 잡음 R <span class="val" id="rV">10</span><input type="range" id="r" min="1" max="40" value="10"></label>
+      <label>모델 잡음 Q <span class="val" id="qV">0.05</span><input type="range" id="q" min="0.01" max="0.5" step="0.01" value="0.05"></label>
+      <button id="rst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kf2'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{sl('rV').textContent=sl('r').value;sl('qV').textContent=sl('q').value;};
+    ['r','q'].forEach(k=>sl(k).oninput=upd);
+    let t=0,xh=[0,0,0,0],P=[[10,0,0,0],[0,10,0,0],[0,0,10,0],[0,0,0,10]],hist=[];
+    sl('rst').onclick=()=>{t=0;xh=[0,0,0,0];P=[[10,0,0,0],[0,10,0,0],[0,0,10,0],[0,0,0,10]];hist=[];};
+    function loop(){
+      const dt=0.05,R=+sl('r').value,Q=+sl('q').value;
+      const cx=320,cy=190,rad=120;
+      const tx=cx+rad*Math.cos(t),ty=cy+rad*Math.sin(t);
+      const mx=tx+(Math.random()*2-1)*Math.sqrt(R)*1.8;
+      const my=ty+(Math.random()*2-1)*Math.sqrt(R)*1.8;
+      // predict (constant velocity)
+      xh[0]+=xh[2]*dt; xh[1]+=xh[3]*dt;
+      // P = A P A^T + Q (simplified)
+      P[0][0]+=2*P[0][2]*dt+P[2][2]*dt*dt+Q;
+      P[1][1]+=2*P[1][3]*dt+P[3][3]*dt*dt+Q;
+      P[0][2]+=P[2][2]*dt; P[1][3]+=P[3][3]*dt;
+      P[2][2]+=Q; P[3][3]+=Q;
+      // update (H picks x,y)
+      const Sx=P[0][0]+R, Sy=P[1][1]+R;
+      const Kx0=P[0][0]/Sx,Kx2=P[0][2]/Sx;
+      const Ky1=P[1][1]/Sy,Ky3=P[1][3]/Sy;
+      const ex=mx-xh[0],ey=my-xh[1];
+      xh[0]+=Kx0*ex; xh[2]+=Kx2*ex;
+      xh[1]+=Ky1*ey; xh[3]+=Ky3*ey;
+      P[0][0]*=(1-Kx0); P[0][2]*=(1-Kx0);
+      P[1][1]*=(1-Ky1); P[1][3]*=(1-Ky1);
+      P[2][2]-=Kx2*P[0][2]; P[3][3]-=Ky3*P[1][3];
+      hist.push({tx,ty,mx,my,ex:xh[0],ey:xh[1]});
+      if(hist.length>200)hist.shift();
+      t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // grid
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      // truth circle
+      x.strokeStyle='#a5d6a7';x.beginPath();x.arc(cx,cy,rad,0,Math.PI*2);x.stroke();
+      // measurements
+      x.fillStyle='rgba(198,40,40,0.5)';
+      hist.forEach(h=>{x.beginPath();x.arc(h.mx,h.my,2,0,Math.PI*2);x.fill();});
+      // estimate trail
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{if(i==0)x.moveTo(h.ex,h.ey);else x.lineTo(h.ex,h.ey);});x.stroke();
+      // covariance ellipse
+      const sx_=Math.sqrt(Math.max(P[0][0],0.5))*2.5;
+      const sy_=Math.sqrt(Math.max(P[1][1],0.5))*2.5;
+      x.strokeStyle='rgba(11,95,255,0.6)';x.beginPath();
+      x.ellipse(xh[0],xh[1],sx_,sy_,0,0,Math.PI*2);x.stroke();
+      // truth dot
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(tx,ty,5,0,Math.PI*2);x.fill();
+      // estimate dot
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(xh[0],xh[1],4,0,Math.PI*2);x.fill();
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <h2>3. 비선형 시스템: EKF / UKF</h2>
+  <p>기본 칼만 필터는 시스템이 <strong>선형</strong>일 때만 정확합니다. 자동차의 자전거 모델처럼 $\sin, \cos$가 들어가면 선형이 아닙니다.</p>
+  <ul>
+    <li><strong>EKF (Extended KF)</strong> — 매 스텝마다 야코비안 행렬로 1차 근사 선형화. 가장 흔히 씁니다.</li>
+    <li><strong>UKF (Unscented KF)</strong> — 평균 주위에 "시그마 포인트"들을 흩뿌려 비선형 함수에 통과시킨 뒤 평균·공분산을 다시 계산. 미분이 필요 없어서 까다로운 시스템에 강합니다.</li>
+    <li><strong>파티클 필터</strong> — 분포 자체를 수많은 점(파티클)으로 표현. 분포가 가우시안이 아니어도 OK.</li>
+  </ul>
+
+  <h2>4. 코드 예제 (Python)</h2>
+  <pre><code>import numpy as np
+dt = 0.1
+A = np.array([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]])
+H = np.array([[1,0,0,0],[0,1,0,0]])    # GPS measures (x,y)
+Q = 0.01*np.eye(4)
+R = 4.0*np.eye(2)
+
+x = np.zeros(4); P = np.eye(4)*10
+def step(z):
+    global x,P
+    x = A @ x
+    P = A @ P @ A.T + Q
+    S = H @ P @ H.T + R
+    K = P @ H.T @ np.linalg.inv(S)
+    x = x + K @ (z - H @ x)
+    P = (np.eye(4) - K @ H) @ P
+    return x</code></pre>
+
+  <nav class="prevnext">
+    <a href="04-kalman-1d.html"><small>← 이전</small>L4. 칼만 1D</a>
+    <a href="07-path-planning.html" class="next"><small>다음 →</small>L7. 경로 계획</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L8. 피드백 제어 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 8. 피드백 제어 (PID)</h1>
+  <p class="lead">오차를 보고 입력을 조정하는, 가장 널리 쓰이는 제어 방법.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>개루프 vs 폐루프</li>
+    <li>P, I, D의 의미</li>
+    <li>PID 튜닝 인터랙티브</li>
+    <li>코드 예제</li>
+  </ol></div>
+
+  <h2>1. 개루프 vs 폐루프</h2>
+  <p><strong>개루프(Open-loop)</strong>: 정해진 명령을 그대로 보냄. 외부 방해가 있으면 금방 어긋납니다.<br>
+  <strong>폐루프(Closed-loop)</strong>: 출력을 측정해 목표와의 <em>오차 $e = r - y$</em>를 계산해 제어량에 반영합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 130" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="80" cy="65" r="14" fill="#fff" stroke="#333"/><text x="80" y="70" text-anchor="middle">−</text>
+      <text x="30" y="70">r →</text>
+      <rect x="140" y="40" width="100" height="50" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="190" y="70" text-anchor="middle">제어기 C</text>
+      <rect x="290" y="40" width="100" height="50" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="340" y="70" text-anchor="middle">플랜트 G</text>
+      <text x="430" y="70">→ y</text>
+      <path d="M94,65 L138,65" stroke="#333" marker-end="url(#a2)"/>
+      <path d="M242,65 L288,65" stroke="#333" marker-end="url(#a2)"/>
+      <path d="M392,65 L450,65 L450,110 L80,110 L80,80" stroke="#333" fill="none" marker-end="url(#a2)"/>
+      <defs><marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+    </svg>
+    <figcaption>그림 1. 폐루프 제어 구조. 출력 y가 입력으로 되돌아옵니다.</figcaption>
+  </figure>
+
+  <h2>2. PID 제어기</h2>
+  <p>오차 $e(t) = r(t) - y(t)$에 대해 다음 세 항의 합으로 입력을 만듭니다.</p>
+  $$ u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d\, \dot{e}(t) $$
+
+  <ul>
+    <li><strong>P (비례)</strong>: 현재 오차에 비례. 큰 오차일수록 강하게 반응.</li>
+    <li><strong>I (적분)</strong>: 누적 오차. 정상상태 오차를 0으로 만듦.</li>
+    <li><strong>D (미분)</strong>: 오차 변화율. 진동을 줄이는 댐핑 효과.</li>
+  </ul>
+
+  <div class="tip"><strong>튜닝 직감</strong> — $K_p$↑ 빠른 응답·진동↑, $K_i$↑ 정상오차↓·오버슈트↑, $K_d$↑ 진동↓·잡음에 민감.</div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: PID 튜닝 (질량-스프링)</h4>
+    <p>목표 위치(빨강 점선)로 질량(파랑)을 움직입니다. PID 게인을 조절하며 응답을 비교해보세요.</p>
+    <canvas id="pid" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="kpV">5</span><input type="range" id="kp" min="0" max="50" step="0.5" value="5"></label>
+      <label>Ki <span class="val" id="kiV">0</span><input type="range" id="ki" min="0" max="20" step="0.1" value="0"></label>
+      <label>Kd <span class="val" id="kdV">2</span><input type="range" id="kd" min="0" max="20" step="0.1" value="2"></label>
+      <button id="step">목표 변경</button>
+      <button id="rst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pid'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{['kp','ki','kd'].forEach(k=>sl(k+'V').textContent=sl(k).value);};
+    ['kp','ki','kd'].forEach(k=>sl(k).oninput=upd);
+    let y=0,yd=0,iE=0,prevE=0,ref=3,hist=[];
+    sl('rst').onclick=()=>{y=0;yd=0;iE=0;prevE=0;hist=[];};
+    sl('step').onclick=()=>{ref=ref>0?-3:3;};
+    function loop(){
+      const Kp=+sl('kp').value,Ki=+sl('ki').value,Kd=+sl('kd').value;
+      const dt=0.03,m=1,k=2,c2=0.3;
+      const e=ref-y; iE+=e*dt; const dE=(e-prevE)/dt; prevE=e;
+      const u=Kp*e+Ki*iE+Kd*dE;
+      const ydd=(u-k*y-c2*yd)/m;
+      yd+=ydd*dt; y+=yd*dt;
+      hist.push({y,ref}); if(hist.length>300)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // top: physical view
+      x.fillStyle='#999';x.fillRect(40,40,8,80);
+      const px=140+y*40;
+      x.strokeStyle='#666';x.lineWidth=2;x.beginPath();x.moveTo(48,80);
+      for(let i=0;i<10;i++)x.lineTo(48+(px-48)*i/10,80+(i%2?-8:8));
+      x.lineTo(px,80);x.stroke();
+      x.fillStyle='#0b5fff';x.fillRect(px-15,60,30,40);
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      x.moveTo(140+ref*40,30);x.lineTo(140+ref*40,110);x.stroke();x.setLineDash([]);
+      // bottom: response plot
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(0,220);x.lineTo(c.width,220);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=220-h.ref*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=220-h.y*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('응답 y(t)',10,300);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p>실험 가이드:</p>
+  <ul>
+    <li>$K_p$만 사용 → 정상상태에 도달은 하지만 약간의 오차가 남거나 진동.</li>
+    <li>$K_d$ 추가 → 진동이 줄어듭니다.</li>
+    <li>$K_i$ 추가 → 작은 잔류 오차가 사라집니다.</li>
+  </ul>
+
+  <h2>3. 코드 예제</h2>
+  <pre><code>class PID:
+    def __init__(self, kp, ki, kd, dt):
+        self.kp, self.ki, self.kd, self.dt = kp, ki, kd, dt
+        self.iE, self.prev = 0.0, 0.0
+
+    def step(self, ref, y):
+        e = ref - y
+        self.iE += e * self.dt
+        dE = (e - self.prev) / self.dt
+        self.prev = e
+        return self.kp*e + self.ki*self.iE + self.kd*dE
+
+# 사용
+pid = PID(kp=5, ki=1, kd=2, dt=0.02)
+u = pid.step(ref=1.0, y=current_y)</code></pre>
+
+  <nav class="prevnext">
+    <a href="07-path-planning.html"><small>← 이전</small>L7. 경로 계획</a>
+    <a href="09-guidance-cbf.html" class="next"><small>다음 →</small>L9. 유도 & CBF</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

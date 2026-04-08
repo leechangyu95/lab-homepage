@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L4. 칼만 필터 (1D) — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 4. 칼만 필터 (1D)</h1>
+  <p class="lead">잡음 속에서 진실을 찾는 가장 우아한 알고리즘.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 필터가 필요한가</li>
+    <li>두 가우시안 합치기</li>
+    <li>예측 - 갱신 두 단계</li>
+    <li>인터랙티브 1D 필터</li>
+    <li>코드 예제</li>
+  </ol></div>
+
+  <h2>1. 왜 필터가 필요한가?</h2>
+  <p>센서는 항상 잡음이 섞입니다. GPS는 ±5 m, IMU는 작은 오차가 시간에 따라 누적됩니다.
+  하지만 두 센서를 똑똑하게 합치면, 둘 다보다 정확한 추정이 가능합니다. 그게 칼만 필터입니다.</p>
+  <p>1960년 R. Kalman이 제안했고, 곧 NASA Apollo 우주선의 항법에 쓰여 인류를 달에 데려갔습니다.</p>
+
+  <h2>2. 두 가우시안 합치기</h2>
+  <p>두 측정값이 평균 $\mu_1, \mu_2$, 분산 $\sigma_1^2, \sigma_2^2$인 가우시안이라면 합쳐진 결과는:</p>
+  $$ \frac{1}{\sigma^2} = \frac{1}{\sigma_1^2} + \frac{1}{\sigma_2^2}, \quad \mu = \frac{\sigma_2^2 \mu_1 + \sigma_1^2 \mu_2}{\sigma_1^2 + \sigma_2^2} $$
+  <p>분산은 둘 중 어느 것보다도 <strong>작아집니다</strong>. 이게 마법의 핵심입니다.</p>
+
+  <h2>3. 예측 - 갱신 두 단계</h2>
+  <h3>① 예측 (Predict)</h3>
+  $$ \hat{x}_{k|k-1} = A \hat{x}_{k-1} + B u_k $$
+  $$ P_{k|k-1} = A P_{k-1} A^\top + Q $$
+  <p>모델로 다음 상태를 예측. 불확실성($P$)은 항상 커집니다.</p>
+
+  <h3>② 갱신 (Update)</h3>
+  $$ K = P_{k|k-1} H^\top (H P_{k|k-1} H^\top + R)^{-1} $$
+  $$ \hat{x}_k = \hat{x}_{k|k-1} + K(z_k - H \hat{x}_{k|k-1}) $$
+  $$ P_k = (I - KH) P_{k|k-1} $$
+  <p>측정값 $z_k$와 비교해 보정. 칼만 이득 $K$는 "측정을 얼마나 믿을지"의 가중치입니다.</p>
+
+  <div class="note"><strong>$K$의 직감</strong> — 측정 잡음 $R$이 작으면 $K$가 1에 가까워져 측정을 신뢰. $R$이 크면 $K$가 0에 가까워져 모델 예측만 따릅니다.</div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D 위치 추정</h4>
+    <p>로봇이 일정 속도로 움직이고 있고, 노이즈가 섞인 센서로 위치를 측정합니다. 칼만 필터의 추정값(파랑)이 진짜 위치(녹색)에 얼마나 잘 따라가는지 보세요.</p>
+    <canvas id="kf" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>측정 잡음 R <span class="val" id="rV">3</span><input type="range" id="r" min="0.1" max="10" step="0.1" value="3"></label>
+      <label>모델 잡음 Q <span class="val" id="qV">0.1</span><input type="range" id="q" min="0.01" max="2" step="0.01" value="0.1"></label>
+      <button id="rst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 진짜 &nbsp; 🔴 측정 &nbsp; 🔵 KF 추정</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kf'),x=c.getContext('2d');
+    let t=0, hist=[];
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{sl('rV').textContent=sl('r').value;sl('qV').textContent=sl('q').value;};
+    sl('rst').onclick=()=>{t=0;hist=[];xh=0;P=1;};
+    ['r','q'].forEach(k=>sl(k).oninput=upd);
+    let xh=0,P=1;
+    function loop(){
+      const R=+sl('r').value,Q=+sl('q').value,dt=0.05,A=1,H=1;
+      const truth=20+15*Math.sin(t*0.5);
+      const meas=truth+(Math.random()*2-1)*Math.sqrt(R)*1.5;
+      // predict
+      const xp=A*xh, Pp=A*P*A+Q;
+      // update
+      const K=Pp*H/(H*Pp*H+R);
+      xh=xp+K*(meas-H*xp);
+      P=(1-K*H)*Pp;
+      hist.push({t,truth,meas,est:xh});
+      if(hist.length>300)hist.shift();
+      t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.height;i+=40){x.beginPath();x.moveTo(0,i);x.lineTo(c.width,i);x.stroke();}
+      const sx=v=>v*2, sy=v=>140-v*5;
+      // truth
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.truth);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      // measurements
+      x.fillStyle='#c62828';
+      hist.forEach((h,i)=>{x.beginPath();x.arc(sx(i),sy(h.meas),1.5,0,Math.PI*2);x.fill();});
+      // estimate
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.est);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>실험해보세요</strong>: $R$을 매우 크게 하면 추정값이 둔해지고, $R$을 작게 하면 측정 노이즈를 그대로 따라갑니다. $Q$는 모델을 얼마나 믿지 않을지를 정합니다.</p>
+
+  <h2>4. 코드 예제 (Python)</h2>
+  <pre><code>import numpy as np
+
+A, H = 1.0, 1.0
+Q, R = 0.1, 4.0          # process / measurement noise
+x_hat, P = 0.0, 1.0      # initial estimate
+
+truth = 50.0
+measurements = truth + np.random.randn(50)*np.sqrt(R)
+
+estimates = []
+for z in measurements:
+    # predict
+    x_hat = A * x_hat
+    P     = A * P * A + Q
+    # update
+    K = P * H / (H * P * H + R)
+    x_hat = x_hat + K * (z - H * x_hat)
+    P = (1 - K * H) * P
+    estimates.append(x_hat)
+
+print("최종 추정:", estimates[-1])    # ≈ 50</code></pre>
+
+  <nav class="prevnext">
+    <a href="03-state-space.html"><small>← 이전</small>L3. 상태공간</a>
+    <a href="05-kalman-2d.html" class="next"><small>다음 →</small>L5. 칼만 필터 2D</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

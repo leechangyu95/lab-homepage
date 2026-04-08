@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L12. 모델 예측 제어 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 12. 모델 예측 제어 (MPC)</h1>
+  <p class="lead">미래를 시뮬레이션해 보고, 가장 좋은 행동을 골라 실행한다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 MPC인가</li>
+    <li>수신지평선(receding horizon)</li>
+    <li>최적화 문제 정의</li>
+    <li>인터랙티브 데모</li>
+  </ol></div>
+
+  <h2>1. 왜 MPC인가</h2>
+  <p>PID는 단순하고 강력하지만, <strong>제약(constraint)</strong>을 직접 다루지 못합니다. 모터의 최대 출력, 안전한 속도, 충돌 회피 같은 제약을 고려해야 한다면 MPC가 정답입니다.</p>
+  <p>핵심 아이디어: <em>미래 N 스텝의 행동을 한꺼번에 최적화하되, 첫 행동만 실제로 실행하고 다음 시점에 다시 푼다.</em></p>
+
+  <h2>2. 수신지평선 (Receding Horizon)</h2>
+  <figure>
+    <svg viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
+      <line x1="20" y1="120" x2="480" y2="120" stroke="#333"/>
+      <g fill="#0b5fff"><circle cx="60" cy="120" r="5"/></g>
+      <g fill="#9eb9ff"><circle cx="100" cy="100" r="4"/><circle cx="140" cy="85" r="4"/><circle cx="180" cy="80" r="4"/><circle cx="220" cy="78" r="4"/><circle cx="260" cy="80" r="4"/></g>
+      <text x="60" y="145" text-anchor="middle" font-size="12">지금</text>
+      <text x="180" y="65" text-anchor="middle" font-size="11" fill="#0742b8">N 스텝 예측 후 첫 행동만 실행</text>
+      <line x1="60" y1="120" x2="60" y2="135" stroke="#0b5fff"/>
+    </svg>
+  </figure>
+
+  <h2>3. 최적화 문제</h2>
+  $$ \min_{u_0,\dots,u_{N-1}} \sum_{i=0}^{N-1} \|x_i - x_\text{ref}\|_Q^2 + \|u_i\|_R^2 $$
+  $$ \text{s.t.}\;\; x_{i+1} = A x_i + B u_i, \quad u_\text{min} \le u_i \le u_\text{max} $$
+
+  <ul>
+    <li>$Q$ — 추종 오차 가중치 (크면 빨리 따라감)</li>
+    <li>$R$ — 입력 가중치 (크면 부드러운 제어)</li>
+    <li>장애물 회피, 속도 제한 등도 모두 제약으로 추가 가능</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D MPC 위치 추종</h4>
+    <p>마우스로 목표 위치(빨강 점선)를 끌고 다녀보세요. MPC가 가속도 한계 안에서 최적으로 따라갑니다.</p>
+    <canvas id="mpc" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>예측 호라이즌 N <span class="val" id="nV">15</span><input type="range" id="n" min="3" max="40" value="15"></label>
+      <label>입력 가중치 R <span class="val" id="rV">0.3</span><input type="range" id="r" min="0.01" max="3" step="0.01" value="0.3"></label>
+      <label>가속도 한계 <span class="val" id="uV">3</span><input type="range" id="u" min="0.5" max="10" step="0.1" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mpc'),x=c.getContext('2d');
+    let pos=0,vel=0,target=200,hist=[],horiz=[];
+    c.onmousemove=e=>{const r=c.getBoundingClientRect();target=(e.clientX-r.left)*c.width/r.width-50;};
+    function loop(){
+      const N=+document.getElementById('n').value;
+      const R=+document.getElementById('r').value;
+      const umax=+document.getElementById('u').value;
+      ['n','r','u'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      // very simple gradient descent on N-step open-loop accelerations
+      let u=new Array(N).fill(0);
+      const dt=0.1;
+      for(let it=0;it<40;it++){
+        // simulate
+        let p=pos,v=vel;const ps=[p];
+        for(let i=0;i<N;i++){v+=u[i]*dt;p+=v*dt;ps.push(p);}
+        // gradient: for each u_i, ∂J/∂u_i ≈ 2*(p_N-target)*dt*(N-i)*dt + 2*R*u_i
+        for(let i=0;i<N;i++){
+          let g=2*R*u[i];
+          for(let k=i+1;k<=N;k++){g+=2*(ps[k]-target)*dt*(k-i)*dt*0.3;}
+          u[i]-=0.05*g;
+          if(u[i]>umax)u[i]=umax;if(u[i]<-umax)u[i]=-umax;
+        }
+      }
+      // apply first
+      vel+=u[0]*dt; pos+=vel*dt;
+      // build horizon ghost
+      let p=pos,v=vel;horiz=[p];
+      for(let i=0;i<N;i++){v+=u[i]*dt;p+=v*dt;horiz.push(p);}
+      hist.push(pos);if(hist.length>300)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // road
+      x.fillStyle='#eee';x.fillRect(40,120,560,30);
+      // target
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(target+50,80);x.lineTo(target+50,170);x.stroke();x.setLineDash([]);
+      // horizon
+      x.fillStyle='rgba(11,95,255,0.25)';
+      horiz.forEach((p,i)=>{x.beginPath();x.arc(p+50,135,5-i*0.1,0,Math.PI*2);x.fill();});
+      // car
+      x.fillStyle='#0b5fff';x.fillRect(pos+35,120,30,30);
+      // history plot
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=240-(h+50)*0.2;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>호라이즌 $N$이 클수록 멀리 내다보지만 계산량이 늘어납니다. $R$이 크면 부드럽게, 작으면 공격적으로 움직입니다.</p>
+
+  <h2>4. 코드 예제 (CasADi)</h2>
+  <pre><code>import casadi as ca
+import numpy as np
+
+N, dt = 20, 0.1
+x = ca.SX.sym('x', 2)            # [pos, vel]
+u = ca.SX.sym('u')               # accel
+f = ca.Function('f', [x,u], [ca.vertcat(x[0]+dt*x[1], x[1]+dt*u)])
+
+opti = ca.Opti()
+X = opti.variable(2, N+1)
+U = opti.variable(1, N)
+x0 = opti.parameter(2); ref = opti.parameter()
+
+J = 0
+for k in range(N):
+    J += 10*(X[0,k]-ref)**2 + 0.3*U[0,k]**2
+    opti.subject_to(X[:,k+1] == f(X[:,k], U[0,k]))
+opti.subject_to(X[:,0] == x0)
+opti.subject_to(opti.bounded(-3, U, 3))
+
+opti.minimize(J)
+opti.solver('ipopt')
+opti.set_value(x0, [0,0]); opti.set_value(ref, 5)
+sol = opti.solve()
+u0 = sol.value(U[0,0])           # 첫 명령만 실제로 적용</code></pre>
+
+  <nav class="prevnext">
+    <a href="11-ann.html"><small>← 이전</small>L11. ANN</a>
+    <a href="13-advanced-mpc.html" class="next"><small>다음 →</small>L13. MPC 고급</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

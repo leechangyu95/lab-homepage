@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L3. 상태공간 모델 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 3. 상태공간 모델</h1>
+  <p class="lead">로봇의 모든 상태를 벡터 하나로, 모든 방정식을 행렬 곱셈 하나로.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 상태공간인가?</li>
+    <li>표준형 ẋ = Ax + Bu</li>
+    <li>예제: 질량-스프링-댐퍼</li>
+    <li>안정성·가제어성·가관측성</li>
+    <li>이산화 (연속 → 디지털)</li>
+  </ol></div>
+
+  <h2>1. 왜 상태공간인가?</h2>
+  <p>로봇은 위치, 속도, 자세, 각속도 등 수십 개 변수를 동시에 갖습니다. 이걸 식 하나마다 따로 쓰면 정신이 없습니다.
+  <strong>상태(state)</strong>라는 벡터에 모두 모아 행렬로 표현하면 깔끔해집니다.</p>
+
+  $$ \dot{\mathbf{x}} = A \mathbf{x} + B \mathbf{u}, \qquad \mathbf{y} = C \mathbf{x} + D \mathbf{u} $$
+
+  <ul>
+    <li>$\mathbf{x}$ — 상태 벡터 (로봇의 모든 정보)</li>
+    <li>$\mathbf{u}$ — 입력 (제어 명령)</li>
+    <li>$\mathbf{y}$ — 출력 (센서로 측정 가능한 값)</li>
+    <li>$A,B,C,D$ — 시스템의 성격을 정하는 행렬</li>
+  </ul>
+
+  <h2>2. 예제: 질량-스프링-댐퍼</h2>
+  <p>벽에 스프링과 감쇠기로 매달린 물체를 생각해봅시다.</p>
+  $$ m\ddot{y} + c\dot{y} + k y = u $$
+  <p>상태를 $\mathbf{x} = \begin{bmatrix}y \\ \dot{y}\end{bmatrix}$로 놓으면:</p>
+  $$ \dot{\mathbf{x}} = \begin{bmatrix}0 & 1 \\ -k/m & -c/m\end{bmatrix}\mathbf{x} + \begin{bmatrix}0 \\ 1/m\end{bmatrix}u $$
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 질량-스프링-댐퍼</h4>
+    <p>스프링 강성 $k$와 감쇠 $c$를 바꿔보며 시스템 응답을 관찰하세요. 살짝 잡아당겼다 놓는 자유 응답입니다.</p>
+    <canvas id="msd" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>질량 m <span class="val" id="mV">1</span><input type="range" id="m" min="0.5" max="3" step="0.1" value="1"></label>
+      <label>스프링 k <span class="val" id="kV">10</span><input type="range" id="k" min="1" max="50" value="10"></label>
+      <label>감쇠 c <span class="val" id="cV">0.5</span><input type="range" id="c" min="0" max="10" step="0.1" value="0.5"></label>
+      <button id="kick">잡아당기기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('msd'),x=c.getContext('2d');
+    let y=2, yd=0, hist=[];
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{['m','k','c'].forEach(k=>sl(k+'V').textContent=sl(k).value);};
+    sl('kick').onclick=()=>{y=2;yd=0;hist=[];};
+    ['m','k','c'].forEach(k=>sl(k).oninput=upd);
+    function loop(){
+      const m=+sl('m').value,k=+sl('k').value,cc=+sl('c').value,dt=0.02;
+      const ydd=(-k*y-cc*yd)/m;
+      yd+=ydd*dt; y+=yd*dt;
+      hist.push(y); if(hist.length>300)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // wall
+      x.fillStyle='#999';x.fillRect(40,80,8,120);
+      // spring
+      const px=140+y*40;
+      x.strokeStyle='#666';x.lineWidth=2;x.beginPath();x.moveTo(48,140);
+      for(let i=0;i<10;i++){x.lineTo(48+(px-48)*i/10,140+(i%2?-10:10));}
+      x.lineTo(px,140);x.stroke();
+      // mass
+      x.fillStyle='#0b5fff';x.fillRect(px-15,115,30,50);
+      // history plot
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((v,i)=>{const xx=300+i,yy=140-v*30;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
+      x.stroke();
+      x.strokeStyle='#ccc';x.beginPath();x.moveTo(300,140);x.lineTo(600,140);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('y(t)',610,143);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p>관찰 포인트: $c$가 작으면 진동이 오래 가고(언더댐핑), 크면 천천히 돌아옵니다(오버댐핑). 딱 그 사이가 <em>임계 감쇠</em>입니다.</p>
+
+  <h2>3. 안정성: 고유값 (Eigenvalues)</h2>
+  <p>$A$ 행렬의 고유값 $\lambda$의 실수부가 모두 음수이면 시스템은 안정합니다.</p>
+  $$ \text{안정} \iff \mathrm{Re}(\lambda_i) < 0 \;\; \forall i $$
+
+  <h2>4. 가제어성·가관측성</h2>
+  <ul>
+    <li><strong>가제어성</strong>: 입력 $u$로 임의의 상태에 도달할 수 있는가? &nbsp;
+      $\mathrm{rank}([B, AB, A^2B, \dots]) = n$</li>
+    <li><strong>가관측성</strong>: 출력 $y$만 보고 상태 $x$를 복원할 수 있는가? &nbsp;
+      $\mathrm{rank}([C; CA; CA^2; \dots]) = n$</li>
+  </ul>
+
+  <h2>5. 이산화 (Discretization)</h2>
+  <p>컴퓨터는 연속 시간으로 적분할 수 없으니 시간 간격 $\Delta t$로 잘라야 합니다.</p>
+  $$ \mathbf{x}_{k+1} = A_d \mathbf{x}_k + B_d \mathbf{u}_k $$
+  <p>등속도 모델 (constant velocity)의 예:</p>
+  $$ A_d = \begin{bmatrix}1 & \Delta t \\ 0 & 1\end{bmatrix}, \quad B_d = \begin{bmatrix}\Delta t^2/2 \\ \Delta t\end{bmatrix} $$
+
+  <h3>코드 예제 (Python)</h3>
+  <pre><code>import numpy as np
+from scipy.linalg import expm
+
+# 연속 시스템
+m, k, c = 1.0, 10.0, 0.5
+A = np.array([[0,1],[-k/m, -c/m]])
+B = np.array([[0],[1/m]])
+
+# 고유값 → 안정성
+print("eigenvalues:", np.linalg.eigvals(A))   # 모두 Re<0 이면 안정
+
+# 이산화 (zero-order hold)
+dt = 0.05
+Ad = expm(A*dt)
+Bd = np.linalg.inv(A) @ (Ad - np.eye(2)) @ B</code></pre>
+
+  <nav class="prevnext">
+    <a href="02-dynamics.html"><small>← 이전</small>L2. 동역학</a>
+    <a href="04-kalman-1d.html" class="next"><small>다음 →</small>L4. 칼만 필터 1D</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L9. 유도 & CBF — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 9. 유도 & 제어 장벽 함수 (CBF)</h1>
+  <p class="lead">"어디로 갈지" 결정하는 유도(guidance)와 "절대 부딪히지 않는" 안전 필터.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>유도(Guidance)란?</li>
+    <li>LOS 경로 추종</li>
+    <li>제어 장벽 함수의 직감</li>
+    <li>인터랙티브 CBF 안전 필터</li>
+  </ol></div>
+
+  <h2>1. 유도란?</h2>
+  <p>경로 계획(L7)이 큰 그림의 길을 정한다면, <strong>유도</strong>는 매 순간 "다음으로 어느 방향을 봐야 하나?"를 결정합니다. 그 방향이 정해지면 제어기(L9)가 실제 모터에 명령을 보냅니다.</p>
+
+  <h2>2. LOS (Line-of-Sight) 경로 추종</h2>
+  <p>가장 단순한 유도법: 경로상에서 일정 거리 앞($L_a$)에 가상 목표점을 두고, 그쪽을 바라보도록 조향합니다.</p>
+  $$ \delta = \arctan\!\left(\frac{k\, e_\text{ct}}{L_a}\right) $$
+  <p>$e_\text{ct}$는 경로로부터의 직각 거리(cross-track error), $k$는 게인입니다.</p>
+
+  <h2>3. 제어 장벽 함수 (CBF)</h2>
+  <p>"안전한 영역"을 함수 $h(x) \ge 0$로 정의해봅시다. 예를 들어 장애물 중심 $(x_o, y_o)$에서 반경 $r$ 안에 들어가지 않으려면:</p>
+  $$ h(x) = (x - x_o)^2 + (y - y_o)^2 - r^2 \ge 0 $$
+  <p>그리고 이 안전 집합이 "앞으로도 침범되지 않도록" 다음 조건을 강제합니다.</p>
+  $$ \dot{h}(x) + \gamma\, h(x) \ge 0 $$
+  <p>이 조건을 만족하는 입력 $u$만 허용하면, 장애물에 가까워질수록 $\dot{h}$가 자동으로 커지면서 막아줍니다. 마치 보이지 않는 자기장이 로봇을 밀어내는 것과 같습니다.</p>
+
+  <p>실제로는 다음 QP(Quadratic Program)를 풉니다.</p>
+  $$ u^* = \arg\min_u \|u - u_\text{nominal}\|^2 \;\;\text{s.t.}\;\; \dot{h} + \gamma h \ge 0 $$
+
+  <div class="tip"><strong>왜 좋은가?</strong> — 사용자는 평소대로 자유롭게 명령을 내리고, CBF는 위험한 명령만 살짝 수정합니다. "안전 필터"라 부르는 이유입니다.</div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: CBF 안전 필터</h4>
+    <p>마우스로 로봇(파랑)을 끌어당기듯 목표를 정합니다. CBF가 자동으로 빨간 장애물을 피하도록 명령을 수정합니다. $\gamma$를 조절해 보세요.</p>
+    <canvas id="cbf" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>γ (보수성) <span class="val" id="gV">1.5</span><input type="range" id="g" min="0.2" max="5" step="0.1" value="1.5"></label>
+      <label><input type="checkbox" id="off"> CBF 끄기 (충돌 발생!)</label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cbf'),x=c.getContext('2d');
+    let robot={x:100,y:200},target={x:100,y:200};
+    const obs=[{x:300,y:180,r:50},{x:450,y:250,r:40},{x:380,y:100,r:35}];
+    c.onmousemove=e=>{const r=c.getBoundingClientRect();target.x=(e.clientX-r.left)*c.width/r.width;target.y=(e.clientY-r.top)*c.height/r.height;};
+    function loop(){
+      const gamma=+document.getElementById('g').value;
+      const off=document.getElementById('off').checked;
+      document.getElementById('gV').textContent=gamma.toFixed(1);
+      // nominal control: go toward target
+      let ux=(target.x-robot.x)*0.05, uy=(target.y-robot.y)*0.05;
+      // CBF safety filter (simple gradient-projection)
+      if(!off){
+        for(const o of obs){
+          const dx=robot.x-o.x,dy=robot.y-o.y;
+          const h=dx*dx+dy*dy-o.r*o.r;
+          const hdot=2*dx*ux+2*dy*uy;
+          const cond=hdot+gamma*h;
+          if(cond<0){
+            const norm=4*(dx*dx+dy*dy);
+            const lam=-cond/norm;
+            ux+=lam*2*dx; uy+=lam*2*dy;
+          }
+        }
+      }
+      robot.x+=ux; robot.y+=uy;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // obstacles + safety margin
+      for(const o of obs){
+        x.fillStyle='rgba(198,40,40,0.15)';x.beginPath();x.arc(o.x,o.y,o.r+10,0,Math.PI*2);x.fill();
+        x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();
+      }
+      // target
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();x.arc(target.x,target.y,8,0,Math.PI*2);x.stroke();
+      x.beginPath();x.moveTo(target.x-5,target.y);x.lineTo(target.x+5,target.y);x.moveTo(target.x,target.y-5);x.lineTo(target.x,target.y+5);x.stroke();
+      // robot
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(robot.x,robot.y,10,0,Math.PI*2);x.fill();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>$\gamma$가 작으면 매우 일찍 회피하고(보수적), 크면 장애물에 거의 닿을 때까지 직진합니다(공격적). CBF를 끄면 명령을 그대로 따라 충돌합니다.</p>
+
+  <h2>4. 코드 예제 (개념 의사코드)</h2>
+  <pre><code>import cvxpy as cp
+import numpy as np
+
+def cbf_filter(u_nom, x, obstacles, gamma=1.5):
+    u = cp.Variable(2)
+    constraints = []
+    for (ox, oy, r) in obstacles:
+        dx, dy = x[0]-ox, x[1]-oy
+        h    = dx*dx + dy*dy - r*r
+        hdot = 2*dx*u[0] + 2*dy*u[1]
+        constraints.append(hdot + gamma*h >= 0)
+    cp.Problem(cp.Minimize(cp.sum_squares(u - u_nom)), constraints).solve()
+    return u.value</code></pre>
+
+  <nav class="prevnext">
+    <a href="08-feedback-control.html"><small>← 이전</small>L8. 피드백 제어</a>
+    <a href="10-regression.html" class="next"><small>다음 →</small>L10. 선형 회귀</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

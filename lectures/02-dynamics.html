@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L2. 운동학과 동역학 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 2. 운동학과 동역학</h1>
+  <p class="lead">로봇이 어떻게 "움직이는지"를 수학으로 표현해봅시다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>운동학 vs 동역학</li>
+    <li>좌표계</li>
+    <li>자전거 모델</li>
+    <li>수치 적분: 오일러 vs 룽게-쿠타</li>
+  </ol></div>
+
+  <h2>1. 운동학 vs 동역학</h2>
+  <p><strong>운동학(Kinematics)</strong>은 "어떻게 움직이는가"의 기하학적 묘사입니다. 힘은 따지지 않습니다.<br>
+  <strong>동역학(Dynamics)</strong>은 "왜 그렇게 움직이는가"입니다. 힘과 질량을 다룹니다.</p>
+  <p>고등학교에서 배운 가장 친숙한 동역학 식이 바로 뉴턴의 제2법칙입니다.</p>
+  $$ F = m a, \quad \tau = I \alpha $$
+  <p>병진운동(직선)과 회전운동(돌기)에 똑같이 적용됩니다.</p>
+
+  <h2>2. 좌표계</h2>
+  <p>로봇은 항상 <strong>두 좌표계</strong>를 동시에 씁니다.</p>
+  <ul>
+    <li><strong>관성 좌표계 (Inertial frame)</strong> — 지도 위 고정된 좌표. 움직이지 않는 기준.</li>
+    <li><strong>본체 좌표계 (Body frame)</strong> — 로봇과 함께 움직이는 좌표. 차의 "앞" 방향.</li>
+  </ul>
+  <p>속도는 본체 좌표에서 측정하기 쉽지만(속도계), 위치는 관성 좌표에서 알아야 합니다(지도 위 점). 둘 사이를 변환하는 회전행렬이 필요합니다.</p>
+
+  <h2>3. 자전거 모델 (Bicycle Model)</h2>
+  <p>실제 자동차는 바퀴 4개지만, 좌우 대칭이므로 앞바퀴 1개·뒷바퀴 1개로 단순화한 <strong>자전거 모델</strong>이 자율주행 표준입니다.</p>
+
+  $$ \dot{x} = v\cos\theta, \quad \dot{y} = v\sin\theta, \quad \dot{\theta} = \frac{v}{L}\tan\delta $$
+
+  <p>여기서 $v$는 속도, $\theta$는 차의 방향(heading), $\delta$는 조향각, $L$은 앞·뒷바퀴 사이 거리(축거)입니다.
+  이 세 식만 있으면 핸들과 페달로 차를 움직일 수 있습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 자전거 모델 운전하기</h4>
+    <p>속도와 조향각을 조절하면 차가 어떻게 움직이는지 확인하세요.</p>
+    <canvas id="bike" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>속도 v (m/s) <span class="val" id="vV">5</span><input type="range" id="v" min="0" max="15" step="0.1" value="5"></label>
+      <label>조향각 δ (도) <span class="val" id="dV">15</span><input type="range" id="d" min="-35" max="35" value="15"></label>
+      <label>축거 L (m) <span class="val" id="lV">2.5</span><input type="range" id="l" min="1" max="5" step="0.1" value="2.5"></label>
+      <button id="reset">리셋</button>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const c=document.getElementById('bike'),x=c.getContext('2d');
+    let s={x:60,y:160,th:0};
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{['v','d','l'].forEach(k=>sl(k+'V').textContent=sl(k).value);};
+    sl('reset').onclick=()=>{s={x:60,y:160,th:0};};
+    ['v','d','l'].forEach(k=>sl(k).oninput=upd);
+    function loop(){
+      const v=+sl('v').value, d=+sl('d').value*Math.PI/180, L=+sl('l').value, dt=0.05;
+      s.x+=v*Math.cos(s.th)*dt*8;
+      s.y+=v*Math.sin(s.th)*dt*8;
+      s.th+=v/L*Math.tan(d)*dt;
+      if(s.x>c.width)s.x=0;if(s.x<0)s.x=c.width;
+      if(s.y>c.height)s.y=0;if(s.y<0)s.y=c.height;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#e3e6ea';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      x.save();x.translate(s.x,s.y);x.rotate(s.th);
+      x.fillStyle='#0b5fff';x.fillRect(-22,-9,44,18);
+      x.fillStyle='#fff';x.fillRect(15,-7,5,14);
+      x.restore();
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <h2>4. 수치 적분: 오일러 vs 룽게-쿠타</h2>
+  <p>위 미분방정식을 컴퓨터로 풀려면 작은 시간 간격 $\Delta t$로 나누어 한 스텝씩 전진해야 합니다.</p>
+
+  <h3>오일러 (가장 단순)</h3>
+  $$ x_{k+1} = x_k + f(x_k, u_k) \,\Delta t $$
+  <p>한 스텝의 변화량을 그대로 더합니다. 빠르지만 부정확합니다.</p>
+
+  <h3>룽게-쿠타 4차 (RK4, 표준)</h3>
+  $$ x_{k+1} = x_k + \frac{\Delta t}{6}(k_1 + 2k_2 + 2k_3 + k_4) $$
+  <p>한 스텝 안에서 4번 기울기를 구해 평균합니다. 4배 느리지만 오차는 수백 배 작습니다.</p>
+
+  <h3>코드 예제 (Python)</h3>
+  <pre><code>import numpy as np
+import matplotlib.pyplot as plt
+
+def f(x, u, L=2.5):
+    v, delta = u
+    return np.array([v*np.cos(x[2]), v*np.sin(x[2]), v/L*np.tan(delta)])
+
+def euler(x, u, dt): return x + f(x,u)*dt
+
+def rk4(x, u, dt):
+    k1 = f(x, u)
+    k2 = f(x + dt/2*k1, u)
+    k3 = f(x + dt/2*k2, u)
+    k4 = f(x + dt*k3, u)
+    return x + dt/6*(k1 + 2*k2 + 2*k3 + k4)
+
+x = np.array([0., 0., 0.])
+traj = [x.copy()]
+for _ in range(200):
+    x = rk4(x, (5.0, 0.1), 0.05)   # v=5 m/s, δ=0.1 rad
+    traj.append(x.copy())
+traj = np.array(traj)
+plt.plot(traj[:,0], traj[:,1]); plt.axis('equal'); plt.show()</code></pre>
+
+  <div class="tip"><strong>핵심 직감</strong> — $\Delta t$가 작을수록 두 방법 모두 정확해집니다. 하지만 RK4는 큰 $\Delta t$에서도 잘 버팁니다. 실시간 시스템에서 계산량을 아낄 때 매우 중요합니다.</div>
+
+  <nav class="prevnext">
+    <a href="01-intro.html"><small>← 이전</small>L1. 입문</a>
+    <a href="03-state-space.html" class="next"><small>다음 →</small>L3. 상태공간 모델</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

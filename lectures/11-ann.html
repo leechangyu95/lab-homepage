@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L11. 인공 신경망 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 11. 인공 신경망 (ANN)</h1>
+  <p class="lead">선형 회귀를 여러 층으로 쌓아 비선형 함수를 학습합니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>퍼셉트론 한 개</li>
+    <li>다층 신경망</li>
+    <li>활성화 함수</li>
+    <li>역전파와 경사 하강법</li>
+    <li>인터랙티브 학습 데모</li>
+  </ol></div>
+
+  <h2>1. 퍼셉트론 (뉴런 한 개)</h2>
+  <p>가장 기본 단위는 입력에 가중치를 곱하고 활성화 함수를 통과시키는 작은 함수입니다.</p>
+  $$ z = w_1 x_1 + w_2 x_2 + b, \quad a = \sigma(z) $$
+  <p>이게 선형 회귀와 무엇이 다를까요? 활성화 함수 $\sigma$가 비선형이라는 점입니다.</p>
+
+  <h2>2. 활성화 함수</h2>
+  $$ \text{ReLU: } \sigma(z) = \max(0, z), \quad \text{Sigmoid: } \sigma(z) = \frac{1}{1+e^{-z}} $$
+  <p>비선형이 끼어들지 않으면 아무리 많은 층을 쌓아도 결국 하나의 직선과 같습니다. 활성화 함수가 신경망을 강력하게 만듭니다.</p>
+
+  <h2>3. 다층 신경망</h2>
+  <p>뉴런을 층(layer)으로 쌓으면 임의로 복잡한 함수를 근사할 수 있습니다 (보편 근사 정리).</p>
+  $$ a^{[l]} = \sigma\!\left(W^{[l]} a^{[l-1]} + b^{[l]}\right) $$
+
+  <figure>
+    <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
+      <g fill="#0b5fff"><circle cx="60" cy="60" r="14"/><circle cx="60" cy="160" r="14"/></g>
+      <g fill="#f57c00">
+        <circle cx="220" cy="40" r="14"/><circle cx="220" cy="100" r="14"/><circle cx="220" cy="160" r="14"/><circle cx="220" cy="200" r="14"/>
+      </g>
+      <g fill="#2e7d32"><circle cx="380" cy="110" r="14"/></g>
+      <g stroke="#aaa">
+        <line x1="74" y1="60" x2="206" y2="40"/><line x1="74" y1="60" x2="206" y2="100"/><line x1="74" y1="60" x2="206" y2="160"/><line x1="74" y1="60" x2="206" y2="200"/>
+        <line x1="74" y1="160" x2="206" y2="40"/><line x1="74" y1="160" x2="206" y2="100"/><line x1="74" y1="160" x2="206" y2="160"/><line x1="74" y1="160" x2="206" y2="200"/>
+        <line x1="234" y1="40" x2="366" y2="110"/><line x1="234" y1="100" x2="366" y2="110"/><line x1="234" y1="160" x2="366" y2="110"/><line x1="234" y1="200" x2="366" y2="110"/>
+      </g>
+      <text x="60" y="200" text-anchor="middle" font-size="12">입력</text>
+      <text x="220" y="225" text-anchor="middle" font-size="12">은닉</text>
+      <text x="380" y="150" text-anchor="middle" font-size="12">출력</text>
+    </svg>
+  </figure>
+
+  <h2>4. 학습: 역전파 + 경사 하강법</h2>
+  <p>네트워크의 출력 $\hat{y}$와 정답 $y$의 오차를 손실 함수로 측정합니다.</p>
+  $$ \mathcal{L} = \frac{1}{2N}\sum_{i=1}^N (y_i - \hat{y}_i)^2 $$
+  <p>가중치 $w$를 미분해서 손실을 줄이는 방향으로 한 발씩 업데이트합니다.</p>
+  $$ w \leftarrow w - \alpha \frac{\partial \mathcal{L}}{\partial w} $$
+  <p>여러 층의 미분은 연쇄 법칙(chain rule)으로 뒤에서 앞으로 전파됩니다 — 이것이 <strong>역전파(backpropagation)</strong>입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D 함수 학습</h4>
+    <p>작은 신경망(1→8→1, ReLU)이 sin 함수를 학습하는 과정입니다. 학습률을 바꾸며 수렴 속도를 보세요.</p>
+    <canvas id="ann" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>학습률 α <span class="val" id="lrV">0.05</span><input type="range" id="lr" min="0.001" max="0.3" step="0.001" value="0.05"></label>
+      <label>은닉 뉴런 H <span class="val" id="hV">8</span><input type="range" id="h" min="2" max="20" value="8"></label>
+      <button id="rst">재학습</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 정답 sin(x) &nbsp; 🔵 신경망 출력 &nbsp; <span id="ep"></span></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ann'),x=c.getContext('2d');
+    let H=8,W1,b1,W2,b2,epoch=0;
+    function init(){
+      H=+document.getElementById('h').value;
+      W1=Array.from({length:H},()=>Math.random()*2-1);
+      b1=Array.from({length:H},()=>Math.random()*2-1);
+      W2=Array.from({length:H},()=>Math.random()*2-1);
+      b2=Math.random()*2-1; epoch=0;
+    }
+    document.getElementById('rst').onclick=init;
+    document.getElementById('h').onchange=init;
+    init();
+    function forward(xi){
+      const z1=W1.map((w,i)=>w*xi+b1[i]);
+      const a1=z1.map(v=>Math.max(0,v));
+      const y=a1.reduce((s,a,i)=>s+W2[i]*a,0)+b2;
+      return {a1,y};
+    }
+    function step(){
+      const lr=+document.getElementById('lr').value;
+      // mini-batch
+      for(let it=0;it<20;it++){
+        const xi=(Math.random()*2-1)*Math.PI;
+        const target=Math.sin(xi);
+        const {a1,y}=forward(xi);
+        const dy=(y-target);
+        // grad on output layer
+        const dW2=a1.map(a=>dy*a);
+        const db2=dy;
+        // grad on hidden
+        const da1=W2.map(w=>dy*w);
+        const dz1=da1.map((d,i)=>d*(a1[i]>0?1:0));
+        const dW1=dz1.map(d=>d*xi);
+        const db1=dz1;
+        for(let i=0;i<H;i++){W1[i]-=lr*dW1[i];b1[i]-=lr*db1[i];W2[i]-=lr*dW2[i];}
+        b2-=lr*db2;
+      }
+      epoch++;
+    }
+    function loop(){
+      step();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      const sx=v=>320+v*80,sy=v=>160-v*100;
+      // truth
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();
+      for(let xi=-Math.PI;xi<Math.PI;xi+=0.05){const xx=sx(xi),yy=sy(Math.sin(xi));if(xi==-Math.PI)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      // network
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let xi=-Math.PI;xi<Math.PI;xi+=0.05){const yy=sy(forward(xi).y);const xx=sx(xi);if(xi==-Math.PI)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      document.getElementById('lrV').textContent=document.getElementById('lr').value;
+      document.getElementById('hV').textContent=H;
+      document.getElementById('ep').textContent='epoch '+epoch;
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>5. PyTorch 코드</h2>
+  <pre><code>import torch
+import torch.nn as nn
+
+model = nn.Sequential(
+    nn.Linear(1, 20),
+    nn.ReLU(),
+    nn.Linear(20, 1),
+)
+loss_fn = nn.MSELoss()
+opt = torch.optim.Adam(model.parameters(), lr=1e-2)
+
+x = torch.linspace(-3.14, 3.14, 200).unsqueeze(1)
+y = torch.sin(x)
+
+for ep in range(2000):
+    pred = model(x)
+    loss = loss_fn(pred, y)
+    opt.zero_grad(); loss.backward(); opt.step()
+print("loss:", loss.item())</code></pre>
+
+  <nav class="prevnext">
+    <a href="10-regression.html"><small>← 이전</small>L10. 회귀</a>
+    <a href="12-mpc.html" class="next"><small>다음 →</small>L12. MPC</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L7. 경로 계획 — SAIL Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 SAIL Learning</a></h1>
+  <nav><a href="../index.html" class="active">로봇공학특론</a></nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 7. 경로 계획</h1>
+  <p class="lead">출발점에서 목표점까지, 장애물을 피해 가는 길을 찾는 알고리즘.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>그래프 탐색의 기초</li>
+    <li>BFS · Dijkstra · A*</li>
+    <li>샘플링 기반: PRM, RRT</li>
+    <li>인터랙티브 A* 데모</li>
+  </ol></div>
+
+  <h2>1. 그래프 탐색의 기초</h2>
+  <p>지도를 격자(grid)로 잘라 각 칸을 <strong>노드(node)</strong>, 인접 칸 사이를 <strong>엣지(edge)</strong>로 보면 경로 찾기는 그래프 탐색 문제가 됩니다.</p>
+
+  <h2>2. 세 가지 대표 알고리즘</h2>
+  <table>
+    <thead><tr><th>알고리즘</th><th>아이디어</th><th>최단경로?</th><th>속도</th></tr></thead>
+    <tbody>
+      <tr><td>BFS</td><td>가까운 곳부터 골고루 퍼짐</td><td>○ (가중치=1일 때)</td><td>느림</td></tr>
+      <tr><td>Dijkstra</td><td>지금까지의 누적 비용이 작은 노드 우선</td><td>○</td><td>중간</td></tr>
+      <tr><td>A*</td><td>$f(n) = g(n) + h(n)$, 목표 방향으로 우선 탐색</td><td>○ (h가 admissible 일 때)</td><td>빠름</td></tr>
+    </tbody>
+  </table>
+
+  <p>A*의 핵심은 휴리스틱 $h(n)$입니다. "여기서 목표까지 대략 얼마나 남았을까"의 추정값입니다.</p>
+  $$ h_\text{euclid}(n) = \sqrt{(x_g-x_n)^2 + (y_g-y_n)^2} $$
+  $$ h_\text{manhattan}(n) = |x_g-x_n| + |y_g-y_n| $$
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: A* 격자 탐색</h4>
+    <p>격자를 클릭해 장애물(검정)을 그린 뒤 <strong>Run A*</strong>를 누르세요. 탐색 영역(연파랑)과 최종 경로(파랑)가 표시됩니다.</p>
+    <canvas id="astar" width="640" height="400"></canvas>
+    <div class="controls">
+      <button id="run">Run A*</button>
+      <button id="clr" class="alt">장애물 지우기</button>
+      <span style="font-size:12px;color:#666">🟢 시작 &nbsp; 🔴 목표 &nbsp; ⬛ 장애물</span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('astar'),x=c.getContext('2d');
+    const W=32,H=20,SZ=20;
+    let grid=Array.from({length:H},()=>Array(W).fill(0));
+    let start=[2,10], goal=[29,10];
+    let visited=new Set(), path=[];
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        if(grid[i][j])x.fillStyle='#222';
+        else if(visited.has(i*W+j))x.fillStyle='#cfe0ff';
+        else x.fillStyle='#fff';
+        x.fillRect(j*SZ,i*SZ,SZ-1,SZ-1);
+      }
+      x.strokeStyle='#0b5fff';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{const xx=p[0]*SZ+SZ/2,yy=p[1]*SZ+SZ/2;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#2e7d32';x.fillRect(start[0]*SZ,start[1]*SZ,SZ-1,SZ-1);
+      x.fillStyle='#c62828';x.fillRect(goal[0]*SZ,goal[1]*SZ,SZ-1,SZ-1);
+    }
+    c.onmousedown=e=>{
+      const r=c.getBoundingClientRect();
+      const j=Math.floor((e.clientX-r.left)*c.width/r.width/SZ);
+      const i=Math.floor((e.clientY-r.top)*c.height/r.height/SZ);
+      if(i<0||i>=H||j<0||j>=W)return;
+      if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1]))return;
+      grid[i][j]=1-grid[i][j];draw();
+    };
+    function astar(){
+      visited=new Set();path=[];
+      const h=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+      const open=[{p:start,g:0,f:h(start,goal),parent:null}];
+      const closed={};
+      while(open.length){
+        open.sort((a,b)=>a.f-b.f);
+        const cur=open.shift();
+        const k=cur.p[1]*W+cur.p[0];
+        if(closed[k])continue;
+        closed[k]=cur;visited.add(k);
+        if(cur.p[0]==goal[0]&&cur.p[1]==goal[1]){
+          let n=cur;while(n){path.push(n.p);n=n.parent;}
+          path.reverse();break;
+        }
+        for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+          const nx=cur.p[0]+dx,ny=cur.p[1]+dy;
+          if(nx<0||ny<0||nx>=W||ny>=H||grid[ny][nx])continue;
+          const ng=cur.g+Math.hypot(dx,dy);
+          open.push({p:[nx,ny],g:ng,f:ng+h([nx,ny],goal),parent:cur});
+        }
+      }
+      draw();
+    }
+    document.getElementById('run').onclick=astar;
+    document.getElementById('clr').onclick=()=>{grid=Array.from({length:H},()=>Array(W).fill(0));visited=new Set();path=[];draw();};
+    // initial obstacles
+    for(let i=4;i<16;i++){grid[i][12]=1;grid[i][20]=1;}
+    draw();
+  })();
+  </script>
+
+  <h2>3. 샘플링 기반: RRT</h2>
+  <p>격자가 아닌 연속 공간에서 장애물이 복잡하면 RRT(Rapidly-exploring Random Tree)가 효과적입니다.</p>
+  <ol>
+    <li>공간에서 랜덤 점 $q_\text{rand}$를 뽑습니다.</li>
+    <li>현재 트리에서 가장 가까운 노드 $q_\text{near}$를 찾습니다.</li>
+    <li>$q_\text{near}$에서 $q_\text{rand}$ 방향으로 작은 거리만큼 전진해 새 노드 $q_\text{new}$를 만듭니다.</li>
+    <li>장애물에 부딪히지 않으면 트리에 추가.</li>
+    <li>목표에 충분히 가까워지면 종료.</li>
+  </ol>
+  <p><strong>RRT*</strong>는 새 노드를 추가할 때 주변 노드들을 다시 연결하여 최적성을 보장합니다.</p>
+
+  <h2>4. 코드 예제 — A* (Python)</h2>
+  <pre><code>import heapq, math
+
+def astar(grid, start, goal):
+    H, W = len(grid), len(grid[0])
+    h = lambda a,b: math.hypot(a[0]-b[0], a[1]-b[1])
+    open_, came, g = [(h(start,goal), 0, start)], {start: None}, {start: 0}
+    while open_:
+        _, gc, cur = heapq.heappop(open_)
+        if cur == goal:
+            path = []
+            while cur: path.append(cur); cur = came[cur]
+            return path[::-1]
+        for dx,dy in [(1,0),(-1,0),(0,1),(0,-1),(1,1),(-1,1),(1,-1),(-1,-1)]:
+            nx, ny = cur[0]+dx, cur[1]+dy
+            if 0<=nx<W and 0<=ny<H and not grid[ny][nx]:
+                ng = gc + math.hypot(dx,dy)
+                if (nx,ny) not in g or ng < g[(nx,ny)]:
+                    g[(nx,ny)] = ng
+                    heapq.heappush(open_, (ng + h((nx,ny),goal), ng, (nx,ny)))
+                    came[(nx,ny)] = cur
+    return None</code></pre>
+
+  <nav class="prevnext">
+    <a href="05-kalman-2d.html"><small>← 이전</small>L5. 칼만 2D</a>
+    <a href="08-feedback-control.html" class="next"><small>다음 →</small>L8. 피드백 제어</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
