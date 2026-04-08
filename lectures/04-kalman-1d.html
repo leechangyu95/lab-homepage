@@ -78,37 +78,49 @@
   <script>
   (function(){
     const c=document.getElementById('gauss'),x=c.getContext('2d');
+    function pdf(xx,mu,sg){return Math.exp(-(xx-mu)**2/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));}
     function loop(){
       const mu=+document.getElementById('mu').value;
       const sg=+document.getElementById('sg').value;
       document.getElementById('muV').textContent=mu.toFixed(1);
       document.getElementById('sgV').textContent=sg.toFixed(1);
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      const x0=320,y0=220,sx=60;
-      x.strokeStyle='#999';x.beginPath();x.moveTo(20,y0);x.lineTo(620,y0);x.moveTo(x0,30);x.lineTo(x0,y0+10);x.stroke();
-      // 1σ, 2σ 음영
-      [[2,'rgba(11,95,255,0.07)'],[1,'rgba(11,95,255,0.13)']].forEach(([k,col])=>{
+      const x0=320,y0=240,sx=60;
+      // 곡선이 항상 같은 픽셀 높이가 되도록 정규화
+      const peakH=170;
+      const peak=pdf(mu,mu,sg);
+      const yScale=peakH/peak;
+      // 축
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,y0);x.lineTo(620,y0);x.moveTo(x0,40);x.lineTo(x0,y0+10);x.stroke();
+      // 1σ, 2σ 음영 (작은 σ에서도 부드럽도록 60 step 사용)
+      [[2,'rgba(11,95,255,0.07)'],[1,'rgba(11,95,255,0.16)']].forEach(([k,col])=>{
         x.fillStyle=col;
+        const N=60;
         x.beginPath();x.moveTo(x0+(mu-k*sg)*sx,y0);
-        for(let xx=mu-k*sg;xx<=mu+k*sg;xx+=0.05){
-          const y=Math.exp(-(xx-mu)**2/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));
-          x.lineTo(x0+xx*sx,y0-y*350);
+        for(let i=0;i<=N;i++){
+          const xx=mu-k*sg+(2*k*sg)*i/N;
+          x.lineTo(x0+xx*sx,y0-pdf(xx,mu,sg)*yScale);
         }
         x.lineTo(x0+(mu+k*sg)*sx,y0);x.closePath();x.fill();
       });
+      // 메인 곡선
       x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
-      for(let xx=-5;xx<=5;xx+=0.05){
-        const y=Math.exp(-(xx-mu)**2/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));
-        const px=x0+xx*sx,py=y0-y*350;
-        if(xx===-5)x.moveTo(px,py);else x.lineTo(px,py);
+      const N=300;
+      for(let i=0;i<=N;i++){
+        const xx=-5+10*i/N;
+        const px=x0+xx*sx,py=y0-pdf(xx,mu,sg)*yScale;
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
       }
       x.stroke();
-      // mean line
-      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(x0+mu*sx,30);x.lineTo(x0+mu*sx,y0);x.stroke();x.setLineDash([]);
-      x.fillStyle='#666';x.font='12px sans-serif';
-      x.fillText('μ',x0+mu*sx-4,25);
-      x.fillText('1σ ≈ 68%',x0+sg*sx+5,150);
-      x.fillText('2σ ≈ 95%',x0+2*sg*sx+5,180);
+      // 평균 수직선
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(x0+mu*sx,40);x.lineTo(x0+mu*sx,y0);x.stroke();x.setLineDash([]);
+      // 라벨
+      x.fillStyle='#c62828';x.font='12px sans-serif';
+      x.fillText('μ = '+mu.toFixed(1),x0+mu*sx+4,55);
+      x.fillStyle='#666';
+      x.fillText('1σ ≈ 68%',x0+0.5*sg*sx,y0-peakH*0.3);
+      x.fillText('2σ ≈ 95%',x0+1.5*sg*sx,y0-peakH*0.08);
+      x.fillText('피크 높이는 항상 같게 정규화됨 (실제 높이 = '+peak.toFixed(2)+')',20,30);
       requestAnimationFrame(loop);
     }
     loop();
@@ -210,17 +222,25 @@
       const sgF=Math.sqrt(1/(1/s1**2+1/s2**2));
       const muF=(s2**2*m1+s1**2*m2)/(s1**2+s2**2);
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      const x0=320,y0=240,sx=70;
+      const x0=320,y0=250,sx=70;
+      // 세 분포 중 가장 큰 피크에 맞춰 정규화
+      const peakMax=Math.max(gauss(m1,m1,s1),gauss(m2,m2,s2),gauss(muF,muF,sgF));
+      const yScale=170/peakMax;
       x.strokeStyle='#999';x.beginPath();x.moveTo(20,y0);x.lineTo(620,y0);x.stroke();
       function draw(mu,sg,col,fill){
-        x.strokeStyle=col;x.fillStyle=fill;x.lineWidth=2;x.beginPath();
-        let first=true;
-        for(let xx=-5;xx<=5;xx+=0.04){const py=y0-gauss(xx,mu,sg)*350;const px=x0+xx*sx;if(first){x.moveTo(px,py);first=false;}else x.lineTo(px,py);}
+        x.strokeStyle=col;x.fillStyle=fill;x.lineWidth=2.5;x.beginPath();
+        const N=300;
+        for(let i=0;i<=N;i++){
+          const xx=-5+10*i/N;
+          const py=y0-gauss(xx,mu,sg)*yScale;
+          const px=x0+xx*sx;
+          if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+        }
         x.lineTo(x0+5*sx,y0);x.lineTo(x0-5*sx,y0);x.closePath();x.fill();x.stroke();
       }
-      draw(m1,s1,'#0b5fff','rgba(11,95,255,0.10)');
-      draw(m2,s2,'#ff8c00','rgba(255,140,0,0.10)');
-      draw(muF,sgF,'#2e7d32','rgba(46,125,50,0.20)');
+      draw(m1,s1,'#0b5fff','rgba(11,95,255,0.15)');
+      draw(m2,s2,'#ff8c00','rgba(255,140,0,0.15)');
+      draw(muF,sgF,'#2e7d32','rgba(46,125,50,0.25)');
       x.fillStyle='#0b5fff';x.font='12px sans-serif';
       x.fillText('🔵 측정 1 (μ='+m1+', σ='+s1+')',20,30);
       x.fillStyle='#ff8c00';x.fillText('🟠 측정 2 (μ='+m2+', σ='+s2+')',20,50);
