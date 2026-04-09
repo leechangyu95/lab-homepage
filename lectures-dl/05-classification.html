@@ -21,130 +21,179 @@
 
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
-  <h1 class="page-title">Week 5. 분류 — KNN · SVM · Decision Tree</h1>
-  <p class="lead">세 가지 대표적 분류기의 개성과 적용 시나리오를 비교합니다.</p>
+  <h1 class="page-title">Week 5. 분류 알고리즘 — KNN, SVM, 결정트리</h1>
+  <p class="lead">고전 머신러닝의 도구상자. 각 알고리즘이 "결정경계"를 그리는 방식이 어떻게 다른지 시각적으로 익힙니다.</p>
 
-  <div class="toc"><h4>목차</h4><ol>
-    <li>KNN 다시 보기</li>
-    <li>서포트 벡터 머신</li>
-    <li>결정 트리</li>
-    <li>인터랙티브 결정 경계 비교</li>
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>KNN 다시 보기 — 거리·가중치·차원의 저주</li>
+    <li>SVM과 마진 최대화</li>
+    <li>커널 트릭</li>
+    <li>결정트리와 정보이득</li>
+    <li>랜덤포레스트 — 나무들의 합의</li>
   </ol></div>
 
-  <h2>1. KNN (복습 + 깊이)</h2>
-  <p>이미 W1에서 보았듯이 거리 기반입니다. 핵심 강점은 구현이 단순하고 결정 경계가 데이터의 모양을 따른다는 것. 약점은 학습 데이터 전체를 들고 다녀야 하며 표준화가 필수입니다.</p>
-
-  <h2>2. SVM (Support Vector Machine)</h2>
-  <p>두 클래스를 가르는 직선(또는 곡면) 중에서 <strong>마진(margin)</strong>이 가장 큰 것을 찾습니다.</p>
-  $$ \max \frac{2}{\|\mathbf{w}\|}, \quad \text{s.t. } y_i(\mathbf{w}^\top \mathbf{x}_i + b) \ge 1 $$
-  <p>핵심 아이디어:</p>
+  <h2>1. KNN 다시 보기</h2>
+  <p>1주차에 만난 KNN을 한 단계 더 깊이 봅니다. KNN의 매력은 간단함이지만, 다음 한계도 명심해야 합니다.</p>
   <ul>
-    <li>마진이 클수록 새 데이터에 강합니다.</li>
-    <li><strong>커널 트릭</strong>으로 비선형 분류도 가능: <em>linear, poly, rbf</em>.</li>
-    <li><strong>C 파라미터</strong>: 마진을 넓게 두느냐(작은 C), 학습 오차를 줄이느냐(큰 C)의 균형.</li>
+    <li><strong>차원의 저주</strong> — 특성이 많아질수록 모든 점이 비슷하게 멀어집니다.</li>
+    <li><strong>예측 비용</strong> — 학습은 빠르지만 매 예측마다 모든 데이터와 거리를 재야 함.</li>
+    <li><strong>스케일 민감</strong> — 표준화가 필수.</li>
   </ul>
+  <p>가중치 KNN을 쓰면 가까운 이웃에 더 큰 표를 줘서 K가 클 때의 둔감함을 완화할 수 있습니다.</p>
 
-  <h2>3. Decision Tree (결정 트리)</h2>
-  <p>"길이 ≥ 20cm 이면 도미, 아니면 다시 무게가 100g 이상인지 묻고…" 같은 IF-THEN 규칙의 연쇄입니다.
-  사람이 읽을 수 있다는 것이 큰 장점입니다.</p>
-  <ul>
-    <li><strong>max_depth</strong>가 작으면 과소적합, 크면 과적합.</li>
-    <li>분할 기준은 보통 <em>지니 불순도</em> 또는 <em>엔트로피</em>.</li>
-  </ul>
-  $$ \text{Gini} = 1 - \sum_c p_c^2 $$
-
-  <table>
-    <thead><tr><th>알고리즘</th><th>강점</th><th>약점</th></tr></thead>
-    <tbody>
-      <tr><td>KNN</td><td>단순, 비선형 OK</td><td>느림, 표준화 필수</td></tr>
-      <tr><td>SVM</td><td>고차원 강함, 마진 보장</td><td>대용량 데이터에 느림</td></tr>
-      <tr><td>Decision Tree</td><td>해석 가능, 전처리 불필요</td><td>과적합 쉬움</td></tr>
-    </tbody>
-  </table>
+  <h2>2. SVM — 마진을 최대화하라</h2>
+  <p>SVM(Support Vector Machine)은 두 클래스를 가르는 직선 중에서 <strong>가장 넓은 도로</strong>(margin)를 만드는 직선을 고릅니다. 도로 위에 닿는 점들이 <em>서포트 벡터</em>입니다.</p>
+  $$ \min_{\mathbf{w}, b} \frac{1}{2}\|\mathbf{w}\|^2 \quad \text{s.t.} \quad y_i(\mathbf{w}^\top \mathbf{x}_i + b) \ge 1 $$
+  <p>현실의 데이터는 깨끗하게 분리되지 않으므로 <em>슬랙 변수</em>를 허용한 <strong>소프트 마진 SVM</strong>을 씁니다. 파라미터 $C$가 위반을 얼마나 허용할지 정합니다 — 작으면 마진이 넓어지고(더 부드러움), 크면 마진이 좁아지며 과적합 위험이 커집니다.</p>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 결정 경계 비교</h4>
-    <p>같은 데이터를 세 알고리즘이 어떻게 다르게 나누는지 봅니다. 데이터셋과 알고리즘을 바꿔보세요.</p>
-    <canvas id="cls" width="640" height="380"></canvas>
+    <h4>🎮 인터랙티브: SVM 마진 (소프트 vs 하드)</h4>
+    <p>두 가우시안 클러스터를 분리하는 SVM의 마진을 그립니다. C 슬라이더로 마진의 폭이 어떻게 달라지는지 봅니다(시각화 단순화 버전).</p>
+    <canvas id="svmCanvas" width="640" height="340"></canvas>
     <div class="controls">
-      <label>알고리즘
-        <select id="alg"><option value="knn">KNN (k=5)</option><option value="lin">선형 (Logistic)</option><option value="rbf">RBF SVM</option></select>
-      </label>
-      <label>데이터셋
-        <select id="ds"><option value="blobs">blobs</option><option value="moons">moons</option><option value="circles">circles</option></select>
-      </label>
-      <button id="rgn">새로 생성</button>
+      <label>C (위반 비용) <span class="val" id="ccV">1</span><input type="range" id="cc" min="0.1" max="10" step="0.1" value="1"></label>
+      <button id="svmRegen">새 데이터</button>
     </div>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('cls'),x=c.getContext('2d');
+    const c=document.getElementById('svmCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
     let pts=[];
     function gen(){
-      pts=[];const ds=document.getElementById('ds').value;
-      if(ds=='blobs'){
-        for(let i=0;i<40;i++)pts.push({x:180+Math.random()*100,y:120+Math.random()*100,c:0});
-        for(let i=0;i<40;i++)pts.push({x:380+Math.random()*100,y:200+Math.random()*100,c:1});
-      }else if(ds=='moons'){
-        for(let i=0;i<50;i++){const t=Math.PI*Math.random();pts.push({x:320+Math.cos(t)*120-30,y:200-Math.sin(t)*100,c:0});}
-        for(let i=0;i<50;i++){const t=Math.PI*Math.random();pts.push({x:320+Math.cos(t+Math.PI)*120+30,y:200-Math.sin(t+Math.PI)*100+50,c:1});}
-        pts.forEach(p=>{p.x+=(Math.random()-0.5)*15;p.y+=(Math.random()-0.5)*15;});
-      }else{
-        for(let i=0;i<60;i++){const t=Math.random()*2*Math.PI,r=30+Math.random()*15;pts.push({x:320+Math.cos(t)*r,y:190+Math.sin(t)*r,c:0});}
-        for(let i=0;i<80;i++){const t=Math.random()*2*Math.PI,r=90+Math.random()*15;pts.push({x:320+Math.cos(t)*r,y:190+Math.sin(t)*r,c:1});}
-      }
+      pts=[];
+      for(let i=0;i<25;i++)pts.push({x:0.25+Math.random()*0.2,y:0.3+Math.random()*0.4,c:0});
+      for(let i=0;i<25;i++)pts.push({x:0.55+Math.random()*0.2,y:0.3+Math.random()*0.4,c:1});
+      draw();
     }
-    gen();document.getElementById('rgn').onclick=gen;document.getElementById('ds').onchange=gen;
-    function classify(px,py,alg){
-      if(alg=='knn'){
-        const ds=pts.map(p=>({d:(p.x-px)**2+(p.y-py)**2,c:p.c})).sort((a,b)=>a.d-b.d).slice(0,5);
-        return ds.reduce((s,d)=>s+(d.c==0?1:-1),0)>=0?0:1;
-      }else if(alg=='lin'){
-        // crude logistic via gradient
-        if(!classify._w||classify._gen!=pts.length){let w1=0,w2=0,b=0;for(let it=0;it<200;it++){let g1=0,g2=0,gb=0;pts.forEach(p=>{const z=w1*p.x+w2*p.y+b;const s=1/(1+Math.exp(-z));const e=s-p.c;g1+=e*p.x;g2+=e*p.y;gb+=e;});w1-=0.0001*g1;w2-=0.0001*g2;b-=0.0001*gb;}classify._w={w1,w2,b};classify._gen=pts.length;}
-        const z=classify._w.w1*px+classify._w.w2*py+classify._w.b;return z>0?1:0;
-      }else{
-        // RBF: kernel sum with gamma
-        const g=0.001;
-        let s0=0,s1=0;
-        pts.forEach(p=>{const k=Math.exp(-g*((p.x-px)**2+(p.y-py)**2));if(p.c==0)s0+=k;else s1+=k;});
-        return s0>s1?0:1;
-      }
+    function draw(){
+      const C=+document.getElementById('cc').value;
+      document.getElementById('ccV').textContent=C.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // simple boundary at x=0.5 plus margin width inversely proportional to C
+      const margin=0.12/Math.sqrt(C);
+      ctx.fillStyle='rgba(11,95,255,0.08)';ctx.fillRect(0,0,0.5*W,H);
+      ctx.fillStyle='rgba(255,140,0,0.10)';ctx.fillRect(0.5*W,0,0.5*W,H);
+      ctx.fillStyle='rgba(150,150,150,0.25)';ctx.fillRect((0.5-margin)*W,0,2*margin*W,H);
+      ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0.5*W,0);ctx.lineTo(0.5*W,H);ctx.stroke();
+      ctx.setLineDash([5,5]);ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo((0.5-margin)*W,0);ctx.lineTo((0.5-margin)*W,H);ctx.stroke();
+      ctx.beginPath();ctx.moveTo((0.5+margin)*W,0);ctx.lineTo((0.5+margin)*W,H);ctx.stroke();
+      ctx.setLineDash([]);
+      pts.forEach(p=>{ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(p.x*W,p.y*H,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('회색 띠 = 마진',10,20);
     }
-    let lastAlg='';
-    function loop(){
-      const alg=document.getElementById('alg').value;
-      if(alg!=lastAlg){classify._w=null;lastAlg=alg;}
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      const STEP=10;
-      for(let i=0;i<c.width;i+=STEP)for(let j=0;j<c.height;j+=STEP){
-        const cl=classify(i,j,alg);
-        x.fillStyle=cl==0?'rgba(11,95,255,0.10)':'rgba(255,140,0,0.13)';
-        x.fillRect(i,j,STEP,STEP);
-      }
-      pts.forEach(p=>{x.fillStyle=p.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(p.x,p.y,4,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.stroke();});
-      requestAnimationFrame(loop);
-    }
-    loop();
+    document.getElementById('cc').addEventListener('input',draw);
+    document.getElementById('svmRegen').addEventListener('click',gen);
+    gen();
   })();
   </script>
 
-  <p>관찰: <em>moons</em>나 <em>circles</em>처럼 비선형 데이터에서는 선형 로지스틱이 실패하고, RBF SVM이나 KNN이 성공합니다.</p>
+  <div class="tip"><strong>커널 트릭.</strong> 데이터가 직선으로 안 갈리면 RBF 같은 커널 함수로 고차원 공간에 매핑한 뒤 그 공간에서 직선을 긋습니다. 실제로 고차원으로 가지 않고 내적만 계산하기 때문에 "트릭"입니다.</div>
 
-  <h2>4. 코드 예제</h2>
-  <pre><code>from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
+  <h2>3. 결정트리</h2>
+  <p>"먼저 길이가 20cm 이상인가? 그렇다면 무게가 300g 이상인가? ..." 이런 식으로 질문을 가지치며 분류하는 모델입니다. 인간이 이해하기 쉽다는 큰 장점이 있습니다.</p>
+  <p>각 노드에서 어떤 질문이 가장 좋은지는 <strong>지니 불순도</strong>나 <strong>엔트로피</strong>로 측정합니다.</p>
+  $$ G = 1 - \sum_k p_k^2, \quad H = -\sum_k p_k \log p_k $$
+  <p>분할 후 불순도가 가장 많이 줄어드는 질문을 고릅니다(정보이득).</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 결정트리 영역 분할</h4>
+    <p>2D 데이터를 단계별로 수직/수평선으로 나눕니다. 깊이가 깊어질수록 영역이 잘게 쪼개집니다.</p>
+    <canvas id="dtCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>최대 깊이 <span class="val" id="dpV">3</span><input type="range" id="dp" min="1" max="6" step="1" value="3"></label>
+      <button id="dtRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dtCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<60;i++){
+        const x=Math.random(),y=Math.random();
+        const c=(x>0.5)^(y>0.5)?1:0;
+        pts.push({x,y,c});
+      }
+      draw();
+    }
+    function gini(arr){if(!arr.length)return 0;const c0=arr.filter(p=>p.c==0).length/arr.length;const c1=1-c0;return 1-c0*c0-c1*c1;}
+    function build(arr,depth,box){
+      if(depth===0||arr.length<3||gini(arr)<0.05){return {leaf:true,arr,box};}
+      let best=null;
+      for(let f=0;f<2;f++)for(let t=0.1;t<1;t+=0.05){
+        const L=arr.filter(p=>(f?p.y:p.x)<t),R=arr.filter(p=>(f?p.y:p.x)>=t);
+        if(!L.length||!R.length)continue;
+        const g=(L.length*gini(L)+R.length*gini(R))/arr.length;
+        if(!best||g<best.g)best={g,f,t,L,R};
+      }
+      if(!best)return{leaf:true,arr,box};
+      const b1={...box},b2={...box};
+      if(best.f===0){b1.x1=best.t;b2.x0=best.t;}else{b1.y1=best.t;b2.y0=best.t;}
+      return {leaf:false,f:best.f,t:best.t,L:build(best.L,depth-1,b1),R:build(best.R,depth-1,b2),box};
+    }
+    function drawNode(n){
+      if(n.leaf){
+        const arr=n.arr;const c0=arr.filter(p=>p.c==0).length;
+        ctx.fillStyle=c0>=arr.length/2?'rgba(11,95,255,0.18)':'rgba(255,140,0,0.18)';
+        ctx.fillRect(n.box.x0*W,n.box.y0*H,(n.box.x1-n.box.x0)*W,(n.box.y1-n.box.y0)*H);
+      }else{drawNode(n.L);drawNode(n.R);
+        ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.beginPath();
+        if(n.f===0){ctx.moveTo(n.t*W,n.box.y0*H);ctx.lineTo(n.t*W,n.box.y1*H);}
+        else{ctx.moveTo(n.box.x0*W,n.t*H);ctx.lineTo(n.box.x1*W,n.t*H);}
+        ctx.stroke();
+      }
+    }
+    function draw(){
+      const D=+document.getElementById('dp').value;
+      document.getElementById('dpV').textContent=D;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const tree=build(pts,D,{x0:0,y0:0,x1:1,y1:1});
+      drawNode(tree);
+      pts.forEach(p=>{ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(p.x*W,p.y*H,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+    }
+    document.getElementById('dp').addEventListener('input',draw);
+    document.getElementById('dtRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <h2>4. 랜덤포레스트</h2>
+  <p>나무 하나는 약하지만 백 그루가 모이면 숲이 됩니다. 랜덤포레스트는 다음 두 가지 무작위성을 더해 여러 트리를 만들고 다수결로 분류합니다.</p>
+  <ul>
+    <li><strong>배깅(Bagging)</strong> — 데이터를 부트스트랩 샘플링.</li>
+    <li><strong>특성 무작위화</strong> — 각 분할에서 일부 특성만 후보로.</li>
+  </ul>
+  <p>과적합에 강하고, 별도 튜닝 없이도 괜찮은 성능을 내는 "기본기" 모델입니다.</p>
+
+  <h2>5. 코드 예제</h2>
+  <pre><code>from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 
-knn = KNeighborsClassifier(n_neighbors=5).fit(Xs, y)
-svm = SVC(kernel='rbf', C=1.0, gamma='auto').fit(Xs, y)
-dt  = DecisionTreeClassifier(max_depth=4).fit(X, y)   # 트리는 표준화 불필요
+svm = SVC(C=1.0, kernel='rbf').fit(X_tr, y_tr)
+dt  = DecisionTreeClassifier(max_depth=4).fit(X_tr, y_tr)
+rf  = RandomForestClassifier(n_estimators=100).fit(X_tr, y_tr)
 
-for m in (knn, svm, dt):
-    print(type(m).__name__, m.score(Xs_test, y_test))</code></pre>
+for m in [svm, dt, rf]:
+    print(type(m).__name__, m.score(X_te, y_te))</code></pre>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>The Elements of Statistical Learning</strong> — Hastie 외, 9·15장. 트리와 SVM의 결정판.</li>
+    <li><strong>scikit-learn SVM 가이드</strong> — <a href="https://scikit-learn.org/stable/modules/svm.html">공식 문서</a>. 커널 종류와 C·γ의 의미.</li>
+    <li><strong>Random Forests</strong> — Leo Breiman 원논문(2001).</li>
+    <li><strong>Visual Intro to Decision Trees</strong> — <a href="http://www.r2d3.us/visual-intro-to-machine-learning-part-1/">r2d3.us</a>. 결정트리 시각화의 명작.</li>
+  </ul>
 
   <nav class="prevnext">
-    <a href="04-regression-2.html"><small>← 이전</small>W4. 로지스틱 회귀</a>
+    <a href="04-regression-2.html"><small>← 이전</small>W4. 회귀 2</a>
     <a href="06-unsupervised.html" class="next"><small>다음 →</small>W6. 비지도학습</a>
   </nav>
 </main>

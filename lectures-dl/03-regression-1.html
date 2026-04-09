@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>W3. 선형 회귀 — Study Page</title>
+<title>W3. 회귀 1: 선형회귀와 경사하강법 — Study Page</title>
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -21,123 +21,220 @@
 
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
-  <h1 class="page-title">Week 3. 회귀 1 — 손실함수와 선형회귀</h1>
-  <p class="lead">"가장 잘 맞는 직선"을 수학으로 정의하고 컴퓨터로 찾아봅시다.</p>
+  <h1 class="page-title">Week 3. 회귀 1: 선형회귀와 경사하강법</h1>
+  <p class="lead">데이터에 직선 하나를 그어봅니다. 그 단순한 행위 안에 머신러닝의 모든 핵심 개념이 들어 있습니다.</p>
 
-  <div class="toc"><h4>목차</h4><ol>
-    <li>회귀 vs 분류</li>
-    <li>손실 함수: MSE, MAE, R²</li>
-    <li>선형 회귀</li>
-    <li>다항 회귀와 과적합</li>
-    <li>인터랙티브 데모</li>
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>회귀 문제란 무엇인가</li>
+    <li>가설(hypothesis)과 파라미터</li>
+    <li>비용 함수 (MSE)</li>
+    <li>경사하강법의 원리</li>
+    <li>학습률 — 너무 크면, 너무 작으면</li>
+    <li>해석적 해 vs 반복적 해</li>
   </ol></div>
 
-  <h2>1. 회귀 vs 분류</h2>
-  <p>분류는 카테고리, 회귀는 <strong>연속된 숫자</strong>를 예측합니다. "농어 길이로 무게 맞추기"가 회귀의 전형적 예입니다.</p>
+  <h2>1. 회귀 문제</h2>
+  <p>입력 $x$로 연속된 출력 $y$를 예측하는 것을 <strong>회귀(regression)</strong>라고 합니다. 농어 길이로 무게를 맞추기, 광고비로 매출 예측하기, 집 면적으로 가격 예측하기 — 모두 회귀입니다.</p>
+  <p>가장 단순한 가정은 $y$가 $x$에 비례한다는 것입니다.</p>
+  $$ \hat{y} = wx + b $$
+  <p>$w$는 기울기(weight), $b$는 절편(bias). 우리 목표는 데이터에 가장 잘 맞는 $w, b$를 찾는 것입니다.</p>
 
-  <h2>2. 손실 함수</h2>
-  <p>예측값 $\hat{y}$가 정답 $y$에서 얼마나 어긋났는지를 한 숫자로 요약합니다.</p>
-  $$ \text{MSE} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2 $$
-  $$ \text{MAE} = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y}_i| $$
-  $$ R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2} $$
-  <ul>
-    <li><strong>MSE</strong> — 큰 오차에 더 큰 벌점. 가장 흔히 사용.</li>
-    <li><strong>MAE</strong> — 절댓값 합. 이상치에 강함.</li>
-    <li><strong>R²</strong> — 1에 가까우면 좋고, 0이면 평균값으로 답한 것과 같음.</li>
-  </ul>
-
-  <h2>3. 선형 회귀</h2>
-  <p>가장 단순한 가설: 데이터가 직선 위에 있다고 가정합니다.</p>
-  $$ \hat{y} = w x + b $$
-  <p>$w$는 기울기, $b$는 y절편입니다. MSE를 최소로 만드는 $(w, b)$를 찾는 게 목표입니다.</p>
-
-  <h2>4. 다항 회귀</h2>
-  <p>직선으로 부족할 때는 곡선을 쓸 수 있습니다.</p>
-  $$ \hat{y} = w_d x^d + w_{d-1} x^{d-1} + \dots + w_1 x + b $$
-  <p>차수 $d$가 클수록 표현력이 강해지지만, 학습 데이터에 너무 맞춰지는 <strong>과적합</strong>이 생깁니다.</p>
+  <h2>2. 비용 함수 — "잘 맞는다"의 정의</h2>
+  <p>예측값 $\hat{y}_i$와 실제값 $y_i$의 차이를 오차(error)라고 합니다. 부호를 없애기 위해 제곱한 다음 평균을 내면 <strong>평균제곱오차(MSE)</strong>가 됩니다.</p>
+  $$ J(w, b) = \frac{1}{N} \sum_{i=1}^{N} (wx_i + b - y_i)^2 $$
+  <p>$J$를 최소화하는 $(w, b)$가 최적의 직선입니다. 이게 바로 "학습"의 정의예요.</p>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 다항 회귀와 과적합</h4>
-    <p>점들이 농어의 길이(가로) → 무게(세로)를 모방한 데이터입니다. 차수를 1부터 9까지 올려가며 어떻게 변하는지 보세요.</p>
-    <canvas id="poly" width="640" height="380"></canvas>
+    <h4>🎮 인터랙티브: 직선 맞추기</h4>
+    <p>슬라이더로 직접 $w$와 $b$를 움직여 데이터에 직선을 맞춰보세요. 비용 $J$가 실시간으로 표시됩니다.</p>
+    <canvas id="fitCanvas" width="640" height="340"></canvas>
     <div class="controls">
-      <label>다항 차수 d <span class="val" id="dV">1</span><input type="range" id="d" min="1" max="9" value="1"></label>
-      <label>학습 R²: <span class="val" id="r2">-</span></label>
-      <button id="resh" class="alt">데이터 새로고침</button>
+      <label>w (기울기) <span class="val" id="wfV">1</span><input type="range" id="wf" min="-2" max="4" step="0.05" value="1"></label>
+      <label>b (절편) <span class="val" id="bfV">0</span><input type="range" id="bf" min="-3" max="3" step="0.05" value="0"></label>
+      <span id="costOut" style="font-weight:bold;color:#0b5fff"></span>
     </div>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('poly'),x=c.getContext('2d');
-    let pts=[];
-    function gen(){pts=[];for(let i=0;i<25;i++){const u=i*0.04+0.05,xx=u,yy=u*u*1.2+0.05+(Math.random()-0.5)*0.18;pts.push([xx,yy]);}}
-    gen();
-    document.getElementById('resh').onclick=gen;
-    function fit(d){
-      const n=pts.length;if(n<d+1)return null;
-      const X=pts.map(p=>{const r=[];for(let k=0;k<=d;k++)r.push(Math.pow(p[0],k));return r;});
-      const Y=pts.map(p=>p[1]);
-      const XT=Array.from({length:d+1},(_,i)=>X.map(r=>r[i]));
-      const XTX=XT.map(row=>XT.map(col=>row.reduce((s,_,k)=>s+row[k]*col[k],0)));
-      const XTY=XT.map(row=>row.reduce((s,_,k)=>s+row[k]*Y[k],0));
-      const A=XTX.map((r,i)=>[...r,XTY[i]]);
-      const N=d+1;
-      for(let i=0;i<N;i++){
-        let mx=i;for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;
-        [A[i],A[mx]]=[A[mx],A[i]];
-        if(Math.abs(A[i][i])<1e-9)return null;
-        for(let k=0;k<N;k++)if(k!=i){const f=A[k][i]/A[i][i];for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];}
-      }
-      return A.map((r,i)=>r[N]/r[i][i]);
+    const c=document.getElementById('fitCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[];
+    for(let i=0;i<25;i++){const x=Math.random()*8;data.push({x,y:1.8*x+0.5+(Math.random()-0.5)*2.5});}
+    const xmin=-1,xmax=9,ymin=-3,ymax=18;
+    const toPx=x=>40+(x-xmin)/(xmax-xmin)*(W-60);
+    const toPy=y=>H-30-(y-ymin)/(ymax-ymin)*(H-60);
+    function draw(){
+      const w=+document.getElementById('wf').value,b=+document.getElementById('bf').value;
+      document.getElementById('wfV').textContent=w.toFixed(2);
+      document.getElementById('bfV').textContent=b.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,10);ctx.lineTo(40,H-30);ctx.stroke();
+      // line
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(w*xmin+b));ctx.lineTo(toPx(xmax),toPy(w*xmax+b));ctx.stroke();
+      // residuals
+      let cost=0;
+      data.forEach(d=>{
+        const yh=w*d.x+b;cost+=(yh-d.y)*(yh-d.y);
+        ctx.strokeStyle='rgba(150,150,150,0.6)';
+        ctx.beginPath();ctx.moveTo(toPx(d.x),toPy(d.y));ctx.lineTo(toPx(d.x),toPy(yh));ctx.stroke();
+      });
+      cost/=data.length;
+      data.forEach(d=>{ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(toPx(d.x),toPy(d.y),4,0,Math.PI*2);ctx.fill();});
+      document.getElementById('costOut').textContent='J = '+cost.toFixed(3);
     }
-    function loop(){
-      const d=+document.getElementById('d').value;
-      document.getElementById('dV').textContent=d;
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
-      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
-      const sx=v=>40+v*560, sy=v=>360-v*220;
-      const beta=fit(d);
-      if(beta){
-        x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
-        for(let u=0;u<=1;u+=0.005){let yy=0;for(let k=0;k<beta.length;k++)yy+=beta[k]*Math.pow(u,k);if(u==0)x.moveTo(sx(u),sy(yy));else x.lineTo(sx(u),sy(yy));}
-        x.stroke();
-        // R^2
-        const ybar=pts.reduce((s,p)=>s+p[1],0)/pts.length;
-        let ss=0,st=0;
-        pts.forEach(p=>{let pr=0;for(let k=0;k<beta.length;k++)pr+=beta[k]*Math.pow(p[0],k);ss+=(p[1]-pr)**2;st+=(p[1]-ybar)**2;});
-        document.getElementById('r2').textContent=(1-ss/st).toFixed(3);
-      }
-      x.fillStyle='#c62828';pts.forEach(p=>{x.beginPath();x.arc(sx(p[0]),sy(p[1]),4,0,Math.PI*2);x.fill();});
-      requestAnimationFrame(loop);
-    }
-    loop();
+    ['wf','bf'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
   })();
   </script>
 
-  <h2>5. 코드 예제 (scikit-learn)</h2>
-  <pre><code>import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
+  <h2>3. 경사하강법</h2>
+  <p>슬라이더로 직접 맞추는 건 재미있지만 손이 모자랍니다. 컴퓨터에게 자동으로 시키려면 비용함수의 <em>기울기</em>를 따라 내려가게 만들면 됩니다.</p>
+  $$ w \leftarrow w - \alpha \frac{\partial J}{\partial w}, \quad b \leftarrow b - \alpha \frac{\partial J}{\partial b} $$
+  <p>$\alpha$는 <strong>학습률(learning rate)</strong>. 한 걸음의 보폭이라 생각하세요. 편미분을 계산해보면:</p>
+  $$ \frac{\partial J}{\partial w} = \frac{2}{N}\sum_i (wx_i + b - y_i)\, x_i, \quad \frac{\partial J}{\partial b} = \frac{2}{N}\sum_i (wx_i + b - y_i) $$
 
-X = np.array([8.4, 13.7, 15.0, 16.2, 17.4, 18.0, 18.7, 19.0, 22.0, 26.0]).reshape(-1,1)
-y = np.array([5.9, 32.0, 40.0, 51.5, 70.0, 100.0, 78.0, 80.0, 110.0, 175.0])
+  <div class="demo">
+    <h4>🎮 인터랙티브: 경사하강법 자동 학습</h4>
+    <p>학습률 $\alpha$를 설정하고 "시작"을 누르면 컴퓨터가 자동으로 직선을 맞춥니다. 너무 크게 하면 발산하고, 너무 작게 하면 한참 걸립니다.</p>
+    <canvas id="gdCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>학습률 α <span class="val" id="lrV">0.02</span><input type="range" id="lr" min="0.001" max="0.1" step="0.001" value="0.02"></label>
+      <button id="gdStart">시작</button>
+      <button id="gdReset">리셋</button>
+      <span id="gdInfo" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gdCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[];
+    for(let i=0;i<30;i++){const x=Math.random()*8;data.push({x,y:1.8*x+0.5+(Math.random()-0.5)*2.5});}
+    const xmin=-1,xmax=9,ymin=-3,ymax=18;
+    const toPx=x=>40+(x-xmin)/(xmax-xmin)*(W-60);
+    const toPy=y=>H-30-(y-ymin)/(ymax-ymin)*(H-60);
+    let w=0,b=0,running=false,step=0,raf=null;
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,10);ctx.lineTo(40,H-30);ctx.stroke();
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(w*xmin+b));ctx.lineTo(toPx(xmax),toPy(w*xmax+b));ctx.stroke();
+      data.forEach(d=>{ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(toPx(d.x),toPy(d.y),4,0,Math.PI*2);ctx.fill();});
+      let J=0;data.forEach(d=>{const e=w*d.x+b-d.y;J+=e*e;});J/=data.length;
+      document.getElementById('gdInfo').textContent=`step ${step}  w=${w.toFixed(3)}  b=${b.toFixed(3)}  J=${J.toFixed(3)}`;
+    }
+    function tick(){
+      const lr=+document.getElementById('lr').value;
+      let dw=0,db=0;
+      data.forEach(d=>{const e=w*d.x+b-d.y;dw+=e*d.x;db+=e;});
+      dw*=2/data.length;db*=2/data.length;
+      w-=lr*dw;b-=lr*db;step++;
+      draw();
+      if(running&&step<400)raf=requestAnimationFrame(tick);else running=false;
+    }
+    document.getElementById('lr').addEventListener('input',()=>{document.getElementById('lrV').textContent=(+document.getElementById('lr').value).toFixed(3);});
+    document.getElementById('gdStart').onclick=()=>{if(!running){running=true;tick();}};
+    document.getElementById('gdReset').onclick=()=>{running=false;cancelAnimationFrame(raf);w=0;b=0;step=0;draw();};
+    draw();
+  })();
+  </script>
 
-# 선형 회귀
-lr = LinearRegression()
-lr.fit(X, y)
-print(f"기울기 w = {lr.coef_[0]:.3f}, 절편 b = {lr.intercept_:.3f}")
-print(f"R² = {lr.score(X, y):.3f}")
+  <div class="tip"><strong>학습률 직관.</strong> 안개 낀 산에서 골짜기를 찾는 등산객을 떠올리세요. 보폭이 너무 크면 골짜기를 건너뛰고, 너무 작으면 평생 못 내려옵니다. 좋은 $\alpha$는 보통 $10^{-4}$ ~ $10^{-1}$ 사이에서 실험으로 찾습니다.</div>
 
-# 다항(2차) 회귀: x^2 특성 추가
-X_poly = np.column_stack([X, X**2])
-lr2 = LinearRegression()
-lr2.fit(X_poly, y)
-print(f"R² (deg 2) = {lr2.score(X_poly, y):.3f}")</code></pre>
+  <h2>4. 비용 함수 표면</h2>
+  <p>$J(w,b)$를 $w$-$b$ 평면 위에 색으로 그리면 그릇 모양이 됩니다(MSE는 볼록함수). 경사하강법은 이 표면 위를 굴러 내려가는 공이에요.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비용 표면 위의 경사하강 궤적</h4>
+    <p>색이 진할수록 비용이 작은 지점입니다. 시작 위치에서 경사하강이 어떻게 골짜기로 내려가는지 보세요.</p>
+    <canvas id="surfCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="surfRun">궤적 그리기</button>
+      <label>학습률 <span class="val" id="lrsV">0.02</span><input type="range" id="lrs" min="0.005" max="0.1" step="0.001" value="0.02"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('surfCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[];
+    for(let i=0;i<25;i++){const x=Math.random()*8;data.push({x,y:1.8*x+0.5+(Math.random()-0.5)*1.5});}
+    function J(w,b){let s=0;data.forEach(d=>{const e=w*d.x+b-d.y;s+=e*e;});return s/data.length;}
+    const wmin=-1,wmax=4,bmin=-4,bmax=4;
+    const toPx=w=>(w-wmin)/(wmax-wmin)*W;
+    const toPy=b=>H-(b-bmin)/(bmax-bmin)*H;
+    function bg(){
+      const img=ctx.createImageData(W,H);
+      let mn=Infinity,mx=-Infinity;const cache=new Float32Array(W*H);
+      for(let j=0;j<H;j+=2)for(let i=0;i<W;i+=2){
+        const w=wmin+i/W*(wmax-wmin),b=bmax-j/H*(bmax-bmin);
+        const v=Math.log(1+J(w,b));cache[j*W+i]=v;if(v<mn)mn=v;if(v>mx)mx=v;
+      }
+      for(let j=0;j<H;j+=2)for(let i=0;i<W;i+=2){
+        const v=(cache[j*W+i]-mn)/(mx-mn);
+        const r=255-Math.floor(v*200),g=255-Math.floor(v*180),bb=255-Math.floor(v*100);
+        for(let dj=0;dj<2;dj++)for(let di=0;di<2;di++){
+          const k=((j+dj)*W+(i+di))*4;img.data[k]=r;img.data[k+1]=g;img.data[k+2]=bb;img.data[k+3]=255;
+        }
+      }
+      ctx.putImageData(img,0,0);
+    }
+    function run(){
+      bg();
+      const lr=+document.getElementById('lrs').value;
+      document.getElementById('lrsV').textContent=lr.toFixed(3);
+      let w=-0.5,b=3.5;
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(toPx(w),toPy(b));
+      for(let k=0;k<200;k++){
+        let dw=0,db=0;data.forEach(d=>{const e=w*d.x+b-d.y;dw+=e*d.x;db+=e;});
+        dw*=2/data.length;db*=2/data.length;
+        w-=lr*dw;b-=lr*db;
+        ctx.lineTo(toPx(w),toPy(b));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#000';ctx.font='12px sans-serif';ctx.fillText('w →',W-30,H-5);ctx.fillText('↑b',5,15);
+    }
+    document.getElementById('surfRun').onclick=run;
+    document.getElementById('lrs').addEventListener('input',()=>{document.getElementById('lrsV').textContent=(+document.getElementById('lrs').value).toFixed(3);});
+    bg();
+  })();
+  </script>
+
+  <h2>5. 정규방정식 — 한 방에 푸는 법</h2>
+  <p>선형회귀는 사실 미분을 0으로 놓고 풀면 닫힌 해가 존재합니다.</p>
+  $$ \mathbf{w}^* = (X^\top X)^{-1} X^\top \mathbf{y} $$
+  <p>장점은 한 번에 정확한 답을 얻는다는 것, 단점은 $X^\top X$의 역행렬을 구해야 해서 특성 수가 많아지면 비싸다는 것($O(n^3)$). 그래서 딥러닝처럼 특성이 수백만 개인 경우엔 무조건 경사하강 계열을 씁니다.</p>
+
+  <h2>6. 코드 예제</h2>
+  <pre><code>from sklearn.linear_model import LinearRegression, SGDRegressor
+import numpy as np
+
+X = np.array([[5.4],[8.5],[12.3],[15.0],[18.7],[22.0]])
+y = np.array([40, 90, 200, 320, 480, 700])
+
+# 정규방정식 (해석해)
+lr = LinearRegression().fit(X, y)
+print(lr.coef_, lr.intercept_)
+
+# 경사하강법
+sgd = SGDRegressor(learning_rate='constant', eta0=0.001, max_iter=1000)
+sgd.fit(X, y)</code></pre>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>Sung Kim Lec 2-3</strong> — <a href="https://hunkim.github.io/ml/">hunkim.github.io/ml</a>. 선형회귀와 경사하강을 가장 친절하게.</li>
+    <li><strong>Andrew Ng Machine Learning</strong> — Coursera. 첫 주차 강의 전체가 이 내용입니다.</li>
+    <li><strong>An Introduction to Statistical Learning</strong> — James 외, 3장. 통계학자의 관점에서 본 회귀.</li>
+    <li><strong>Goodfellow Deep Learning</strong>, 4-5장 — 수치 최적화의 모든 것.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="02-data-handling.html"><small>← 이전</small>W2. 데이터 핸들링</a>
-    <a href="04-regression-2.html" class="next"><small>다음 →</small>W4. 로지스틱 회귀</a>
+    <a href="04-regression-2.html" class="next"><small>다음 →</small>W4. 회귀 2</a>
   </nav>
 </main>
 <footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>

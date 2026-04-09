@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>W4. 로지스틱 회귀 — Study Page</title>
+<title>W4. 회귀 2: 다중회귀와 로지스틱 — Study Page</title>
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -21,113 +21,228 @@
 
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
-  <h1 class="page-title">Week 4. 회귀 2 — 다중회귀와 로지스틱 회귀</h1>
-  <p class="lead">여러 특성을 한 번에 다루고, 직선 회귀를 분류기로 변신시킵니다.</p>
+  <h1 class="page-title">Week 4. 회귀 2: 다중회귀, 로지스틱, 소프트맥스</h1>
+  <p class="lead">변수가 여러 개로 늘어나고, 출력이 0/1이 되면, 출력이 여러 클래스로 늘어나면 — 회귀의 세 가지 진화.</p>
 
-  <div class="toc"><h4>목차</h4><ol>
-    <li>다중 회귀</li>
-    <li>Ridge / Lasso 규제</li>
-    <li>시그모이드 함수</li>
-    <li>로지스틱 회귀</li>
-    <li>인터랙티브 데모</li>
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>다중 변수 선형회귀</li>
+    <li>벡터화 표기와 행렬</li>
+    <li>이진 분류와 시그모이드</li>
+    <li>로지스틱 회귀의 비용함수 — 크로스 엔트로피</li>
+    <li>다중 클래스 분류와 소프트맥스</li>
   </ol></div>
 
-  <h2>1. 다중 회귀</h2>
-  <p>특성이 한 개가 아니라 여러 개라면, 각 특성마다 가중치 $w_i$를 두면 됩니다.</p>
-  $$ \hat{y} = w_1 x_1 + w_2 x_2 + \dots + w_p x_p + b $$
-  <p>벡터/행렬로 쓰면 $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$로 단순합니다.</p>
-
-  <h2>2. 규제(Regularization): Ridge & Lasso</h2>
-  <p>특성이 많고 데이터가 적으면 모델이 가중치를 멋대로 키워 과적합합니다. 이를 막기 위해 손실함수에 가중치 크기 벌점을 더합니다.</p>
-  $$ \text{Ridge: } J = \text{MSE} + \lambda \sum_i w_i^2 $$
-  $$ \text{Lasso: } J = \text{MSE} + \lambda \sum_i |w_i| $$
-  <ul>
-    <li><strong>Ridge (L2)</strong> — 가중치를 작게 유지. 부드러움.</li>
-    <li><strong>Lasso (L1)</strong> — 일부 가중치를 정확히 0으로 만들어 자동 특성 선택.</li>
-  </ul>
-
-  <h2>3. 시그모이드 함수</h2>
-  <p>선형 회귀의 출력은 $-\infty \sim +\infty$ 어떤 값도 될 수 있습니다. 이걸 0과 1 사이의 <em>확률</em>로 짜내려면 시그모이드를 사용합니다.</p>
-  $$ \sigma(z) = \frac{1}{1 + e^{-z}} $$
-
-  <h2>4. 로지스틱 회귀 (Logistic Regression)</h2>
-  <p>이름엔 "회귀"가 들어가지만 실제로는 <strong>분류기</strong>입니다.</p>
-  $$ P(y=1 \mid \mathbf{x}) = \sigma(\mathbf{w}^\top \mathbf{x} + b) $$
-  <p>출력이 0.5 이상이면 클래스 1, 미만이면 0으로 분류합니다. 손실 함수로는 교차 엔트로피를 씁니다.</p>
-  $$ \mathcal{L} = -\bigl[y \log \hat{y} + (1-y)\log(1-\hat{y})\bigr] $$
+  <h2>1. 다중 변수 선형회귀</h2>
+  <p>입력이 한 개($x$)에서 여러 개($x_1, x_2, \dots, x_n$)로 늘어나도 본질은 같습니다.</p>
+  $$ \hat{y} = w_1 x_1 + w_2 x_2 + \dots + w_n x_n + b = \mathbf{w}^\top \mathbf{x} + b $$
+  <p>가중치 벡터 $\mathbf{w}$가 각 입력의 "중요도"를 학습합니다. 비용함수도 같은 MSE를 씁니다.</p>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 시그모이드 & 로지스틱 결정 경계</h4>
-    <p>왼쪽: 시그모이드 곡선($w$ 크기에 따라 가팔라짐). 오른쪽: 2D 데이터에서 로지스틱 회귀가 학습한 결정 경계입니다.</p>
-    <canvas id="lg" width="640" height="320"></canvas>
+    <h4>🎮 인터랙티브: 두 변수의 가중치 효과</h4>
+    <p>$\hat{y} = w_1 x_1 + w_2 x_2$의 예측 평면을 색으로 그립니다. 두 가중치를 움직이며 평면이 어떻게 기우는지 보세요.</p>
+    <canvas id="mvCanvas" width="640" height="320"></canvas>
     <div class="controls">
-      <label>w (시그모이드 가파름) <span class="val" id="wV">1</span><input type="range" id="w" min="0.1" max="5" step="0.1" value="1"></label>
-      <button id="rst">데이터 새로고침</button>
+      <label>w₁ <span class="val" id="w1V">1</span><input type="range" id="w1" min="-2" max="2" step="0.05" value="1"></label>
+      <label>w₂ <span class="val" id="w2V">0.5</span><input type="range" id="w2" min="-2" max="2" step="0.05" value="0.5"></label>
     </div>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('lg'),x=c.getContext('2d');
-    let pts=[];
-    function gen(){pts=[];for(let i=0;i<40;i++){const cls=i<20?0:1;const px=cls==0?60+Math.random()*100:200+Math.random()*100;const py=cls==0?60+Math.random()*180:80+Math.random()*180;pts.push({x:px,y:py,c:cls});}}
-    gen();document.getElementById('rst').onclick=gen;
-    function fit(){
-      // simple gradient descent on logistic loss
-      let w1=0,w2=0,b=0;const lr=0.001;
-      for(let it=0;it<400;it++){
-        let g1=0,g2=0,gb=0;
-        pts.forEach(p=>{const z=w1*p.x+w2*p.y+b;const s=1/(1+Math.exp(-z));const e=s-p.c;g1+=e*p.x;g2+=e*p.y;gb+=e;});
-        w1-=lr*g1;w2-=lr*g2;b-=lr*gb;
+    const c=document.getElementById('mvCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const w1=+document.getElementById('w1').value,w2=+document.getElementById('w2').value;
+      document.getElementById('w1V').textContent=w1.toFixed(2);
+      document.getElementById('w2V').textContent=w2.toFixed(2);
+      const img=ctx.createImageData(W,H);
+      let mn=Infinity,mx=-Infinity;const buf=new Float32Array(W*H);
+      for(let j=0;j<H;j++)for(let i=0;i<W;i++){
+        const x1=(i/W)*4-2,x2=(j/H)*4-2;
+        const v=w1*x1+w2*x2;buf[j*W+i]=v;if(v<mn)mn=v;if(v>mx)mx=v;
       }
-      return {w1,w2,b};
-    }
-    let model=fit();let counter=0;
-    function loop(){
-      if(counter++%30==0)model=fit();
-      const w=+document.getElementById('w').value;
-      document.getElementById('wV').textContent=w;
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      // left: sigmoid
-      x.strokeStyle='#999';x.beginPath();x.moveTo(20,160);x.lineTo(300,160);x.moveTo(160,30);x.lineTo(160,290);x.stroke();
-      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
-      for(let xx=20;xx<300;xx+=2){const u=(xx-160)/30;const yy=160-(1/(1+Math.exp(-w*u))-0.5)*200;if(xx==20)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
-      x.stroke();
-      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('σ(wz)',20,40);
-      // right: 2D logistic
-      x.fillStyle='#666';x.fillText('로지스틱 결정 경계',360,30);
-      // shading
-      const STEP=10;
-      for(let i=320;i<c.width;i+=STEP)for(let j=40;j<c.height;j+=STEP){
-        const z=model.w1*(i-320+50)+model.w2*j+model.b;
-        const s=1/(1+Math.exp(-z));
-        x.fillStyle=s>0.5?'rgba(255,140,0,0.13)':'rgba(11,95,255,0.10)';
-        x.fillRect(i,j,STEP,STEP);
+      for(let j=0;j<H;j++)for(let i=0;i<W;i++){
+        const t=(buf[j*W+i]-mn)/(mx-mn+1e-9);
+        const r=Math.floor(255-t*200),g=Math.floor(255-Math.abs(t-0.5)*100),b=Math.floor(100+t*150);
+        const k=(j*W+i)*4;img.data[k]=r;img.data[k+1]=g;img.data[k+2]=b;img.data[k+3]=255;
       }
-      pts.forEach(p=>{x.fillStyle=p.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(320+p.x*0.85,p.y,5,0,Math.PI*2);x.fill();});
-      requestAnimationFrame(loop);
+      ctx.putImageData(img,0,0);
+      ctx.fillStyle='#fff';ctx.font='13px sans-serif';
+      ctx.fillText(`ŷ = ${w1.toFixed(2)}·x₁ + ${w2.toFixed(2)}·x₂`,10,20);
     }
-    loop();
+    ['w1','w2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
   })();
   </script>
 
-  <h2>5. 코드 예제</h2>
-  <pre><code>from sklearn.linear_model import LogisticRegression, Ridge, Lasso
+  <h2>2. 시그모이드와 이진 분류</h2>
+  <p>출력이 "예/아니오", "스팸/정상", "환자/정상"처럼 0이나 1이라면 직선 출력은 부적절합니다. 출력을 0~1로 짓이기는 함수가 필요한데, 가장 유명한 것이 <strong>시그모이드</strong>입니다.</p>
+  $$ \sigma(z) = \frac{1}{1 + e^{-z}}, \quad z = \mathbf{w}^\top \mathbf{x} + b $$
+  <p>$\sigma(z)$를 "1일 확률"로 해석합니다. 임계값 0.5를 기준으로 분류하면 결정경계는 $\mathbf{w}^\top \mathbf{x} + b = 0$인 직선이 됩니다.</p>
 
-# 다중 회귀 + Ridge 규제
-ridge = Ridge(alpha=1.0)
-ridge.fit(X_train, y_train)
-print(ridge.score(X_test, y_test))
+  <div class="demo">
+    <h4>🎮 인터랙티브: 시그모이드 곡선</h4>
+    <p>$z = wx + b$의 $w$와 $b$를 움직이며 시그모이드의 모양과 위치 변화를 관찰하세요.</p>
+    <canvas id="sigCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>w <span class="val" id="swV">1</span><input type="range" id="sw" min="-5" max="5" step="0.1" value="1"></label>
+      <label>b <span class="val" id="sbV">0</span><input type="range" id="sb" min="-5" max="5" step="0.1" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sigCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const xmin=-6,xmax=6;
+    const toPx=x=>30+(x-xmin)/(xmax-xmin)*(W-50);
+    const toPy=y=>H-30-y*(H-50);
+    function draw(){
+      const w=+document.getElementById('sw').value,b=+document.getElementById('sb').value;
+      document.getElementById('swV').textContent=w.toFixed(2);
+      document.getElementById('sbV').textContent=b.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(30,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(30,10);ctx.lineTo(30,H-30);ctx.stroke();
+      ctx.strokeStyle='#aaa';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(30,toPy(0.5));ctx.lineTo(W-20,toPy(0.5));ctx.stroke();ctx.setLineDash([]);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const x=xmin+(xmax-xmin)*i/200;
+        const z=w*x+b,s=1/(1+Math.exp(-z));
+        if(i===0)ctx.moveTo(toPx(x),toPy(s));else ctx.lineTo(toPx(x),toPy(s));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';ctx.fillText('1',10,toPy(1)+5);ctx.fillText('0.5',5,toPy(0.5)+5);ctx.fillText('0',10,toPy(0)+5);
+    }
+    ['sw','sb'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
 
-# 로지스틱 회귀 (이진 분류)
-log = LogisticRegression()
-log.fit(X_train, y_train)
-print(log.predict([[5.5, 30]]))                  # 0 또는 1
-print(log.predict_proba([[5.5, 30]]))            # [P(0), P(1)]
-print(log.coef_, log.intercept_)</code></pre>
+  <h2>3. 로지스틱 회귀의 비용함수</h2>
+  <p>로지스틱 회귀에 MSE를 그대로 쓰면 비용 표면이 울퉁불퉁해집니다(비볼록). 대신 <strong>크로스 엔트로피(log loss)</strong>를 씁니다.</p>
+  $$ J(\mathbf{w}) = -\frac{1}{N} \sum_{i=1}^{N} \big[ y_i \log \hat{y}_i + (1-y_i) \log (1-\hat{y}_i) \big] $$
+  <p>이 함수는 시그모이드 출력에 대해 볼록함수가 되어 경사하강이 골짜기를 찾기 쉬워집니다.</p>
+
+  <h2>4. 2D 로지스틱 결정경계</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2D 결정경계 학습</h4>
+    <p>두 가우시안 클러스터(빨강/파랑)를 분리하는 직선을 로지스틱 회귀로 학습합니다. "학습" 버튼을 누르면 경사하강이 돌아갑니다.</p>
+    <canvas id="logCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <button id="logTrain">학습</button>
+      <button id="logReset">리셋</button>
+      <span id="logInfo" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('logCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[],w1=0.1,w2=-0.1,b=0,raf=null,running=false;
+    function gen(){
+      pts=[];
+      for(let i=0;i<40;i++){pts.push({x:0.3+Math.random()*0.3,y:0.3+Math.random()*0.3,c:0});}
+      for(let i=0;i<40;i++){pts.push({x:0.6+Math.random()*0.3,y:0.6+Math.random()*0.3,c:1});}
+    }
+    gen();
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const STEP=10;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const x=i/W,y=j/H;
+        const z=w1*x+w2*y+b,s=1/(1+Math.exp(-z));
+        ctx.fillStyle=s>0.5?'rgba(255,140,0,0.15)':'rgba(11,95,255,0.12)';
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach(p=>{ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(p.x*W,p.y*H,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+      document.getElementById('logInfo').textContent=`w₁=${w1.toFixed(2)}  w₂=${w2.toFixed(2)}  b=${b.toFixed(2)}`;
+    }
+    function tick(){
+      const lr=0.5;
+      let dw1=0,dw2=0,db=0;
+      pts.forEach(p=>{
+        const z=w1*p.x+w2*p.y+b,s=1/(1+Math.exp(-z));
+        const e=s-p.c;dw1+=e*p.x;dw2+=e*p.y;db+=e;
+      });
+      const N=pts.length;w1-=lr*dw1/N;w2-=lr*dw2/N;b-=lr*db/N;
+      draw();
+      if(running){raf=requestAnimationFrame(tick);}
+    }
+    document.getElementById('logTrain').onclick=()=>{if(!running){running=true;tick();}else{running=false;cancelAnimationFrame(raf);}};
+    document.getElementById('logReset').onclick=()=>{running=false;cancelAnimationFrame(raf);w1=0.1;w2=-0.1;b=0;gen();draw();};
+    draw();
+  })();
+  </script>
+
+  <h2>5. 소프트맥스 — 여러 클래스 분류</h2>
+  <p>클래스가 셋 이상이면 시그모이드 대신 <strong>소프트맥스</strong>를 씁니다. $K$개의 점수 $z_1, \dots, z_K$를 받아 합이 1인 확률 분포로 변환합니다.</p>
+  $$ p_k = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}} $$
+  <p>가장 큰 점수 클래스가 자연스럽게 가장 큰 확률을 갖되, 모든 클래스가 0보다 큰 부드러운 출력을 줍니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 소프트맥스 막대그래프</h4>
+    <p>세 클래스의 점수 $z$를 슬라이더로 조절하면 소프트맥스 확률이 어떻게 변하는지 보입니다.</p>
+    <canvas id="smCanvas" width="640" height="260"></canvas>
+    <div class="controls">
+      <label>z₁ <span class="val" id="z1V">2</span><input type="range" id="z1" min="-5" max="5" step="0.1" value="2"></label>
+      <label>z₂ <span class="val" id="z2V">1</span><input type="range" id="z2" min="-5" max="5" step="0.1" value="1"></label>
+      <label>z₃ <span class="val" id="z3V">0</span><input type="range" id="z3" min="-5" max="5" step="0.1" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('smCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const z=[+document.getElementById('z1').value,+document.getElementById('z2').value,+document.getElementById('z3').value];
+      ['z1','z2','z3'].forEach((id,i)=>document.getElementById(id+'V').textContent=z[i].toFixed(1));
+      const m=Math.max(...z),ex=z.map(v=>Math.exp(v-m)),s=ex.reduce((a,b)=>a+b);
+      const p=ex.map(v=>v/s);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const colors=['#0b5fff','#ff8c00','#2e7d32'];
+      const bw=120,gap=40,baseY=H-40;
+      p.forEach((pi,i)=>{
+        const x=80+i*(bw+gap),h=pi*(H-80);
+        ctx.fillStyle=colors[i];ctx.fillRect(x,baseY-h,bw,h);
+        ctx.fillStyle='#333';ctx.font='14px sans-serif';
+        ctx.fillText(`p${i+1}=${pi.toFixed(3)}`,x+10,baseY-h-8);
+        ctx.fillText(`클래스${i+1}`,x+25,baseY+18);
+      });
+    }
+    ['z1','z2','z3'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>6. 코드 예제</h2>
+  <pre><code>from sklearn.linear_model import LogisticRegression
+import numpy as np
+
+# 두 특성, 이진 라벨
+X = np.array([[2,3],[3,3],[4,5],[1,1],[2,1],[3,2]])
+y = np.array([1,1,1,0,0,0])
+
+clf = LogisticRegression().fit(X, y)
+print(clf.coef_, clf.intercept_)
+print(clf.predict_proba([[3,3]]))  # [[0.07, 0.93]]
+
+# 다중 클래스 (소프트맥스)
+clf3 = LogisticRegression(multi_class='multinomial').fit(X3, y3)</code></pre>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>Sung Kim Lec 4-6</strong> — <a href="https://hunkim.github.io/ml/">hunkim.github.io/ml</a>. 다중회귀부터 소프트맥스까지 차근차근.</li>
+    <li><strong>Bishop PRML</strong>, 4장 — 로지스틱 회귀의 베이즈적 해석.</li>
+    <li><strong>Cross Entropy 직관</strong> — Chris Olah, <a href="https://colah.github.io/posts/2015-09-Visual-Information/">Visual Information Theory</a>.</li>
+    <li><strong>scikit-learn LogisticRegression</strong> — 정규화 옵션 C 파라미터의 의미.</li>
+  </ul>
 
   <nav class="prevnext">
-    <a href="03-regression-1.html"><small>← 이전</small>W3. 선형 회귀</a>
-    <a href="05-classification.html" class="next"><small>다음 →</small>W5. 분류 알고리즘</a>
+    <a href="03-regression-1.html"><small>← 이전</small>W3. 회귀 1</a>
+    <a href="05-classification.html" class="next"><small>다음 →</small>W5. 분류</a>
   </nav>
 </main>
 <footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>

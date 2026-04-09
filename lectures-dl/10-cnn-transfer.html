@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>W10. 전이학습 — Study Page</title>
+<title>W10. CNN 심화와 전이학습 — Study Page</title>
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -12,7 +12,7 @@
 </head>
 <body>
 <header class="site-header"><div class="wrap">
-  <h1><a href="../index.html">Study Page</a></h1>
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
@@ -21,114 +21,141 @@
 
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
-  <h1 class="page-title">Week 10. CNN 2 — 전이학습 & 데이터 증강</h1>
-  <p class="lead">남이 학습해 놓은 모델의 어깨 위에 올라타서, 적은 데이터로도 좋은 성능을 냅니다.</p>
+  <h1 class="page-title">Week 10. CNN 심화와 전이학습</h1>
+  <p class="lead">AlexNet에서 ResNet까지 거대 네트워크들의 진화, 그리고 남이 학습시킨 모델을 가져와 내 문제에 적용하는 전이학습.</p>
 
-  <div class="toc"><h4>목차</h4><ol>
-    <li>학습된 필터 들여다보기</li>
-    <li>데이터 증강</li>
-    <li>전이학습 (Transfer Learning)</li>
-    <li>ResNet과 잔차 연결</li>
-    <li>인터랙티브 데이터 증강 데모</li>
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>AlexNet — 딥러닝 르네상스의 시작</li>
+    <li>VGG — 깊이의 힘</li>
+    <li>GoogLeNet — 넓이의 힘</li>
+    <li>ResNet — 잔차 연결로 100층을 넘다</li>
+    <li>전이학습 — 특성 추출과 미세조정</li>
   </ol></div>
 
-  <h2>1. 학습된 필터 들여다보기</h2>
-  <p>학습이 끝난 CNN의 첫 층 필터를 그려보면, 보통 <strong>엣지 검출기</strong>나 색상 패치 같은 단순한 패턴이 나옵니다.
-  더 깊은 층의 활성화는 눈, 바퀴, 얼굴처럼 점점 추상적인 부품을 인식합니다.</p>
-  <p>PyTorch에서는 <code>register_forward_hook</code>으로 중간 출력을 캡처할 수 있습니다.</p>
+  <h2>1. AlexNet (2012)</h2>
+  <p>2012년 ImageNet 대회. Krizhevsky·Sutskever·Hinton의 AlexNet이 이전 우승자(에러율 26%)를 16%로 끌어내렸습니다. 이 한 번의 사건이 딥러닝 시대를 열었습니다. 비결은 ① GPU 학습, ② ReLU, ③ 드롭아웃, ④ 데이터 증강.</p>
 
-  <h2>2. 데이터 증강 (Data Augmentation)</h2>
-  <p>학습 데이터가 적을 때는 같은 이미지를 약간씩 변형해 가짜 데이터를 만듭니다.</p>
-  <ul>
-    <li>좌우 뒤집기 (RandomHorizontalFlip)</li>
-    <li>약간 회전 (RandomRotation)</li>
-    <li>모서리 자르기 (RandomCrop)</li>
-    <li>색상 변화 (ColorJitter)</li>
-  </ul>
-  <p>모델은 더 다양한 이미지를 보게 되어 일반화 성능이 올라갑니다.</p>
+  <h2>2. VGG (2014)</h2>
+  <p>3×3 작은 필터만 16~19층 깊이로 단조롭게 쌓아 만든 모델. 단순하고 일관된 구조 덕에 지금도 백본으로 자주 쓰입니다.</p>
 
-  <h2>3. 전이학습</h2>
-  <p>ImageNet(120만 장)으로 미리 학습된 모델을 가져와, 마지막 분류층만 우리 데이터에 맞춰 재학습합니다.</p>
-  $$ \theta_\text{pretrained} \xrightarrow{\text{fine-tune}} \theta_\text{new task} $$
-  <p>처음부터 학습하는 것보다 보통 <strong>훨씬 적은 데이터·시간</strong>으로 더 높은 정확도를 얻습니다.</p>
+  <h2>3. GoogLeNet / Inception (2014)</h2>
+  <p>"필터 크기를 하나로 정하지 말고 1×1, 3×3, 5×5를 동시에 적용해 합치자". Inception 모듈이라는 이 발상으로 깊이와 너비를 동시에 늘렸습니다.</p>
 
-  <h2>4. ResNet과 잔차 연결</h2>
-  <p>층이 너무 깊어지면 기울기가 사라져 학습이 안 됩니다. ResNet은 이를 <em>지름길(skip connection)</em>로 해결합니다.</p>
-  $$ \mathbf{y} = \mathcal{F}(\mathbf{x}) + \mathbf{x} $$
-  <p>덧셈 한 줄 덕분에 100층, 1000층까지도 학습이 가능해졌습니다.</p>
+  <h2>4. ResNet (2015)</h2>
+  <p>층을 너무 깊이 쌓으면 오히려 학습이 안 됩니다(기울기 소실의 친구인 "성능 열화"). He Kaiming이 제안한 잔차 연결(residual connection)로 이 문제를 깼습니다.</p>
+  $$ y = F(x) + x $$
+  <p>입력을 출력에 그대로 더해주면 기울기가 우회로를 통해 흐를 수 있습니다. 이 작은 변화로 152층, 그리고 1000층까지도 학습이 가능해졌습니다.</p>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 데이터 증강 미리보기</h4>
-    <p>같은 원본 이미지에 다양한 변환이 적용된 결과를 동시에 보여줍니다.</p>
-    <canvas id="aug" width="640" height="340"></canvas>
+    <h4>🎮 인터랙티브: 잔차 연결의 효과</h4>
+    <p>같은 50층 네트워크에서 잔차 연결이 있을 때(파랑)와 없을 때(주황) 입력층에 도달하는 기울기 크기를 비교합니다.</p>
+    <canvas id="resCanvas" width="640" height="280"></canvas>
     <div class="controls">
-      <label>회전 강도 <span class="val" id="rV">15</span><input type="range" id="r" min="0" max="60" value="15"></label>
-      <label>밝기 변동 <span class="val" id="bV">0.3</span><input type="range" id="b" min="0" max="0.8" step="0.05" value="0.3"></label>
-      <button id="reroll">새로 생성</button>
+      <label>층 수 <span class="val" id="rlV">50</span><input type="range" id="rl" min="5" max="100" step="1" value="50"></label>
     </div>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('aug'),x=c.getContext('2d');
-    function drawCat(ctx,cx,cy,scale,rot,bright,flip){
-      ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.scale(flip?-scale:scale,scale);
-      const col=v=>'rgb('+Math.min(255,v*bright|0)+','+Math.min(255,v*0.7*bright|0)+','+Math.min(255,v*0.4*bright|0)+')';
-      ctx.fillStyle=col(220);ctx.beginPath();ctx.arc(0,0,38,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle=col(220);ctx.beginPath();ctx.moveTo(-30,-25);ctx.lineTo(-15,-50);ctx.lineTo(-5,-25);ctx.closePath();ctx.fill();
-      ctx.beginPath();ctx.moveTo(30,-25);ctx.lineTo(15,-50);ctx.lineTo(5,-25);ctx.closePath();ctx.fill();
-      ctx.fillStyle='#222';ctx.beginPath();ctx.arc(-12,-5,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(12,-5,4,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#e91e63';ctx.beginPath();ctx.arc(0,8,3,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#222';ctx.beginPath();ctx.moveTo(-3,12);ctx.quadraticCurveTo(-8,18,-12,15);ctx.moveTo(3,12);ctx.quadraticCurveTo(8,18,12,15);ctx.stroke();
-      ctx.restore();
+    const c=document.getElementById('resCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const L=+document.getElementById('rl').value;
+      document.getElementById('rlV').textContent=L;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,20);ctx.lineTo(40,H-30);ctx.stroke();
+      const xs=W-60;
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;ctx.beginPath();
+      for(let k=0;k<=L;k++){const g=Math.pow(0.85,k);const x=40+k/L*xs,y=H-30-g*(H-60);if(k===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+      ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.beginPath();
+      for(let k=0;k<=L;k++){const g=1/(1+k*0.02);const x=40+k/L*xs,y=H-30-g*(H-60);if(k===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+      ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';ctx.fillText('잔차 연결 있음',W-160,30);
+      ctx.fillStyle='#ff8c00';ctx.fillText('잔차 연결 없음',W-160,48);
     }
-    let seeds=[];
-    function reroll(){seeds=Array.from({length:8},()=>({rs:Math.random()*2-1,bs:Math.random()*2-1,ss:Math.random()*0.4+0.8,fl:Math.random()<0.5}));}
-    reroll();document.getElementById('reroll').onclick=reroll;
-    function loop(){
-      const rmax=+document.getElementById('r').value*Math.PI/180;
-      const bmax=+document.getElementById('b').value;
-      document.getElementById('rV').textContent=document.getElementById('r').value;
-      document.getElementById('bV').textContent=document.getElementById('b').value;
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('원본',75,30);x.fillText('증강된 8개 변형',280,30);
-      drawCat(x,80,140,1.4,0,1,false);
-      const W=70;
-      seeds.forEach((s,i)=>{
-        const cx=240+(i%4)*95, cy=70+Math.floor(i/4)*130;
-        x.strokeStyle='#e3e6ea';x.strokeRect(cx-45,cy-45,90,90);
-        drawCat(x,cx,cy,s.ss,s.rs*rmax,1+s.bs*bmax,s.fl);
-      });
-      requestAnimationFrame(loop);
-    }
-    loop();
+    document.getElementById('rl').addEventListener('input',draw);
+    draw();
   })();
   </script>
 
-  <h2>5. PyTorch 코드</h2>
-  <pre><code>from torchvision import transforms, models
+  <h2>5. 전이학습</h2>
+  <p>ImageNet에서 1400만 장으로 학습된 ResNet은 이미 "이미지의 일반적인 특성"을 알고 있습니다. 우리가 가진 데이터가 1000장뿐이어도, 이 사전학습 모델을 가져와서 마지막 층만 갈아끼우면 좋은 결과를 얻을 수 있습니다.</p>
+  <ul>
+    <li><strong>특성 추출(feature extraction)</strong> — 모든 층을 동결하고 마지막 분류기만 새로 학습.</li>
+    <li><strong>미세조정(fine-tuning)</strong> — 마지막 몇 층을 풀어 작은 학습률로 재학습.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 동결할 층 수 선택</h4>
+    <p>네트워크의 어디서부터 풀어줄지(unfreeze) 정해보세요. 너무 많이 풀면 작은 데이터로 학습이 망가지고, 너무 적게 풀면 새 도메인에 적응하지 못합니다.</p>
+    <canvas id="frzCanvas" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>마지막부터 풀 층 수 <span class="val" id="ufV">2</span><input type="range" id="uf" min="0" max="6" step="1" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('frzCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const u=+document.getElementById('uf').value;
+      document.getElementById('ufV').textContent=u;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const N=6,bw=80,gap=20,total=N*(bw+gap)-gap,x0=(W-total)/2;
+      for(let i=0;i<N;i++){
+        const x=x0+i*(bw+gap);
+        const frozen=i<N-u;
+        ctx.fillStyle=frozen?'#bbb':'#0b5fff';
+        ctx.fillRect(x,80,bw,80);
+        ctx.fillStyle='#fff';ctx.font='13px sans-serif';
+        ctx.fillText(`층 ${i+1}`,x+20,125);
+        ctx.fillStyle='#333';ctx.fillText(frozen?'동결':'학습',x+22,180);
+      }
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('입력 →',10,125);ctx.fillText('→ 출력',W-50,125);
+    }
+    document.getElementById('uf').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <div class="tip"><strong>경험칙.</strong> 새 데이터가 ① 적고 ② 비슷한 도메인이면 특성 추출만, ① 적고 ② 다른 도메인이면 마지막 1~2층 미세조정, ① 많고 ② 비슷하면 전체 미세조정(작은 lr), ① 많고 ② 다르면 처음부터 학습.</p></div>
+
+  <h2>6. 학습률 스케줄</h2>
+  <p>전이학습에서는 보통 매우 작은 학습률($10^{-5}$~$10^{-4}$)로 시작합니다. 큰 학습률은 사전학습된 가중치를 망가뜨리기 때문입니다. 워밍업(warmup)과 코사인 감쇠를 함께 쓰는 게 표준입니다.</p>
+
+  <h2>7. 코드 예제 (PyTorch)</h2>
+  <pre><code>import torch
+import torchvision.models as models
 import torch.nn as nn
 
-# 1) 데이터 증강
-train_tf = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomCrop(32, padding=4),
-    transforms.ColorJitter(0.2, 0.2, 0.2),
-    transforms.ToTensor(),
-    transforms.Normalize((0.49,0.48,0.45), (0.25,0.24,0.26)),
-])
+# 사전학습된 ResNet50 불러오기
+model = models.resnet50(weights='IMAGENET1K_V2')
 
-# 2) 사전학습된 ResNet18 불러와 마지막 층만 교체
-model = models.resnet18(weights='IMAGENET1K_V1')
-model.fc = nn.Linear(512, 10)             # CIFAR-10용
+# 모든 파라미터 동결
+for p in model.parameters():
+    p.requires_grad = False
 
-# 3) 새 fc 층만 빠르게 학습
-opt = torch.optim.Adam(model.fc.parameters(), lr=1e-3)</code></pre>
+# 마지막 FC 층만 새 클래스 수에 맞게 교체 (자동으로 학습 가능)
+model.fc = nn.Linear(model.fc.in_features, 10)
+
+optimizer = torch.optim.Adam(model.fc.parameters(), lr=1e-3)</code></pre>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>AlexNet 원논문</strong> — Krizhevsky 외(2012). 딥러닝 시대의 출생증명서.</li>
+    <li><strong>Deep Residual Learning</strong> — He 외(2015). ResNet 원논문.</li>
+    <li><strong>How transferable are features in deep neural networks?</strong> — Yosinski 외(2014). 어디까지 옮길 수 있는가.</li>
+    <li><strong>fast.ai Practical Deep Learning</strong> — 전이학습 실전 코스의 표준.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="09-cnn-basics.html"><small>← 이전</small>W9. CNN 기초</a>
-    <a href="11-rnn-lstm.html" class="next"><small>다음 →</small>W11. RNN & LSTM</a>
+    <a href="11-rnn-lstm.html" class="next"><small>다음 →</small>W11. RNN/LSTM</a>
   </nav>
 </main>
-<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
 </body>
 </html>

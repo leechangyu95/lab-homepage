@@ -12,7 +12,7 @@
 </head>
 <body>
 <header class="site-header"><div class="wrap">
-  <h1><a href="../index.html">Study Page</a></h1>
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
@@ -21,132 +21,188 @@
 
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
-  <h1 class="page-title">Week 9. 합성곱 신경망 (CNN) 기초</h1>
-  <p class="lead">이미지에는 격자 구조가 있습니다. CNN은 그 구조를 활용하는 신경망입니다.</p>
+  <h1 class="page-title">Week 9. CNN 기초 — 합성곱 신경망</h1>
+  <p class="lead">이미지를 위해 태어난 신경망. 합성곱이라는 단순한 연산이 어떻게 모서리·질감·물체를 차례로 학습하는지 봅니다.</p>
 
-  <div class="toc"><h4>목차</h4><ol>
-    <li>왜 MLP는 이미지에 약한가</li>
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>완전연결망의 한계 — 이미지에는 부적합</li>
     <li>합성곱 연산</li>
-    <li>패딩, 스트라이드, 출력 크기</li>
-    <li>풀링</li>
-    <li>인터랙티브 필터 데모</li>
+    <li>스트라이드와 패딩</li>
+    <li>풀링 — 다운샘플링</li>
+    <li>LeNet — 최초의 성공 사례</li>
   </ol></div>
 
-  <h2>1. 왜 MLP가 이미지에 약한가</h2>
-  <p>28×28 = 784개의 픽셀을 펼쳐 MLP에 넣으면 <em>옆 픽셀끼리 가깝다</em>는 사실이 사라집니다.
-  또한 같은 사물이 약간만 옆으로 이동해도 완전히 다른 입력으로 보입니다.</p>
+  <h2>1. 완전연결망의 문제</h2>
+  <p>$28 \times 28$ MNIST 이미지를 1차원으로 펴면 784개 입력. 은닉층에 256개 뉴런만 둬도 가중치가 20만 개입니다. 이미지가 $224 \times 224$로 커지면 1천만 개. 게다가 픽셀의 위치 관계(이웃 픽셀이 의미적으로 연관)를 완전히 무시합니다.</p>
+  <p>해결책: <strong>지역 연결</strong> + <strong>가중치 공유</strong>. 이게 합성곱입니다.</p>
 
-  <h2>2. 합성곱(Convolution) 연산</h2>
-  <p>작은 필터(예: 3×3)가 이미지 위를 슬라이딩하면서 원소별 곱의 합을 계산합니다.</p>
-  $$ O[i,j] = \sum_u \sum_v K[u,v]\, I[i+u, j+v] $$
-  <p>같은 필터가 모든 위치에 적용되므로 <strong>가중치 공유(weight sharing)</strong>가 일어나고, 이동 불변성이 자연스럽게 생깁니다.</p>
-
-  <h2>3. 출력 크기 공식</h2>
-  $$ H_\text{out} = \left\lfloor \frac{H_\text{in} - K + 2P}{S} \right\rfloor + 1 $$
-  <ul>
-    <li>$K$: 커널 크기, $P$: 패딩, $S$: 스트라이드</li>
-    <li>패딩을 $P=(K-1)/2$로 두면 출력 크기가 입력과 같아집니다("same padding").</li>
-  </ul>
-
-  <h2>4. 풀링 (Pooling)</h2>
-  <p>2×2 영역의 최댓값을 뽑는 max pooling이 가장 흔합니다. 크기가 절반으로 줄고, 작은 위치 이동에 더 둔감해집니다.</p>
+  <h2>2. 합성곱 연산</h2>
+  <p>작은 필터(예: 3×3)를 이미지 위에서 한 칸씩 미끄러뜨리며, 각 위치에서 필터와 그 영역의 원소별 곱의 합을 출력합니다.</p>
+  $$ S(i,j) = \sum_{m,n} I(i+m, j+n) \cdot K(m,n) $$
+  <p>같은 필터를 모든 위치에 쓰므로 가중치가 공유되고, 이 덕분에 "물체가 어디 있든 같은 모양이면 같은 반응"을 얻습니다(평행이동 불변성).</p>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 합성곱 필터 만져보기</h4>
-    <p>3×3 필터의 9개 값을 클릭으로 바꾸면 오른쪽 출력 이미지가 즉시 변합니다. 프리셋으로 엣지·블러를 시험해보세요.</p>
-    <canvas id="cnv" width="640" height="320"></canvas>
+    <h4>🎮 인터랙티브: 3×3 필터 편집기</h4>
+    <p>이미지에 적용할 3×3 커널을 직접 고르세요. 소벨 X·Y는 모서리를, 블러는 부드러움을, 샤프닝은 강조를 만듭니다.</p>
+    <canvas id="convCanvas" width="640" height="320"></canvas>
     <div class="controls">
-      <button id="ed">수직 엣지</button>
-      <button id="eh">수평 엣지</button>
-      <button id="bl">블러</button>
-      <button id="sh">샤프닝</button>
-      <button id="zr" class="alt">0으로</button>
+      <label>커널
+        <select id="krn">
+          <option value="sx">Sobel X (수직 모서리)</option>
+          <option value="sy">Sobel Y (수평 모서리)</option>
+          <option value="blur">블러</option>
+          <option value="sharp">샤프닝</option>
+          <option value="emboss">엠보스</option>
+        </select>
+      </label>
     </div>
-    <p style="font-size:12px;color:#666">중앙 셀 클릭: +1 / 우클릭: -1</p>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('cnv'),x=c.getContext('2d');
-    // build a synthetic image with shapes
-    const N=32;const img=Array.from({length:N},()=>Array(N).fill(0));
-    for(let i=0;i<N;i++)for(let j=0;j<N;j++){
-      if(i>8&&i<24&&j>10&&j<14)img[i][j]=1;        // vertical bar
-      if(i>14&&i<18&&j>6&&j<26)img[i][j]=1;        // horizontal bar
-      if((i-22)**2+(j-22)**2<16)img[i][j]=1;       // circle
+    const c=document.getElementById('convCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const SIZE=80;
+    function makeImg(){
+      const img=[];for(let j=0;j<SIZE;j++){const row=[];for(let i=0;i<SIZE;i++){
+        let v=0;
+        if(i>20&&i<60&&j>20&&j<60)v=200;
+        if(i>30&&i<50&&j>30&&j<50)v=100;
+        v+=Math.random()*20;row.push(Math.min(255,v));
+      }img.push(row);}return img;
     }
-    let K=[[0,0,0],[0,1,0],[0,0,0]];
-    const presets={ed:[[-1,0,1],[-2,0,2],[-1,0,1]],eh:[[-1,-2,-1],[0,0,0],[1,2,1]],bl:[[1,1,1],[1,1,1],[1,1,1]].map(r=>r.map(v=>v/9)),sh:[[0,-1,0],[-1,5,-1],[0,-1,0]],zr:[[0,0,0],[0,0,0],[0,0,0]]};
-    Object.keys(presets).forEach(k=>document.getElementById(k).onclick=()=>{K=presets[k].map(r=>[...r]);});
-    function conv(){
-      const out=Array.from({length:N},()=>Array(N).fill(0));
-      for(let i=1;i<N-1;i++)for(let j=1;j<N-1;j++){
-        let s=0;for(let u=-1;u<=1;u++)for(let v=-1;v<=1;v++)s+=K[u+1][v+1]*img[i+u][j+v];
-        out[i][j]=s;
-      }
-      return out;
-    }
-    c.onclick=e=>{
-      const r=c.getBoundingClientRect();const px=(e.clientX-r.left)*c.width/r.width, py=(e.clientY-r.top)*c.height/r.height;
-      // kernel area: 280..400, 80..200 (40px cells)
-      if(px>280&&px<400&&py>80&&py<200){const ci=Math.floor((py-80)/40),cj=Math.floor((px-280)/40);K[ci][cj]+=1;}
+    const img=makeImg();
+    const kernels={
+      sx:[[-1,0,1],[-2,0,2],[-1,0,1]],
+      sy:[[-1,-2,-1],[0,0,0],[1,2,1]],
+      blur:[[1/9,1/9,1/9],[1/9,1/9,1/9],[1/9,1/9,1/9]],
+      sharp:[[0,-1,0],[-1,5,-1],[0,-1,0]],
+      emboss:[[-2,-1,0],[-1,1,1],[0,1,2]]
     };
-    c.oncontextmenu=e=>{e.preventDefault();const r=c.getBoundingClientRect();const px=(e.clientX-r.left)*c.width/r.width, py=(e.clientY-r.top)*c.height/r.height;
-      if(px>280&&px<400&&py>80&&py<200){const ci=Math.floor((py-80)/40),cj=Math.floor((px-280)/40);K[ci][cj]-=1;}};
-    function loop(){
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      // input image
-      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('입력',60,30);
-      for(let i=0;i<N;i++)for(let j=0;j<N;j++){const v=img[i][j];x.fillStyle='rgb('+(v*255)+','+(v*255)+','+(v*255)+')';x.fillRect(20+j*5,40+i*5,5,5);}
-      // kernel
-      x.fillStyle='#666';x.fillText('3×3 필터',300,30);
-      for(let i=0;i<3;i++)for(let j=0;j<3;j++){
-        x.fillStyle='#fff';x.fillRect(280+j*40,80+i*40,40,40);
-        x.strokeStyle='#0b5fff';x.strokeRect(280+j*40,80+i*40,40,40);
-        x.fillStyle='#0742b8';x.font='14px monospace';x.textAlign='center';
-        x.fillText(K[i][j].toFixed(1),300+j*40,105+i*40);x.textAlign='start';
-      }
-      // output
-      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('출력 (특성 맵)',440,30);
-      const out=conv();
-      let mx=0;out.forEach(r=>r.forEach(v=>{if(Math.abs(v)>mx)mx=Math.abs(v);}));
-      mx=mx||1;
-      for(let i=0;i<N;i++)for(let j=0;j<N;j++){
-        const v=out[i][j]/mx;
-        if(v>=0)x.fillStyle='rgb('+(v*255|0)+','+(v*255|0)+','+(v*255|0)+')';
-        else x.fillStyle='rgb('+(-v*200|0)+',0,0)';
-        x.fillRect(440+j*5,40+i*5,5,5);
-      }
-      requestAnimationFrame(loop);
+    function conv(img,k){
+      const out=[];const N=img.length;
+      for(let j=1;j<N-1;j++){const r=[];for(let i=1;i<N-1;i++){
+        let s=0;for(let m=-1;m<=1;m++)for(let n=-1;n<=1;n++)s+=img[j+m][i+n]*k[m+1][n+1];
+        r.push(s);
+      }out.push(r);}return out;
     }
-    loop();
+    function paint(arr,x0,y0,scale,abs){
+      let mn=Infinity,mx=-Infinity;arr.forEach(r=>r.forEach(v=>{const u=abs?Math.abs(v):v;if(u<mn)mn=u;if(u>mx)mx=u;}));
+      for(let j=0;j<arr.length;j++)for(let i=0;i<arr[0].length;i++){
+        const u=abs?Math.abs(arr[j][i]):arr[j][i];
+        const t=Math.floor((u-mn)/(mx-mn+1e-9)*255);
+        ctx.fillStyle=`rgb(${t},${t},${t})`;
+        ctx.fillRect(x0+i*scale,y0+j*scale,scale,scale);
+      }
+    }
+    function draw(){
+      const t=document.getElementById('krn').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      paint(img,20,30,3,false);
+      const out=conv(img,kernels[t]);
+      paint(out,360,30,3,true);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('원본',20,20);ctx.fillText('합성곱 결과',360,20);
+      // kernel display
+      const k=kernels[t];const kx=180,ky=160;
+      ctx.fillStyle='#fff';ctx.fillRect(kx,ky,120,120);ctx.strokeStyle='#000';ctx.strokeRect(kx,ky,120,120);
+      for(let j=0;j<3;j++)for(let i=0;i<3;i++){
+        ctx.fillStyle='#000';ctx.font='12px sans-serif';
+        ctx.fillText(k[j][i].toFixed(2),kx+8+i*40,ky+25+j*40);
+      }
+      ctx.fillText('커널',kx+45,ky-6);
+    }
+    document.getElementById('krn').onchange=draw;
+    draw();
   })();
   </script>
 
-  <p>관찰: 수직 엣지 필터(Sobel x)는 세로선만, 수평 엣지 필터는 가로선만 강하게 반응합니다. CNN은 이런 필터를 스스로 학습합니다.</p>
+  <h2>3. 스트라이드와 패딩</h2>
+  <p><strong>스트라이드(stride)</strong>는 필터가 한 번에 미끄러지는 칸 수. 보통 1이지만 2로 두면 출력 크기가 반으로 줄어듭니다.</p>
+  <p><strong>패딩(padding)</strong>은 입력 가장자리에 0을 둘러주는 것. "same" 패딩이면 출력 크기가 입력과 같아집니다.</p>
+  $$ \text{out} = \left\lfloor \frac{\text{in} + 2p - k}{s} \right\rfloor + 1 $$
 
-  <h2>5. PyTorch 코드</h2>
-  <pre><code>import torch.nn as nn, torch.nn.functional as F
+  <h2>4. 풀링</h2>
+  <p>합성곱 뒤에 보통 <strong>맥스풀링</strong>을 둡니다. 2×2 영역에서 최댓값만 골라 출력 크기를 절반으로 줄입니다. 이로써 ① 계산량을 줄이고, ② 작은 위치 변화에 강인해집니다.</p>
 
-class FashionCNN(nn.Module):
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2×2 풀링</h4>
+    <p>같은 입력에 맥스풀링과 평균풀링을 적용해 결과를 비교합니다.</p>
+    <canvas id="poolCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <button id="poolNew">새 입력</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('poolCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let arr=[];
+    function gen(){arr=[];for(let j=0;j<8;j++){const r=[];for(let i=0;i<8;i++)r.push(Math.floor(Math.random()*10));arr.push(r);}draw();}
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cell=28;
+      function paint(a,x0,y0,label){
+        for(let j=0;j<a.length;j++)for(let i=0;i<a[0].length;i++){
+          const v=a[j][i];const t=Math.floor(255-v*20);
+          ctx.fillStyle=`rgb(${t},${t},255)`;ctx.fillRect(x0+i*cell,y0+j*cell,cell,cell);
+          ctx.strokeStyle='#888';ctx.strokeRect(x0+i*cell,y0+j*cell,cell,cell);
+          ctx.fillStyle='#000';ctx.font='12px sans-serif';ctx.fillText(v,x0+i*cell+8,y0+j*cell+18);
+        }
+        ctx.fillStyle='#333';ctx.font='13px sans-serif';ctx.fillText(label,x0,y0-5);
+      }
+      paint(arr,20,30,'입력 8×8');
+      const mx=[],av=[];
+      for(let j=0;j<4;j++){const r1=[],r2=[];for(let i=0;i<4;i++){
+        const a=arr[j*2][i*2],b=arr[j*2][i*2+1],c2=arr[j*2+1][i*2],d=arr[j*2+1][i*2+1];
+        r1.push(Math.max(a,b,c2,d));r2.push(Math.round((a+b+c2+d)/4));
+      }mx.push(r1);av.push(r2);}
+      paint(mx,290,30,'맥스풀 4×4');
+      paint(av,460,30,'평균풀 4×4');
+    }
+    document.getElementById('poolNew').onclick=gen;
+    gen();
+  })();
+  </script>
+
+  <h2>5. LeNet — 최초의 성공 사례</h2>
+  <p>1998년 Yann LeCun이 만든 LeNet-5는 우편번호 손글씨 인식에 쓰였습니다. 구조는 [Conv→Pool→Conv→Pool→FC→FC→Out]의 단순한 형태지만 현대 모든 CNN의 원형입니다.</p>
+
+  <h2>6. 코드 예제 (PyTorch)</h2>
+  <pre><code>import torch.nn as nn
+
+class LeNet(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(1, 6, 5)     # 1ch → 6ch, 5×5 필터
         self.pool  = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.fc1   = nn.Linear(64*7*7, 128)
-        self.fc2   = nn.Linear(128, 10)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1   = nn.Linear(16*4*4, 120)
+        self.fc2   = nn.Linear(120, 84)
+        self.fc3   = nn.Linear(84, 10)
+
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))   # 28→14
-        x = self.pool(F.relu(self.conv2(x)))   # 14→7
+        x = self.pool(torch.relu(self.conv1(x)))
+        x = self.pool(torch.relu(self.conv2(x)))
         x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        return self.fc2(x)</code></pre>
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)</code></pre>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>Sung Kim Lec 11</strong> — CNN 한국어 강의.</li>
+    <li><strong>CS231n Convolutional Networks</strong> — Stanford, <a href="https://cs231n.github.io/convolutional-networks/">cs231n.github.io</a>. 가장 명쾌한 설명.</li>
+    <li><strong>LeNet 원논문</strong> — LeCun 외, "Gradient-Based Learning Applied to Document Recognition" (1998).</li>
+    <li><strong>A Guide to Convolution Arithmetic</strong> — Dumoulin·Visin. 출력 크기 공식의 모든 것.</li>
+  </ul>
 
   <nav class="prevnext">
-    <a href="08-dnn-backprop.html"><small>← 이전</small>W8. 심층신경망</a>
-    <a href="10-cnn-transfer.html" class="next"><small>다음 →</small>W10. 전이학습</a>
+    <a href="08-dnn-backprop.html"><small>← 이전</small>W8. DNN 역전파</a>
+    <a href="10-cnn-transfer.html" class="next"><small>다음 →</small>W10. CNN 전이학습</a>
   </nav>
 </main>
-<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
 </body>
 </html>

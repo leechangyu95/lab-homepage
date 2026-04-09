@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>W13. Transformer & LLM — Study Page</title>
+<title>W13. Transformer와 LLM — Study Page</title>
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -12,7 +12,7 @@
 </head>
 <body>
 <header class="site-header"><div class="wrap">
-  <h1><a href="../index.html">Study Page</a></h1>
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
@@ -22,149 +22,203 @@
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
   <h1 class="page-title">Week 13. Transformer와 LLM</h1>
-  <p class="lead">RNN을 대체하고 ChatGPT·Claude를 가능케 한 핵심 아키텍처입니다.</p>
+  <p class="lead">RNN을 완전히 버리고 어텐션만으로 만든 트랜스포머. 그 위에서 자라난 GPT·BERT·ChatGPT 가족 이야기.</p>
 
-  <div class="toc"><h4>목차</h4><ol>
-    <li>RNN의 한계</li>
-    <li>셀프 어텐션(Self-Attention)</li>
-    <li>Q · K · V의 의미</li>
-    <li>멀티 헤드와 트랜스포머 블록</li>
-    <li>대규모 언어모델(LLM)</li>
-    <li>인터랙티브 어텐션 데모</li>
-    <li>HuggingFace로 즉시 사용</li>
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>"Attention Is All You Need" — 2017년의 충격</li>
+    <li>Self-Attention의 Q·K·V</li>
+    <li>Multi-Head Attention</li>
+    <li>위치 인코딩</li>
+    <li>BERT, GPT, 그리고 LLM</li>
+    <li>샘플링과 온도</li>
   </ol></div>
 
-  <h2>1. RNN의 한계</h2>
-  <p>RNN/LSTM은 단어를 순서대로만 처리할 수 있어 <strong>병렬화가 안 됩니다</strong>. 또한 매우 긴 문장에서는 여전히 정보가 흐릿해집니다.</p>
+  <h2>1. RNN을 버리다</h2>
+  <p>2017년 구글의 "Attention Is All You Need" 논문은 RNN과 CNN을 모두 버리고 어텐션만으로 시퀀스를 처리하는 모델, <strong>Transformer</strong>를 제안했습니다. 핵심 동기: RNN은 순차적이라 병렬화가 어렵고, 매우 긴 시퀀스를 잘 못 다룹니다. 어텐션은 모든 위치를 한 번에 보면서 GPU에서 완벽히 병렬화됩니다.</p>
 
-  <h2>2. 셀프 어텐션의 핵심 아이디어</h2>
-  <p>한 단어가 문장 안의 <strong>모든 다른 단어</strong>를 동시에 본 뒤, "지금 나에게 가장 중요한 단어가 누구인지" 가중치를 계산합니다.</p>
-
-  $$ \text{Attention}(Q, K, V) = \mathrm{softmax}\!\left(\frac{Q K^\top}{\sqrt{d_k}}\right) V $$
-
-  <h2>3. Q · K · V란?</h2>
+  <h2>2. Self-Attention</h2>
+  <p>각 토큰을 세 개의 벡터로 사상합니다.</p>
   <ul>
-    <li><strong>Query (Q)</strong> — "내가 찾고 싶은 것"</li>
-    <li><strong>Key (K)</strong> — "내가 가지고 있는 것의 색인"</li>
-    <li><strong>Value (V)</strong> — "실제 내용"</li>
+    <li><strong>Query (Q)</strong>: "내가 찾는 것"</li>
+    <li><strong>Key (K)</strong>: "내가 가진 것의 표지"</li>
+    <li><strong>Value (V)</strong>: "내 진짜 내용"</li>
   </ul>
-  <p>단어 도서관에 비유하면 Q는 검색어, K는 책 제목, V는 책 내용입니다. Q와 K의 내적이 클수록 그 단어의 V가 많이 섞여 들어갑니다.</p>
-
-  <h2>4. 멀티 헤드 & 트랜스포머 블록</h2>
-  <p>여러 개의 어텐션을 병렬로 두면 각 헤드가 다른 종류의 관계(문법, 의미, 위치 등)를 따로 학습합니다.</p>
-  $$ \text{MultiHead}(Q,K,V) = \text{Concat}(\text{head}_1, \dots, \text{head}_h) W^O $$
-  <p>한 트랜스포머 블록 = <code>Self-Attention → 잔차+LayerNorm → FFN → 잔차+LayerNorm</code>. 이걸 12층, 24층, 96층씩 쌓으면 BERT, GPT-3, GPT-4가 됩니다.</p>
-
-  <h2>5. 대규모 언어모델 (LLM)</h2>
-  <p>인터넷 텍스트 수조 개 단어로 트랜스포머를 학습시키면, 다음 단어 예측이라는 단순한 과제만으로도 놀라운 일반 지능이 나타납니다.</p>
-  <ul>
-    <li><strong>BERT</strong> — 양방향, 빈칸 채우기 학습. 이해 과제에 강함.</li>
-    <li><strong>GPT</strong> — 단방향, 다음 단어 예측. 생성 과제에 강함.</li>
-    <li><strong>T5 / BART</strong> — 입력 → 출력 변환 (요약, 번역).</li>
-  </ul>
+  $$ \text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{Q K^\top}{\sqrt{d_k}}\right) V $$
+  <p>$Q K^\top$은 각 토큰이 다른 모든 토큰에 얼마나 "어울리는지" 점수를 만듭니다. 소프트맥스로 가중치로 만든 뒤 V를 가중합합니다. 이 한 줄이 트랜스포머의 모든 것이에요.</p>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 어텐션 가중치 히트맵</h4>
-    <p>단어 5~7개의 짧은 문장을 입력하면 단어 간 어텐션 가중치를 시각화합니다. (간이 데모 — 실제 모델 가중치는 아니지만 패턴은 유사)</p>
-    <canvas id="att" width="640" height="380"></canvas>
+    <h4>🎮 인터랙티브: Self-Attention 행렬</h4>
+    <p>5단어 문장의 Q·K^T 행렬을 시각화합니다. 행은 query, 열은 key. 각 셀의 색은 그 두 단어의 어울림 점수입니다.</p>
+    <canvas id="saCanvas" width="640" height="380"></canvas>
     <div class="controls">
-      <label>문장 <input id="sent" type="text" value="The cat sat on the mat" style="width:340px"></label>
-      <button id="rg">갱신</button>
+      <label>온도 (softmax) <span class="val" id="tpV">1</span><input type="range" id="tp" min="0.2" max="3" step="0.05" value="1"></label>
+      <button id="saRegen">새 패턴</button>
     </div>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('att'),x=c.getContext('2d');
-    let words=[],M=[];
-    function update(){
-      words=document.getElementById('sent').value.trim().split(/\s+/).slice(0,10);
-      const n=words.length;
-      // pseudo-attention: nearby + same-category boost + softmax per row
-      const charCat=w=>w.toLowerCase().replace(/[^a-z]/g,'').length%4;
-      M=[];
-      for(let i=0;i<n;i++){
-        const row=[];
-        for(let j=0;j<n;j++){
-          const dist=Math.abs(i-j);
-          const sim=charCat(words[i])==charCat(words[j])?1.5:0;
-          row.push(Math.exp(-dist*0.4+sim+(i==j?0.8:0)));
-        }
-        const s=row.reduce((a,b)=>a+b,0);
-        M.push(row.map(v=>v/s));
-      }
+    const c=document.getElementById('saCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const toks=['The','cat','sat','on','mat'];
+    let scores=[];
+    function gen(){
+      scores=[];
+      for(let i=0;i<5;i++){const r=[];for(let j=0;j<5;j++){r.push(Math.random()*4-1);}scores.push(r);}
+      draw();
     }
-    update();document.getElementById('rg').onclick=update;
-    function loop(){
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      const n=words.length;if(n==0){requestAnimationFrame(loop);return;}
-      const cell=Math.min(50,260/n);
-      const x0=200,y0=80;
-      // column labels
-      x.fillStyle='#333';x.font='12px sans-serif';
-      words.forEach((w,j)=>{x.save();x.translate(x0+j*cell+cell/2,y0-5);x.rotate(-Math.PI/4);x.fillText(w,0,0);x.restore();});
-      // row labels
-      words.forEach((w,i)=>{x.textAlign='right';x.fillText(w,x0-8,y0+i*cell+cell/2+4);x.textAlign='start';});
-      // matrix
-      for(let i=0;i<n;i++)for(let j=0;j<n;j++){
-        const v=M[i][j];
-        x.fillStyle='rgba(11,95,255,'+v*1.5+')';
-        x.fillRect(x0+j*cell,y0+i*cell,cell-1,cell-1);
-        if(v>0.15){x.fillStyle='#fff';x.font='10px monospace';x.textAlign='center';x.fillText(v.toFixed(2),x0+j*cell+cell/2,y0+i*cell+cell/2+3);x.textAlign='start';}
+    function draw(){
+      const T=+document.getElementById('tp').value;
+      document.getElementById('tpV').textContent=T.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cell=50,x0=120,y0=70;
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      for(let i=0;i<5;i++){ctx.fillText(toks[i],x0+i*cell+10,y0-10);ctx.fillText(toks[i],x0-70,y0+i*cell+30);}
+      const M=[];
+      for(let i=0;i<5;i++){
+        const exps=scores[i].map(s=>Math.exp(s/T));
+        const sm=exps.reduce((a,b)=>a+b);
+        M.push(exps.map(v=>v/sm));
       }
-      x.fillStyle='#666';x.font='12px sans-serif';
-      x.fillText('각 행: 해당 단어가 다른 단어들에 주는 어텐션 가중치 (합=1)',20,360);
-      requestAnimationFrame(loop);
+      for(let i=0;i<5;i++)for(let j=0;j<5;j++){
+        const v=M[i][j];const t=Math.floor(255-v*255);
+        ctx.fillStyle=`rgb(${t},${t},255)`;
+        ctx.fillRect(x0+j*cell,y0+i*cell,cell-2,cell-2);
+        ctx.fillStyle=v>0.5?'#fff':'#333';ctx.font='12px sans-serif';
+        ctx.fillText(v.toFixed(2),x0+j*cell+10,y0+i*cell+30);
+      }
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('row = Query, col = Key',x0,y0+5*cell+25);
     }
-    loop();
+    document.getElementById('tp').addEventListener('input',draw);
+    document.getElementById('saRegen').onclick=gen;
+    gen();
   })();
   </script>
 
-  <h2>6. HuggingFace로 즉시 사용</h2>
-  <p>거대한 모델을 직접 학습할 필요는 없습니다. 사전학습된 모델을 단 몇 줄로 불러올 수 있습니다.</p>
-  <pre><code>from transformers import pipeline
+  <h2>3. Multi-Head Attention</h2>
+  <p>한 번의 어텐션으로는 한 종류의 관계만 잡습니다. 그래서 Q·K·V를 여러 개의 작은 부분 공간으로 쪼개 동시에 어텐션을 계산하고(예: 8개 헤드), 결과를 이어 붙입니다. 한 헤드는 문법 관계를, 다른 헤드는 공지시(coreference)를 학습할 수 있습니다.</p>
 
-# 1) 감성 분석
-clf = pipeline('sentiment-analysis')
-print(clf("This movie was wonderful!"))
-# → [{'label': 'POSITIVE', 'score': 0.9999}]
+  <div class="demo">
+    <h4>🎮 인터랙티브: 멀티헤드 분할</h4>
+    <p>$d_{\text{model}}=64$ 차원이 8개 헤드로 나뉘면 헤드당 8차원입니다. 헤드 수를 바꾸며 분할 모습을 보세요.</p>
+    <canvas id="mhCanvas" width="640" height="220"></canvas>
+    <div class="controls">
+      <label>헤드 수 <span class="val" id="mhV">8</span><input type="range" id="mh" min="1" max="16" step="1" value="8"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mhCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLORS=['#0b5fff','#ff8c00','#2e7d32','#c62828','#6a1b9a','#00838f','#e91e63','#f9a825','#3f51b5','#009688','#795548','#9c27b0','#607d8b','#ffc107','#4caf50','#f44336'];
+    function draw(){
+      const h=+document.getElementById('mh').value;
+      document.getElementById('mhV').textContent=h;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const D=64,total=W-80,bw=total/D;
+      for(let k=0;k<D;k++){
+        const head=Math.floor(k/(D/h));
+        ctx.fillStyle=COLORS[head%16];
+        ctx.fillRect(40+k*bw,80,bw-1,60);
+      }
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`d_model=64, ${h}개 헤드, 헤드당 ${64/h}차원`,40,50);
+    }
+    document.getElementById('mh').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
-# 2) 텍스트 생성 (GPT-2)
-gen = pipeline('text-generation', model='gpt2')
-print(gen("AI will change the future", max_length=40)[0]['generated_text'])
+  <h2>4. 위치 인코딩</h2>
+  <p>어텐션은 모든 위치를 동시에 보므로 순서를 모릅니다. 이를 알려주려면 각 위치에 고유한 벡터를 더해줍니다. 원논문에서는 사인·코사인 함수를 썼습니다.</p>
+  $$ PE_{(pos,2i)} = \sin\!\left(\frac{pos}{10000^{2i/d}}\right), \quad PE_{(pos,2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d}}\right) $$
 
-# 3) 요약 (DistilBART)
-summarize = pipeline('summarization', model='sshleifer/distilbart-cnn-12-6')
-print(summarize(long_text, max_length=60, min_length=20))
+  <h2>5. BERT, GPT, 그리고 LLM</h2>
+  <table>
+    <thead><tr><th>모델</th><th>구조</th><th>학습 방식</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td>BERT (2018)</td><td>인코더 only</td><td>마스킹된 단어 맞히기</td><td>이해(분류, QA)</td></tr>
+      <tr><td>GPT (2018~)</td><td>디코더 only</td><td>다음 단어 맞히기</td><td>생성</td></tr>
+      <tr><td>T5 (2019)</td><td>인코더-디코더</td><td>모든 NLP를 텍스트→텍스트로</td><td>범용</td></tr>
+      <tr><td>ChatGPT (2022)</td><td>GPT + RLHF</td><td>사람 피드백 강화학습</td><td>대화</td></tr>
+    </tbody>
+  </table>
+  <p>모델 크기는 GPT-1의 1억 개에서 GPT-3의 1750억, GPT-4의 추정 1조 개 이상까지 폭발적으로 커졌습니다. 일정 규모를 넘으면 작은 모델에는 없던 능력(few-shot 학습, 추론, 코드 작성)이 갑자기 나타나는 <strong>창발(emergent)</strong> 현상이 관찰됩니다.</p>
 
-# 4) 질문 응답
-qa = pipeline('question-answering')
-print(qa(question="When was PyTorch released?", context=ctx))
-
-# 5) 제로샷 분류 (학습 없이 새 카테고리 분류)
-zs = pipeline('zero-shot-classification')
-print(zs("이 영화는 정말 재미있었다",
-         candidate_labels=['긍정', '부정', '중립']))</code></pre>
-
-  <h2>7. 프롬프트 엔지니어링</h2>
-  <p>LLM의 성능은 프롬프트 작성 방식에 크게 좌우됩니다.</p>
+  <h2>6. 샘플링과 온도</h2>
+  <p>LLM은 다음 단어의 확률 분포를 출력합니다. 그중 하나를 고르는 방법:</p>
   <ul>
-    <li><strong>역할 부여</strong>: "당신은 친절한 수학 선생님입니다…"</li>
-    <li><strong>예시 제시</strong>(few-shot): 원하는 출력 형식의 예 2~3개</li>
-    <li><strong>단계 분해</strong>: "단계별로 차근차근 생각해보세요"</li>
-    <li><strong>명확한 형식 지정</strong>: "JSON 형식으로 답하세요"</li>
+    <li><strong>Greedy</strong>: 최댓값 — 결정적, 단조롭다.</li>
+    <li><strong>Top-k</strong>: 상위 k개 중에서 샘플링.</li>
+    <li><strong>Top-p (nucleus)</strong>: 누적 확률 p까지의 단어들 중에서.</li>
+    <li><strong>온도</strong>: 소프트맥스 전 점수를 $T$로 나눔. $T<1$이면 뾰족(보수적), $T>1$이면 평평(창의적).</li>
   </ul>
 
-  <div class="tip">
-    <strong>여기까지 마치면</strong>: 머신러닝의 기본부터 최신 LLM의 핵심 원리까지 모두 둘러본 셈입니다.
-    이제 실전 프로젝트(이미지 분류기 만들기, 챗봇 만들기, 시계열 예측)로 손을 움직여 보세요.
-    또는 <a href="../index.html">로봇공학특론</a>의 강화학습·MPC와 결합해 자율 시스템에 응용할 수 있습니다.
+  <div class="demo">
+    <h4>🎮 인터랙티브: 온도가 출력 분포에 미치는 영향</h4>
+    <p>5개 후보 단어의 점수를 받아 온도에 따라 확률 분포가 어떻게 변하는지 봅니다. 온도가 0에 가까우면 한 단어만 살아남고, 크면 모두 비슷해집니다.</p>
+    <canvas id="tmpCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>온도 T <span class="val" id="tmV">1</span><input type="range" id="tm" min="0.1" max="3" step="0.05" value="1"></label>
+    </div>
   </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tmpCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const words=['cat','dog','tree','sky','run'];
+    const scores=[3.0,2.5,1.0,0.5,2.0];
+    function draw(){
+      const T=+document.getElementById('tm').value;
+      document.getElementById('tmV').textContent=T.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ex=scores.map(s=>Math.exp(s/T));
+      const sm=ex.reduce((a,b)=>a+b);const p=ex.map(v=>v/sm);
+      const bw=80,gap=30,total=5*(bw+gap)-gap,x0=(W-total)/2;
+      p.forEach((v,i)=>{
+        const x=x0+i*(bw+gap),h=v*(H-80);
+        ctx.fillStyle='#0b5fff';ctx.fillRect(x,H-40-h,bw,h);
+        ctx.fillStyle='#333';ctx.font='13px sans-serif';
+        ctx.fillText(words[i],x+20,H-20);
+        ctx.fillText(v.toFixed(3),x+15,H-50-h);
+      });
+    }
+    document.getElementById('tm').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>7. 코드 예제 (Hugging Face)</h2>
+  <pre><code>from transformers import AutoTokenizer, AutoModelForCausalLM
+
+tok = AutoTokenizer.from_pretrained('gpt2')
+model = AutoModelForCausalLM.from_pretrained('gpt2')
+
+inputs = tok('Once upon a time', return_tensors='pt')
+out = model.generate(**inputs, max_length=50, temperature=0.8,
+                     top_p=0.9, do_sample=True)
+print(tok.decode(out[0]))</code></pre>
+
+  <h2>8. 마무리 — 우리는 어디로 가는가</h2>
+  <p>13주에 걸쳐 KNN에서 시작해 트랜스포머까지 왔습니다. 지난 70년의 AI 역사를 한 학기에 압축한 셈입니다. 앞으로의 방향은 ① 더 큰 멀티모달 모델, ② 더 효율적인 학습(LoRA, distillation), ③ 도구 사용 에이전트, ④ 안전성과 정렬(alignment)입니다. 어디로 가든, 이번 학기에 만진 기본기는 그대로 유효합니다.</p>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>Attention Is All You Need</strong> — Vaswani 외(2017). 트랜스포머 원논문.</li>
+    <li><strong>The Illustrated Transformer</strong> — Jay Alammar, <a href="https://jalammar.github.io/illustrated-transformer/">jalammar.github.io</a>. 그림 강의의 명작.</li>
+    <li><strong>BERT</strong> — Devlin 외(2018). <strong>GPT-3</strong> — Brown 외(2020).</li>
+    <li><strong>Hugging Face Course</strong> — <a href="https://huggingface.co/course">huggingface.co/course</a>. 실습 위주.</li>
+    <li><strong>Andrej Karpathy "Let's build GPT"</strong> — 유튜브. 처음부터 GPT를 만드는 영상.</li>
+  </ul>
 
   <nav class="prevnext">
-    <a href="12-rnn-advanced.html"><small>← 이전</small>W12. RNN 심화</a>
-    <a href="../dl.html" class="next"><small>완료 🎉</small>주차 목록으로</a>
+    <a href="12-rnn-advanced.html"><small>← 이전</small>W12. Seq2Seq</a>
+    <a href="../dl.html" class="next"><small>다음 →</small>주차 목록으로</a>
   </nav>
 </main>
-<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
 </body>
 </html>

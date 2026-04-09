@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>W8. 심층신경망 & 역전파 — Study Page</title>
+<title>W8. 심층신경망과 역전파 — Study Page</title>
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -12,7 +12,7 @@
 </head>
 <body>
 <header class="site-header"><div class="wrap">
-  <h1><a href="../index.html">Study Page</a></h1>
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
@@ -22,158 +22,188 @@
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
   <h1 class="page-title">Week 8. 심층신경망과 역전파</h1>
-  <p class="lead">한 층짜리 MLP를 깊게 쌓고, 역전파 수식을 직접 따라가 봅시다.</p>
+  <p class="lead">층이 깊어지면 어떻게 학습할까. 연쇄법칙·기울기 소실·ReLU·드롭아웃·배치정규화 — 현대 딥러닝을 떠받치는 다섯 기둥.</p>
 
-  <div class="toc"><h4>목차</h4><ol>
-    <li>왜 깊게 쌓는가</li>
-    <li>순전파 한 줄 정리</li>
-    <li>역전파의 핵심: 연쇄법칙</li>
-    <li>옵티마이저: SGD, Momentum, Adam</li>
-    <li>드롭아웃과 배치 정규화</li>
-    <li>인터랙티브 학습 데모</li>
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>역전파 — 연쇄법칙으로 푸는 미분</li>
+    <li>기울기 소실 문제</li>
+    <li>ReLU의 등장</li>
+    <li>가중치 초기화 (Xavier, He)</li>
+    <li>드롭아웃과 배치정규화</li>
   </ol></div>
 
-  <h2>1. 왜 깊게 쌓는가?</h2>
-  <p>은닉층 1개로도 이론적으로는 어떤 함수도 근사할 수 있지만(보편 근사 정리), 실제로는 폭이 폭발적으로 커야 합니다.
-  <strong>층을 깊게</strong> 쌓으면 같은 능력을 훨씬 적은 파라미터로 표현할 수 있습니다.</p>
+  <h2>1. 왜 역전파가 필요한가</h2>
+  <p>신경망의 파라미터 수는 수백만 개. 비용함수의 모든 파라미터에 대한 편미분을 일일이 손으로 구할 수는 없습니다. 다행히 신경망은 함수의 합성이고, 합성함수의 미분은 <strong>연쇄법칙(chain rule)</strong>으로 풀립니다.</p>
+  $$ \frac{\partial L}{\partial w} = \frac{\partial L}{\partial y} \cdot \frac{\partial y}{\partial z} \cdot \frac{\partial z}{\partial w} $$
+  <p>이 곱셈을 출력에서 입력으로 거꾸로 흘려보내는 알고리즘이 <strong>역전파</strong>입니다. 1986년 Rumelhart·Hinton·Williams가 대중화했습니다.</p>
 
-  <h2>2. 순전파 (Forward Pass)</h2>
-  $$ \mathbf{a}^{[l]} = \sigma\!\bigl(W^{[l]} \mathbf{a}^{[l-1]} + \mathbf{b}^{[l]}\bigr) $$
-  <p>입력 $\mathbf{a}^{[0]}$가 첫 층부터 마지막 층까지 차례대로 변환됩니다.</p>
-
-  <h2>3. 역전파 (Backpropagation)</h2>
-  <p>출력에서 손실 $\mathcal{L}$을 계산한 뒤, <strong>연쇄법칙</strong>으로 모든 $W$에 대한 기울기를 한 번에 구합니다.</p>
-  $$ \frac{\partial \mathcal{L}}{\partial W^{[l]}} = \frac{\partial \mathcal{L}}{\partial \mathbf{a}^{[l]}} \cdot \frac{\partial \mathbf{a}^{[l]}}{\partial \mathbf{z}^{[l]}} \cdot \frac{\partial \mathbf{z}^{[l]}}{\partial W^{[l]}} $$
-  <p>핵심 직감: 마지막 층의 오차를 거꾸로(뒤에서 앞으로) 흘려보내면서 각 가중치가 손실에 얼마나 기여했는지 알아냅니다.</p>
-
-  <h2>4. 옵티마이저</h2>
-  <table>
-    <thead><tr><th>이름</th><th>업데이트 규칙</th><th>특징</th></tr></thead>
-    <tbody>
-      <tr><td>SGD</td><td>$w \leftarrow w - \alpha \nabla_w \mathcal{L}$</td><td>단순, 느림</td></tr>
-      <tr><td>Momentum</td><td>$v \leftarrow \beta v + \nabla_w$, $w \leftarrow w - \alpha v$</td><td>관성으로 가속</td></tr>
-      <tr><td>Adam</td><td>1차·2차 모멘트 적응</td><td>대부분 디폴트</td></tr>
-    </tbody>
-  </table>
-
-  <h2>5. 과적합 방지</h2>
-  <ul>
-    <li><strong>드롭아웃</strong> — 학습 중 뉴런을 확률 $p$로 끔. 앙상블 효과.</li>
-    <li><strong>배치 정규화</strong> — 각 층 입력의 평균 0, 분산 1로 정규화.</li>
-    <li><strong>조기 종료</strong> — 검증 손실이 다시 오르면 학습 중단.</li>
-  </ul>
+  <h2>2. 기울기 소실</h2>
+  <p>시그모이드의 미분은 최대 0.25입니다. 층이 10개면 미분이 $0.25^{10} \approx 10^{-6}$로 줄어듭니다. 입력층 가까이엔 기울기가 도달조차 못하니 학습이 멈춥니다. 이게 두 번째 AI 겨울의 기술적 원인이었습니다.</p>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 깊은 MLP가 나선형 데이터 학습</h4>
-    <p>2개의 나선이 얽힌 데이터입니다. 깊이와 학습률을 조절하며 결정 경계가 자라는 모습을 보세요.</p>
-    <canvas id="dnn" width="640" height="380"></canvas>
+    <h4>🎮 인터랙티브: 깊이별 기울기 크기</h4>
+    <p>층 수와 활성함수를 바꿔가며 입력층까지 도달하는 기울기 크기를 봅니다. 시그모이드는 깊어질수록 급격히 작아집니다.</p>
+    <canvas id="vgCanvas" width="640" height="320"></canvas>
     <div class="controls">
-      <label>은닉층 폭 H <span class="val" id="hV">10</span><input type="range" id="h" min="3" max="20" value="10"></label>
-      <label>학습률 α <span class="val" id="lrV">0.05</span><input type="range" id="lr" min="0.005" max="0.3" step="0.005" value="0.05"></label>
-      <button id="rst">재학습</button>
+      <label>층 수 <span class="val" id="lyV">8</span><input type="range" id="ly" min="2" max="20" step="1" value="8"></label>
+      <label>활성
+        <select id="actSel2"><option value="sig">Sigmoid</option><option value="tanh">tanh</option><option value="relu">ReLU</option></select>
+      </label>
     </div>
-    <p style="font-size:13px;color:#666"><span id="ep"></span></p>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('dnn'),x=c.getContext('2d');
-    let H=10,W1,b1,W2,b2,W3,b3,epoch=0,data=[];
-    function gen(){
-      data=[];
-      for(let i=0;i<60;i++){
-        const r=i/60*3,t=r*1.8;
-        data.push({x:r*Math.cos(t),y:r*Math.sin(t),c:0});
-        data.push({x:-r*Math.cos(t),y:-r*Math.sin(t),c:1});
+    const c=document.getElementById('vgCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function maxd(t){if(t==='sig')return 0.25;if(t==='tanh')return 1;if(t==='relu')return 1;}
+    function draw(){
+      const L=+document.getElementById('ly').value,t=document.getElementById('actSel2').value;
+      document.getElementById('lyV').textContent=L;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,20);ctx.lineTo(40,H-30);ctx.stroke();
+      const m=maxd(t);
+      const bw=(W-80)/L;
+      for(let k=0;k<L;k++){
+        const g=Math.pow(m,k+1);
+        const h=Math.max(2,g*(H-60));
+        ctx.fillStyle=g<0.001?'#c62828':g<0.05?'#ff8c00':'#0b5fff';
+        ctx.fillRect(50+k*bw,H-30-h,bw-4,h);
       }
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('출력층',40,H-10);ctx.fillText('입력층',W-80,H-10);
+      ctx.fillText('|기울기|',5,30);
     }
-    function init(){
-      H=+document.getElementById('h').value;gen();
-      W1=Array.from({length:H},()=>[Math.random()*2-1,Math.random()*2-1]);
-      b1=Array.from({length:H},()=>Math.random()*2-1);
-      W2=Array.from({length:H},()=>Array.from({length:H},()=>Math.random()*0.6-0.3));
-      b2=Array.from({length:H},()=>Math.random()*0.6-0.3);
-      W3=Array.from({length:H},()=>Math.random()*0.6-0.3);
-      b3=Math.random()*0.6-0.3;epoch=0;
-    }
-    document.getElementById('rst').onclick=init;
-    document.getElementById('h').onchange=init;
-    init();
-    function fwd(x1,x2){
-      const z1=W1.map((w,i)=>w[0]*x1+w[1]*x2+b1[i]);
-      const a1=z1.map(v=>Math.max(0,v));
-      const z2=W2.map((wr,i)=>wr.reduce((s,w,j)=>s+w*a1[j],0)+b2[i]);
-      const a2=z2.map(v=>Math.max(0,v));
-      const z3=W3.reduce((s,w,i)=>s+w*a2[i],0)+b3;
-      const y=1/(1+Math.exp(-z3));
-      return {a1,a2,z1,z2,y};
-    }
-    function step(){
-      const lr=+document.getElementById('lr').value;
-      data.forEach(d=>{
-        const {a1,a2,z1,z2,y}=fwd(d.x,d.y);
-        const dy=y-d.c;
-        const dW3=a2.map(a=>dy*a),db3=dy;
-        const da2=W3.map(w=>dy*w);
-        const dz2=da2.map((dv,i)=>dv*(z2[i]>0?1:0));
-        const dW2=dz2.map((dv,i)=>a1.map(a=>dv*a));
-        const db2=dz2;
-        const da1=a1.map((_,j)=>dz2.reduce((s,dv,i)=>s+dv*W2[i][j],0));
-        const dz1=da1.map((dv,i)=>dv*(z1[i]>0?1:0));
-        for(let i=0;i<H;i++){
-          W1[i][0]-=lr*dz1[i]*d.x;W1[i][1]-=lr*dz1[i]*d.y;b1[i]-=lr*dz1[i];
-          for(let j=0;j<H;j++)W2[i][j]-=lr*dW2[i][j];
-          b2[i]-=lr*db2[i]; W3[i]-=lr*dW3[i];
-        }
-        b3-=lr*db3;
-      });
-      epoch++;
-    }
-    function loop(){
-      for(let k=0;k<3;k++)step();
-      document.getElementById('hV').textContent=H;
-      document.getElementById('lrV').textContent=document.getElementById('lr').value;
-      document.getElementById('ep').textContent='epoch '+epoch;
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      const STEP=10,sx=v=>320+v*55,sy=v=>190-v*55;
-      for(let i=0;i<c.width;i+=STEP)for(let j=0;j<c.height;j+=STEP){
-        const u=(i-320)/55,v=(190-j)/55;
-        const yv=fwd(u,v).y;
-        x.fillStyle=yv>0.5?'rgba(255,140,0,'+(yv-0.5)*0.5+')':'rgba(11,95,255,'+(0.5-yv)*0.5+')';
-        x.fillRect(i,j,STEP,STEP);
-      }
-      data.forEach(d=>{x.fillStyle=d.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(sx(d.x),sy(d.y),4,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.stroke();});
-      requestAnimationFrame(loop);
-    }
-    loop();
+    document.getElementById('ly').addEventListener('input',draw);
+    document.getElementById('actSel2').addEventListener('change',draw);
+    draw();
   })();
   </script>
 
-  <h2>6. PyTorch 코드</h2>
-  <pre><code>import torch.nn as nn, torch.nn.functional as F
+  <h2>3. ReLU — 단순함의 승리</h2>
+  <p>$\max(0, x)$. 이게 전부입니다. 양수에서 미분이 1이라 곱해도 줄어들지 않고, 음수에서 0이라 일부 뉴런이 자연스럽게 꺼져 희소성을 얻습니다. 2010년경 Hinton·Krizhevsky의 ImageNet 승리 이후 사실상 표준이 되었습니다.</p>
 
-class DNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.fc1 = nn.Linear(784, 128)
-        self.bn1 = nn.BatchNorm1d(128)
-        self.drop = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, 10)
-    def forward(self, x):
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.bn1(self.fc1(x)))
-        x = self.drop(x)
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
+  <h2>4. 가중치 초기화</h2>
+  <p>가중치를 모두 0으로 초기화하면 모든 뉴런이 같은 출력을 내고, 같은 기울기를 받아 영원히 똑같이 움직입니다(대칭성 문제). 무작위로 초기화하되 분산을 잘 골라야 합니다.</p>
+  <ul>
+    <li><strong>Xavier (Glorot)</strong>: $\text{Var}(W) = 1/n_{\text{in}}$ — 시그모이드/tanh 용.</li>
+    <li><strong>He</strong>: $\text{Var}(W) = 2/n_{\text{in}}$ — ReLU 용.</li>
+  </ul>
 
-opt  = torch.optim.Adam(model.parameters(), lr=1e-3)
-loss = nn.CrossEntropyLoss()</code></pre>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 초기화 방법별 활성값 분포</h4>
+    <p>5층을 통과한 뒤 마지막 층의 활성값 분포가 어떤지 봅니다. 0 가까이 모이거나 양 끝에 쌓이면 학습이 어려워집니다.</p>
+    <canvas id="initCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>초기화
+        <select id="initSel"><option value="zero">Zero</option><option value="xavier">Xavier</option><option value="he">He</option><option value="big">큰값</option></select>
+      </label>
+      <button id="initRun">새 샘플</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('initCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const t=document.getElementById('initSel').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const N=2000,n=64;
+      const std={zero:0,xavier:Math.sqrt(1/n),he:Math.sqrt(2/n),big:0.5}[t];
+      const out=[];
+      for(let s=0;s<N;s++){
+        let x=new Array(n).fill(0).map(()=>Math.random()*2-1);
+        for(let l=0;l<5;l++){
+          const y=new Array(n).fill(0);
+          for(let i=0;i<n;i++){let z=0;for(let j=0;j<n;j++){const u=Math.random(),v=Math.random();const w=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*std;z+=w*x[j];}y[i]=Math.max(0,z);}
+          x=y;
+        }
+        out.push(x[0]);
+      }
+      const B=40;const mn=Math.min(...out),mx=Math.max(...out);const bins=new Array(B).fill(0);
+      out.forEach(v=>{const b=Math.min(B-1,Math.max(0,Math.floor((v-mn)/(mx-mn+1e-9)*B)));bins[b]++;});
+      const peak=Math.max(...bins);
+      bins.forEach((v,i)=>{const x=20+i*((W-40)/B),y=H-30-(v/peak)*(H-60);ctx.fillStyle='#0b5fff';ctx.fillRect(x,y,(W-40)/B-2,H-30-y);});
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText(`범위 [${mn.toFixed(3)}, ${mx.toFixed(3)}]`,20,18);
+    }
+    document.getElementById('initSel').addEventListener('change',draw);
+    document.getElementById('initRun').addEventListener('click',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>5. 드롭아웃 — 무작위 휴식</h2>
+  <p>학습 중 매 미니배치마다 일부 뉴런을 무작위로 끕니다(예: 50%). 이렇게 하면 한 뉴런이 다른 뉴런에 너무 의존하지 못해 일반화가 좋아집니다. Hinton이 "랜덤 앙상블"이라고 부른 이유.</p>
+
+  <h2>6. 배치 정규화</h2>
+  <p>각 층에서 활성값을 미니배치 단위로 다시 표준화합니다. 학습이 빨라지고 학습률을 크게 잡아도 안정적입니다.</p>
+  $$ \hat{x} = \frac{x - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}}, \quad y = \gamma \hat{x} + \beta $$
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 드롭아웃 마스크 시각화</h4>
+    <p>뉴런 격자에서 드롭아웃 비율 p에 따라 무작위로 꺼지는(회색) 뉴런을 봅니다. "새 마스크"를 누르면 매번 다른 패턴이 됩니다.</p>
+    <canvas id="dropCanvas" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>드롭아웃 p <span class="val" id="dpV2">0.5</span><input type="range" id="dp2" min="0" max="0.9" step="0.05" value="0.5"></label>
+      <button id="dpNew">새 마스크</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dropCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let mask=[];
+    function gen(){const N=15*6;mask=new Array(N).fill(0).map(()=>Math.random());draw();}
+    function draw(){
+      const p=+document.getElementById('dp2').value;
+      document.getElementById('dpV2').textContent=p.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cols=15,rows=6,sx=(W-40)/cols,sy=(H-40)/rows;
+      for(let r=0;r<rows;r++)for(let cc=0;cc<cols;cc++){
+        const k=r*cols+cc;const on=mask[k]>p;
+        ctx.fillStyle=on?'#0b5fff':'#bbb';
+        ctx.beginPath();ctx.arc(20+cc*sx+sx/2,20+r*sy+sy/2,Math.min(sx,sy)/2-3,0,Math.PI*2);ctx.fill();
+      }
+    }
+    document.getElementById('dp2').addEventListener('input',draw);
+    document.getElementById('dpNew').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <h2>7. 코드 예제 (PyTorch)</h2>
+  <pre><code>import torch.nn as nn
+
+net = nn.Sequential(
+    nn.Linear(784, 256),
+    nn.BatchNorm1d(256),
+    nn.ReLU(),
+    nn.Dropout(0.3),
+    nn.Linear(256, 10),
+)
+
+# He 초기화
+for m in net.modules():
+    if isinstance(m, nn.Linear):
+        nn.init.kaiming_normal_(m.weight, nonlinearity='relu')</code></pre>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>Sung Kim Lec 9-10</strong> — 역전파와 기울기 소실 한국어 강의.</li>
+    <li><strong>Backprop intro</strong> — Chris Olah, <a href="https://colah.github.io/posts/2015-08-Backprop/">Calculus on Computational Graphs</a>.</li>
+    <li><strong>Glorot &amp; He init</strong> — 두 원논문(2010, 2015).</li>
+    <li><strong>Dropout</strong> — Srivastava·Hinton 외(2014). 직관과 실험.</li>
+    <li><strong>Batch Normalization</strong> — Ioffe·Szegedy(2015).</li>
+  </ul>
 
   <nav class="prevnext">
-    <a href="07-mlp.html"><small>← 이전</small>W7. 인공 신경망</a>
+    <a href="07-mlp.html"><small>← 이전</small>W7. MLP</a>
     <a href="09-cnn-basics.html" class="next"><small>다음 →</small>W9. CNN 기초</a>
   </nav>
 </main>
-<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
 </body>
 </html>

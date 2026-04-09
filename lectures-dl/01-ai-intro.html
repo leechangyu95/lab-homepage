@@ -22,41 +22,104 @@
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
   <h1 class="page-title">Week 1. AI의 세계</h1>
-  <p class="lead">인공지능이 무엇인지, 그리고 가장 단순한 분류기를 직접 만들어봅시다.</p>
+  <p class="lead">인공지능이라는 큰 숲을 한 바퀴 둘러보고, 가장 단순하지만 강력한 분류기를 직접 손으로 굴려봅니다.</p>
 
   <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
-    <li>AI · ML · DL의 차이</li>
-    <li>지도학습과 비지도학습</li>
-    <li>분류 vs 회귀</li>
-    <li>K-최근접 이웃 (KNN)</li>
-    <li>scikit-learn 코드</li>
+    <li>AI · ML · DL의 포함 관계</li>
+    <li>지도학습과 비지도학습, 분류와 회귀</li>
+    <li>가장 단순한 분류기: K-최근접 이웃 (KNN)</li>
+    <li>거리 척도: 유클리드 vs 맨해튼</li>
+    <li>scikit-learn 코드 한 줄 체험</li>
+    <li>13주차 전체 로드맵</li>
   </ol></div>
 
-  <h2>1. AI · ML · DL</h2>
-  <p>세 단어가 자주 헷갈리지만 포함 관계입니다.</p>
+  <h2>1. AI · ML · DL — 헷갈리는 세 단어</h2>
+  <p>뉴스에서 매일 듣지만 막상 차이를 설명하라고 하면 막막합니다. 사실은 <strong>포함 관계</strong>입니다.</p>
   <ul>
-    <li><strong>AI (인공지능)</strong> — 사람처럼 생각하거나 행동하는 모든 기계. 가장 큰 개념.</li>
-    <li><strong>ML (머신러닝)</strong> — 사람이 규칙을 일일이 짜는 대신 <em>데이터에서 규칙을 배우는</em> 기법.</li>
-    <li><strong>DL (딥러닝)</strong> — 다층 신경망을 사용하는 머신러닝의 한 갈래.</li>
+    <li><strong>AI (인공지능)</strong> — 사람처럼 생각하거나 행동하는 모든 기계. 가장 큰 개념. 1950년대부터 시작된 오래된 단어로, 규칙 기반 전문가 시스템도 AI입니다.</li>
+    <li><strong>ML (머신러닝)</strong> — 사람이 규칙을 일일이 짜는 대신 <em>데이터에서 규칙을 자동으로 배우는</em> 방법. AI의 한 갈래입니다.</li>
+    <li><strong>DL (딥러닝)</strong> — 다층 신경망을 사용하는 머신러닝의 한 갈래. 2012년 ImageNet 대회 이후 폭발적으로 성장했습니다.</li>
   </ul>
+  <p>즉 <em>AI ⊃ ML ⊃ DL</em>. 이번 학기에는 가운데와 가장 안쪽 동그라미를 본격적으로 다룹니다.</p>
+
+  <div class="tip">
+    <strong>왜 갑자기 딥러닝이 떴을까?</strong> 세 가지가 동시에 갖춰졌기 때문입니다. ① <em>데이터</em>(인터넷·스마트폰), ② <em>계산력</em>(GPU), ③ <em>알고리즘</em>(ReLU·드롭아웃·배치정규화). 이 셋 중 하나라도 빠졌으면 지금의 AI 열풍은 없었습니다.
+  </div>
 
   <h2>2. 지도학습 vs 비지도학습</h2>
   <table>
     <thead><tr><th>분류</th><th>입력</th><th>예시</th></tr></thead>
     <tbody>
-      <tr><td>지도학습 (Supervised)</td><td>입력 + <em>정답 라벨</em></td><td>도미/빙어 분류, 집값 예측</td></tr>
-      <tr><td>비지도학습 (Unsupervised)</td><td>입력만</td><td>고객 군집화, 이상치 탐지</td></tr>
+      <tr><td>지도학습 (Supervised)</td><td>입력 + <em>정답 라벨</em></td><td>도미/빙어 분류, 집값 예측, 메일 스팸 판정</td></tr>
+      <tr><td>비지도학습 (Unsupervised)</td><td>입력만</td><td>고객 군집화, 차원 축소, 이상치 탐지</td></tr>
+      <tr><td>강화학습 (Reinforcement)</td><td>상태 + 보상</td><td>알파고, 로봇 보행, 게임 AI</td></tr>
     </tbody>
   </table>
 
   <p>지도학습은 다시 두 종류로 나뉩니다.</p>
   <ul>
-    <li><strong>분류 (Classification)</strong> — 카테고리를 예측. "이건 도미? 빙어?"</li>
-    <li><strong>회귀 (Regression)</strong> — 연속된 숫자를 예측. "이 농어의 무게는 몇 g?"</li>
+    <li><strong>분류 (Classification)</strong> — 카테고리를 예측. "이건 도미? 빙어?" 출력이 이산적입니다.</li>
+    <li><strong>회귀 (Regression)</strong> — 연속된 숫자를 예측. "이 농어의 무게는 몇 g?" 출력이 실수입니다.</li>
   </ul>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 지도/비지도 데이터 생성기</h4>
+    <p>클러스터 수와 분산을 조절해 데이터를 생성합니다. "라벨 보이기"를 끄면 비지도학습 입장에서 본 데이터입니다 — 색이 없으니 그저 점 무더기죠.</p>
+    <canvas id="genCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>클러스터 수 <span class="val" id="kgV">3</span><input type="range" id="kg" min="2" max="5" step="1" value="3"></label>
+      <label>분산 <span class="val" id="sgV">25</span><input type="range" id="sg" min="5" max="60" step="1" value="25"></label>
+      <label><input type="checkbox" id="lblOn" checked> 라벨 보이기</label>
+      <button id="regen">새로 생성</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('genCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLORS=['#0b5fff','#ff8c00','#2e7d32','#c62828','#6a1b9a'];
+    let pts=[];
+    function gen(){
+      const K=+document.getElementById('kg').value;
+      const sigma=+document.getElementById('sg').value;
+      pts=[];
+      const centers=[];
+      for(let k=0;k<K;k++){centers.push({x:80+Math.random()*(W-160),y:60+Math.random()*(H-120)});}
+      for(let k=0;k<K;k++){
+        for(let i=0;i<40;i++){
+          const u=Math.random(),v=Math.random();
+          const z0=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+          const z1=Math.sqrt(-2*Math.log(u))*Math.sin(2*Math.PI*v);
+          pts.push({x:centers[k].x+z0*sigma,y:centers[k].y+z1*sigma,c:k});
+        }
+      }
+      draw();
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const lbl=document.getElementById('lblOn').checked;
+      pts.forEach(p=>{
+        ctx.fillStyle=lbl?COLORS[p.c]:'#888';
+        ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();
+      });
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(lbl?'지도학습 — 색=라벨':'비지도학습 — 라벨 없음',12,20);
+    }
+    ['kg','sg'].forEach(id=>{
+      document.getElementById(id).addEventListener('input',()=>{
+        document.getElementById(id+'V').textContent=document.getElementById(id).value;
+        if(id==='sg')gen();else gen();
+      });
+    });
+    document.getElementById('lblOn').addEventListener('change',draw);
+    document.getElementById('regen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
   <h2>3. K-Nearest Neighbors (KNN)</h2>
-  <p>가장 단순하고 직관적인 분류기입니다. 새 데이터가 들어오면:</p>
+  <p>가장 단순하고 직관적인 분류기입니다. 학습이라 할 만한 게 없습니다 — 그냥 데이터를 통째로 외워둘 뿐. 새 데이터가 들어오면:</p>
   <ol>
     <li>학습 데이터 중 가장 <strong>가까운 K개</strong>의 이웃을 찾습니다.</li>
     <li>그 K개의 클래스를 보고 <strong>다수결</strong>로 결정합니다.</li>
@@ -64,13 +127,15 @@
 
   $$ \text{class}(\mathbf{x}) = \arg\max_{c} \sum_{i \in N_K(\mathbf{x})} \mathbb{1}(y_i = c) $$
 
-  <p>$N_K(\mathbf{x})$는 $\mathbf{x}$의 K개 최근접 이웃, $\mathbb{1}$은 조건이 참이면 1입니다.</p>
+  <p>$N_K(\mathbf{x})$는 $\mathbf{x}$의 K개 최근접 이웃, $\mathbb{1}$은 조건이 참이면 1입니다. 거리는 보통 유클리드 거리를 씁니다.</p>
 
-  <div class="note"><strong>K가 작으면</strong> 모델이 너무 민감해져 잡음까지 외우는 <em>과적합</em>, <strong>K가 크면</strong> 너무 둔해지는 <em>과소적합</em>이 일어납니다.</div>
+  $$ d_{\text{Euclid}}(\mathbf{x},\mathbf{y}) = \sqrt{\sum_i (x_i - y_i)^2}, \quad d_{\text{Manhattan}}(\mathbf{x},\mathbf{y}) = \sum_i |x_i - y_i| $$
+
+  <div class="tip"><strong>K가 작으면</strong> 모델이 너무 민감해져 잡음까지 외우는 <em>과적합</em>이, <strong>K가 크면</strong> 너무 둔해지는 <em>과소적합</em>이 일어납니다. 보통 홀수로 잡고(다수결 동점 방지) 교차검증으로 고릅니다.</div>
 
   <div class="demo">
     <h4>🎮 인터랙티브: KNN 결정 경계</h4>
-    <p>도미(파랑)와 빙어(주황) 데이터입니다. K를 조절하며 결정 경계가 어떻게 변하는지 보세요. 캔버스를 클릭해 새 데이터를 추가할 수도 있습니다.</p>
+    <p>도미(파랑)와 빙어(주황) 데이터입니다. K를 조절하며 결정 경계가 어떻게 변하는지 보세요. 캔버스를 클릭해 새 데이터를 추가할 수 있고, 우클릭은 빙어입니다.</p>
     <canvas id="knn" width="640" height="380"></canvas>
     <div class="controls">
       <label>K (이웃 수) <span class="val" id="kV">5</span><input type="range" id="k" min="1" max="29" step="2" value="5"></label>
@@ -80,34 +145,79 @@
   </div>
   <script>
   (function(){
-    const c=document.getElementById('knn'),x=c.getContext('2d');
+    const c=document.getElementById('knn');
+    if(!c)return;
+    const ctx=c.getContext('2d');
     let pts=[];
-    // bream cluster (right-top): bigger
-    for(let i=0;i<25;i++)pts.push({x:380+Math.random()*180,y:80+Math.random()*120,c:0});
-    // smelt cluster (left-bottom): smaller
-    for(let i=0;i<15;i++)pts.push({x:80+Math.random()*150,y:230+Math.random()*120,c:1});
-    c.oncontextmenu=e=>{e.preventDefault();const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height,c:1});};
-    c.onclick=e=>{const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height,c:0});};
-    document.getElementById('rst').onclick=()=>{pts=[];for(let i=0;i<25;i++)pts.push({x:380+Math.random()*180,y:80+Math.random()*120,c:0});for(let i=0;i<15;i++)pts.push({x:80+Math.random()*150,y:230+Math.random()*120,c:1});};
-    function loop(){
+    function seed(){
+      pts=[];
+      for(let i=0;i<25;i++)pts.push({x:380+Math.random()*180,y:80+Math.random()*120,c:0});
+      for(let i=0;i<15;i++)pts.push({x:80+Math.random()*150,y:230+Math.random()*120,c:1});
+    }
+    seed();
+    c.oncontextmenu=e=>{e.preventDefault();const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height,c:1});draw();};
+    c.onclick=e=>{const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height,c:0});draw();};
+    document.getElementById('rst').onclick=()=>{seed();draw();};
+    document.getElementById('k').addEventListener('input',()=>{
+      document.getElementById('kV').textContent=document.getElementById('k').value;
+      draw();
+    });
+    function draw(){
       const K=+document.getElementById('k').value;
-      document.getElementById('kV').textContent=K;
-      // background classification
       const STEP=12;
+      ctx.clearRect(0,0,c.width,c.height);
       for(let i=0;i<c.width;i+=STEP)for(let j=0;j<c.height;j+=STEP){
         const ds=pts.map(p=>({d:Math.hypot(p.x-i,p.y-j),c:p.c})).sort((a,b)=>a.d-b.d).slice(0,K);
         const v=ds.reduce((s,d)=>s+(d.c==0?1:-1),0);
-        x.fillStyle=v>=0?'rgba(11,95,255,0.10)':'rgba(255,140,0,0.12)';
-        x.fillRect(i,j,STEP,STEP);
+        ctx.fillStyle=v>=0?'rgba(11,95,255,0.10)':'rgba(255,140,0,0.12)';
+        ctx.fillRect(i,j,STEP,STEP);
       }
-      pts.forEach(p=>{x.fillStyle=p.c==0?'#0b5fff':'#ff8c00';x.beginPath();x.arc(p.x,p.y,5,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.stroke();});
-      requestAnimationFrame(loop);
+      pts.forEach(p=>{ctx.fillStyle=p.c==0?'#0b5fff':'#ff8c00';ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
     }
-    loop();
+    draw();
   })();
   </script>
 
-  <h2>4. 코드 예제 (scikit-learn)</h2>
+  <h2>4. 거리 척도 비교</h2>
+  <p>"가깝다"의 정의는 한 가지가 아닙니다. 유클리드는 직선 거리, 맨해튼은 도시 블록을 따라가는 거리입니다. 차원이 높아질수록 두 거리의 차이가 커지는데, 이를 <em>차원의 저주</em>라고도 합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 유클리드 vs 맨해튼</h4>
+    <p>중심점에서 같은 거리에 있는 점들의 집합(=등거리원)을 그립니다. 유클리드는 동그란 원이지만 맨해튼은 마름모(정사각형 회전)입니다.</p>
+    <canvas id="dist" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>반지름 <span class="val" id="rV">80</span><input type="range" id="rr" min="20" max="140" step="2" value="80"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dist');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const r=+document.getElementById('rr').value;
+      document.getElementById('rV').textContent=r;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx1=W/4,cy=H/2,cx2=3*W/4;
+      // Euclidean
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx1,cy,r,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(cx1,cy,3,0,Math.PI*2);ctx.fill();
+      // Manhattan: diamond
+      ctx.strokeStyle='#ff8c00';
+      ctx.beginPath();
+      ctx.moveTo(cx2,cy-r);ctx.lineTo(cx2+r,cy);ctx.lineTo(cx2,cy+r);ctx.lineTo(cx2-r,cy);ctx.closePath();ctx.stroke();
+      ctx.fillStyle='#ff8c00';ctx.beginPath();ctx.arc(cx2,cy,3,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#333';ctx.font='14px sans-serif';
+      ctx.fillText('유클리드 (L2)',cx1-50,30);
+      ctx.fillText('맨해튼 (L1)',cx2-50,30);
+    }
+    document.getElementById('rr').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>5. 코드 예제 (scikit-learn)</h2>
   <pre><code># 도미(0) vs 빙어(1) 분류
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -121,6 +231,80 @@ kn.fit(fish_data, fish_label)
 
 print(kn.predict([[30, 600]]))   # → [0]  (도미)
 print(kn.score(fish_data, fish_label))   # → 1.0</code></pre>
+
+  <h2>6. 13주 전체 로드맵</h2>
+  <p>이번 학기 우리는 데이터 다루기부터 시작해 회귀·분류·신경망·CNN·RNN을 거쳐 트랜스포머와 대형 언어 모델까지 갑니다. 각 카드를 눌러 해당 주차로 바로 이동할 수 있습니다.</p>
+
+  <div class="cards">
+    <a class="card" href="02-data-handling.html">
+      <span class="num">Week 2</span>
+      <h3>데이터 핸들링</h3>
+      <p>모델보다 데이터가 먼저입니다. NumPy 배열, pandas 데이터프레임, 표준화와 정규화, 학습/검증/테스트 분할까지 — 머신러닝 파이프라인의 절반은 여기서 끝납니다.</p>
+    </a>
+    <a class="card" href="03-regression-1.html">
+      <span class="num">Week 3</span>
+      <h3>회귀 1: 선형회귀</h3>
+      <p>가장 단순한 모델로 직선을 데이터에 맞춥니다. 비용함수(MSE)와 경사하강법이라는 두 도구로 "학습"이 무엇인지 처음 만지게 됩니다.</p>
+    </a>
+    <a class="card" href="04-regression-2.html">
+      <span class="num">Week 4</span>
+      <h3>회귀 2: 다중회귀와 로지스틱</h3>
+      <p>입력이 여러 개인 다중회귀, 0/1을 예측하는 로지스틱 회귀, 그리고 여러 클래스를 다루는 소프트맥스. 분류와 회귀의 다리를 놓습니다.</p>
+    </a>
+    <a class="card" href="05-classification.html">
+      <span class="num">Week 5</span>
+      <h3>분류 알고리즘</h3>
+      <p>KNN을 더 깊이 보고, 마진을 최대화하는 SVM, 질문을 가지치는 결정트리, 나무 여러 그루를 모은 랜덤포레스트까지. 고전 머신러닝의 핵심 도구상자입니다.</p>
+    </a>
+    <a class="card" href="06-unsupervised.html">
+      <span class="num">Week 6</span>
+      <h3>비지도학습</h3>
+      <p>라벨 없이 데이터의 구조를 찾습니다. K-평균 군집화, 밀도 기반 DBSCAN, 그리고 차원을 줄이는 PCA. "세상을 단순하게 보는 법"을 배웁니다.</p>
+    </a>
+    <a class="card" href="07-mlp.html">
+      <span class="num">Week 7</span>
+      <h3>퍼셉트론과 MLP</h3>
+      <p>신경망의 시작. XOR 문제로 한 번 죽었던 퍼셉트론이 다층 구조와 활성함수로 부활하는 이야기. 비선형성이 왜 그렇게 중요한지 알게 됩니다.</p>
+    </a>
+    <a class="card" href="08-dnn-backprop.html">
+      <span class="num">Week 8</span>
+      <h3>심층신경망과 역전파</h3>
+      <p>층이 깊어지면 어떻게 학습할까? 연쇄법칙으로 풀어내는 역전파, 사라지는 기울기, ReLU·드롭아웃·배치정규화 같은 현대 딥러닝의 토대들.</p>
+    </a>
+    <a class="card" href="09-cnn-basics.html">
+      <span class="num">Week 9</span>
+      <h3>CNN 기초</h3>
+      <p>이미지를 위한 신경망. 합성곱이라는 단순한 연산이 어떻게 모서리·질감·물체를 차례로 찾아내는지, 그리고 LeNet이라는 첫 성공 사례까지.</p>
+    </a>
+    <a class="card" href="10-cnn-transfer.html">
+      <span class="num">Week 10</span>
+      <h3>CNN 심화와 전이학습</h3>
+      <p>AlexNet → VGG → ResNet으로 이어지는 거대 네트워크들과, 남이 학습시켜놓은 모델을 가져와 내 문제에 맞게 미세조정하는 전이학습 실전.</p>
+    </a>
+    <a class="card" href="11-rnn-lstm.html">
+      <span class="num">Week 11</span>
+      <h3>RNN과 LSTM</h3>
+      <p>시간이 있는 데이터(말, 음악, 주가)를 다루는 신경망. 단순 RNN의 한계와 그것을 푼 LSTM의 게이트 구조를 그림으로 이해합니다.</p>
+    </a>
+    <a class="card" href="12-rnn-advanced.html">
+      <span class="num">Week 12</span>
+      <h3>Seq2Seq와 Attention</h3>
+      <p>번역기처럼 입력 시퀀스를 받아 출력 시퀀스를 만드는 인코더-디코더 구조, 그리고 모든 LLM의 어머니인 어텐션 메커니즘.</p>
+    </a>
+    <a class="card" href="13-transformer-llm.html">
+      <span class="num">Week 13</span>
+      <h3>Transformer와 LLM</h3>
+      <p>RNN을 완전히 버리고 어텐션만으로 만든 트랜스포머. 그 위에서 GPT·BERT·ChatGPT가 어떻게 자라났는지, 그리고 우리 미래는 어디로 가는지.</p>
+    </a>
+  </div>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>혼자 공부하는 머신러닝+딥러닝</strong> — 박해선 저. 도미/빙어 예제로 부드럽게 들어가는 한국어 입문서.</li>
+    <li><strong>Sung Kim의 모두를 위한 머신러닝/딥러닝</strong> — <a href="https://hunkim.github.io/ml/">hunkim.github.io/ml</a>. 한국어 강의의 고전.</li>
+    <li><strong>scikit-learn 공식 튜토리얼</strong> — <a href="https://scikit-learn.org/stable/tutorial/">scikit-learn.org</a>. KNN을 비롯한 모든 고전 ML이 한자리에.</li>
+    <li><strong>Pattern Recognition and Machine Learning</strong> — Bishop. 깊이 있게 가고 싶을 때의 표준 교과서.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="../dl.html"><small>← 돌아가기</small>주차 목록</a>

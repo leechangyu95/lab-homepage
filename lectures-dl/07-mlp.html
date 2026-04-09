@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>W7. 인공 신경망 — Study Page</title>
+<title>W7. 퍼셉트론과 MLP — Study Page</title>
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -21,155 +21,241 @@
 
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
-  <h1 class="page-title">Week 7. 인공 신경망 — 퍼셉트론과 MLP</h1>
-  <p class="lead">로지스틱 회귀를 여러 층으로 쌓으면 딥러닝의 출발점이 됩니다.</p>
+  <h1 class="page-title">Week 7. 퍼셉트론과 다층 신경망(MLP)</h1>
+  <p class="lead">신경망이 처음 죽었다가 부활한 이야기. XOR 문제와 그 해결책으로서의 비선형 활성함수.</p>
 
-  <div class="toc"><h4>목차</h4><ol>
-    <li>퍼셉트론</li>
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>퍼셉트론의 역사 — 1958년, 그리고 죽음</li>
+    <li>퍼셉트론 학습 규칙</li>
     <li>XOR 문제</li>
     <li>다층 퍼셉트론(MLP)</li>
-    <li>학습 — 역전파와 경사하강법</li>
-    <li>인터랙티브 분류 데모</li>
-    <li>PyTorch 코드</li>
+    <li>활성함수들 — 시그모이드, tanh, ReLU, Leaky ReLU</li>
   </ol></div>
 
-  <h2>1. 퍼셉트론 (단일 뉴런)</h2>
-  $$ z = \sum_i w_i x_i + b, \quad \text{output} = \begin{cases}1 & z \ge 0 \\ 0 & z < 0\end{cases} $$
-  <p>입력에 가중치를 곱해 합산한 뒤, 0보다 크면 1, 작으면 0을 출력하는 단순한 모델입니다.
-  AND, OR 같은 선형 분리 가능 문제는 해결합니다.</p>
-
-  <h2>2. XOR 문제</h2>
-  <p>그러나 XOR은 직선 하나로는 절대 나눌 수 없습니다.</p>
-  <table>
-    <thead><tr><th>x₁</th><th>x₂</th><th>XOR</th></tr></thead>
-    <tbody><tr><td>0</td><td>0</td><td>0</td></tr><tr><td>0</td><td>1</td><td>1</td></tr><tr><td>1</td><td>0</td><td>1</td></tr><tr><td>1</td><td>1</td><td>0</td></tr></tbody>
-  </table>
-  <p>이 한 가지 사실 때문에 1970년대에 신경망 연구가 한 번 멈췄습니다. 해결책은 <strong>층을 여러 개 쌓는 것</strong>이었습니다.</p>
-
-  <h2>3. 다층 퍼셉트론 (MLP)</h2>
-  <p>은닉층 한두 개만 추가해도 임의의 비선형 함수를 표현할 수 있습니다(보편 근사 정리).</p>
-  $$ \mathbf{a}^{[l]} = \sigma\!\bigl(W^{[l]} \mathbf{a}^{[l-1]} + \mathbf{b}^{[l]}\bigr) $$
-  <p>각 층은 선형 변환 + 비선형 활성화의 반복입니다.</p>
-
-  <h3>대표적 활성화 함수</h3>
-  $$ \text{ReLU}(z) = \max(0, z), \quad \sigma(z) = \frac{1}{1+e^{-z}} $$
-  <p>ReLU는 단순하지만 깊은 네트워크에서 가장 잘 동작해 표준으로 쓰입니다.</p>
-
-  <h2>4. 학습</h2>
-  <p>손실 함수(분류는 교차 엔트로피, 회귀는 MSE)를 정의하고, 가중치 $w$를 손실 감소 방향으로 한 발씩 이동합니다.</p>
-  $$ w \leftarrow w - \alpha \frac{\partial \mathcal{L}}{\partial w} $$
-  <p>$\partial \mathcal{L}/\partial w$를 효율적으로 구하는 알고리즘이 <strong>역전파(backpropagation)</strong>입니다. PyTorch가 자동으로 해줍니다.</p>
+  <h2>1. 퍼셉트론 — 신경망의 시작</h2>
+  <p>1958년 Frank Rosenblatt이 만든 퍼셉트론은 사람의 뉴런을 흉내 낸 가장 단순한 모델입니다. 입력에 가중치를 곱해 더하고, 임계값을 넘으면 1, 아니면 0.</p>
+  $$ y = \begin{cases} 1 & \text{if } \mathbf{w}^\top \mathbf{x} + b > 0 \\ 0 & \text{otherwise} \end{cases} $$
+  <p>학습은 매우 간단합니다. 틀리면 가중치를 그 입력 방향으로 살짝 옮깁니다.</p>
+  $$ \mathbf{w} \leftarrow \mathbf{w} + \eta (y_{\text{true}} - y_{\text{pred}}) \mathbf{x} $$
 
   <div class="demo">
-    <h4>🎮 인터랙티브: MLP가 XOR 학습하기</h4>
-    <p>2-4-1 구조의 작은 신경망이 XOR을 학습합니다. 수렴할 때까지 잠시 기다려보세요.</p>
-    <canvas id="mlp" width="640" height="380"></canvas>
+    <h4>🎮 인터랙티브: 퍼셉트론 학습 (AND/OR/XOR)</h4>
+    <p>AND·OR은 직선으로 분리되어 수렴하지만 XOR은 영원히 헤맵니다. 이게 1969년 Minsky가 신경망을 거의 죽인 그 문제입니다.</p>
+    <canvas id="pCanvas" width="640" height="340"></canvas>
     <div class="controls">
-      <label>학습률 α <span class="val" id="lrV">0.3</span><input type="range" id="lr" min="0.05" max="1.5" step="0.05" value="0.3"></label>
-      <label>은닉 뉴런 H <span class="val" id="hV">4</span><input type="range" id="h" min="2" max="10" value="4"></label>
-      <button id="rst">재학습</button>
+      <label>문제
+        <select id="prob">
+          <option value="and">AND</option>
+          <option value="or">OR</option>
+          <option value="xor">XOR</option>
+        </select>
+      </label>
+      <button id="pStart">학습 시작/정지</button>
+      <button id="pReset">리셋</button>
+      <span id="pInfo" style="font-size:12px;color:#666"></span>
     </div>
-    <p style="font-size:13px;color:#666"><span id="ep"></span></p>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('mlp'),x=c.getContext('2d');
-    const data=[[0,0,0],[0,1,1],[1,0,1],[1,1,0]];
-    let H=4,W1=[],b1=[],W2=[],b2=0,epoch=0;
-    function init(){
-      H=+document.getElementById('h').value;
-      W1=Array.from({length:H},()=>[Math.random()*2-1,Math.random()*2-1]);
-      b1=Array.from({length:H},()=>Math.random()*2-1);
-      W2=Array.from({length:H},()=>Math.random()*2-1);
-      b2=Math.random()*2-1;epoch=0;
-    }
-    document.getElementById('rst').onclick=init;
-    document.getElementById('h').onchange=init;
-    init();
-    function fwd(x1,x2){
-      const z1=W1.map((w,i)=>w[0]*x1+w[1]*x2+b1[i]);
-      const a1=z1.map(v=>Math.max(0,v));
-      const z2=a1.reduce((s,a,i)=>s+W2[i]*a,0)+b2;
-      const y=1/(1+Math.exp(-z2));
-      return {a1,z1,y};
-    }
-    function step(){
-      const lr=+document.getElementById('lr').value;
-      data.forEach(d=>{
-        const {a1,z1,y}=fwd(d[0],d[1]);
-        const dy=y-d[2];
-        const dW2=a1.map(a=>dy*a);
-        const db2=dy;
-        const da1=W2.map(w=>dy*w);
-        const dz1=da1.map((dv,i)=>dv*(z1[i]>0?1:0));
-        for(let i=0;i<H;i++){W1[i][0]-=lr*dz1[i]*d[0];W1[i][1]-=lr*dz1[i]*d[1];b1[i]-=lr*dz1[i];W2[i]-=lr*dW2[i];}
-        b2-=lr*db2;
-      });
-      epoch++;
-    }
-    function loop(){
-      step();
-      document.getElementById('lrV').textContent=document.getElementById('lr').value;
-      document.getElementById('hV').textContent=H;
-      document.getElementById('ep').textContent='epoch '+epoch+' · 예측: '+data.map(d=>fwd(d[0],d[1]).y.toFixed(2)).join(', ');
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      // shading: predicted prob
-      const STEP=10;
-      for(let i=80;i<560;i+=STEP)for(let j=40;j<340;j+=STEP){
-        const u=(i-80)/480, v=1-(j-40)/300;
-        const y=fwd(u,v).y;
-        x.fillStyle=y>0.5?'rgba(255,140,0,'+(y-0.5)*0.6+')':'rgba(11,95,255,'+(0.5-y)*0.6+')';
-        x.fillRect(i,j,STEP,STEP);
+    const c=document.getElementById('pCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let w1=Math.random()*0.4-0.2,w2=Math.random()*0.4-0.2,b=0,running=false,raf=null,step=0;
+    const probs={and:[[0,0,0],[0,1,0],[1,0,0],[1,1,1]],or:[[0,0,0],[0,1,1],[1,0,1],[1,1,1]],xor:[[0,0,0],[0,1,1],[1,0,1],[1,1,0]]};
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const data=probs[document.getElementById('prob').value];
+      const STEP=15;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const x=i/W*1.4-0.2,y=1-j/H*1.4-(-0.2);
+        const z=w1*x+w2*y+b;
+        ctx.fillStyle=z>0?'rgba(255,140,0,0.12)':'rgba(11,95,255,0.10)';
+        ctx.fillRect(i,j,STEP,STEP);
       }
-      // axes
-      x.strokeStyle='#999';x.beginPath();x.moveTo(80,340);x.lineTo(560,340);x.moveTo(80,40);x.lineTo(80,340);x.stroke();
-      // points
-      data.forEach(d=>{const px=80+d[0]*480,py=340-d[1]*300;x.fillStyle=d[2]==1?'#ff8c00':'#0b5fff';x.beginPath();x.arc(px,py,12,0,Math.PI*2);x.fill();x.strokeStyle='#000';x.lineWidth=2;x.stroke();x.fillStyle='#fff';x.font='bold 12px sans-serif';x.textAlign='center';x.fillText(d[2],px,py+4);x.textAlign='start';});
-      requestAnimationFrame(loop);
+      data.forEach(d=>{
+        const px=(d[0]+0.2)/1.4*W,py=H-(d[1]+0.2)/1.4*H;
+        ctx.fillStyle=d[2]?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(px,py,10,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#000';ctx.stroke();
+      });
+      document.getElementById('pInfo').textContent=`step ${step}  w₁=${w1.toFixed(2)}  w₂=${w2.toFixed(2)}  b=${b.toFixed(2)}`;
     }
-    loop();
+    function tick(){
+      const data=probs[document.getElementById('prob').value];
+      const eta=0.1;
+      data.forEach(d=>{
+        const z=w1*d[0]+w2*d[1]+b,p=z>0?1:0,e=d[2]-p;
+        w1+=eta*e*d[0];w2+=eta*e*d[1];b+=eta*e;
+      });
+      step++;draw();
+      if(running&&step<300)raf=requestAnimationFrame(tick);else running=false;
+    }
+    document.getElementById('pStart').onclick=()=>{if(!running){running=true;tick();}else{running=false;cancelAnimationFrame(raf);}};
+    document.getElementById('pReset').onclick=()=>{running=false;cancelAnimationFrame(raf);w1=Math.random()*0.4-0.2;w2=Math.random()*0.4-0.2;b=0;step=0;draw();};
+    document.getElementById('prob').onchange=()=>{step=0;w1=Math.random()*0.4-0.2;w2=Math.random()*0.4-0.2;b=0;draw();};
+    draw();
   })();
   </script>
 
-  <p>학습률이 너무 작으면 수렴이 느리고, 너무 크면 발산합니다. 0.3 정도가 무난합니다.
-  은닉 뉴런 수를 줄이면 XOR을 못 풀 때도 있습니다.</p>
+  <h2>2. XOR 문제</h2>
+  <p>XOR은 (0,0)→0, (0,1)→1, (1,0)→1, (1,1)→0. 어떤 직선도 이 네 점을 정확히 나눌 수 없습니다. 단층 퍼셉트론은 본질적으로 직선만 그릴 수 있어서 XOR을 못 풉니다. 1969년 Minsky·Papert가 이 사실을 책으로 출판하면서 신경망 연구는 거의 중단됩니다(첫 번째 AI 겨울).</p>
 
-  <h2>5. PyTorch 코드 (Fashion MNIST)</h2>
-  <pre><code>import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
+  <h2>3. 다층 퍼셉트론 (MLP)</h2>
+  <p>해결책은 의외로 단순했습니다 — <strong>층을 하나 더 쌓고 비선형 활성함수를 넣자</strong>. 입력층-은닉층-출력층의 구조에서 은닉층 뉴런 두 개만 있어도 XOR을 풀 수 있습니다.</p>
+  $$ \mathbf{h} = \sigma(W_1 \mathbf{x} + \mathbf{b}_1), \quad \hat{y} = \sigma(W_2 \mathbf{h} + b_2) $$
+  <p>비선형 $\sigma$가 핵심입니다. 이게 없으면 아무리 층을 쌓아도 결국 큰 직선 하나로 줄어들기 때문입니다.</p>
 
-# 데이터
-tr = datasets.FashionMNIST('.', train=True, download=True,
-                           transform=transforms.ToTensor())
-ld = DataLoader(tr, batch_size=64, shuffle=True)
+  <h2>4. 활성함수 4총사</h2>
 
-# 모델
-model = nn.Sequential(
-    nn.Flatten(),
-    nn.Linear(28*28, 256), nn.ReLU(),
-    nn.Linear(256, 128),  nn.ReLU(),
-    nn.Linear(128, 10),
-)
-loss_fn = nn.CrossEntropyLoss()
-opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+  <div class="demo">
+    <h4>🎮 인터랙티브: 활성함수와 그 미분</h4>
+    <p>함수를 골라 모양과 미분(점선)을 봅니다. ReLU의 단순함이 왜 딥러닝을 살렸는지 느껴보세요.</p>
+    <canvas id="actCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="actSel">
+          <option value="sig">Sigmoid</option>
+          <option value="tanh">tanh</option>
+          <option value="relu">ReLU</option>
+          <option value="lrelu">Leaky ReLU</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('actCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const xmin=-5,xmax=5,ymin=-1.2,ymax=1.2;
+    const toPx=x=>30+(x-xmin)/(xmax-xmin)*(W-50);
+    const toPy=y=>H/2-y*((H-40)/(ymax-ymin));
+    function f(t,x){
+      if(t==='sig'){const s=1/(1+Math.exp(-x));return [s*2-1,2*s*(1-s)];}
+      if(t==='tanh'){const s=Math.tanh(x);return [s,1-s*s];}
+      if(t==='relu'){return [Math.max(0,x)/3,x>0?0.33:0];}
+      if(t==='lrelu'){const v=x>0?x:0.1*x;return [v/3,x>0?0.33:0.033];}
+    }
+    function draw(){
+      const t=document.getElementById('actSel').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(30,H/2);ctx.lineTo(W-20,H/2);ctx.moveTo(toPx(0),20);ctx.lineTo(toPx(0),H-20);ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){const x=xmin+(xmax-xmin)*i/200;const v=f(t,x)[0];if(i===0)ctx.moveTo(toPx(x),toPy(v));else ctx.lineTo(toPx(x),toPy(v));}
+      ctx.stroke();
+      ctx.strokeStyle='#ff8c00';ctx.setLineDash([4,4]);ctx.beginPath();
+      for(let i=0;i<=200;i++){const x=xmin+(xmax-xmin)*i/200;const v=f(t,x)[1];if(i===0)ctx.moveTo(toPx(x),toPy(v));else ctx.lineTo(toPx(x),toPy(v));}
+      ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';ctx.fillText('함수',W-100,30);
+      ctx.fillStyle='#ff8c00';ctx.fillText('미분(점선)',W-100,48);
+    }
+    document.getElementById('actSel').onchange=draw;
+    draw();
+  })();
+  </script>
 
-# 학습 루프
-for epoch in range(5):
-    for xb, yb in ld:
-        pred = model(xb)
-        loss = loss_fn(pred, yb)
-        opt.zero_grad()
-        loss.backward()       # 자동 역전파
-        opt.step()
-    print(f"epoch {epoch} loss {loss.item():.3f}")</code></pre>
+  <table>
+    <thead><tr><th>이름</th><th>식</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>Sigmoid</td><td>$1/(1+e^{-x})$</td><td>확률 해석, 부드러움</td><td>기울기 소실, 0 중심 아님</td></tr>
+      <tr><td>tanh</td><td>$\tanh(x)$</td><td>0 중심</td><td>여전히 양 끝 포화</td></tr>
+      <tr><td>ReLU</td><td>$\max(0,x)$</td><td>계산 빠름, 기울기 살아있음</td><td>죽은 ReLU 문제</td></tr>
+      <tr><td>Leaky ReLU</td><td>$x$ if $x>0$ else $0.01x$</td><td>ReLU 죽음 완화</td><td>약간 복잡</td></tr>
+    </tbody>
+  </table>
 
-  <div class="tip">여기까지 마치면 머신러닝의 핵심 흐름(데이터 → 손실 → 최적화 → 모델)을 모두 본 것입니다. 다음 단계는 <a href="../lectures/13-advanced-mpc.html">로봇공학특론 강의</a>의 신경망 활용편이나, CNN·Transformer 같은 심화 주제로 이어집니다.</div>
+  <h2>5. MLP가 XOR을 푸는 방법</h2>
+  <p>은닉층의 뉴런 한 개가 "x₁ AND NOT x₂"를 학습하고, 다른 한 개가 "NOT x₁ AND x₂"를 학습한 뒤, 출력층이 두 결과를 OR하면 XOR이 됩니다. 즉 비선형 활성을 가진 두 뉴런이 평면을 두 번 접어 직선이 아닌 결정경계를 만듭니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 작은 MLP가 XOR을 학습</h4>
+    <p>2-2-1 구조의 작은 신경망이 XOR을 학습합니다. "학습"을 누르면 결정경계가 점점 휘어집니다.</p>
+    <canvas id="mlpCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <button id="mlpRun">학습 시작/정지</button>
+      <button id="mlpReset">리셋</button>
+      <span id="mlpInfo" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mlpCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[[0,0,0],[0,1,1],[1,0,1],[1,1,0]];
+    let W1,b1,W2,b2,running=false,raf=null,epoch=0;
+    function init(){
+      W1=[[Math.random()-0.5,Math.random()-0.5],[Math.random()-0.5,Math.random()-0.5]];
+      b1=[0,0];W2=[Math.random()-0.5,Math.random()-0.5];b2=0;epoch=0;
+    }
+    init();
+    function sig(x){return 1/(1+Math.exp(-x));}
+    function fwd(x){
+      const z1=[W1[0][0]*x[0]+W1[0][1]*x[1]+b1[0],W1[1][0]*x[0]+W1[1][1]*x[1]+b1[1]];
+      const h=[sig(z1[0]),sig(z1[1])];
+      const z2=W2[0]*h[0]+W2[1]*h[1]+b2;const y=sig(z2);
+      return {h,y};
+    }
+    function train(){
+      const lr=0.5;
+      for(let e=0;e<50;e++){
+        data.forEach(d=>{
+          const x=[d[0],d[1]],t=d[2];
+          const f=fwd(x);
+          const dy=f.y-t;
+          const dW2=[dy*f.h[0],dy*f.h[1]],db2=dy;
+          const dh=[dy*W2[0]*f.h[0]*(1-f.h[0]),dy*W2[1]*f.h[1]*(1-f.h[1])];
+          const dW1=[[dh[0]*x[0],dh[0]*x[1]],[dh[1]*x[0],dh[1]*x[1]]];
+          W2[0]-=lr*dW2[0];W2[1]-=lr*dW2[1];b2-=lr*db2;
+          W1[0][0]-=lr*dW1[0][0];W1[0][1]-=lr*dW1[0][1];
+          W1[1][0]-=lr*dW1[1][0];W1[1][1]-=lr*dW1[1][1];
+          b1[0]-=lr*dh[0];b1[1]-=lr*dh[1];
+        });
+        epoch++;
+      }
+      draw();
+      if(running)raf=requestAnimationFrame(train);
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const STEP=10;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const x=i/W,y=1-j/H;const v=fwd([x,y]).y;
+        ctx.fillStyle=v>0.5?'rgba(255,140,0,0.16)':'rgba(11,95,255,0.12)';
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      data.forEach(d=>{ctx.fillStyle=d[2]?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(d[0]*W,(1-d[1])*H,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#000';ctx.stroke();});
+      document.getElementById('mlpInfo').textContent=`epoch ${epoch}`;
+    }
+    document.getElementById('mlpRun').onclick=()=>{if(!running){running=true;train();}else{running=false;cancelAnimationFrame(raf);}};
+    document.getElementById('mlpReset').onclick=()=>{running=false;cancelAnimationFrame(raf);init();draw();};
+    draw();
+  })();
+  </script>
+
+  <h2>6. 코드 예제</h2>
+  <pre><code>from sklearn.neural_network import MLPClassifier
+import numpy as np
+
+X = np.array([[0,0],[0,1],[1,0],[1,1]])
+y = np.array([0,1,1,0])  # XOR
+
+clf = MLPClassifier(hidden_layer_sizes=(2,), activation='tanh',
+                    solver='lbfgs', max_iter=2000)
+clf.fit(X, y)
+print(clf.predict(X))   # [0 1 1 0]</code></pre>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>Sung Kim Lec 8</strong> — XOR 이야기를 가장 친절하게.</li>
+    <li><strong>Perceptrons</strong> — Minsky·Papert (1969). 신경망을 죽인 그 책.</li>
+    <li><strong>Universal Approximation Theorem</strong> — 은닉층이 충분하면 어떤 함수든 근사 가능.</li>
+    <li><strong>Goodfellow Deep Learning</strong>, 6장 — 활성함수 비교의 표준.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="06-unsupervised.html"><small>← 이전</small>W6. 비지도학습</a>
-    <a href="../dl.html" class="next"><small>완료 🎉</small>주차 목록으로</a>
+    <a href="08-dnn-backprop.html" class="next"><small>다음 →</small>W8. DNN 역전파</a>
   </nav>
 </main>
 <footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>

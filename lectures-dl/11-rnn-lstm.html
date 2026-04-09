@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>W11. RNN & LSTM — Study Page</title>
+<title>W11. RNN과 LSTM — Study Page</title>
 <link rel="stylesheet" href="../assets/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -12,7 +12,7 @@
 </head>
 <body>
 <header class="site-header"><div class="wrap">
-  <h1><a href="../index.html">Study Page</a></h1>
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
@@ -21,125 +21,189 @@
 
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../dl.html">← 주차 목록</a></p>
-  <h1 class="page-title">Week 11. RNN과 LSTM — 시퀀스 모델</h1>
-  <p class="lead">시간 순서가 중요한 데이터(문장, 음성, 주가)를 위한 신경망입니다.</p>
+  <h1 class="page-title">Week 11. RNN과 LSTM</h1>
+  <p class="lead">시간이 흐르는 데이터 — 말, 음악, 주가, 센서 신호 — 를 다루는 신경망. 그리고 그것을 실용화한 LSTM의 게이트 구조.</p>
 
-  <div class="toc"><h4>목차</h4><ol>
-    <li>왜 시퀀스 모델인가</li>
-    <li>RNN의 핵심 아이디어</li>
-    <li>RNN의 한계: 장기 의존성</li>
-    <li>LSTM과 게이트</li>
-    <li>텍스트 임베딩</li>
-    <li>인터랙티브 시퀀스 데모</li>
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>시퀀스 데이터의 특징</li>
+    <li>vanilla RNN과 BPTT</li>
+    <li>장기 의존성 문제</li>
+    <li>LSTM의 세 게이트</li>
+    <li>GRU — 더 간단한 대안</li>
   </ol></div>
 
-  <h2>1. 왜 시퀀스 모델인가</h2>
-  <p>"<em>나는 어제 영화를 보고 ___ 했다.</em>"의 빈칸을 채우려면 앞 문장 전체를 기억해야 합니다. 이미지처럼 한 번에 들어오는 데이터와 달리, 텍스트와 시계열은 <strong>순서</strong>가 정보입니다.</p>
+  <h2>1. 시퀀스 데이터</h2>
+  <p>이미지는 위치가 중요하지만, 시퀀스는 <strong>순서</strong>가 중요합니다. "나는 학교에 갔다"와 "갔다 학교에 나는"은 단어가 같아도 의미가 다릅니다. 입력 길이가 가변적이라는 점도 큰 차이.</p>
 
-  <h2>2. RNN (Recurrent Neural Network)</h2>
-  <p>입력을 한 단어씩 처리하면서, <strong>숨은 상태(hidden state)</strong> $h_t$를 다음 스텝으로 넘겨줍니다.</p>
+  <h2>2. Vanilla RNN</h2>
+  <p>핵심 아이디어는 <strong>은닉 상태 $h_t$를 다음 시점으로 넘기는 것</strong>. 같은 가중치를 매 시점 반복해 사용합니다.</p>
   $$ h_t = \tanh(W_h h_{t-1} + W_x x_t + b) $$
-  <p>마치 사람이 책을 읽으며 머릿속에 줄거리를 누적하는 것과 같습니다.</p>
-
-  <h2>3. RNN의 한계</h2>
-  <p>긴 문장을 처리하면 앞쪽 정보가 거의 사라집니다(<strong>기울기 소실</strong>). "10페이지 전에 나온 단서"는 잊어버립니다.</p>
-
-  <h2>4. LSTM (Long Short-Term Memory)</h2>
-  <p>LSTM은 hidden state 외에 <strong>셀 상태(cell state) $C_t$</strong>를 따로 두고, 세 개의 <strong>게이트</strong>로 정보를 조절합니다.</p>
-  $$ f_t = \sigma(W_f [h_{t-1}, x_t] + b_f) \quad \text{(망각 게이트)} $$
-  $$ i_t = \sigma(W_i [h_{t-1}, x_t] + b_i) \quad \text{(입력 게이트)} $$
-  $$ o_t = \sigma(W_o [h_{t-1}, x_t] + b_o) \quad \text{(출력 게이트)} $$
-  $$ C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t $$
-  <p>망각 게이트가 "잊을지 말지"를, 입력 게이트가 "새로 기억할지"를 결정합니다. 덕분에 수백 스텝 전 정보도 보존할 수 있습니다.</p>
-
-  <h2>5. 단어 임베딩 (Embedding)</h2>
-  <p>단어를 정수 인덱스로 바꾼 뒤, 학습 가능한 행렬에서 행을 뽑아 밀집 벡터로 만듭니다.</p>
-  $$ \mathbf{e}_i = E[w_i], \quad E \in \mathbb{R}^{|V| \times d} $$
-  <p>비슷한 의미의 단어는 학습 후 비슷한 벡터로 자리 잡습니다.</p>
+  $$ y_t = W_y h_t $$
+  <p>학습은 시간을 따라 펼친 뒤 보통 역전파를 적용합니다 — 이를 <strong>BPTT(Backpropagation Through Time)</strong>라고 부릅니다.</p>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: LSTM 게이트 시각화</h4>
-    <p>입력 시퀀스가 들어올 때 망각·입력·출력 게이트의 값이 어떻게 변하는지 보여줍니다. 시퀀스를 직접 입력해 보세요.</p>
-    <canvas id="lstm" width="640" height="320"></canvas>
+    <h4>🎮 인터랙티브: RNN 펼침 시각화</h4>
+    <p>같은 셀이 시간을 따라 5번 반복되는 모습을 봅니다. 슬라이더로 시점을 옮기면 그 순간의 은닉 상태가 강조됩니다.</p>
+    <canvas id="rnnCanvas" width="640" height="280"></canvas>
     <div class="controls">
-      <label>입력 시퀀스 (-1 ~ 1) <input id="seq" type="text" value="0.8, 0.6, -0.5, 0.3, 0.9, -0.7, 0.4, -0.2" style="width:300px"></label>
-      <button id="run">실행</button>
+      <label>현재 시점 t <span class="val" id="rtV">2</span><input type="range" id="rt" min="0" max="4" step="1" value="2"></label>
     </div>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('lstm'),x=c.getContext('2d');
-    let states=[];
-    function run(){
-      const arr=document.getElementById('seq').value.split(',').map(s=>parseFloat(s.trim())||0);
-      states=[];let h=0,C=0;
-      arr.forEach(xi=>{
-        const f=1/(1+Math.exp(-(0.8*h+0.5*xi+0.3)));
-        const i=1/(1+Math.exp(-(0.4*h+1.2*xi-0.2)));
-        const o=1/(1+Math.exp(-(0.6*h+0.7*xi+0.1)));
-        const g=Math.tanh(0.5*h+1.5*xi);
-        C=f*C+i*g; h=o*Math.tanh(C);
-        states.push({xi,f,i,o,C,h});
-      });
+    const c=document.getElementById('rnnCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const t=+document.getElementById('rt').value;
+      document.getElementById('rtV').textContent=t;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const N=5,bw=80,gap=40;
+      const total=N*(bw+gap)-gap,x0=(W-total)/2;
+      for(let i=0;i<N;i++){
+        const x=x0+i*(bw+gap),y=110;
+        ctx.fillStyle=i===t?'#0b5fff':'#bbd0ff';
+        ctx.strokeStyle='#000';ctx.fillRect(x,y,bw,60);ctx.strokeRect(x,y,bw,60);
+        ctx.fillStyle='#fff';ctx.font='14px sans-serif';ctx.fillText(`h${i}`,x+30,y+38);
+        ctx.fillStyle='#333';ctx.font='12px sans-serif';
+        ctx.fillText(`x${i}`,x+30,y-8);
+        ctx.beginPath();ctx.moveTo(x+40,y-25);ctx.lineTo(x+40,y);ctx.strokeStyle='#666';ctx.stroke();
+        ctx.fillText(`y${i}`,x+30,y+85);
+        ctx.beginPath();ctx.moveTo(x+40,y+60);ctx.lineTo(x+40,y+78);ctx.stroke();
+        if(i<N-1){ctx.beginPath();ctx.moveTo(x+bw,y+30);ctx.lineTo(x+bw+gap,y+30);ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.stroke();ctx.lineWidth=1;}
+      }
+      ctx.fillStyle='#666';ctx.font='13px sans-serif';
+      ctx.fillText('같은 셀이 시간을 따라 반복',W/2-100,30);
     }
-    document.getElementById('run').onclick=run;run();
-    function loop(){
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      const W=Math.min(70,560/states.length),Y0=30;
-      x.fillStyle='#666';x.font='12px sans-serif';
-      x.fillText('시간 →',520,310);
-      const labels=['입력 x','f (망각)','i (입력)','o (출력)','C (셀)','h (출력)'];
-      const colors=['#666','#c62828','#0b5fff','#2e7d32','#9c27b0','#ff8c00'];
-      labels.forEach((l,row)=>{
-        x.fillStyle=colors[row];x.fillText(l,10,Y0+row*45+15);
-      });
-      states.forEach((s,t)=>{
-        const cx=120+t*W,vals=[s.xi,s.f,s.i,s.o,Math.tanh(s.C),s.h];
-        vals.forEach((v,row)=>{
-          const cy=Y0+row*45;
-          x.fillStyle=colors[row]+'33';
-          const bw=Math.min(W-6,40);
-          x.fillRect(cx-bw/2,cy,bw,30);
-          const fillH=Math.max(2,Math.abs(v)*28);
-          x.fillStyle=colors[row];
-          if(v>=0)x.fillRect(cx-bw/2,cy+30-fillH,bw,fillH);
-          else x.fillRect(cx-bw/2,cy,bw,fillH);
-          x.fillStyle='#222';x.font='10px monospace';x.textAlign='center';
-          x.fillText(v.toFixed(2),cx,cy+44);x.textAlign='start';
-        });
-      });
-      requestAnimationFrame(loop);
-    }
-    loop();
+    document.getElementById('rt').addEventListener('input',draw);
+    draw();
   })();
   </script>
 
-  <p>관찰: 망각 게이트 $f$가 0에 가까우면 셀이 리셋되고, 1에 가까우면 이전 정보가 유지됩니다.</p>
+  <h2>3. 장기 의존성 문제</h2>
+  <p>"나는 어제 도서관에서 친구들과 ... 책을 <em>읽었다</em>." 마지막 동사를 결정하는 정보(주어 "나는")가 아주 멀리 있을 수 있습니다. vanilla RNN은 같은 가중치를 반복 곱하므로, 시간 차이가 멀어지면 기울기가 지수적으로 사라지거나 폭발합니다.</p>
 
-  <h2>6. PyTorch 코드 — 영화 리뷰 감성 분류</h2>
+  <h2>4. LSTM</h2>
+  <p>1997년 Hochreiter·Schmidhuber가 제안한 LSTM(Long Short-Term Memory)은 "정보의 고속도로"인 셀 상태 $C_t$를 추가하고, 세 개의 게이트로 그것을 제어합니다.</p>
+  <ul>
+    <li><strong>망각 게이트(forget)</strong>: 과거 셀 상태에서 무엇을 지울지.</li>
+    <li><strong>입력 게이트(input)</strong>: 현재 정보 중 무엇을 새로 쓸지.</li>
+    <li><strong>출력 게이트(output)</strong>: 셀 상태에서 무엇을 외부에 보일지.</li>
+  </ul>
+  $$ f_t = \sigma(W_f [h_{t-1}, x_t]), \quad i_t = \sigma(W_i [h_{t-1}, x_t]), \quad o_t = \sigma(W_o [h_{t-1}, x_t]) $$
+  $$ \tilde{C}_t = \tanh(W_C [h_{t-1}, x_t]), \quad C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t $$
+  $$ h_t = o_t \odot \tanh(C_t) $$
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: LSTM 게이트 값 조절</h4>
+    <p>세 게이트 값을 직접 움직이며 셀 상태가 어떻게 변하는지 보세요. 망각이 0이면 과거를 완전히 지우고, 입력이 0이면 새 정보를 받지 않습니다.</p>
+    <canvas id="lstmCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>망각 f <span class="val" id="fgV">0.9</span><input type="range" id="fg" min="0" max="1" step="0.01" value="0.9"></label>
+      <label>입력 i <span class="val" id="igV">0.5</span><input type="range" id="ig" min="0" max="1" step="0.01" value="0.5"></label>
+      <label>출력 o <span class="val" id="ogV">0.8</span><input type="range" id="og" min="0" max="1" step="0.01" value="0.8"></label>
+      <button id="lstmRun">10스텝 실행</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lstmCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function run(){
+      const f=+document.getElementById('fg').value,i=+document.getElementById('ig').value,o=+document.getElementById('og').value;
+      document.getElementById('fgV').textContent=f.toFixed(2);
+      document.getElementById('igV').textContent=i.toFixed(2);
+      document.getElementById('ogV').textContent=o.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      let C=0,h=0;const Cs=[],hs=[];
+      for(let t=0;t<10;t++){
+        const x=Math.sin(t*0.6);
+        const Cnew=Math.tanh(x+0.5*h);
+        C=f*C+i*Cnew;
+        h=o*Math.tanh(C);
+        Cs.push(C);hs.push(h);
+      }
+      const xs=W-80,bw=xs/10;
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,H/2);ctx.lineTo(W-20,H/2);ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      Cs.forEach((v,k)=>{const x=40+k*bw,y=H/2-v*80;if(k===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      ctx.strokeStyle='#ff8c00';ctx.beginPath();
+      hs.forEach((v,k)=>{const x=40+k*bw,y=H/2-v*80;if(k===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';ctx.fillText('셀 상태 C',W-110,30);
+      ctx.fillStyle='#ff8c00';ctx.fillText('출력 h',W-110,48);
+    }
+    ['fg','ig','og'].forEach(id=>document.getElementById(id).addEventListener('input',run));
+    document.getElementById('lstmRun').onclick=run;
+    run();
+  })();
+  </script>
+
+  <h2>5. GRU — 더 간단한 대안</h2>
+  <p>2014년 Cho 외가 제안한 GRU(Gated Recurrent Unit)는 LSTM의 세 게이트를 두 개로 줄였습니다. 성능은 비슷하면서 파라미터가 적어 작은 데이터셋에서 자주 쓰입니다.</p>
+
+  <h2>6. 시계열 예측 데모</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 사인파 예측</h4>
+    <p>간단한 1셀 RNN이 사인파를 학습합니다. 진폭과 주파수를 조절해보세요(시뮬레이션).</p>
+    <canvas id="sinCanvas" width="640" height="260"></canvas>
+    <div class="controls">
+      <label>주파수 <span class="val" id="frV">1</span><input type="range" id="fr" min="0.5" max="3" step="0.1" value="1"></label>
+      <label>잡음 <span class="val" id="nzV">0.1</span><input type="range" id="nz" min="0" max="0.5" step="0.01" value="0.1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sinCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const f=+document.getElementById('fr').value,nz=+document.getElementById('nz').value;
+      document.getElementById('frV').textContent=f.toFixed(1);
+      document.getElementById('nzV').textContent=nz.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<W;i++){const t=i/W*4*Math.PI;const y=Math.sin(f*t)+nz*(Math.random()-0.5);if(i===0)ctx.moveTo(i,H/2-y*60);else ctx.lineTo(i,H/2-y*60);}
+      ctx.stroke();
+      ctx.strokeStyle='#ff8c00';ctx.setLineDash([5,5]);ctx.beginPath();
+      for(let i=0;i<W;i++){const t=i/W*4*Math.PI;const y=Math.sin(f*t);if(i===0)ctx.moveTo(i,H/2-y*60);else ctx.lineTo(i,H/2-y*60);}
+      ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';ctx.fillText('관측(잡음)',10,20);
+      ctx.fillStyle='#ff8c00';ctx.fillText('RNN 예측',10,38);
+    }
+    ['fr','nz'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>7. 코드 예제 (PyTorch)</h2>
   <pre><code>import torch.nn as nn
 
-class LSTMClassifier(nn.Module):
-    def __init__(self, vocab_size, embed_dim=128, hidden_dim=64):
+class LSTMNet(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
         super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
-        self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, 1)
-
+        self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
     def forward(self, x):
-        e = self.embedding(x)                  # (B, T, embed)
-        out, (h, c) = self.lstm(e)             # h: (1, B, hidden)
-        return self.fc(h.squeeze(0)).squeeze(1)
+        out, (h, c) = self.lstm(x)
+        return self.fc(out[:, -1, :])</code></pre>
 
-model = LSTMClassifier(vocab_size=10002)
-loss  = nn.BCEWithLogitsLoss()
-opt   = torch.optim.Adam(model.parameters(), lr=1e-3)</code></pre>
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>Sung Kim Lec 12</strong> — RNN/LSTM 한국어 강의.</li>
+    <li><strong>Understanding LSTM Networks</strong> — Chris Olah, <a href="https://colah.github.io/posts/2015-08-Understanding-LSTMs/">colah.github.io</a>. 이 분야의 고전 글.</li>
+    <li><strong>LSTM 원논문</strong> — Hochreiter·Schmidhuber(1997). 인내심을 가지고 보세요.</li>
+    <li><strong>The Unreasonable Effectiveness of RNNs</strong> — Andrej Karpathy.</li>
+  </ul>
 
   <nav class="prevnext">
-    <a href="10-cnn-transfer.html"><small>← 이전</small>W10. 전이학습</a>
-    <a href="12-rnn-advanced.html" class="next"><small>다음 →</small>W12. RNN 심화</a>
+    <a href="10-cnn-transfer.html"><small>← 이전</small>W10. CNN 전이학습</a>
+    <a href="12-rnn-advanced.html" class="next"><small>다음 →</small>W12. Seq2Seq</a>
   </nav>
 </main>
-<footer class="site-footer"><div class="wrap"><p>© Study Page</p></div></footer>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
 </body>
 </html>
