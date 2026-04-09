@@ -50,6 +50,97 @@
     <li><strong>L1 (MAE)</strong>: 절댓값 합. 이상치에 강함.</li>
     <li><strong>Huber</strong>: 작은 오차는 L2, 큰 오차는 L1로 처리. 두 장점을 결합.</li>
   </ul>
+  $$ L_2 = \sum_i (y_i - \hat y_i)^2 \qquad L_1 = \sum_i |y_i - \hat y_i| $$
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: L1 회귀 vs L2 회귀 (이상치에 대한 강건성)</h4>
+    <p>같은 데이터에 L2(파랑)과 L1(주황) 회귀 직선을 동시에 적합합니다. "이상치 강도" 슬라이더를 키우면 한 점의 y값이 크게 튀고, L2 직선만 크게 휘는 것을 볼 수 있습니다. 이것이 L1이 이상치에 강건한 이유입니다.</p>
+    <canvas id="l1l2" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>이상치 크기 <span class="val" id="outV">3.0</span><input type="range" id="out" min="0" max="8" step="0.1" value="3.0"></label>
+      <button id="l1l2Rs" class="alt">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('l1l2');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const CW=c.width,CH=c.height;
+    const PX=60,PY=CH-40,PW=CW-100,PH=CH-80;
+    const xmin=0,xmax=10,ymin=-2,ymax=14;
+    function toPx(u){return PX+(u-xmin)/(xmax-xmin)*PW;}
+    function toPy(v){return PY-(v-ymin)/(ymax-ymin)*PH;}
+    let base=[];
+    function gen(){
+      base=[];
+      for(let i=0;i<12;i++){
+        const xi=0.5+i*0.8;
+        const yi=0.8*xi+1+(Math.random()*2-1)*0.6;
+        base.push([xi,yi]);
+      }
+    }
+    gen();
+    // L2 closed form
+    function fitL2(pts){
+      let n=pts.length,sx=0,sy=0,sxx=0,sxy=0;
+      pts.forEach(([u,v])=>{sx+=u;sy+=v;sxx+=u*u;sxy+=u*v;});
+      const det=n*sxx-sx*sx;
+      if(Math.abs(det)<1e-12)return [0,0];
+      return [(sxx*sy-sx*sxy)/det,(n*sxy-sx*sy)/det]; // [b0, b1]
+    }
+    // L1 fit by coordinate-descent / iterated reweighted least squares (IRLS)
+    function fitL1(pts){
+      let [b0,b1]=fitL2(pts);
+      for(let it=0;it<60;it++){
+        const w=pts.map(([u,v])=>{const r=Math.abs(v-(b0+b1*u));return 1/Math.max(r,1e-3);});
+        let sw=0,swx=0,swy=0,swxx=0,swxy=0;
+        pts.forEach(([u,v],i)=>{const wi=w[i];sw+=wi;swx+=wi*u;swy+=wi*v;swxx+=wi*u*u;swxy+=wi*u*v;});
+        const det=sw*swxx-swx*swx;
+        if(Math.abs(det)<1e-12)break;
+        b0=(swxx*swy-swx*swxy)/det;
+        b1=(sw*swxy-swx*swy)/det;
+      }
+      return [b0,b1];
+    }
+    function draw(){
+      const out=parseFloat(document.getElementById('out').value);
+      document.getElementById('outV').textContent=out.toFixed(1);
+      // current data: base + one outlier on the 4th point shifted up
+      const pts=base.map(p=>[p[0],p[1]]);
+      if(pts.length>4)pts[4]=[pts[4][0],pts[4][1]+out*1.2];
+      const [a2,b2]=fitL2(pts);
+      const [a1,b1]=fitL1(pts);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,CW,CH);
+      // grid
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;
+      for(let gx=xmin;gx<=xmax;gx+=2){ctx.beginPath();ctx.moveTo(toPx(gx),toPy(ymin));ctx.lineTo(toPx(gx),toPy(ymax));ctx.stroke();}
+      for(let gy=0;gy<=12;gy+=2){ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(gy));ctx.lineTo(toPx(xmax),toPy(gy));ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(0));ctx.lineTo(toPx(xmax),toPy(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(toPx(0),toPy(ymin));ctx.lineTo(toPx(0),toPy(ymax));ctx.stroke();
+      // L2 line
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(a2+b2*xmin));ctx.lineTo(toPx(xmax),toPy(a2+b2*xmax));ctx.stroke();
+      // L1 line
+      ctx.strokeStyle='#f57c00';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(a1+b1*xmin));ctx.lineTo(toPx(xmax),toPy(a1+b1*xmax));ctx.stroke();
+      // points
+      pts.forEach((p,i)=>{
+        const isOut=(i===4&&out>0.5);
+        ctx.fillStyle=isOut?'#c62828':'#333';
+        ctx.beginPath();ctx.arc(toPx(p[0]),toPy(p[1]),isOut?7:4,0,Math.PI*2);ctx.fill();
+      });
+      // legend
+      ctx.font='12px sans-serif';
+      ctx.fillStyle='#0b5fff';ctx.fillText('■ L2 (MSE): β₀='+a2.toFixed(2)+', β₁='+b2.toFixed(2),12,20);
+      ctx.fillStyle='#f57c00';ctx.fillText('■ L1 (MAE): β₀='+a1.toFixed(2)+', β₁='+b1.toFixed(2),290,20);
+    }
+    document.getElementById('out').addEventListener('input',draw);
+    document.getElementById('l1l2Rs').addEventListener('click',()=>{gen();draw();});
+    draw();
+  })();
+  </script>
 
   <h2>5. 다항 회귀와 과적합</h2>
   <p>$y = \beta_0 + \beta_1 x + \beta_2 x^2 + \dots + \beta_d x^d$로 차수를 올리면 더 잘 맞춥니다. 하지만 차수가 너무 높으면 학습 데이터의 잡음까지 외워버리는 <strong>과적합</strong>이 발생합니다.</p>
@@ -294,44 +385,115 @@
   </div>
   <script>
   (function(){
-    const c=document.getElementById('gd'),x=c.getContext('2d');
-    const data=[];for(let i=0;i<20;i++){const xi=i/10;data.push([xi,1.5*xi+0.3+(Math.random()-0.5)*0.5]);}
-    let b0=-1,b1=-0.5,traj=[];let auto=false;
+    const c=document.getElementById('gd');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    // Data: 20 points, true slope 1.5, intercept 0.3
+    const data=[];
+    for(let i=0;i<20;i++){
+      const xi=i/10;   // [0, 1.9]
+      data.push([xi,1.5*xi+0.3+(Math.random()*2-1)*0.25]);
+    }
+    // Left plot box: data space x in [0, 2], y in [-0.5, 4]
+    const LX=40,LT=50,LW=260,LH=230;    // left box top-left + width/height
+    const xMin=0,xMax=2,yMin=-0.5,yMax=4;
+    function lx(u){return LX+(u-xMin)/(xMax-xMin)*LW;}
+    function ly(v){return LT+LH-(v-yMin)/(yMax-yMin)*LH;}
+    // clip line to box for visualization
+    function clipLine(a,b){
+      // y = a + b*x, return two endpoints within the box
+      const ptsOut=[];
+      // intersect with x=xMin, x=xMax
+      [xMin,xMax].forEach(xv=>{const yv=a+b*xv;if(yv>=yMin&&yv<=yMax)ptsOut.push([xv,yv]);});
+      // intersect with y=yMin, y=yMax
+      if(Math.abs(b)>1e-9){
+        [yMin,yMax].forEach(yv=>{const xv=(yv-a)/b;if(xv>=xMin&&xv<=xMax)ptsOut.push([xv,yv]);});
+      }
+      return ptsOut.slice(0,2);
+    }
+    // Right loss surface box
+    const RX=360,RT=50,RW=240,RH=230;
+    const bMin=-2,bMax=4;  // both beta0 and beta1 range
+    function rx(a){return RX+(a-bMin)/(bMax-bMin)*RW;}
+    function ry(b){return RT+RH-(b-bMin)/(bMax-bMin)*RH;}
+
+    let b0=-1,b1=-0.5,traj=[[b0,b1]];
+    let auto=false;
     function loss(a,b){let s=0;data.forEach(([u,v])=>{const e=a+b*u-v;s+=e*e;});return s/data.length;}
     function step(){
-      const eta=+document.getElementById('eta').value;
-      let g0=0,g1=0;data.forEach(([u,v])=>{const e=b0+b1*u-v;g0+=2*e;g1+=2*e*u;});
+      const eta=parseFloat(document.getElementById('eta').value);
+      let g0=0,g1=0;
+      data.forEach(([u,v])=>{const e=b0+b1*u-v;g0+=2*e;g1+=2*e*u;});
       g0/=data.length;g1/=data.length;
-      b0-=eta*g0;b1-=eta*g1;traj.push([b0,b1]);
+      b0-=eta*g0;b1-=eta*g1;
+      traj.push([b0,b1]);
     }
-    document.getElementById('gdStep').onclick=step;
-    document.getElementById('gdAuto').onclick=()=>{auto=!auto;};
-    document.getElementById('gdRst').onclick=()=>{b0=-1;b1=-0.5;traj=[[b0,b1]];};
-    traj=[[b0,b1]];
-    function loop(){
-      if(auto)step();
-      document.getElementById('etaV').textContent=(+document.getElementById('eta').value).toFixed(3);
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      // left: data + line
-      const LX=20,LY=280,SX=110,SY=90;
-      x.strokeStyle='#ccc';x.strokeRect(LX,LY-200,250,200);
-      x.fillStyle='#c62828';data.forEach(([u,v])=>{x.beginPath();x.arc(LX+u*SX,LY-v*SY,3,0,Math.PI*2);x.fill();});
-      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();x.moveTo(LX,LY-b0*SY);x.lineTo(LX+2*SX,LY-(b0+b1*2)*SY);x.stroke();
-      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('β₀='+b0.toFixed(2)+' β₁='+b1.toFixed(2)+' L='+loss(b0,b1).toFixed(3),LX,18);
-      // right: loss heatmap
-      const RX=380,RY=280,W=240,H=200;
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,c.width,c.height);
+      document.getElementById('etaV').textContent=parseFloat(document.getElementById('eta').value).toFixed(3);
+      // === LEFT: data + line ===
+      ctx.strokeStyle='#ccc';ctx.lineWidth=1;ctx.strokeRect(LX,LT,LW,LH);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let gy=0;gy<=4;gy++){ctx.beginPath();ctx.moveTo(LX,ly(gy));ctx.lineTo(LX+LW,ly(gy));ctx.stroke();}
+      for(let gx=0;gx<=2;gx+=0.5){ctx.beginPath();ctx.moveTo(lx(gx),LT);ctx.lineTo(lx(gx),LT+LH);ctx.stroke();}
+      // data points
+      ctx.fillStyle='#c62828';
+      data.forEach(([u,v])=>{ctx.beginPath();ctx.arc(lx(u),ly(v),4,0,Math.PI*2);ctx.fill();});
+      // current line (clipped)
+      const seg=clipLine(b0,b1);
+      if(seg.length===2){
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(lx(seg[0][0]),ly(seg[0][1]));ctx.lineTo(lx(seg[1][0]),ly(seg[1][1]));ctx.stroke();
+      }
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('β₀='+b0.toFixed(2)+'  β₁='+b1.toFixed(2)+'  L='+loss(b0,b1).toFixed(3),LX,LT-12);
+      // === RIGHT: MSE loss surface + trajectory ===
       const cell=8;
       let lmin=Infinity,lmax=-Infinity;const vals=[];
-      for(let i=0;i<W;i+=cell)for(let j=0;j<H;j+=cell){const a=-2+(i/W)*6,b=-2+((H-j)/H)*6;const L=loss(a,b);vals.push([i,j,L]);if(L<lmin)lmin=L;if(L>lmax)lmax=L;}
-      vals.forEach(([i,j,L])=>{const t=Math.min(1,(L-lmin)/(lmax-lmin+1e-9));x.fillStyle='rgba(11,95,255,'+(1-t)*0.6+')';x.fillRect(RX+i,RY-H+j,cell,cell);});
-      x.strokeStyle='#333';x.strokeRect(RX,RY-H,W,H);
+      for(let i=0;i<RW;i+=cell){
+        for(let j=0;j<RH;j+=cell){
+          const a=bMin+(i/RW)*(bMax-bMin);
+          const b=bMin+((RH-j)/RH)*(bMax-bMin);
+          const L=loss(a,b);
+          vals.push([i,j,L]);
+          if(L<lmin)lmin=L;if(L>lmax)lmax=L;
+        }
+      }
+      vals.forEach(([i,j,L])=>{
+        const t=Math.min(1,(L-lmin)/(lmax-lmin+1e-9));
+        ctx.fillStyle='rgba(11,95,255,'+(1-t)*0.55+')';
+        ctx.fillRect(RX+i,RT+j,cell,cell);
+      });
+      ctx.strokeStyle='#333';ctx.strokeRect(RX,RT,RW,RH);
+      // axes labels
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('β₀',RX+RW/2,RT+RH+15);
+      ctx.save();ctx.translate(RX-12,RT+RH/2);ctx.rotate(-Math.PI/2);ctx.fillText('β₁',0,0);ctx.restore();
       // trajectory
-      x.strokeStyle='#ff8c00';x.lineWidth=2;x.beginPath();
-      traj.forEach((p,i)=>{const ii=(p[0]+2)/6*W,jj=H-(p[1]+2)/6*H;if(i==0)x.moveTo(RX+ii,RY-H+jj);else x.lineTo(RX+ii,RY-H+jj);});x.stroke();
-      x.fillStyle='#666';x.fillText('MSE(β₀,β₁)',RX,18);
-      requestAnimationFrame(loop);
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;ctx.beginPath();
+      traj.forEach((p,i)=>{
+        const px=rx(p[0]),py=ry(p[1]);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      });
+      ctx.stroke();
+      // current point on surface
+      const cur=traj[traj.length-1];
+      ctx.fillStyle='#ff8c00';
+      ctx.beginPath();ctx.arc(rx(cur[0]),ry(cur[1]),5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('MSE(β₀,β₁) — step '+(traj.length-1),RX,RT-12);
     }
-    loop();
+    function tick(){
+      if(auto)step();
+      draw();
+      requestAnimationFrame(tick);
+    }
+    document.getElementById('gdStep').addEventListener('click',()=>{step();});
+    document.getElementById('gdAuto').addEventListener('click',()=>{auto=!auto;});
+    document.getElementById('gdRst').addEventListener('click',()=>{b0=-1;b1=-0.5;traj=[[b0,b1]];});
+    document.getElementById('eta').addEventListener('input',()=>{});
+    tick();
   })();
   </script>
 
