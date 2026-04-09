@@ -77,53 +77,65 @@
   </div>
   <script>
   (function(){
-    const c=document.getElementById('gauss'),x=c.getContext('2d');
-    function pdf(xx,mu,sg){return Math.exp(-(xx-mu)**2/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));}
-    function loop(){
-      const mu=+document.getElementById('mu').value;
-      const sg=+document.getElementById('sg').value;
+    const c=document.getElementById('gauss');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const x0=W/2,y0=H-40,sx=60,peakH=170;
+    function pdf(xx,mu,sg){return Math.exp(-(xx-mu)*(xx-mu)/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));}
+    function draw(){
+      const muEl=document.getElementById('mu'),sgEl=document.getElementById('sg');
+      const mu=parseFloat(muEl.value),sg=parseFloat(sgEl.value);
       document.getElementById('muV').textContent=mu.toFixed(1);
       document.getElementById('sgV').textContent=sg.toFixed(1);
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      const x0=320,y0=240,sx=60;
-      // 곡선이 항상 같은 픽셀 높이가 되도록 정규화
-      const peakH=170;
       const peak=pdf(mu,mu,sg);
       const yScale=peakH/peak;
-      // 축
-      x.strokeStyle='#999';x.beginPath();x.moveTo(20,y0);x.lineTo(620,y0);x.moveTo(x0,40);x.lineTo(x0,y0+10);x.stroke();
-      // 1σ, 2σ 음영 (작은 σ에서도 부드럽도록 60 step 사용)
-      [[2,'rgba(11,95,255,0.07)'],[1,'rgba(11,95,255,0.16)']].forEach(([k,col])=>{
-        x.fillStyle=col;
-        const N=60;
-        x.beginPath();x.moveTo(x0+(mu-k*sg)*sx,y0);
+      // clear
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // axes
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(20,y0);ctx.lineTo(W-20,y0);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x0,40);ctx.lineTo(x0,y0+10);ctx.stroke();
+      // 2σ shading
+      function shade(k,fill){
+        ctx.fillStyle=fill;
+        ctx.beginPath();
+        const a=mu-k*sg,b=mu+k*sg,N=80;
+        ctx.moveTo(x0+a*sx,y0);
         for(let i=0;i<=N;i++){
-          const xx=mu-k*sg+(2*k*sg)*i/N;
-          x.lineTo(x0+xx*sx,y0-pdf(xx,mu,sg)*yScale);
+          const xx=a+(b-a)*i/N;
+          ctx.lineTo(x0+xx*sx,y0-pdf(xx,mu,sg)*yScale);
         }
-        x.lineTo(x0+(mu+k*sg)*sx,y0);x.closePath();x.fill();
-      });
-      // 메인 곡선
-      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+        ctx.lineTo(x0+b*sx,y0);
+        ctx.closePath();ctx.fill();
+      }
+      shade(2,'rgba(11,95,255,0.08)');
+      shade(1,'rgba(11,95,255,0.18)');
+      // main curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
       const N=300;
       for(let i=0;i<=N;i++){
         const xx=-5+10*i/N;
         const px=x0+xx*sx,py=y0-pdf(xx,mu,sg)*yScale;
-        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
       }
-      x.stroke();
-      // 평균 수직선
-      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(x0+mu*sx,40);x.lineTo(x0+mu*sx,y0);x.stroke();x.setLineDash([]);
-      // 라벨
-      x.fillStyle='#c62828';x.font='12px sans-serif';
-      x.fillText('μ = '+mu.toFixed(1),x0+mu*sx+4,55);
-      x.fillStyle='#666';
-      x.fillText('1σ ≈ 68%',x0+0.5*sg*sx,y0-peakH*0.3);
-      x.fillText('2σ ≈ 95%',x0+1.5*sg*sx,y0-peakH*0.08);
-      x.fillText('피크 높이는 항상 같게 정규화됨 (실제 높이 = '+peak.toFixed(2)+')',20,30);
-      requestAnimationFrame(loop);
+      ctx.stroke();
+      // mean line
+      ctx.strokeStyle='#c62828';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(x0+mu*sx,40);ctx.lineTo(x0+mu*sx,y0);ctx.stroke();
+      ctx.setLineDash([]);
+      // labels
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText('μ = '+mu.toFixed(1),x0+mu*sx+4,55);
+      ctx.fillStyle='#555';
+      ctx.fillText('1σ ≈ 68%',x0+0.5*sg*sx,y0-peakH*0.35);
+      ctx.fillText('2σ ≈ 95%',x0+1.5*sg*sx,y0-peakH*0.1);
+      ctx.fillText('피크 높이 정규화 (실제 높이 = '+peak.toFixed(3)+')',20,25);
     }
-    loop();
+    document.getElementById('mu').addEventListener('input',draw);
+    document.getElementById('sg').addEventListener('input',draw);
+    draw();
   })();
   </script>
 
