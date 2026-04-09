@@ -19,18 +19,160 @@
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
   <h1 class="page-title">Lecture 11. 모델 예측 제어 (MPC)</h1>
-  <p class="lead">미래를 시뮬레이션해 보고, 가장 좋은 행동을 골라 실행한다.</p>
+  <p class="lead">미래를 시뮬레이션해 보고, 가장 좋은 행동을 골라 실행한다. 현대 제어공학의 표준 언어이자, SAIL 연구실의 핵심 연구 주제.</p>
 
   <div class="toc"><h4>목차</h4><ol>
-    <li>왜 MPC인가</li>
-    <li>수신지평선(receding horizon)</li>
-    <li>최적화 문제 정의</li>
-    <li>인터랙티브 데모</li>
+    <li>왜 MPC인가 — 최적화 기반 제어</li>
+    <li>고전 제어 vs MPC</li>
+    <li>제약이 MPC를 필요하게 만드는 이유</li>
+    <li>수학적 정식화 (OCP)</li>
+    <li>수신지평선 전략 — Plan & Do</li>
+    <li>설계 파라미터: 샘플시간·호라이즌·가중치</li>
+    <li>인터랙티브: 1D MPC 위치 추종</li>
+    <li>CasADi 코드 예제</li>
+    <li>부드러운 경로: Cubic Spline</li>
+    <li>iLQR — 비선형의 빠른 해법</li>
+    <li>배경: LQR (무한 호라이즌)</li>
+    <li>응용 사례 (ms ~ days)</li>
+    <li>더 깊이 공부하기</li>
   </ol></div>
 
-  <h2>1. 왜 MPC인가</h2>
-  <p>PID는 단순하고 강력하지만, <strong>제약(constraint)</strong>을 직접 다루지 못합니다. 모터의 최대 출력, 안전한 속도, 충돌 회피 같은 제약을 고려해야 한다면 MPC가 정답입니다.</p>
-  <p>핵심 아이디어: <em>미래 N 스텝의 행동을 한꺼번에 최적화하되, 첫 행동만 실제로 실행하고 다음 시점에 다시 푼다.</em></p>
+  <h2>1. 왜 MPC인가 — 최적화 기반 제어</h2>
+  <p>경주용 자동차가 서킷을 주행하는 장면을 떠올려 봅시다. 목표는 <strong>랩 타임 최소화</strong>이고, 지켜야 할 제약은 여러 가지입니다:</p>
+  <ul>
+    <li>다른 차와 부딪히지 않아야 한다 (상태 제약)</li>
+    <li>도로를 벗어나면 안 된다 (상태 제약)</li>
+    <li>미끄러지면 안 된다 (동역학 제약)</li>
+    <li>가속·제동·조향에는 물리적 한계가 있다 (입력 제약)</li>
+  </ul>
+  <p>사람 운전자는 어떻게 할까요? <em>앞을 내다보고</em>, 도로 상태·다가올 코너·차의 성능을 고려해 <em>향후 몇 초 동안의 경로와 가·감속을 동시에 계획</em>합니다. 그리고 그 계획대로 움직이다가, 코너를 도는 순간 새로운 정보(앞 차, 노면 상태)를 보고 <em>다시 계획</em>합니다.</p>
+  <p>MPC는 이 과정을 수학으로 적은 것입니다:</p>
+  <div class="tip"><strong>MPC 한 줄 요약</strong> — "모델을 이용해 미래 $N$ 스텝의 최적 입력 시퀀스를 구하고, 첫 입력만 실제로 적용한 뒤, 다음 샘플 시점에 새로운 측정값으로 전 과정을 반복한다."</div>
+  <p>PID는 단순하고 강력하지만 <strong>제약(constraint)</strong>을 직접 다루지 못합니다. 모터의 최대 출력, 안전한 속도, 충돌 회피 같은 제약을 고려해야 한다면 MPC가 정답입니다.</p>
+
+  <h2>2. 고전 제어 vs MPC</h2>
+  <table>
+    <thead><tr><th></th><th>고전 제어 (PID · 주파수 영역)</th><th>MPC (시간 영역 · 실시간 최적화)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>설계 관점</strong></td><td>제어기 $C(s)$를 <em>한 번</em> 설계</td><td>매 샘플 시점에 $u(t)$를 <em>다시 계산</em></td></tr>
+      <tr><td><strong>주로 다루는 문제</strong></td><td>외란 억제, 잡음 민감도, 모델 불확실성</td><td>입력 제약(포화), 상태 제약(안전)</td></tr>
+      <tr><td><strong>미래 정보</strong></td><td>사용 안 함</td><td>참조 궤적·장애물 예측을 직접 반영</td></tr>
+      <tr><td><strong>다중 입출력</strong></td><td>번거로움 (decoupling 필요)</td><td>자연스럽게 벡터로 처리</td></tr>
+      <tr><td><strong>계산 비용</strong></td><td>사실상 0</td><td>매 스텝 QP/NLP 풀이 (수 ms ~ 수십 ms)</td></tr>
+    </tbody>
+  </table>
+  <p><em>핵심 메시지 (Jones/Borrelli/Morari):</em> 고전 설계는 "제어기를 설계하는" 문제인 반면, MPC는 "매 순간 최적 입력을 직접 선택하는" 문제입니다. 계산 파워가 충분해진 2000년대 이후로 MPC가 산업 현장의 표준이 되었습니다.</p>
+
+  <h2>3. 제약이 MPC를 필요하게 만드는 이유</h2>
+  <p>모든 실제 시스템에는 제약이 있습니다:</p>
+  <ul>
+    <li><strong>물리적 제약 (Physical)</strong> — 액추에이터 한계: 모터 최대 토크, 밸브 최대 열림, 스로틀 포화.</li>
+    <li><strong>성능 제약 (Performance)</strong> — 오버슈트 금지, 정착 시간 상한, 편안한 승차감.</li>
+    <li><strong>안전 제약 (Safety)</strong> — 온도·압력 상한, 충돌 금지, 최소 이격 거리.</li>
+  </ul>
+  <p>여기서 중요한 관찰: <strong>최적 작동점은 제약 경계 <em>근처</em>에 있습니다.</strong> 예를 들어 화학 플랜트의 수익은 온도가 안전 상한에 가까울수록 좋고, 레이싱 카의 랩타임은 마찰 한계에 가까울수록 짧아집니다.</p>
+  <p>고전 제어의 해법은 "세트포인트를 제약에서 충분히 멀리 떨어뜨려" 제약을 건드리지 않는 것입니다 — 이는 명백히 <em>차선</em>입니다. MPC는 제약을 설계 안에 직접 녹여 <em>최적점에서 운전</em>할 수 있습니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg">
+      <line x1="30" y1="170" x2="280" y2="170" stroke="#333"/>
+      <line x1="30" y1="30" x2="30" y2="170" stroke="#333"/>
+      <line x1="30" y1="50" x2="280" y2="50" stroke="#c62828" stroke-dasharray="4,4"/>
+      <text x="285" y="54" font-size="11" fill="#c62828">제약</text>
+      <path d="M30,150 Q80,90 150,110 T280,115" stroke="#0b5fff" fill="none" stroke-width="2"/>
+      <line x1="30" y1="115" x2="280" y2="115" stroke="#0b5fff" stroke-dasharray="2,3"/>
+      <text x="155" y="195" text-anchor="middle" font-size="11" fill="#0742b8">고전 제어: 세트포인트를 제약에서 멀리</text>
+
+      <line x1="310" y1="170" x2="540" y2="170" stroke="#333"/>
+      <line x1="310" y1="30" x2="310" y2="170" stroke="#333"/>
+      <line x1="310" y1="50" x2="540" y2="50" stroke="#c62828" stroke-dasharray="4,4"/>
+      <text x="545" y="54" font-size="11" fill="#c62828">제약</text>
+      <path d="M310,150 Q360,60 430,58 T540,55" stroke="#2e7d32" fill="none" stroke-width="2"/>
+      <line x1="310" y1="55" x2="540" y2="55" stroke="#2e7d32" stroke-dasharray="2,3"/>
+      <text x="425" y="195" text-anchor="middle" font-size="11" fill="#1b5e20">MPC: 제약 바로 아래에서 최적 운전</text>
+    </svg>
+    <figcaption>그림. 고전 설계는 제약에서 거리를 두어 안전한 대신 suboptimal. MPC는 제약을 최적화에 직접 포함해 최적점에서 작동.</figcaption>
+  </figure>
+
+  <h2>4. 수학적 정식화 (OCP)</h2>
+  <p>매 샘플 시점 $t$마다 MPC가 푸는 문제는 다음 유한 호라이즌 최적 제어 문제(FH-OCP)입니다:</p>
+  $$ U_t^*(x(t)) \;=\; \arg\min_{U_t}\; \underbrace{p(x_{t+N})}_{\text{종단 비용}} \;+\; \sum_{k=0}^{N-1} \underbrace{q(x_{t+k},\, u_{t+k})}_{\text{단계 비용}} $$
+  $$ \text{s.t.}\quad x_t = x(t) \quad\text{(현재 상태 측정)} $$
+  $$ x_{t+k+1} = f(x_{t+k}, u_{t+k}) \quad \text{(시스템 모델)} $$
+  $$ x_{t+k} \in \mathcal{X},\;\; u_{t+k} \in \mathcal{U} \quad \text{(상태·입력 제약)} $$
+  $$ x_{t+N} \in \mathcal{X}_f \quad \text{(종단 제약)} $$
+  <p>최적화 변수는 $U_t = \{u_t, u_{t+1}, \dots, u_{t+N-1}\}$, 즉 앞으로 $N$ 스텝의 입력 시퀀스입니다.</p>
+  <p>문제는 세 가지 요소로 정의됩니다:</p>
+  <ul>
+    <li><strong>목적 함수 (Objective)</strong> — 무엇을 최소화할 것인가? 참조로부터의 거리 ($\|x - x_\text{ref}\|_Q^2$), 제곱/절대 오차, 에너지 소비, 경제적 비용(economic MPC) 등.</li>
+    <li><strong>내부 모델 (Model)</strong> — 시스템을 어떻게 예측할 것인가? 선형 $x^+ = Ax + Bu$, 비선형 $x^+ = f(x,u)$, 단일/다변수, 이산/하이브리드.</li>
+    <li><strong>제약 (Constraints)</strong> — 무엇을 지켜야 하는가? 입력·출력·상태, 선형/이차/비볼록, 부등식/등식.</li>
+  </ul>
+
+  <h3>4.1 이차 비용 LMPC — 가장 흔한 형태</h3>
+  <p>모델이 선형이고 비용이 이차식이면 MPC는 <strong>볼록 이차계획법(QP)</strong>이 됩니다. 매 스텝 QP 한 번이면 되므로 수 ms 안에 풀립니다 — 이 경우를 <em>Linear MPC (LMPC)</em>라고 부릅니다.</p>
+  $$ \min\; x_N^\top P x_N + \sum_{k=0}^{N-1} \bigl(x_k^\top Q x_k + u_k^\top R u_k\bigr) $$
+  <p>가중치 행렬의 역할:</p>
+  <ul>
+    <li>$Q \succeq 0$ — 상태 오차 페널티. 추종을 "얼마나 빨리 시키고 싶은가".</li>
+    <li>$R \succ 0$ — 입력 페널티. 커질수록 부드럽고 에너지 효율적이지만 느림.</li>
+    <li>$P \succeq 0$ — <strong>종단 비용</strong>. 이후 무한 호라이즌을 근사해 안정성을 보장하는 핵심 장치 (뒤 L12에서 자세히).</li>
+  </ul>
+
+  <h2>5. 수신지평선 전략 — Plan & Do</h2>
+  <p>MPC는 매 샘플마다 다음을 반복합니다:</p>
+  <ol>
+    <li><strong>측정/추정</strong> — 현재 상태 $x(t)$를 (칼만 필터 등으로) 알아낸다.</li>
+    <li><strong>계획 (Plan)</strong> — OCP를 풀어 최적 입력 시퀀스 $U_t^* = \{u_t^*, \dots, u_{t+N-1}^*\}$를 얻는다.</li>
+    <li><strong>실행 (Do)</strong> — <em>오직 첫 번째 입력</em> $u_t^*$만 실제 시스템에 보낸다.</li>
+    <li><strong>이동</strong> — 다음 샘플에서 호라이즌을 한 칸 밀고 1단계부터 다시.</li>
+  </ol>
+  <p>나머지 $N-1$개 입력을 버리는 것이 아깝게 느껴지지만, <em>그 덕분에 피드백이 생깁니다.</em> 예기치 못한 외란이 들어와도 다음 스텝에서 새 측정값으로 재계획되므로, open-loop 최적화가 closed-loop 피드백 제어로 승격됩니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 560 180" xmlns="http://www.w3.org/2000/svg">
+      <line x1="30" y1="130" x2="540" y2="130" stroke="#333"/>
+      <g font-size="10" fill="#666">
+        <text x="70" y="150" text-anchor="middle">t</text>
+        <text x="170" y="150" text-anchor="middle">t+1</text>
+        <text x="270" y="150" text-anchor="middle">t+2</text>
+      </g>
+      <!-- plan at t -->
+      <g stroke="#0b5fff" fill="#0b5fff">
+        <circle cx="70" cy="130" r="4"/>
+        <circle cx="110" cy="100" r="3" opacity="0.5"/>
+        <circle cx="150" cy="80" r="3" opacity="0.5"/>
+        <circle cx="190" cy="70" r="3" opacity="0.5"/>
+        <circle cx="230" cy="66" r="3" opacity="0.5"/>
+      </g>
+      <text x="150" y="50" font-size="10" fill="#0b5fff">t에서의 계획 (N=4)</text>
+      <!-- plan at t+1 -->
+      <g stroke="#f57c00" fill="#f57c00">
+        <circle cx="170" cy="110" r="4"/>
+        <circle cx="210" cy="85" r="3" opacity="0.5"/>
+        <circle cx="250" cy="72" r="3" opacity="0.5"/>
+        <circle cx="290" cy="65" r="3" opacity="0.5"/>
+        <circle cx="330" cy="60" r="3" opacity="0.5"/>
+      </g>
+      <text x="280" y="35" font-size="10" fill="#f57c00">t+1에서의 재계획 (외란 반영)</text>
+      <!-- executed actions (bold) -->
+      <line x1="70" y1="130" x2="70" y2="145" stroke="#0b5fff" stroke-width="3"/>
+      <line x1="170" y1="130" x2="170" y2="145" stroke="#f57c00" stroke-width="3"/>
+      <text x="400" y="120" font-size="11" fill="#666">볼드 막대 = 실제 실행된 첫 입력</text>
+    </svg>
+    <figcaption>그림. Receding horizon의 핵심: 매 스텝 $N$개의 계획을 만들지만 첫 입력만 실행. 이 "버림"이 피드백을 만듭니다.</figcaption>
+  </figure>
+
+  <h2>6. 설계 파라미터: 샘플시간·호라이즌·가중치</h2>
+  <p>MPC를 실전에 적용할 때 엔지니어가 정해야 할 세 가지:</p>
+  <ul>
+    <li><strong>샘플시간 $T_s$</strong> — 빠를수록 외란에 잘 반응하지만, 매 스텝 최적화를 풀 시간이 부족해집니다. 경험칙: 시스템의 지배적 시정수의 $1/10 \sim 1/20$.</li>
+    <li><strong>예측 호라이즌 $N$</strong> — 길수록 미래를 멀리 내다보지만 계산량이 $\mathcal{O}(N)$로 늘고, 문제 크기(변수 수)는 $\mathcal{O}(Nn_u)$. 최소한 지배적 과도응답이 끝나는 데 걸리는 시간보다는 길어야 합니다.</li>
+    <li><strong>가중치 $Q, R, P$</strong> — Bryson의 규칙: "허용 가능한 최대 편차의 제곱의 역수"로 대각 원소를 시작. 이후 시뮬레이션으로 조율.</li>
+  </ul>
+  <p>제어 호라이즌 $N_c \le N$을 따로 둬서 $k \ge N_c$ 이후에는 $u_k = u_{k-1}$로 묶으면(input blocking) 변수 수를 더 줄일 수 있습니다.</p>
+
+  <h2>7. 인터랙티브: 1D MPC 위치 추종</h2>
 
   <h2>2. 수신지평선 (Receding Horizon)</h2>
   <figure>
@@ -116,7 +258,7 @@
 
   <p>호라이즌 $N$이 클수록 멀리 내다보지만 계산량이 늘어납니다. $R$이 크면 부드럽게, 작으면 공격적으로 움직입니다.</p>
 
-  <h2>4. 코드 예제 (CasADi)</h2>
+  <h2>8. 코드 예제 (CasADi)</h2>
   <pre><code>import casadi as ca
 import numpy as np
 
@@ -143,7 +285,7 @@ opti.set_value(x0, [0,0]); opti.set_value(ref, 5)
 sol = opti.solve()
 u0 = sol.value(U[0,0])           # 첫 명령만 실제로 적용</code></pre>
 
-  <h2>5. 부드러운 경로 만들기 — Cubic Spline</h2>
+  <h2>9. 부드러운 경로 만들기 — Cubic Spline</h2>
   <p>MPC에 넣을 참조 경로는 보통 몇 개의 웨이포인트(waypoint)로만 주어집니다. 그 사이를 부드럽게 잇는 가장 흔한 방법은 <strong>3차 스플라인</strong>입니다.
   PythonRobotics의 <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/CubicSpline">CubicSpline</a> 모듈이 표준 구현입니다.</p>
   $$ S_i(x) = a_i + b_i(x - x_i) + c_i(x - x_i)^2 + d_i(x - x_i)^3 $$
@@ -208,7 +350,7 @@ u0 = sol.value(U[0,0])           # 첫 명령만 실제로 적용</code></pre>
   })();
   </script>
 
-  <h2>6. iLQR — 큰 비선형 문제의 빠른 해법</h2>
+  <h2>10. iLQR — 큰 비선형 문제의 빠른 해법</h2>
   <p>일반 MPC는 매 스텝 비선형 최적화를 풀어야 해 느릴 수 있습니다. <strong>iterative LQR (iLQR)</strong>은 명목 궤적 주변을 LQR로 선형화한 뒤 반복적으로 개선합니다.
   PythonRobotics의 <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/ModelPredictiveTrajectoryGenerator">ModelPredictiveTrajectoryGenerator</a>가 이런 방식의 한 예입니다.</p>
   <ul>
@@ -218,13 +360,28 @@ u0 = sol.value(U[0,0])           # 첫 명령만 실제로 적용</code></pre>
   </ul>
   <p>비선형 차량 모델에서도 수십 ms 안에 수렴해, 자율주행 차량과 드론에 널리 쓰입니다.</p>
 
-  <h2>7. 배경: LQR (무한 호라이즌, 제약 없음)</h2>
+  <h2>11. 배경: LQR (무한 호라이즌, 제약 없음)</h2>
   <p>MPC의 "조상"은 LQR입니다. 선형 시스템 $x_{k+1} = Ax_k + Bu_k$에 이차 비용 $\sum x^\top Q x + u^\top R u$를 두고 무한 호라이즌으로 풀면, 최적 제어는 단순한 상태 피드백 $u_k = -Kx_k$가 됩니다. 여기서 $K$는 이산 리카티 방정식의 해입니다:</p>
   $$ P = A^\top P A - A^\top P B (R + B^\top P B)^{-1} B^\top P A + Q, \qquad K = (R + B^\top P B)^{-1} B^\top P A $$
   <p>제약이 없고 모델이 선형이면 LQR이 MPC와 같은 답을 줍니다. 즉 MPC는 <em>"제약과 비선형을 다룰 수 있는 LQR"</em>이라고 볼 수 있습니다.</p>
 
-  <h2>8. 더 깊이 공부하기</h2>
+  <h2>12. 응용 사례 — ms부터 days까지</h2>
+  <p>MPC는 다양한 시간 스케일의 시스템에 적용됩니다. Jones/Borrelli/Morari의 ETH 강의노트에 나오는 대표 예시들입니다.</p>
+  <table>
+    <thead><tr><th>시간 스케일</th><th>응용</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>ms</td><td>Ball on Plate, 전력 전자, 드론 자세</td><td>샘플시간 10 ms 이하, 선형 MPC + QP</td></tr>
+      <tr><td>sub-second</td><td>ETH 쿼드콥터 곡예 비행, dNaNo 미니 레이싱카</td><td>비선형 MPC, 하드웨어 실시간 제약</td></tr>
+      <tr><td>초 (s)</td><td>자동차 트랙션·ACC·차선 유지, 로봇 조작</td><td>저장된 맵·예측 궤적을 활용</td></tr>
+      <tr><td>분~시</td><td>건물 난방·냉방(energy-efficient building), 화학 플랜트</td><td>날씨 예보·에너지 가격을 참조 입력으로</td></tr>
+      <tr><td>일~주</td><td>공급망 계획, 전력 계통 디스패치, 인력 배치</td><td>경제 MPC, 확률적 수요 예측</td></tr>
+    </tbody>
+  </table>
+  <p>SAIL 연구실이 직접 다루는 범위는 주로 <strong>sub-second ~ 초 단위</strong>입니다 — 자율수상선(ASV), 자율 차량, 멀티 로봇 시스템에서 안전 보장이 필요한 MPC.</p>
+
+  <h2>13. 더 깊이 공부하기</h2>
   <ul>
+    <li>Jones, Borrelli, Morari, <em>Model Predictive Control — Part I: Introduction</em>, ETH Zürich/UC Berkeley/EPFL 강의노트 2015. 본 강의의 구조와 응용 예시가 이 슬라이드를 크게 참고했습니다.</li>
     <li>Rawlings, Mayne, Diehl, <em>Model Predictive Control: Theory, Computation, and Design</em> (2판, Nob Hill 2020) — <a href="https://sites.engineering.ucsb.edu/~jbraw/mpc/">PDF 공개</a>. MPC 분야의 표준 교과서.</li>
     <li>Borrelli, Bemporad, Morari, <em>Predictive Control for Linear and Hybrid Systems</em>, Cambridge 2017.</li>
     <li>Tedrake, <em>Underactuated Robotics</em> — <a href="https://underactuated.mit.edu/">온라인 교재</a>. LQR, iLQR, 궤적 최적화를 로봇 맥락에서 다룸.</li>
