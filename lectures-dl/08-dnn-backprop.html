@@ -33,13 +33,43 @@
     <li>드롭아웃과 배치정규화</li>
   </ol></div>
 
-  <h2>1. 왜 역전파가 필요한가</h2>
-  <p>신경망의 파라미터 수는 수백만 개. 비용함수의 모든 파라미터에 대한 편미분을 일일이 손으로 구할 수는 없습니다. 다행히 신경망은 함수의 합성이고, 합성함수의 미분은 <strong>연쇄법칙(chain rule)</strong>으로 풀립니다.</p>
+  <h2>1. 왜 역전파가 필요한가 — 수백만 파라미터의 미분</h2>
+  <p>현대 신경망의 파라미터 수는 수백만, 수억, 심지어 수조 개입니다. GPT-3는 1750억 개의 파라미터를 가집니다. 비용함수 $J$가 있을 때, 경사하강법을 쓰려면 <em>각 파라미터에 대한 편미분</em>을 모두 알아야 합니다. 이걸 손으로 구하는 것은 불가능할 뿐 아니라, 순진하게 <em>수치 미분</em>(각 파라미터를 미세하게 바꿔 차이를 보는 방법)으로 계산하면 파라미터 하나당 한 번의 forward pass가 필요해 총 $O(\text{파라미터 수})$번의 계산이 듭니다. 파라미터가 백만 개면 한 업데이트에 백만 번의 forward pass가 필요 — 완전히 비현실적입니다.</p>
+  <p>다행히 신경망은 <em>함수의 합성(composition)</em>이고, 합성함수의 미분은 <strong>연쇄법칙(chain rule)</strong>으로 풀립니다:</p>
   $$ \frac{\partial L}{\partial w} = \frac{\partial L}{\partial y} \cdot \frac{\partial y}{\partial z} \cdot \frac{\partial z}{\partial w} $$
-  <p>이 곱셈을 출력에서 입력으로 거꾸로 흘려보내는 알고리즘이 <strong>역전파</strong>입니다. 1986년 Rumelhart·Hinton·Williams가 대중화했습니다.</p>
+  <p>이 곱셈을 <em>출력층에서 입력층으로 거꾸로 흘려보내는</em> 알고리즘이 <strong>역전파(backpropagation)</strong>입니다. 놀라운 점: 역전파는 파라미터 수에 관계없이 <em>딱 한 번의 backward pass</em>로 모든 편미분을 계산합니다. 시간 복잡도는 forward pass와 동일한 $O(\text{파라미터 수})$. 수치 미분에 비해 정확히 파라미터 수만큼 빨라집니다.</p>
+  <p>역사적으로 역전파는 1960~70년대에 여러 연구자(Bryson & Ho, Linnainmaa, Werbos)가 독립적으로 발견했지만, 신경망 학습에 대중적으로 적용된 것은 1986년 Rumelhart, Hinton, Williams의 Nature 논문 이후입니다. 이 논문은 XOR 같은 문제를 다층 퍼셉트론으로 학습시키는 데 성공했고, <a href="07-mlp.html">W7</a>에서 다룬 첫 번째 AI 겨울을 끝내는 도화선이 되었습니다.</p>
 
-  <h2>2. 기울기 소실</h2>
-  <p>시그모이드의 미분은 최대 0.25입니다. 층이 10개면 미분이 $0.25^{10} \approx 10^{-6}$로 줄어듭니다. 입력층 가까이엔 기울기가 도달조차 못하니 학습이 멈춥니다. 이게 두 번째 AI 겨울의 기술적 원인이었습니다.</p>
+  <h3>1.1 2층 신경망에서 역전파 손으로 유도하기</h3>
+  <p>구체적으로 해봅시다. 입력 $x$, 은닉층 하나, 출력 하나인 단순한 구조를 생각합니다:</p>
+  $$ z_1 = w_1 x + b_1, \quad a_1 = \sigma(z_1) $$
+  $$ z_2 = w_2 a_1 + b_2, \quad \hat y = \sigma(z_2) $$
+  $$ L = \tfrac{1}{2}(\hat y - y)^2 $$
+  <p>Forward pass는 위에서 아래로 — 입력 $x$부터 손실 $L$까지 계산. Backward pass는 아래에서 위로 — $L$부터 각 파라미터까지 편미분 계산.</p>
+  <p><strong>출력층에서 시작</strong>:</p>
+  $$ \frac{\partial L}{\partial \hat y} = \hat y - y $$
+  <p>다음으로 $z_2$에 대한 편미분 (연쇄법칙):</p>
+  $$ \frac{\partial L}{\partial z_2} = \frac{\partial L}{\partial \hat y} \cdot \frac{\partial \hat y}{\partial z_2} = (\hat y - y) \cdot \sigma'(z_2) $$
+  <p>여기서 $\sigma'(z) = \sigma(z)(1 - \sigma(z))$. 이 양을 $\delta_2$로 기록해둡니다 — "출력층의 국소 에러".</p>
+  <p>이제 $w_2, b_2$에 대한 편미분:</p>
+  $$ \frac{\partial L}{\partial w_2} = \delta_2 \cdot a_1, \quad \frac{\partial L}{\partial b_2} = \delta_2 $$
+  <p><strong>은닉층으로 전파</strong>:</p>
+  $$ \frac{\partial L}{\partial a_1} = \delta_2 \cdot w_2 $$
+  $$ \frac{\partial L}{\partial z_1} = \frac{\partial L}{\partial a_1} \cdot \sigma'(z_1) = \delta_2 \cdot w_2 \cdot \sigma'(z_1) $$
+  <p>이걸 $\delta_1$이라 부르고, $w_1, b_1$ 편미분:</p>
+  $$ \frac{\partial L}{\partial w_1} = \delta_1 \cdot x, \quad \frac{\partial L}{\partial b_1} = \delta_1 $$
+  <p>핵심 패턴: 각 층의 "에러 신호" $\delta_l$이 이전 층으로 $\delta_{l-1} = (W_l^\top \delta_l) \cdot \sigma'(z_{l-1})$ 형태로 <em>거꾸로 전파</em>됩니다. 이 재귀적 구조 덕분에 층 수에 관계없이 효율적으로 계산할 수 있고, 현대 자동 미분(autograd) 엔진(PyTorch, JAX, TensorFlow)의 기반입니다.</p>
+
+  <div class="tip">
+    <strong>실전 팁</strong> — 역전파를 구현할 때는 Forward pass 중 중간 값($z_l, a_l$)을 모두 저장해 두어야 Backward pass에서 재사용할 수 있습니다. 이 메모리 비용이 모델 크기의 병목이 되어, 딥러닝에서는 "gradient checkpointing"이라는 기법으로 일부 중간값을 버리고 필요할 때 다시 계산하는 트레이드오프를 씁니다.
+  </div>
+
+  <h2>2. 기울기 소실 — 깊은 망의 죽음</h2>
+  <p>역전파를 알게 되었으니 이제 깊은 신경망을 쉽게 학습할 수 있어야 할 것 같습니다. 그런데 1990년대에 연구자들은 층을 4~5개 이상 쌓으면 학습이 <em>멈추는</em> 이상한 현상을 목격했습니다. 원인은 <strong>기울기 소실(vanishing gradient)</strong>입니다.</p>
+  <p>시그모이드의 미분 $\sigma'(z) = \sigma(z)(1-\sigma(z))$는 $z = 0$에서 최댓값 0.25를 가지고, 양 끝으로 갈수록 0에 가까워집니다. 역전파에서 각 층을 거칠 때마다 이 미분이 곱해지므로, 10층이면 기울기가 $0.25^{10} \approx 10^{-6}$로 줄어듭니다:</p>
+  $$ \frac{\partial L}{\partial w_1} \propto \sigma'(z_n) \cdot \sigma'(z_{n-1}) \cdots \sigma'(z_1) $$
+  <p>입력층 가까이엔 기울기가 사실상 0이 되어 그 층들은 전혀 학습되지 않습니다. 반대 상황인 <strong>기울기 폭발(exploding gradient)</strong>도 존재하는데, 가중치가 너무 크면 곱셈이 기하급수적으로 커져 학습이 발산합니다.</p>
+  <p>이 문제가 1990년대부터 2000년대 중반까지 신경망 연구를 멈춘 주요 기술적 장벽이었습니다. 그래서 이 시기를 "두 번째 AI 겨울"의 일부로 보기도 합니다. 2010년 경 <strong>ReLU</strong>의 도입과 <strong>영리한 초기화</strong>, <strong>배치 정규화</strong>가 차례로 이 문제를 해결하면서 오늘날의 "딥"러닝이 가능해졌습니다.</p>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 깊이별 기울기 크기</h4>
@@ -135,12 +165,30 @@
   })();
   </script>
 
-  <h2>5. 드롭아웃 — 무작위 휴식</h2>
-  <p>학습 중 매 미니배치마다 일부 뉴런을 무작위로 끕니다(예: 50%). 이렇게 하면 한 뉴런이 다른 뉴런에 너무 의존하지 못해 일반화가 좋아집니다. Hinton이 "랜덤 앙상블"이라고 부른 이유.</p>
+  <h2>5. 드롭아웃 — 무작위 휴식으로 일반화 얻기</h2>
+  <p><strong>드롭아웃(Dropout, Srivastava et al. 2014)</strong>은 Geoffrey Hinton이 은행 창구에서 영감을 얻었다고 합니다. "왜 은행원을 자주 바꾸지?"라고 물었더니 "누구든 오랫동안 같은 업무를 맡으면 부정이 생길 가능성이 있다"는 답을 들었답니다. 신경망도 마찬가지입니다. 특정 뉴런이 다른 특정 뉴런에만 지나치게 의존하면 "공모(co-adaptation)"가 일어나 일반화가 나빠집니다.</p>
+  <p>드롭아웃의 해법은 놀랍도록 단순합니다. 학습 중 매 미니배치마다 각 뉴런을 확률 $p$로 끕니다(보통 $p = 0.5$). 꺼진 뉴런은 순전파와 역전파에서 완전히 무시됩니다. 그러면 뉴런은 "언제 누가 꺼질지 모르니 혼자서도 쓸모 있어야 한다"고 배우게 되어, 건강한 중복성을 가진 표현이 형성됩니다.</p>
+  <p>추론(테스트) 시에는 모든 뉴런을 켜되 출력에 $1 - p$를 곱해 평균 활성을 맞춥니다. 실제로는 학습 때 $1/(1-p)$로 미리 스케일링해두는 "inverted dropout"이 표준입니다.</p>
 
-  <h2>6. 배치 정규화</h2>
-  <p>각 층에서 활성값을 미니배치 단위로 다시 표준화합니다. 학습이 빨라지고 학습률을 크게 잡아도 안정적입니다.</p>
-  $$ \hat{x} = \frac{x - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}}, \quad y = \gamma \hat{x} + \beta $$
+  <h3>5.1 드롭아웃이 앙상블인 이유</h3>
+  <p>Hinton은 드롭아웃을 "근사적 앙상블"로 해석했습니다. 네트워크에 $n$개의 뉴런이 있다면 드롭아웃 마스크의 가능한 조합은 $2^n$개. 각 학습 스텝에서 이 중 하나가 선택되는 셈이라, 사실상 $2^n$개의 다른 신경망을 동시에 학습시키고 그 가중 평균을 쓰는 것과 같습니다. 명시적으로 $2^n$개의 모델을 학습하는 것은 불가능하지만, 드롭아웃은 모든 파라미터를 공유하는 형태로 이것을 근사합니다.</p>
+  <p>앙상블은 일반화를 향상시키는 고전적 기법입니다 (<a href="05-classification.html">W5 랜덤포레스트</a>에서 본 것과 같은 아이디어). 드롭아웃은 이 장점을 한 모델 안에서 얻어내는 영리한 트릭입니다.</p>
+
+  <h2>6. 배치 정규화 — 내부 공변량 변화 제어</h2>
+  <p><strong>배치 정규화(Batch Normalization, Ioffe & Szegedy 2015)</strong>는 2015년 이후 거의 모든 딥 컨볼루션 신경망의 표준이 된 기법입니다. 아이디어: 각 층에 들어오는 활성값을 <em>미니배치 단위로 다시 표준화</em>해 분포를 안정시킵니다.</p>
+  $$ \hat{x}_i = \frac{x_i - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}}, \quad y_i = \gamma \hat{x}_i + \beta $$
+  <p>여기서 $\mu_B, \sigma_B^2$은 현재 미니배치의 평균과 분산. 표준화 후 학습 가능한 파라미터 $\gamma, \beta$로 다시 스케일링해 "네트워크가 원하는 분포"를 복원할 여지를 줍니다.</p>
+  <p>왜 효과가 있을까? 원래 저자들은 "내부 공변량 변화(internal covariate shift)" — 학습 중 앞쪽 층이 업데이트되면 뒤쪽 층 입력 분포가 계속 바뀌어 학습이 어려워지는 것 — 를 줄인다고 설명했습니다. 최근 연구는 다른 해석을 제시합니다: 배치 정규화가 <em>손실 지형을 부드럽게</em> 만들어 경사하강법이 더 큰 학습률을 안전하게 쓸 수 있게 한다는 것. 이유가 무엇이든, 실전에서는 다음과 같은 효과를 얻습니다:</p>
+  <ul>
+    <li><strong>학습 속도</strong> — 학습률을 10배 이상 키울 수 있고, 수렴까지 걸리는 에폭이 절반 이하로 줄어듦.</li>
+    <li><strong>초기화에 덜 민감</strong> — 좋은 초기화의 필요성이 줄어듦 (여전히 필요하지만).</li>
+    <li><strong>정규화 효과</strong> — 미니배치마다 미세한 잡음이 들어가 드롭아웃처럼 약한 규제가 됨. 실제로 BN이 있으면 드롭아웃을 뺄 수 있다는 권고가 많음.</li>
+    <li><strong>깊은 망 가능</strong> — BN 덕분에 50층, 100층의 ResNet이 실제로 학습 가능해짐.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>BN vs LN vs GN</strong> — 배치 정규화는 미니배치 크기에 의존적이라 작은 배치에서는 추정이 불안정합니다. 그래서 대안으로 <em>레이어 정규화(LayerNorm)</em>, <em>그룹 정규화(GroupNorm)</em> 등이 제안되었고, Transformer 계열에서는 LayerNorm이 표준입니다. 각자 "무엇을 기준으로 통계를 내는가"가 다릅니다: BN은 배치 차원, LN은 특징 차원, GN은 특징 그룹 차원.
+  </div>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 드롭아웃 마스크 시각화</h4>

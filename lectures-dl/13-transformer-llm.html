@@ -34,18 +34,47 @@
     <li>샘플링과 온도</li>
   </ol></div>
 
-  <h2>1. RNN을 버리다</h2>
-  <p>2017년 구글의 "Attention Is All You Need" 논문은 RNN과 CNN을 모두 버리고 어텐션만으로 시퀀스를 처리하는 모델, <strong>Transformer</strong>를 제안했습니다. 핵심 동기: RNN은 순차적이라 병렬화가 어렵고, 매우 긴 시퀀스를 잘 못 다룹니다. 어텐션은 모든 위치를 한 번에 보면서 GPU에서 완벽히 병렬화됩니다.</p>
-
-  <h2>2. Self-Attention</h2>
-  <p>각 토큰을 세 개의 벡터로 사상합니다.</p>
+  <h2>1. RNN을 버리고 어텐션만 — 2017년의 충격</h2>
+  <p>2017년 6월, 구글 Brain의 Vaswani 등 8명이 발표한 논문 "Attention Is All You Need"는 딥러닝 역사상 가장 큰 파장을 일으킨 논문 중 하나입니다. 제목 그대로 <strong>"어텐션만 있으면 충분하다"</strong> — RNN도, CNN도, 아무것도 필요 없고 <a href="12-rnn-advanced.html">W12 §4 어텐션</a>에서 본 self-attention과 몇 개의 MLP만으로 시퀀스를 처리할 수 있다는 주장을 담고, 이를 실제로 구현한 모델이 바로 <strong>Transformer</strong>입니다.</p>
+  <p>왜 RNN을 버리려 했을까요? 세 가지 핵심 문제가 있었습니다:</p>
   <ul>
-    <li><strong>Query (Q)</strong>: "내가 찾는 것"</li>
-    <li><strong>Key (K)</strong>: "내가 가진 것의 표지"</li>
-    <li><strong>Value (V)</strong>: "내 진짜 내용"</li>
+    <li><strong>병렬화 불가</strong> — RNN은 시점 $t$의 계산이 $t-1$의 결과에 의존하므로 <em>순차적으로만</em> 계산할 수 있습니다. 1000 단어 문장이면 1000번을 줄줄이 해야 함. GPU의 수천 개 코어가 대부분 놀고 있습니다.</li>
+    <li><strong>장거리 의존성의 어려움</strong> — LSTM이 완화는 했지만, 여전히 매우 먼 단어 사이 관계는 약합니다. 각 정보가 여러 LSTM 셀을 거치며 변형됩니다.</li>
+    <li><strong>경로 길이</strong> — 토큰 $i$와 $j$ 사이 정보 교환의 경로 길이가 $O(|i-j|)$. 먼 토큰은 많은 단계를 거쳐야 서로를 "본다".</li>
   </ul>
+  <p>Transformer는 이 모두를 한 번에 해결합니다. Self-attention에서는:</p>
+  <ul>
+    <li><strong>완전 병렬</strong> — 모든 토큰이 모든 토큰과 동시에 상호작용하므로 GPU에서 최적.</li>
+    <li><strong>경로 길이 $O(1)$</strong> — 어떤 두 토큰도 한 번의 어텐션으로 직접 연결. 장거리 의존성이 사라짐.</li>
+    <li><strong>해석 가능</strong> — 어텐션 가중치가 "어떤 단어가 어떤 단어를 보는지"를 직접 보여줌.</li>
+  </ul>
+  <p>대가가 있긴 합니다 — 메모리 사용량이 시퀀스 길이에 $O(n^2)$로 증가합니다. 하지만 GPU 메모리가 빠르게 커지면서 이 한계는 점점 덜 중요해졌고, 최근엔 Flash Attention, sparse attention 같은 기법으로 더 완화되고 있습니다.</p>
+
+  <h2>2. Self-Attention — Q·K·V 삼각관계</h2>
+  <p>Self-attention은 "각 토큰이 나머지 모든 토큰을 참조한다"는 생각을 구현합니다. 구현 방식은 영리합니다. 각 토큰 표현 $x_i$를 세 개의 학습 가능한 행렬로 투영해 세 개의 벡터를 만듭니다:</p>
+  $$ \mathbf q_i = W^Q x_i, \quad \mathbf k_i = W^K x_i, \quad \mathbf v_i = W^V x_i $$
+  <ul>
+    <li><strong>Query $\mathbf q$</strong>: "내가 <em>지금 찾는 것</em>의 특징" — 이 토큰이 궁금해 하는 질문</li>
+    <li><strong>Key $\mathbf k$</strong>: "내가 <em>가진 것의 표지</em>" — 다른 토큰들이 자신을 광고하는 라벨</li>
+    <li><strong>Value $\mathbf v$</strong>: "내 <em>실제 내용</em>" — 매칭되면 전달될 정보 본체</li>
+  </ul>
+  <p>비유하자면, 도서관에서 책을 찾는 장면과 같습니다. 내가 "머신러닝에 관한 책을 찾는다"(Query)고 하면, 각 책의 겉표지에 쓰인 제목·키워드(Key)와 비교해 일치 점수를 매기고, 가장 잘 맞는 책의 실제 내용(Value)을 가져다 읽는 것. Self-attention은 이걸 한 번에 모든 쿼리와 모든 키에 대해 수행합니다.</p>
+  <p>수식으로는 놀랍도록 단순합니다:</p>
   $$ \text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{Q K^\top}{\sqrt{d_k}}\right) V $$
-  <p>$Q K^\top$은 각 토큰이 다른 모든 토큰에 얼마나 "어울리는지" 점수를 만듭니다. 소프트맥스로 가중치로 만든 뒤 V를 가중합합니다. 이 한 줄이 트랜스포머의 모든 것이에요.</p>
+  <p>해체해서 읽어봅시다:</p>
+  <ol>
+    <li>$QK^\top$ — 모든 쿼리와 모든 키의 내적. 결과는 $n \times n$ "유사도 행렬". 셀 $(i, j)$는 "토큰 $i$가 토큰 $j$에 얼마나 관심 있는가".</li>
+    <li>$\div \sqrt{d_k}$ — 키 차원의 제곱근으로 나눔. 왜 이게 필요한지는 아래 §2.1에서.</li>
+    <li>$\text{softmax}$ — 각 행을 확률 분포로 정규화. 토큰 $i$가 다른 토큰들에 얼마나 주의를 줄지 합이 1이 되게.</li>
+    <li>$\cdot V$ — 이 가중치로 Value 벡터들을 가중 평균. 결과는 토큰 $i$의 <em>새 표현</em>.</li>
+  </ol>
+  <p>이 한 줄이 Transformer의 전부이자 최신 LLM의 심장입니다.</p>
+
+  <h3>2.1 왜 $\sqrt{d_k}$로 나누는가</h3>
+  <p>작은 디테일처럼 보이지만 중요합니다. 차원 $d_k$가 크면 $Q$와 $K$의 내적이 큰 분산을 가집니다 (각 원소의 분산이 $O(d_k)$). softmax의 입력이 너무 크면 한 값이 지배해 그래디언트가 거의 0이 됩니다 (softmax가 "날카로워"져서 one-hot에 가까워짐 → 학습 신호 증발). $\sqrt{d_k}$로 나누면 내적의 분산이 $O(1)$로 유지되어 softmax가 부드러운 분포를 만들고 그래디언트가 건강하게 흐릅니다. 작은 수학적 세부지만 이 한 수 없으면 Transformer는 학습이 안 됩니다.</p>
+
+  <h3>2.2 간단한 예시로 Q·K·V 감 잡기</h3>
+  <p>"The cat sat on the mat"라는 6단어 문장을 생각해봅시다. 각 단어가 3차원 임베딩이라고 치고, "cat"이라는 단어의 표현이 self-attention을 통해 어떻게 갱신되는지 상상해봅시다. "cat"의 Query는 "나는 동물이고, 내 행동과 위치가 궁금해"라는 의미를 담을 수 있습니다. 각 단어의 Key는 "sat: 동작이야", "mat: 장소야" 등. 내적하면 "sat"와 "mat"이 높은 점수를 받고, softmax로 가중치가 되어 그들의 Value가 "cat"의 새 표현에 섞입니다. 결과적으로 "cat"은 이제 "자기 자신 + 자기가 한 행동(sat) + 자기가 있는 곳(mat)"의 풍부한 의미를 담은 새 벡터가 됩니다. 이 과정을 모든 토큰이 병렬로 수행.</p>
 
   <div class="demo">
     <h4>🎮 인터랙티브: Self-Attention 행렬</h4>
@@ -97,8 +126,19 @@
   })();
   </script>
 
-  <h2>3. Multi-Head Attention</h2>
-  <p>한 번의 어텐션으로는 한 종류의 관계만 잡습니다. 그래서 Q·K·V를 여러 개의 작은 부분 공간으로 쪼개 동시에 어텐션을 계산하고(예: 8개 헤드), 결과를 이어 붙입니다. 한 헤드는 문법 관계를, 다른 헤드는 공지시(coreference)를 학습할 수 있습니다.</p>
+  <h2>3. Multi-Head Attention — 여러 시점의 앙상블</h2>
+  <p>한 번의 self-attention은 한 종류의 관계만 포착할 수 있습니다. 그런데 언어에는 동시에 여러 층위의 관계가 있습니다:</p>
+  <ul>
+    <li>문법적 관계 (주어-동사 일치)</li>
+    <li>의미적 관계 (who did what to whom)</li>
+    <li>공지시(coreference) — "it"이 가리키는 게 무엇인지</li>
+    <li>담화 관계 — 인과, 대조, 시간 순서</li>
+  </ul>
+  <p>해법은 직관적입니다 — <strong>여러 번의 어텐션을 동시에 돌리자</strong>. 이를 <strong>멀티헤드 어텐션(Multi-Head Attention)</strong>이라 부릅니다. 구체적으로는 Q·K·V를 $h$개의 작은 부분 공간으로 쪼개고 (예: $d = 512, h = 8$이면 각 헤드는 64차원), 각 "헤드"가 독립적으로 attention을 계산합니다:</p>
+  $$ \text{head}_i = \text{Attention}(Q W_i^Q, K W_i^K, V W_i^V) $$
+  $$ \text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \dots, \text{head}_h) W^O $$
+  <p>각 헤드는 다른 투영 행렬을 학습하므로 서로 다른 종류의 관계에 집중하도록 <em>저절로</em> 전문화됩니다. BERT 같은 훈련된 모델의 헤드를 분석해보면, 실제로 어떤 헤드는 주어-동사 관계를, 어떤 헤드는 대명사-선행사 관계를 학습한 것을 확인할 수 있습니다. 이를 "attention head specialization"이라 부르고, Transformer의 해석 가능성 연구의 주요 주제입니다.</p>
+  <p>계산량은 같은데 (헤드가 $h$배 많지만 각 차원은 $1/h$) 표현력은 훨씬 풍부해집니다 — 사실상 공짜 점심입니다.</p>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 멀티헤드 분할</h4>
@@ -132,11 +172,23 @@
   })();
   </script>
 
-  <h2>4. 위치 인코딩</h2>
-  <p>어텐션은 모든 위치를 동시에 보므로 순서를 모릅니다. 이를 알려주려면 각 위치에 고유한 벡터를 더해줍니다. 원논문에서는 사인·코사인 함수를 썼습니다.</p>
+  <h2>4. 위치 인코딩 — 순서를 주입하는 트릭</h2>
+  <p>Self-attention의 아름다운 점은 <em>위치에 대한 편향이 없다</em>는 것입니다. 어떤 토큰이 어디에 있든 상호작용 방식은 동일합니다. 그런데 이게 문제도 됩니다 — "철수가 영희를 때렸다"와 "영희가 철수를 때렸다"는 단어 집합이 같지만 의미가 완전히 다릅니다. 순서 정보가 필요합니다!</p>
+  <p>해법은 단순합니다: <strong>각 위치에 고유한 벡터를 더해주기</strong>. 입력 임베딩 $\mathbf e_i$에 위치 벡터 $\mathbf{PE}_i$를 더해 $\mathbf x_i = \mathbf e_i + \mathbf{PE}_i$를 만들어 Transformer에 넣습니다. 이제 모델은 "같은 단어라도 1번째 위치와 10번째 위치의 표현이 다름"을 알게 됩니다.</p>
+  <p>위치 인코딩을 어떻게 만들까요? 원논문은 <strong>사인·코사인 함수</strong>를 사용했습니다:</p>
   $$ PE_{(pos,2i)} = \sin\!\left(\frac{pos}{10000^{2i/d}}\right), \quad PE_{(pos,2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d}}\right) $$
+  <p>직관적으로 보면, 각 차원마다 서로 다른 주파수의 사인/코사인 파동을 두어 각 위치에 고유한 "지문"을 만듭니다. 낮은 차원은 빠른 주기(이웃 위치 구별), 높은 차원은 느린 주기(멀리 떨어진 위치 구별). 이 선택의 장점:</p>
+  <ul>
+    <li>훈련 데이터에 없었던 긴 시퀀스에도 일반화 가능 (수식으로 계산되니까)</li>
+    <li>두 위치의 상대 거리가 선형 변환으로 표현 가능 — 모델이 "상대적 거리"를 학습하기 쉬움</li>
+  </ul>
+  <p>현대 변형에는 <strong>학습 가능한 위치 임베딩</strong> (BERT), <strong>상대 위치 인코딩</strong> (T5, Transformer-XL), <strong>RoPE (Rotary Position Embedding)</strong> (LLaMA) 등이 있습니다. 특히 RoPE는 최근 대부분의 오픈소스 LLM의 표준이 되었습니다.</p>
 
-  <h2>5. BERT, GPT, 그리고 LLM</h2>
+  <div class="tip">
+    <strong>초보자 오해</strong> — "위치 인코딩이 단순히 1, 2, 3, 4를 더하면 안 되나?" 안 됩니다. 그러면 첫 차원만 사용하게 되고 차원들의 스케일이 맞지 않아 어텐션이 왜곡됩니다. 사인/코사인 방식은 모든 차원에 걸쳐 균형 있는 신호를 분포시킵니다.
+  </div>
+
+  <h2>5. BERT, GPT, 그리고 LLM — Transformer의 두 얼굴</h2>
   <table>
     <thead><tr><th>모델</th><th>구조</th><th>학습 방식</th><th>용도</th></tr></thead>
     <tbody>
@@ -146,7 +198,17 @@
       <tr><td>ChatGPT (2022)</td><td>GPT + RLHF</td><td>사람 피드백 강화학습</td><td>대화</td></tr>
     </tbody>
   </table>
-  <p>모델 크기는 GPT-1의 1억 개에서 GPT-3의 1750억, GPT-4의 추정 1조 개 이상까지 폭발적으로 커졌습니다. 일정 규모를 넘으면 작은 모델에는 없던 능력(few-shot 학습, 추론, 코드 작성)이 갑자기 나타나는 <strong>창발(emergent)</strong> 현상이 관찰됩니다.</p>
+  <h3>5.1 BERT vs GPT — 같은 블록, 다른 목적</h3>
+  <p>둘 다 Transformer 블록을 쌓은 모델이지만 철학이 정반대입니다.</p>
+  <p><strong>BERT (Bidirectional Encoder Representations from Transformers, 2018)</strong>는 인코더 블록만 씁니다. 훈련 방법: 입력의 약 15% 단어를 마스킹하고 그 단어를 맞추게 합니다 (Masked Language Model). 양방향(앞뒤 모두) 컨텍스트를 사용하므로 "이해"에 뛰어납니다 — 감성 분석, 문장 분류, 질문 응답, 개체명 인식에서 2018년 당시 거의 모든 벤치마크를 갱신했습니다.</p>
+  <p><strong>GPT (Generative Pre-trained Transformer, 2018~)</strong>는 디코더 블록만 씁니다 (인코더-디코더 사이 cross-attention 제거). 훈련 방법: 앞 단어들을 보고 다음 단어를 맞추는 단순한 autoregressive language modeling. 단방향(왼쪽에서 오른쪽)이라 "생성"에 뛰어납니다. 왼쪽 문맥으로부터 텍스트를 이어 쓰는 것이 기본 능력.</p>
+  <p>처음엔 BERT가 학계에서 우세했습니다. 하지만 2020년 GPT-3가 1750억 파라미터로 "few-shot learning"을 시연하면서 분위기가 역전되었습니다. 프롬프트에 몇 개의 예시만 주면 재훈련 없이 새 작업을 수행할 수 있다는 것이 입증되었고, 이는 BERT가 재훈련(fine-tuning)을 필요로 하는 것과 대조됩니다. 2022년 ChatGPT가 대중에게 공개되면서 GPT 계열이 NLP의 표준이 되었습니다.</p>
+
+  <h3>5.2 스케일링 법칙 (Scaling Laws)</h3>
+  <p>OpenAI의 2020년 논문 "Scaling Laws for Neural Language Models"는 충격적인 관찰을 발표했습니다. 모델 크기 $N$, 데이터셋 크기 $D$, 계산량 $C$가 커질 때 손실이 다음 멱법칙(power law)을 따른다는 것:</p>
+  $$ L(N) \propto N^{-0.076}, \quad L(D) \propto D^{-0.095}, \quad L(C) \propto C^{-0.050} $$
+  <p>이는 "모델을 계속 크게 만들면 성능이 예측 가능하게 올라간다"는 의미입니다. 그리고 실제로 이 법칙을 따라 GPT-1 → GPT-2 → GPT-3 → GPT-4로 스케일을 키우자 성능이 계속 올랐습니다. 모델 크기는 GPT-1의 1.1억 개에서 GPT-3의 1750억 개, GPT-4의 추정 1조 개 이상까지 폭발적으로 커졌고, 훈련 데이터도 수십 GB에서 수 TB로.</p>
+  <p>더 놀라운 것은 <strong>창발적 능력(emergent abilities)</strong>입니다. 작은 모델에서는 전혀 보이지 않던 능력들 — few-shot 학습, 산술 계산, 추론, 코드 작성 — 이 특정 규모를 넘어가면 <em>갑자기</em> 나타납니다. 이는 단순한 점진적 개선이 아니라 질적 전환으로 보입니다. 왜 이런 현상이 일어나는지는 아직 완전히 설명되지 않았고, 현대 AI 연구의 큰 미스터리입니다.</p>
 
   <h2>6. 샘플링과 온도</h2>
   <p>LLM은 다음 단어의 확률 분포를 출력합니다. 그중 하나를 고르는 방법:</p>
