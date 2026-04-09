@@ -73,9 +73,9 @@
     c.onclick=e=>{const r=c.getBoundingClientRect();pts.push([(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]);};
     document.getElementById('clr').onclick=()=>{pts=[];};
     function fit(d){
-      // X (n x (d+1)), y (n)
+      // X (n x (d+1)), y (n). Normalize x to [0,1] for numerical stability.
       const n=pts.length;if(n<d+1)return null;
-      const X=pts.map(p=>{const r=[];for(let k=0;k<=d;k++)r.push(Math.pow(p[0]/100,k));return r;});
+      const X=pts.map(p=>{const r=[];for(let k=0;k<=d;k++)r.push(Math.pow(p[0]/c.width,k));return r;});
       const Y=pts.map(p=>p[1]);
       // Normal equations: solve (X^T X) b = X^T Y
       const XT=Array.from({length:d+1},(_,i)=>X.map(r=>r[i]));
@@ -102,7 +102,7 @@
       if(beta){
         x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
         for(let xx=0;xx<c.width;xx+=2){
-          let yy=0;const u=xx/100;for(let k=0;k<beta.length;k++)yy+=beta[k]*Math.pow(u,k);
+          let yy=0;const u=xx/c.width;for(let k=0;k<beta.length;k++)yy+=beta[k]*Math.pow(u,k);
           if(xx==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
         }
         x.stroke();
@@ -214,10 +214,10 @@
       x.fillStyle='#666';x.font='11px sans-serif';x.fillText('β₀='+b0.toFixed(2)+' β₁='+b1.toFixed(2)+' L='+loss(b0,b1).toFixed(3),LX,18);
       // right: loss heatmap
       const RX=380,RY=280,W=240,H=200;
-      const step=8;
+      const cell=8;
       let lmin=Infinity,lmax=-Infinity;const vals=[];
-      for(let i=0;i<W;i+=step)for(let j=0;j<H;j+=step){const a=-2+(i/W)*6,b=-2+((H-j)/H)*6;const L=loss(a,b);vals.push([i,j,L]);if(L<lmin)lmin=L;if(L>lmax)lmax=L;}
-      vals.forEach(([i,j,L])=>{const t=Math.min(1,(L-lmin)/(lmax-lmin+1e-9));x.fillStyle='rgba(11,95,255,'+(1-t)*0.6+')';x.fillRect(RX+i,RY-H+j,step,step);});
+      for(let i=0;i<W;i+=cell)for(let j=0;j<H;j+=cell){const a=-2+(i/W)*6,b=-2+((H-j)/H)*6;const L=loss(a,b);vals.push([i,j,L]);if(L<lmin)lmin=L;if(L>lmax)lmax=L;}
+      vals.forEach(([i,j,L])=>{const t=Math.min(1,(L-lmin)/(lmax-lmin+1e-9));x.fillStyle='rgba(11,95,255,'+(1-t)*0.6+')';x.fillRect(RX+i,RY-H+j,cell,cell);});
       x.strokeStyle='#333';x.strokeRect(RX,RY-H,W,H);
       // trajectory
       x.strokeStyle='#ff8c00';x.lineWidth=2;x.beginPath();
