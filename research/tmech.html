@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TMECH 2024 — 운하 자율 항법 NMPC — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="index.html" class="active">연구 소개</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="index.html">← 연구 소개</a></p>
+  <h1 class="page-title">TMECH 2024 — 운하 환경 자율 항법을 위한 장애물 회피 NMPC</h1>
+  <p class="lead">C. Lee, D. Chung, J. Kim, J. Kim, <em>IEEE/ASME Transactions on Mechatronics</em>, 29(3), 1985–1996, June 2024. <a href="https://doi.org/10.1109/TMECH.2023.3312672">DOI: 10.1109/TMECH.2023.3312672</a></p>
+
+  <div class="tip">
+    <strong>한 줄 요약</strong> — 좁은 운하에서 실제 소형 선박이 벽과 부딪히지 않고 자율 주행하도록, LiDAR 점군(point cloud)을 <em>선분(line segment)</em>들로 실시간 파싱해 비선형 MPC의 제약으로 직접 넣는 방법을 제시하고 포항 운하에서 실험으로 검증한 연구.
+  </div>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 운하 항법이 어려운가</li>
+    <li>배경: 선박의 동역학 모델</li>
+    <li>시스템 동정 (System Identification)</li>
+    <li>LiDAR 점군 → 선분 변환</li>
+    <li>NMPC 정식화</li>
+    <li>포항 운하 실험 결과</li>
+    <li>강의 연결 요약</li>
+  </ol></div>
+
+  <h2>1. 왜 운하 항법이 어려운가</h2>
+  <p>자율 선박(ASV, Autonomous Surface Vehicle)의 대부분 기존 연구는 <strong>열린 해역</strong>을 가정합니다. 그러나 실제로 사람이 자주 이용하는 항만, 운하, 수로는 폭이 좁고, 벽이 직선이 아니며, 다른 배가 수시로 나타납니다. 여기서 자율 주행에 필요한 요소는 크게 세 가지입니다:</p>
+  <ul>
+    <li><strong>정확한 동역학 모델</strong> — 저속 선박은 관성이 크고 <em>언더액츄에이티드</em>(가로 방향 제어 없음)여서 사전 모델 없이는 MPC가 발산합니다.</li>
+    <li><strong>실시간 장애물 표현</strong> — 운하 벽은 곡선·돌출부·계단 구조가 섞여 있어 단순한 원·폴리곤으로는 표현이 어렵습니다.</li>
+    <li><strong>계산 효율</strong> — 탑재 컴퓨터에서 10 Hz 이상으로 NMPC를 풀어야 현실적인 반응 속도가 나옵니다.</li>
+  </ul>
+  <p>본 논문은 이 세 요구를 모두 만족시키는 파이프라인을 제시합니다. 배경이 되는 모델링은 <a href="../lectures/02-dynamics.html">L2 운동학과 동역학</a>에서, MPC의 일반적 정식화는 <a href="../lectures/11-mpc.html">L11 MPC</a>에서 설명했던 내용입니다.</p>
+
+  <h2>2. 배경 — 선박의 동역학 모델</h2>
+  <p>저속에서 3자유도(surge, sway, yaw) 선박은 Fossen 표준 모델로 기술됩니다:</p>
+  $$ \dot{\boldsymbol\eta} = R(\psi)\,\boldsymbol\nu, \qquad M\dot{\boldsymbol\nu} + C(\boldsymbol\nu)\boldsymbol\nu + D(\boldsymbol\nu)\boldsymbol\nu = \boldsymbol\tau $$
+  <p>여기서 $\boldsymbol\eta = [x, y, \psi]^\top$은 지구 고정 좌표의 위치와 방위각, $\boldsymbol\nu = [u, v, r]^\top$은 선체 고정 좌표의 전진·횡·요우 속도, $M$은 관성 행렬, $C$는 코리올리 항, $D$는 유체 저항 항, $\boldsymbol\tau$는 제어 입력(프로펠러 추력과 러더).</p>
+  <p>이 식이 복잡해 보이지만 핵심은 <em>입력 2개(추력·러더)로 3개 자유도를 제어</em>해야 하는 언더액츄에이티드 구조입니다. 이는 <a href="../lectures/02-dynamics.html">L2</a>에서 다룬 자전거 모델의 해양 버전이라고 봐도 됩니다.</p>
+
+  <h2>3. 시스템 동정 — 모델을 실험 데이터에서 뽑아내기</h2>
+  <p>위의 이론 모델은 파라미터($M_{ii}$, 감쇠 계수들)가 미지입니다. 저자들은 실제 배에서 다음 두 가지 기동 실험을 수행하고 그 응답으로부터 파라미터를 최적화로 추정했습니다:</p>
+  <ul>
+    <li><strong>가감속 시험(Acceleration-deceleration)</strong> — 전진 방향($u$) 동역학, 주로 감쇠 항 $X_u$, $X_{uu}$ 추정.</li>
+    <li><strong>지그재그 시험(Zig-zag)</strong> — 횡방향과 요우 동역학, $Y_v$, $Y_r$, $N_v$, $N_r$ 등 추정.</li>
+  </ul>
+  <p>추정 절차는 간단히 말해 "실측 궤적과 시뮬레이션 궤적의 오차를 최소화하도록 파라미터를 조율"하는 비선형 최소제곱입니다. 이 단계는 <a href="../lectures/09-regression.html">L9 회귀</a>에서 본 경사하강법의 로봇공학 버전입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 지그재그 시험 감각 익히기</h4>
+    <p>러더를 ±δ로 주기적으로 뒤집으면 배가 S자로 움직입니다. 실제로는 이 궤적이 $Y_v$, $N_r$ 같은 파라미터 식별의 입력이 됩니다.</p>
+    <canvas id="zigzag" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>러더 각 δ (°) <span class="val" id="dV">20</span><input type="range" id="d" min="5" max="40" step="1" value="20"></label>
+      <label>주기 T (s) <span class="val" id="TV">8</span><input type="range" id="T" min="3" max="20" step="1" value="8"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('zigzag');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    let ship={x:60,y:H/2,th:0,u:1.5,r:0},trail=[],t=0;
+    function reset(){ship={x:60,y:H/2,th:0,u:1.5,r:0};trail=[];t=0;}
+    function loop(){
+      const delta=parseFloat(document.getElementById('d').value)*Math.PI/180;
+      const T=parseFloat(document.getElementById('T').value);
+      document.getElementById('dV').textContent=(delta*180/Math.PI).toFixed(0);
+      document.getElementById('TV').textContent=T.toFixed(0);
+      const dt=0.08;
+      const cmd=(Math.floor(t/(T/2))%2===0?1:-1)*delta;
+      // simple surge+yaw: r follows cmd with lag, th integrates r
+      const rDot=(cmd*0.3 - ship.r)*1.2;
+      ship.r+=rDot*dt;
+      ship.th+=ship.r*dt;
+      ship.x+=ship.u*Math.cos(ship.th)*dt*25;
+      ship.y+=ship.u*Math.sin(ship.th)*dt*25;
+      trail.push({x:ship.x,y:ship.y});
+      if(trail.length>400)trail.shift();
+      if(ship.x>W-30)reset();
+      t+=dt;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#e5e7eb';
+      for(let gy=0;gy<H;gy+=30){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      trail.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+      ctx.stroke();
+      ctx.save();ctx.translate(ship.x,ship.y);ctx.rotate(ship.th);
+      ctx.fillStyle='#0742b8';
+      ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(-10,-6);ctx.lineTo(-10,6);ctx.closePath();ctx.fill();
+      ctx.restore();
+      ctx.fillStyle='#555';ctx.font='12px sans-serif';
+      ctx.fillText('러더 명령 = '+(cmd*180/Math.PI).toFixed(0)+'° · 요우율 r = '+ship.r.toFixed(2)+' rad/s',12,22);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. LiDAR 점군 → 선분 (Line Segment) 변환</h2>
+  <p>운하 벽은 수백~수천 개의 LiDAR 점군으로 들어옵니다. 이를 NMPC에 넣으려면 "회피해야 할 집합"을 간결한 수학적 형태로 표현해야 합니다. 저자들이 선택한 것은 <strong>허프 변환(Hough Transform)</strong> 기반 선분 추출입니다.</p>
+  <ol>
+    <li>LiDAR 스캔의 점군을 극좌표에서 허프 공간 $(\rho, \theta)$로 투표.</li>
+    <li>피크를 잡아 직선 후보 생성.</li>
+    <li>각 직선 위에 실제 점군이 모여 있는 구간만 남겨 <em>유한한 선분</em>으로 변환.</li>
+  </ol>
+  <p>그 결과 한 스캔당 수 개에서 수십 개의 선분이 남고, 각 선분은 두 끝점 $(\mathbf{p}_1, \mathbf{p}_2)$만 있으면 됩니다. 이 선분들은 MPC의 볼록 제약(convex constraint)으로 들어가기에 이상적입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 점군에서 선분 후보 찾기 (단순화 버전)</h4>
+    <p>실제 허프 변환 대신, 이 데모는 "가장 많은 점을 지나는 직선"을 RANSAC으로 찾아 보여줍니다. 점 분포를 보고 어떤 선이 나오는지 관찰하세요. 버튼을 누를 때마다 다른 점 분포가 만들어집니다.</p>
+    <canvas id="ransac" width="640" height="280"></canvas>
+    <div class="controls">
+      <button id="ransacNew">새 점군</button>
+      <button id="ransacRun">RANSAC 실행</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ransac');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    let pts=[],line=null;
+    function gen(){
+      pts=[];
+      // two wall-like lines with noise + outliers
+      const a1=0.2,b1=80;
+      const a2=-0.15,b2=230;
+      for(let x=30;x<=W-30;x+=10){
+        if(Math.random()<0.7)pts.push([x+Math.random()*6-3,a1*x+b1+Math.random()*10-5]);
+        if(Math.random()<0.5)pts.push([x+Math.random()*6-3,a2*x+b2+Math.random()*10-5]);
+      }
+      for(let i=0;i<20;i++)pts.push([Math.random()*W,Math.random()*H]);
+      line=null;draw();
+    }
+    function ransac(){
+      let best={inl:-1,a:0,b:0};
+      const TH=6;
+      for(let it=0;it<200;it++){
+        const i=Math.floor(Math.random()*pts.length);
+        const j=Math.floor(Math.random()*pts.length);
+        if(i===j)continue;
+        const [x1,y1]=pts[i],[x2,y2]=pts[j];
+        if(Math.abs(x2-x1)<1e-6)continue;
+        const a=(y2-y1)/(x2-x1),b=y1-a*x1;
+        let inl=0;
+        pts.forEach(([x,y])=>{if(Math.abs(y-(a*x+b))<TH)inl++;});
+        if(inl>best.inl)best={inl,a,b};
+      }
+      line=best;draw();
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#666';
+      pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fill();});
+      if(line){
+        ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(0,line.b);ctx.lineTo(W,line.a*W+line.b);ctx.stroke();
+        ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+        ctx.fillText('인라이어 수: '+line.inl+' / '+pts.length,12,22);
+      }
+    }
+    document.getElementById('ransacNew').addEventListener('click',gen);
+    document.getElementById('ransacRun').addEventListener('click',ransac);
+    gen();
+  })();
+  </script>
+
+  <h2>5. NMPC 정식화</h2>
+  <p>매 샘플 시점에서 풀리는 최적 제어 문제는 다음과 같습니다:</p>
+  $$ \min_{x(\cdot), u(\cdot)} \sum_{i=0}^{N_p-1} \bigl(\|x_i - x_i^\text{ref}\|_Q^2 + \|u_i\|_R^2\bigr) + \|x_{N_p} - x_{N_p}^\text{ref}\|_{Q_f}^2 $$
+  $$ \text{s.t.}\quad x_0 = x_\text{init}, \quad x_{i+1} = f_d(x_i, u_i, p), $$
+  $$ g(u_i) \le 0, \quad h_j(x_i) \ge 0 \text{ (선분 } j\text{ 에 대해)} $$
+  <p>핵심은 <strong>선분 제약</strong> $h_j$입니다. 선분 $j$의 양쪽 점이 $\mathbf{p}_1^{(j)}, \mathbf{p}_2^{(j)}$라면, 선분을 포함하는 직선의 단위 법벡터 $\mathbf{n}_j$와 선분 위의 한 점까지의 부호 있는 거리를 취하면 반평면(half-space) 제약이 만들어집니다:</p>
+  $$ h_j(x_i) = \mathbf{n}_j^\top (\mathbf{p}_{\text{robot},i} - \mathbf{p}_1^{(j)}) - r_\text{safe} \ge 0 $$
+  <p>여기서 $r_\text{safe}$는 선박 크기 + 여유. 이 제약이 <a href="../lectures/08-guidance-cbf.html">L8 CBF</a>의 이산 형태이기도 합니다 (선분마다 하나의 $h$).</p>
+  <p>문제는 볼록 QP가 아닌 비선형 NLP이므로 IPOPT로 풉니다. 자동 미분은 CasADi가 제공합니다. 이 부분은 <a href="../lectures/11-mpc.html">L11 MPC</a> 섹션 8(코드 예제)에서 다룬 CasADi 패턴 그대로입니다.</p>
+
+  <h2>6. 포항 운하 실험</h2>
+  <p>실험 플랫폼은 길이 약 3 m의 소형 크루즈 보트였습니다. 주요 결과:</p>
+  <ul>
+    <li><strong>실시간성</strong> — 호라이즌 $N_p=20$, $\Delta t = 0.5$ s 기준 평균 NMPC 풀이 시간 약 30 ms (즉 30 Hz 이상 가능).</li>
+    <li><strong>추종 정확도</strong> — 참조 경로 대비 평균 횡오차 50 cm 이내, 운하 폭의 10% 수준.</li>
+    <li><strong>안전</strong> — 한 번도 벽과 충돌하지 않음. 선분 제약이 항상 비음수로 유지.</li>
+  </ul>
+  <p>이는 실제 무인 선박이 도시 수로 같은 환경에서 자율 주행하기 위한 파이프라인의 가능성을 보여준 중요한 사례입니다.</p>
+
+  <h2>7. 강의 연결 요약</h2>
+  <table>
+    <thead><tr><th>논문 파트</th><th>관련 강의</th></tr></thead>
+    <tbody>
+      <tr><td>Fossen 동역학, 언더액츄에이티드</td><td><a href="../lectures/02-dynamics.html">L2 동역학</a></td></tr>
+      <tr><td>상태공간 표현, 선형화</td><td><a href="../lectures/03-state-space.html">L3 상태공간</a></td></tr>
+      <tr><td>시스템 동정 (비선형 최소제곱)</td><td><a href="../lectures/09-regression.html">L9 회귀</a> · <a href="../lectures-dl/03-regression-1.html">W3 DL 회귀</a></td></tr>
+      <tr><td>경로 추종과 횡오차</td><td><a href="../lectures/07-feedback-control.html">L7 피드백 제어</a></td></tr>
+      <tr><td>NMPC OCP 정식화</td><td><a href="../lectures/11-mpc.html">L11 MPC</a></td></tr>
+      <tr><td>선분 제약 = 이산 CBF</td><td><a href="../lectures/08-guidance-cbf.html">L8 CBF</a></td></tr>
+    </tbody>
+  </table>
+
+  <h2>📖 원문과 관련 자료</h2>
+  <ul>
+    <li><strong>C. Lee, D. Chung, J. Kim, J. Kim</strong>, "Nonlinear Model Predictive Control With Obstacle Avoidance Constraints for Autonomous Navigation in a Canal Environment", <em>IEEE/ASME Trans. Mechatronics</em>, vol. 29, no. 3, pp. 1985–1996, Jun 2024. <a href="https://doi.org/10.1109/TMECH.2023.3312672">DOI</a></li>
+    <li><strong>Fossen, T. I.</strong>, <em>Handbook of Marine Craft Hydrodynamics and Motion Control</em>, 2판, Wiley 2021 — 본 논문의 동역학 모델 표준 교재.</li>
+    <li><strong>Hough, P.</strong>, "Method and means for recognizing complex patterns", U.S. Patent 3,069,654, 1962 — 허프 변환 원특허.</li>
+    <li><strong>Andersson et al.</strong>, "CasADi", <em>Math. Prog. Computation</em>, 2019 — NMPC 풀이에 사용된 자동 미분 프레임워크.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="index.html"><small>← 목록</small>연구 소개</a>
+    <a href="tcst.html" class="next"><small>다음 논문 →</small>TCST 2024</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

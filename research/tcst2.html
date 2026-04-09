@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TC-CBF 2025 — 비홀로노믹 차량 회피 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="index.html" class="active">연구 소개</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="index.html">← 연구 소개</a></p>
+  <h1 class="page-title">TC-CBF 2025 — 비홀로노믹 차량을 위한 회전원 기반 제어 장벽 함수</h1>
+  <p class="lead">C. Lee, K. Park, J. Kim, 2025 (arXiv:2503.20280). 유니사이클과 자율 수상선(ASV)에서 실제 실험으로 검증.</p>
+
+  <div class="tip">
+    <strong>한 줄 요약</strong> — 기존의 유클리드 거리 기반 CBF는 "얼마나 멀리 있는가"만 보기 때문에 핸들을 못 꺾는 차량에게 비현실적으로 급격한 회피를 요구합니다. 본 논문은 <em>차량의 회전 원(turning circle)</em>까지의 거리를 기반으로 한 새 CBF(TC-CBF)를 제안해, 차량의 기구학적 한계를 자연스럽게 반영한 훨씬 부드러운 회피를 가능하게 합니다.
+  </div>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>문제 제기 — 비홀로노믹 차량과 CBF의 불협화음</li>
+    <li>배경: CBF 복습 (L8과 연결)</li>
+    <li>기존 ED-CBF의 한계</li>
+    <li>핵심 아이디어 — 회전 원까지의 거리</li>
+    <li>TC-CBF의 수식</li>
+    <li>MPC와의 결합</li>
+    <li>실험 결과</li>
+    <li>강의 연결 요약</li>
+  </ol></div>
+
+  <h2>1. 문제 제기</h2>
+  <p>유니사이클·자동차·선박 같은 차량은 <strong>비홀로노믹</strong> 제약이 있습니다. 즉, 어느 방향이든 즉시 움직일 수 있는 게 아니라 "현재 바라보는 방향"으로만 진행하고, 방향을 바꾸려면 유한한 회전 반경이 필요합니다. 이 때문에 "장애물이 10 m 앞에 있다"와 "장애물이 옆에 붙어 있다"는 동일한 거리라도 완전히 다른 회피 난이도를 가집니다.</p>
+  <p>하지만 표준 CBF는 이 차이를 모릅니다. 그래서 기존 연구들은 "안전 마진을 넉넉히 두고, 회피를 급하게 시키면 된다"로 넘어갔는데, 이는 다음 문제를 만듭니다:</p>
+  <ul>
+    <li>필요 이상으로 속도를 줄임 (효율 저하)</li>
+    <li>비현실적 회전율 요구 → 포화(saturation) → 실현불가능(infeasibility)</li>
+    <li>해양 환경처럼 관성이 큰 시스템은 아예 대응 불가</li>
+  </ul>
+
+  <h2>2. 배경 — CBF 복습 (<a href="../lectures/08-guidance-cbf.html">L8</a>과 연결)</h2>
+  <p>CBF는 "안전한 상태 집합" $\mathcal{S} = \{x : h(x) \ge 0\}$을 정의하고, 그 집합을 벗어나지 않는 제어 입력만 허용하는 필터입니다. 핵심 조건(연속시간):</p>
+  $$ \dot h(x, u) + \alpha(h(x)) \ge 0 $$
+  <p>여기서 $\alpha$는 class-K 함수 (가장 흔한 선택: $\alpha(h) = \gamma h$). 이 조건을 만족하면 <strong>forward invariance</strong>가 성립 — 초기에 안전하면 영원히 안전.</p>
+  <p>이 조건은 MPC에 녹일 수 있고, 매 스텝 QP/NLP로 처리됩니다. 자세한 내용은 <a href="../lectures/08-guidance-cbf.html">L8 유도 & CBF</a>와 <a href="../lectures/12-advanced-mpc.html">L12 §12 MPC+CBF</a>에서 다뤘습니다.</p>
+
+  <h2>3. 기존 ED-CBF의 한계</h2>
+  <p>가장 많이 쓰이는 CBF 형태는 <strong>유클리드 거리 기반</strong>(Euclidean Distance CBF, ED-CBF)입니다:</p>
+  $$ h_\text{ED}(x) = \|p - p_\text{obs}\|^2 - (r_\text{safe})^2 $$
+  <p>여기서 $p$는 차량 위치, $p_\text{obs}$는 장애물 중심. 문제는 이 $h$의 그래디언트가 "장애물에서 직선으로 멀어지는 방향"을 가리키지만, 비홀로노믹 차량은 그 방향으로 즉시 움직일 수 없다는 것입니다. 따라서 CBF가 요구하는 $\dot h$를 달성하려면 매우 빠른 회전이 필요하고, 결국 모터 포화 또는 해 없음.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: ED-CBF가 비홀로노믹 차량에 주는 과도한 요구</h4>
+    <p>차량(파랑)이 전진하면서 장애물(빨강) 근처를 지나갑니다. 회전율 한계를 작게 설정할수록, ED-CBF는 실현 불가능한 회피를 요구해 차량이 "갇혀" 멈추는 현상을 볼 수 있습니다.</p>
+    <canvas id="edcbf" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>회전율 한계 rMax <span class="val" id="rV">0.6</span><input type="range" id="rMax" min="0.1" max="2" step="0.05" value="0.6"></label>
+      <label>안전 반경 r <span class="val" id="sV">50</span><input type="range" id="sR" min="20" max="100" step="5" value="50"></label>
+      <button id="edRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('edcbf');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const obs={x:380,y:150,r:0};
+    let car;
+    function reset(){car={x:40,y:150,th:0,v:1.4};}
+    reset();
+    document.getElementById('edRst').addEventListener('click',reset);
+    function loop(){
+      const rMax=parseFloat(document.getElementById('rMax').value);
+      const sR=parseFloat(document.getElementById('sR').value);
+      obs.r=sR;
+      document.getElementById('rV').textContent=rMax.toFixed(2);
+      document.getElementById('sV').textContent=sR.toFixed(0);
+      const dx=car.x-obs.x,dy=car.y-obs.y;
+      const d=Math.hypot(dx,dy);
+      const h=d*d-sR*sR;
+      // nominal: go forward (want uy that maintains heading)
+      let u=0;
+      // CBF: 2*(dx*vx + dy*vy) + gamma*h >= 0
+      const vx=car.v*Math.cos(car.th),vy=car.v*Math.sin(car.th);
+      const gamma=1.0;
+      const hdot=2*(dx*vx+dy*vy);
+      const cond=hdot+gamma*h;
+      if(cond<0 && d<sR*2){
+        // ED-CBF would require turning: approximate needed r (rate)
+        const needed=-cond*0.002;
+        u=Math.sign((dy*vx-dx*vy))*Math.min(rMax,Math.abs(needed));
+      }
+      car.th+=u*0.08;
+      car.x+=vx*0.8;car.y+=vy*0.8;
+      if(car.x>W-20||car.y<20||car.y>H-20)reset();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='rgba(198,40,40,0.15)';
+      ctx.beginPath();ctx.arc(obs.x,obs.y,obs.r,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(obs.x,obs.y,8,0,Math.PI*2);ctx.fill();
+      ctx.save();ctx.translate(car.x,car.y);ctx.rotate(car.th);
+      ctx.fillStyle='#0742b8';
+      ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(-10,-6);ctx.lineTo(-10,6);ctx.closePath();ctx.fill();
+      ctx.restore();
+      ctx.fillStyle='#555';ctx.font='12px sans-serif';
+      ctx.fillText('h = '+h.toFixed(0)+(h<0?' · 충돌!':'' ),12,22);
+      ctx.fillText('요청된 회전 vs rMax',12,40);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 핵심 아이디어 — 회전 원까지의 거리</h2>
+  <p>본 논문의 통찰은 "차량이 장애물을 피하려면 결국 <em>회전 원</em>(turning circle)을 돌아서 나가야 한다"는 기하학적 관찰입니다. 회전 원이란 주어진 속도 $v$와 최대 회전율 $r_\text{max}$로 정상회전했을 때 차량이 그리는 원으로, 반경은 $R = v/r_\text{max}$. 왼쪽 회전과 오른쪽 회전 각각 하나씩이므로 총 두 개의 원.</p>
+  <p>따라서 "회피가 실현 가능한가?"의 진짜 기준은 "장애물이 두 회전 원 중 <em>적어도 하나의 바깥</em>에 있는가?"입니다. 이 관찰을 그대로 CBF의 $h$로 사용합니다:</p>
+  $$ h_\text{TC}(x) = \max\bigl(d_L(x)^2 - (R+r)^2,\; d_R(x)^2 - (R+r)^2\bigr) $$
+  <p>여기서 $d_L, d_R$은 장애물에서 왼쪽·오른쪽 회전 원 중심까지 거리, $R$은 회전 반경, $r$은 장애물 반경 + 안전 여유.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 회전 원과 장애물의 관계</h4>
+    <p>차량(파랑) 왼쪽·오른쪽에 회전 원 두 개가 그려집니다. 장애물(빨강) 위치를 마우스로 옮겨, 언제 "왼쪽으로 회피 가능", "오른쪽으로 회피 가능", "둘 다 불가능"이 되는지 보세요.</p>
+    <canvas id="tccbf" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>회전 반경 R <span class="val" id="RV">80</span><input type="range" id="R" min="30" max="150" step="5" value="80"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tccbf');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const car={x:120,y:200,th:-0.3};
+    let obs={x:380,y:130,r:35};
+    c.addEventListener('mousemove',e=>{
+      const rct=c.getBoundingClientRect();
+      obs.x=(e.clientX-rct.left)*W/rct.width;
+      obs.y=(e.clientY-rct.top)*H/rct.height;
+      draw();
+    });
+    document.getElementById('R').addEventListener('input',draw);
+    function draw(){
+      const R=parseFloat(document.getElementById('R').value);
+      document.getElementById('RV').textContent=R.toFixed(0);
+      // circle centers (perpendicular to heading)
+      const cL={x:car.x+R*Math.cos(car.th+Math.PI/2),y:car.y+R*Math.sin(car.th+Math.PI/2)};
+      const cR={x:car.x+R*Math.cos(car.th-Math.PI/2),y:car.y+R*Math.sin(car.th-Math.PI/2)};
+      const dL=Math.hypot(obs.x-cL.x,obs.y-cL.y)-obs.r;
+      const dR=Math.hypot(obs.x-cR.x,obs.y-cR.y)-obs.r;
+      const leftOK=dL>R;
+      const rightOK=dR>R;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // left circle
+      ctx.strokeStyle=leftOK?'#2e7d32':'#c62828';ctx.lineWidth=2;
+      ctx.setLineDash(leftOK?[]:[4,4]);
+      ctx.beginPath();ctx.arc(cL.x,cL.y,R,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+      // right circle
+      ctx.strokeStyle=rightOK?'#2e7d32':'#c62828';
+      ctx.setLineDash(rightOK?[]:[4,4]);
+      ctx.beginPath();ctx.arc(cR.x,cR.y,R,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+      // obstacle
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(obs.x,obs.y,obs.r,0,Math.PI*2);ctx.fill();
+      // car
+      ctx.save();ctx.translate(car.x,car.y);ctx.rotate(car.th);
+      ctx.fillStyle='#0742b8';
+      ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(-10,-7);ctx.lineTo(-10,7);ctx.closePath();ctx.fill();
+      ctx.restore();
+      // labels
+      ctx.fillStyle='#555';ctx.font='12px sans-serif';
+      ctx.fillText('왼쪽 회피: '+(leftOK?'✓':'✗')+'  오른쪽 회피: '+(rightOK?'✓':'✗'),12,22);
+      ctx.fillText('h_TC = max(d_L, d_R) - R - r = '+Math.max(dL-R,dR-R).toFixed(0),12,40);
+      ctx.fillStyle='#c62828';ctx.fillText('장애물을 마우스로 드래그 — 빨간 점선은 불가능 원',12,H-12);
+    }
+    draw();
+  })();
+  </script>
+
+  <h2>5. TC-CBF의 이산시간 MPC 제약 형태</h2>
+  <p>MPC에 넣기 위해 이산시간으로 변환하면:</p>
+  $$ h_\text{TC}(x_{k+1}) - (1 - \gamma)\,h_\text{TC}(x_k) \ge 0, \quad \gamma \in (0, 1] $$
+  <p>이 부등식이 MPC의 각 스텝 $k = 0, \dots, N-1$에 제약으로 추가됩니다. $\gamma$가 작을수록 보수적(일찍 회피), 크면 공격적(늦게 회피). 기존 ED-CBF와 달리, 회전 반경을 이미 고려했기 때문에 $\gamma$를 크게 해도 실현가능성이 유지됩니다.</p>
+
+  <h2>6. MPC와의 결합</h2>
+  <p>논문이 사용한 MPC는 단순한 이차 비용 + TC-CBF 제약:</p>
+  $$ \min \sum_{k=0}^{N-1} \|x_k - x_k^\text{ref}\|_Q^2 + \|u_k\|_R^2 $$
+  $$ \text{s.t.}\;\; x_{k+1} = f(x_k, u_k), \quad u_k \in \mathcal{U}, \quad h_\text{TC}(x_{k+1}) \ge (1-\gamma) h_\text{TC}(x_k) $$
+  <p>이 구조는 <a href="../lectures/12-advanced-mpc.html">L12 §12 MPC+CBF</a>에서 일반적 틀로 다루었던 결합과 정확히 같습니다. 유일한 차이는 $h$의 정의.</p>
+
+  <h2>7. 실험 결과</h2>
+  <ul>
+    <li><strong>유니사이클 시뮬레이션</strong>: ED-CBF는 정해진 궤적에서 장애물을 돌지 못하고 멈춤. TC-CBF는 자연스럽게 돌아 진행. 평균 속도 유지율 ED-CBF 40% vs TC-CBF 85%.</li>
+    <li><strong>ASV 실험</strong>: 실제 자율 수상선으로 정적·동적 장애물 회피 테스트. TC-CBF가 궤적 길이에서 22% 짧고, 제어 입력 진동이 현저히 적음.</li>
+    <li><strong>MPC 계산 시간</strong>: ED-CBF와 거의 동일(제약 개수만 2배). 실시간 10 Hz로 충분히 동작.</li>
+  </ul>
+
+  <h2>8. 강의 연결 요약</h2>
+  <table>
+    <thead><tr><th>논문 파트</th><th>관련 강의</th></tr></thead>
+    <tbody>
+      <tr><td>비홀로노믹 운동학, 회전 반경</td><td><a href="../lectures/02-dynamics.html">L2 동역학</a></td></tr>
+      <tr><td>Dubins 곡선 (회전+직선 최단경로)</td><td><a href="../lectures/06-path-planning.html">L6 §7 Dubins</a></td></tr>
+      <tr><td>CBF forward invariance</td><td><a href="../lectures/08-guidance-cbf.html">L8 CBF</a></td></tr>
+      <tr><td>이산 CBF와 MPC 결합</td><td><a href="../lectures/12-advanced-mpc.html">L12 §12 MPC+CBF</a></td></tr>
+      <tr><td>비선형 MPC 풀이</td><td><a href="../lectures/11-mpc.html">L11 MPC</a></td></tr>
+    </tbody>
+  </table>
+
+  <h2>📖 원문과 관련 자료</h2>
+  <ul>
+    <li><strong>C. Lee, K. Park, J. Kim</strong>, "Turning Circle-based Control Barrier Function for Efficient Collision Avoidance of Nonholonomic Vehicles", 2025, <a href="https://arxiv.org/abs/2503.20280">arXiv:2503.20280</a>.</li>
+    <li><strong>Ames, Xu, Grizzle, Tabuada</strong>, "Control Barrier Function Based Quadratic Programs for Safety Critical Systems", <em>IEEE TAC</em>, 2017 — CBF의 표준 정식화.</li>
+    <li><strong>Zeng, Zhang, Sreenath</strong>, "Safety-critical Model Predictive Control with Discrete-time Control Barrier Function", <em>ACC</em>, 2021 — 이산 CBF와 MPC 결합 원논문.</li>
+    <li><strong>Dubins, L. E.</strong>, "On curves of minimal length with a constraint on average curvature", <em>Amer. J. Math.</em>, 1957 — 회전 원 개념의 원점.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="tcst.html"><small>← 이전 논문</small>TCST 2024</a>
+    <a href="mech.html" class="next"><small>다음 논문 →</small>MECH 2025</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

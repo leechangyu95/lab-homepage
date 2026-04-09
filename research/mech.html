@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MECH 2025 — COLREGs TC-CBF — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="index.html" class="active">연구 소개</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="index.html">← 연구 소개</a></p>
+  <h1 class="page-title">MECH 2025 — COLREGs 준수 TC-CBF 해상 충돌 회피</h1>
+  <p class="lead">C. Lee, J. Park, J. Kim, 2025 (arXiv:2504.19247). <a href="../research/tcst2.html">TC-CBF</a>를 국제 해상 충돌 예방 규칙(COLREGs)까지 확장한 후속 연구.</p>
+
+  <div class="tip">
+    <strong>한 줄 요약</strong> — 자율 선박이 다른 배와 조우할 때는 단순히 부딪히지 않는 것만으론 부족합니다. 선원들 사이에 <em>약속된 회피 방향</em>(COLREGs 규칙)을 따라야 합니다. 본 논문은 <a href="tcst2.html">TC-CBF</a>에 COLREGs 의무 방향을 자동으로 반영해, 규칙을 지키면서도 여전히 계산 효율이 높은 해상용 CBF를 제안합니다.
+  </div>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>COLREGs란?</li>
+    <li>조우 상황의 3분류</li>
+    <li>기존 방법의 한계</li>
+    <li>핵심 아이디어 — 회전 원 선택 규칙</li>
+    <li>TC-CBF의 COLREGs 확장 수식</li>
+    <li>MPC 통합</li>
+    <li>시뮬레이션 결과</li>
+    <li>강의 연결 요약</li>
+  </ol></div>
+
+  <h2>1. COLREGs — 해상의 교통 법규</h2>
+  <p>COLREGs(International Regulations for Preventing Collisions at Sea, 1972)는 바다에서 선박이 서로 충돌하지 않기 위해 지켜야 할 국제 규정입니다. 자동차의 도로교통법과 비슷한 개념으로, 특히 "누가 어떻게 피해야 하는가"를 명시합니다. 자율 선박이 실제 바다에 나가려면 이 규정을 반드시 따라야 합니다 — 단순히 피하기만 해서는 다른 선장이 예측할 수 없어 혼란과 사고를 초래합니다.</p>
+  <p>핵심 규칙은 Rule 13~17에 정의된 세 가지 조우 상황별 의무입니다:</p>
+
+  <h2>2. 조우 상황의 3분류</h2>
+  <table>
+    <thead><tr><th>규칙</th><th>상황</th><th>나의 의무</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Rule 14</strong> 정면 조우 (Head-on)</td><td>두 배가 서로 마주보고 접근</td><td>서로 <em>우현(오른쪽)</em>으로 변침해 좌현끼리 통과</td></tr>
+      <tr><td><strong>Rule 15</strong> 횡단 (Crossing)</td><td>한 배가 다른 배의 우현 쪽에서 접근</td><td>우현에서 오는 배가 <em>피급 의무</em>(give-way), 통상 우현 변침</td></tr>
+      <tr><td><strong>Rule 13</strong> 추월 (Overtaking)</td><td>뒤에서 더 빠른 배가 따라잡음</td><td>추월하는 배가 피급 의무, 좌우 어느 쪽이든 가능</td></tr>
+    </tbody>
+  </table>
+  <p>즉 일반적으로는 "<strong>우현으로 피해라</strong>"가 대원칙이지만, 추월 같은 예외도 있습니다. 자율 시스템은 상대 선박과의 상대 위치·방위각·속도를 보고 자신이 어떤 상황에 놓였는지 먼저 판단한 뒤, 해당 규칙이 요구하는 방향으로 회피해야 합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 220" xmlns="http://www.w3.org/2000/svg">
+      <!-- Head-on -->
+      <g>
+        <text x="100" y="30" text-anchor="middle" font-size="13" font-weight="bold">Rule 14 정면</text>
+        <circle cx="50" cy="100" r="10" fill="#0b5fff"/><path d="M60,100 L90,100" stroke="#0b5fff" stroke-width="2" marker-end="url(#arrs)"/>
+        <circle cx="150" cy="100" r="10" fill="#c62828"/><path d="M140,100 L110,100" stroke="#c62828" stroke-width="2" marker-end="url(#arrs)"/>
+        <path d="M55,90 Q75,60 85,70" stroke="#2e7d32" stroke-width="2" fill="none" marker-end="url(#arrs)"/>
+        <text x="100" y="180" text-anchor="middle" font-size="11" fill="#1b5e20">→ 우현(오른쪽)으로 피함</text>
+      </g>
+      <!-- Crossing -->
+      <g transform="translate(210,0)">
+        <text x="100" y="30" text-anchor="middle" font-size="13" font-weight="bold">Rule 15 횡단</text>
+        <circle cx="50" cy="120" r="10" fill="#0b5fff"/><path d="M60,120 L100,120" stroke="#0b5fff" stroke-width="2" marker-end="url(#arrs)"/>
+        <circle cx="140" cy="60" r="10" fill="#c62828"/><path d="M140,70 L120,110" stroke="#c62828" stroke-width="2" marker-end="url(#arrs)"/>
+        <path d="M55,110 Q95,80 110,105" stroke="#2e7d32" stroke-width="2" fill="none" marker-end="url(#arrs)"/>
+        <text x="100" y="180" text-anchor="middle" font-size="11" fill="#1b5e20">→ 우현으로 피함 (give-way)</text>
+      </g>
+      <!-- Overtaking -->
+      <g transform="translate(420,0)">
+        <text x="100" y="30" text-anchor="middle" font-size="13" font-weight="bold">Rule 13 추월</text>
+        <circle cx="80" cy="100" r="10" fill="#c62828"/><path d="M90,100 L120,100" stroke="#c62828" stroke-width="2" marker-end="url(#arrs)"/>
+        <circle cx="30" cy="100" r="10" fill="#0b5fff"/><path d="M40,100 L70,100" stroke="#0b5fff" stroke-width="2" marker-end="url(#arrs)"/>
+        <path d="M40,90 Q60,60 90,70" stroke="#2e7d32" stroke-width="2" fill="none" marker-end="url(#arrs)"/>
+        <text x="100" y="180" text-anchor="middle" font-size="11" fill="#1b5e20">→ 좌우 선택 가능</text>
+      </g>
+      <defs><marker id="arrs" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="currentColor"/></marker></defs>
+    </svg>
+    <figcaption>그림. COLREGs 3대 조우 상황. 파란색이 나의 선박, 빨간색이 상대. 초록 화살표가 내가 가야 할 방향.</figcaption>
+  </figure>
+
+  <h2>3. 기존 방법의 한계</h2>
+  <p>이전 연구들은 주로 <strong>Velocity Obstacle (VO)</strong>이나 <strong>유클리드 CBF</strong>를 COLREGs와 합치려 했습니다. 그러나 두 접근 모두 다음 문제를 갖습니다:</p>
+  <ul>
+    <li><strong>VO</strong>: 속도 공간에서 "충돌을 일으키는 속도 집합"을 정의하고 그 밖으로 나가도록 함. COLREGs를 "금지 영역 추가"로 간단히 붙일 수 있지만, 속도 공간 기반이라 <em>회전 한계</em>를 반영하지 못함. 결과적으로 실행 불가능한 명령.</li>
+    <li><strong>유클리드 CBF</strong>: 비홀로노믹 한계를 고려 못함 (<a href="tcst2.html">TCST2</a>에서 이미 다룬 문제). 게다가 회피 방향을 명시적으로 제어하지 못해 COLREGs를 따라가기 어려움.</li>
+  </ul>
+
+  <h2>4. 핵심 아이디어 — 회전 원 선택 규칙</h2>
+  <p>본 논문의 통찰은 간단합니다: <a href="tcst2.html">TC-CBF</a>는 이미 <strong>두 개의 회전 원</strong>(왼쪽/오른쪽)을 사용해 "어느 방향으로 회피할지"를 자연스럽게 내장합니다. 여기에 COLREGs 의무를 반영하려면 단순히 <em>두 원 중 어느 것을 살릴지를 규칙에 따라 선택</em>하면 됩니다:</p>
+  <ul>
+    <li>정면/횡단 → 우현(오른쪽) 회피 → 오른쪽 회전 원만 사용</li>
+    <li>추월 → 양쪽 회전 원 모두 사용 (원래 TC-CBF와 동일)</li>
+  </ul>
+  <p>이 선택은 단순한 논리 조건으로 구현됩니다 — 추가 계산 부담이 거의 없어 원래 TC-CBF의 효율성을 그대로 유지합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 조우 상황별 의무 회피 방향</h4>
+    <p>상대 선박(빨강)의 접근 각도를 슬라이더로 바꾸면, 그 각도에서 COLREGs가 분류하는 상황(정면/횡단/추월)과 TC-CBF가 선택할 회전 원이 자동으로 바뀝니다.</p>
+    <canvas id="colreg" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>상대 접근 방위각 θ (°) <span class="val" id="thV">0</span><input type="range" id="th" min="-180" max="180" step="5" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('colreg');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    function draw(){
+      const th=parseFloat(document.getElementById('th').value)*Math.PI/180;
+      document.getElementById('thV').textContent=(th*180/Math.PI).toFixed(0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=W/2,oy=H/2;
+      // own ship at center, heading right (th_own=0)
+      ctx.save();ctx.translate(ox,oy);
+      // turning circles
+      const R=80;
+      const cL={x:0,y:-R},cR={x:0,y:R};
+      // classify situation by relative bearing
+      const deg=th*180/Math.PI;
+      let rule='',rightOnly=false,bothOK=false;
+      if(Math.abs(deg)<15){rule='Rule 14 정면';rightOnly=true;}
+      else if(deg>15 && deg<112.5){rule='Rule 15 횡단 (우현)';rightOnly=true;}
+      else if(deg<-15 && deg>-112.5){rule='Rule 17 유지 (stand-on)';rightOnly=false;bothOK=true;}
+      else{rule='Rule 13 추월';bothOK=true;}
+      // left circle (green if usable)
+      ctx.strokeStyle=rightOnly?'#c62828':'#2e7d32';
+      ctx.lineWidth=2;
+      ctx.setLineDash(rightOnly?[4,4]:[]);
+      ctx.beginPath();ctx.arc(cL.x,cL.y,R,0,Math.PI*2);ctx.stroke();
+      // right circle (always usable except stand-on)
+      ctx.strokeStyle='#2e7d32';
+      ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(cR.x,cR.y,R,0,Math.PI*2);ctx.stroke();
+      // own ship
+      ctx.fillStyle='#0b5fff';
+      ctx.beginPath();ctx.moveTo(18,0);ctx.lineTo(-12,-8);ctx.lineTo(-12,8);ctx.closePath();ctx.fill();
+      // other ship at angle th, distance 200
+      const dist=200;
+      const ox2=dist*Math.cos(th),oy2=dist*Math.sin(th);
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(ox2,oy2,10,0,Math.PI*2);ctx.fill();
+      // line from own to other
+      ctx.strokeStyle='#aaa';ctx.setLineDash([2,4]);
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(ox2,oy2);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      ctx.fillStyle='#0742b8';ctx.font='bold 14px sans-serif';
+      ctx.fillText(rule,12,28);
+      ctx.fillStyle='#555';ctx.font='12px sans-serif';
+      ctx.fillText('🟢 사용 가능한 회전 원 · 🔴 규칙 위반 → 사용 불가',12,48);
+    }
+    document.getElementById('th').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>5. TC-CBF의 COLREGs 확장 수식</h2>
+  <p>일반 TC-CBF는 왼쪽·오른쪽 회전 원 모두 고려:</p>
+  $$ h_\text{TC}(x) = \max\bigl(h_L(x),\; h_R(x)\bigr) $$
+  <p>COLREGs 확장에서는 상황에 따라 한쪽을 "강제 비활성화"합니다:</p>
+  $$ h_\text{COLREGs}(x) = \begin{cases} h_R(x) & \text{정면·횡단 (우현 변침 의무)}\\ h_L(x) & \text{좌현 변침 규칙 예외}\\ \max(h_L, h_R) & \text{추월·stand-on} \end{cases} $$
+  <p>이렇게 하면 "가능한 회피 중 규칙에 맞는 것만 선택"이 자연스럽게 강제됩니다.</p>
+
+  <h2>6. MPC 통합</h2>
+  <p>MPC 정식화는 <a href="tcst2.html">TC-CBF</a>와 거의 동일하되, CBF만 위 $h_\text{COLREGs}$로 교체합니다:</p>
+  $$ \min \sum_{k=0}^{N-1} \|x_k - x_k^\text{ref}\|_Q^2 + \|u_k\|_R^2 $$
+  $$ \text{s.t.}\;\; x_{k+1} = f(x_k, u_k),\;\; u_k \in \mathcal{U},\;\; h_\text{COLREGs}(x_{k+1}) \ge (1-\gamma)\,h_\text{COLREGs}(x_k) $$
+  <p>상대 선박은 관측된 속도로 상수 속도 예측이 사용되며, 매 샘플 시점에 다시 업데이트됩니다. 이 부분은 <a href="../lectures/04-kalman-1d.html">L4 칼만 필터</a>에서 다룬 상태 추정과 바로 연결됩니다.</p>
+
+  <h2>7. 시뮬레이션 결과</h2>
+  <ul>
+    <li>정면 조우에서 기존 ED-CBF는 양쪽 어느 방향으로든 피함(규칙 위반 가능). 제안 방법은 항상 우현으로 피함(규칙 준수).</li>
+    <li>횡단 상황에서 ED-CBF는 과도한 속도 감소 발생. TC-CBF 기반 제안 방법은 속도 유지율 80%.</li>
+    <li>다수 선박(3척) 동시 조우에서도 각 상대에 대한 개별 CBF 제약으로 확장 가능.</li>
+    <li>계산 시간은 원래 TC-CBF 대비 1.02배 (규칙 판정에 드는 추가 비용이 극미함).</li>
+  </ul>
+
+  <h2>8. 강의 연결 요약</h2>
+  <table>
+    <thead><tr><th>논문 파트</th><th>관련 강의</th></tr></thead>
+    <tbody>
+      <tr><td>선박 운동학과 회전 원</td><td><a href="../lectures/02-dynamics.html">L2 동역학</a></td></tr>
+      <tr><td>상대 선박 상태 예측</td><td><a href="../lectures/04-kalman-1d.html">L4 칼만 필터</a></td></tr>
+      <tr><td>전역/지역 경로의 역할</td><td><a href="../lectures/06-path-planning.html">L6 경로 계획</a></td></tr>
+      <tr><td>CBF forward invariance</td><td><a href="../lectures/08-guidance-cbf.html">L8 유도 & CBF</a></td></tr>
+      <tr><td>TC-CBF (이전 논문)</td><td><a href="tcst2.html">TC-CBF 2025</a></td></tr>
+      <tr><td>MPC+CBF 결합</td><td><a href="../lectures/12-advanced-mpc.html">L12 §12 MPC+CBF</a></td></tr>
+    </tbody>
+  </table>
+
+  <h2>📖 원문과 관련 자료</h2>
+  <ul>
+    <li><strong>C. Lee, J. Park, J. Kim</strong>, "Efficient COLREGs-Compliant Collision Avoidance using Turning Circle-based Control Barrier Function", 2025, <a href="https://arxiv.org/abs/2504.19247">arXiv:2504.19247</a>.</li>
+    <li><strong>IMO</strong>, "Convention on the International Regulations for Preventing Collisions at Sea (COLREGs)", 1972 (개정 2009) — 원 규정 문서.</li>
+    <li><strong>Fiorini & Shiller</strong>, "Motion planning in dynamic environments using velocity obstacles", <em>Int. J. Robotics Research</em>, 1998 — Velocity Obstacle의 원논문.</li>
+    <li><strong>Kuwata et al.</strong>, "Safe Maritime Autonomous Navigation With COLREGS, Using Velocity Obstacles", <em>IEEE J. Oceanic Engineering</em>, 2014 — COLREGs+VO의 대표 선행 연구.</li>
+    <li><strong><a href="tcst2.html">본 연구실 TC-CBF 2025</a></strong> — 본 논문의 직접적인 기반.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="tcst2.html"><small>← 이전 논문</small>TC-CBF 2025</a>
+    <a href="index.html" class="next"><small>마침</small>연구 소개로</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
