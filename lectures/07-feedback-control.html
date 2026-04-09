@@ -19,13 +19,16 @@
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
   <h1 class="page-title">Lecture 7. 피드백 제어 (PID)</h1>
-  <p class="lead">오차를 보고 입력을 조정하는, 가장 널리 쓰이는 제어 방법.</p>
+  <p class="lead">오차를 보고 입력을 조정하는, 가장 널리 쓰이는 제어 방법. PID부터 차량 경로 추종(Pure Pursuit, Stanley)까지.</p>
 
   <div class="toc"><h4>목차</h4><ol>
     <li>개루프 vs 폐루프</li>
-    <li>P, I, D의 의미</li>
-    <li>PID 튜닝 인터랙티브</li>
-    <li>코드 예제</li>
+    <li>PID 제어기 — 각 항의 역할</li>
+    <li>과도응답 지표와 튜닝 규칙</li>
+    <li>인터랙티브: PID 질량-스프링</li>
+    <li>차량 경로 추종: Pure Pursuit</li>
+    <li>차량 경로 추종: Stanley</li>
+    <li>코드 · 더 깊이 공부하기</li>
   </ol></div>
 
   <h2>1. 개루프 vs 폐루프</h2>
@@ -60,6 +63,20 @@
   </ul>
 
   <div class="tip"><strong>튜닝 직감</strong> — $K_p$↑ 빠른 응답·진동↑, $K_i$↑ 정상오차↓·오버슈트↑, $K_d$↑ 진동↓·잡음에 민감.</div>
+
+  <h2>3. 과도응답 지표와 튜닝 규칙</h2>
+  <p>제어기의 성능은 스텝 입력(갑자기 목표가 바뀌는 상황)에 대한 응답 곡선의 네 가지 수치로 표현합니다:</p>
+  <ul>
+    <li><strong>상승 시간 $t_r$ (Rise time)</strong> — 목표의 10%에서 90%까지 올라가는 데 걸리는 시간.</li>
+    <li><strong>최대 오버슈트 $M_p$ (Overshoot)</strong> — 목표를 얼마나 넘어섰는가. 2차 시스템에서 감쇠비 $\zeta$로 결정: $M_p = e^{-\pi\zeta/\sqrt{1-\zeta^2}}$.</li>
+    <li><strong>정착 시간 $t_s$ (Settling time)</strong> — 목표의 ±2% 이내로 들어와 머무는 시간.</li>
+    <li><strong>정상상태 오차 $e_\infty$ (Steady-state error)</strong> — $t\to\infty$에서의 잔여 오차. 타입-1 이상 시스템에서 적분항이 0으로 만듭니다.</li>
+  </ul>
+  <p>실전에서는 <strong>Ziegler-Nichols 한계이득법</strong>이 고전적인 출발점입니다. $K_i = K_d = 0$에서 $K_p$를 지속진동이 생기는 한계값 $K_u$로 높이고, 그때의 주기 $T_u$를 잰 뒤:</p>
+  $$ K_p = 0.6 K_u, \quad K_i = 1.2 K_u / T_u, \quad K_d = 0.075 K_u T_u $$
+  <p>요즘은 이 값을 초기값으로만 쓰고, 시뮬레이션/현장에서 손으로 다듬거나 최적화로 바로 조율합니다.</p>
+
+  <h2>4. 인터랙티브: PID 튜닝</h2>
 
   <div class="demo">
     <h4>🎮 인터랙티브: PID 튜닝 (질량-스프링)</h4>
@@ -120,7 +137,7 @@
     <li>$K_i$ 추가 → 작은 잔류 오차가 사라집니다.</li>
   </ul>
 
-  <h2>3. 코드 예제</h2>
+  <h2>7. 코드 예제 & 더 깊이 공부하기</h2>
   <pre><code>class PID:
     def __init__(self, kp, ki, kd, dt):
         self.kp, self.ki, self.kd, self.dt = kp, ki, kd, dt
@@ -137,12 +154,12 @@
 pid = PID(kp=5, ki=1, kd=2, dt=0.02)
 u = pid.step(ref=1.0, y=current_y)</code></pre>
 
-  <h2>4. 실전: 차량 경로 추종 제어</h2>
+  <h2>5. 실전: 차량 경로 추종 제어</h2>
   <p>PID는 1차원에 좋지만, 자동차가 곡선 경로를 따라가려면 횡방향(좌우) 오차를 핸들 각도로 바꿔주는 전문 제어기가 필요합니다.
   자율주행 분야의 양대 산맥은 <strong>Pure Pursuit</strong>과 <strong>Stanley</strong>입니다.
   둘 다 <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathTracking">PythonRobotics PathTracking</a>에 짧게 구현되어 있습니다.</p>
 
-  <h3>4-1. Pure Pursuit (순수 추적)</h3>
+  <h3>5.1 Pure Pursuit (순수 추적)</h3>
   <p>차량 앞 일정 거리 $L_d$ 떨어진 경로 위 점을 "당근"처럼 바라보고 그쪽으로 핸들을 꺾습니다.</p>
   $$ \delta = \arctan\!\left(\frac{2 L \sin\alpha}{L_d}\right) $$
   <p>$L$은 축거, $\alpha$는 차량 진행 방향과 당근 방향 사이 각도입니다.</p>
@@ -197,7 +214,7 @@ u = pid.step(ref=1.0, y=current_y)</code></pre>
   })();
   </script>
 
-  <h3>4-2. Stanley Controller (Stanford 우승작)</h3>
+  <h3>5.2 Stanley Controller (Stanford 우승작)</h3>
   <p>2005년 DARPA Grand Challenge에서 Stanford의 Stanley가 우승할 때 쓴 알고리즘입니다.
   앞바퀴 위치에서 측정한 <strong>경로 오차 $e$</strong>와 <strong>방향 오차 $\theta_e$</strong>를 합칩니다.</p>
   $$ \delta = \theta_e + \arctan\!\left(\frac{k\, e}{v}\right) $$
@@ -258,6 +275,15 @@ u = pid.step(ref=1.0, y=current_y)</code></pre>
   </script>
 
   <p><strong>비교</strong>: Pure Pursuit은 부드럽지만 코너에서 안쪽으로 깎입니다(컷팅). Stanley는 횡오차에 직접 반응해 더 정확하지만 잡음에 민감합니다. 둘 다 PythonRobotics에 50줄 이내의 짧은 파이썬 코드로 구현돼 있습니다.</p>
+
+  <h2>6. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Åström & Murray, <em>Feedback Systems: An Introduction for Scientists and Engineers</em> (2판, 2021) — <a href="https://fbsbook.org/">온라인 공개</a>. 1~3장이 이 강의의 고급판입니다.</li>
+    <li>Franklin, Powell, Emami-Naeini, <em>Feedback Control of Dynamic Systems</em> — 고전적인 학부 교과서.</li>
+    <li><a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathTracking">PythonRobotics PathTracking</a> — Pure Pursuit, Stanley, LQR, MPC 버전까지 한 곳에 비교.</li>
+    <li>Thrun et al., "Stanley: The robot that won the DARPA Grand Challenge", JFR 2006 — Stanley 원논문.</li>
+    <li>Coulter, "Implementation of the Pure Pursuit Path Tracking Algorithm", CMU Tech Report 1992.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="06-path-planning.html"><small>← 이전</small>L6. 경로 계획</a>
