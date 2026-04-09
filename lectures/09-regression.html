@@ -66,51 +66,93 @@
   </div>
   <script>
   (function(){
-    const c=document.getElementById('reg'),x=c.getContext('2d');
+    const c=document.getElementById('reg');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
     let pts=[];
     for(let i=0;i<10;i++){const xi=60+i*55,yi=300-(80+i*15+(Math.random()-0.5)*60);pts.push([xi,yi]);}
-    c.oncontextmenu=e=>{e.preventDefault();const r=c.getBoundingClientRect();const px=(e.clientX-r.left)*c.width/r.width,py=(e.clientY-r.top)*c.height/r.height;let bi=-1,bd=20;pts.forEach((p,i)=>{const d=Math.hypot(p[0]-px,p[1]-py);if(d<bd){bd=d;bi=i;}});if(bi>=0)pts.splice(bi,1);};
-    c.onclick=e=>{const r=c.getBoundingClientRect();pts.push([(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]);};
-    document.getElementById('clr').onclick=()=>{pts=[];};
-    function fit(d){
-      // X (n x (d+1)), y (n). Normalize x to [0,1] for numerical stability.
-      const n=pts.length;if(n<d+1)return null;
-      const X=pts.map(p=>{const r=[];for(let k=0;k<=d;k++)r.push(Math.pow(p[0]/c.width,k));return r;});
-      const Y=pts.map(p=>p[1]);
-      // Normal equations: solve (X^T X) b = X^T Y
-      const XT=Array.from({length:d+1},(_,i)=>X.map(r=>r[i]));
-      const XTX=XT.map(row=>XT.map(col=>row.reduce((s,_,k)=>s+row[k]*col[k],0)));
-      const XTY=XT.map(row=>row.reduce((s,_,k)=>s+row[k]*Y[k],0));
-      // Gauss-Jordan
+
+    function solve(XTX,XTY,N){
       const A=XTX.map((r,i)=>[...r,XTY[i]]);
-      const N=d+1;
       for(let i=0;i<N;i++){
-        let mx=i;for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;
+        let mx=i;
+        for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;
         [A[i],A[mx]]=[A[mx],A[i]];
-        if(Math.abs(A[i][i])<1e-9)return null;
-        for(let k=0;k<N;k++)if(k!=i){const f=A[k][i]/A[i][i];for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];}
+        if(Math.abs(A[i][i])<1e-12)return null;
+        const piv=A[i][i];
+        for(let j=0;j<=N;j++)A[i][j]/=piv;
+        for(let k=0;k<N;k++){
+          if(k===i)continue;
+          const f=A[k][i];
+          for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];
+        }
       }
-      return A.map((r,i)=>r[N]/r[i][i]);
+      return A.map(r=>r[N]);
     }
-    function loop(){
-      const d=+document.getElementById('d').value;
+    function fit(d){
+      const n=pts.length;
+      if(n<d+1)return null;
+      // Normalize x to [0,1] for numerical stability
+      const X=pts.map(p=>{const r=[];for(let k=0;k<=d;k++)r.push(Math.pow(p[0]/W,k));return r;});
+      const Y=pts.map(p=>p[1]);
+      const m=d+1;
+      const XTX=Array.from({length:m},()=>Array(m).fill(0));
+      const XTY=Array(m).fill(0);
+      for(let i=0;i<m;i++){
+        for(let j=0;j<m;j++){
+          let s=0;for(let k=0;k<n;k++)s+=X[k][i]*X[k][j];
+          XTX[i][j]=s;
+        }
+        let s=0;for(let k=0;k<n;k++)s+=X[k][i]*Y[k];
+        XTY[i]=s;
+      }
+      return solve(XTX,XTY,m);
+    }
+    function draw(){
+      const d=parseInt(document.getElementById('d').value);
       document.getElementById('dV').textContent=d;
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
-      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;
+      for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+      for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
       const beta=fit(d);
       if(beta){
-        x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
-        for(let xx=0;xx<c.width;xx+=2){
-          let yy=0;const u=xx/c.width;for(let k=0;k<beta.length;k++)yy+=beta[k]*Math.pow(u,k);
-          if(xx==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();
+        for(let xx=0;xx<=W;xx+=2){
+          const u=xx/W;
+          let yy=0;
+          for(let k=0;k<beta.length;k++)yy+=beta[k]*Math.pow(u,k);
+          if(xx===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
         }
-        x.stroke();
+        ctx.stroke();
+      }else{
+        ctx.fillStyle='#c62828';ctx.font='13px sans-serif';
+        ctx.fillText('점이 d+1개 이상 필요합니다 (현재 '+pts.length+'개, 필요 '+(d+1)+'개)',20,30);
       }
-      x.fillStyle='#c62828';pts.forEach(p=>{x.beginPath();x.arc(p[0],p[1],4,0,Math.PI*2);x.fill();});
-      requestAnimationFrame(loop);
+      ctx.fillStyle='#c62828';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(p[0],p[1],5,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(p[0],p[1],5,0,Math.PI*2);ctx.stroke();});
     }
-    loop();
+
+    c.addEventListener('click',e=>{
+      const r=c.getBoundingClientRect();
+      pts.push([(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]);
+      draw();
+    });
+    c.addEventListener('contextmenu',e=>{
+      e.preventDefault();
+      const r=c.getBoundingClientRect();
+      const px=(e.clientX-r.left)*W/r.width,py=(e.clientY-r.top)*H/r.height;
+      let bi=-1,bd=25;
+      pts.forEach((p,i)=>{const dd=Math.hypot(p[0]-px,p[1]-py);if(dd<bd){bd=dd;bi=i;}});
+      if(bi>=0){pts.splice(bi,1);draw();}
+    });
+    document.getElementById('d').addEventListener('input',draw);
+    document.getElementById('clr').addEventListener('click',()=>{pts=[];draw();});
+    draw();
   })();
   </script>
 
