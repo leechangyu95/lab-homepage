@@ -298,12 +298,18 @@
     document.getElementById('pfRst').onclick=()=>{robot={x:60,y:300};};
     function force(p){
       const ka=+document.getElementById('ka').value,kr=+document.getElementById('kr').value;
+      // Attractive: F = -ka*(p - goal), scaled so magnitude ~1 at ~20 px away
       let fx=-ka*(p.x-goal.x)*0.05,fy=-ka*(p.y-goal.y)*0.05;
       obs.forEach(o=>{
-        const dx=p.x-o.x,dy=p.y-o.y;const d=Math.hypot(dx,dy);const r0=80;
-        if(d<r0&&d>0.5){
+        const dx=p.x-o.x,dy=p.y-o.y;
+        const dc=Math.hypot(dx,dy);
+        if(dc<0.5)return;
+        const d=Math.max(dc-o.r,0.5); // distance to obstacle SURFACE
+        const r0=60;                   // influence radius from surface
+        if(d<r0){
+          // F_rep = kr*(1/d - 1/r0)/d^2 along the outward radial direction
           const m=kr*(1/d-1/r0)/(d*d);
-          fx+=m*dx/d;fy+=m*dy/d;
+          fx+=m*dx/dc;fy+=m*dy/dc;
         }
       });
       return {fx,fy};
@@ -312,13 +318,16 @@
       ['ka','kr'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
       const f=force(robot);
       const mag=Math.hypot(f.fx,f.fy)||1;
-      robot.x+=f.fx/mag*1.5;robot.y+=f.fy/mag*1.5;
+      // step size proportional to force magnitude but capped — this lets repulsion
+      // actually deflect the trajectory instead of being washed out by normalization
+      const step=Math.min(mag,2);
+      robot.x+=f.fx/mag*step;robot.y+=f.fy/mag*step;
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
       // potential heat
       const STEP=12;
       for(let i=0;i<c.width;i+=STEP)for(let j=0;j<c.height;j+=STEP){
         let U=0.001*((i-goal.x)**2+(j-goal.y)**2);
-        obs.forEach(o=>{const d=Math.hypot(i-o.x,j-o.y);if(d<80&&d>1)U+=300*(1/d-1/80)**2;});
+        obs.forEach(o=>{const dc=Math.hypot(i-o.x,j-o.y);const d=Math.max(dc-o.r,0.5);if(d<60)U+=500*(1/d-1/60)**2;});
         const v=Math.min(1,U/150);
         x.fillStyle='rgba(255,140,0,'+v*0.4+')';x.fillRect(i,j,STEP,STEP);
       }
