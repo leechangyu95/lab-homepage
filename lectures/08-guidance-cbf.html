@@ -23,9 +23,10 @@
 
   <div class="toc"><h4>목차</h4><ol>
     <li>유도(Guidance)란?</li>
-    <li>LOS 경로 추종</li>
-    <li>제어 장벽 함수의 직감</li>
-    <li>인터랙티브 CBF 안전 필터</li>
+    <li>LOS 경로 추종 + 인터랙티브</li>
+    <li>제어 장벽 함수(CBF) 이론</li>
+    <li>CBF 안전 필터 인터랙티브</li>
+    <li>코드 · 더 깊이 공부하기</li>
   </ol></div>
 
   <h2>1. 유도란?</h2>
@@ -34,14 +35,71 @@
   <h2>2. LOS (Line-of-Sight) 경로 추종</h2>
   <p>가장 단순한 유도법: 경로상에서 일정 거리 앞($L_a$)에 가상 목표점을 두고, 그쪽을 바라보도록 조향합니다.</p>
   $$ \delta = \arctan\!\left(\frac{k\, e_\text{ct}}{L_a}\right) $$
-  <p>$e_\text{ct}$는 경로로부터의 직각 거리(cross-track error), $k$는 게인입니다.</p>
+  <p>$e_\text{ct}$는 경로로부터의 직각 거리(cross-track error), $k$는 게인입니다. 해양 자율수상선(ASV)에서는 <strong>enclosure-based LOS</strong> 방식이 표준입니다 — 경로와 일정 반경 원의 교점을 바라봅니다(Fossen).</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: LOS 경로 추종 (직선 경로)</h4>
+    <p>직선 경로(초록)를 향해 선박(파랑)이 LOS로 접근합니다. 전방 주시거리 $L_a$와 게인을 바꿔 횡오차 수렴 속도를 비교해 보세요.</p>
+    <canvas id="los" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>전방 주시 L_a <span class="val" id="laV">60</span><input type="range" id="la" min="20" max="160" value="60"></label>
+      <label>속도 U <span class="val" id="uvV">2</span><input type="range" id="uv" min="0.5" max="4" step="0.1" value="2"></label>
+      <button id="losRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('los'),x=c.getContext('2d');
+    const pA=[40,200],pB=[600,140];
+    let ship;
+    function init(){ship={x:60,y:60,th:0.3};}
+    init();document.getElementById('losRst').onclick=init;
+    function loop(){
+      const La=+document.getElementById('la').value;
+      const U=+document.getElementById('uv').value;
+      ['la','uv'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const tx=pB[0]-pA[0],ty=pB[1]-pA[1],len=Math.hypot(tx,ty);
+      const ex=tx/len,ey=ty/len; // tangent
+      const nx=-ey,ny=ex;         // normal
+      const dx=ship.x-pA[0],dy=ship.y-pA[1];
+      const s=dx*ex+dy*ey;         // along-track
+      const ect=dx*nx+dy*ny;       // cross-track (signed)
+      // LOS point: along-track + La
+      const tgtX=pA[0]+(s+La)*ex, tgtY=pA[1]+(s+La)*ey;
+      const desired=Math.atan2(tgtY-ship.y,tgtX-ship.x);
+      // heading to desired
+      let dth=((desired-ship.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+      ship.th+=Math.max(-0.08,Math.min(0.08,dth*0.15));
+      ship.x+=U*Math.cos(ship.th);ship.y+=U*Math.sin(ship.th);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#2e7d32';x.lineWidth=3;x.beginPath();x.moveTo(pA[0],pA[1]);x.lineTo(pB[0],pB[1]);x.stroke();
+      // LOS target
+      x.fillStyle='#ff8c00';x.beginPath();x.arc(tgtX,tgtY,6,0,Math.PI*2);x.fill();
+      x.strokeStyle='#ff8c00';x.setLineDash([3,3]);x.beginPath();x.moveTo(ship.x,ship.y);x.lineTo(tgtX,tgtY);x.stroke();x.setLineDash([]);
+      // cross-track projection
+      const proj=[pA[0]+s*ex,pA[1]+s*ey];
+      x.strokeStyle='#c62828';x.setLineDash([2,3]);x.beginPath();x.moveTo(ship.x,ship.y);x.lineTo(proj[0],proj[1]);x.stroke();x.setLineDash([]);
+      // ship
+      x.save();x.translate(ship.x,ship.y);x.rotate(ship.th);
+      x.fillStyle='#0b5fff';x.beginPath();x.moveTo(12,0);x.lineTo(-8,-6);x.lineTo(-8,6);x.closePath();x.fill();
+      x.restore();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('횡오차 e_ct = '+ect.toFixed(1)+' px',12,305);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
 
   <h2>3. 제어 장벽 함수 (CBF)</h2>
+  <p>피드백 제어기(PID, Pure Pursuit)는 "얼마나 잘 따라가느냐"를 다루지, "절대 부딪히지 않도록"은 보장하지 못합니다. CBF는 이 간극을 <strong>수학적 안전 인증</strong>으로 메웁니다.</p>
   <p>"안전한 영역"을 함수 $h(x) \ge 0$로 정의해봅시다. 예를 들어 장애물 중심 $(x_o, y_o)$에서 반경 $r$ 안에 들어가지 않으려면:</p>
   $$ h(x) = (x - x_o)^2 + (y - y_o)^2 - r^2 \ge 0 $$
   <p>그리고 이 안전 집합이 "앞으로도 침범되지 않도록" 다음 조건을 강제합니다.</p>
   $$ \dot{h}(x) + \gamma\, h(x) \ge 0 $$
   <p>이 조건을 만족하는 입력 $u$만 허용하면, 장애물에 가까워질수록 $\dot{h}$가 자동으로 커지면서 막아줍니다. 마치 보이지 않는 자기장이 로봇을 밀어내는 것과 같습니다.</p>
+  <p>일반적으로 $\gamma h$ 대신 <strong>class-K 함수</strong> $\alpha(h)$를 씁니다. $\alpha$는 $\alpha(0)=0$이고 순증가 함수이면 무엇이든 가능합니다. 가장 흔한 선택이 $\alpha(h)=\gamma h$이며, $\gamma$가 클수록 장애물에 가까이 갈 수 있도록 허용합니다(공격적).</p>
+  $$ \dot{h}(x, u) + \alpha(h(x)) \ge 0 $$
+  <p><strong>Forward invariance 정리</strong> (Ames et al., 2017): 위 조건을 만족하는 $u$가 매 순간 존재하면, 초기에 $h(x_0)\ge 0$이면 모든 $t\ge 0$에서 $h(x(t))\ge 0$이 보장됩니다. 즉, <em>시작이 안전하면 영원히 안전</em>.</p>
 
   <p>실제로는 다음 QP(Quadratic Program)를 풉니다.</p>
   $$ u^* = \arg\min_u \|u - u_\text{nominal}\|^2 \;\;\text{s.t.}\;\; \dot{h} + \gamma h \ge 0 $$
@@ -103,7 +161,7 @@
 
   <p>$\gamma$가 작으면 매우 일찍 회피하고(보수적), 크면 장애물에 거의 닿을 때까지 직진합니다(공격적). CBF를 끄면 명령을 그대로 따라 충돌합니다.</p>
 
-  <h2>4. 코드 예제 (개념 의사코드)</h2>
+  <h2>5. 코드 예제 (개념 의사코드)</h2>
   <pre><code>import cvxpy as cp
 import numpy as np
 
@@ -117,6 +175,15 @@ def cbf_filter(u_nom, x, obstacles, gamma=1.5):
         constraints.append(hdot + gamma*h >= 0)
     cp.Problem(cp.Minimize(cp.sum_squares(u - u_nom)), constraints).solve()
     return u.value</code></pre>
+
+  <h2>6. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Ames, Xu, Grizzle, Tabuada, "Control Barrier Function based Quadratic Programs for Safety Critical Systems", IEEE TAC 2017 — CBF의 표준 정식화.</li>
+    <li>Ames et al., "Control Barrier Functions: Theory and Applications", ECC 2019 — <a href="https://arxiv.org/abs/1903.11199">튜토리얼 논문</a>.</li>
+    <li>Fossen, <em>Handbook of Marine Craft Hydrodynamics and Motion Control</em>, Wiley 2021 — LOS 유도의 해양 표준 교과서.</li>
+    <li>Breeden, Panagou, "High Relative Degree Control Barrier Functions Under Input Constraints", CDC 2021 — 고차 CBF.</li>
+    <li><a href="https://github.com/HybridRobotics/CBF-CLF-Helper">CBF-CLF-Helper (MATLAB/Python)</a> — Ames 연구실의 오픈소스 툴킷.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="07-feedback-control.html"><small>← 이전</small>L7. 피드백 제어</a>

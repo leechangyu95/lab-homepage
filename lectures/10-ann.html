@@ -35,8 +35,44 @@
   <p>이게 선형 회귀와 무엇이 다를까요? 활성화 함수 $\sigma$가 비선형이라는 점입니다.</p>
 
   <h2>2. 활성화 함수</h2>
-  $$ \text{ReLU: } \sigma(z) = \max(0, z), \quad \text{Sigmoid: } \sigma(z) = \frac{1}{1+e^{-z}} $$
+  $$ \text{ReLU: } \sigma(z) = \max(0, z), \quad \text{Sigmoid: } \sigma(z) = \frac{1}{1+e^{-z}}, \quad \text{Tanh: } \sigma(z) = \tanh z $$
   <p>비선형이 끼어들지 않으면 아무리 많은 층을 쌓아도 결국 하나의 직선과 같습니다. 활성화 함수가 신경망을 강력하게 만듭니다.</p>
+  <ul>
+    <li><strong>ReLU</strong>가 현재 기본값 — 계산이 빠르고 기울기 소실이 적음. 단점: "죽은 뉴런".</li>
+    <li><strong>Sigmoid</strong>는 출력이 (0, 1)이어서 확률 해석 좋지만 깊은 망에서 기울기 소실.</li>
+    <li><strong>Tanh</strong>는 평균이 0이어서 Sigmoid보다 학습이 안정적.</li>
+    <li>현대 변형: <strong>Leaky ReLU, GELU, Swish</strong> 등이 Transformer/ResNet에서 널리 쓰입니다.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 활성화 함수 비교</h4>
+    <p>네 가지 함수의 모양과 기울기를 동시에 확인합니다.</p>
+    <canvas id="acts" width="640" height="260"></canvas>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('acts'),x=c.getContext('2d');
+    const fns=[
+      {name:'ReLU',f:z=>Math.max(0,z),col:'#0b5fff'},
+      {name:'Sigmoid',f:z=>1/(1+Math.exp(-z)),col:'#c62828'},
+      {name:'Tanh',f:z=>Math.tanh(z),col:'#2e7d32'},
+      {name:'Leaky ReLU',f:z=>z>0?z:0.1*z,col:'#f57c00'}
+    ];
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const X0=40,Y0=130,W=560,H=100;
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(X0,Y0);x.lineTo(X0+W,Y0);x.moveTo(X0+W/2,Y0-H);x.lineTo(X0+W/2,Y0+H);x.stroke();
+      fns.forEach((fn,idx)=>{
+        x.strokeStyle=fn.col;x.lineWidth=2;x.beginPath();
+        for(let i=0;i<=W;i+=2){const z=(i-W/2)/30;const v=fn.f(z);const xx=X0+i,yy=Y0-Math.max(-1.5,Math.min(1.5,v))*(H/1.5);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+        x.stroke();
+        x.fillStyle=fn.col;x.fillText(fn.name,X0+10+idx*140,20);
+      });
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('x축: z ∈ [-10,10], y축: σ(z)',X0,250);
+    }
+    draw();
+  })();
+  </script>
 
   <h2>3. 다층 신경망</h2>
   <p>뉴런을 층(layer)으로 쌓으면 임의로 복잡한 함수를 근사할 수 있습니다 (보편 근사 정리).</p>
@@ -162,6 +198,15 @@ for ep in range(2000):
     loss = loss_fn(pred, y)
     opt.zero_grad(); loss.backward(); opt.step()
 print("loss:", loss.item())</code></pre>
+
+  <h2>6. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Goodfellow, Bengio, Courville, <em>Deep Learning</em>, MIT Press 2016 — <a href="https://www.deeplearningbook.org/">온라인 공개</a>. 6장 MLP, 8장 최적화가 이 강의의 심화판.</li>
+    <li>Nielsen, <em>Neural Networks and Deep Learning</em> — <a href="http://neuralnetworksanddeeplearning.com/">무료 온라인 교과서</a>. 역전파를 손으로 유도하는 가장 친절한 자료.</li>
+    <li>Cybenko (1989), "Approximation by superpositions of a sigmoidal function" — 보편 근사 정리의 원논문.</li>
+    <li>Kingma, Ba, "Adam: A method for stochastic optimization", ICLR 2015.</li>
+    <li>He, Zhang, Ren, Sun, "Delving Deep into Rectifiers", ICCV 2015 — ReLU 초기화와 PReLU.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="09-regression.html"><small>← 이전</small>L9. 회귀</a>

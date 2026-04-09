@@ -218,6 +218,20 @@ u0 = sol.value(U[0,0])           # 첫 명령만 실제로 적용</code></pre>
   </ul>
   <p>비선형 차량 모델에서도 수십 ms 안에 수렴해, 자율주행 차량과 드론에 널리 쓰입니다.</p>
 
+  <h2>7. 배경: LQR (무한 호라이즌, 제약 없음)</h2>
+  <p>MPC의 "조상"은 LQR입니다. 선형 시스템 $x_{k+1} = Ax_k + Bu_k$에 이차 비용 $\sum x^\top Q x + u^\top R u$를 두고 무한 호라이즌으로 풀면, 최적 제어는 단순한 상태 피드백 $u_k = -Kx_k$가 됩니다. 여기서 $K$는 이산 리카티 방정식의 해입니다:</p>
+  $$ P = A^\top P A - A^\top P B (R + B^\top P B)^{-1} B^\top P A + Q, \qquad K = (R + B^\top P B)^{-1} B^\top P A $$
+  <p>제약이 없고 모델이 선형이면 LQR이 MPC와 같은 답을 줍니다. 즉 MPC는 <em>"제약과 비선형을 다룰 수 있는 LQR"</em>이라고 볼 수 있습니다.</p>
+
+  <h2>8. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Rawlings, Mayne, Diehl, <em>Model Predictive Control: Theory, Computation, and Design</em> (2판, Nob Hill 2020) — <a href="https://sites.engineering.ucsb.edu/~jbraw/mpc/">PDF 공개</a>. MPC 분야의 표준 교과서.</li>
+    <li>Borrelli, Bemporad, Morari, <em>Predictive Control for Linear and Hybrid Systems</em>, Cambridge 2017.</li>
+    <li>Tedrake, <em>Underactuated Robotics</em> — <a href="https://underactuated.mit.edu/">온라인 교재</a>. LQR, iLQR, 궤적 최적화를 로봇 맥락에서 다룸.</li>
+    <li>Andersson et al., "CasADi: a software framework for nonlinear optimization and optimal control", Math. Prog. Comp. 2019.</li>
+    <li><a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathTracking/model_predictive_speed_and_steer_control">PythonRobotics MPC 차량 추종</a> — 100줄 남짓한 CasADi 예제.</li>
+  </ul>
+
   <nav class="prevnext">
     <a href="10-ann.html"><small>← 이전</small>L10. ANN</a>
     <a href="12-advanced-mpc.html" class="next"><small>다음 →</small>L12. MPC 고급</a>
