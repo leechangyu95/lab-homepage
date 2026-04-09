@@ -19,40 +19,68 @@
 <main class="wrap">
   <p style="color:var(--muted);font-size:13px"><a href="../index.html">← 강의 목록</a></p>
   <h1 class="page-title">Lecture 6. 경로 계획</h1>
-  <p class="lead">출발점에서 목표점까지, 장애물을 피해 가는 길을 찾는 알고리즘.</p>
+  <p class="lead">출발점에서 목표점까지, 장애물을 피해 가는 길을 찾는 알고리즘. 전역 경로(global path)와 지역 경로(local path), 그리고 그래프 탐색과 샘플링 기반 기법까지.</p>
 
   <div class="toc"><h4>목차</h4><ol>
-    <li>그래프 탐색의 기초</li>
-    <li>BFS · Dijkstra · A*</li>
-    <li>샘플링 기반: PRM, RRT</li>
-    <li>인터랙티브 A* 데모</li>
+    <li>경로 계획이란? — 전역/지역/추종</li>
+    <li>그래프 표현과 탐색 전략</li>
+    <li>BFS · Dijkstra · Greedy · A* 비교</li>
+    <li>인터랙티브: 네 알고리즘 동시 비교</li>
+    <li>샘플링 기반: PRM, RRT, RRT*</li>
+    <li>인공 포텐셜 필드</li>
+    <li>Dubins 곡선 — 운동학적 제약</li>
+    <li>코드 예제 · 더 깊이 공부하기</li>
   </ol></div>
 
-  <h2>1. 그래프 탐색의 기초</h2>
-  <p>지도를 격자(grid)로 잘라 각 칸을 <strong>노드(node)</strong>, 인접 칸 사이를 <strong>엣지(edge)</strong>로 보면 경로 찾기는 그래프 탐색 문제가 됩니다.</p>
+  <h2>1. 경로 계획이란?</h2>
+  <p>모바일 로봇이 "어디로 갈지"를 정하는 문제입니다. 실제 시스템은 보통 세 층으로 나뉘어 돌아갑니다:</p>
+  <ul>
+    <li><strong>전역 경로 (Global path)</strong> — 전체 지도에서 출발점→목표점까지 큰 그림의 경로. 계산이 느려도 괜찮지만 장애물 정보가 정확해야 합니다. (예: A*)</li>
+    <li><strong>지역 경로 (Local path)</strong> — 전역 경로 일부 구간에서 새로 발견된 장애물을 피하는 단기 재계획. 빠른 반응이 중요합니다. (예: DWA, TEB)</li>
+    <li><strong>추종 제어 (Tracking control)</strong> — 경로를 따라가도록 바퀴·모터에 명령을 내리는 제어기. 다음 강의 L7·L8에서 다룹니다.</li>
+  </ul>
+  <p>이 강의에서는 전역 경로 계획의 두 축인 <em>그래프 탐색</em>과 <em>샘플링 기반 방법</em>을 모두 살펴봅니다.</p>
 
-  <h2>2. 세 가지 대표 알고리즘</h2>
+  <h2>2. 그래프 표현과 탐색 전략</h2>
+  <p>지도를 격자(grid)로 잘라 각 칸을 <strong>노드(node)</strong>, 인접 칸 사이를 <strong>엣지(edge)</strong>로 보면 경로 찾기는 그래프 탐색 문제가 됩니다. 엣지에는 이동 비용 $w$가 붙고, 목표는 비용 합이 최소가 되는 노드 순서를 찾는 것입니다.</p>
+  <p>탐색 전략은 크게 두 가지로 나뉩니다:</p>
+  <ul>
+    <li><strong>무정보 탐색 (Uninformed / blind)</strong> — 목표의 위치를 전혀 사용하지 않고 기계적으로 확장. BFS, Dijkstra.</li>
+    <li><strong>정보 기반 탐색 (Informed / heuristic)</strong> — "여기서 목표까지 얼마나 남았을지"의 추정값 $h(n)$을 활용. Greedy Best-First, A*, D*.</li>
+  </ul>
+  <p>A*의 핵심 평가함수는 다음과 같습니다:</p>
+  $$ f(n) = \underbrace{g(n)}_{\text{시작에서 } n \text{까지 실제 비용}} + \underbrace{h(n)}_{\text{} n \text{에서 목표까지 추정 비용}} $$
+  <p><strong>Admissibility</strong>: $h(n)$이 실제 최소 비용을 과대평가하지 않으면($h(n) \le h^*(n)$) A*는 최적해를 보장합니다. 유클리드·맨해튼 거리 모두 admissible 휴리스틱의 대표 예입니다.</p>
+  $$ h_\text{euclid}(n) = \sqrt{(x_g-x_n)^2 + (y_g-y_n)^2} \qquad h_\text{manhattan}(n) = |x_g-x_n| + |y_g-y_n| $$
+
+  <h2>3. 네 알고리즘의 비교</h2>
   <table>
-    <thead><tr><th>알고리즘</th><th>아이디어</th><th>최단경로?</th><th>속도</th></tr></thead>
+    <thead><tr><th>알고리즘</th><th>우선순위</th><th>최단경로?</th><th>탐색 영역</th></tr></thead>
     <tbody>
-      <tr><td>BFS</td><td>가까운 곳부터 골고루 퍼짐</td><td>○ (가중치=1일 때)</td><td>느림</td></tr>
-      <tr><td>Dijkstra</td><td>지금까지의 누적 비용이 작은 노드 우선</td><td>○</td><td>중간</td></tr>
-      <tr><td>A*</td><td>$f(n) = g(n) + h(n)$, 목표 방향으로 우선 탐색</td><td>○ (h가 admissible 일 때)</td><td>빠름</td></tr>
+      <tr><td>BFS</td><td>깊이(step 수)</td><td>○ (가중치=1일 때)</td><td>원형으로 균일 확산</td></tr>
+      <tr><td>Dijkstra</td><td>$g(n)$</td><td>○</td><td>가까운 쪽 원형 확산</td></tr>
+      <tr><td>Greedy Best-First</td><td>$h(n)$</td><td>✗</td><td>목표 방향으로 직진 (장애물에 약함)</td></tr>
+      <tr><td>A*</td><td>$f(n) = g(n)+h(n)$</td><td>○ (admissible $h$)</td><td>목표 방향 집중 (좁고 효율적)</td></tr>
     </tbody>
   </table>
 
-  <p>A*의 핵심은 휴리스틱 $h(n)$입니다. "여기서 목표까지 대략 얼마나 남았을까"의 추정값입니다.</p>
-  $$ h_\text{euclid}(n) = \sqrt{(x_g-x_n)^2 + (y_g-y_n)^2} $$
-  $$ h_\text{manhattan}(n) = |x_g-x_n| + |y_g-y_n| $$
-
+  <h2>4. 인터랙티브: 네 알고리즘 동시 비교</h2>
   <div class="demo">
-    <h4>🎮 인터랙티브: A* 격자 탐색</h4>
-    <p>격자를 클릭해 장애물(검정)을 그린 뒤 <strong>Run A*</strong>를 누르세요. 탐색 영역(연파랑)과 최종 경로(파랑)가 표시됩니다.</p>
+    <h4>🎮 알고리즘 선택 A* / Dijkstra / BFS / Greedy</h4>
+    <p>같은 지도에서 네 알고리즘이 <strong>얼마나 많은 노드를 방문하는지</strong>를 직접 비교해 보세요. 격자를 클릭/드래그하여 장애물을 그리고, 모드를 바꾼 뒤 <strong>Run</strong>을 누르세요.</p>
     <canvas id="astar" width="640" height="400"></canvas>
     <div class="controls">
-      <button id="run">Run A*</button>
+      <label>알고리즘
+        <select id="mode">
+          <option value="astar">A*</option>
+          <option value="dij">Dijkstra</option>
+          <option value="bfs">BFS</option>
+          <option value="greedy">Greedy Best-First</option>
+        </select>
+      </label>
+      <button id="run">Run</button>
       <button id="clr" class="alt">장애물 지우기</button>
-      <span style="font-size:12px;color:#666">🟢 시작 &nbsp; 🔴 목표 &nbsp; ⬛ 장애물</span>
+      <span id="stats" style="font-size:12px;color:#666">🟢 시작 &nbsp; 🔴 목표 &nbsp; ⬛ 장애물</span>
     </div>
   </div>
   <script>
@@ -75,18 +103,17 @@
       x.fillStyle='#2e7d32';x.fillRect(start[0]*SZ,start[1]*SZ,SZ-1,SZ-1);
       x.fillStyle='#c62828';x.fillRect(goal[0]*SZ,goal[1]*SZ,SZ-1,SZ-1);
     }
-    c.onmousedown=e=>{
-      const r=c.getBoundingClientRect();
-      const j=Math.floor((e.clientX-r.left)*c.width/r.width/SZ);
-      const i=Math.floor((e.clientY-r.top)*c.height/r.height/SZ);
-      if(i<0||i>=H||j<0||j>=W)return;
-      if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1]))return;
-      grid[i][j]=1-grid[i][j];draw();
-    };
-    function astar(){
+    let drag=false,dragVal=1;
+    function cellOf(e){const r=c.getBoundingClientRect();return [Math.floor((e.clientX-r.left)*c.width/r.width/SZ),Math.floor((e.clientY-r.top)*c.height/r.height/SZ)];}
+    c.onmousedown=e=>{const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W)return;if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1]))return;dragVal=1-grid[i][j];grid[i][j]=dragVal;drag=true;draw();};
+    c.onmousemove=e=>{if(!drag)return;const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W)return;if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1]))return;grid[i][j]=dragVal;draw();};
+    window.addEventListener('mouseup',()=>{drag=false;});
+    function search(){
       visited=new Set();path=[];
+      const mode=document.getElementById('mode').value;
       const h=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
-      const open=[{p:start,g:0,f:h(start,goal),parent:null}];
+      const prio=(g,hv)=>mode==='bfs'?g:mode==='dij'?g:mode==='greedy'?hv:g+hv;
+      const open=[{p:start,g:0,f:prio(0,h(start,goal)),parent:null}];
       const closed={};
       while(open.length){
         open.sort((a,b)=>a.f-b.f);
@@ -101,13 +128,15 @@
         for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
           const nx=cur.p[0]+dx,ny=cur.p[1]+dy;
           if(nx<0||ny<0||nx>=W||ny>=H||grid[ny][nx])continue;
-          const ng=cur.g+Math.hypot(dx,dy);
-          open.push({p:[nx,ny],g:ng,f:ng+h([nx,ny],goal),parent:cur});
+          const stepC=mode==='bfs'?1:Math.hypot(dx,dy);
+          const ng=cur.g+stepC;
+          open.push({p:[nx,ny],g:ng,f:prio(ng,h([nx,ny],goal)),parent:cur});
         }
       }
+      document.getElementById('stats').textContent='방문 '+visited.size+' 노드 · 경로 길이 '+path.length;
       draw();
     }
-    document.getElementById('run').onclick=astar;
+    document.getElementById('run').onclick=search;
     document.getElementById('clr').onclick=()=>{grid=Array.from({length:H},()=>Array(W).fill(0));visited=new Set();path=[];draw();};
     // initial obstacles
     for(let i=4;i<16;i++){grid[i][12]=1;grid[i][20]=1;}
@@ -115,8 +144,71 @@
   })();
   </script>
 
-  <h2>3. 샘플링 기반: RRT</h2>
-  <p>격자가 아닌 연속 공간에서 장애물이 복잡하면 RRT(Rapidly-exploring Random Tree)가 효과적입니다.</p>
+  <h2>5. 샘플링 기반: PRM과 RRT</h2>
+  <p>격자가 아닌 연속 공간에서 장애물이 복잡하면 그래프 탐색 대신 <strong>공간을 무작위로 샘플링</strong>해 그래프를 만드는 편이 훨씬 효율적입니다. 대표 기법은 두 가지입니다:</p>
+  <ul>
+    <li><strong>PRM (Probabilistic Roadmap)</strong> — 전체 공간에서 유효한 점들을 다수 뽑고, 가까운 점끼리 연결해 로드맵을 만든 뒤 그 위에서 A*로 경로를 찾습니다. <em>다회 질의</em>에 유리(지도가 고정이면 로드맵 재사용).</li>
+    <li><strong>RRT (Rapidly-exploring Random Tree)</strong> — 트리를 한 노드씩 빠르게 자라게 해서 <em>한 번의 질의</em>에 유리.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: PRM 로드맵</h4>
+    <p>점을 뽑고(샘플링), 반경 $r$ 안의 점들과 장애물을 피해 연결합니다. 그 후 시작→목표 최단 경로를 Dijkstra로 찾습니다.</p>
+    <canvas id="prm" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>샘플 수 <span class="val" id="nsV">80</span><input type="range" id="ns" min="20" max="200" value="80"></label>
+      <label>연결 반경 r <span class="val" id="rrV">90</span><input type="range" id="rr" min="40" max="160" value="90"></label>
+      <button id="prmGen">다시 샘플</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('prm'),x=c.getContext('2d');
+    const obs=[{x:220,y:140,r:40},{x:380,y:230,r:50},{x:470,y:120,r:30},{x:300,y:70,r:25}];
+    const S=[40,40],G=[600,340];
+    let nodes=[],edges=[],path=[];
+    function collide(p){return obs.some(o=>(o.x-p[0])**2+(o.y-p[1])**2<(o.r+4)*(o.r+4));}
+    function lineCol(a,b){const N=12;for(let i=0;i<=N;i++){const p=[a[0]+(b[0]-a[0])*i/N,a[1]+(b[1]-a[1])*i/N];if(collide(p))return true;}return false;}
+    function gen(){
+      const N=+document.getElementById('ns').value;
+      const r=+document.getElementById('rr').value;
+      nodes=[S,G];edges=[];
+      for(let i=0;i<N;i++){const p=[Math.random()*c.width,Math.random()*c.height];if(!collide(p))nodes.push(p);}
+      for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+        const d=Math.hypot(nodes[i][0]-nodes[j][0],nodes[i][1]-nodes[j][1]);
+        if(d<r&&!lineCol(nodes[i],nodes[j]))edges.push([i,j,d]);
+      }
+      // Dijkstra from 0 to 1
+      const dist=Array(nodes.length).fill(Infinity),prev=Array(nodes.length).fill(-1);
+      dist[0]=0;const Q=new Set(nodes.map((_,i)=>i));
+      const adj=Array.from({length:nodes.length},()=>[]);
+      edges.forEach(([a,b,d])=>{adj[a].push([b,d]);adj[b].push([a,d]);});
+      while(Q.size){let u=-1,m=Infinity;Q.forEach(i=>{if(dist[i]<m){m=dist[i];u=i;}});if(u<0||u===1)break;Q.delete(u);
+        adj[u].forEach(([v,w])=>{if(Q.has(v)&&dist[u]+w<dist[v]){dist[v]=dist[u]+w;prev[v]=u;}});}
+      path=[];let u=1;while(u>=0){path.push(nodes[u]);u=prev[u];}
+    }
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#cfd8e3';x.lineWidth=1;edges.forEach(([a,b])=>{x.beginPath();x.moveTo(nodes[a][0],nodes[a][1]);x.lineTo(nodes[b][0],nodes[b][1]);x.stroke();});
+      x.fillStyle='#0b5fff';nodes.forEach(p=>{x.beginPath();x.arc(p[0],p[1],2.5,0,Math.PI*2);x.fill();});
+      if(path.length>1&&path[path.length-1][0]===S[0]){
+        x.strokeStyle='#ff8c00';x.lineWidth=3;x.beginPath();path.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      }
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(S[0],S[1],8,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(G[0],G[1],10,0,Math.PI*2);x.fill();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('노드 '+nodes.length+' · 엣지 '+edges.length+(path.length>1&&path[path.length-1][0]===S[0]?' · 경로 발견 ✓':' · 경로 없음'),12,370);
+    }
+    function up(){['ns','rr'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);}
+    document.getElementById('prmGen').onclick=()=>{gen();draw();up();};
+    document.getElementById('ns').oninput=up;document.getElementById('rr').oninput=up;
+    gen();draw();up();
+  })();
+  </script>
+
+  <h3>5.1 RRT — 트리 성장형</h3>
+  <p>RRT는 트리를 점점 자라게 해서 빠르게 장애물 공간을 탐색합니다.</p>
   <ol>
     <li>공간에서 랜덤 점 $q_\text{rand}$를 뽑습니다.</li>
     <li>현재 트리에서 가장 가까운 노드 $q_\text{near}$를 찾습니다.</li>
@@ -181,7 +273,7 @@
   })();
   </script>
 
-  <h2>4. 인공 포텐셜 필드 (Artificial Potential Field)</h2>
+  <h2>6. 인공 포텐셜 필드 (Artificial Potential Field)</h2>
   <p>로봇을 <strong>전기를 띤 입자</strong>로 가정해, 목표점에서 끌어당기는 힘과 장애물에서 미는 힘을 합성한 방향으로 움직입니다.
   PythonRobotics의 <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/PotentialFieldPlanning">Potential Field</a> 구현을 참고했습니다.</p>
   $$ U(x) = \underbrace{\tfrac12 k_a \|x - x_g\|^2}_{\text{인력}} + \underbrace{\sum_o \tfrac12 k_r \left(\tfrac{1}{d(x,o)} - \tfrac{1}{d_0}\right)^2}_{\text{척력}} $$
@@ -239,7 +331,7 @@
   })();
   </script>
 
-  <h2>5. Dubins 곡선 — 최소 회전 반경</h2>
+  <h2>7. Dubins 곡선 — 운동학적 제약</h2>
   <p>자동차나 비행기는 제자리 회전을 못합니다. 최소 회전 반경 $R$이 정해져 있죠. 두 자세(위치+방향) 사이의 가장 짧은 경로는 항상 <strong>직선과 원호의 조합</strong> 6가지 중 하나입니다 (Dubins, 1957).
   PythonRobotics의 <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/DubinsPath">DubinsPath</a> 모듈이 표준 구현입니다.</p>
 
@@ -304,7 +396,7 @@
   })();
   </script>
 
-  <h2>6. 코드 예제 — A* (Python)</h2>
+  <h2>8. 코드 예제 — A* (Python)</h2>
   <pre><code>import heapq, math
 
 def astar(grid, start, goal):
@@ -326,6 +418,15 @@ def astar(grid, start, goal):
                     heapq.heappush(open_, (ng + h((nx,ny),goal), ng, (nx,ny)))
                     came[(nx,ny)] = cur
     return None</code></pre>
+
+  <h2>9. 더 깊이 공부하기</h2>
+  <ul>
+    <li><a href="https://www.redblobgames.com/pathfinding/a-star/introduction.html">Red Blob Games — A* Introduction</a> (시각화가 매우 친절)</li>
+    <li><a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning">PythonRobotics PathPlanning</a> (A*, Dijkstra, RRT, RRT*, PRM, Dubins 등 참조 구현)</li>
+    <li>LaValle, <em>Planning Algorithms</em>, Cambridge 2006 — 샘플링 기반 계획의 고전 교과서. <a href="http://lavalle.pl/planning/">온라인 공개</a>.</li>
+    <li>Karaman & Frazzoli, "Sampling-based algorithms for optimal motion planning", IJRR 2011 — RRT*의 원논문.</li>
+    <li>Dubins, "On curves of minimal length with a constraint on average curvature", Amer. J. Math. 1957.</li>
+  </ul>
 
   <nav class="prevnext">
     <a href="05-kalman-2d.html"><small>← 이전</small>L5. 칼만 2D</a>
