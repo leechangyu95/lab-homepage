@@ -165,50 +165,114 @@
 
   <div class="demo">
     <h4>🎮 인터랙티브: Ridge λ 효과</h4>
-    <p>9차 다항식을 고정하고 $\lambda$만 바꿔 곡선이 얼마나 매끄러워지는지 보세요. $\lambda = 0$이면 과적합, 너무 크면 직선에 가까워집니다.</p>
+    <p>9점으로 9차 다항식(파라미터 10개)을 맞추면 $\lambda=0$에서 심한 과적합이 일어납니다. 슬라이더를 오른쪽으로 옮겨 $\lambda$를 키우면 곡선이 점점 매끄러워지다가 결국 평균선에 가까워집니다.</p>
     <canvas id="ridge" width="640" height="320"></canvas>
     <div class="controls">
-      <label>log₁₀ λ <span class="val" id="lamV">-3</span><input type="range" id="lam" min="-6" max="3" step="0.2" value="-3"></label>
+      <label>log₁₀ λ <span class="val" id="lamV">-6.0</span><input type="range" id="lam" min="-6" max="2" step="0.1" value="-6"></label>
+      <button id="ridgeRs" class="alt">새 데이터</button>
     </div>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('ridge'),x=c.getContext('2d');
-    // true function: sine with noise
-    const pts=[];for(let i=0;i<18;i++){const xi=i/17;const yi=Math.sin(2*Math.PI*xi)+(Math.random()-0.5)*0.4;pts.push([xi,yi]);}
-    function fit(d,lam){
-      const n=pts.length;
-      const X=pts.map(p=>{const r=[];for(let k=0;k<=d;k++)r.push(Math.pow(p[0],k));return r;});
-      const Y=pts.map(p=>p[1]);
-      const XT=Array.from({length:d+1},(_,i)=>X.map(r=>r[i]));
-      const XTX=XT.map((row,i)=>XT.map((col,j)=>row.reduce((s,_,k)=>s+row[k]*col[k],0)+(i===j?lam:0)));
-      const XTY=XT.map(row=>row.reduce((s,_,k)=>s+row[k]*Y[k],0));
-      const A=XTX.map((r,i)=>[...r,XTY[i]]);
-      const N=d+1;
-      for(let i=0;i<N;i++){let mx=i;for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;[A[i],A[mx]]=[A[mx],A[i]];if(Math.abs(A[i][i])<1e-12)return null;for(let k=0;k<N;k++)if(k!=i){const f=A[k][i]/A[i][i];for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];}}
-      return A.map((r,i)=>r[N]/r[i][i]);
+    const c=document.getElementById('ridge');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const CW=c.width,CH=c.height;
+    const DEG=9;
+    let pts=[];
+    function genData(){
+      pts=[];
+      // 9 sample points from a sine, with noticeable noise
+      for(let i=0;i<9;i++){
+        const xi=0.02+i*(0.96/8);
+        const yi=Math.sin(2*Math.PI*xi)+(Math.random()*2-1)*0.35;
+        pts.push([xi,yi]);
+      }
     }
-    function loop(){
-      const logLam=+document.getElementById('lam').value;
+    genData();
+    function solve(M,b,N){
+      const A=M.map((r,i)=>[...r,b[i]]);
+      for(let i=0;i<N;i++){
+        let mx=i;
+        for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;
+        [A[i],A[mx]]=[A[mx],A[i]];
+        if(Math.abs(A[i][i])<1e-14)return null;
+        const piv=A[i][i];
+        for(let j=0;j<=N;j++)A[i][j]/=piv;
+        for(let k=0;k<N;k++){
+          if(k===i)continue;
+          const f=A[k][i];
+          for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];
+        }
+      }
+      return A.map(r=>r[N]);
+    }
+    function fitRidge(lam){
+      const n=pts.length,m=DEG+1;
+      const X=pts.map(p=>{const r=[];for(let k=0;k<m;k++)r.push(Math.pow(p[0],k));return r;});
+      const Y=pts.map(p=>p[1]);
+      const XTX=Array.from({length:m},()=>Array(m).fill(0));
+      const XTY=Array(m).fill(0);
+      for(let i=0;i<m;i++){
+        for(let j=0;j<m;j++){
+          let s=0;for(let k=0;k<n;k++)s+=X[k][i]*X[k][j];
+          XTX[i][j]=s+(i===j?lam:0);
+        }
+        let s=0;for(let k=0;k<n;k++)s+=X[k][i]*Y[k];
+        XTY[i]=s;
+      }
+      return solve(XTX,XTY,m);
+    }
+    const PX=40,PY=CH/2,PW=CW-80,PH=120;
+    function toPx(u){return PX+u*PW;}
+    function toPy(v){return PY-v*PH;}
+    function draw(){
+      const logLam=parseFloat(document.getElementById('lam').value);
       const lam=Math.pow(10,logLam);
       document.getElementById('lamV').textContent=logLam.toFixed(1);
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      // axes
-      const X0=40,Y0=160,W=560,H=120;
-      x.strokeStyle='#ddd';x.strokeRect(X0,Y0-H,W,2*H);
-      // true function
-      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.beginPath();
-      for(let i=0;i<=100;i++){const u=i/100;const y=Math.sin(2*Math.PI*u);if(i==0)x.moveTo(X0+u*W,Y0-y*H);else x.lineTo(X0+u*W,Y0-y*H);}x.stroke();
-      const beta=fit(9,lam);
-      if(beta){
-        x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
-        for(let i=0;i<=200;i++){const u=i/200;let y=0;for(let k=0;k<beta.length;k++)y+=beta[k]*Math.pow(u,k);if(i==0)x.moveTo(X0+u*W,Y0-y*H);else x.lineTo(X0+u*W,Y0-y*H);}x.stroke();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,CW,CH);
+      // plot box
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;
+      ctx.strokeRect(PX,PY-PH,PW,2*PH);
+      // zero line
+      ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(PX,PY);ctx.lineTo(PX+PW,PY);ctx.stroke();
+      // true function sin(2πx)
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const u=i/200;
+        const v=Math.sin(2*Math.PI*u);
+        const px=toPx(u),py=toPy(v);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
       }
-      x.fillStyle='#c62828';pts.forEach(p=>{x.beginPath();x.arc(X0+p[0]*W,Y0-p[1]*H,4,0,Math.PI*2);x.fill();});
-      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('초록: 참값 sin(2πx) · 파랑: Ridge 9차 적합 · λ='+lam.toExponential(1),12,300);
-      requestAnimationFrame(loop);
+      ctx.stroke();
+      // fit
+      const beta=fitRidge(lam);
+      if(beta){
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+        for(let i=0;i<=400;i++){
+          const u=i/400;
+          let v=0;for(let k=0;k<beta.length;k++)v+=beta[k]*Math.pow(u,k);
+          v=Math.max(-1.8,Math.min(1.8,v)); // clip for visualization
+          const px=toPx(u),py=toPy(v);
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+      // data points
+      ctx.fillStyle='#c62828';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(toPx(p[0]),toPy(p[1]),5,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(toPx(p[0]),toPy(p[1]),5,0,Math.PI*2);ctx.stroke();});
+      // legend
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';
+      ctx.fillText('■ 참값 sin(2πx)',12,25);
+      ctx.fillStyle='#0b5fff';ctx.fillText('■ Ridge 9차 적합',130,25);
+      ctx.fillStyle='#c62828';ctx.fillText('● 데이터 ('+pts.length+'개)',260,25);
+      ctx.fillStyle='#555';ctx.fillText('λ = '+lam.toExponential(2),380,25);
     }
-    loop();
+    document.getElementById('lam').addEventListener('input',draw);
+    document.getElementById('ridgeRs').addEventListener('click',()=>{genData();draw();});
+    draw();
   })();
   </script>
 

@@ -108,51 +108,76 @@
 
   <div class="demo">
     <h4>🎮 인터랙티브: CBF 안전 필터</h4>
-    <p>마우스로 로봇(파랑)을 끌어당기듯 목표를 정합니다. CBF가 자동으로 빨간 장애물을 피하도록 명령을 수정합니다. $\gamma$를 조절해 보세요.</p>
+    <p>로봇(파랑)이 왼쪽에서 오른쪽으로 x축을 따라 일정한 속도로 이동합니다. 경로상에 장애물이 있으면 CBF 안전 필터가 자동으로 명령을 수정해 y 방향으로 회피합니다. $\gamma$가 작을수록 일찍, 크면 늦게 회피합니다.</p>
     <canvas id="cbf" width="640" height="380"></canvas>
     <div class="controls">
-      <label>γ (보수성) <span class="val" id="gV">1.5</span><input type="range" id="g" min="0.2" max="5" step="0.1" value="1.5"></label>
+      <label>γ (보수성) <span class="val" id="gV">0.20</span><input type="range" id="g" min="0.01" max="1.00" step="0.01" value="0.20"></label>
       <label><input type="checkbox" id="off"> CBF 끄기 (충돌 발생!)</label>
+      <button id="cbfRst">리셋</button>
     </div>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('cbf'),x=c.getContext('2d');
-    let robot={x:100,y:200},target={x:100,y:200};
-    const obs=[{x:300,y:180,r:50},{x:450,y:250,r:40},{x:380,y:100,r:35}];
-    c.onmousemove=e=>{const r=c.getBoundingClientRect();target.x=(e.clientX-r.left)*c.width/r.width;target.y=(e.clientY-r.top)*c.height/r.height;};
+    const c=document.getElementById('cbf');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const obs=[{x:230,y:180,r:45},{x:400,y:210,r:40},{x:520,y:170,r:30}];
+    const y0=190;      // nominal y (center line)
+    const vx=1.2;      // constant forward speed (px/frame)
+    let robot={x:20,y:y0},trail=[];
+    function reset(){robot={x:20,y:y0};trail=[];}
+    document.getElementById('cbfRst').addEventListener('click',reset);
     function loop(){
-      const gamma=+document.getElementById('g').value;
+      const gamma=parseFloat(document.getElementById('g').value);
       const off=document.getElementById('off').checked;
-      document.getElementById('gV').textContent=gamma.toFixed(1);
-      // nominal control: go toward target
-      let ux=(target.x-robot.x)*0.05, uy=(target.y-robot.y)*0.05;
-      // CBF safety filter (simple gradient-projection)
+      document.getElementById('gV').textContent=gamma.toFixed(2);
+      // Nominal control: constant rightward velocity + gentle pull toward y0
+      let ux=vx, uy=(y0-robot.y)*0.02;
+      // CBF safety filter: project nominal onto feasible half-space for each obstacle
       if(!off){
         for(const o of obs){
-          const dx=robot.x-o.x,dy=robot.y-o.y;
+          const dx=robot.x-o.x, dy=robot.y-o.y;
           const h=dx*dx+dy*dy-o.r*o.r;
+          // discrete CBF condition: 2*(dx*ux+dy*uy) + gamma*h >= 0
           const hdot=2*dx*ux+2*dy*uy;
           const cond=hdot+gamma*h;
           if(cond<0){
             const norm=4*(dx*dx+dy*dy);
-            const lam=-cond/norm;
-            ux+=lam*2*dx; uy+=lam*2*dy;
+            if(norm>1e-6){
+              const lam=-cond/norm;
+              ux+=lam*2*dx; uy+=lam*2*dy;
+            }
           }
         }
       }
       robot.x+=ux; robot.y+=uy;
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      trail.push({x:robot.x,y:robot.y});
+      if(trail.length>600)trail.shift();
+      if(robot.x>W-20)reset();
+      // render
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // baseline y=y0
+      ctx.strokeStyle='#e5e7eb';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(0,y0);ctx.lineTo(W,y0);ctx.stroke();
+      ctx.setLineDash([]);
       // obstacles + safety margin
       for(const o of obs){
-        x.fillStyle='rgba(198,40,40,0.15)';x.beginPath();x.arc(o.x,o.y,o.r+10,0,Math.PI*2);x.fill();
-        x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();
+        ctx.fillStyle='rgba(198,40,40,0.15)';
+        ctx.beginPath();ctx.arc(o.x,o.y,o.r+10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#c62828';
+        ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill();
       }
-      // target
-      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();x.arc(target.x,target.y,8,0,Math.PI*2);x.stroke();
-      x.beginPath();x.moveTo(target.x-5,target.y);x.lineTo(target.x+5,target.y);x.moveTo(target.x,target.y-5);x.lineTo(target.x,target.y+5);x.stroke();
+      // trail
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      trail.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
+      ctx.stroke();
       // robot
-      x.fillStyle='#0b5fff';x.beginPath();x.arc(robot.x,robot.y,10,0,Math.PI*2);x.fill();
+      ctx.fillStyle='#0b5fff';
+      ctx.beginPath();ctx.arc(robot.x,robot.y,8,0,Math.PI*2);ctx.fill();
+      // label
+      ctx.fillStyle='#555';ctx.font='12px sans-serif';
+      ctx.fillText('γ = '+gamma.toFixed(2)+(off?' · CBF OFF':' · CBF ON'),12,25);
       requestAnimationFrame(loop);
     }
     loop();
