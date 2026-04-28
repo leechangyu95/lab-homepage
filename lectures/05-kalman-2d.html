@@ -139,6 +139,119 @@
   $$ \boldsymbol\mu_\text{new} = \Sigma_\text{new}(\Sigma_1^{-1}\boldsymbol\mu_1 + \Sigma_2^{-1}\boldsymbol\mu_2) $$
   <p>1D의 식 $1/\sigma^2 = 1/\sigma_1^2 + 1/\sigma_2^2$가 행렬 역함수로 일반화된 모습입니다. 결과 공분산은 두 입력 공분산보다 항상 "작다"(고유값이 모두 작거나 같다)는 사실은 그대로입니다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 가우시안 합치기</h4>
+    <p>두 가우시안의 평균을 마우스로 드래그하고, 슬라이더로 각각의 공분산 모양을 바꿔보세요.
+    <span style="color:#c62828">빨강</span>·<span style="color:#0b5fff">파랑</span> 타원이 입력이고,
+    <span style="color:#7b1fa2">보라</span> 타원이 합쳐진 결과입니다.
+    <strong>보라가 항상 두 입력 안쪽에 들어가고 (불확실성 감소), 더 좁은 쪽 평균에 더 가까워지는 것</strong>을 확인하세요.</p>
+    <canvas id="merge" width="640" height="380"></canvas>
+    <div class="controls" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px">
+      <label style="color:#c62828">G1: σ²ₓ <span class="val" id="m1sxV">3</span><input type="range" id="m1sx" min="0.5" max="8" step="0.1" value="3"></label>
+      <label style="color:#0b5fff">G2: σ²ₓ <span class="val" id="m2sxV">1.5</span><input type="range" id="m2sx" min="0.5" max="8" step="0.1" value="1.5"></label>
+      <label style="color:#c62828">G1: σ²ᵧ <span class="val" id="m1syV">1</span><input type="range" id="m1sy" min="0.5" max="8" step="0.1" value="1"></label>
+      <label style="color:#0b5fff">G2: σ²ᵧ <span class="val" id="m2syV">4</span><input type="range" id="m2sy" min="0.5" max="8" step="0.1" value="4"></label>
+      <label style="color:#c62828">G1: σₓᵧ <span class="val" id="m1sxyV">0.8</span><input type="range" id="m1sxy" min="-3" max="3" step="0.1" value="0.8"></label>
+      <label style="color:#0b5fff">G2: σₓᵧ <span class="val" id="m2sxyV">-1.2</span><input type="range" id="m2sxy" min="-3" max="3" step="0.1" value="-1.2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('merge'),x=c.getContext('2d');
+    const SC=30, cx=320, cy=190;
+    // 화면 좌표 ↔ 데이터 좌표
+    const toScr=(p)=>({x:cx+p[0]*SC, y:cy-p[1]*SC});
+    const toData=(sx,sy)=>[(sx-cx)/SC,(cy-sy)/SC];
+    // 두 평균 (데이터 좌표)
+    let mu1=[-3,-1], mu2=[3,1.5];
+    let drag=null;
+    c.onmousedown=e=>{
+      const r=c.getBoundingClientRect();
+      const px=(e.clientX-r.left)*c.width/r.width, py=(e.clientY-r.top)*c.height/r.height;
+      const p1=toScr(mu1), p2=toScr(mu2);
+      const d1=Math.hypot(px-p1.x,py-p1.y), d2=Math.hypot(px-p2.x,py-p2.y);
+      if(d1<14&&d1<d2)drag=1; else if(d2<14)drag=2;
+    };
+    c.onmousemove=e=>{
+      if(!drag)return;
+      const r=c.getBoundingClientRect();
+      const px=(e.clientX-r.left)*c.width/r.width, py=(e.clientY-r.top)*c.height/r.height;
+      const d=toData(px,py);
+      if(drag===1)mu1=d; else mu2=d;
+    };
+    c.onmouseup=()=>drag=null; c.onmouseleave=()=>drag=null;
+    // 2x2 역행렬, 합, 곱
+    const inv=(M)=>{const d=M[0][0]*M[1][1]-M[0][1]*M[1][0];return [[M[1][1]/d,-M[0][1]/d],[-M[1][0]/d,M[0][0]/d]];};
+    const add=(A,B)=>[[A[0][0]+B[0][0],A[0][1]+B[0][1]],[A[1][0]+B[1][0],A[1][1]+B[1][1]]];
+    const mv=(M,v)=>[M[0][0]*v[0]+M[0][1]*v[1], M[1][0]*v[0]+M[1][1]*v[1]];
+    function ellipse(S, color, fillAlpha, levels){
+      const tr=S[0][0]+S[1][1], disc=Math.sqrt(Math.max(0,(S[0][0]-S[1][1])**2+4*S[0][1]*S[1][0]));
+      const l1=(tr+disc)/2, l2=(tr-disc)/2;
+      const ang=0.5*Math.atan2(2*S[0][1], S[0][0]-S[1][1]);
+      return {l1,l2,ang};
+    }
+    function drawEll(mu, S, color, lw){
+      const tr=S[0][0]+S[1][1], disc=Math.sqrt(Math.max(0,(S[0][0]-S[1][1])**2+4*S[0][1]*S[1][0]));
+      const l1=(tr+disc)/2, l2=(tr-disc)/2;
+      const ang=0.5*Math.atan2(2*S[0][1], S[0][0]-S[1][1]);
+      const p=toScr(mu);
+      // y축이 뒤집혀 있으므로 회전각도 부호 반전
+      [3,2,1].forEach(k=>{
+        x.strokeStyle=color; x.lineWidth=lw;
+        x.fillStyle=color.replace('rgb','rgba').replace(')',','+(0.06*(4-k))+')');
+        x.beginPath();
+        x.ellipse(p.x, p.y, Math.sqrt(Math.max(l1,0.01))*k*SC, Math.sqrt(Math.max(l2,0.01))*k*SC, -ang, 0, Math.PI*2);
+        x.fill(); x.stroke();
+      });
+    }
+    function loop(){
+      const ids=['m1sx','m1sy','m1sxy','m2sx','m2sy','m2sxy'];
+      const v={};
+      ids.forEach(k=>{v[k]=+document.getElementById(k).value;document.getElementById(k+'V').textContent=document.getElementById(k).value;});
+      const S1=[[v.m1sx,v.m1sxy],[v.m1sxy,v.m1sy]];
+      const S2=[[v.m2sx,v.m2sxy],[v.m2sxy,v.m2sy]];
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 격자 + 축
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=SC){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=SC){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(20,cy);x.lineTo(620,cy);x.moveTo(cx,30);x.lineTo(cx,350);x.stroke();
+      // 양정부호 검사
+      const det1=S1[0][0]*S1[1][1]-S1[0][1]**2, det2=S2[0][0]*S2[1][1]-S2[0][1]**2;
+      if(det1<=0||det2<=0){
+        x.fillStyle='#c62828';x.font='14px sans-serif';
+        x.fillText('⚠ 비양정부호 공분산. σₓᵧ를 줄이세요.',20,30);
+        requestAnimationFrame(loop);return;
+      }
+      // 합치기
+      const P1=inv(S1), P2=inv(S2);
+      const Pn=add(P1,P2);
+      const Sn=inv(Pn);
+      const muN=mv(Sn, [P1[0][0]*mu1[0]+P1[0][1]*mu1[1]+P2[0][0]*mu2[0]+P2[0][1]*mu2[1],
+                        P1[1][0]*mu1[0]+P1[1][1]*mu1[1]+P2[1][0]*mu2[0]+P2[1][1]*mu2[1]]);
+      // 그리기 — 입력 두 개, 합쳐진 결과
+      drawEll(mu1, S1, 'rgb(198,40,40)', 1.5);
+      drawEll(mu2, S2, 'rgb(11,95,255)', 1.5);
+      drawEll(muN, Sn, 'rgb(123,31,162)', 2.5);
+      // 평균 점들
+      const p1=toScr(mu1), p2=toScr(mu2), pN=toScr(muN);
+      x.fillStyle='#c62828';x.beginPath();x.arc(p1.x,p1.y,7,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.lineWidth=2;x.stroke();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(p2.x,p2.y,7,0,Math.PI*2);x.fill();x.stroke();
+      x.fillStyle='#7b1fa2';x.beginPath();x.arc(pN.x,pN.y,6,0,Math.PI*2);x.fill();x.stroke();
+      // 정보 패널
+      const tr1=S1[0][0]+S1[1][1], tr2=S2[0][0]+S2[1][1], trN=Sn[0][0]+Sn[1][1];
+      x.fillStyle='#222';x.font='12px sans-serif';
+      x.fillText('μ₁ = ('+mu1[0].toFixed(2)+', '+mu1[1].toFixed(2)+')   tr(Σ₁) = '+tr1.toFixed(2),12,22);
+      x.fillText('μ₂ = ('+mu2[0].toFixed(2)+', '+mu2[1].toFixed(2)+')   tr(Σ₂) = '+tr2.toFixed(2),12,40);
+      x.fillStyle='#7b1fa2';x.font='bold 12px sans-serif';
+      x.fillText('μ_new = ('+muN[0].toFixed(2)+', '+muN[1].toFixed(2)+')   tr(Σ_new) = '+trN.toFixed(2)+'   (← 항상 더 작음)',12,58);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('🔴 G1   🔵 G2   🟣 합쳐진 분포 — 빨강·파랑 점을 드래그해 평균을 옮겨보세요',12,365);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
   <h2>5. 예제 — GPS 위치 융합</h2>
   <p>등속도 모델 + GPS 위치 측정의 가장 흔한 조합입니다.</p>
   <ul>
@@ -150,7 +263,7 @@
 
   <div class="demo">
     <h4>🎮 인터랙티브: 2D 칼만 필터 측위</h4>
-    <p>로봇(녹색)이 원을 그리며 움직이고, GPS(빨강)는 노이즈가 큽니다. 칼만 필터(파랑)와 공분산 타원이 시간에 따라 어떻게 갱신되는지 보세요.</p>
+    <p>로봇(녹색)은 등속 직선으로 움직이다 가끔 방향을 바꿉니다 — CV(constant velocity) 모델이 잘 들어맞는 운동입니다. GPS(빨강) 잡음을 칼만 필터(파랑)가 어떻게 평탄화하는지, 방향 전환 직후 공분산 타원이 어떻게 커졌다 다시 작아지는지 보세요.</p>
     <canvas id="kf2" width="640" height="380"></canvas>
     <div class="controls">
       <label>GPS 잡음 R <span class="val" id="rV">10</span><input type="range" id="r" min="1" max="40" value="10"></label>
@@ -164,43 +277,73 @@
     const sl=(id)=>document.getElementById(id);
     const upd=()=>{sl('rV').textContent=sl('r').value;sl('qV').textContent=sl('q').value;};
     ['r','q'].forEach(k=>sl(k).oninput=upd);
-    let t=0,xh=[0,0,0,0],P=[[10,0,0,0],[0,10,0,0],[0,0,10,0],[0,0,0,10]],hist=[];
-    sl('rst').onclick=()=>{t=0;xh=[0,0,0,0];P=[[10,0,0,0],[0,10,0,0],[0,0,10,0],[0,0,0,10]];hist=[];};
+    let t, truth, xh, P, hist, nextTurn;
+    function reset(){
+      t=0;
+      truth={x:120, y:200, vx:55, vy:25};
+      xh=[truth.x, truth.y, 0, 0];
+      P=[[10,0,0,0],[0,10,0,0],[0,0,100,0],[0,0,0,100]];
+      hist=[];
+      nextTurn=2.5;
+    }
+    reset();
+    sl('rst').onclick=reset;
     function loop(){
       const dt=0.05,R=+sl('r').value,Q=+sl('q').value;
-      const cx=320,cy=190,rad=120;
-      const tx=cx+rad*Math.cos(t),ty=cy+rad*Math.sin(t);
+      // 진짜 로봇: 등속 직선 + 가끔 방향 전환 + 벽 반사
+      truth.x+=truth.vx*dt; truth.y+=truth.vy*dt;
+      if(truth.x<60){truth.x=60; truth.vx=Math.abs(truth.vx);}
+      if(truth.x>580){truth.x=580; truth.vx=-Math.abs(truth.vx);}
+      if(truth.y<60){truth.y=60; truth.vy=Math.abs(truth.vy);}
+      if(truth.y>320){truth.y=320; truth.vy=-Math.abs(truth.vy);}
+      if(t>nextTurn){
+        const ang=Math.random()*2*Math.PI, sp=40+Math.random()*30;
+        truth.vx=sp*Math.cos(ang); truth.vy=sp*Math.sin(ang);
+        nextTurn=t+3+Math.random()*2;
+      }
+      const tx=truth.x, ty=truth.y;
       const mx=tx+(Math.random()*2-1)*Math.sqrt(R)*1.8;
       const my=ty+(Math.random()*2-1)*Math.sqrt(R)*1.8;
+      // 예측
       xh[0]+=xh[2]*dt; xh[1]+=xh[3]*dt;
       P[0][0]+=2*P[0][2]*dt+P[2][2]*dt*dt+Q;
       P[1][1]+=2*P[1][3]*dt+P[3][3]*dt*dt+Q;
       P[0][2]+=P[2][2]*dt; P[1][3]+=P[3][3]*dt;
       P[2][2]+=Q; P[3][3]+=Q;
+      // 갱신
       const Sx=P[0][0]+R, Sy=P[1][1]+R;
       const Kx0=P[0][0]/Sx,Kx2=P[0][2]/Sx;
       const Ky1=P[1][1]/Sy,Ky3=P[1][3]/Sy;
       const ex=mx-xh[0],ey=my-xh[1];
       xh[0]+=Kx0*ex; xh[2]+=Kx2*ex;
       xh[1]+=Ky1*ey; xh[3]+=Ky3*ey;
-      P[0][0]*=(1-Kx0); P[0][2]*=(1-Kx0);
-      P[1][1]*=(1-Ky1); P[1][3]*=(1-Ky1);
-      P[2][2]-=Kx2*P[0][2]; P[3][3]-=Ky3*P[1][3];
+      // 공분산: P22는 옛 P02를 사용해야 하므로 먼저 처리
+      const P02_old=P[0][2], P13_old=P[1][3];
+      P[2][2]-=Kx2*P02_old; P[3][3]-=Ky3*P13_old;
+      P[0][0]*=(1-Kx0); P[0][2]=(1-Kx0)*P02_old;
+      P[1][1]*=(1-Ky1); P[1][3]=(1-Ky1)*P13_old;
       hist.push({tx,ty,mx,my,ex:xh[0],ey:xh[1]});
       if(hist.length>200)hist.shift();
       t+=dt;
+      // 그리기
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
       x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
       for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
-      x.strokeStyle='#a5d6a7';x.beginPath();x.arc(cx,cy,rad,0,Math.PI*2);x.stroke();
+      // 진짜 궤적 (얇은 녹색 선)
+      x.strokeStyle='rgba(46,125,50,0.4)';x.lineWidth=1;x.beginPath();
+      hist.forEach((h,i)=>{if(i==0)x.moveTo(h.tx,h.ty);else x.lineTo(h.tx,h.ty);});x.stroke();
+      // GPS 측정점
       x.fillStyle='rgba(198,40,40,0.5)';
       hist.forEach(h=>{x.beginPath();x.arc(h.mx,h.my,2,0,Math.PI*2);x.fill();});
+      // KF 추정 궤적
       x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
       hist.forEach((h,i)=>{if(i==0)x.moveTo(h.ex,h.ey);else x.lineTo(h.ex,h.ey);});x.stroke();
+      // 공분산 타원
       const sx_=Math.sqrt(Math.max(P[0][0],0.5))*2.5;
       const sy_=Math.sqrt(Math.max(P[1][1],0.5))*2.5;
       x.strokeStyle='rgba(11,95,255,0.6)';x.beginPath();
       x.ellipse(xh[0],xh[1],sx_,sy_,0,0,Math.PI*2);x.stroke();
+      // 점들
       x.fillStyle='#2e7d32';x.beginPath();x.arc(tx,ty,5,0,Math.PI*2);x.fill();
       x.fillStyle='#0b5fff';x.beginPath();x.arc(xh[0],xh[1],4,0,Math.PI*2);x.fill();
       requestAnimationFrame(loop);
@@ -234,22 +377,26 @@
   <script>
   (function(){
     const c=document.getElementById('ekf'),x=c.getContext('2d');
-    const lm=[{x:140,y:100},{x:520,y:120},{x:340,y:320}];
-    let robot={x:320,y:200};
+    const lm=[{x:140,y:100,z:0,zd:0},{x:520,y:120,z:0,zd:0},{x:340,y:320,z:0,zd:0}];
+    let robot={x:320,y:200},frame=0;
+    lm.forEach(L=>{const d=Math.hypot(robot.x-L.x,robot.y-L.y);L.z=d;L.zd=d;});
     c.onmousemove=e=>{const r=c.getBoundingClientRect();robot.x=(e.clientX-r.left)*c.width/r.width;robot.y=(e.clientY-r.top)*c.height/r.height;};
     function loop(){
       const sg=+document.getElementById('ekfR').value;
       document.getElementById('ekfRV').textContent=sg;
       x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      // 각 랜드마크에서 거리 측정 + 잡음
+      // 새 측정은 약 4Hz로만 (60fps / 15)
+      const measure=(frame++%15===0);
       lm.forEach(L=>{
         const d=Math.hypot(robot.x-L.x,robot.y-L.y);
-        const z=d+(Math.random()*2-1)*sg;
+        if(measure) L.z=d+(Math.random()*2-1)*sg;
+        // 표시 반지름은 EWMA로 부드럽게 보간
+        L.zd+=(L.z-L.zd)*0.15;
         // 측정값에 해당하는 원 (잡음 두께 ±2σ)
         x.strokeStyle='rgba(11,95,255,0.6)';x.lineWidth=2;
-        x.beginPath();x.arc(L.x,L.y,z,0,Math.PI*2);x.stroke();
+        x.beginPath();x.arc(L.x,L.y,L.zd,0,Math.PI*2);x.stroke();
         x.strokeStyle='rgba(11,95,255,0.15)';x.lineWidth=2*sg;
-        x.beginPath();x.arc(L.x,L.y,z,0,Math.PI*2);x.stroke();
+        x.beginPath();x.arc(L.x,L.y,L.zd,0,Math.PI*2);x.stroke();
         x.fillStyle='#c62828';x.beginPath();x.arc(L.x,L.y,7,0,Math.PI*2);x.fill();
       });
       // 로봇 (진짜 위치)
@@ -274,6 +421,139 @@
     <li>EKF보다 비선형성에 더 강함</li>
     <li>계산량은 EKF의 약 2배</li>
   </ul>
+
+  <p><strong>시그마 포인트의 의미</strong> — $n$차원 상태에 대해 $2n+1$개의 점을 평균과 공분산 주위에 대칭적으로 배치합니다. Julier·Uhlmann의 원본 공식($\kappa = 3-n$):</p>
+  $$ \mathcal X_0 = \boldsymbol\mu, \qquad \mathcal X_i = \boldsymbol\mu \pm \big(\sqrt{(n+\kappa)\,\Sigma}\big)_i $$
+  $$ W_0 = \frac{\kappa}{n+\kappa}, \qquad W_i = \frac{1}{2(n+\kappa)} $$
+  <p>각 시그마 포인트를 비선형 함수에 통과시킨 뒤, 가중 평균과 가중 공분산으로 결과 가우시안을 복원합니다 ("Unscented Transform"). 비선형성이 클수록 EKF의 선형 근사보다 유리해집니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: UKF — 시그마 포인트가 비선형을 통과하는 모습</h4>
+    <p>입력 분포는 극좌표 $(r, \theta)$의 가우시안이고, 변환은 $h(r,\theta) = (r\cos\theta,\; r\sin\theta)$ — 직교좌표로의 비선형 변환입니다.
+    <span style="color:#666"><strong>회색 구름</strong></span>은 진짜 변환된 분포(3,600개 결정론적 샘플),
+    <span style="color:#c62828"><strong>빨강 타원</strong></span>은 EKF의 1차 근사,
+    <span style="color:#0b5fff"><strong>파랑 타원·점</strong></span>은 UKF (시그마 포인트 5개를 변환해 다시 적합)입니다.
+    <strong>σ_θ를 키우면 진짜 분포가 바나나처럼 휘고, EKF는 평균 위치마저 빗나가지만 UKF는 잘 따라갑니다.</strong></p>
+    <canvas id="ukf" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>r₀ <span class="val" id="ukfRV">3</span><input type="range" id="ukfR" min="1" max="6" step="0.1" value="3"></label>
+      <label>θ₀ (rad) <span class="val" id="ukfTV">0.6</span><input type="range" id="ukfT" min="0" max="1.5" step="0.05" value="0.6"></label>
+      <label>σ_r <span class="val" id="ukfSrV">0.3</span><input type="range" id="ukfSr" min="0.05" max="1" step="0.05" value="0.3"></label>
+      <label>σ_θ <span class="val" id="ukfStV">0.4</span><input type="range" id="ukfSt" min="0.05" max="0.9" step="0.05" value="0.4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ukf'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    function chol(M){
+      const a=Math.sqrt(Math.max(M[0][0],1e-12));
+      const b=M[1][0]/a;
+      const cc=Math.sqrt(Math.max(M[1][1]-b*b,1e-12));
+      return [[a,0],[b,cc]];
+    }
+    function ellAxes(S){
+      const tr=S[0][0]+S[1][1];
+      const disc=Math.sqrt(Math.max(0,(S[0][0]-S[1][1])**2+4*S[0][1]*S[1][0]));
+      return {l1:(tr+disc)/2, l2:(tr-disc)/2, ang:0.5*Math.atan2(2*S[0][1], S[0][0]-S[1][1])};
+    }
+    function matmul(A,B){return [[A[0][0]*B[0][0]+A[0][1]*B[1][0],A[0][0]*B[0][1]+A[0][1]*B[1][1]],[A[1][0]*B[0][0]+A[1][1]*B[1][0],A[1][0]*B[0][1]+A[1][1]*B[1][1]]];}
+    function transp(A){return [[A[0][0],A[1][0]],[A[0][1],A[1][1]]];}
+    let cache={key:null,samples:null};
+    function getSamples(r0,t0,sr,st){
+      const key=r0+','+t0+','+sr+','+st;
+      if(cache.key===key)return cache.samples;
+      const samples=[];
+      for(let i=1;i<=60;i++)for(let j=0;j<60;j++){
+        const u=i/61, v=j/60;
+        const z1=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+        const z2=Math.sqrt(-2*Math.log(u))*Math.sin(2*Math.PI*v);
+        const r=r0+sr*z1, t=t0+st*z2;
+        samples.push([r*Math.cos(t), r*Math.sin(t)]);
+      }
+      cache={key:key, samples:samples};
+      return samples;
+    }
+    function draw(){
+      const r0=+sl('ukfR').value, t0=+sl('ukfT').value;
+      const sr=+sl('ukfSr').value, st=+sl('ukfSt').value;
+      ['ukfR','ukfT','ukfSr','ukfSt'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=380, cy=210, SC=38;
+      x.strokeStyle='#eee';
+      for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      x.strokeStyle='#bbb';x.lineWidth=1;
+      x.beginPath();x.moveTo(180,cy);x.lineTo(640,cy);x.moveTo(cx,30);x.lineTo(cx,390);x.stroke();
+      x.fillStyle='rgba(120,120,120,0.45)';
+      getSamples(r0,t0,sr,st).forEach(p=>{x.fillRect(cx+p[0]*SC-1, cy-p[1]*SC-1, 2, 2);});
+      const n=2, kappa=1;
+      const Pin=[[sr*sr,0],[0,st*st]];
+      const sPin=[[Pin[0][0]*(n+kappa),0],[0,Pin[1][1]*(n+kappa)]];
+      const L=chol(sPin);
+      const sig=[[r0,t0],
+                 [r0+L[0][0],t0+L[1][0]],[r0-L[0][0],t0-L[1][0]],
+                 [r0+L[0][1],t0+L[1][1]],[r0-L[0][1],t0-L[1][1]]];
+      const W=[kappa/(n+kappa),0.5/(n+kappa),0.5/(n+kappa),0.5/(n+kappa),0.5/(n+kappa)];
+      const ysig=sig.map(s=>[s[0]*Math.cos(s[1]), s[0]*Math.sin(s[1])]);
+      let mu=[0,0]; ysig.forEach((y,i)=>{mu[0]+=W[i]*y[0]; mu[1]+=W[i]*y[1];});
+      let Pukf=[[0,0],[0,0]];
+      ysig.forEach((y,i)=>{
+        const dx=y[0]-mu[0], dy=y[1]-mu[1];
+        Pukf[0][0]+=W[i]*dx*dx; Pukf[0][1]+=W[i]*dx*dy;
+        Pukf[1][0]+=W[i]*dx*dy; Pukf[1][1]+=W[i]*dy*dy;
+      });
+      const J=[[Math.cos(t0),-r0*Math.sin(t0)],[Math.sin(t0),r0*Math.cos(t0)]];
+      const Pekf=matmul(matmul(J,Pin),transp(J));
+      const muEKF=[r0*Math.cos(t0), r0*Math.sin(t0)];
+      function drawEll(m,S,col,fa){
+        const e=ellAxes(S);
+        x.strokeStyle=col; x.lineWidth=2;
+        x.fillStyle=col.replace('rgb','rgba').replace(')',','+fa+')');
+        x.beginPath();
+        x.ellipse(cx+m[0]*SC, cy-m[1]*SC,
+          Math.sqrt(Math.max(e.l1,1e-6))*2*SC,
+          Math.sqrt(Math.max(e.l2,1e-6))*2*SC,
+          -e.ang, 0, Math.PI*2);
+        x.fill(); x.stroke();
+      }
+      drawEll(muEKF, Pekf, 'rgb(198,40,40)', 0.07);
+      drawEll(mu, Pukf, 'rgb(11,95,255)', 0.10);
+      x.fillStyle='#c62828';x.beginPath();x.arc(cx+muEKF[0]*SC, cy-muEKF[1]*SC, 6, 0, Math.PI*2);x.fill();
+      x.strokeStyle='#fff';x.lineWidth=2;x.stroke();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(cx+mu[0]*SC, cy-mu[1]*SC, 6, 0, Math.PI*2);x.fill();
+      x.stroke();
+      x.fillStyle='rgba(11,95,255,0.95)';
+      ysig.forEach((y,i)=>{
+        if(i===0)return;
+        x.beginPath();x.arc(cx+y[0]*SC, cy-y[1]*SC, 4, 0, Math.PI*2);x.fill();
+      });
+      const ix=14, iy=14, iw=150, ih=120;
+      x.fillStyle='#fff';x.fillRect(ix,iy,iw,ih);
+      x.strokeStyle='#bbb';x.lineWidth=1;x.strokeRect(ix,iy,iw,ih);
+      x.fillStyle='#444';x.font='11px sans-serif';
+      x.fillText('입력 (r, θ)', ix+6, iy+14);
+      const i_cy=iy+ih/2;
+      const i_scR=(iw-30)/8, i_scT=(ih-30)/2;
+      function toIns(r,t){return {x:ix+15+(r/7)*(iw-30), y:i_cy-(t-0.75)*i_scT};}
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;
+      x.fillStyle='rgba(11,95,255,0.10)';
+      const ein=toIns(r0,t0);
+      x.beginPath();
+      x.ellipse(ein.x, ein.y, sr*i_scR*2, st*i_scT*2, 0, 0, Math.PI*2);
+      x.fill();x.stroke();
+      x.fillStyle='#0b5fff';
+      sig.forEach((s,i)=>{const p=toIns(s[0],s[1]);x.beginPath();x.arc(p.x,p.y,i===0?3.5:3,0,Math.PI*2);x.fill();});
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('회색 = 진짜 분포  ·  빨강 = EKF  ·  파랑 = UKF (· 시그마 점)', 180, 24);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      const dErr=Math.hypot(mu[0]-muEKF[0], mu[1]-muEKF[1]).toFixed(3);
+      x.fillText('두 평균 차이: '+dErr+'   (σ_θ가 클수록 차이 ↑)', 180, 392);
+    }
+    ['ukfR','ukfT','ukfSr','ukfSt'].forEach(k=>sl(k).oninput=draw);
+    draw();
+  })();
+  </script>
 
   <h3>파티클 필터 (Particle Filter)</h3>
   <p>분포 자체를 수많은 점(파티클)의 집합으로 표현합니다.</p>

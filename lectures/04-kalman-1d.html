@@ -47,6 +47,102 @@
 
   <p>1960년 R. E. Kalman이 제안했고, 곧 NASA의 Apollo 우주선 항법 컴퓨터에 탑재되어 인류를 달에 보냈습니다. 오늘날 거의 모든 자율 시스템(드론, 자동차, 선박, 스마트폰 GPS) 안에 칼만 필터가 돌고 있습니다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 단독 센서는 왜 부족한가? — GPS vs IMU vs 융합</h4>
+    <p>1차원 위치를 추적하는 상황입니다. <strong>GPS</strong>는 잡음이 크지만 평균적으로 진실 주변에 머물고, <strong>IMU</strong>(가속도 적분)는 매끄럽지만 작은 속도 편향이 시간이 지날수록 누적되어 진실에서 멀어집니다. 두 센서를 똑똑하게 섞은 <strong>융합 추정</strong>은 어느 쪽 단독보다 진실에 가깝게 따라갑니다. 슬라이더를 움직여 잡음·드리프트를 키워보고, 좌상단의 RMS 오차가 어떻게 변하는지 보세요.</p>
+    <canvas id="motiv" width="680" height="320"></canvas>
+    <div class="controls">
+      <label>GPS 잡음 σ (m) <span class="val" id="mGpsV">1.5</span><input type="range" id="mGps" min="0.2" max="4" step="0.1" value="1.5"></label>
+      <label>IMU 드리프트 (m/s) <span class="val" id="mDriftV">0.20</span><input type="range" id="mDrift" min="0" max="0.5" step="0.01" value="0.20"></label>
+      <button id="mRst">노이즈 다시 뽑기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('motiv');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const ml=52,mr=16,mt=28,mb=34;
+    const pw=W-ml-mr,ph=H-mt-mb;
+    const T=25,dt=0.1,N=Math.floor(T/dt)+1;
+    const yMin=-2,yMax=36;
+    function truth(t){return 0.8*t+3*Math.sin(0.5*t);}
+    function truthV(t){return 0.8+1.5*Math.cos(0.5*t);}
+    function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    const X=t=>ml+(t/T)*pw, Y=y=>mt+ph-((y-yMin)/(yMax-yMin))*ph;
+    let truePts=[],gps=[],imu=[],fused=[],noise=[];
+    function reroll(){noise=[];for(let i=0;i<N;i++)noise.push(gauss());}
+    function regen(){
+      const sgGps=+document.getElementById('mGps').value;
+      const drift=+document.getElementById('mDrift').value;
+      const alpha=0.92;
+      truePts=[];gps=[];imu=[];fused=[];
+      let imuPos=truth(0),fusePos=truth(0);
+      for(let i=0;i<N;i++){
+        const t=i*dt,xt=truth(t);
+        truePts.push({t,y:xt});
+        const z=xt+sgGps*noise[i];
+        gps.push({t,y:z});
+        const v=truthV(t)+drift;
+        imuPos+=v*dt;
+        imu.push({t,y:imuPos});
+        fusePos=alpha*(fusePos+v*dt)+(1-alpha)*z;
+        fused.push({t,y:fusePos});
+      }
+    }
+    function draw(){
+      document.getElementById('mGpsV').textContent=(+document.getElementById('mGps').value).toFixed(1);
+      document.getElementById('mDriftV').textContent=(+document.getElementById('mDrift').value).toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+      for(let y=0;y<=35;y+=5){ctx.beginPath();ctx.moveTo(ml,Y(y));ctx.lineTo(W-mr,Y(y));ctx.stroke();}
+      for(let t=0;t<=T;t+=5){ctx.beginPath();ctx.moveTo(X(t),mt);ctx.lineTo(X(t),mt+ph);ctx.stroke();}
+      ctx.strokeStyle='#999';
+      ctx.beginPath();ctx.moveTo(ml,mt+ph);ctx.lineTo(W-mr,mt+ph);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.stroke();
+      ctx.fillStyle='#555';ctx.font='11px sans-serif';
+      for(let t=0;t<=T;t+=5){ctx.fillText(t+'s',X(t)-7,mt+ph+16);}
+      for(let y=0;y<=35;y+=5){ctx.fillText(y+' m',ml-34,Y(y)+4);}
+      ctx.fillStyle='#c62828';
+      gps.forEach(p=>{ctx.beginPath();ctx.arc(X(p.t),Y(p.y),2,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.beginPath();truePts.forEach((p,i)=>{const px=X(p.t),py=Y(p.y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle='#f59e0b';ctx.lineWidth=2;
+      ctx.beginPath();imu.forEach((p,i)=>{const px=X(p.t),py=Y(p.y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();fused.forEach((p,i)=>{const px=X(p.t),py=Y(p.y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});ctx.stroke();
+      const lx=W-mr-152,ly=mt+6;
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(lx-8,ly-4,152,86);
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.strokeRect(lx-8,ly-4,152,86);
+      ctx.font='12px sans-serif';
+      function row(yy,col,dash,txt,dot){
+        ctx.strokeStyle=col;ctx.lineWidth=2.5;
+        if(dash)ctx.setLineDash(dash);
+        ctx.beginPath();ctx.moveTo(lx,yy);ctx.lineTo(lx+22,yy);ctx.stroke();
+        ctx.setLineDash([]);
+        if(dot){ctx.fillStyle=col;ctx.beginPath();ctx.arc(lx+11,yy,2,0,Math.PI*2);ctx.fill();}
+        ctx.fillStyle='#333';ctx.fillText(txt,lx+28,yy+4);
+      }
+      row(ly+10,'#888',[6,4],'진짜 위치',false);
+      row(ly+30,'#c62828',null,'GPS 측정',true);
+      row(ly+50,'#f59e0b',null,'IMU 적분',false);
+      row(ly+70,'#0b5fff',null,'융합 추정',false);
+      let eG=0,eI=0,eF=0;
+      for(let i=0;i<N;i++){eG+=(gps[i].y-truePts[i].y)**2;eI+=(imu[i].y-truePts[i].y)**2;eF+=(fused[i].y-truePts[i].y)**2;}
+      eG=Math.sqrt(eG/N);eI=Math.sqrt(eI/N);eF=Math.sqrt(eF/N);
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('RMS 오차 — GPS: '+eG.toFixed(2)+' m,  IMU: '+eI.toFixed(2)+' m,  융합: '+eF.toFixed(2)+' m',ml,mt-10);
+    }
+    function update(){regen();draw();}
+    document.getElementById('mGps').addEventListener('input',update);
+    document.getElementById('mDrift').addEventListener('input',update);
+    document.getElementById('mRst').addEventListener('click',()=>{reroll();update();});
+    reroll();update();
+  })();
+  </script>
+
   <h2>2. 은닉 상태와 측정</h2>
   <p>"진짜 상태(true state)"는 우리가 직접 볼 수 없습니다. 보이는 건 잡음이 섞인 측정값(measurement)뿐. 진짜 상태를 <strong>은닉 상태(hidden state)</strong>라 부릅니다.</p>
 
@@ -301,6 +397,129 @@
     <li>$K$ — <strong>칼만 이득</strong>. 측정에 얼마나 가중치를 줄지의 비율.</li>
   </ul>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 사이클이 분포를 어떻게 바꾸는가</h4>
+    <p>한 스텝 = <strong>예측 → 측정 → 갱신</strong>. 회색 점선은 이전 사후, 주황은 예측 후 분포(분산이 $Q$만큼 커짐), 파랑은 측정과 합친 갱신 사후(좁아짐). 빨간 점은 측정값 $z$, 초록 점선은 참 위치 $x^*$입니다. 자동 모드로 두면 분포가 시간에 따라 어떻게 안정되는지 보입니다.</p>
+    <canvas id="puc" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>프로세스 잡음 Q <span class="val" id="pucQV">0.5</span><input type="range" id="pucQ" min="0" max="3" step="0.05" value="0.5"></label>
+      <label>측정 잡음 R <span class="val" id="pucRV">2</span><input type="range" id="pucR" min="0.1" max="10" step="0.1" value="2"></label>
+      <label>참 위치 x* <span class="val" id="pucTV">5</span><input type="range" id="pucT" min="-10" max="10" step="0.5" value="5"></label>
+      <button id="pucStep">▶ 한 스텝</button>
+      <button id="pucAuto">▶▶ 자동</button>
+      <button id="pucRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('puc'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    let mu,P,prevMu,prevP,predMu,predP,lastZ,t,history;
+    const home=()=>{mu=0;P=10;prevMu=null;prevP=null;predMu=null;predP=null;lastZ=null;t=0;history=[];};
+    home();
+    const upd=()=>['pucQ','pucR','pucT'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['pucQ','pucR','pucT'].forEach(k=>sl(k).oninput=upd);upd();
+    function step(){
+      const Q=+sl('pucQ').value, R=+sl('pucR').value, target=+sl('pucT').value;
+      prevMu=mu;prevP=P;
+      predMu=mu;predP=P+Q;
+      const u1=Math.random()||1e-9, u2=Math.random();
+      const noise=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2)*Math.sqrt(R);
+      lastZ=target+noise;
+      const K=predP/(predP+R);
+      mu=predMu+K*(lastZ-predMu);
+      P=(1-K)*predP;
+      t++;
+      history.push({t,mu,P,z:lastZ,target});
+      if(history.length>120)history.shift();
+    }
+    sl('pucStep').onclick=step;
+    sl('pucRst').onclick=home;
+    let autoTimer=null;
+    sl('pucAuto').onclick=()=>{
+      if(autoTimer){clearInterval(autoTimer);autoTimer=null;sl('pucAuto').textContent='▶▶ 자동';}
+      else{autoTimer=setInterval(step,500);sl('pucAuto').textContent='⏸ 정지';}
+    };
+    function gauss(m,v,xq){return Math.exp(-(xq-m)*(xq-m)/(2*v))/Math.sqrt(2*Math.PI*v);}
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const SPLIT=220;
+      const xMin=-15,xMax=15,gw=c.width-40,gh=SPLIT-50,gx0=20,gy0=30;
+      x.strokeStyle='#eee';
+      for(let xv=xMin;xv<=xMax;xv+=5){
+        const px=gx0+(xv-xMin)/(xMax-xMin)*gw;
+        x.beginPath();x.moveTo(px,gy0);x.lineTo(px,gy0+gh);x.stroke();
+        x.fillStyle='#aaa';x.font='10px sans-serif';x.textAlign='center';x.fillText(xv,px,gy0+gh+12);
+      }
+      let yMax=0.5;
+      if(prevP!==null) yMax=Math.max(yMax,gauss(prevMu,prevP,prevMu));
+      if(predP!==null) yMax=Math.max(yMax,gauss(predMu,predP,predMu));
+      yMax=Math.max(yMax,gauss(mu,P,mu));
+      function plotG(m,v,color,dash){
+        x.strokeStyle=color;x.lineWidth=2;if(dash)x.setLineDash(dash);else x.setLineDash([]);
+        x.beginPath();
+        for(let i=0;i<=240;i++){
+          const xv=xMin+(xMax-xMin)*i/240;
+          const yv=gauss(m,v,xv);
+          const px=gx0+(xv-xMin)/(xMax-xMin)*gw;
+          const py=gy0+gh-yv/yMax*gh*0.9;
+          if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+        }
+        x.stroke();x.setLineDash([]);
+      }
+      if(prevP!==null)plotG(prevMu,prevP,'#bbb',[3,3]);
+      if(predP!==null)plotG(predMu,predP,'#ff8c00',null);
+      plotG(mu,P,'#0b5fff',null);
+      if(lastZ!==null){
+        const px=gx0+(lastZ-xMin)/(xMax-xMin)*gw;
+        x.strokeStyle='#c62828';x.lineWidth=2;
+        x.beginPath();x.moveTo(px,gy0+gh-12);x.lineTo(px,gy0+gh);x.stroke();
+        x.fillStyle='#c62828';x.beginPath();x.arc(px,gy0+gh,5,0,Math.PI*2);x.fill();
+      }
+      const target=+sl('pucT').value;
+      const tpx=gx0+(target-xMin)/(xMax-xMin)*gw;
+      x.strokeStyle='#2e7d32';x.setLineDash([2,3]);x.lineWidth=1.5;
+      x.beginPath();x.moveTo(tpx,gy0);x.lineTo(tpx,gy0+gh);x.stroke();x.setLineDash([]);
+      x.font='11px sans-serif';x.textAlign='left';
+      x.fillStyle='#bbb';x.fillText('--- 이전 사후',gx0+8,gy0-10);
+      x.fillStyle='#ff8c00';x.fillText('— 예측 (P+Q)',gx0+108,gy0-10);
+      x.fillStyle='#0b5fff';x.fillText('— 갱신 사후',gx0+208,gy0-10);
+      x.fillStyle='#c62828';x.fillText('● 측정 z',gx0+296,gy0-10);
+      x.fillStyle='#2e7d32';x.fillText(': 참 x*',gx0+360,gy0-10);
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';
+      x.fillText('스텝 t='+t,gx0,SPLIT-8);
+      x.fillStyle='#0b5fff';x.fillText('μ='+mu.toFixed(2)+', σ²='+P.toFixed(3)+', σ='+Math.sqrt(P).toFixed(3),gx0+80,SPLIT-8);
+      if(predP!==null){const K=predP/(predP+ +sl('pucR').value);x.fillStyle='#ff8c00';x.fillText('K='+K.toFixed(3),gx0+360,SPLIT-8);}
+      x.strokeStyle='#e3e6ea';x.beginPath();x.moveTo(0,SPLIT);x.lineTo(c.width,SPLIT);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('시간에 따른 추정 (μ ± σ 띠, 빨간 점=측정)',gx0,SPLIT+18);
+      const tx0=gx0,ty0=SPLIT+28,tw=gw,th=c.height-SPLIT-48;
+      const tWin=60, tStart=Math.max(0,t-tWin);
+      const yMinT=-12, yMaxT=12;
+      const tx=tt=>tx0+(tt-tStart)/tWin*tw;
+      const ty=yv=>ty0+th-(yv-yMinT)/(yMaxT-yMinT)*th;
+      x.strokeStyle='#ccc';x.beginPath();x.moveTo(tx0,ty0);x.lineTo(tx0,ty0+th);x.stroke();
+      x.beginPath();x.moveTo(tx0,ty(0));x.lineTo(tx0+tw,ty(0));x.stroke();
+      x.strokeStyle='#2e7d32';x.setLineDash([3,3]);
+      x.beginPath();x.moveTo(tx0,ty(target));x.lineTo(tx0+tw,ty(target));x.stroke();x.setLineDash([]);
+      if(history.length>0){
+        x.fillStyle='rgba(11,95,255,0.15)';x.beginPath();let started=false;
+        history.forEach(e=>{if(e.t<tStart)return;const px=tx(e.t),py=ty(e.mu+Math.sqrt(e.P));if(!started){x.moveTo(px,py);started=true;}else x.lineTo(px,py);});
+        for(let i=history.length-1;i>=0;i--){const e=history[i];if(e.t<tStart)continue;const px=tx(e.t),py=ty(e.mu-Math.sqrt(e.P));x.lineTo(px,py);}
+        x.closePath();x.fill();
+        x.fillStyle='#c62828';
+        history.forEach(e=>{if(e.t<tStart)return;const px=tx(e.t),py=ty(e.z);x.beginPath();x.arc(px,py,2.5,0,Math.PI*2);x.fill();});
+        x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();started=false;
+        history.forEach(e=>{if(e.t<tStart)return;const px=tx(e.t),py=ty(e.mu);if(!started){x.moveTo(px,py);started=true;}else x.lineTo(px,py);});
+        x.stroke();
+      }
+      x.fillStyle='#aaa';x.font='10px sans-serif';
+      x.fillText(yMaxT,tx0-22,ty0+6);x.fillText(yMinT,tx0-22,ty0+th);x.fillText(0,tx0-10,ty(0)+4);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
   <h2>7. 예제 1: 정지된 거리 추정</h2>
   <p>강의 노트의 예제: 진짜 거리는 50 m, 측정 오차 $\sigma = 5$ m. 10번 측정한 값:</p>
   <p style="font-family:monospace;font-size:13px;background:#f5f5f5;padding:8px;border-radius:4px">
@@ -309,48 +528,144 @@
   <p>10개를 그냥 평균 내면 49.85 m로 정답에 가깝습니다. 칼만 필터는 측정이 들어올 때마다 추정치를 한 번씩 업데이트하면서 같은 결과로 수렴합니다.</p>
 
   <div class="demo">
-    <h4>🎮 인터랙티브: 정지된 1D 위치 추정</h4>
-    <p>진짜 위치가 30으로 고정되어 있고, 잡음이 섞인 측정이 매 스텝 들어옵니다. 측정 잡음 $R$과 초기 분산을 조절해 보세요.</p>
-    <canvas id="static" width="640" height="280"></canvas>
+    <h4>🎮 인터랙티브: 정지된 1D 위치 추정 — 측정이 쌓일수록 수렴</h4>
+    <p>진짜 거리는 50 m로 고정. 칼만 필터가 측정 한 개씩 받으며 추정값 $\hat x$와 불확실성 $P$를 어떻게 줄여나가는지 시간축으로 펼쳐서 봅니다. 일부러 <strong>틀린 초기 추정</strong>($\hat x_0=20$)에서 시작해도, 측정이 쌓이면 빠르게 50으로 수렴하고 <strong>±2σ 신뢰 구간(연한 파란 띠)</strong>이 좁아지는 게 보입니다. 같은 데이터를 단순 평균낸 값과도 비교됩니다.</p>
+    <canvas id="static" width="720" height="340"></canvas>
     <div class="controls">
-      <label>측정 잡음 R <span class="val" id="srV">10</span><input type="range" id="sr" min="0.5" max="40" step="0.5" value="10"></label>
-      <button id="staticRst">새로운 시퀀스</button>
+      <label>측정 잡음 R <span class="val" id="srV">25</span><input type="range" id="sr" min="1" max="100" step="1" value="25"></label>
+      <label>초기 추정 x̂₀ <span class="val" id="sx0V">20</span><input type="range" id="sx0" min="10" max="90" step="1" value="20"></label>
+      <label>초기 분산 P₀ <span class="val" id="sp0V">400</span><input type="range" id="sp0" min="10" max="1000" step="10" value="400"></label>
+      <button id="sPlay">▶ 재생</button>
+      <button id="sStep" class="alt">한 스텝</button>
+      <button id="sNew" class="alt">새 시퀀스</button>
     </div>
   </div>
   <script>
   (function(){
-    const c=document.getElementById('static'),x=c.getContext('2d');
-    let xh=0,P=100,k=0,frame=0;
-    function init(){xh=0;P=100;k=0;frame=0;}
-    init();document.getElementById('staticRst').onclick=init;
-    function loop(){
-      if(frame++%15===0){
-        const R=+document.getElementById('sr').value;
-        const z=30+(Math.random()*2-1)*Math.sqrt(R)*1.5;
-        const K=P/(P+R);
-        xh=xh+K*(z-xh);
-        P=(1-K)*P;
-        k++;
-      }
-      const R=+document.getElementById('sr').value;
-      document.getElementById('srV').textContent=R;
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.setLineDash([5,5]);x.beginPath();x.moveTo(40,140);x.lineTo(620,140);x.stroke();x.setLineDash([]);
-      // 추정치를 큰 점으로
-      const px=320, py=140-(xh-30)*8;
-      x.fillStyle='#0b5fff';x.beginPath();x.arc(px,py,8,0,Math.PI*2);x.fill();
-      // 1σ 막대
-      x.strokeStyle='#0b5fff';x.lineWidth=2;
-      const sg=Math.sqrt(P)*8;
-      x.beginPath();x.moveTo(px,py-sg);x.lineTo(px,py+sg);x.moveTo(px-8,py-sg);x.lineTo(px+8,py-sg);x.moveTo(px-8,py+sg);x.lineTo(px+8,py+sg);x.stroke();
-      x.fillStyle='#666';x.font='12px sans-serif';
-      x.fillText('🟢 진짜 거리 = 30',40,30);
-      x.fillStyle='#0b5fff';x.fillText('🔵 추정 = '+xh.toFixed(2)+' (±'+Math.sqrt(P).toFixed(2)+')',40,50);
-      x.fillStyle='#666';x.fillText('스텝 k = '+k,40,70);
-      x.fillText('K = P/(P+R) = '+(P/(P+R)).toFixed(3),40,90);
-      requestAnimationFrame(loop);
+    const c=document.getElementById('static');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const ml=46,mr=196,mt=24,mb=34;
+    const pw=W-ml-mr,ph=H-mt-mb;
+    const truth=50,Nmax=20;
+    const yMin=10,yMax=90;
+    let xh0=20,P0=400,R=25;
+    let xh=xh0,P=P0;
+    let meas=[],hist=[];
+    let playing=false,lastTick=0;
+    const SPEED=380;
+    function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    const X=k=>ml+(k/Nmax)*pw;
+    const Y=y=>mt+ph-((y-yMin)/(yMax-yMin))*ph;
+    const clip=y=>Math.max(yMin,Math.min(yMax,y));
+    function newSeq(){
+      R=+document.getElementById('sr').value;
+      meas=[];
+      const sg=Math.sqrt(R);
+      for(let i=0;i<Nmax;i++)meas.push(truth+sg*gauss());
+      reset();
     }
-    loop();
+    function reset(){
+      xh0=+document.getElementById('sx0').value;
+      P0=+document.getElementById('sp0').value;
+      xh=xh0;P=P0;hist=[];
+    }
+    function step(){
+      if(hist.length>=Nmax)return;
+      const k=hist.length;
+      const z=meas[k];
+      const K=P/(P+R);
+      xh=xh+K*(z-xh);
+      P=(1-K)*P;
+      hist.push({k,z,xh,P,K});
+    }
+    function draw(){
+      document.getElementById('srV').textContent=R.toFixed(0);
+      document.getElementById('sx0V').textContent=xh0.toFixed(0);
+      document.getElementById('sp0V').textContent=P0.toFixed(0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+      for(let y=yMin;y<=yMax;y+=10){ctx.beginPath();ctx.moveTo(ml,Y(y));ctx.lineTo(ml+pw,Y(y));ctx.stroke();}
+      for(let k=0;k<=Nmax;k+=5){ctx.beginPath();ctx.moveTo(X(k),mt);ctx.lineTo(X(k),mt+ph);ctx.stroke();}
+      ctx.strokeStyle='#999';
+      ctx.beginPath();ctx.moveTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.stroke();
+      ctx.fillStyle='#555';ctx.font='11px sans-serif';
+      for(let k=0;k<=Nmax;k+=5){ctx.fillText(k,X(k)-4,mt+ph+15);}
+      for(let y=yMin;y<=yMax;y+=10){ctx.fillText(y,ml-22,Y(y)+4);}
+      ctx.fillText('스텝 k',ml+pw/2-15,mt+ph+28);
+      ctx.save();ctx.translate(12,mt+ph/2+22);ctx.rotate(-Math.PI/2);ctx.fillText('거리 (m)',0,0);ctx.restore();
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.moveTo(ml,Y(truth));ctx.lineTo(ml+pw,Y(truth));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';
+      ctx.fillText('진짜 거리 = '+truth,ml+pw-92,Y(truth)-6);
+      const pts=[{k:0,xh:xh0,P:P0},...hist.map(h=>({k:h.k+1,xh:h.xh,P:h.P}))];
+      ctx.fillStyle='rgba(11,95,255,0.13)';
+      ctx.beginPath();
+      pts.forEach((p,i)=>{const sg=Math.sqrt(p.P);const py=Y(clip(p.xh+2*sg));if(i===0)ctx.moveTo(X(p.k),py);else ctx.lineTo(X(p.k),py);});
+      for(let i=pts.length-1;i>=0;i--){const sg=Math.sqrt(pts[i].P);ctx.lineTo(X(pts[i].k),Y(clip(pts[i].xh-2*sg)));}
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle='#c62828';
+      hist.forEach(h=>{ctx.beginPath();ctx.arc(X(h.k+1),Y(clip(h.z)),2.8,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      pts.forEach((p,i)=>{if(i===0)ctx.moveTo(X(p.k),Y(p.xh));else ctx.lineTo(X(p.k),Y(p.xh));});
+      ctx.stroke();
+      const cur=pts[pts.length-1];
+      ctx.fillStyle='#0b5fff';
+      ctx.beginPath();ctx.arc(X(cur.k),Y(cur.xh),4.5,0,Math.PI*2);ctx.fill();
+      const px=ml+pw+14,py=mt+4;
+      ctx.fillStyle='#fff';ctx.fillRect(px-6,py-2,180,ph+8);
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.strokeRect(px-6,py-2,180,ph+8);
+      ctx.fillStyle='#333';ctx.font='bold 13px sans-serif';
+      ctx.fillText('현재 상태',px,py+14);
+      ctx.font='12px Consolas,monospace';
+      let yy=py+34;
+      const last=hist.length>0?hist[hist.length-1]:null;
+      ctx.fillStyle='#555';
+      ctx.fillText('k = '+(last?last.k+1:0)+' / '+Nmax,px,yy);yy+=22;
+      if(last){
+        ctx.fillStyle='#c62828';ctx.fillText('z_k  = '+last.z.toFixed(2),px,yy);yy+=20;
+        ctx.fillStyle='#0b5fff';ctx.fillText('x̂_k  = '+last.xh.toFixed(2),px,yy);yy+=18;
+        ctx.fillText('P_k  = '+last.P.toFixed(2),px,yy);yy+=18;
+        ctx.fillText('σ_k  = '+Math.sqrt(last.P).toFixed(2),px,yy);yy+=18;
+        ctx.fillStyle='#7c3aed';ctx.fillText('K_k  = '+last.K.toFixed(3),px,yy);yy+=24;
+        let s=0;hist.forEach(h=>s+=h.z);const naive=s/hist.length;
+        ctx.fillStyle='#666';ctx.font='11px Consolas,monospace';
+        ctx.fillText('단순평균 = '+naive.toFixed(2),px,yy);yy+=16;
+        ctx.fillText('KF오차   = '+(last.xh-truth>=0?'+':'')+(last.xh-truth).toFixed(2),px,yy);
+      }else{
+        ctx.fillStyle='#0b5fff';ctx.fillText('x̂_0 = '+xh0.toFixed(0),px,yy);yy+=18;
+        ctx.fillText('P_0 = '+P0.toFixed(0),px,yy);yy+=18;
+        ctx.fillText('σ_0 = '+Math.sqrt(P0).toFixed(2),px,yy);yy+=22;
+        ctx.fillStyle='#999';ctx.font='11px sans-serif';
+        ctx.fillText('▶ 재생을 눌러 측정',px,yy);yy+=14;
+        ctx.fillText('   하나씩 받아보세요',px,yy);
+      }
+    }
+    function tick(now){
+      if(playing&&now-lastTick>=SPEED){
+        step();lastTick=now;
+        if(hist.length>=Nmax){playing=false;document.getElementById('sPlay').textContent='▶ 재생';}
+      }
+      draw();
+      requestAnimationFrame(tick);
+    }
+    document.getElementById('sr').addEventListener('input',()=>{playing=false;document.getElementById('sPlay').textContent='▶ 재생';newSeq();});
+    document.getElementById('sx0').addEventListener('input',reset);
+    document.getElementById('sp0').addEventListener('input',reset);
+    document.getElementById('sStep').addEventListener('click',()=>{playing=false;document.getElementById('sPlay').textContent='▶ 재생';if(hist.length>=Nmax)reset();step();});
+    document.getElementById('sPlay').addEventListener('click',()=>{
+      if(hist.length>=Nmax)reset();
+      playing=!playing;
+      document.getElementById('sPlay').textContent=playing?'⏸ 일시정지':'▶ 재생';
+      lastTick=performance.now();
+    });
+    document.getElementById('sNew').addEventListener('click',()=>{playing=false;document.getElementById('sPlay').textContent='▶ 재생';newSeq();});
+    newSeq();
+    requestAnimationFrame(tick);
   })();
   </script>
 
