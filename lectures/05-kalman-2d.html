@@ -566,65 +566,276 @@
 
   <div class="demo">
     <h4>🎮 인터랙티브: 파티클 필터로 1D 위치 추정</h4>
-    <p>1차원 직선 위에서 진짜 위치(녹색)를 200개 파티클(파랑 점들)이 추정합니다. 측정이 들어올 때마다 진짜 위치 근처의 파티클이 살아남고, 멀리 있는 파티클은 제거됩니다.</p>
-    <canvas id="pf" width="640" height="280"></canvas>
+    <p>1차원 직선 위에서 진짜 위치(녹색)를 200개 파티클(파랑 점들)이 추정합니다. <strong>"한 스텝"</strong>으로 한 번씩 진행하거나, <strong>"자동"</strong>으로 연속 실행하세요. 측정(빨간 화살표)이 들어올 때마다 진짜 위치 근처의 파티클이 살아남고, 멀리 있는 파티클은 제거됩니다. 위쪽 바 그래프는 파티클이 만드는 추정 확률 분포(히스토그램)입니다.</p>
+    <canvas id="pf" width="640" height="320"></canvas>
     <div class="controls">
       <label>측정 잡음 σ <span class="val" id="pfsV">3</span><input type="range" id="pfs" min="0.5" max="10" step="0.5" value="3"></label>
-      <button id="pfStep">한 스텝</button>
-      <button id="pfAuto">자동</button>
+      <button id="pfStep">한 스텝 ▷</button>
+      <button id="pfAuto">자동 ⏵</button>
       <button id="pfRst" class="alt">리셋</button>
     </div>
   </div>
   <script>
   (function(){
     const c=document.getElementById('pf'),x=c.getContext('2d');
-    let parts,truth=20,running=false,frame=0;
-    function init(){parts=[];for(let i=0;i<200;i++)parts.push({x:Math.random()*60,w:1/200});truth=20;}
+    const sl=(id)=>document.getElementById(id);
+    const N=200, X0=20, X1=620, Y_LINE=240;       // line y in canvas
+    const xToPix=(xv)=>X0+(xv/60)*(X1-X0);        // data x ∈ [0,60] → pixels
+    let parts, truth, lastZ=null, stepCount=0, running=false, frame=0;
+    function init(){
+      parts=[];
+      for(let i=0;i<N;i++)parts.push({x:Math.random()*60, w:1/N});
+      truth=20; lastZ=null; stepCount=0;
+    }
     init();
-    document.getElementById('pfRst').onclick=init;
-    document.getElementById('pfAuto').onclick=()=>{running=!running;};
+    sl('pfRst').onclick=init;
+    sl('pfAuto').onclick=function(){running=!running; this.textContent=running?'정지 ⏸':'자동 ⏵';};
+    sl('pfs').oninput=()=>{sl('pfsV').textContent=sl('pfs').value;};
+    function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
     function step(){
-      const sg=+document.getElementById('pfs').value;
-      // 진짜 위치 살짝 이동
-      truth+=0.3+Math.random()*0.4;
-      if(truth>55)truth=5;
-      // 파티클 예측: 약간씩 무작위 이동
-      parts.forEach(p=>{p.x+=0.4+(Math.random()-0.5)*1.5;});
-      // 측정
-      const z=truth+(Math.random()*2-1)*sg;
-      // 가중치 계산 (가우시안 likelihood)
+      const sg=+sl('pfs').value;
+      // 진짜 위치 이동 (오른쪽으로 천천히, 끝에 닿으면 5로 점프)
+      truth+=0.5+gauss()*0.1;
+      if(truth>58)truth=2;
+      // 파티클 예측: 같은 운동 모델 + 노이즈
+      parts.forEach(p=>{p.x+=0.5+gauss()*0.7;});
+      // 측정 (잡음 섞인 진짜 위치)
+      const z=truth+gauss()*sg;
+      lastZ=z;
+      // 가중치: 가우시안 likelihood
+      let wmax=-Infinity;
+      const lw=parts.map(p=>{const e=-((p.x-z)**2)/(2*sg*sg); if(e>wmax)wmax=e; return e;});
       let wsum=0;
-      parts.forEach(p=>{p.w=Math.exp(-(p.x-z)**2/(2*sg*sg));wsum+=p.w;});
-      parts.forEach(p=>p.w/=(wsum||1));
-      // 리샘플링
-      const cum=[];let s=0;parts.forEach(p=>{s+=p.w;cum.push(s);});
+      parts.forEach((p,i)=>{p.w=Math.exp(lw[i]-wmax); wsum+=p.w;});
+      if(wsum>1e-300)parts.forEach(p=>p.w/=wsum);
+      else parts.forEach(p=>p.w=1/N);
+      // Systematic resampling
+      const cum=[]; let s=0; parts.forEach(p=>{s+=p.w; cum.push(s);});
+      const u0=Math.random()/N;
       const newParts=[];
-      for(let i=0;i<parts.length;i++){
-        const r=Math.random();let idx=0;while(idx<cum.length-1&&cum[idx]<r)idx++;
-        newParts.push({x:parts[idx].x+(Math.random()-0.5)*0.3,w:1/parts.length});
+      let idx=0;
+      for(let i=0;i<N;i++){
+        const u=u0+i/N;
+        while(idx<cum.length-1&&cum[idx]<u)idx++;
+        newParts.push({x:parts[idx].x+gauss()*0.2, w:1/N});
       }
       parts=newParts;
+      stepCount++;
     }
-    document.getElementById('pfStep').onclick=step;
-    function loop(){
-      if(running&&frame++%10===0)step();
-      const sg=+document.getElementById('pfs').value;
-      document.getElementById('pfsV').textContent=sg;
-      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
-      x.strokeStyle='#999';x.beginPath();x.moveTo(20,180);x.lineTo(620,180);x.stroke();
-      // 파티클들
-      parts.forEach(p=>{const px=20+p.x*10;x.fillStyle='rgba(11,95,255,0.5)';x.beginPath();x.arc(px,180+(Math.random()-0.5)*8,2,0,Math.PI*2);x.fill();});
-      // 추정 (가중 평균)
-      const est=parts.reduce((s,p)=>s+p.x*p.w,0)*parts.length / parts.length;
+    sl('pfStep').onclick=step;
+    function draw(){
+      if(running && frame%10===0)step();
+      frame++;
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      // 격자
+      x.strokeStyle='#eee';
+      for(let i=0;i<=60;i+=5){const px=xToPix(i); x.beginPath(); x.moveTo(px,40); x.lineTo(px,Y_LINE); x.stroke();}
+      // x축
+      x.strokeStyle='#999'; x.lineWidth=1;
+      x.beginPath(); x.moveTo(X0,Y_LINE); x.lineTo(X1,Y_LINE); x.stroke();
+      // 눈금
+      x.fillStyle='#666'; x.font='10px sans-serif';
+      for(let i=0;i<=60;i+=10){const px=xToPix(i); x.beginPath(); x.moveTo(px,Y_LINE); x.lineTo(px,Y_LINE+5); x.stroke(); x.fillText(i, px-5, Y_LINE+18);}
+      // 히스토그램 (파티클 밀도)
+      const bins=60, binW=(X1-X0)/bins;
+      const hist=new Array(bins).fill(0);
+      parts.forEach(p=>{const b=Math.max(0,Math.min(bins-1,Math.floor(p.x))); hist[b]++;});
+      const maxH=Math.max(1,...hist);
+      const HIST_TOP=50, HIST_BOT=Y_LINE-25;
+      x.fillStyle='rgba(11,95,255,0.3)';
+      hist.forEach((h,i)=>{
+        const px=X0+i*binW;
+        const bh=(h/maxH)*(HIST_BOT-HIST_TOP);
+        x.fillRect(px+0.5, HIST_BOT-bh, binW-1, bh);
+      });
+      // 파티클 점들 (선 위, jitter 고정)
+      parts.forEach((p,i)=>{
+        const px=xToPix(p.x);
+        const jy=Y_LINE-2-((i*9301+49297)%6); // deterministic jitter
+        x.fillStyle='rgba(11,95,255,0.55)';
+        x.beginPath(); x.arc(px,jy,2,0,Math.PI*2); x.fill();
+      });
+      // 추정 (단순 평균; 리샘플링 후 가중치는 균등이므로 동일)
       const meanX=parts.reduce((s,p)=>s+p.x,0)/parts.length;
-      x.fillStyle='#0b5fff';x.beginPath();x.arc(20+meanX*10,180,7,0,Math.PI*2);x.fill();
-      // 진짜
-      x.fillStyle='#2e7d32';x.beginPath();x.arc(20+truth*10,180,8,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.lineWidth=2;x.stroke();
-      x.fillStyle='#666';x.font='12px sans-serif';
-      x.fillText('🟢 진짜 = '+truth.toFixed(1)+'  ·  🔵 추정 = '+meanX.toFixed(1)+'  ·  파티클 분포 = 추정 확률 분포',20,30);
-      requestAnimationFrame(loop);
+      // 측정 화살표
+      if(lastZ!==null){
+        const px=xToPix(lastZ);
+        x.strokeStyle='#c62828'; x.lineWidth=2; x.fillStyle='#c62828';
+        x.beginPath(); x.moveTo(px, Y_LINE+30); x.lineTo(px, Y_LINE+8); x.stroke();
+        x.beginPath(); x.moveTo(px-5,Y_LINE+12); x.lineTo(px,Y_LINE+5); x.lineTo(px+5,Y_LINE+12); x.closePath(); x.fill();
+        x.font='11px sans-serif'; x.fillText('z='+lastZ.toFixed(1), px-18, Y_LINE+45);
+      }
+      // 추정 (파랑 ▼)
+      {const px=xToPix(meanX);
+      x.fillStyle='#0b5fff';
+      x.beginPath(); x.moveTo(px-7,Y_LINE-20); x.lineTo(px+7,Y_LINE-20); x.lineTo(px,Y_LINE-8); x.closePath(); x.fill();}
+      // 진짜 위치 (녹색 큰 점)
+      {const px=xToPix(truth);
+      x.fillStyle='#2e7d32';
+      x.beginPath(); x.arc(px,Y_LINE,9,0,Math.PI*2); x.fill();
+      x.strokeStyle='#fff'; x.lineWidth=2; x.stroke();}
+      // 정보
+      x.fillStyle='#444'; x.font='13px sans-serif';
+      x.fillText('🟢 진짜 = '+truth.toFixed(1)+'   🔽 PF 추정 = '+meanX.toFixed(1)+'   🔴 측정 z'+(lastZ!==null?'= '+lastZ.toFixed(1):' (대기)')+'   ·   step #'+stepCount, 20, 22);
+      x.fillStyle='#888'; x.font='11px sans-serif';
+      x.fillText('파란 막대 = 파티클 히스토그램(추정 확률 분포)', 20, 305);
+      requestAnimationFrame(draw);
     }
-    loop();
+    sl('pfsV').textContent=sl('pfs').value;
+    draw();
+  })();
+  </script>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2D 파티클 필터 — 거리 기반 전역 측위</h4>
+    <p>3개 랜드마크(빨강)가 거리만 알려주는 상황에서 평면 위 로봇(녹색)을 추정합니다. 처음에는 파티클(파랑 점들)이 화면에 균등하게 흩뿌려져 있다가 측정이 누적되면서 진짜 위치 주위로 모입니다.
+    <strong>"납치"</strong> 버튼은 로봇을 다른 곳으로 순간 이동시킵니다 — 이때 가우시안 단봉 가정의 EKF는 발산하지만, 파티클 필터는 다중 가설을 표현하므로 다시 수렴합니다 ("kidnapped robot problem"). 비교를 위해 EKF 추정(🔶주황 큰 점·타원)도 함께 그립니다.</p>
+    <canvas id="pf2" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>측정 잡음 σ <span class="val" id="pf2sV">15</span><input type="range" id="pf2s" min="3" max="40" value="15"></label>
+      <label>파티클 수 <span class="val" id="pf2nV">500</span><input type="range" id="pf2n" min="100" max="2000" step="100" value="500"></label>
+      <button id="pf2Auto">자동 ⏵</button>
+      <button id="pf2Kid">납치 🛸</button>
+      <button id="pf2Rst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pf2'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    const lm=[{x:100,y:80},{x:540,y:90},{x:320,y:340}];
+    let robot, parts, ekf, running=false, frame=0;
+    function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function init(){
+      robot={x:200, y:200, vx:1.6, vy:0.9};
+      const N=+sl('pf2n').value;
+      parts=[];
+      for(let i=0;i<N;i++)parts.push({x:Math.random()*620+10, y:Math.random()*380+10, w:1/N});
+      // EKF: x=[x,y], P=large initial covariance, posed at center
+      ekf={mu:[320,200], P:[[1e4,0],[0,1e4]]};
+    }
+    init();
+    sl('pf2Rst').onclick=init;
+    sl('pf2Kid').onclick=()=>{robot.x=50+Math.random()*540;robot.y=50+Math.random()*300;};
+    sl('pf2Auto').onclick=function(){running=!running;this.textContent=running?'정지 ⏸':'자동 ⏵';};
+    sl('pf2n').oninput=()=>{sl('pf2nV').textContent=sl('pf2n').value;init();};
+    sl('pf2s').oninput=()=>{sl('pf2sV').textContent=sl('pf2s').value;};
+    function step(){
+      const sg=+sl('pf2s').value;
+      const N=parts.length;
+      // Robot motion
+      robot.x+=robot.vx; robot.y+=robot.vy;
+      if(robot.x<30||robot.x>610)robot.vx*=-1;
+      if(robot.y<30||robot.y>370)robot.vy*=-1;
+      // PF predict
+      parts.forEach(p=>{
+        p.x+=robot.vx+gauss()*2.5;
+        p.y+=robot.vy+gauss()*2.5;
+      });
+      // Measurements
+      const meas=lm.map(L=>Math.hypot(robot.x-L.x,robot.y-L.y)+gauss()*sg);
+      // PF weights
+      let wmax=-Infinity;
+      const logW=parts.map(p=>{
+        let lw=0;
+        for(let i=0;i<lm.length;i++){
+          const d=Math.hypot(p.x-lm[i].x, p.y-lm[i].y);
+          lw -= ((d-meas[i])**2)/(2*sg*sg);
+        }
+        if(lw>wmax)wmax=lw;
+        return lw;
+      });
+      let wsum=0;
+      parts.forEach((p,i)=>{p.w=Math.exp(logW[i]-wmax); wsum+=p.w;});
+      if(wsum>1e-300)parts.forEach(p=>p.w/=wsum);
+      else parts.forEach(p=>p.w=1/N);
+      // Systematic resampling
+      const cum=[];let s=0;parts.forEach(p=>{s+=p.w;cum.push(s);});
+      const u0=Math.random()/N;
+      const newP=[];
+      let idx=0;
+      for(let i=0;i<N;i++){
+        const u=u0+i/N;
+        while(idx<cum.length-1&&cum[idx]<u)idx++;
+        newP.push({x:parts[idx].x+gauss()*1.2, y:parts[idx].y+gauss()*1.2, w:1/N});
+      }
+      parts=newP;
+      // EKF update for comparison: state x=[x,y], motion = identity + Q, meas = ranges
+      const Q=[[6,0],[0,6]];
+      ekf.P=[[ekf.P[0][0]+Q[0][0],ekf.P[0][1]],[ekf.P[1][0],ekf.P[1][1]+Q[1][1]]];
+      // Sequential measurement update for each landmark
+      for(let i=0;i<lm.length;i++){
+        const dx=ekf.mu[0]-lm[i].x, dy=ekf.mu[1]-lm[i].y;
+        const d=Math.hypot(dx,dy);
+        if(d<1e-6)continue;
+        const H=[dx/d, dy/d];
+        // S = H P H^T + R
+        const HP=[H[0]*ekf.P[0][0]+H[1]*ekf.P[1][0], H[0]*ekf.P[0][1]+H[1]*ekf.P[1][1]];
+        const S=HP[0]*H[0]+HP[1]*H[1]+sg*sg;
+        // K = P H^T / S
+        const PHt=[ekf.P[0][0]*H[0]+ekf.P[0][1]*H[1], ekf.P[1][0]*H[0]+ekf.P[1][1]*H[1]];
+        const K=[PHt[0]/S, PHt[1]/S];
+        const innov=meas[i]-d;
+        ekf.mu=[ekf.mu[0]+K[0]*innov, ekf.mu[1]+K[1]*innov];
+        // P = (I - K H) P
+        const KH=[[K[0]*H[0],K[0]*H[1]],[K[1]*H[0],K[1]*H[1]]];
+        const IKH=[[1-KH[0][0],-KH[0][1]],[-KH[1][0],1-KH[1][1]]];
+        ekf.P=[[IKH[0][0]*ekf.P[0][0]+IKH[0][1]*ekf.P[1][0], IKH[0][0]*ekf.P[0][1]+IKH[0][1]*ekf.P[1][1]],
+               [IKH[1][0]*ekf.P[0][0]+IKH[1][1]*ekf.P[1][0], IKH[1][0]*ekf.P[0][1]+IKH[1][1]*ekf.P[1][1]]];
+      }
+    }
+    function draw(){
+      if(running&&frame%4===0)step();
+      frame++;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';
+      for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      // True ranges to landmarks (faint circles)
+      x.strokeStyle='rgba(198,40,40,0.10)';x.lineWidth=1;
+      lm.forEach(L=>{const d=Math.hypot(robot.x-L.x,robot.y-L.y);x.beginPath();x.arc(L.x,L.y,d,0,Math.PI*2);x.stroke();});
+      // Particles
+      x.fillStyle='rgba(11,95,255,0.45)';
+      parts.forEach(p=>{x.beginPath();x.arc(p.x,p.y,2,0,Math.PI*2);x.fill();});
+      // PF estimate (mean)
+      const mx=parts.reduce((s,p)=>s+p.x,0)/parts.length;
+      const my=parts.reduce((s,p)=>s+p.y,0)/parts.length;
+      // EKF ellipse
+      const tr=ekf.P[0][0]+ekf.P[1][1];
+      const disc=Math.sqrt(Math.max(0,(ekf.P[0][0]-ekf.P[1][1])**2+4*ekf.P[0][1]*ekf.P[1][0]));
+      const l1=(tr+disc)/2, l2=(tr-disc)/2;
+      const ang=0.5*Math.atan2(2*ekf.P[0][1], ekf.P[0][0]-ekf.P[1][1]);
+      x.strokeStyle='#ff8c00';x.lineWidth=2;x.fillStyle='rgba(255,140,0,0.08)';
+      x.beginPath();
+      x.ellipse(ekf.mu[0], ekf.mu[1],
+        Math.min(Math.sqrt(Math.max(l1,0.01))*2, 1000),
+        Math.min(Math.sqrt(Math.max(l2,0.01))*2, 1000),
+        ang, 0, Math.PI*2);
+      x.fill();x.stroke();
+      x.fillStyle='#ff8c00';x.beginPath();x.arc(ekf.mu[0],ekf.mu[1],7,0,Math.PI*2);x.fill();
+      x.strokeStyle='#fff';x.lineWidth=2;x.stroke();
+      // PF estimate
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(mx,my,7,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.lineWidth=2;x.stroke();
+      // Landmarks
+      lm.forEach(L=>{
+        x.fillStyle='#c62828';x.beginPath();x.arc(L.x,L.y,8,0,Math.PI*2);x.fill();
+        x.strokeStyle='#fff';x.lineWidth=2;x.stroke();
+      });
+      // Robot
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(robot.x,robot.y,8,0,Math.PI*2);x.fill();
+      x.strokeStyle='#fff';x.lineWidth=2;x.stroke();
+      // Info
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('🟢 진짜  ·  🔴 랜드마크  ·  🔵 PF 추정 + 파티클 ('+parts.length+')  ·  🟠 EKF 추정·타원',12,22);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      const errPF=Math.hypot(mx-robot.x,my-robot.y);
+      const errEKF=Math.hypot(ekf.mu[0]-robot.x,ekf.mu[1]-robot.y);
+      x.fillText('PF 오차: '+errPF.toFixed(1)+' px   ·   EKF 오차: '+errEKF.toFixed(1)+' px   ·   납치 후 EKF는 빗나가는 모습을 관찰', 12, 392);
+      requestAnimationFrame(draw);
+    }
+    sl('pf2sV').textContent=sl('pf2s').value;
+    sl('pf2nV').textContent=sl('pf2n').value;
+    draw();
   })();
   </script>
 
