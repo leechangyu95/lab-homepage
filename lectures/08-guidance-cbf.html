@@ -115,7 +115,7 @@
     <p>로봇(파랑)이 왼쪽에서 오른쪽으로 x축을 따라 일정한 속도로 이동합니다. 경로상에 장애물이 있으면 CBF 안전 필터가 자동으로 명령을 수정해 y 방향으로 회피합니다. $\gamma$가 작을수록 일찍, 크면 늦게 회피합니다.</p>
     <canvas id="cbf" width="640" height="380"></canvas>
     <div class="controls">
-      <label>γ (보수성) <span class="val" id="gV">0.20</span><input type="range" id="g" min="0.01" max="1.00" step="0.01" value="0.20"></label>
+      <label>γ (보수성) <span class="val" id="gV">0.20</span><input type="range" id="g" min="0.00" max="0.30" step="0.01" value="0.20"></label>
       <label><input type="checkbox" id="off"> CBF 끄기 (충돌 발생!)</label>
       <button id="cbfRst">리셋</button>
     </div>
@@ -128,7 +128,7 @@
     const W=c.width,H=c.height;
     const obs=[{x:230,y:180,r:45},{x:400,y:210,r:40},{x:520,y:170,r:30}];
     const y0=190;      // nominal y (center line)
-    const vx=1.2;      // constant forward speed (px/frame)
+    const vx=2.4;      // constant forward speed (px/frame) — never modified by filter
     let robot={x:20,y:y0},trail=[];
     function reset(){robot={x:20,y:y0};trail=[];}
     document.getElementById('cbfRst').addEventListener('click',reset);
@@ -136,21 +136,22 @@
       const gamma=parseFloat(document.getElementById('g').value);
       const off=document.getElementById('off').checked;
       document.getElementById('gV').textContent=gamma.toFixed(2);
-      // Nominal control: constant rightward velocity + gentle pull toward y0
-      let ux=vx, uy=(y0-robot.y)*0.02;
-      // CBF safety filter: project nominal onto feasible half-space for each obstacle
+      // Nominal control: forward speed is fixed, lateral pull toward y0
+      const ux=vx;
+      let uy=(y0-robot.y)*0.05;
+      // CBF lateral-only filter: ux는 그대로 두고 uy만 안전 영역으로 투영
+      // condition: 2*dx*vx + 2*dy*uy + gamma*h >= 0  →  solve for uy
       if(!off){
-        for(const o of obs){
-          const dx=robot.x-o.x, dy=robot.y-o.y;
-          const h=dx*dx+dy*dy-o.r*o.r;
-          // discrete CBF condition: 2*(dx*ux+dy*uy) + gamma*h >= 0
-          const hdot=2*dx*ux+2*dy*uy;
-          const cond=hdot+gamma*h;
-          if(cond<0){
-            const norm=4*(dx*dx+dy*dy);
-            if(norm>1e-6){
-              const lam=-cond/norm;
-              ux+=lam*2*dx; uy+=lam*2*dy;
+        for(let pass=0; pass<3; pass++){            // 다중 장애물 동시 만족을 위한 sweep
+          for(const o of obs){
+            const dx=robot.x-o.x, dy=robot.y-o.y;
+            const h=dx*dx+dy*dy-o.r*o.r;
+            const cond=2*dx*ux+2*dy*uy+gamma*h;
+            if(cond<0){
+              const dyEff=Math.abs(dy)<1e-2 ? (dy>=0?1e-2:-1e-2) : dy;
+              const uyBound=(-2*dx*ux-gamma*h)/(2*dyEff);
+              if(dyEff>0)      uy=Math.max(uy,uyBound);  // push further below
+              else             uy=Math.min(uy,uyBound);  // push further above
             }
           }
         }
