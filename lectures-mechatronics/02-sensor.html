@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W2. 센서와 트랜스듀서 — 메카트로닉스</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 2. 센서와 트랜스듀서</h1>
+  <p class="lead">물리 세계를 전기 신호로 번역하는 첫 단계. 측정의 정확도가 모든 후속 처리의 한계를 정합니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>센서 vs 트랜스듀서 — 같은 듯 다른 두 단어</li>
+    <li>센서 분류: 접촉/비접촉, 아날로그/디지털, 능동/수동</li>
+    <li>정적 특성 — 정확도·정밀도·민감도·이력</li>
+    <li>동적 특성 — 응답 시간과 시정수</li>
+    <li>대표 센서 — 포텐셔미터, 스트레인 게이지, 엔코더, IMU</li>
+  </ol></div>
+
+  <h2>1. 센서 vs 트랜스듀서</h2>
+  <p>두 단어가 자주 혼용되지만 정확히는 다음과 같이 구분됩니다.</p>
+  <ul>
+    <li><strong>센서(sensor)</strong> — 물리량(온도·압력·거리 등)을 <em>감지</em>하는 소자.</li>
+    <li><strong>트랜스듀서(transducer)</strong> — 한 형태의 에너지를 다른 형태로 <em>변환</em>하는 소자. 즉 센서 + 신호 변환 회로의 통칭.</li>
+  </ul>
+  <p>예: 서모커플(thermocouple)은 온도(열에너지)를 전압(전기에너지)으로 변환하는 트랜스듀서입니다. 센서가 곧 트랜스듀서인 경우가 많아 일상에서는 거의 같은 의미로 씁니다.</p>
+
+  <h2>2. 센서의 분류</h2>
+
+  <h3>2.1 접촉 vs 비접촉</h3>
+  <ul>
+    <li><strong>접촉형(Contact)</strong>: 측정 대상에 직접 닿아야 함. 예) 리미트 스위치, 스트레인 게이지, 서모커플.</li>
+    <li><strong>비접촉형(Non-contact)</strong>: 떨어져서 측정. 예) 적외선 거리센서, 카메라, 레이더, 라이다.</li>
+  </ul>
+
+  <h3>2.2 변위·위치·근접 센서</h3>
+  <table>
+    <thead><tr><th>종류</th><th>측정량</th><th>대표 소자</th></tr></thead>
+    <tbody>
+      <tr><td>변위(Displacement)</td><td>이동 거리</td><td>LVDT, 포텐셔미터</td></tr>
+      <tr><td>위치(Position)</td><td>절대/상대 위치</td><td>엔코더, GPS</td></tr>
+      <tr><td>근접(Proximity)</td><td>가까이 있는지 (On/Off)</td><td>유도형, 정전용량형, 광전</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 아날로그 vs 디지털</h3>
+  <ul>
+    <li><strong>아날로그</strong>: 출력이 연속적인 전압/전류. 잡음 영향 받음. ADC를 거쳐 디지털화 필요.</li>
+    <li><strong>디지털</strong>: 출력이 0/1 비트열. 잡음에 강함. MCU로 직접 읽기 가능.</li>
+  </ul>
+
+  <h2>3. 정적 특성(Static Characteristics)</h2>
+  <p>입력이 일정한 정상상태에서의 센서 성능 지표들입니다.</p>
+
+  <h3>3.1 Range, Span, Error</h3>
+  <ul>
+    <li><strong>Range(범위)</strong>: 측정 가능한 최소/최대값. 예) $-40 \sim 125\,°C$.</li>
+    <li><strong>Span(스팬)</strong>: 최대 − 최소. 위 예에서 $165\,°C$.</li>
+    <li><strong>Error(오차)</strong>: 측정값 − 참값. 참 24°C일 때 25°C가 나오면 오차 +1°C.</li>
+  </ul>
+
+  <h3>3.2 정확도(Accuracy) vs 정밀도(Precision)</h3>
+  <p>두 단어를 자주 헷갈리는데, 다음 그림으로 설명됩니다.</p>
+  <ul>
+    <li><strong>정확도</strong>: 측정값이 <em>참값</em>에 얼마나 가까운가 (전체 범위에 대한 % 오차로 표현).</li>
+    <li><strong>정밀도(Repeatability)</strong>: 같은 입력을 반복 측정했을 때 결과가 얼마나 일정한가. 정확도와 별개로, 평균은 빗나가도 분포가 좁으면 정밀도는 높음.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(0,0)">
+        <text x="50" y="20" font-size="12" font-weight="bold">정확↑ 정밀↑</text>
+        <circle cx="80" cy="100" r="50" fill="none" stroke="#333"/>
+        <circle cx="80" cy="100" r="30" fill="none" stroke="#333"/>
+        <circle cx="80" cy="100" r="10" fill="#c62828"/>
+        <circle cx="78" cy="98" r="2" fill="#0742b8"/>
+        <circle cx="82" cy="100" r="2" fill="#0742b8"/>
+        <circle cx="80" cy="103" r="2" fill="#0742b8"/>
+        <circle cx="79" cy="100" r="2" fill="#0742b8"/>
+      </g>
+      <g transform="translate(160,0)">
+        <text x="50" y="20" font-size="12" font-weight="bold">정확↓ 정밀↑</text>
+        <circle cx="80" cy="100" r="50" fill="none" stroke="#333"/>
+        <circle cx="80" cy="100" r="30" fill="none" stroke="#333"/>
+        <circle cx="80" cy="100" r="10" fill="#c62828"/>
+        <circle cx="118" cy="78" r="2" fill="#0742b8"/>
+        <circle cx="122" cy="80" r="2" fill="#0742b8"/>
+        <circle cx="120" cy="83" r="2" fill="#0742b8"/>
+        <circle cx="119" cy="80" r="2" fill="#0742b8"/>
+      </g>
+      <g transform="translate(320,0)">
+        <text x="50" y="20" font-size="12" font-weight="bold">정확↑ 정밀↓</text>
+        <circle cx="80" cy="100" r="50" fill="none" stroke="#333"/>
+        <circle cx="80" cy="100" r="30" fill="none" stroke="#333"/>
+        <circle cx="80" cy="100" r="10" fill="#c62828"/>
+        <circle cx="65" cy="90" r="2" fill="#0742b8"/>
+        <circle cx="95" cy="105" r="2" fill="#0742b8"/>
+        <circle cx="80" cy="115" r="2" fill="#0742b8"/>
+        <circle cx="85" cy="90" r="2" fill="#0742b8"/>
+      </g>
+      <g transform="translate(480,0)">
+        <text x="50" y="20" font-size="12" font-weight="bold">정확↓ 정밀↓</text>
+        <circle cx="80" cy="100" r="50" fill="none" stroke="#333"/>
+        <circle cx="80" cy="100" r="30" fill="none" stroke="#333"/>
+        <circle cx="80" cy="100" r="10" fill="#c62828"/>
+        <circle cx="55" cy="80" r="2" fill="#0742b8"/>
+        <circle cx="115" cy="120" r="2" fill="#0742b8"/>
+        <circle cx="75" cy="125" r="2" fill="#0742b8"/>
+        <circle cx="125" cy="85" r="2" fill="#0742b8"/>
+      </g>
+    </svg>
+    <figcaption>그림 1. 정확도 vs 정밀도 — 과녁의 빨간 중심이 참값. 점들이 측정값.</figcaption>
+  </figure>
+
+  <h3>3.3 민감도(Sensitivity)</h3>
+  <p>입력 변화에 대한 출력 변화의 비율. 예: $0.5\,\text{V}/°C$인 온도 센서는 1°C 올라가면 출력이 0.5V 증가.</p>
+  $$ S = \frac{\Delta\,\text{output}}{\Delta\,\text{input}} $$
+
+  <h3>3.4 이력현상(Hysteresis)</h3>
+  <p>같은 입력값이라도 입력이 <em>증가하다 도달</em>한 경우와 <em>감소하다 도달</em>한 경우 출력이 다른 현상. 강자성체나 일부 기계 부품의 마찰에서 흔히 나타납니다. 정밀 측정에서는 이력 곡선의 면적으로 정량화합니다.</p>
+
+  <h3>3.5 비선형 오차</h3>
+  <p>이상적으로 출력이 입력에 직선 비례해야 하지만 실제로는 곡선. 그 편차의 최댓값을 풀스케일 대비 %로 표시합니다.</p>
+
+  <h3>3.6 분해능(Resolution)·데드밴드·드리프트</h3>
+  <ul>
+    <li><strong>분해능</strong>: 식별 가능한 최소 변화량. 12-bit ADC로 0~5V를 측정하면 분해능 $\approx 1.22\,\text{mV}$.</li>
+    <li><strong>데드밴드</strong>: 입력이 변해도 출력이 반응하지 않는 구간. 예) 마우스 휠을 살짝 돌려도 안 움직이는 영역.</li>
+    <li><strong>데드타임</strong>: 입력 변화 후 출력 변화가 시작하기까지의 지연.</li>
+    <li><strong>제로 드리프트</strong>: 시간이 지나면서 0점이 천천히 이동하는 현상. 정기적 캘리브레이션이 필요한 이유.</li>
+  </ul>
+
+  <h2>4. 동적 특성(Dynamic Characteristics)</h2>
+  <p>입력이 시시각각 변할 때 센서가 얼마나 빨리 반응하는지에 대한 지표. 입력 형태별로 다음을 봅니다.</p>
+  <ul>
+    <li><strong>스텝 입력</strong>: 갑자기 한 값으로 변함 (실험에서 가장 자주 씀).</li>
+    <li><strong>램프 입력</strong>: 일정 속도로 변함.</li>
+    <li><strong>정현파 입력</strong>: 주파수 응답 측정용.</li>
+  </ul>
+
+  <h3>4.1 시정수 $\tau$</h3>
+  <p>1차 시스템(가장 흔한 센서 모델)의 스텝 응답:</p>
+  $$ y(t) = y_\infty\left(1 - e^{-t/\tau}\right) $$
+  <p>$t = \tau$에서 최종값의 약 63.2%, $5\tau$이면 99% 도달. 이 $\tau$가 작을수록 빠른 센서입니다. <a href="../lectures-mech/07-capacitor-inductor.html">기전공학기초 W7</a>의 RC 시정수와 정확히 같은 식이에요 — 모든 1차 시스템은 같은 수학으로 풀립니다.</p>
+
+  <h3>4.2 상승시간(Rise Time)·정착시간(Settling Time)</h3>
+  <ul>
+    <li><strong>상승시간 $t_r$</strong>: 출력이 10%에서 90%까지 도달하는 시간.</li>
+    <li><strong>정착시간 $t_s$</strong>: 최종값의 ±2% 이내로 들어와 머무는 시간.</li>
+  </ul>
+
+  <h2>5. 대표 센서들</h2>
+
+  <h3>5.1 포텐셔미터(Potentiometer)</h3>
+  <p>가변 저항. 회전 또는 직선 이동 → 저항값 변화 → 출력 전압 변화. 단순하지만 마찰·마모로 분해능과 수명에 한계.</p>
+
+  <h3>5.2 스트레인 게이지(Strain Gauge)</h3>
+  <p>금속 와이어가 늘어나면 길이는 증가, 단면적은 감소 → 저항이 증가. 미세한 저항 변화를 <a href="../lectures-mech/05-dc-analysis-2.html">기전공학기초 W5의 휘트스톤 브릿지</a>로 정밀하게 읽습니다.</p>
+  $$ \frac{\Delta R}{R} = G \cdot \varepsilon $$
+  <p>$G$는 게이지 인자(보통 ~2), $\varepsilon$은 변형률.</p>
+
+  <h3>5.3 엔코더(Encoder)</h3>
+  <ul>
+    <li><strong>증분형(Incremental)</strong>: 펄스를 세서 상대적 회전 측정. 전원 끄면 위치 정보 잃음.</li>
+    <li><strong>절대형(Absolute)</strong>: 디스크에 패턴이 있어 절대 위치를 한 번에 읽음. 더 비쌈.</li>
+  </ul>
+  <p>로봇 관절 제어에 거의 항상 쓰이는 센서.</p>
+
+  <h3>5.4 IMU (관성 측정 장치)</h3>
+  <ul>
+    <li><strong>가속도계(Accelerometer)</strong>: 선형 가속도 측정. 중력에서 기울기 계산 가능.</li>
+    <li><strong>자이로(Gyroscope)</strong>: 각속도 측정. 적분으로 자세 추정 (드리프트 누적).</li>
+    <li><strong>자력계(Magnetometer)</strong>: 지자기 방향. 절대 방위.</li>
+  </ul>
+  <p>3축씩 합쳐 9-DOF IMU가 만들어지고, 그 신호를 <a href="04-kalman-1d.html">W4 칼만 필터</a>로 융합해 자세를 추정합니다.</p>
+
+  <h3>5.5 거리 센서</h3>
+  <table>
+    <thead><tr><th>종류</th><th>원리</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>적외선(IR)</td><td>반사광 강도 → 거리</td><td>저가, 단거리(~80cm), 색·재질 영향</td></tr>
+      <tr><td>초음파</td><td>음파 왕복시간(ToF)</td><td>저가, 중거리(~5m), 각도 분해능 낮음</td></tr>
+      <tr><td>레이저(LiDAR)</td><td>레이저 ToF / 위상</td><td>고정밀, 고가, 자율주행 핵심</td></tr>
+      <tr><td>레이더</td><td>전파 ToF / 도플러</td><td>날씨 강건, 속도까지 측정</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>지표</th><th>의미</th><th>왜 중요한가</th></tr></thead>
+    <tbody>
+      <tr><td>정확도</td><td>참값과의 거리</td><td>측정 신뢰성의 한계</td></tr>
+      <tr><td>정밀도</td><td>반복성</td><td>캘리브레이션으로 정확도로 변환 가능</td></tr>
+      <tr><td>민감도</td><td>입력당 출력 변화</td><td>증폭기 설계의 기준</td></tr>
+      <tr><td>분해능</td><td>최소 식별 단위</td><td>ADC 비트 수의 의미</td></tr>
+      <tr><td>시정수</td><td>응답 속도</td><td>제어 대역폭 결정</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>다음 주차로의 다리</strong> — 센서가 출력하는 신호는 그대로 쓸 수 없습니다. 잡음에 묻혀 있고, 크기가 너무 작거나 다른 회로의 입력 범위와 안 맞을 수 있어요. 다음 주(W3)는 그 신호를 깨끗하고 적절한 형태로 다듬는 <strong>신호 조절(Signal Conditioning)</strong>입니다 — 증폭, 필터, ADC.
+  </div>
+
+  <nav class="prevnext">
+    <a href="01-intro.html"><small>← 이전</small>W1. 메카트로닉스 개요</a>
+    <a href="03-signal-conditioning.html" class="next"><small>다음 →</small>W3. 신호 조절</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

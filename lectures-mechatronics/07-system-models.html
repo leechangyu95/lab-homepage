@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W7. 시스템 모델 — 메카트로닉스</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 7. 시스템 모델 — 미분방정식으로 동역학을 적기</h1>
+  <p class="lead">스프링·매스·댐퍼 — 모든 기계 시스템의 ABC. 그리고 같은 식이 RLC 회로에서도 나타나는 신비로운 사실.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 모델이 필요한가</li>
+    <li>3대 기계 요소: 스프링·댐퍼·질량</li>
+    <li>자유물체도(FBD)와 뉴턴 제2법칙</li>
+    <li>2차 미분방정식 표준형</li>
+    <li>전기적 유사 — 같은 수학, 다른 도메인</li>
+    <li>비선형 모델과 선형화</li>
+  </ol></div>
+
+  <h2>1. 왜 모델인가</h2>
+  <p>제어를 잘하려면 시스템이 <strong>어떻게 움직이는지</strong>부터 알아야 합니다. 그 "어떻게"를 수학으로 적은 것이 <strong>모델</strong>입니다. 모델이 있으면:</p>
+  <ul>
+    <li><strong>예측</strong>: 입력 명령에 대한 출력을 미리 계산.</li>
+    <li><strong>설계</strong>: 원하는 응답을 만드는 제어기 파라미터를 미리 계산.</li>
+    <li><strong>분석</strong>: 안정성·성능·한계를 수학적으로 검증.</li>
+  </ul>
+  <p>메카트로닉스의 모델은 보통 미분방정식 형태입니다. 이번 주에는 가장 보편적인 <strong>2차 시스템</strong>을 다룹니다.</p>
+
+  <h2>2. 3대 기계 요소</h2>
+  <p>거의 모든 기계 시스템은 다음 세 요소로 모델링됩니다.</p>
+
+  <h3>2.1 스프링(Spring) — 변위에 비례하는 복원력</h3>
+  $$ F_s = k\,x \qquad [\text{N}] $$
+  <p>$x$는 평형점에서의 변위, $k$는 스프링 상수 (단위: N/m). 변위가 클수록 더 큰 복원력. 늘어나면 당기고, 줄면 밀어내는 성질.</p>
+
+  <h3>2.2 댐퍼(Dashpot) — 속도에 비례하는 마찰</h3>
+  $$ F_d = b\,\dot{x} \qquad [\text{N}] $$
+  <p>$\dot{x}$는 속도, $b$는 감쇠 계수 (단위: N·s/m). 자동차 쇼크 옵서버, 문닫힘 댐퍼 등이 그 예. <strong>운동 에너지를 열로 소비</strong>하는 비가역 요소.</p>
+
+  <h3>2.3 질량(Mass) — 가속도에 비례하는 관성</h3>
+  $$ F_m = m\,\ddot{x} \qquad [\text{N}] $$
+  <p>뉴턴 제2법칙. 관성은 가속(상태 변화)을 거부하는 본성으로, 시스템에 <strong>에너지를 저장</strong>하는 요소(운동 에너지 $\frac{1}{2}m\dot{x}^2$).</p>
+
+  <h2>3. 스프링-매스-댐퍼 시스템</h2>
+  <p>가장 기본인 모델 — 질량 $m$이 스프링과 댐퍼로 벽에 묶여 있고, 외력 $f(t)$를 받습니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="40" x2="50" y2="160" stroke="#333" stroke-width="3"/>
+      <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#333" stroke-width="1"/>
+      </pattern>
+      <rect x="40" y="40" width="10" height="120" fill="url(#hatch)"/>
+      <path d="M50,80 L70,80 L80,70 L90,90 L100,70 L110,90 L120,70 L130,90 L140,80 L160,80" fill="none" stroke="#0742b8" stroke-width="2"/>
+      <text x="100" y="65" text-anchor="middle" font-size="11" fill="#0742b8">k</text>
+      <line x1="50" y1="120" x2="100" y2="120" stroke="#333" stroke-width="2"/>
+      <rect x="100" y="110" width="40" height="20" fill="none" stroke="#c1121f" stroke-width="2"/>
+      <line x1="100" y1="115" x2="140" y2="115" stroke="#c1121f"/>
+      <line x1="100" y1="125" x2="140" y2="125" stroke="#c1121f"/>
+      <text x="120" y="145" text-anchor="middle" font-size="11" fill="#c1121f">b (댐퍼)</text>
+      <line x1="140" y1="120" x2="160" y2="120" stroke="#333" stroke-width="2"/>
+      <line x1="160" y1="60" x2="160" y2="140" stroke="#333" stroke-width="2"/>
+      <line x1="160" y1="60" x2="260" y2="60" stroke="#333" stroke-width="2"/>
+      <line x1="160" y1="140" x2="260" y2="140" stroke="#333" stroke-width="2"/>
+      <line x1="260" y1="60" x2="260" y2="140" stroke="#333" stroke-width="2"/>
+      <text x="210" y="105" text-anchor="middle" font-size="20" font-weight="bold" fill="#1b5e20">m</text>
+      <line x1="260" y1="100" x2="320" y2="100" stroke="#666" stroke-width="2" marker-end="url(#aw)"/>
+      <text x="290" y="92" font-size="13" font-weight="bold" fill="#666">f(t)</text>
+      <line x1="160" y1="180" x2="280" y2="180" stroke="#333" stroke-dasharray="4,2"/>
+      <text x="210" y="195" text-anchor="middle" font-size="13" fill="#0742b8">x</text>
+      <defs><marker id="aw" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#666"/></marker></defs>
+    </svg>
+    <figcaption>그림 1. 스프링-매스-댐퍼 시스템. 외력 $f(t)$가 가해지면 질량이 변위 $x(t)$로 응답.</figcaption>
+  </figure>
+
+  <h3>3.1 자유물체도(FBD)와 뉴턴의 법칙</h3>
+  <p>질량 $m$에 작용하는 힘을 모두 적습니다.</p>
+  <ul>
+    <li>외력 $f(t)$ (가해지는 힘)</li>
+    <li>스프링 복원력 $-kx$ (변위 반대 방향)</li>
+    <li>댐퍼 마찰 $-b\dot{x}$ (속도 반대 방향)</li>
+  </ul>
+  <p>뉴턴 제2법칙 $F = m\ddot{x}$:</p>
+  $$ m\ddot{x} = f(t) - kx - b\dot{x} $$
+  <p>정리하면 표준형 2차 미분방정식:</p>
+  $$ \boxed{m\ddot{x} + b\dot{x} + kx = f(t)} $$
+
+  <h2>4. 표준형의 의미 — 자연 주파수와 감쇠비</h2>
+  <p>위 식을 양변을 $m$으로 나누면:</p>
+  $$ \ddot{x} + \frac{b}{m}\dot{x} + \frac{k}{m}x = \frac{f(t)}{m} $$
+  <p>이를 표준형으로 다시 쓰면:</p>
+  $$ \ddot{x} + 2\zeta\omega_n\,\dot{x} + \omega_n^2\,x = \frac{f(t)}{m} $$
+
+  <p>두 핵심 파라미터:</p>
+  <ul>
+    <li><strong>고유 주파수(natural frequency)</strong> $\omega_n = \sqrt{k/m}$ — 댐퍼가 없을 때 자유진동 주파수.</li>
+    <li><strong>감쇠비(damping ratio)</strong> $\zeta = \frac{b}{2\sqrt{km}}$ — 진동이 얼마나 빨리 잦아드는가.</li>
+  </ul>
+
+  <p>$\zeta$ 값에 따라 시스템이 다르게 응답합니다.</p>
+  <table>
+    <thead><tr><th>$\zeta$</th><th>이름</th><th>응답</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr><td>$\zeta = 0$</td><td>무감쇠(undamped)</td><td>영원히 진동</td><td>이상화된 LC 회로</td></tr>
+      <tr><td>$0 &lt; \zeta &lt; 1$</td><td>저감쇠(underdamped)</td><td>진동하며 감쇠</td><td>자동차 서스펜션</td></tr>
+      <tr><td>$\zeta = 1$</td><td>임계감쇠(critical)</td><td>가장 빠르게 진동 없이</td><td>이상적 댐퍼</td></tr>
+      <tr><td>$\zeta &gt; 1$</td><td>과감쇠(overdamped)</td><td>느리게 비진동</td><td>건물 출입문 댐퍼</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 분류와 실제 응답 곡선은 다음 주(W9)에서 자세히 그려봅니다.</p>
+
+  <h2>5. 전기-기계 유사 — 같은 수학, 다른 도메인</h2>
+  <p>흥미로운 사실: <strong>RLC 회로의 미분방정식이 스프링-매스-댐퍼와 정확히 같은 형태</strong>입니다.</p>
+
+  <table>
+    <thead><tr><th>기계</th><th>전기 (RLC)</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td>변위 $x$</td><td>전하 $q$</td><td>일반화 좌표</td></tr>
+      <tr><td>속도 $\dot{x}$</td><td>전류 $i = \dot{q}$</td><td>흐름</td></tr>
+      <tr><td>질량 $m$</td><td>인덕턴스 $L$</td><td>관성·에너지 저장</td></tr>
+      <tr><td>댐퍼 $b$</td><td>저항 $R$</td><td>에너지 소비</td></tr>
+      <tr><td>스프링 $k$</td><td>$1/C$</td><td>복원력·에너지 저장</td></tr>
+      <tr><td>외력 $f$</td><td>전압 $v$</td><td>입력</td></tr>
+    </tbody>
+  </table>
+
+  <p>한 도메인에서 푼 답이 다른 도메인에 그대로 적용됩니다 — 이래서 RLC 회로 분석을 마스터한 사람은 진동 시스템도 자연스럽게 이해해요. <a href="../lectures-mech/08-impedance.html">기전공학기초 W8 임피던스</a>의 RLC 공진이 바로 위 표의 전기 버전입니다.</p>
+
+  <h2>6. 좀 더 복잡한 모델</h2>
+
+  <h3>6.1 다자유도(Multi-DOF) 시스템</h3>
+  <p>두 질량이 스프링으로 연결된 경우 등 — 각 질량의 변위를 변수로 두고 연립 미분방정식이 됩니다.</p>
+  $$ M\ddot{\mathbf{x}} + B\dot{\mathbf{x}} + K\mathbf{x} = \mathbf{f}(t) $$
+  <p>여기서 $M$, $B$, $K$는 행렬. 모드 분석으로 풀면 여러 개의 1자유도 시스템으로 분해됩니다(고유값-고유벡터).</p>
+
+  <h3>6.2 비선형 동역학</h3>
+  <p>실제 시스템은 비선형 항이 있습니다 — 정마찰, 스프링의 비선형성, 회전 운동의 $\sin\theta$ 등. 자전거 모델, 드론 동역학이 모두 비선형이에요. 일반 미분방정식 그대로 풀거나, 동작점 근처에서 <strong>선형화(linearization)</strong>해 위 표준형으로 근사합니다.</p>
+
+  <h3>6.3 선형화 예 — 진자</h3>
+  $$ \ddot{\theta} + \frac{g}{\ell}\sin\theta = 0 $$
+  <p>비선형. 작은 각에서 $\sin\theta \approx \theta$로 근사하면:</p>
+  $$ \ddot{\theta} + \frac{g}{\ell}\theta = 0 \quad \Rightarrow \quad \omega_n = \sqrt{g/\ell} $$
+  <p>이게 단진자의 주기 식 $T = 2\pi\sqrt{\ell/g}$의 출처. 작은 각 한정 — 큰 각에서는 비선형 효과가 무시 못 함.</p>
+
+  <h2>7. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>식</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>$m\ddot{x} + b\dot{x} + kx = f$</td><td>2차 시스템 표준형</td></tr>
+      <tr><td>$\omega_n = \sqrt{k/m}$</td><td>고유 주파수</td></tr>
+      <tr><td>$\zeta = b/(2\sqrt{km})$</td><td>감쇠비</td></tr>
+      <tr><td>$\zeta \lessgtr 1$</td><td>저/임계/과감쇠 구분</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. 더 깊이 보기</h2>
+  <ul>
+    <li><a href="../lectures/02-dynamics.html">로봇공학특론 L2 동역학</a> — 다축 로봇의 라그랑주 방정식, 자전거 모델, RK4 수치 적분.</li>
+    <li><a href="../lectures/03-state-space.html">로봇공학특론 L3 상태공간</a> — 위 표준형을 1차 벡터식 $\dot{\mathbf{x}} = A\mathbf{x} + B\mathbf{u}$로 변환.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>다음 주차로의 다리</strong> — 모델 식을 적었으니 이제 실제로 풀어 응답을 봐야 합니다. 다음 주(W9)에서는 이 2차 미분방정식의 <strong>스텝·임펄스·정현파 응답</strong>을 그려보고, $\zeta$가 응답 모양을 어떻게 결정하는지 직관을 만듭니다. 그리고 W10에서 라플라스 변환으로 풀이를 자동화합니다.
+  </div>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:30px">※ W8은 중간고사 주차로 별도 콘텐츠 없습니다. 다음은 W9.</p>
+
+  <nav class="prevnext">
+    <a href="06-microprocessor.html"><small>← 이전</small>W6. 마이크로프로세서</a>
+    <a href="09-dynamic-response.html" class="next"><small>다음 →</small>W9. 동적 응답</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

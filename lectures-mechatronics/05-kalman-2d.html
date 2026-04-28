@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W5. 칼만 필터 (2D) — 메카트로닉스</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 5. 칼만 필터 (2D) — 위치+속도 동시 추정</h1>
+  <p class="lead">상태가 둘 이상이면 1D 분산이 공분산 행렬로 진화합니다. 그리고 비선형 시스템을 위한 EKF/UKF.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>다차원 상태 — 벡터와 행렬로</li>
+    <li>공분산 행렬과 타원</li>
+    <li>2D 칼만 필터 — 행렬 형식</li>
+    <li>위치+속도 추정 예제</li>
+    <li>비선형 시스템 — EKF와 UKF</li>
+  </ol></div>
+
+  <h2>1. 다차원 상태로의 확장</h2>
+  <p>1D에서는 상태 $x$가 스칼라였지만, 실제 시스템은 위치만이 아니라 속도·자세·각속도 등 여러 변수를 동시에 가집니다. 이를 <strong>상태 벡터</strong>로 묶어 다룹니다.</p>
+  $$ \mathbf{x} = \begin{bmatrix} p \\ v \end{bmatrix}, \quad \text{(예: 1D 위치 + 속도)} $$
+  <p>분산 $\sigma^2$는 <strong>공분산 행렬 $P$</strong>로 일반화됩니다.</p>
+  $$ P = \begin{bmatrix} \sigma_p^2 & \sigma_{pv} \\ \sigma_{pv} & \sigma_v^2 \end{bmatrix} $$
+  <ul>
+    <li>대각 항: 각 변수의 분산</li>
+    <li>비대각 항: 두 변수의 상관관계 (위치와 속도가 서로 어떻게 묶이는가)</li>
+  </ul>
+
+  <h2>2. 공분산 행렬의 시각화 — 타원</h2>
+  <p>2D 가우시안의 등고선은 <strong>타원</strong>이고, 공분산 행렬이 그 타원의 모양을 결정합니다.</p>
+  <ul>
+    <li><strong>대각 행렬</strong> ($\sigma_{pv} = 0$): 축 정렬된 타원. $p$, $v$가 독립.</li>
+    <li><strong>양의 비대각</strong>: 우상향 기울어진 타원. $p$↑이면 $v$↑ 경향.</li>
+    <li><strong>음의 비대각</strong>: 좌상향 기울어진 타원. 반대 상관관계.</li>
+  </ul>
+  <p>타원의 주축은 <strong>고유벡터(eigenvector)</strong>, 길이는 <strong>고유값(eigenvalue)</strong>의 제곱근에 비례. 즉 공분산의 PCA가 곧 불확실성의 주방향을 알려줍니다.</p>
+
+  <h2>3. 2D 칼만 필터 — 행렬 형식</h2>
+  <p>1D 식이 그대로 행렬로 일반화됩니다.</p>
+
+  <h3>3.1 시스템 모델</h3>
+  $$ \mathbf{x}_k = F\mathbf{x}_{k-1} + B u_k + \mathbf{w}_k, \qquad \mathbf{w}_k \sim \mathcal{N}(0, Q) $$
+  $$ \mathbf{z}_k = H\mathbf{x}_k + \mathbf{v}_k, \qquad \mathbf{v}_k \sim \mathcal{N}(0, R) $$
+  <ul>
+    <li>$F$: 상태 천이 행렬 (한 스텝 동안 상태가 어떻게 변하는지)</li>
+    <li>$B$: 제어 입력 행렬</li>
+    <li>$H$: 관측 행렬 (상태에서 측정값으로의 변환)</li>
+    <li>$Q$, $R$: 과정/측정 잡음 공분산</li>
+  </ul>
+
+  <h3>3.2 예측(Predict)</h3>
+  $$ \hat{\mathbf{x}}_k^- = F\hat{\mathbf{x}}_{k-1} + Bu_k $$
+  $$ P_k^- = F P_{k-1} F^\top + Q $$
+
+  <h3>3.3 갱신(Update)</h3>
+  $$ K_k = P_k^- H^\top (H P_k^- H^\top + R)^{-1} \quad (\text{Kalman gain 행렬}) $$
+  $$ \hat{\mathbf{x}}_k = \hat{\mathbf{x}}_k^- + K_k (\mathbf{z}_k - H\hat{\mathbf{x}}_k^-) $$
+  $$ P_k = (I - K_k H) P_k^- $$
+  <p>1D 식과 정확히 같은 모양이고, 스칼라가 행렬로 바뀐 것뿐입니다. 마지막 항 $(\mathbf{z}_k - H\hat{\mathbf{x}}_k^-)$를 <strong>혁신(innovation)</strong>이라 부르며, 측정과 예측의 불일치를 의미합니다.</p>
+
+  <h2>4. 위치+속도 추정 예제</h2>
+  <p>1D 직선 위에서 등속 운동(가속도 입력 없음, 잡음만 있음)하는 차량. 위치만 측정 가능.</p>
+
+  <h3>4.1 모델 정의</h3>
+  $$ \mathbf{x} = \begin{bmatrix} p \\ v \end{bmatrix}, \quad F = \begin{bmatrix} 1 & \Delta t \\ 0 & 1 \end{bmatrix}, \quad H = \begin{bmatrix} 1 & 0 \end{bmatrix} $$
+  <p>$F$는 "다음 위치 = 현재 위치 + 속도×Δt", "다음 속도 = 현재 속도"라는 등속 모델. $H = [1, 0]$은 "측정은 위치만"이라는 의미.</p>
+
+  <h3>4.2 핵심 관찰</h3>
+  <ul>
+    <li>위치 측정만으로도 <strong>속도까지 추정 가능</strong>합니다. 어떻게? 공분산 행렬의 비대각 항이 위치와 속도의 상관관계를 학습해서, "위치가 이렇게 변하니 속도는 대략 얼마"를 자동으로 추론합니다.</li>
+    <li>등속 모델이 잘 맞으면 추정이 빨리 수렴, 가속이 자주 바뀌면 $Q$를 키워야 합니다.</li>
+  </ul>
+
+  <h3>4.3 Python 예제</h3>
+  <pre><code>import numpy as np
+
+dt = 1.0
+F = np.array([[1, dt], [0, 1]])
+H = np.array([[1, 0]])
+Q = np.array([[0.01, 0], [0, 0.1]])  # 과정 잡음
+R = np.array([[4.0]])                 # 측정 잡음 (위치 분산)
+
+x = np.array([[0], [1]])     # 초기 추정: 위치 0, 속도 1
+P = np.eye(2)                # 초기 공분산
+
+for z in measurements:
+    # Predict
+    x = F @ x
+    P = F @ P @ F.T + Q
+    # Update
+    y = z - H @ x                       # innovation
+    S = H @ P @ H.T + R                 # innovation covariance
+    K = P @ H.T @ np.linalg.inv(S)      # Kalman gain
+    x = x + K @ y
+    P = (np.eye(2) - K @ H) @ P
+</code></pre>
+
+  <h2>5. 비선형 시스템 — EKF와 UKF</h2>
+  <p>표준 칼만 필터는 시스템이 <strong>선형</strong>이고 잡음이 <strong>가우시안</strong>일 때만 최적입니다. 그러나 실제 로봇 동역학은 비선형입니다 — 자전거 모델·각도 회전·삼각함수 등.</p>
+
+  <h3>5.1 EKF (Extended Kalman Filter)</h3>
+  <p>비선형 함수 $f(\mathbf{x})$, $h(\mathbf{x})$를 동작점 근처에서 <strong>선형 근사(자코비언)</strong>로 바꿔 표준 칼만 필터를 적용.</p>
+  $$ F_k = \frac{\partial f}{\partial \mathbf{x}}\bigg|_{\hat{\mathbf{x}}_{k-1}}, \quad H_k = \frac{\partial h}{\partial \mathbf{x}}\bigg|_{\hat{\mathbf{x}}_k^-} $$
+  <p>장점: 구현이 직관적, 빠름. 단점: 강한 비선형에서 발산 가능, 자코비언 계산 필요.</p>
+
+  <h3>5.2 UKF (Unscented Kalman Filter)</h3>
+  <p>자코비언 대신 <strong>시그마 점(sigma points)</strong>이라는 대표 표본을 비선형 함수에 통과시켜 통계를 추정. 자코비언 없이도 더 정확하고 강건한 경우가 많아 SLAM·드론 자세 등에 자주 쓰입니다.</p>
+
+  <h3>5.3 파티클 필터(Particle Filter)</h3>
+  <p>가우시안 가정 자체를 버리고 수많은 표본 입자로 분포를 표현. 가장 일반적이지만 계산량이 많아 저차원·고비선형에 주로 사용. 로봇 위치 추정(Monte Carlo Localization)이 대표 예.</p>
+
+  <h2>6. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>필터</th><th>가정</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>KF</td><td>선형 + 가우시안</td><td>최적, 단순</td><td>비선형에 못 씀</td></tr>
+      <tr><td>EKF</td><td>약한 비선형 + 가우시안</td><td>구현 단순</td><td>강한 비선형에 발산</td></tr>
+      <tr><td>UKF</td><td>비선형 + 가우시안</td><td>자코비언 불필요, 정확</td><td>EKF보다 무거움</td></tr>
+      <tr><td>Particle</td><td>없음 (가장 일반)</td><td>가장 강건</td><td>계산량 큼</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. 더 깊이 보기</h2>
+  <ul>
+    <li><a href="../lectures/05-kalman-2d.html">로봇공학특론 L5</a> — 2D 칼만 필터의 인터랙티브 시각화, 공분산 타원 직접 그려보기, EKF/UKF 비교.</li>
+    <li><a href="../lectures/03-state-space.html">로봇공학특론 L3</a> — $F$, $H$ 행렬이 어디서 왔나(상태공간 모델).</li>
+  </ul>
+
+  <div class="tip">
+    <strong>실무 팁</strong> — 칼만 필터를 처음 구현할 때 가장 어려운 건 식이 아니라 <em>$Q$와 $R$의 튜닝</em>입니다. $Q$를 너무 작게 잡으면 모델을 과신해 측정을 무시하고, $R$을 너무 작게 잡으면 측정 잡음을 그대로 따라가요. 보통 $R$은 센서 데이터시트에서 뽑고, $Q$는 시뮬레이션·실측으로 조정합니다.
+  </div>
+
+  <nav class="prevnext">
+    <a href="04-kalman-1d.html"><small>← 이전</small>W4. 칼만 필터 (1D)</a>
+    <a href="06-microprocessor.html" class="next"><small>다음 →</small>W6. 마이크로프로세서</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W3. 신호 조절 — 메카트로닉스</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 3. 신호 조절(Signal Conditioning)</h1>
+  <p class="lead">센서가 내놓은 거친 신호를 쓸 만한 형태로 다듬기 — 증폭·필터·ADC.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 신호 조절이 필요한가</li>
+    <li>증폭(Amplification)</li>
+    <li>필터(Filter) — 노이즈 제거의 핵심</li>
+    <li>ADC — 아날로그를 디지털로</li>
+    <li>표본화 정리와 에일리어싱</li>
+    <li>이동 평균 필터(Moving Average)</li>
+  </ol></div>
+
+  <h2>1. 왜 신호 조절인가</h2>
+  <p>센서 출력은 그대로 MCU의 ADC에 넣을 수 있는 깨끗한 신호가 거의 없습니다. 보통 다음 문제 중 하나 이상을 가집니다.</p>
+  <ul>
+    <li><strong>크기가 너무 작음</strong> — 스트레인 게이지 출력은 mV 단위, ADC 입력은 0~5V. 1000배 증폭 필요.</li>
+    <li><strong>잡음이 섞임</strong> — 50/60Hz 전원 잡음, 고주파 EMI, 기계 진동에 의한 흔들림.</li>
+    <li><strong>전압 범위가 안 맞음</strong> — 음수 출력을 양수로, 또는 0~10V를 0~5V로 스케일링.</li>
+    <li><strong>임피던스가 안 맞음</strong> — 신호원 출력저항이 너무 커서 ADC가 신호를 빨아먹어버림.</li>
+  </ul>
+
+  <p>이 모든 문제를 해결하는 단계가 <strong>신호 조절</strong>이고, 보통 다음 순서로 구성됩니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 90" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="80" height="50" rx="6" fill="#eef3ff" stroke="#0742b8"/>
+      <text x="50" y="50" text-anchor="middle" font-size="11" fill="#0742b8">센서</text>
+      <path d="M90,45 L120,45" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="120" y="20" width="90" height="50" rx="6" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="165" y="48" text-anchor="middle" font-size="11" fill="#e65100">증폭기</text>
+      <path d="M210,45 L240,45" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="240" y="20" width="90" height="50" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="285" y="48" text-anchor="middle" font-size="11" fill="#1b5e20">필터(LPF)</text>
+      <path d="M330,45 L360,45" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="360" y="20" width="80" height="50" rx="6" fill="#f3e5f5" stroke="#6a1b9a"/>
+      <text x="400" y="48" text-anchor="middle" font-size="11" fill="#4a148c">ADC</text>
+      <path d="M440,45 L470,45" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="470" y="20" width="100" height="50" rx="6" fill="#fce4ec" stroke="#c2185b"/>
+      <text x="520" y="48" text-anchor="middle" font-size="11" fill="#880e4f">MCU·SW</text>
+      <defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#666"/></marker></defs>
+    </svg>
+    <figcaption>그림 1. 센서 → 증폭 → 필터 → ADC → MCU의 신호 처리 파이프라인.</figcaption>
+  </figure>
+
+  <h2>2. 증폭(Amplification)</h2>
+  <p>작은 신호를 키우는 단계. <a href="../lectures-mech/11-opamp.html">기전공학기초 W11의 op-amp</a>가 핵심 도구입니다. 메카트로닉스에서 자주 쓰는 두 형태:</p>
+
+  <h3>2.1 비반전 증폭기 (Non-inverting)</h3>
+  $$ v_O = \left(1 + \frac{R_2}{R_1}\right) v_S $$
+  <p>입력 임피던스가 매우 커서 약한 신호원에 부담을 안 줍니다. 일반적인 센서 신호 증폭에 1순위.</p>
+
+  <h3>2.2 계측 증폭기 (Instrumentation Amp)</h3>
+  <p>3-op-amp 구조로 차분 신호만 증폭하고 동상 잡음을 제거합니다 (CMRR이 매우 높음). <strong>스트레인 게이지·서모커플·심전도 등 미약한 차분 신호 측정의 표준</strong>.</p>
+  $$ v_O = \frac{R_f}{R_1}(v_2 - v_1) \times \text{(추가 이득)} $$
+  <p>휘트스톤 브릿지(<a href="../lectures-mech/05-dc-analysis-2.html">기전공학기초 W5</a>)의 출력을 받아 ADC로 보내는 자리에 거의 항상 들어갑니다. INA125·INA126 같은 IC가 표준 부품.</p>
+
+  <h2>3. 필터(Filter)</h2>
+  <p>특정 주파수 대역만 통과시키고 나머지를 걸러내는 회로. 종류는 4가지:</p>
+
+  <table>
+    <thead><tr><th>이름</th><th>약자</th><th>통과 대역</th><th>대표 응용</th></tr></thead>
+    <tbody>
+      <tr><td>저역통과</td><td>LPF</td><td>$f &lt; f_c$</td><td>고주파 잡음 제거 (가장 흔함)</td></tr>
+      <tr><td>고역통과</td><td>HPF</td><td>$f &gt; f_c$</td><td>DC 오프셋 제거, AC 결합</td></tr>
+      <tr><td>대역통과</td><td>BPF</td><td>$f_1 &lt; f &lt; f_2$</td><td>특정 주파수만 (라디오 튜너)</td></tr>
+      <tr><td>대역저지</td><td>BSF/Notch</td><td>특정 주파수만 막음</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.1 RC 저역통과 필터(LPF)</h3>
+  <p>저항 + 커패시터 조합. 가장 단순하고 가장 자주 쓰는 잡음 제거기.</p>
+  $$ \frac{V_{\text{out}}}{V_{\text{in}}} = \frac{1}{1 + j\omega RC}, \qquad f_c = \frac{1}{2\pi RC} $$
+  <p>차단 주파수 $f_c$ 위는 점차 약해지고 아래는 그대로 통과. <a href="../lectures-mech/08-impedance.html">기전공학기초 W8 임피던스</a>에서 보드 플롯과 함께 자세히 다룹니다.</p>
+
+  <h3>3.2 적용 예 — IMU 가속도 센서</h3>
+  <p>차량의 IMU 가속도 신호에는 엔진 진동(수백 Hz)이 큰 잡음으로 섞여 들어옵니다. 차량 자세 제어에 필요한 주파수는 보통 ~10Hz 이하이므로 $f_c \approx 20\,\text{Hz}$인 LPF를 통과시키면 깨끗한 신호가 됩니다.</p>
+
+  <h2>4. ADC — 아날로그를 디지털로</h2>
+  <p>아날로그 신호를 MCU가 처리할 수 있는 비트열로 변환. 두 단계로 나뉩니다.</p>
+
+  <h3>4.1 표본화(Sampling)</h3>
+  <p>연속 신호 $x(t)$를 일정 간격 $T_s$로 측정 → 이산 신호 $x[n] = x(nT_s)$. 측정 빈도를 표본화 주파수 $f_s = 1/T_s$라 합니다.</p>
+
+  <h3>4.2 양자화(Quantization)</h3>
+  <p>각 표본의 값을 유한한 비트로 표현. $N$비트 ADC라면 $2^N$단계로 분해. Arduino UNO의 ADC는 10비트 = 1024단계 = 0~5V를 약 4.88mV 단위로.</p>
+
+  <h3>4.3 ADC 분해능과 양자화 오차</h3>
+  $$ \text{LSB} = \frac{V_{\text{ref}}}{2^N} $$
+  <p>분해능은 LSB와 같고, 양자화 오차는 ±LSB/2. 5V·10비트면 LSB ≈ 4.88mV, 오차 ±2.44mV. 이보다 작은 신호 변화는 ADC가 인식 못 합니다 — 그래서 증폭이 필요한 또 다른 이유.</p>
+
+  <h2>5. 표본화 정리와 에일리어싱</h2>
+
+  <h3>5.1 나이퀴스트-섀넌 정리</h3>
+  <p>"신호의 최고 주파수 성분의 <strong>2배 이상</strong>으로 표본화하면 원 신호를 완전히 복원할 수 있다."</p>
+  $$ \boxed{f_s \ge 2 f_{\max}} $$
+  <p>이 한계 $f_s/2$를 <strong>나이퀴스트 주파수</strong>라 합니다. 음성(20kHz) 녹음의 표본화율 44.1kHz가 이 정리에서 나온 값이에요.</p>
+
+  <h3>5.2 에일리어싱(Aliasing)</h3>
+  <p>표본화율이 $2f_{\max}$ 미만이면 고주파 성분이 저주파로 <strong>잘못 보입니다</strong>. 회전하는 바퀴가 영화에서 거꾸로 도는 것처럼 보이는 현상이 그 예. 한 번 에일리어싱이 일어나면 어떤 디지털 처리로도 복원 불가.</p>
+
+  <h3>5.3 안티앨리어싱 필터</h3>
+  <p>예방책 — ADC 직전에 LPF를 둬 $f_s/2$ 이상의 성분을 미리 제거. 이를 <strong>안티앨리어싱 필터(anti-aliasing filter)</strong>라 합니다. 모든 데이터 수집 시스템의 표준 구성:</p>
+  <p><em>센서 → 증폭 → 안티앨리어싱 LPF → ADC → MCU</em></p>
+
+  <h3>5.4 예제 — 10Hz 신호의 표본화</h3>
+  <p>$x(t) = \cos(2\pi \cdot 10 \cdot t)$를 다양한 $f_s$로 표본화하면:</p>
+  <ul>
+    <li>$f_s = 100\,\text{Hz}$ → 매 주기당 10점 → 잘 표현됨.</li>
+    <li>$f_s = 25\,\text{Hz}$ → 주기당 2.5점 → 한계 근처지만 OK.</li>
+    <li>$f_s = 18\,\text{Hz}$ → 나이퀴스트(20Hz) 미만 → 에일리어싱! 2Hz 신호처럼 보임.</li>
+  </ul>
+
+  <h2>6. 이동 평균 필터(Moving Average)</h2>
+  <p>가장 단순한 디지털 LPF. 최근 $N$개 샘플의 평균을 출력으로 내보냅니다.</p>
+  $$ y[n] = \frac{1}{N}\sum_{k=0}^{N-1} x[n-k] $$
+
+  <h3>6.1 효과와 한계</h3>
+  <ul>
+    <li><strong>효과</strong>: 평균이 잡음을 누르고 신호의 추세를 부드럽게 함. 구현이 매우 쉬움 (3~4줄 C 코드).</li>
+    <li><strong>한계</strong>: 응답이 늦어짐(평균창 크기만큼 지연). 빠른 변화에 둔감해짐.</li>
+  </ul>
+
+  <h3>6.2 Python 예제</h3>
+  <pre><code>import numpy as np
+def moving_average(x, N):
+    return np.convolve(x, np.ones(N)/N, mode='valid')
+
+# 잡음 섞인 신호
+t = np.linspace(0, 1, 200)
+clean = np.sin(2*np.pi*5*t)
+noisy = clean + 0.3*np.random.randn(len(t))
+
+filtered = moving_average(noisy, N=10)</code></pre>
+
+  <p>이동 평균은 연산량이 적어 임베디드에 자주 쓰지만 정밀 측정에는 IIR/FIR 필터를 별도로 설계합니다.</p>
+
+  <h2>7. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>단계</th><th>도구</th><th>해결하는 문제</th></tr></thead>
+    <tbody>
+      <tr><td>증폭</td><td>op-amp (비반전·계측)</td><td>너무 작은 신호</td></tr>
+      <tr><td>필터</td><td>RC LPF, op-amp 필터</td><td>잡음·고주파 성분</td></tr>
+      <tr><td>안티앨리어싱</td><td>$f_s/2$ 이하만 통과</td><td>표본화 왜곡 예방</td></tr>
+      <tr><td>ADC</td><td>SAR/시그마-델타</td><td>아날로그 → 디지털</td></tr>
+      <tr><td>디지털 후처리</td><td>이동 평균, IIR/FIR</td><td>SW에서 추가 잡음 제거</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>다음 주차로의 다리</strong> — 필터·평균은 잡음을 줄이지만 <em>물리 모델을 모릅니다</em>. 그러나 우리가 측정하는 시스템(예: 자동차 위치)은 가속·감속 같은 동역학 모델이 있어요. 이 모델 정보까지 함께 활용해 잡음을 더 잘 누르는 도구가 다음 주(W4)의 <strong>칼만 필터</strong>입니다.
+  </div>
+
+  <nav class="prevnext">
+    <a href="02-sensor.html"><small>← 이전</small>W2. 센서와 트랜스듀서</a>
+    <a href="04-kalman-1d.html" class="next"><small>다음 →</small>W4. 칼만 필터 (1D)</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
