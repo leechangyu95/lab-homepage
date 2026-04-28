@@ -121,6 +121,67 @@
   $$ \frac{v_S - 0}{R_1} = \frac{0 - v_O}{R_2} \implies \boxed{v_O = -\frac{R_2}{R_1} v_S} $$
   <p>이득의 크기는 저항 비율 $R_2/R_1$로 결정되고 부호는 반전. 예: $R_1 = 10\,\text{k}$, $R_2 = 100\,\text{k}$, $v_S = 0.1\,\text{V}$ → $v_O = -1\,\text{V}$ (10배 증폭, 부호 반전).</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 반전 증폭기 — 입력 vs 출력</h4>
+    <p>$R_1$, $R_2$를 바꾸며 이득 $-R_2/R_1$이 어떻게 변하는지, 출력이 어떻게 입력의 부호 반전·크기 증폭이 되는지 봅니다. ±13V 포화 한계도 함께 표시합니다.</p>
+    <canvas id="invCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R₁ <span class="val" id="invR1V">10</span> kΩ<input type="range" id="invR1" min="1" max="100" step="1" value="10"></label>
+      <label>R₂ <span class="val" id="invR2V">100</span> kΩ<input type="range" id="invR2" min="1" max="500" step="5" value="100"></label>
+      <label>입력 진폭 <span class="val" id="invAV">0.5</span> V<input type="range" id="invA" min="0.1" max="3" step="0.1" value="0.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('invCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Vsat=13;
+    function draw(){
+      const R1=+document.getElementById('invR1').value;
+      const R2=+document.getElementById('invR2').value;
+      const A=+document.getElementById('invA').value;
+      document.getElementById('invR1V').textContent=R1;
+      document.getElementById('invR2V').textContent=R2;
+      document.getElementById('invAV').textContent=A.toFixed(1);
+      const gain=-R2/R1;
+      const Tspan=4*Math.PI;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(t){return 60+t/Tspan*(W-90);}
+      function y(v){return H/2-v/(Vsat+1)*(H-60)/2;}
+      ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Tspan),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),20);ctx.lineTo(x(0),H-30);ctx.stroke();
+      ctx.strokeStyle='#999';ctx.lineWidth=1;ctx.setLineDash([6,3]);
+      ctx.beginPath();ctx.moveTo(x(0),y(Vsat));ctx.lineTo(x(Tspan),y(Vsat));
+      ctx.moveTo(x(0),y(-Vsat));ctx.lineTo(x(Tspan),y(-Vsat));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=0.02){
+        const v=A*Math.sin(t);
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=0.02){
+        let v=gain*A*Math.sin(t);
+        v=Math.max(-Vsat,Math.min(Vsat,v));
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`이득 = −R_2/R_1 = ${gain.toFixed(2)}`,40,30);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText(`v_S = ${A.toFixed(1)} sin(t)`,W-300,30);
+      ctx.fillStyle='#c62828';
+      const peak=Math.abs(gain*A);
+      ctx.fillText(`v_O peak ≈ ${peak.toFixed(2)} V${peak>Vsat?' (포화!)':''}`,W-160,30);
+    }
+    ['invR1','invR2','invA'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h3>8.2 비반전 증폭기(Non-inverting)</h3>
   <p>입력이 (+) 단자로 직접, (−) 단자는 $R_1$로 접지, $R_2$로 출력에 연결.</p>
   <p>가상접지 → $v_- = v_+ = v_S$. KCL:</p>
@@ -158,6 +219,68 @@
   <h3>8.6 계측 증폭기(Instrumentation Amp)</h3>
   <p>차동 증폭기의 입력 두 단자 앞에 버퍼를 하나씩 추가한 3-op-amp 구조. 입력 임피던스가 매우 크고 동상신호 제거비(CMRR)가 매우 높아 <strong>스트레인 게이지·심전도(ECG)·서모커플</strong> 등 매우 작은 차분 신호 측정의 표준 회로입니다(W5 휘트스톤 브릿지의 출력을 받는 곳!).</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 가산기 — 세 신호의 가중 합</h4>
+    <p>세 입력 $v_1, v_2, v_3$을 다른 가중치($R_f/R_k$)로 합쳐 출력을 계산합니다. 단순 합산기($R_1=R_2=R_3=R_f$)와 가중 평균이 어떻게 다른지 직접 실험.</p>
+    <canvas id="sumCanvas" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>v₁ <span class="val" id="sV1">1.0</span> V<input type="range" id="sV1i" min="-3" max="3" step="0.1" value="1"></label>
+      <label>v₂ <span class="val" id="sV2">0.5</span> V<input type="range" id="sV2i" min="-3" max="3" step="0.1" value="0.5"></label>
+      <label>v₃ <span class="val" id="sV3">-0.5</span> V<input type="range" id="sV3i" min="-3" max="3" step="0.1" value="-0.5"></label>
+      <label>R₁ <span class="val" id="sR1">10</span> kΩ<input type="range" id="sR1i" min="1" max="100" step="1" value="10"></label>
+      <label>R₂ <span class="val" id="sR2">10</span> kΩ<input type="range" id="sR2i" min="1" max="100" step="1" value="10"></label>
+      <label>R₃ <span class="val" id="sR3">10</span> kΩ<input type="range" id="sR3i" min="1" max="100" step="1" value="10"></label>
+      <label>R_f <span class="val" id="sRf">10</span> kΩ<input type="range" id="sRfi" min="1" max="100" step="1" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sumCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const v1=+document.getElementById('sV1i').value;
+      const v2=+document.getElementById('sV2i').value;
+      const v3=+document.getElementById('sV3i').value;
+      const R1=+document.getElementById('sR1i').value;
+      const R2=+document.getElementById('sR2i').value;
+      const R3=+document.getElementById('sR3i').value;
+      const Rf=+document.getElementById('sRfi').value;
+      [['sV1',v1],['sV2',v2],['sV3',v3],['sR1',R1],['sR2',R2],['sR3',R3],['sRf',Rf]].forEach(([id,v])=>{document.getElementById(id).textContent=typeof v==='number'?v.toFixed(v%1?1:0):v;});
+      const w1=Rf/R1,w2=Rf/R2,w3=Rf/R3;
+      const out=-(w1*v1+w2*v2+w3*v3);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const bx=80,by=120,bw=80,bh=80;
+      function bar(x,v,w,label){
+        const sign=v>=0?1:-1;
+        const h=Math.min(bh,Math.abs(v)*15);
+        ctx.fillStyle=sign>0?'#0b5fff':'#c62828';
+        ctx.fillRect(x,by-(sign>0?h:0),bw,h);
+        ctx.strokeStyle='#222';ctx.strokeRect(x,by-bh,bw,2*bh);
+        ctx.beginPath();ctx.moveTo(x,by);ctx.lineTo(x+bw,by);ctx.stroke();
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(label,x+5,by+bh+15);
+        ctx.fillText(`v=${v.toFixed(2)}V`,x+2,by+bh+30);
+        if(w!==undefined)ctx.fillText(`w=${w.toFixed(2)}`,x+2,by+bh+45);
+      }
+      bar(40,v1,w1,'v₁');
+      bar(140,v2,w2,'v₂');
+      bar(240,v3,w3,'v₃');
+      // Sum bar
+      ctx.fillStyle='#1b5e20';ctx.font='13px sans-serif';
+      ctx.fillText('= v_O (출력)',420,by-bh-10);
+      bar(420,out,undefined,'v_O');
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`v_O = −(w₁v₁ + w₂v₂ + w₃v₃) = ${out.toFixed(3)} V`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const eqWeights=Math.abs(w1-w2)<0.01&&Math.abs(w2-w3)<0.01;
+      ctx.fillText(eqWeights?'가중치 같음 → 단순 합산기 (반전)':'가중치 다름 → 각 입력에 다른 비중',40,52);
+    }
+    ['sV1i','sV2i','sV3i','sR1i','sR2i','sR3i','sRfi'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>9. 적분기와 미분기</h2>
   <p>저항 자리에 커패시터를 두면 새로운 동작이 생깁니다.</p>
 
@@ -170,6 +293,66 @@
   <p>$R_1$ 자리에 커패시터를 두면:</p>
   $$ v_O(t) = -RC\,\frac{d v_S(t)}{dt} $$
   <p>PID의 D항. 다만 미분기는 노이즈 증폭 문제 때문에 보통 추가 필터와 함께 씁니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 적분기 — 사각파를 삼각파로</h4>
+    <p>반전 증폭기의 $R_2$ 자리에 커패시터 $C$를 두면 적분기. 사각파 입력에 적분기를 통과시키면 삼각파 출력이 나옵니다 — 출력 기울기는 $-v_S/(RC)$.</p>
+    <canvas id="intCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="iRV">10</span> kΩ<input type="range" id="iR" min="1" max="100" step="1" value="10"></label>
+      <label>C <span class="val" id="iCV">1.0</span> μF<input type="range" id="iC" min="0.01" max="10" step="0.01" value="1"></label>
+      <label>입력 진폭 <span class="val" id="iAV">1.0</span> V<input type="range" id="iA" min="0.1" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('intCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Vsat=13;
+    function draw(){
+      const R=+document.getElementById('iR').value*1000;
+      const Cv=+document.getElementById('iC').value*1e-6;
+      const A=+document.getElementById('iA').value;
+      document.getElementById('iRV').textContent=(R/1000).toFixed(0);
+      document.getElementById('iCV').textContent=(Cv*1e6).toFixed(2);
+      document.getElementById('iAV').textContent=A.toFixed(1);
+      const f=100;
+      const Tspan=2/f;
+      const N=400,dt=Tspan/N;
+      let vO=0;
+      const arr=[];
+      for(let k=0;k<N;k++){
+        const t=k*dt;
+        const vS=A*(Math.sin(2*Math.PI*f*t)>=0?1:-1);
+        // dvO/dt = -vS/(RC)
+        vO=vO-vS/(R*Cv)*dt;
+        vO=Math.max(-Vsat,Math.min(Vsat,vO));
+        arr.push({t,vS,vO});
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(t){return 60+t/Tspan*(W-90);}
+      function y(v){return H/2-v/(Vsat+1)*(H-60)/2;}
+      ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Tspan),y(0));ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      arr.forEach((p,i)=>{if(i===0)ctx.moveTo(x(p.t),y(p.vS));else ctx.lineTo(x(p.t),y(p.vS));});
+      ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.beginPath();
+      arr.forEach((p,i)=>{if(i===0)ctx.moveTo(x(p.t),y(p.vO));else ctx.lineTo(x(p.t),y(p.vO));});
+      ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';
+      ctx.fillText('입력 사각파 v_S(t)',60,30);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('출력 삼각파 v_O(t) = −(1/RC)∫v_S dt',300,30);
+      const tau=R*Cv;
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`τ = RC = ${(tau*1000).toFixed(2)} ms,  슬로프 = ±${(A/(R*Cv)).toFixed(0)} V/s`,40,H-15);
+    }
+    ['iR','iC','iA'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
 
   <h2>10. 출력 동작 범위 — 무한정 키울 수는 없다</h2>
   <p>이상적 op-amp는 출력에 한계가 없지만 실제 op-amp는 공급전압 $V_{CC}$, $V_{EE}$ 사이에서만 출력할 수 있습니다 — 그 한계에 닿으면 <strong>포화(saturation)</strong>되어 신호가 잘립니다.</p>

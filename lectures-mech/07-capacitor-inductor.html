@@ -94,6 +94,72 @@
     <figcaption>그림 1. RC 회로의 충·방전 곡선. 시정수 $\tau$가 시간 스케일을 결정합니다.</figcaption>
   </figure>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: RC 충·방전과 시정수</h4>
+    <p>$R$, $C$ 값을 바꿔 시정수 $\tau = RC$가 어떻게 곡선을 늘이고 줄이는지 봅니다. <strong>모드</strong>로 충전/방전을 토글. $t=\tau$ 지점에서 변화량 63%, $5\tau$에서 거의 끝납니다.</p>
+    <canvas id="rcCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>모드
+        <select id="rcMode"><option value="charge">충전</option><option value="discharge">방전</option></select>
+      </label>
+      <label>R <span class="val" id="rcRV">1.0</span> kΩ<input type="range" id="rcR" min="0.1" max="10" step="0.1" value="1"></label>
+      <label>C <span class="val" id="rcCV">100</span> μF<input type="range" id="rcC" min="10" max="1000" step="10" value="100"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rcCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const V0=5;
+    function draw(){
+      const mode=document.getElementById('rcMode').value;
+      const R=+document.getElementById('rcR').value*1000;
+      const Cv=+document.getElementById('rcC').value*1e-6;
+      document.getElementById('rcRV').textContent=(R/1000).toFixed(1);
+      document.getElementById('rcCV').textContent=(Cv*1e6).toFixed(0);
+      const tau=R*Cv;
+      const Tspan=5*tau;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(t){return 60+t/Tspan*(W-90);}
+      function y(v){return H-50-(v/V0)*(H-90);}
+      ctx.strokeStyle='#ddd';
+      for(let i=1;i<=5;i++){const t=i*tau;ctx.beginPath();ctx.moveTo(x(t),y(0));ctx.lineTo(x(t),y(V0));ctx.stroke();}
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Tspan),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(0),y(V0));ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let i=1;i<=5;i++){ctx.fillText(i+'τ',x(i*tau)-5,H-35);}
+      ctx.fillText('0',45,y(0)+4);ctx.fillText('V₀',35,y(V0)+4);
+      // 63% line
+      const v63=mode==='charge'?V0*0.632:V0*0.368;
+      ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(x(0),y(v63));ctx.lineTo(x(tau),y(v63));ctx.lineTo(x(tau),y(0));ctx.stroke();
+      ctx.setLineDash([]);
+      // Curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=Tspan/200){
+        const v=mode==='charge'?V0*(1-Math.exp(-t/tau)):V0*Math.exp(-t/tau);
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      const tauMs=tau*1000;
+      const label=tauMs<1?(tau*1e6).toFixed(0)+' μs':tauMs<1000?tauMs.toFixed(1)+' ms':(tauMs/1000).toFixed(2)+' s';
+      ctx.fillText(`τ = RC = ${label}`,40,30);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText(mode==='charge'?'v_C = V₀(1 − e^{−t/τ})':'v_C = V₀ e^{−t/τ}',40,52);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('점선: t=τ에서 63% (충전) / 37% (방전)',40,H-15);
+    }
+    ['rcMode','rcR','rcC'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.addEventListener('input',draw);el.addEventListener('change',draw);
+    });
+    draw();
+  })();
+  </script>
+
   <h3>2.4 커패시터에 저장되는 에너지</h3>
   <p>커패시터는 에너지를 <em>전기장에</em> 저장한다고 했지요. 그 양은 얼마일까? 전류 정의 $i = dq/dt$와 전력 $p = vi$로부터:</p>
   $$ W = \int_0^t p\,dt' = \int_0^t v \cdot i\,dt' = \int_0^Q v\,dq = \int_0^V (Cv)\,dv = \frac{1}{2}CV^2 $$
@@ -165,6 +231,72 @@
     <li><strong>스위칭 레귤레이터</strong> — Buck/Boost 컨버터 등 모든 현대 SMPS의 핵심에 인덕터가 있습니다. 빠른 스위칭으로 인덕터에 에너지를 모았다 풀었다 하며 전압을 효율적으로 변환합니다.</li>
     <li><strong>스파크 회로</strong> — 자동차 점화 코일에서 1차 코일의 전류를 갑자기 끊으면 $L\,di/dt$가 폭발적으로 커져 2차 코일에 수만 V의 점화 스파크를 만듭니다.</li>
   </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: RL 응답과 스파크 — $V_L = L\,di/dt$</h4>
+    <p>RL 직렬에서 전원 ON/OFF 시 전류가 지수적으로 변하고, OFF 순간에는 인덕터 양단에 큰 역기전력 스파크가 발생합니다. <strong>스위치</strong>를 토글하며 전류와 인덕터 전압을 동시에 보세요.</p>
+    <canvas id="rlCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>스위치
+        <select id="rlSw"><option value="on">ON (전류 상승)</option><option value="off">OFF (전류 감쇠)</option></select>
+      </label>
+      <label>R <span class="val" id="rlRV">100</span> Ω<input type="range" id="rlR" min="10" max="1000" step="10" value="100"></label>
+      <label>L <span class="val" id="rlLV">100</span> mH<input type="range" id="rlL" min="10" max="1000" step="10" value="100"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rlCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const V0=10;
+    function draw(){
+      const sw=document.getElementById('rlSw').value;
+      const R=+document.getElementById('rlR').value;
+      const L=+document.getElementById('rlL').value*1e-3;
+      document.getElementById('rlRV').textContent=R;
+      document.getElementById('rlLV').textContent=(L*1000).toFixed(0);
+      const tau=L/R;
+      const i0=V0/R;
+      const Tspan=5*tau;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(t){return 60+t/Tspan*(W-90);}
+      function yI(v){return H-50-(v/i0)*((H-90)/2);}
+      function yV(v){return 100 - v*30;}
+      ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo(x(0),H-50);ctx.lineTo(x(Tspan),H-50);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),50);ctx.lineTo(x(Tspan),50);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),20);ctx.lineTo(x(0),H-30);ctx.stroke();
+      // Current curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=Tspan/200){
+        const i=sw==='on'?i0*(1-Math.exp(-t/tau)):i0*Math.exp(-t/tau);
+        if(t===0)ctx.moveTo(x(t),yI(i));else ctx.lineTo(x(t),yI(i));
+      }
+      ctx.stroke();
+      // V_L curve (V_L = L di/dt = V0*exp(-t/tau) for ON, -V0*exp(-t/tau) for OFF)
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.setLineDash([5,3]);ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=Tspan/200){
+        const vL=sw==='on'?V0*Math.exp(-t/tau):-V0*Math.exp(-t/tau);
+        if(t===0)ctx.moveTo(x(t),yV(vL));else ctx.lineTo(x(t),yV(vL));
+      }
+      ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText(`전류 i(t)  (peak ${(i0*1000).toFixed(1)} mA)`,W-220,H-50);
+      ctx.fillStyle='#c62828';
+      ctx.fillText(`인덕터 전압 v_L(t)`,W-220,50);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`τ = L/R = ${(tau*1000).toFixed(2)} ms`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(sw==='off'?'OFF 순간 v_L가 −V₀로 점프 → 큰 di/dt가 만드는 스파크 원리':'ON 시 v_L가 V₀에서 0으로 감쇠 (i가 정상상태로)',40,H-15);
+    }
+    ['rlSw','rlR','rlL'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.addEventListener('input',draw);el.addEventListener('change',draw);
+    });
+    draw();
+  })();
+  </script>
 
   <h2>4. 세 소자의 직병렬 비교</h2>
   <table>

@@ -87,6 +87,73 @@
   <h2>4. 주파수 응답 — 필터의 시작</h2>
   <p>임피던스가 주파수에 따라 변한다는 사실은 <strong>필터(filter)</strong>의 핵심 원리입니다. 단순 RC 회로 하나로 무엇이 되는지 봅시다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: R, L, C 임피던스의 주파수 의존성</h4>
+    <p>$|Z|$를 주파수에 대해 그립니다. 저항은 일정, 인덕터는 주파수에 비례, 커패시터는 반비례. 로그 축에서 보면 L과 C는 서로 거울 대칭입니다.</p>
+    <canvas id="zwCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="zwRV">100</span> Ω<input type="range" id="zwR" min="10" max="1000" step="10" value="100"></label>
+      <label>L <span class="val" id="zwLV">10</span> mH<input type="range" id="zwL" min="0.1" max="100" step="0.1" value="10"></label>
+      <label>C <span class="val" id="zwCV">10</span> μF<input type="range" id="zwC" min="0.1" max="100" step="0.1" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('zwCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const R=+document.getElementById('zwR').value;
+      const L=+document.getElementById('zwL').value*1e-3;
+      const Cv=+document.getElementById('zwC').value*1e-6;
+      document.getElementById('zwRV').textContent=R;
+      document.getElementById('zwLV').textContent=(L*1000).toFixed(1);
+      document.getElementById('zwCV').textContent=(Cv*1e6).toFixed(1);
+      const fmin=1,fmax=1e6;
+      const lZmin=0,lZmax=5; // log10(Z): 1 to 100k
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(f){return 60+(Math.log10(f)-Math.log10(fmin))/(Math.log10(fmax)-Math.log10(fmin))*(W-90);}
+      function y(z){const lz=Math.log10(Math.max(1e-3,z));return H-50-(lz-lZmin)/(lZmax-lZmin)*(H-90);}
+      ctx.strokeStyle='#ddd';
+      for(let p=0;p<=6;p++){const f=Math.pow(10,p);ctx.beginPath();ctx.moveTo(x(f),y(1));ctx.lineTo(x(f),y(1e5));ctx.stroke();}
+      for(let p=0;p<=5;p++){const z=Math.pow(10,p);ctx.beginPath();ctx.moveTo(x(fmin),y(z));ctx.lineTo(x(fmax),y(z));ctx.stroke();}
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x(fmin),y(1));ctx.lineTo(x(fmax),y(1));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(fmin),y(1));ctx.lineTo(x(fmin),y(1e5));ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let p=0;p<=6;p++){ctx.fillText('10^'+p,x(Math.pow(10,p))-12,H-35);}
+      // R
+      ctx.strokeStyle='#1b5e20';ctx.lineWidth=2;ctx.beginPath();
+      ctx.moveTo(x(fmin),y(R));ctx.lineTo(x(fmax),y(R));ctx.stroke();
+      // L
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.05){
+        const f=Math.pow(10,lf);const z=2*Math.PI*f*L;
+        if(lf===Math.log10(fmin))ctx.moveTo(x(f),y(z));else ctx.lineTo(x(f),y(z));
+      }
+      ctx.stroke();
+      // C
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.05){
+        const f=Math.pow(10,lf);const z=1/(2*Math.PI*f*Cv);
+        if(lf===Math.log10(fmin))ctx.moveTo(x(f),y(z));else ctx.lineTo(x(f),y(z));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.font='13px sans-serif';
+      ctx.fillText(`R = ${R} Ω`,W-150,30);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText(`Z_L = ωL ↑`,W-150,50);
+      ctx.fillStyle='#c62828';
+      ctx.fillText(`Z_C = 1/ωC ↓`,W-150,70);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('주파수 f [Hz] (log)',W/2-50,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('|Z| [Ω] (log)',-30,0);ctx.restore();
+    }
+    ['zwR','zwL','zwC'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h3>4.1 RC 저역통과 필터(LPF)</h3>
   <p>저항 $R$을 직렬에 두고 커패시터 $C$의 양단을 출력으로 잡습니다. 전압 분배:</p>
   $$ \frac{V_{\text{out}}}{V_{\text{in}}} = \frac{Z_C}{R + Z_C} = \frac{1/(j\omega C)}{R + 1/(j\omega C)} = \frac{1}{1 + j\omega RC} $$
@@ -124,6 +191,69 @@
     <figcaption>그림 1. RC LPF와 HPF의 주파수 응답. 차단 주파수 $\omega_c = 1/RC$에서 −3dB(=0.707배).</figcaption>
   </figure>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: RC LPF/HPF 보드 플롯</h4>
+    <p>$R$, $C$를 바꿔 차단 주파수 $\omega_c = 1/RC$가 어떻게 이동하는지 봅니다. <strong>필터 종류</strong>로 LPF/HPF 토글. 차단 주파수에서 정확히 0.707배(−3dB) 점이 보여요.</p>
+    <canvas id="bodeCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>필터
+        <select id="bodeSel"><option value="lpf">LPF (저역통과)</option><option value="hpf">HPF (고역통과)</option></select>
+      </label>
+      <label>R <span class="val" id="bodeRV">1.0</span> kΩ<input type="range" id="bodeR" min="0.1" max="10" step="0.1" value="1"></label>
+      <label>C <span class="val" id="bodeCV">1.0</span> μF<input type="range" id="bodeC" min="0.01" max="10" step="0.01" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bodeCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const sel=document.getElementById('bodeSel').value;
+      const R=+document.getElementById('bodeR').value*1000;
+      const Cv=+document.getElementById('bodeC').value*1e-6;
+      document.getElementById('bodeRV').textContent=(R/1000).toFixed(1);
+      document.getElementById('bodeCV').textContent=(Cv*1e6).toFixed(2);
+      const fc=1/(2*Math.PI*R*Cv);
+      const fmin=fc/100,fmax=fc*100;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(f){return 60+(Math.log10(f/fmin))/4*(W-90);}
+      function y(g){return H-50-Math.max(0,1+g)*(H-90)/1.1;}
+      ctx.strokeStyle='#ddd';
+      for(let p=-2;p<=2;p++){const f=fc*Math.pow(10,p);ctx.beginPath();ctx.moveTo(x(f),y(0));ctx.lineTo(x(f),y(-1));ctx.stroke();}
+      for(let g=0;g>=-1;g-=0.2){ctx.beginPath();ctx.moveTo(x(fmin),y(g));ctx.lineTo(x(fmax),y(g));ctx.stroke();}
+      ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo(x(fmin),y(-1));ctx.lineTo(x(fmax),y(-1));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(fmin),y(0));ctx.lineTo(x(fmin),y(-1));ctx.stroke();
+      // 0.707 line
+      ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      const g707=Math.log10(0.7071);
+      ctx.beginPath();ctx.moveTo(x(fmin),y(g707));ctx.lineTo(x(fc),y(g707));ctx.lineTo(x(fc),y(-1));ctx.stroke();
+      ctx.setLineDash([]);
+      // Curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const f=Math.pow(10,lf);const wRC=(2*Math.PI*f)*R*Cv;
+        const mag=sel==='lpf'?(1/Math.sqrt(1+wRC*wRC)):(wRC/Math.sqrt(1+wRC*wRC));
+        const lg=Math.log10(Math.max(1e-3,mag));
+        if(lf===Math.log10(fmin))ctx.moveTo(x(f),y(lg));else ctx.lineTo(x(f),y(lg));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`f_c = 1/(2πRC) = ${fc<1000?fc.toFixed(1)+' Hz':(fc/1000).toFixed(2)+' kHz'}`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('점선: 0.707배(−3dB) 점이 차단 주파수',40,50);
+      ctx.fillText('주파수 f (log, f_c 기준 ±2decade)',W/2-100,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('|H(jω)| (log)',-25,0);ctx.restore();
+    }
+    ['bodeSel','bodeR','bodeC'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.addEventListener('input',draw);el.addEventListener('change',draw);
+    });
+    draw();
+  })();
+  </script>
+
   <h2>5. RLC 직렬 회로와 공진</h2>
   <p>R, L, C를 직렬로 연결한 회로의 임피던스는 단순한 합:</p>
   $$ Z = R + j\omega L + \frac{1}{j\omega C} = R + j\!\left(\omega L - \frac{1}{\omega C}\right) $$
@@ -136,6 +266,67 @@
   <h3>5.2 품질 계수 Q</h3>
   $$ Q = \frac{\omega_0 L}{R} = \frac{1}{R}\sqrt{\frac{L}{C}} $$
   <p>$Q$가 클수록 공진 봉우리가 뾰족해지고, 주변 주파수를 잘 거른다는 의미입니다. 라디오 튜너, 무선통신 필터의 핵심 지표입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: RLC 공진 — Q가 클수록 뾰족</h4>
+    <p>RLC 직렬에서 전류 진폭 $|I(\omega)| = |V|/|Z(\omega)|$를 그립니다. $\omega_0 = 1/\sqrt{LC}$에서 봉우리가 형성되고, $R$이 작아질수록 $Q = \omega_0 L/R$이 커져 봉우리가 날카로워집니다.</p>
+    <canvas id="resCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="resRV">10</span> Ω<input type="range" id="resR" min="1" max="100" step="1" value="10"></label>
+      <label>L <span class="val" id="resLV">1.0</span> mH<input type="range" id="resL" min="0.1" max="10" step="0.1" value="1"></label>
+      <label>C <span class="val" id="resCV">1.0</span> μF<input type="range" id="resC" min="0.1" max="10" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('resCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const R=+document.getElementById('resR').value;
+      const L=+document.getElementById('resL').value*1e-3;
+      const Cv=+document.getElementById('resC').value*1e-6;
+      document.getElementById('resRV').textContent=R;
+      document.getElementById('resLV').textContent=(L*1000).toFixed(1);
+      document.getElementById('resCV').textContent=(Cv*1e6).toFixed(1);
+      const w0=1/Math.sqrt(L*Cv);
+      const Q=w0*L/R;
+      const wmin=w0/10,wmax=w0*10;
+      const Vp=1;
+      const Imax=Vp/R;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(w){return 60+(Math.log10(w/wmin))/Math.log10(wmax/wmin)*(W-90);}
+      function y(i){return H-50-(i/(Imax*1.05))*(H-90);}
+      ctx.strokeStyle='#ddd';
+      for(let p=-1;p<=1;p++){const w=w0*Math.pow(10,p);ctx.beginPath();ctx.moveTo(x(w),y(0));ctx.lineTo(x(w),y(Imax));ctx.stroke();}
+      ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo(x(wmin),y(0));ctx.lineTo(x(wmax),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(wmin),y(0));ctx.lineTo(x(wmin),y(Imax));ctx.stroke();
+      // Curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lw=Math.log10(wmin);lw<=Math.log10(wmax);lw+=0.01){
+        const w=Math.pow(10,lw);
+        const X=w*L-1/(w*Cv);
+        const Z=Math.sqrt(R*R+X*X);
+        const I=Vp/Z;
+        if(lw===Math.log10(wmin))ctx.moveTo(x(w),y(I));else ctx.lineTo(x(w),y(I));
+      }
+      ctx.stroke();
+      // Mark w0
+      ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(x(w0),y(0));ctx.lineTo(x(w0),y(Imax));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`ω₀ = 1/√(LC) = ${w0.toFixed(0)} rad/s ≈ ${(w0/2/Math.PI).toFixed(0)} Hz`,40,30);
+      ctx.fillText(`Q = ω₀L/R = ${Q.toFixed(2)} (클수록 뾰족)`,40,52);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('각주파수 ω (log, ω₀ 기준 ±1decade)',W/2-110,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('|I(ω)|',-15,0);ctx.restore();
+    }
+    ['resR','resL','resC'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
 
   <h3>5.3 RC 필터의 위상 응답</h3>
   <p>크기 응답만이 아니라 위상도 함께 봐야 필터를 제대로 이해합니다. RC LPF의 전달함수 $1/(1+j\omega RC)$의 위상은:</p>

@@ -61,6 +61,67 @@
   <p>세 양 사이의 관계는 다음 한 줄로 모두 통합됩니다.</p>
   $$ \omega = 2\pi f = \frac{2\pi}{T} $$
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 사인파의 네 요소</h4>
+    <p>진폭·각주파수·위상이 그래프 모양에 어떻게 영향을 주는지 직접 봅니다. 위상이 양수면 그래프가 왼쪽으로 이동(앞섬), 음수면 오른쪽 이동(뒤짐).</p>
+    <canvas id="sinCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>진폭 A <span class="val" id="sinAV">1.0</span><input type="range" id="sinA" min="0.1" max="2" step="0.1" value="1"></label>
+      <label>각주파수 ω <span class="val" id="sinWV">2</span> rad/s<input type="range" id="sinW" min="1" max="8" step="0.5" value="2"></label>
+      <label>위상 θ <span class="val" id="sinPV">0</span>°<input type="range" id="sinP" min="-180" max="180" step="10" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sinCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Tspan=2*Math.PI;
+    function draw(){
+      const A=+document.getElementById('sinA').value;
+      const w=+document.getElementById('sinW').value;
+      const p=+document.getElementById('sinP').value*Math.PI/180;
+      document.getElementById('sinAV').textContent=A.toFixed(1);
+      document.getElementById('sinWV').textContent=w.toFixed(1);
+      document.getElementById('sinPV').textContent=(p*180/Math.PI).toFixed(0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(t){return 60+t/Tspan*(W-90);}
+      function y(v){return H/2 - v*((H-60)/2/2.2);}
+      ctx.strokeStyle='#ddd';
+      for(let t=0;t<=Tspan;t+=Math.PI/4){ctx.beginPath();ctx.moveTo(x(t),20);ctx.lineTo(x(t),H-30);ctx.stroke();}
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x(0),H/2);ctx.lineTo(x(Tspan),H/2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),20);ctx.lineTo(x(0),H-30);ctx.stroke();
+      // Reference (dashed)
+      ctx.setLineDash([4,3]);ctx.strokeStyle='#999';ctx.lineWidth=1.5;
+      ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=0.02){
+        const v=Math.cos(w*t);
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Current signal
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=0.01){
+        const v=A*Math.cos(w*t+p);
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`v(t) = ${A.toFixed(1)}·cos(${w.toFixed(1)}t + ${(p*180/Math.PI).toFixed(0)}°)`,30,20);
+      ctx.fillStyle='#999';ctx.font='12px sans-serif';
+      ctx.fillText('회색 점선: cos(ωt) 기준',30,H-10);
+      const T=2*Math.PI/w;
+      ctx.fillStyle='#1b5e20';
+      ctx.fillText(`T = ${T.toFixed(2)}s, f = ${(1/T).toFixed(2)}Hz`,W-200,20);
+    }
+    ['sinA','sinW','sinP'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h3>2.1 위상의 직관</h3>
   <p>두 사람이 같은 노래를 부르는데 한 사람이 0.5초 늦게 시작했다면, 그 두 신호는 같은 주파수지만 <strong>위상차</strong>가 있습니다. 위상이 양수($\theta &gt; 0$)면 그래프가 왼쪽으로 이동한 것 — 그 신호가 다른 신호보다 <em>앞선다(lead)</em>고 합니다. 음수면 오른쪽 이동, 즉 <em>뒤진다(lag)</em>.</p>
   <p>주의 — 위상차 비교는 <strong>같은 주파수의 신호끼리만</strong> 의미가 있습니다.</p>
@@ -127,6 +188,91 @@
   $$ I \approx 4.64\angle 143.2°\,\text{A} \implies i(t) \approx 4.64\cos(2t + 143.2°)\,\text{A} $$
   <p>미분방정식 한 단계 한 단계 풀던 노력이 분수의 복소수 나눗셈 한 번으로 끝납니다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 페이저 — 회전하는 화살표</h4>
+    <p>왼쪽은 복소평면의 페이저(크기 $A$, 각도 $\theta$), 오른쪽은 시간 영역의 사인파. 페이저는 회전을 멈춘 정지 화상이고, 사인파는 그 회전의 실수부(수평 그림자)입니다.</p>
+    <canvas id="phasorCanvas" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>크기 |V| <span class="val" id="phAV">1.0</span><input type="range" id="phA" min="0.2" max="2" step="0.1" value="1"></label>
+      <label>위상 θ <span class="val" id="phPV">0</span>°<input type="range" id="phP" min="0" max="360" step="10" value="0"></label>
+      <label>애니메이션 t <span class="val" id="phTV">0.0</span> s<input type="range" id="phT" min="0" max="6.28" step="0.1" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('phasorCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const A=+document.getElementById('phA').value;
+      const p=+document.getElementById('phP').value*Math.PI/180;
+      const t=+document.getElementById('phT').value;
+      document.getElementById('phAV').textContent=A.toFixed(1);
+      document.getElementById('phPV').textContent=(p*180/Math.PI).toFixed(0);
+      document.getElementById('phTV').textContent=t.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Phasor on the left (radius up to 100)
+      const cx=130,cy=H/2,r=80;
+      ctx.strokeStyle='#ddd';
+      ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(cx,cy,r/2,0,Math.PI*2);ctx.stroke();
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(cx-r-20,cy);ctx.lineTo(cx+r+20,cy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx,cy-r-20);ctx.lineTo(cx,cy+r+20);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('Re',cx+r+22,cy+4);ctx.fillText('Im',cx-12,cy-r-22);
+      // Rotating phasor
+      const ang=p+t;
+      const px=cx+r*A*Math.cos(ang);
+      const py=cy-r*A*Math.sin(ang);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();
+      // Arrow head
+      ctx.fillStyle='#0b5fff';
+      ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+      // Projection (real part)
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,cy);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(px,cy,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`V = ${A.toFixed(2)}∠${(p*180/Math.PI).toFixed(0)}°`,40,30);
+      // Time domain on the right
+      const tx=290,tyc=H/2,tw=W-tx-20,th=80;
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(tx,tyc);ctx.lineTo(tx+tw,tyc);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(tx,tyc-th);ctx.lineTo(tx,tyc+th);ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.beginPath();
+      const Tspan=4*Math.PI;
+      for(let s=0;s<=Tspan;s+=0.02){
+        const v=A*Math.cos(s+p);
+        const xx=tx+s/Tspan*tw;
+        const yy=tyc-v*th/2;
+        if(s===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      // Current point
+      const cur=A*Math.cos(t+p);
+      const cxp=tx+t/Tspan*tw;
+      const cyp=tyc-cur*th/2;
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(cxp,cyp,6,0,Math.PI*2);ctx.fill();
+      // Connect projection
+      ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(px,cy);ctx.lineTo(cxp,cyp);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`v(t) = ${A.toFixed(1)}·cos(t + ${(p*180/Math.PI).toFixed(0)}°)`,tx+10,tyc-th-5);
+      ctx.fillStyle='#c62828';
+      ctx.fillText(`현재값: ${cur.toFixed(2)}`,tx+10,tyc+th+15);
+    }
+    ['phA','phP','phT'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>5. 위상차가 알려주는 소자의 정체</h2>
   <p>정상상태 AC에서 어떤 소자에 대한 전류와 전압의 위상차 $\psi = \psi_v - \psi_i$를 보면 그 소자가 무엇인지 알 수 있습니다.</p>
 
@@ -140,6 +286,61 @@
   </table>
 
   <p><strong>"ELI the ICE man"</strong> — Electrical engineering 학생들이 외우는 mnemonic. <em>E</em>(전압)가 <em>I</em>(전류)를 앞서면 <em>L</em>(인덕터), <em>I</em>가 <em>E</em>를 앞서면 <em>C</em>(커패시터). 다음 주(W7)에서 이 위상차가 어떻게 자연스럽게 떨어지는지 미분방정식으로 직접 보게 됩니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: R, L, C에서 V–I 위상차</h4>
+    <p>같은 정현파 전압을 R, L, C에 인가하고 전류 파형을 함께 봅니다. 저항은 동위상, 인덕터는 전류가 90° 뒤짐(lag), 커패시터는 전류가 90° 앞섬(lead).</p>
+    <canvas id="rlcCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>소자
+        <select id="rlcSel"><option value="R">저항 (R)</option><option value="L">인덕터 (L)</option><option value="C">커패시터 (C)</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rlcCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Tspan=4*Math.PI;
+    function draw(){
+      const sel=document.getElementById('rlcSel').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(60,H/2);ctx.lineTo(W-20,H/2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(60,30);ctx.lineTo(60,H-30);ctx.stroke();
+      function x(t){return 60+t/Tspan*(W-90);}
+      function y(v){return H/2 - v*((H-60)/2/1.2);}
+      // Voltage: cos(t)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=0.02){
+        const v=Math.cos(t);
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();
+      // Current depending on element
+      let phase=0,label='',mnemonic='';
+      if(sel==='R'){phase=0;label='I in phase with V';mnemonic='V-I 동위상';}
+      else if(sel==='L'){phase=-Math.PI/2;label='I lags V by 90° (ELI)';mnemonic='전류가 90° 뒤짐';}
+      else if(sel==='C'){phase=+Math.PI/2;label='I leads V by 90° (ICE)';mnemonic='전류가 90° 앞섬';}
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.setLineDash([6,3]);ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=0.02){
+        const v=Math.cos(t+phase);
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';
+      ctx.fillText('전압 v(t) = cos(t)',70,28);
+      ctx.fillStyle='#c62828';
+      ctx.fillText(`전류 i(t) ↔ ${label}`,260,28);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`소자: ${sel} — ${mnemonic}`,70,H-15);
+    }
+    document.getElementById('rlcSel').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
 
   <h2>6. 회로 해석의 4가지 시야</h2>
   <p>입력 신호의 종류에 따라 회로 해석법이 달라집니다.</p>
