@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W2. 라플라스 변환 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 2. 라플라스 변환</h1>
+  <p class="lead">미분방정식을 대수방정식으로 바꿔주는 마법의 도구.
+  복잡한 적분 정의는 잠시 옆으로 미루고, "변환표를 사전처럼 쓰는 법"을 먼저 익힙니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 라플라스가 필요할까?</li>
+    <li>정의와 직관</li>
+    <li>꼭 알아야 할 변환쌍 7개</li>
+    <li>핵심 성질: 미분·적분·시간이동</li>
+    <li>역변환과 부분분수</li>
+    <li>인터랙티브: 시간영역 ↔ s-영역</li>
+    <li>Python으로 라플라스 다루기</li>
+  </ol></div>
+
+  <h2>1. 왜 라플라스가 필요할까?</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>곱셈을 하기 어려운 큰 수 두 개가 있다고 합시다. 옛날 사람들은 두 수를 <strong>로그</strong>로 바꿔서 더한 다음
+  지수로 다시 되돌렸어요. 곱셈이 덧셈으로 바뀌니 훨씬 쉬웠죠. 라플라스도 똑같은 발상입니다.
+  미분방정식을 풀기 어려운 시간영역(t)에서, 미분이 단순한 곱셈으로 바뀌는 새 영역(s)으로 옮겨서
+  대수적으로 풀고, 다시 시간영역으로 되돌립니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 160" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <rect x="20" y="20" width="170" height="50" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="105" y="40" text-anchor="middle" font-size="13">시간영역 미분방정식</text>
+      <text x="105" y="58" text-anchor="middle" font-size="13">τẏ + y = Ku</text>
+      <rect x="450" y="20" width="170" height="50" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="535" y="40" text-anchor="middle" font-size="13">s영역 대수방정식</text>
+      <text x="535" y="58" text-anchor="middle" font-size="13">(τs + 1)Y(s) = K U(s)</text>
+      <rect x="450" y="100" width="170" height="50" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="535" y="120" text-anchor="middle" font-size="13">대수적으로 Y(s) 푼다</text>
+      <text x="535" y="138" text-anchor="middle" font-size="13">Y(s) = K/(τs+1) · U(s)</text>
+      <rect x="20" y="100" width="170" height="50" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="105" y="120" text-anchor="middle" font-size="13">시간영역 해</text>
+      <text x="105" y="138" text-anchor="middle" font-size="13">y(t) = ...</text>
+      <path d="M192,45 L448,45" stroke="#0b5fff" marker-end="url(#ar)"/>
+      <text x="320" y="38" text-anchor="middle" font-size="12" fill="#0b5fff">𝓛 라플라스 변환</text>
+      <path d="M535,72 L535,98" stroke="#333" marker-end="url(#ar)"/>
+      <path d="M448,125 L192,125" stroke="#0b5fff" marker-end="url(#ar)"/>
+      <text x="320" y="118" text-anchor="middle" font-size="12" fill="#0b5fff">𝓛⁻¹ 역변환</text>
+    </svg>
+    <figcaption>그림 1. 라플라스 변환은 어려운 미분방정식을 우회해서 푸는 길입니다.</figcaption>
+  </figure>
+
+  <h2>2. 정의와 직관</h2>
+
+  <p>시간 함수 $f(t)$ ($t \geq 0$)의 라플라스 변환은 다음과 같이 정의됩니다.</p>
+  $$ F(s) = \mathcal{L}\{f(t)\} = \int_0^\infty f(t)\, e^{-st}\, dt $$
+
+  <p>$s$는 일반적으로 복소수($s = \sigma + j\omega$)이고, $e^{-st}$는 시간이 갈수록 작아지는 가중치입니다.
+  즉 라플라스 변환은 <em>$f(t)$를 다양한 감쇠율 $\sigma$와 진동수 $\omega$의 지수함수에 얼마나 닮았는지 측정하는 사전</em>이라고
+  보면 됩니다.</p>
+
+  <div class="note">
+    <strong>실무 팁</strong> — 자동제어에서는 정의식으로 직접 적분할 일이 거의 없습니다.
+    아래 변환표 7개와 4가지 성질만 외워서 표 보고 변환·역변환합니다. 정의는 "왜 그게 가능한가" 정도만 이해하면 충분.
+  </div>
+
+  <h2>3. 꼭 알아야 할 변환쌍 7개</h2>
+
+  <table>
+    <thead><tr><th>$f(t)$, $t \geq 0$</th><th>$F(s) = \mathcal{L}\{f(t)\}$</th><th>이름</th></tr></thead>
+    <tbody>
+      <tr><td>$\delta(t)$</td><td>$1$</td><td>단위 임펄스</td></tr>
+      <tr><td>$1$ (단위 계단)</td><td>$\dfrac{1}{s}$</td><td>단위 스텝 $u(t)$</td></tr>
+      <tr><td>$t$</td><td>$\dfrac{1}{s^2}$</td><td>램프</td></tr>
+      <tr><td>$t^n$, $n=0,1,2,\dots$</td><td>$\dfrac{n!}{s^{n+1}}$</td><td>거듭제곱</td></tr>
+      <tr><td>$e^{-at}$</td><td>$\dfrac{1}{s+a}$</td><td>지수 감쇠</td></tr>
+      <tr><td>$\sin(\omega t)$</td><td>$\dfrac{\omega}{s^2 + \omega^2}$</td><td>사인</td></tr>
+      <tr><td>$\cos(\omega t)$</td><td>$\dfrac{s}{s^2 + \omega^2}$</td><td>코사인</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 일곱 개와 다음 절의 4가지 성질의 조합이면 학부 자동제어에서 만나는 거의 모든 신호를 다룰 수 있습니다.</p>
+
+  <h2>4. 핵심 성질: 미분·적분·시간이동·최종값</h2>
+
+  <h3>미분 (가장 중요!)</h3>
+  $$ \mathcal{L}\{\dot{f}(t)\} = sF(s) - f(0^-) $$
+  $$ \mathcal{L}\{\ddot{f}(t)\} = s^2 F(s) - s f(0^-) - \dot{f}(0^-) $$
+
+  <p>"<em>$t$에 대한 미분 = $s$를 곱하는 것 (− 초기값)</em>". 자동제어에서 이 한 줄이 절반을 차지합니다.
+  미분방정식이 곧 다항식으로 바뀌는 이유입니다.</p>
+
+  <h3>적분</h3>
+  $$ \mathcal{L}\!\left\{\int_0^t f(\tau)\, d\tau \right\} = \frac{F(s)}{s} $$
+  <p>적분은 $s$로 나눕니다. PID의 I 항이 왜 $K_i/s$로 표현되는지 곧 보일 거예요.</p>
+
+  <h3>선형성·시간이동·s-이동</h3>
+  <ul>
+    <li><strong>선형성</strong>: $\mathcal{L}\{a f + b g\} = aF(s) + bG(s)$</li>
+    <li><strong>시간이동</strong>: $\mathcal{L}\{f(t-T)\, u(t-T)\} = e^{-Ts} F(s)$ — 지연(deadtime)이 $e^{-Ts}$로 나타나는 이유.</li>
+    <li><strong>s-이동(주파수 이동)</strong>: $\mathcal{L}\{e^{-at} f(t)\} = F(s+a)$ — 감쇠 사인 등을 만들 때.</li>
+  </ul>
+
+  <h3>최종값 정리 (Final Value Theorem)</h3>
+  $$ \lim_{t\to\infty} f(t) = \lim_{s\to 0} sF(s) \quad \text{(우변이 안정할 때만)} $$
+  <p>역변환을 하지 않고도 "정상상태에서 출력이 어디로 가는지"를 바로 읽는 마법. W7 정상상태 오차 계산의 주역입니다.</p>
+
+  <h2>5. 역변환과 부분분수</h2>
+
+  <p>$Y(s)$가 두 다항식의 비로 나오면(거의 항상 그렇습니다), <strong>부분분수 분해</strong>로 변환표 형태로 쪼갭니다.</p>
+
+  <h3>예제 1: 1차 시스템 계단응답</h3>
+  <p>$\tau\dot{y} + y = K u$, $y(0)=0$, $u(t)=$ 단위 스텝일 때.</p>
+  <p>라플라스: $(\tau s + 1) Y(s) = K \cdot \dfrac{1}{s}$, 따라서</p>
+  $$ Y(s) = \frac{K}{s(\tau s + 1)} = \frac{A}{s} + \frac{B}{\tau s + 1} $$
+  <p>분자 일치: $K = A(\tau s + 1) + B s$. $s=0$ 대입 $\Rightarrow A = K$. $s = -1/\tau$ 대입 $\Rightarrow B = -K\tau$.</p>
+  $$ Y(s) = \frac{K}{s} - \frac{K\tau}{\tau s + 1} = \frac{K}{s} - \frac{K}{s + 1/\tau} $$
+  <p>변환표로 역변환:</p>
+  $$ \boxed{\,y(t) = K\left(1 - e^{-t/\tau}\right)\,} $$
+  <p>이게 바로 W5에서 다루는 1차 시스템 계단응답 공식입니다. 라플라스 한 번이면 미분방정식 적분 없이 끝.</p>
+
+  <h3>예제 2: 부분분수 (반복근·복소근)</h3>
+  <p>분모에 반복근이나 복소근이 있을 때는 약간의 트릭이 필요합니다.</p>
+  <ul>
+    <li><strong>반복근</strong>: $\dfrac{1}{(s+a)^2} \to t e^{-at}$. 분해 시 $\dfrac{A}{s+a} + \dfrac{B}{(s+a)^2}$ 형태.</li>
+    <li><strong>복소근</strong>: $\dfrac{\omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2}$ → 감쇠 사인. W6에서 자세히.</li>
+  </ul>
+
+  <h2>6. 인터랙티브: 시간영역 ↔ s-영역</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 극점 위치가 시간응답을 어떻게 바꾸나</h4>
+    <p>$F(s) = \dfrac{1}{(s-p)}$의 극점 $p = \sigma + j\omega$를 슬라이더로 옮겨 보세요.
+    왼쪽은 s-평면(빨간 점이 극점), 오른쪽은 그에 대응하는 시간응답 $f(t) = e^{\sigma t}\cos(\omega t)$입니다.
+    실수부 $\sigma$가 안정성을, 허수부 $\omega$가 진동수를 결정합니다.</p>
+    <canvas id="splane" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>실수부 σ <span class="val" id="sigV">-0.5</span><input type="range" id="sig" min="-2" max="1" step="0.05" value="-0.5"></label>
+      <label>허수부 ω <span class="val" id="omV">2</span><input type="range" id="om" min="0" max="6" step="0.1" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('splane'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('sigV').textContent=(+$('sig').value).toFixed(2);$('omV').textContent=(+$('om').value).toFixed(1);};
+    ['sig','om'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const sig=+$('sig').value, om=+$('om').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // s-plane on left half (0..300)
+      const cx=150, cy=160, sc=60;
+      x.strokeStyle='#bbb';x.beginPath();
+      x.moveTo(20,cy);x.lineTo(280,cy);x.moveTo(cx,20);x.lineTo(cx,300);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('Re',270,cy-6);x.fillText('Im',cx+6,30);
+      // shaded unstable region (Re>0)
+      x.fillStyle='rgba(198,40,40,0.07)';x.fillRect(cx,20,160,280);
+      x.fillStyle='#c62828';x.font='10px sans-serif';x.fillText('불안정',cx+30,40);
+      // pole and conjugate
+      const px=cx+sig*sc, py1=cy-om*sc, py2=cy+om*sc;
+      x.fillStyle='#c62828';
+      x.beginPath();x.arc(px,py1,7,0,Math.PI*2);x.fill();
+      if(om>0.05){x.beginPath();x.arc(px,py2,7,0,Math.PI*2);x.fill();}
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('극점 p = '+sig.toFixed(2)+(om>=0?'+':'')+om.toFixed(1)+'j', 20, 295);
+      // time-domain response on right (320..640)
+      const ox=330, oy=160;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(630,oy);x.moveTo(ox,20);x.lineTo(ox,300);x.stroke();
+      x.fillStyle='#666';x.fillText('t',625,oy-6);x.fillText('f(t)',ox+6,30);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      let started=false;
+      for(let i=0;i<300;i++){
+        const t=i*0.04, f=Math.exp(sig*t)*Math.cos(om*t);
+        const xx=ox+i, yy=oy-f*60;
+        if(yy<10||yy>310)continue;
+        if(!started){x.moveTo(xx,yy);started=true;}else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      const verdict = sig<-0.01?'안정 (수렴)' : sig>0.01?'불안정 (발산)' : '경계 (지속 진동)';
+      x.fillText('시간응답  e^(σt)·cos(ωt)   →  '+verdict, ox, 295);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>꼭 만져볼 것</strong>:</p>
+  <ul>
+    <li>σ를 0보다 작게 → 안정 (시간이 갈수록 작아짐)</li>
+    <li>σ = 0, ω &gt; 0 → 안정 경계 (영원히 같은 진폭으로 진동)</li>
+    <li>σ &gt; 0 → 불안정 (시간이 갈수록 커짐, 발산)</li>
+    <li>ω를 키우면 시간응답이 더 빠르게 진동</li>
+  </ul>
+
+  <div class="tip">
+    <strong>가장 중요한 한 문장</strong> — 자동제어 전체에서 시스템의 운명은 <em>전달함수의 극점이 s-평면 어디에 있느냐</em>로
+    결정됩니다. 모든 극점이 좌반평면(Re &lt; 0)에 있어야 안정입니다. 이 한 문장이 W8 Routh-Hurwitz, W9 근궤적, W10 Bode의
+    출발점입니다.
+  </div>
+
+  <h2>7. Python으로 라플라스 다루기</h2>
+
+  <p>SymPy는 라플라스 변환을 기호적으로 계산해 주고, <code>python-control</code>은 전달함수를 객체로 다룹니다.</p>
+
+<pre><code class="language-python">import sympy as sp
+
+t, s, K, tau = sp.symbols('t s K tau', positive=True)
+
+# 1차 시스템 계단응답을 직접 라플라스로 풀기
+U = 1/s                                  # 단위 스텝의 라플라스
+G = K / (tau*s + 1)                      # 1차 전달함수
+Y = sp.simplify(G * U)                   # 출력의 라플라스
+print('Y(s) =', Y)
+
+# 역변환
+y_t = sp.inverse_laplace_transform(Y, s, t)
+print('y(t) =', sp.simplify(y_t))
+# 출력: K - K*exp(-t/tau)   ← 강의 예제와 정확히 일치</code></pre>
+
+<pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+# 같은 시스템을 수치적으로: G(s) = 2 / (3s + 1)
+G = signal.TransferFunction([2.0], [3.0, 1.0])
+t, y = signal.step(G, T=np.linspace(0, 15, 400))
+
+plt.plot(t, y); plt.axhline(2.0, ls='--', color='r', label='K = 2')
+plt.xlabel('time [s]'); plt.ylabel('y(t)'); plt.legend(); plt.grid()
+plt.title('1차 시스템 계단응답:  y(t) = K(1 - e^(-t/τ))')
+plt.show()</code></pre>
+
+  <h2>8. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>라플라스는 미분방정식을 대수방정식으로 바꾸는 사전이다.</li>
+      <li>변환쌍 7개 + 미분/적분/시간이동/최종값 정리 → 학부 자동제어의 90%를 처리.</li>
+      <li>$\dot{f} \leftrightarrow sF$. 이 한 줄이 핵심.</li>
+      <li>역변환은 부분분수 분해 후 표 보고 매칭.</li>
+      <li>극점의 위치(s-평면)가 시스템의 안정성과 시간응답을 결정한다 — 이번 강의의 가장 큰 직관.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="01-intro.html"><small>← 이전</small>W1. 자동제어 개요</a>
+    <a href="03-transfer-function.html" class="next"><small>다음 →</small>W3. 전달함수 &amp; 시스템 모델링</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

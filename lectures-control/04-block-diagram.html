@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W4. 블록선도 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 4. 블록선도</h1>
+  <p class="lead">시스템을 그림으로 그리고 식으로 줄이기.
+  세 가지 결합 규칙(직렬·병렬·피드백)만 알면 어떤 복잡한 회로도 단일 전달함수로 압축할 수 있습니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>블록선도의 기호</li>
+    <li>세 가지 기본 결합</li>
+    <li>폐루프 전달함수 — 자동제어의 가장 중요한 식</li>
+    <li>등가 변환의 트릭</li>
+    <li>인터랙티브: 블록선도 → 단일 전달함수</li>
+    <li>외란이 들어올 때</li>
+  </ol></div>
+
+  <h2>1. 블록선도의 기호</h2>
+
+  <p>블록선도(Block Diagram)는 신호의 흐름과 변환을 그림으로 표현한 것입니다. 단 네 가지 기호만 씁니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 130" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <!-- block -->
+      <rect x="20" y="40" width="100" height="50" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="70" y="70" text-anchor="middle">G(s)</text>
+      <text x="70" y="115" text-anchor="middle" font-size="11" fill="#666">① 전달함수 블록</text>
+      <!-- summing junction -->
+      <circle cx="220" cy="65" r="14" fill="#fff" stroke="#333"/>
+      <text x="220" y="70" text-anchor="middle">+</text>
+      <text x="200" y="50" font-size="11">+</text><text x="232" y="80" font-size="11">−</text>
+      <text x="220" y="115" text-anchor="middle" font-size="11" fill="#666">② 가산점 (summing)</text>
+      <!-- branch / takeoff -->
+      <line x1="320" y1="65" x2="430" y2="65" stroke="#333" stroke-width="2"/>
+      <circle cx="375" cy="65" r="4" fill="#333"/>
+      <line x1="375" y1="65" x2="375" y2="100" stroke="#333"/>
+      <text x="375" y="115" text-anchor="middle" font-size="11" fill="#666">③ 분기점 (takeoff)</text>
+      <!-- arrow -->
+      <line x1="500" y1="65" x2="600" y2="65" stroke="#333" stroke-width="2" marker-end="url(#ar4)"/>
+      <text x="540" y="55" text-anchor="middle" font-size="11">u(t) 또는 U(s)</text>
+      <text x="550" y="115" text-anchor="middle" font-size="11" fill="#666">④ 신호 (화살표)</text>
+    </svg>
+    <figcaption>그림 1. 블록선도의 네 가지 기본 기호.</figcaption>
+  </figure>
+
+  <h2>2. 세 가지 기본 결합</h2>
+
+  <h3>② 직렬(Cascade) 결합</h3>
+  <p>두 블록이 일렬로 놓이면 전달함수는 <strong>곱</strong>해집니다.</p>
+  $$ Y(s) = G_1(s) G_2(s) U(s) \quad \Rightarrow \quad G_{eq}(s) = G_1(s)\, G_2(s) $$
+
+  <figure>
+    <svg viewBox="0 0 480 80" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar5" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <text x="20" y="45">U →</text>
+      <line x1="50" y1="40" x2="100" y2="40" stroke="#333" marker-end="url(#ar5)"/>
+      <rect x="100" y="20" width="80" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="140" y="44" text-anchor="middle">G₁</text>
+      <line x1="180" y1="40" x2="240" y2="40" stroke="#333" marker-end="url(#ar5)"/>
+      <rect x="240" y="20" width="80" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="280" y="44" text-anchor="middle">G₂</text>
+      <line x1="320" y1="40" x2="380" y2="40" stroke="#333" marker-end="url(#ar5)"/>
+      <text x="395" y="45">→ Y</text>
+    </svg>
+  </figure>
+
+  <h3>② 병렬(Parallel) 결합</h3>
+  <p>같은 입력이 두 블록으로 나뉘어 들어가고 출력이 합쳐집니다.</p>
+  $$ G_{eq}(s) = G_1(s) \pm G_2(s) $$
+
+  <h3>③ 피드백(Feedback) 결합 — 자동제어의 주역</h3>
+  <p>출력이 센서 $H(s)$를 거쳐 입력으로 되돌아옵니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 520 150" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar6" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <text x="20" y="55">R →</text>
+      <line x1="50" y1="50" x2="80" y2="50" stroke="#333"/>
+      <circle cx="95" cy="50" r="14" fill="#fff" stroke="#333"/>
+      <text x="95" y="55" text-anchor="middle">−</text>
+      <line x1="109" y1="50" x2="160" y2="50" stroke="#333" marker-end="url(#ar6)"/>
+      <rect x="160" y="30" width="80" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="200" y="54" text-anchor="middle">G(s)</text>
+      <line x1="240" y1="50" x2="370" y2="50" stroke="#333"/>
+      <circle cx="305" cy="50" r="3" fill="#333"/>
+      <line x1="370" y1="50" x2="430" y2="50" stroke="#333" marker-end="url(#ar6)"/>
+      <text x="445" y="55">→ Y</text>
+      <line x1="305" y1="50" x2="305" y2="110" stroke="#333"/>
+      <line x1="305" y1="110" x2="245" y2="110" stroke="#333" marker-end="url(#ar6)"/>
+      <rect x="165" y="90" width="80" height="40" fill="#fce4ec" stroke="#c62828"/>
+      <text x="205" y="114" text-anchor="middle">H(s)</text>
+      <line x1="165" y1="110" x2="95" y2="110" stroke="#333"/>
+      <line x1="95" y1="110" x2="95" y2="64" stroke="#333" marker-end="url(#ar6)"/>
+    </svg>
+  </figure>
+
+  <p>$Y = G(R - HY)$를 풀면:</p>
+  $$ \boxed{\,\frac{Y(s)}{R(s)} = \frac{G(s)}{1 + G(s) H(s)}\,} $$
+  <p>이게 <strong>폐루프 전달함수</strong>입니다. 자동제어 책 한 권이 사실상 이 한 줄에서 시작합니다.
+  $H = 1$인 경우(센서가 이상적, 단위 피드백)에는 더 단순해지죠.</p>
+  $$ \frac{Y(s)}{R(s)} = \frac{G(s)}{1 + G(s)} $$
+
+  <h2>3. 폐루프 전달함수가 왜 그렇게 중요한가?</h2>
+
+  <p>분모 $1 + G(s)H(s) = 0$이 폐루프 시스템의 <strong>특성방정식</strong>입니다.
+  이 식의 근(극점)이 시간응답·안정성을 결정합니다. 즉:</p>
+  <ul>
+    <li>W5–W6 시간응답 분석은 폐루프 극점의 위치 → 응답 모양 매핑</li>
+    <li>W8 Routh-Hurwitz는 특성방정식의 근이 좌반평면에 있는지 판정</li>
+    <li>W9 근궤적은 게인 $K$가 변할 때 극점이 어떻게 움직이는지 추적</li>
+  </ul>
+  <p>모든 길이 한 분모에서 갈라집니다.</p>
+
+  <h2>4. 등가 변환의 트릭</h2>
+
+  <p>실제 시스템의 블록선도는 가산점·분기점이 얽혀 있어 한 번에 위 세 결합으로 안 읽힐 수 있습니다.
+  그때 쓰는 변환 규칙 두 개만 기억하세요.</p>
+
+  <ul>
+    <li><strong>가산점 이동</strong>: 가산점을 블록 앞/뒤로 옮기려면 그 블록의 전달함수로 곱하거나 나누어 보정.</li>
+    <li><strong>분기점 이동</strong>: 분기점을 블록 앞/뒤로 옮기려면 그 블록을 한 번 더 끼워 넣거나 빼서 보정.</li>
+  </ul>
+
+  <p>실무에서는 이 변환을 손으로 하는 일이 거의 없고, 아래 Python 한 줄로 풀어버립니다.</p>
+
+  <h2>5. 인터랙티브: 블록선도 → 단일 전달함수</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: PI 제어기 + 1차 플랜트의 폐루프</h4>
+    <p>제어기 $C(s) = K_p + K_i/s$, 플랜트 $G(s) = 1/(\tau s + 1)$, 단위 피드백.
+    폐루프 전달함수와 그 단위 스텝 응답을 동시에 봅니다.</p>
+    <canvas id="bd" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>τ (플랜트) <span class="val" id="bdtV">1.0</span><input type="range" id="bdt" min="0.2" max="4" step="0.1" value="1.0"></label>
+      <label>Kp <span class="val" id="kpV2">1.0</span><input type="range" id="kp2" min="0" max="6" step="0.1" value="1.0"></label>
+      <label>Ki <span class="val" id="kiV2">0.5</span><input type="range" id="ki2" min="0" max="5" step="0.1" value="0.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bd'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('bdtV').textContent=(+$('bdt').value).toFixed(1);$('kpV2').textContent=(+$('kp2').value).toFixed(1);$('kiV2').textContent=(+$('ki2').value).toFixed(1);};
+    ['bdt','kp2','ki2'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const tau=+$('bdt').value, Kp=+$('kp2').value, Ki=+$('ki2').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // sym closed-loop:  T = (Kp s + Ki) / [tau s^2 + (1 + Kp) s + Ki]
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('폐루프 전달함수  T(s) = (Kp·s + Ki) / (τ·s² + (1+Kp)·s + Ki)', 20, 30);
+      x.fillText('현재 분모: '+tau.toFixed(2)+'s² + '+(1+Kp).toFixed(2)+'s + '+Ki.toFixed(2),20,52);
+      // simulate step response by Euler on  τ y'' + (1+Kp) y' + Ki y = Kp r' + Ki r
+      // for unit step r=1 (r'=0 for t>0+), ODE becomes:  τ y'' + (1+Kp) y' + Ki y = Ki
+      let y=0,yd=0; const dt=0.02, N=600, hist=[];
+      for(let i=0;i<N;i++){
+        const ydd=(Ki - (1+Kp)*yd - Ki*y)/Math.max(tau,0.01);
+        yd+=ydd*dt; y+=yd*dt; hist.push(y);
+      }
+      // plot
+      const ox=40, oy=270, w=560, h=180;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      x.moveTo(ox,oy-150);x.lineTo(ox+w,oy-150);x.stroke();x.setLineDash([]);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('1.0',ox-22,oy-148);x.fillText('0',ox-12,oy+4);x.fillText('t',ox+w+5,oy+4);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-Math.max(-0.3,Math.min(2,v))*150;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      // verdict
+      const finalv=hist[hist.length-1];
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('최종값: '+finalv.toFixed(3)+(Math.abs(finalv-1)<0.05?' ✓ 1.0에 수렴':' (정상상태 오차 있음)'),ox,oy+22);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰</strong>:</p>
+  <ul>
+    <li>$K_i = 0$ (P 단독): 정상상태 오차가 남는다 — 분자에 $K_p$만 있고 분모에 $K_i = 0$.</li>
+    <li>$K_i &gt; 0$: 적분 항 덕에 정상상태에서 1.0에 정확히 수렴.</li>
+    <li>$K_p$를 너무 키우면 오버슈트와 진동이 생긴다 — W6의 ζ 감소.</li>
+  </ul>
+
+  <h2>6. 외란이 들어올 때</h2>
+
+  <p>플랜트 입력에 외란 $D(s)$가 더해진다고 합시다. 같은 폐루프에 두 입력 ($R$과 $D$)이 있는 셈인데,
+  선형이므로 중첩의 원리로 따로 계산해 더하면 됩니다.</p>
+
+  $$ Y(s) = \underbrace{\frac{G C}{1 + G C}}_{T(s)} R(s) + \underbrace{\frac{G}{1 + G C}}_{S(s)} D(s) $$
+
+  <p>$T(s)$를 <strong>기준 추적 함수(complementary sensitivity)</strong>, $S(s)$를 <strong>외란 감도 함수(sensitivity)</strong>라 부릅니다.
+  $|GC|$가 클수록 $T \to 1$, $S \to 1/(GC) \to 0$. 즉 게인을 키우면 외란이 자동으로 억제됩니다.
+  하지만 너무 키우면 W11에서 보듯 안정여유가 사라집니다 — 자동제어의 영원한 트레이드오프.</p>
+
+  <h2>7. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>블록선도는 시스템 그림 + 식이다. 직렬·병렬·피드백 세 결합으로 거의 모든 구조를 줄일 수 있다.</li>
+      <li>폐루프 전달함수: $\dfrac{G}{1 + GH}$. 자동제어 강의의 가장 중요한 한 줄.</li>
+      <li>분모 $1 + GH$ = 특성방정식. 모든 안정성·응답 분석이 여기서 출발.</li>
+      <li>고게인은 외란 억제에 좋지만 안정여유를 잡아먹는다.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="03-transfer-function.html"><small>← 이전</small>W3. 전달함수 &amp; 모델링</a>
+    <a href="05-first-order.html" class="next"><small>다음 →</small>W5. 1차 시스템 시간응답</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

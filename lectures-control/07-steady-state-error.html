@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W7. 정상상태 오차 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 7. 정상상태 오차</h1>
+  <p class="lead">시간이 충분히 흐른 뒤에도 남는 오차를 어떻게 예측하고 없앨까?
+  Type 번호 한 숫자로 시스템의 성능을 한 줄에 정리합니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>최종값 정리로 정상상태 오차 계산하기</li>
+    <li>Type 번호와 시스템 분류</li>
+    <li>오차 상수 (Kp, Kv, Ka)</li>
+    <li>입력 종류별 오차 표</li>
+    <li>인터랙티브: Type별 응답 비교</li>
+    <li>왜 적분기를 추가하면 오차가 0이 되는가?</li>
+  </ol></div>
+
+  <h2>1. 최종값 정리로 정상상태 오차 계산하기</h2>
+
+  <p>단위 피드백 폐루프에서 오차 $e(t) = r(t) - y(t)$의 라플라스는</p>
+  $$ E(s) = \frac{1}{1 + G(s)}\, R(s) $$
+
+  <p>W2에서 본 최종값 정리(Final Value Theorem)를 쓰면 시간이 무한대로 갈 때의 오차를 역변환 없이 바로 계산할 수 있습니다.</p>
+  $$ \boxed{\, e_{ss} = \lim_{t\to\infty} e(t) = \lim_{s\to 0} sE(s) = \lim_{s\to 0} \frac{s\, R(s)}{1 + G(s)} \,} $$
+
+  <div class="note">
+    <strong>전제 조건</strong> — 폐루프가 안정해야 합니다. 불안정 시스템에 최종값 정리를 적용하면 엉뚱한 값이 나옵니다.
+    그래서 정상상태 오차 분석은 항상 안정성 확인(W8) 뒤에 합니다.
+  </div>
+
+  <h2>2. Type 번호와 시스템 분류</h2>
+
+  <p>$G(s)$를 다음과 같이 적었을 때, $s = 0$의 극점 개수 $N$을 <strong>Type 번호</strong>라고 합니다.</p>
+  $$ G(s) = \frac{K\,(s+z_1)(s+z_2)\cdots}{s^N\,(s+p_1)(s+p_2)\cdots} $$
+
+  <p>즉 분모에 $s$가 몇 개 곱해져 있느냐. 이게 시스템의 "오차 성능 등급"을 한 숫자로 압축합니다.</p>
+
+  <table>
+    <thead><tr><th>Type</th><th>예시 G(s)</th><th>실제 예</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>$\dfrac{K}{(s+1)(s+2)}$</td><td>온도제어 (적분기 없음)</td></tr>
+      <tr><td>1</td><td>$\dfrac{K}{s(s+1)}$</td><td>위치제어 (속도→위치 적분 1회)</td></tr>
+      <tr><td>2</td><td>$\dfrac{K}{s^2(s+1)}$</td><td>가속도→위치 (적분 2회)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. 오차 상수 (Kp, Kv, Ka)</h2>
+
+  <p>입력의 종류(스텝/램프/포물선)에 따라 정의되는 세 가지 오차 상수입니다.</p>
+
+  <table>
+    <thead><tr><th>이름</th><th>정의</th><th>해당 입력</th></tr></thead>
+    <tbody>
+      <tr><td>위치 오차상수 $K_p$</td><td>$\displaystyle\lim_{s\to 0} G(s)$</td><td>스텝 입력</td></tr>
+      <tr><td>속도 오차상수 $K_v$</td><td>$\displaystyle\lim_{s\to 0} sG(s)$</td><td>램프 입력</td></tr>
+      <tr><td>가속도 오차상수 $K_a$</td><td>$\displaystyle\lim_{s\to 0} s^2 G(s)$</td><td>포물선 입력</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 정의에서 어떤 시스템이 어떤 입력에 0 오차를 낼 수 있는지가 자동으로 결정됩니다.</p>
+
+  <h2>4. 입력 종류별 오차 표 — 한 장으로 정리</h2>
+
+  <p>$R(s)$가 단위 스텝, 램프, 포물선일 때 정상상태 오차:</p>
+
+  <table>
+    <thead><tr><th>입력</th><th>$R(s)$</th><th>$e_{ss}$ 공식</th><th>Type 0</th><th>Type 1</th><th>Type 2</th></tr></thead>
+    <tbody>
+      <tr><td>스텝 (위치)</td><td>$1/s$</td><td>$\dfrac{1}{1 + K_p}$</td><td>유한</td><td><strong>0</strong></td><td><strong>0</strong></td></tr>
+      <tr><td>램프 (속도)</td><td>$1/s^2$</td><td>$\dfrac{1}{K_v}$</td><td>$\infty$</td><td>유한</td><td><strong>0</strong></td></tr>
+      <tr><td>포물선 (가속도)</td><td>$1/s^3$</td><td>$\dfrac{1}{K_a}$</td><td>$\infty$</td><td>$\infty$</td><td>유한</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>한 줄 요약</strong> — Type N 시스템은 $N$차 다항식 입력까지는 어떻게든 따라가지만,
+    그보다 한 차수 높은 입력에는 따라가지 못한다 (오차 = $\infty$).
+    같은 차수에서는 유한한 오차, 더 낮은 차수에서는 0 오차.
+  </div>
+
+  <h3>예제: 모터 위치제어가 왜 자연스럽게 Type 1인가?</h3>
+  <p>DC 모터의 전달함수 $G_m(s) = K_m / [s(\tau_m s + 1)]$은 분모에 $s$ 하나가 이미 있습니다.
+  이건 "각도는 각속도의 적분"이라는 물리적 사실에서 나옵니다. 그래서 P 제어만 걸어도 폐루프가
+  안정한 한 <em>스텝 위치 명령에 대해 정상상태 오차가 0</em>이 됩니다 — 적분기를 따로 넣지 않아도.</p>
+
+  <h2>5. 인터랙티브: Type별 응답 비교</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Type 0/1/2 시스템에 스텝과 램프 넣어보기</h4>
+    <p>같은 게인 $K$로 세 시스템 ($\dfrac{K}{s+1}$, $\dfrac{K}{s(s+1)}$, $\dfrac{K}{s^2(s+1)}$)에
+    스텝/램프 입력을 가했을 때 어느 쪽이 따라가는지 보세요.</p>
+    <canvas id="ssec" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>입력 종류
+        <select id="inkind"><option value="step">단위 스텝</option><option value="ramp">램프</option></select>
+      </label>
+      <label>게인 K <span class="val" id="ssK">2.0</span><input type="range" id="ssk" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ssec'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('ssK').textContent=(+$('ssk').value).toFixed(1);};
+    $('ssk').oninput=upd;
+    function loop(){
+      const K=+$('ssk').value, kind=$('inkind').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const dt=0.04, N=400;
+      // 단위 피드백, P 제어(이득 K 한 변수에 흡수). 세 가지 폐루프:
+      //   Type 0:  G = K/(s+1)       →  closed:  ẏ + (1+K)y = K r
+      //   Type 1:  G = K/[s(s+1)]    →  closed:  ÿ + ẏ + K y = K r
+      //   Type 2:  G = K/[s²(s+1)]   →  closed:  y''' + y'' + K y = K r
+      let s0=0;                    // Type 0:  y
+      let s1a=0, s1b=0;            // Type 1:  y, ẏ
+      let s2a=0, s2b=0, s2c=0;     // Type 2:  y, ẏ, ÿ
+      const out0=[], out1=[], out2=[], rs=[];
+      for(let k=0;k<N;k++){
+        const t=k*dt;
+        const r = kind==='step' ? 1.0 : 0.5*t;
+        s0 += dt * (-(1+K)*s0 + K*r);
+        const dd1 = K*r - s1b - K*s1a;
+        s1b += dt*dd1; s1a += dt*s1b;
+        const ddd2 = K*r - s2c - K*s2a;
+        s2c += dt*ddd2; s2b += dt*s2c; s2a += dt*s2b;
+        out0.push(s0); out1.push(s1a); out2.push(s2a); rs.push(r);
+      }
+      const data={out0, out1, out2, rs};
+      const ox=40, oy=270, w=560, h=220, T=N*dt;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      const yMax = Math.max(2, Math.max(...data.rs)*1.2);
+      const Y=v=>oy - Math.max(-1,Math.min(yMax,v))/yMax * h;
+      // ref
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      data.rs.forEach((v,i)=>{const xx=ox+i*w/N, yy=Y(v); if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();x.setLineDash([]);
+      const drawC=(arr,col)=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+        arr.forEach((v,i)=>{const xx=ox+i*w/N, yy=Y(v); if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();};
+      drawC(data.out0,'#f57c00');
+      drawC(data.out1,'#0b5fff');
+      drawC(data.out2,'#2e7d32');
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('빨강(점선): 입력 r(t)',ox,oy+20);
+      x.fillStyle='#f57c00';x.fillText('Type 0',ox+170,oy+20);
+      x.fillStyle='#0b5fff';x.fillText('Type 1',ox+250,oy+20);
+      x.fillStyle='#2e7d32';x.fillText('Type 2',ox+330,oy+20);
+      // ess readout
+      const ess0 = data.rs[N-1] - data.out0[N-1];
+      const ess1 = data.rs[N-1] - data.out1[N-1];
+      const ess2 = data.rs[N-1] - data.out2[N-1];
+      x.fillStyle='#444';x.fillText('정상오차 ess  Type0='+ess0.toFixed(2)+'  Type1='+ess1.toFixed(2)+'  Type2='+ess2.toFixed(2),ox,oy+38);
+      requestAnimationFrame(loop);
+    }
+    upd();$('inkind').onchange=upd;loop();
+  })();
+  </script>
+
+  <p><strong>꼭 만져볼 것</strong>:</p>
+  <ul>
+    <li>스텝 입력: Type 0은 잔류 오차, Type 1·2는 0으로 수렴.</li>
+    <li>램프 입력: Type 0은 시간이 갈수록 발산하는 오차, Type 1은 일정한 오차(= 1/Kv), Type 2는 0.</li>
+    <li>K를 키우면 Type 0/1의 오차가 작아지지만, 너무 키우면 진동이 시작 → W11 안정여유와의 트레이드오프.</li>
+  </ul>
+
+  <h2>6. 왜 적분기를 추가하면 오차가 0이 되는가?</h2>
+
+  <p>I 제어가 정상상태 오차를 0으로 만든다는 사실은 마법이 아니라 위 표의 직접적 결과입니다.
+  PID에서 적분 항 $K_i/s$를 추가한다는 건 시스템 분모에 $s$가 하나 더 곱해진다는 뜻 → <strong>Type 번호가 1 증가</strong>.
+  Type 0이었던 시스템이 Type 1이 되면서 스텝 입력 오차가 0이 됩니다.</p>
+
+  <p>이게 실무에서 "외란이 있는 항온조에는 PI를 써라"의 이론적 근거입니다.
+  외란도 결국 입력 신호이고, Type 1이 되면 상수 외란에 대해서도 정상상태 오차가 0이 됩니다.</p>
+
+  <div class="warn">
+    <strong>그럼 적분기를 마구 추가하면?</strong> — Type 번호를 키울수록 정상오차는 좋아지지만 <em>안정성이 위태로워집니다</em>.
+    각 적분기는 Bode 위상에 −90°를 추가해서 위상여유를 잡아먹습니다(W11). 그래서 실무 PID에는 거의 항상 적분기 1개만 씁니다.
+  </div>
+
+  <h2>7. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>$e_{ss} = \lim_{s\to 0} sE(s)$ — 시간 영역 적분 없이 정상오차를 바로 계산.</li>
+      <li>Type 번호 = $G(s)$의 $s=0$ 극점 개수.</li>
+      <li>Type N은 $t^{N-1}$까지의 입력에서 0 오차, $t^N$ 입력에서 유한 오차, 그 이상은 발산.</li>
+      <li>I 제어를 추가하면 Type +1, 정상오차 ↓ 안정여유 ↓ — 트레이드오프.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="06-second-order.html"><small>← 이전</small>W6. 2차 시스템</a>
+    <a href="08-routh-hurwitz.html" class="next"><small>다음 →</small>W8. Routh-Hurwitz 안정성</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

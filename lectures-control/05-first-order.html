@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W5. 1차 시스템 시간응답 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 5. 1차 시스템 시간응답</h1>
+  <p class="lead">시정수 τ 하나로 모든 게 결정되는 가장 단순한 동적 시스템.
+  RC 필터·온도·1차 모터 — 자동제어에서 가장 자주 만나는 형태입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>1차 시스템의 표준형</li>
+    <li>계단응답과 63% 규칙</li>
+    <li>임펄스응답</li>
+    <li>시정수와 5τ 규칙</li>
+    <li>인터랙티브: τ와 K 슬라이더</li>
+    <li>실험으로 시스템 식별 (System ID)</li>
+  </ol></div>
+
+  <h2>1. 1차 시스템의 표준형</h2>
+
+  <p>1차 시스템은 미분방정식이 1차인 시스템입니다.</p>
+  $$ \tau\, \dot{y}(t) + y(t) = K\, u(t) $$
+  <p>라플라스 변환:</p>
+  $$ \boxed{\, G(s) = \frac{Y(s)}{U(s)} = \frac{K}{\tau s + 1} \,} $$
+
+  <ul>
+    <li><strong>$K$ (DC 게인)</strong>: 입력이 1로 영원히 유지될 때 출력이 정착하는 값.</li>
+    <li><strong>$\tau$ (시정수, time constant)</strong>: 시스템이 얼마나 빠르게 반응하는지의 척도. 단위는 시간(초).</li>
+    <li><strong>극점</strong>: $\tau s + 1 = 0 \;\Rightarrow\; s = -1/\tau$ (실수, 좌반평면) → <em>항상 안정</em>.</li>
+  </ul>
+
+  <h2>2. 계단응답과 63% 규칙</h2>
+
+  <p>$u(t)$가 단위 스텝(0 → 1)일 때 W2 예제에서 본 결과:</p>
+  $$ \boxed{\, y(t) = K\bigl(1 - e^{-t/\tau}\bigr) \,} $$
+
+  <table>
+    <thead><tr><th>$t$</th><th>$y(t)/K$</th><th>해석</th></tr></thead>
+    <tbody>
+      <tr><td>$\tau$</td><td>$1 - e^{-1} \approx 0.632$</td><td><strong>63.2%</strong> ← 시정수의 정의</td></tr>
+      <tr><td>$2\tau$</td><td>$\approx 0.865$</td><td>86.5%</td></tr>
+      <tr><td>$3\tau$</td><td>$\approx 0.950$</td><td>95.0%</td></tr>
+      <tr><td>$4\tau$</td><td>$\approx 0.982$</td><td>98.2%</td></tr>
+      <tr><td>$5\tau$</td><td>$\approx 0.993$</td><td>99.3% — 실무에서 "정착"으로 본다</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>왜 63%일까?</strong> $\tau$의 정의 자체가 "응답이 최종값의 $1 - 1/e \approx 63.2\%$에 도달하는 시간"입니다.
+    이 사실 한 줄이면 측정된 응답 곡선에서 자를 대고 시정수를 바로 읽을 수 있습니다 — 6절 시스템 식별의 핵심.
+  </div>
+
+  <h2>3. 임펄스응답</h2>
+
+  <p>$u(t) = \delta(t)$일 때 (수학적 임펄스, 짧고 강한 자극):</p>
+  $$ y(t) = \frac{K}{\tau} e^{-t/\tau} $$
+
+  <p>$t=0$에서 갑자기 $K/\tau$로 뛰었다가 시정수 $\tau$로 지수 감쇠합니다. 자연 응답(natural response) 모드를
+  순수하게 보여주는 시험이지만, 실제 시스템에 진짜 임펄스를 가하기는 어려워서 보통은 계단응답으로 대체합니다.</p>
+
+  <h2>4. 시정수와 5τ 규칙</h2>
+
+  <p>실무 한 문장: "<strong>1차 시스템은 5τ 정도면 정착했다고 본다</strong>." 이 한 줄 때문에 모터·필터·온도제어를
+  설계할 때 "필요한 응답 시간 = 5τ" 식으로 거꾸로 시정수를 정합니다.</p>
+
+  <p>예: 0.5초 안에 응답을 정착시키고 싶다 → $\tau \leq 0.1$초가 되어야 함 → 그에 맞춰 회로의 RC 값이나
+  제어기의 게인을 결정.</p>
+
+  <h2>5. 인터랙티브: τ와 K 슬라이더</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 시스템의 계단응답 만져보기</h4>
+    <p>$\tau$와 $K$를 바꿔보면서 응답이 어떻게 변하는지 관찰하세요.
+    파란 점은 $t = \tau$, $2\tau$, $3\tau$, $5\tau$ 위치.</p>
+    <canvas id="fo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>시정수 τ <span class="val" id="ftV">1.0</span><input type="range" id="ft" min="0.2" max="3" step="0.05" value="1.0"></label>
+      <label>DC 게인 K <span class="val" id="fkV">1.0</span><input type="range" id="fk" min="0.2" max="3" step="0.1" value="1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fo'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('ftV').textContent=(+$('ft').value).toFixed(2);$('fkV').textContent=(+$('fk').value).toFixed(1);};
+    ['ft','fk'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const tau=+$('ft').value, K=+$('fk').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=50, oy=270, w=560, h=220, T=10;
+      // grid + axes
+      x.strokeStyle='#eee';for(let i=0;i<=5;i++){const xx=ox+i*w/5;x.beginPath();x.moveTo(xx,oy-h);x.lineTo(xx,oy);x.stroke();
+        x.fillStyle='#888';x.font='10px sans-serif';x.fillText((i*T/5).toFixed(0)+'s',xx-8,oy+13);}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      // K line
+      const kY=oy-K*h/3;
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(ox,kY);x.lineTo(ox+w,kY);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.fillText('K = '+K.toFixed(1),ox+w-50,kY-4);
+      // 63% line
+      const y63=oy-K*0.632*h/3;
+      x.strokeStyle='#0b5fff';x.setLineDash([2,3]);x.beginPath();x.moveTo(ox,y63);x.lineTo(ox+w,y63);x.stroke();x.setLineDash([]);
+      x.fillStyle='#0b5fff';x.fillText('0.632·K',ox+w-60,y63-4);
+      // response curve
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=300;i++){const t=i*T/300, y=K*(1-Math.exp(-t/tau));
+        const xx=ox+i*w/300, yy=oy-y*h/3; if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      // markers at τ, 2τ, 3τ, 5τ
+      [1,2,3,5].forEach(n=>{const t=n*tau;if(t>T)return;
+        const y=K*(1-Math.exp(-n)); const xx=ox+t*w/T, yy=oy-y*h/3;
+        x.fillStyle='#0b5fff';x.beginPath();x.arc(xx,yy,5,0,Math.PI*2);x.fill();
+        x.fillStyle='#444';x.font='11px sans-serif';x.fillText(n+'τ',xx-6,yy-8);});
+      // labels
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('y(t) = K(1 − e^(−t/τ))   ⟶  τ='+tau.toFixed(2)+'s, 5τ='+(5*tau).toFixed(2)+'s',20,30);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰</strong>:</p>
+  <ul>
+    <li>$\tau$를 키우면 응답이 느려진다 (정착까지 더 오래).</li>
+    <li>$K$는 최종 정착 값만 바꾼다 — 응답의 모양(시간 척도)은 건드리지 않는다.</li>
+    <li>$t = \tau$에서 항상 $0.632\,K$를 지나간다. 자로 그 점을 잡으면 미지의 시스템에서도 $\tau$를 측정할 수 있다.</li>
+  </ul>
+
+  <h2>6. 실험으로 시스템 식별 (System ID)</h2>
+
+  <p>실제 모터·온도제어기·드론 데이터를 받았을 때 1차 모델로 근사하는 가장 빠른 방법:</p>
+
+  <ol>
+    <li>입력에 단위 스텝을 가한다 (예: 모터에 일정 전압 5V 인가).</li>
+    <li>출력이 정착하는 값을 측정 → $K = y_{\infty} / u_{\infty}$.</li>
+    <li>출력이 $0.632\, K$가 되는 시간을 측정 → 그게 $\tau$.</li>
+  </ol>
+
+  <p>이걸 그래프 한 장에서 자로 잡으면 $G(s) = K/(\tau s + 1)$ 모델 완성.
+  공정 제어 분야에서 60년 넘게 쓰이고 있는 클래식한 방법입니다 (Cohen-Coon, IMC 등의 출발점).</p>
+
+<pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+
+# 임의의 측정 데이터 (예: 모터 속도 응답)
+t = np.linspace(0, 10, 200)
+y_meas = 3.0 * (1 - np.exp(-t/1.5)) + 0.05*np.random.randn(len(t))  # K=3, τ=1.5
+
+# 1) DC 게인 추정: 마지막 N 샘플 평균
+K_hat = y_meas[-30:].mean()
+# 2) 0.632*K 지점 찾기
+idx = np.argmax(y_meas >= 0.632 * K_hat)
+tau_hat = t[idx]
+
+print(f'추정값:  K ≈ {K_hat:.2f},  τ ≈ {tau_hat:.2f} s')
+
+# 모델 응답과 비교
+y_model = K_hat * (1 - np.exp(-t/tau_hat))
+plt.plot(t, y_meas, '.', label='측정', alpha=.5)
+plt.plot(t, y_model, 'r-', label=f'모델 K={K_hat:.2f}, τ={tau_hat:.2f}')
+plt.axhline(0.632*K_hat, ls='--', color='gray')
+plt.xlabel('t [s]'); plt.ylabel('y'); plt.legend(); plt.grid(); plt.show()</code></pre>
+
+  <h2>7. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>1차 시스템: $G(s) = K/(\tau s + 1)$, 극점 하나가 $-1/\tau$. 항상 안정.</li>
+      <li>계단응답 $y(t) = K(1 - e^{-t/\tau})$, $t = \tau$에서 63.2%.</li>
+      <li>5τ ≈ 99% 정착 — "1차 시스템 정착 시간"의 실무 기준.</li>
+      <li>측정된 응답에서 $K$와 τ를 바로 읽을 수 있다 → 가장 단순한 시스템 식별.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="04-block-diagram.html"><small>← 이전</small>W4. 블록선도</a>
+    <a href="06-second-order.html" class="next"><small>다음 →</small>W6. 2차 시스템 시간응답</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

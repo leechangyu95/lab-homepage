@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W3. 전달함수 & 시스템 모델링 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 3. 전달함수 &amp; 시스템 모델링</h1>
+  <p class="lead">물리법칙(F=ma, KVL)에서 전달함수 한 줄까지.
+  질량-스프링-댐퍼·RC회로·DC 모터 — 자동제어 교재에 가장 자주 등장하는 세 시스템을 직접 유도합니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>전달함수란?</li>
+    <li>예제 ① 질량-스프링-댐퍼</li>
+    <li>예제 ② RC 회로</li>
+    <li>예제 ③ DC 모터 (각도 제어)</li>
+    <li>극점·영점과 시스템 차수</li>
+    <li>인터랙티브: 전달함수의 매개변수와 응답</li>
+    <li>Python: 모델링부터 시뮬레이션까지</li>
+  </ol></div>
+
+  <h2>1. 전달함수란?</h2>
+
+  <p>선형·시불변(LTI) 시스템에서 입력 $u(t)$와 출력 $y(t)$ 사이 관계는 보통 미분방정식으로 적힙니다.
+  양변을 라플라스 변환하고 <strong>모든 초기조건을 0으로 두면</strong> 비율 하나로 정리됩니다.</p>
+
+  $$ G(s) = \frac{Y(s)}{U(s)} = \frac{\text{출력의 라플라스}}{\text{입력의 라플라스}}\bigg|_{\text{초기조건 } = 0} $$
+
+  <p>이 비율을 <strong>전달함수(Transfer Function)</strong>라고 부릅니다.
+  시스템의 동특성을 한 줄짜리 분수식으로 압축한 것이라고 보면 됩니다.</p>
+
+  <div class="note">
+    <strong>왜 초기조건을 0으로 둘까?</strong> 전달함수는 <em>시스템 자체</em>의 특성입니다. 같은 시스템이라도 어떤 신호를 넣고 어떤
+    초기상태에서 시작하느냐에 따라 출력이 달라지는데, 전달함수는 그중 "시스템의 응답성"만 따로 떼어내기 위해
+    "처음엔 잠잠한 상태"라는 표준을 잡은 것입니다.
+  </div>
+
+  <h2>2. 예제 ① 질량-스프링-댐퍼 (MSD)</h2>
+
+  <p>책상 위 카트에 스프링과 댐퍼가 달려 있고, 손으로 힘 $u(t)$를 가합니다. 위치를 $y(t)$라고 합시다.</p>
+
+  <figure>
+    <svg viewBox="0 0 480 140" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="40" width="20" height="60" fill="#888"/>
+      <path d="M40,55 L70,50 L90,60 L110,50 L130,60 L150,50 L170,60 L190,50 L210,55"
+        stroke="#0b5fff" fill="none" stroke-width="2"/>
+      <text x="115" y="40" font-size="11" fill="#0b5fff">k</text>
+      <line x1="40" y1="80" x2="80" y2="80" stroke="#888" stroke-width="2"/>
+      <rect x="80" y="74" width="40" height="12" fill="none" stroke="#888"/>
+      <line x1="80" y1="80" x2="120" y2="80" stroke="#888" stroke-width="2"/>
+      <line x1="120" y1="80" x2="210" y2="80" stroke="#888" stroke-width="2"/>
+      <text x="115" y="100" font-size="11" fill="#666">c</text>
+      <rect x="210" y="40" width="60" height="60" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+      <text x="240" y="76" text-anchor="middle">m</text>
+      <defs><marker id="ar3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#c62828"/></marker></defs>
+      <path d="M280,70 L340,70" stroke="#c62828" stroke-width="2" marker-end="url(#ar3)"/>
+      <text x="345" y="74" fill="#c62828">u(t)</text>
+      <line x1="240" y1="110" x2="240" y2="125" stroke="#444"/>
+      <text x="232" y="135" font-size="12">y(t)</text>
+    </svg>
+    <figcaption>그림 1. 질량-스프링-댐퍼 — 자동제어에서 가장 자주 등장하는 2차 시스템.</figcaption>
+  </figure>
+
+  <p>뉴턴 제2법칙: $m\ddot{y} + c\dot{y} + ky = u$. 라플라스 변환(초기조건 0):</p>
+  $$ (ms^2 + cs + k)\, Y(s) = U(s) $$
+  $$ \boxed{\, G(s) = \frac{Y(s)}{U(s)} = \frac{1}{ms^2 + cs + k} \,} $$
+
+  <p>분모가 $s$의 2차식이므로 <em>2차 시스템</em>. 이 단순한 식이 W6의 모든 응답 분석의 출발점입니다.</p>
+
+  <h2>3. 예제 ② RC 회로</h2>
+
+  <p>입력 전압 $v_i$, 출력 전압 $v_o$인 RC 저역통과 필터입니다. (기전공학 W7과 동일)</p>
+
+  <p>KVL과 $i = C\dot{v_o}$로부터 $RC\dot{v_o} + v_o = v_i$. 라플라스:</p>
+  $$ \boxed{\, G(s) = \frac{V_o(s)}{V_i(s)} = \frac{1}{RCs + 1} = \frac{1}{\tau s + 1} \,} $$
+
+  <p>분모가 $s$의 1차식이므로 <em>1차 시스템</em>. 시정수 $\tau = RC$가 곧 등장할 W5의 주역입니다.</p>
+
+  <h2>4. 예제 ③ DC 모터 — 자동제어의 "Hello World"</h2>
+
+  <p>로봇 관절·바퀴·드론 프로펠러 — 모두 DC 모터로 굴러갑니다. 입력은 전압 $V$, 출력은 회전각 $\theta$.</p>
+
+  <table>
+    <thead><tr><th>요소</th><th>식</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>전기 회로 (KVL)</td><td>$V = L\dot{i} + R i + K_e \dot{\theta}$</td><td>역기전력 $K_e \dot{\theta}$가 핵심</td></tr>
+      <tr><td>토크 발생</td><td>$T = K_t i$</td><td>전류가 토크로 변환</td></tr>
+      <tr><td>역학 (관성 + 마찰)</td><td>$J\ddot{\theta} + b\dot{\theta} = T$</td><td>로터의 회전운동방정식</td></tr>
+    </tbody>
+  </table>
+
+  <p>인덕턴스 $L$이 작으면 흔히 무시합니다($L \approx 0$): $i = (V - K_e\dot{\theta})/R$. 대입해서 정리하면</p>
+  $$ J\ddot{\theta} + \left(b + \tfrac{K_t K_e}{R}\right)\dot{\theta} = \tfrac{K_t}{R}\, V $$
+
+  <p>각도까지 가는 전달함수:</p>
+  $$ \boxed{\, \frac{\Theta(s)}{V(s)} = \frac{K_t/R}{s\bigl(Js + b + K_t K_e/R\bigr)} \,} $$
+
+  <p>분모에 $s$가 따로 있는 건 "각도는 각속도의 적분"이기 때문입니다.
+  속도까지의 전달함수는 <em>1차</em>, 각도까지는 적분기 하나가 더 붙어 <em>2차</em>가 됩니다.
+  이 구조가 W13에서 캐스케이드 PID로 자연스럽게 분리하는 이유입니다.</p>
+
+  <div class="note">
+    <strong>표준 형태로 단순화</strong> — 자동제어 책에서는 흔히 $\dfrac{K_m}{s(\tau_m s + 1)}$로 적습니다.
+    $K_m$은 모터 게인, $\tau_m$은 기계적 시정수입니다. 데이터시트의 토크 상수·관성·마찰 값을 대입하면 바로 나옵니다.
+  </div>
+
+  <h2>5. 극점·영점과 시스템 차수</h2>
+
+  <p>전달함수 $G(s) = \dfrac{N(s)}{D(s)}$에서:</p>
+  <ul>
+    <li><strong>극점(pole)</strong> = $D(s) = 0$의 해. 시스템의 시간응답 모드를 결정. <em>좌반평면이면 안정</em>.</li>
+    <li><strong>영점(zero)</strong> = $N(s) = 0$의 해. 응답의 모양(오버슈트·언더슈트)을 형성.</li>
+    <li><strong>차수(order)</strong> = 분모 다항식의 차수. 1차 → 단조 응답, 2차 → 진동 가능, 그 이상은 두 가지 모드의 조합.</li>
+  </ul>
+
+  <h2>6. 인터랙티브: 전달함수의 매개변수와 응답</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 vs 2차 시스템 응답 비교</h4>
+    <p>왼쪽은 1차 $G_1(s) = \dfrac{1}{\tau s + 1}$, 오른쪽은 2차 $G_2(s) = \dfrac{\omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2}$.
+    같은 단위 스텝을 입력했을 때 응답이 어떻게 다른지 보세요.</p>
+    <canvas id="tfdemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>τ (1차) <span class="val" id="tauV">2.0</span><input type="range" id="tau" min="0.2" max="5" step="0.1" value="2.0"></label>
+      <label>ωₙ (2차) <span class="val" id="wnV">2.0</span><input type="range" id="wn" min="0.5" max="5" step="0.1" value="2.0"></label>
+      <label>ζ (2차) <span class="val" id="zV">0.4</span><input type="range" id="z" min="0" max="2" step="0.05" value="0.4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tfdemo'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('tauV').textContent=(+$('tau').value).toFixed(1);$('wnV').textContent=(+$('wn').value).toFixed(1);$('zV').textContent=(+$('z').value).toFixed(2);};
+    ['tau','wn','z'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const tau=+$('tau').value, wn=+$('wn').value, z=+$('z').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const draw=(ox,title,col,fn)=>{
+        const oy=210, w=300, h=170;
+        x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+        x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+        x.moveTo(ox,oy-150);x.lineTo(ox+w,oy-150);x.stroke();x.setLineDash([]);
+        x.fillStyle='#666';x.font='11px sans-serif';x.fillText('1.0',ox-22,oy-148);x.fillText('0',ox-12,oy+4);
+        x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+        for(let i=0;i<300;i++){const t=i*0.05, y=fn(t); const xx=ox+i, yy=oy-y*150;
+          if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);} x.stroke();
+        x.fillStyle='#444';x.font='13px sans-serif';x.fillText(title,ox+10,oy-h-4);
+      };
+      // 1st order step response
+      draw(20,'1차: y(t) = 1 - e^(-t/τ)','#0b5fff', t=>1-Math.exp(-t/tau));
+      // 2nd order step response (closed form for under/critical/over damped)
+      draw(330,'2차: ζ='+z.toFixed(2),'#f57c00', t=>{
+        if(z<1){const wd=wn*Math.sqrt(1-z*z);
+          return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z) * Math.sin(wd*t + Math.acos(z));}
+        if(Math.abs(z-1)<1e-3) return 1 - (1+wn*t)*Math.exp(-wn*t);
+        const a=z*wn, b=wn*Math.sqrt(z*z-1);
+        const r1=-a+b, r2=-a-b;
+        return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);
+      });
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰</strong>:</p>
+  <ul>
+    <li>1차: 항상 매끈히 단조 증가. τ가 클수록 느림.</li>
+    <li>2차 ζ &lt; 1: 진동하면서 수렴(미감쇠). ζ가 작을수록 오버슈트가 큼.</li>
+    <li>2차 ζ = 1: 진동 직전(임계감쇠). 가장 빠른 비진동 응답.</li>
+    <li>2차 ζ &gt; 1: 진동 없이 천천히(과감쇠).</li>
+  </ul>
+
+  <h2>7. Python: 모델링부터 시뮬레이션까지</h2>
+
+<pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+# ── 1차: RC 필터  G(s) = 1 / (RC*s + 1)
+R, C = 1e3, 100e-6                   # 1 kΩ, 100 µF → τ = 0.1 s
+G1 = signal.TransferFunction([1.0], [R*C, 1.0])
+
+# ── 2차: 질량-스프링-댐퍼  G(s) = 1 / (m s² + c s + k)
+m, c_d, k = 1.0, 0.4, 4.0            # ωn = 2,  ζ = 0.1
+G2 = signal.TransferFunction([1.0], [m, c_d, k])
+
+# ── 3차: DC 모터(각도)  G(s) = K / [ s (τm s + 1) ]
+K_m, tau_m = 5.0, 0.3
+G3 = signal.TransferFunction([K_m], [tau_m, 1.0, 0.0])
+
+t = np.linspace(0, 6, 600)
+fig, ax = plt.subplots(1, 3, figsize=(12, 3))
+for axi, G, name in zip(ax, [G1, G2, G3], ['RC', 'MSD', 'DC motor (θ)']):
+    tt, yy = signal.step(G, T=t)
+    axi.plot(tt, yy); axi.set_title(name); axi.grid()
+plt.tight_layout(); plt.show()</code></pre>
+
+  <p>같은 코드 틀에 시스템 매개변수만 바꿔 끼우면 어떤 LTI 시스템이든 시뮬레이션할 수 있습니다.
+  W13~W14의 로봇 응용도 결국 이 한 줄 패턴의 확장입니다.</p>
+
+  <h2>8. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>전달함수 $G(s) = Y(s)/U(s)$ — 미분방정식의 라플라스 압축 버전.</li>
+      <li>물리(F=ma, KVL) → 미분방정식 → 라플라스 → 전달함수, 이 흐름이 모든 모델링의 기본.</li>
+      <li>분모 차수가 시스템 "차수"이고, 분모의 근(극점)이 시간응답 모드를 결정.</li>
+      <li>RC = 1차, MSD = 2차, DC 모터(각도) = 적분기 + 1차 = 사실상 2차 시스템.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="02-laplace.html"><small>← 이전</small>W2. 라플라스 변환</a>
+    <a href="04-block-diagram.html" class="next"><small>다음 →</small>W4. 블록선도</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

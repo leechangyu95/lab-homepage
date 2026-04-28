@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W9. 근궤적 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 9. 근궤적 (Root Locus)</h1>
+  <p class="lead">제어기 게인 K가 0에서 무한대까지 움직일 때 폐루프 극점이 s-평면에서 그리는 궤적.
+  "K를 얼마나 키우면 진동 시작?", "어떤 ζ에 도달할 수 있나?"를 한 그림으로 답해줍니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 근궤적이 필요한가</li>
+    <li>크기·각도 조건</li>
+    <li>작도 규칙 7가지</li>
+    <li>예제 — 손으로 그려보기</li>
+    <li>인터랙티브: 게인 K 슬라이더</li>
+    <li>설계에 활용하기</li>
+  </ol></div>
+
+  <h2>1. 왜 근궤적이 필요한가</h2>
+
+  <p>W8에서 Routh로 "특정 K에서 안정한가"는 판정할 수 있었습니다. 그런데 실제 설계에서는 더 풍부한 질문이 옵니다.</p>
+  <ul>
+    <li>K를 키우면 폐루프 극점이 어디로 움직이는가?</li>
+    <li>K를 어디까지 올려야 ζ = 0.7 (오버슈트 ~5%)에 도달하는가?</li>
+    <li>특정 K에서 자연주파수 ωₙ은 얼마인가?</li>
+  </ul>
+  <p>근궤적은 "K가 0 → ∞"라는 한 매개변수의 변화를 한 장의 그림으로 보여줍니다.
+  W. R. Evans가 1948년에 제안한, 컴퓨터가 없던 시대의 시각적 설계 도구입니다.</p>
+
+  <h2>2. 크기·각도 조건</h2>
+
+  <p>특성방정식 $1 + K G(s)H(s) = 0$, 즉 $K G(s)H(s) = -1$. 복소수 등식이므로 두 조건으로 나뉩니다.</p>
+
+  <ul>
+    <li><strong>각도 조건</strong>: $\angle G(s)H(s) = \pm 180^\circ \cdot (2k+1)$ — <em>이게 궤적의 모양을 결정</em></li>
+    <li><strong>크기 조건</strong>: $K = 1/|G(s)H(s)|$ — 궤적 위 점에 해당하는 K 값을 알려줌</li>
+  </ul>
+
+  <p>각도 조건만으로 궤적이 그려지고, 크기 조건은 그 위 점에 K 라벨을 다는 데 쓰인다고 생각하면 됩니다.</p>
+
+  <h2>3. 작도 규칙 7가지</h2>
+
+  <p>$K G(s)H(s) = K \dfrac{N(s)}{D(s)}$, 영점 $m$개·극점 $n$개라 합시다 ($n \geq m$).</p>
+
+  <ol>
+    <li><strong>출발과 종착</strong>: 궤적은 $K = 0$일 때 <em>개루프 극점</em>에서 시작해, $K \to \infty$일 때 <em>개루프 영점</em> 또는 무한대로 간다.</li>
+    <li><strong>가지 수</strong>: 가지 수 = $\max(n, m)$ = 일반적으로 $n$.</li>
+    <li><strong>실축 부분</strong>: 실축 위 한 점이 궤적에 속하려면 그 점의 <em>오른쪽</em>에 있는 실축 위 극점·영점의 개수의 합이 홀수여야 한다.</li>
+    <li><strong>점근선</strong>: 무한대로 가는 가지의 점근선은
+      $$ \sigma_a = \frac{\sum p_i - \sum z_i}{n - m}, \quad
+         \theta_a = \frac{(2k+1) \cdot 180^\circ}{n - m} $$
+      $\sigma_a$는 점근선이 만나는 실축의 점, $\theta_a$는 각도.</li>
+    <li><strong>실축 이탈/진입점</strong>: $dK/ds = 0$의 실수 해. 두 극점 사이에서 궤적이 갈라지거나 합쳐지는 지점.</li>
+    <li><strong>허수축 교차점</strong>: 특성방정식에 $s = j\omega$를 대입해 풀면 임계 K와 ω를 얻는다 (W8 Routh 경계와 동일).</li>
+    <li><strong>출발 각도</strong> (복소 극점에서): $\theta_d = 180^\circ - \sum \angle (p_d - p_i) + \sum \angle (p_d - z_i)$.</li>
+  </ol>
+
+  <div class="note">
+    <strong>실무 팁</strong> — 위 규칙을 모두 외울 필요는 없습니다. 1~4번이 80%를 그리고, 5~7번은 정밀도를 높일 때만.
+    Python <code>control.root_locus(G)</code>면 한 줄로 그려주니, 시험을 위해서가 아니라면 손계산은 1~4번까지면 충분합니다.
+  </div>
+
+  <h2>4. 예제 — 손으로 그려보기</h2>
+
+  <p>$G(s)H(s) = \dfrac{1}{s(s+1)(s+5)}$ (W8 예제 동일).</p>
+
+  <ol>
+    <li>극점 $\{0, -1, -5\}$, 영점 없음 → $n=3, m=0$.</li>
+    <li>가지 수 3개. 모두 무한대로 발산.</li>
+    <li>실축 부분: $-1 < s < 0$의 오른쪽엔 극점 1개(홀수 ✓), $-5 < s < -1$의 오른쪽엔 2개(짝수 ✗), $s < -5$의 오른쪽엔 3개(홀수 ✓). 따라서 실축 위 궤적은 $[-1, 0]$과 $(-\infty, -5]$.</li>
+    <li>점근선 중심 $\sigma_a = (0 + (-1) + (-5)) / 3 = -2$, 각도 $\theta_a = 60^\circ, 180^\circ, 300^\circ$.</li>
+    <li>$dK/ds = 0$ 풀면 이탈점 $s \approx -0.47$. 두 극점 0과 −1 사이에서 갈라져 60°, 300° 점근선을 따라 무한대로.</li>
+    <li>허수축 교차: $s = j\omega$ 대입 후 실·허부 분리하면 $\omega = \sqrt{5}$, $K = 30$ (W8과 일치).</li>
+  </ol>
+
+  <h2>5. 인터랙티브: 게인 K 슬라이더로 궤적 따라가기</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: $1/[s(s+1)(s+5)]$의 근궤적</h4>
+    <p>회색 곡선이 K가 0 → 60일 때 그리는 전체 궤적, 빨간 X가 현재 K에서의 폐루프 극점.
+    슬라이더로 K를 움직이면서 극점이 좌반평면 → 허수축 → 우반평면으로 옮겨가는 모습을 보세요.</p>
+    <canvas id="rl" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>게인 K <span class="val" id="rlKV">5</span><input type="range" id="rlK" min="0.1" max="60" step="0.1" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rl'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('rlKV').textContent=(+$('rlK').value).toFixed(1);};
+    $('rlK').oninput=upd;
+    function roots3(a,b,c,d){
+      const p2=b/a,p1=c/a,p0=d/a;
+      let r=[{re:1,im:1},{re:1,im:-1},{re:-1,im:0}];
+      for(let it=0;it<60;it++){
+        const nr=r.map((zi,i)=>{
+          const z2={re:zi.re*zi.re-zi.im*zi.im, im:2*zi.re*zi.im};
+          const z3={re:z2.re*zi.re-z2.im*zi.im, im:z2.re*zi.im+z2.im*zi.re};
+          const f={re:z3.re + p2*z2.re + p1*zi.re + p0, im:z3.im + p2*z2.im + p1*zi.im};
+          let dn={re:1,im:0};
+          r.forEach((zj,j)=>{if(i===j)return;
+            const dr=zi.re-zj.re, di=zi.im-zj.im;
+            dn={re:dn.re*dr-dn.im*di, im:dn.re*di+dn.im*dr};});
+          const denom=dn.re*dn.re+dn.im*dn.im;
+          const dz={re:(f.re*dn.re+f.im*dn.im)/denom, im:(f.im*dn.re-f.re*dn.im)/denom};
+          return {re:zi.re-dz.re, im:zi.im-dz.im};
+        });
+        r=nr;
+      }
+      return r;
+    }
+    function loop(){
+      const Kcur=+$('rlK').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320, cy=190, sc=45;
+      // grid
+      x.strokeStyle='#eee';for(let r=-7;r<=2;r++){const xx=cx+r*sc;x.beginPath();x.moveTo(xx,20);x.lineTo(xx,360);x.stroke();}
+      for(let i=-4;i<=4;i++){const yy=cy-i*sc;x.beginPath();x.moveTo(20,yy);x.lineTo(620,yy);x.stroke();}
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,cy);x.lineTo(620,cy);x.moveTo(cx,20);x.lineTo(cx,360);x.stroke();
+      // unstable shading
+      x.fillStyle='rgba(198,40,40,0.06)';x.fillRect(cx,20,300,340);
+      // open-loop poles (blue X)
+      [0,-1,-5].forEach(p=>{const px=cx+p*sc,py=cy;
+        x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+        x.moveTo(px-7,py-7);x.lineTo(px+7,py+7);x.moveTo(px-7,py+7);x.lineTo(px+7,py-7);x.stroke();});
+      // entire root locus: sweep K and plot all roots
+      x.fillStyle='rgba(150,150,150,0.5)';
+      for(let K=0.1;K<60;K+=0.3){
+        const r=roots3(1,6,5,K);
+        r.forEach(p=>{const px=cx+p.re*sc,py=cy-p.im*sc;
+          x.fillRect(px-1.2,py-1.2,2.4,2.4);});
+      }
+      // current K poles (red X)
+      const r=roots3(1,6,5,Kcur);
+      r.forEach(p=>{const px=cx+p.re*sc,py=cy-p.im*sc;
+        x.strokeStyle='#c62828';x.lineWidth=2.5;x.beginPath();
+        x.moveTo(px-9,py-9);x.lineTo(px+9,py+9);x.moveTo(px-9,py+9);x.lineTo(px+9,py-9);x.stroke();});
+      // labels
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('Re',610,cy-4);x.fillText('Im',cx+5,28);
+      [0,-1,-5].forEach(p=>{x.fillText(p.toString(),cx+p*sc-4,cy+14);});
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('파랑 X = 개루프 극점,  회색 점 = 전체 근궤적,  빨강 X = 현재 K의 폐루프 극점',20,375);
+      // verdict
+      const unstable=r.some(p=>p.re>0.001);
+      x.fillStyle=unstable?'#c62828':'#2e7d32';x.font='13px sans-serif';
+      x.fillText(unstable?'불안정':'안정',20,30);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰</strong>:</p>
+  <ul>
+    <li>K 작을 때 (예: 0.5): 세 극점이 거의 개루프 극점 자리에서 시작.</li>
+    <li>K가 커지면 두 극점이 갈라져서 점근선을 따라 위·아래 방향으로 이동.</li>
+    <li>K = 30에서 두 극점이 정확히 허수축 위 (±j√5).</li>
+    <li>K &gt; 30에서 우반평면으로 → 발산.</li>
+  </ul>
+
+  <h2>6. 설계에 활용하기</h2>
+
+  <p>설계 명세 → s-평면 영역 → 근궤적과의 교차점 → K 결정 흐름:</p>
+  <ol>
+    <li>"오버슈트 ≤ 5%, 정착 ≤ 1초" → ζ ≥ 0.7, $\zeta\omega_n \geq 4$.</li>
+    <li>s-평면에서 ζ ≥ 0.7 (각도 ≤ 45°)과 $\sigma \leq -4$를 만족하는 부채꼴 영역을 그린다.</li>
+    <li>근궤적이 그 영역을 지나는 점에서 K를 결정 (크기 조건 $K = 1/|G(s)|$).</li>
+  </ol>
+
+  <p>이게 가능한 시스템도 있고 불가능한 시스템도 있습니다. 후자라면 P 단독으로는 명세를 못 맞추니
+  PD나 PID로 바꾸거나(W12), Lead/Lag 보상기로 영점을 추가해서 궤적의 모양 자체를 바꿔야 합니다.</p>
+
+<pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+import control as ctl
+
+# G(s) = 1 / [s(s+1)(s+5)]
+G = ctl.tf([1], [1, 6, 5, 0])
+ctl.root_locus(G, kvect=np.linspace(0.01, 60, 300), grid=True)
+plt.title('근궤적:  K = 0 → 60')
+plt.show()
+
+# 특정 K에서 폐루프 극점 확인
+for K in [5, 20, 30, 40]:
+    cl = ctl.feedback(K * G, 1)
+    poles = ctl.poles(cl)
+    print(f'K={K:2d}  poles = {np.round(poles, 3)}')</code></pre>
+
+  <h2>7. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>근궤적 = K가 변할 때 폐루프 극점이 그리는 길.</li>
+      <li>각도 조건이 모양을, 크기 조건이 K 값을 결정.</li>
+      <li>가장 자주 쓰는 작도 규칙 4가지: 출발/종착, 가지 수, 실축 위 부분, 점근선.</li>
+      <li>설계 명세 → s-평면 영역 → 궤적과의 교차점 → K 결정.</li>
+      <li>실무에선 손계산보다 <code>control.root_locus()</code> 한 줄.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="08-routh-hurwitz.html"><small>← 이전</small>W8. Routh-Hurwitz</a>
+    <a href="10-bode.html" class="next"><small>다음 →</small>W10. Bode 선도</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W10. Bode 선도 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 10. Bode 선도 — 주파수 응답</h1>
+  <p class="lead">"이 시스템은 어떤 주파수의 신호를 잘 통과시키고 어떤 건 막는가?"
+  데시벨과 데케이드 두 단위 덕분에 어떤 복잡한 전달함수도 점근선 몇 개로 손그림이 가능합니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>주파수 응답이란? — $s = j\omega$ 대입의 의미</li>
+    <li>데시벨과 데케이드</li>
+    <li>기본 항의 Bode 점근선 4종</li>
+    <li>곱은 더하기로 — Bode의 마법</li>
+    <li>인터랙티브: 시스템 → Bode 선도</li>
+    <li>Python으로 Bode 그리기</li>
+  </ol></div>
+
+  <h2>1. 주파수 응답이란?</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>스피커에 사인파를 넣어보면 저음(20 Hz)은 잘 울리는데 고음(15 kHz)은 작게 들립니다.
+  같은 진폭의 입력이라도 주파수에 따라 출력 진폭과 위상이 달라지는 것 — 그게 주파수 응답입니다.</p>
+
+  <p>LTI 시스템 $G(s)$에 사인파 $u(t) = \sin(\omega t)$를 넣고 정상상태에 도달하면, 출력은 같은 주파수의 사인파지만
+  진폭과 위상이 바뀝니다.</p>
+
+  $$ y_{ss}(t) = |G(j\omega)| \cdot \sin\bigl(\omega t + \angle G(j\omega)\bigr) $$
+
+  <p>즉 전달함수에 $s \to j\omega$ 대입한 복소수 $G(j\omega)$의 <strong>크기</strong>가 진폭 비율을, <strong>위상</strong>이 시간 지연을 알려줍니다.</p>
+
+  <h2>2. 데시벨과 데케이드</h2>
+
+  <p>주파수 응답을 그리는 두 가지 결정적인 단위 변환이 있습니다.</p>
+
+  <ul>
+    <li><strong>데시벨(dB)</strong>: $|G|_{dB} = 20 \log_{10}|G|$. 곱셈을 덧셈으로 바꿔줍니다.</li>
+    <li><strong>데케이드(decade)</strong>: 주파수를 10배로 늘리는 단위. log 축에서 일정한 거리.</li>
+  </ul>
+
+  <table>
+    <thead><tr><th>$|G|$</th><th>$|G|_{dB}$</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>0.1</td><td>−20</td><td>10배 감쇠</td></tr>
+      <tr><td>0.5</td><td>−6</td><td>절반</td></tr>
+      <tr><td>1</td><td>0</td><td>그대로</td></tr>
+      <tr><td>$\sqrt{2}$</td><td>+3</td><td>$\sqrt{2}$배 (전력 2배)</td></tr>
+      <tr><td>10</td><td>+20</td><td>10배 증폭</td></tr>
+      <tr><td>100</td><td>+40</td><td>100배 증폭</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 두 단위 덕에 $G(s)$가 여러 항의 곱이라도 dB 그래프에서는 단순한 덧셈, 위상 그래프에서도 덧셈이 됩니다.
+  그래서 손그림이 가능해진 것입니다.</p>
+
+  <h2>3. 기본 항의 Bode 점근선 4종</h2>
+
+  <p>전달함수가 1차·2차 항의 곱이면, 각 항의 Bode를 따로 그려서 더하면 됩니다. 외워야 할 항은 다음 네 가지.</p>
+
+  <h3>① 상수 게인 $K$</h3>
+  <ul><li>크기: $20 \log_{10}|K|$ dB (수평선)</li><li>위상: 0° (또는 K&lt;0이면 −180°)</li></ul>
+
+  <h3>② 적분기 $1/s$</h3>
+  <ul>
+    <li>크기: 모든 ω에서 $-20 \log_{10}\omega$ dB → ω=1에서 0 dB, 한 데케이드마다 −20 dB의 직선</li>
+    <li>위상: 모든 ω에서 −90° (수평선)</li>
+  </ul>
+
+  <h3>③ 1차 항 $1/(s/\omega_c + 1)$ (저역통과)</h3>
+  <ul>
+    <li>크기: $\omega \ll \omega_c$에서 0 dB, $\omega \gg \omega_c$에서 −20 dB/decade로 떨어짐. 코너 $\omega = \omega_c$에서 −3 dB.</li>
+    <li>위상: $\omega \ll \omega_c$에서 0°, $\omega \gg \omega_c$에서 −90°. 코너에서 −45°.</li>
+  </ul>
+
+  <h3>④ 2차 항 (감쇠비 ζ)</h3>
+  <p>$\dfrac{\omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2}$</p>
+  <ul>
+    <li>크기: $\omega \ll \omega_n$에서 0 dB, $\omega \gg \omega_n$에서 −40 dB/decade. ζ가 작으면 $\omega_n$ 근처에 <strong>피크</strong> (공진).</li>
+    <li>위상: 0° → −180°, $\omega = \omega_n$에서 −90°.</li>
+  </ul>
+
+  <h2>4. 곱은 더하기로 — Bode의 마법</h2>
+
+  <p>$G(s) = \dfrac{10}{s(s/2 + 1)(s/20 + 1)}$의 Bode를 손그림으로 그려봅시다.</p>
+
+  <ol>
+    <li>상수 10: 크기 +20 dB 수평, 위상 0°.</li>
+    <li>적분기 $1/s$: 크기 −20 dB/decade 직선 (ω=1에서 0 dB), 위상 −90°.</li>
+    <li>코너 $\omega = 2$의 1차 항: ω &gt; 2에서 추가로 −20 dB/decade, 위상 ω=2에서 −45°, 멀리 −90°.</li>
+    <li>코너 $\omega = 20$의 1차 항: ω &gt; 20에서 다시 추가 −20 dB/decade, 위상 ω=20에서 −45°.</li>
+  </ol>
+
+  <p>1열을 모두 더하면 전체 크기 곡선, 위상도 마찬가지. 결과:</p>
+
+  <table>
+    <thead><tr><th>주파수 영역</th><th>크기 기울기 [dB/decade]</th><th>위상 [°]</th></tr></thead>
+    <tbody>
+      <tr><td>$\omega < 2$</td><td>−20</td><td>약 −90</td></tr>
+      <tr><td>$2 < \omega < 20$</td><td>−40</td><td>약 −135 → −180 변화</td></tr>
+      <tr><td>$\omega > 20$</td><td>−60</td><td>약 −270</td></tr>
+    </tbody>
+  </table>
+
+  <p>크기 곡선이 0 dB을 가로지르는 주파수가 <strong>이득 교차주파수 $\omega_{gc}$</strong>, 위상이 −180°를 가로지르는 주파수가 <strong>위상 교차주파수 $\omega_{pc}$</strong>입니다.
+  이 둘이 W11 안정여유의 기준점이 됩니다.</p>
+
+  <h2>5. 인터랙티브: 시스템 → Bode 선도</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 + 적분기 시스템의 Bode</h4>
+    <p>$G(s) = \dfrac{K}{s(\tau s + 1)}$의 Bode를 그립니다. K와 τ를 움직여 보세요.
+    상단은 크기(dB), 하단은 위상(°). 빨간 가로선은 0 dB와 −180° 기준선.</p>
+    <canvas id="bd2" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>K <span class="val" id="bdKV">10</span><input type="range" id="bdK" min="0.5" max="50" step="0.5" value="10"></label>
+      <label>τ <span class="val" id="bdtV2">0.5</span><input type="range" id="bdt2" min="0.05" max="2" step="0.05" value="0.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bd2'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('bdKV').textContent=(+$('bdK').value).toFixed(1);$('bdtV2').textContent=(+$('bdt2').value).toFixed(2);};
+    ['bdK','bdt2'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const K=+$('bdK').value, tau=+$('bdt2').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // log frequency axis: 10^-1 to 10^3
+      const wmin=-1, wmax=3;
+      const ox=60, mw=560;
+      const xOf=lw=>ox + (lw-wmin)/(wmax-wmin)*mw;
+      // magnitude plot top
+      const myT=20, myB=170, myH=myB-myT;
+      // magnitude axis: -60 to +40 dB
+      const mTop=40, mBot=-60;
+      const yMof=db=>myT + (mTop-db)/(mTop-mBot)*myH;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,myT);x.lineTo(ox,myB);x.lineTo(ox+mw,myB);x.stroke();
+      // grid
+      for(let dec=wmin;dec<=wmax;dec++){const xx=xOf(dec);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(xx,myT);x.lineTo(xx,myB);x.stroke();
+        x.fillStyle='#777';x.font='10px sans-serif';x.fillText('10^'+dec,xx-12,myB+12);}
+      for(let db=mTop;db>=mBot;db-=20){const yy=yMof(db);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(ox,yy);x.lineTo(ox+mw,yy);x.stroke();
+        x.fillStyle='#777';x.fillText(db+' dB',ox-40,yy+3);}
+      // 0 dB line
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,yMof(0));x.lineTo(ox+mw,yMof(0));x.stroke();x.setLineDash([]);
+      // magnitude curve
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      let wgc=null;
+      for(let i=0;i<=400;i++){const lw=wmin+i/400*(wmax-wmin), w=Math.pow(10,lw);
+        const mag = K / (w * Math.sqrt(1+(tau*w)**2));
+        const dB = 20*Math.log10(mag);
+        const xx=xOf(lw), yy=yMof(dB);
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+        if(wgc===null && dB<=0 && i>0) wgc=w;}
+      x.stroke();
+      // phase plot bottom
+      const pyT=210, pyB=350, pyH=pyB-pyT;
+      const pTop=0, pBot=-270;
+      const yPof=p=>pyT + (pTop-p)/(pTop-pBot)*pyH;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,pyT);x.lineTo(ox,pyB);x.lineTo(ox+mw,pyB);x.stroke();
+      for(let dec=wmin;dec<=wmax;dec++){const xx=xOf(dec);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(xx,pyT);x.lineTo(xx,pyB);x.stroke();}
+      for(let p=pTop;p>=pBot;p-=45){const yy=yPof(p);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(ox,yy);x.lineTo(ox+mw,yy);x.stroke();
+        x.fillStyle='#777';x.fillText(p+'°',ox-40,yy+3);}
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,yPof(-180));x.lineTo(ox+mw,yPof(-180));x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=400;i++){const lw=wmin+i/400*(wmax-wmin), w=Math.pow(10,lw);
+        const ph = -90 - 180/Math.PI*Math.atan(tau*w);
+        const xx=xOf(lw), yy=yPof(ph);
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('|G(jω)| [dB]',10,myT-5);
+      x.fillText('∠G(jω) [°]',10,pyT-5);
+      if(wgc) x.fillText('이득 교차주파수 ωgc ≈ '+wgc.toFixed(2)+' rad/s',ox+200,myT-5);
+      x.fillText('ω [rad/s]',ox+mw-50,pyB+25);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰</strong>:</p>
+  <ul>
+    <li>K를 키우면 크기 곡선 전체가 위로 평행 이동 → ωgc 증가.</li>
+    <li>τ를 키우면 코너주파수 1/τ가 왼쪽으로 이동 → 더 일찍 −40 dB/decade로 꺾인다.</li>
+    <li>위상은 K에 무관 (상수는 위상에 0을 더할 뿐). τ만이 위상 곡선을 좌우로 미룬다.</li>
+  </ul>
+
+  <h2>6. Python으로 Bode 그리기</h2>
+
+<pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+# G(s) = 10 / [ s (0.5 s + 1) (0.05 s + 1) ]
+num = [10]
+den = np.polymul(np.polymul([1, 0], [0.5, 1]), [0.05, 1])
+G = signal.TransferFunction(num, den)
+
+w = np.logspace(-1, 3, 500)
+w, mag, phase = signal.bode(G, w)
+
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 6))
+ax1.semilogx(w, mag); ax1.axhline(0, color='r', ls='--'); ax1.grid(True, which='both')
+ax1.set_ylabel('Magnitude [dB]')
+ax2.semilogx(w, phase); ax2.axhline(-180, color='r', ls='--'); ax2.grid(True, which='both')
+ax2.set_ylabel('Phase [°]'); ax2.set_xlabel('ω [rad/s]')
+plt.tight_layout(); plt.show()</code></pre>
+
+  <h2>7. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>$s = j\omega$ 대입 → 크기 (dB)와 위상 (°) 두 곡선.</li>
+      <li>dB는 곱셈을 덧셈으로 바꿔주는 마법. 그래서 손그림이 된다.</li>
+      <li>네 가지 기본 항(상수, 적분기, 1차, 2차)의 점근선만 외우면 어떤 시스템도 그릴 수 있다.</li>
+      <li>크기 곡선이 0 dB을 지나는 ωgc, 위상이 −180°를 지나는 ωpc — W11에서 안정여유의 기준점.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="09-root-locus.html"><small>← 이전</small>W9. 근궤적</a>
+    <a href="11-stability-margin.html" class="next"><small>다음 →</small>W11. 안정여유 &amp; 강인성</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

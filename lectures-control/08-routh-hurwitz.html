@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W8. 안정성 — Routh-Hurwitz — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 8. 안정성 — Routh-Hurwitz</h1>
+  <p class="lead">고차 다항식의 근을 구하지 않고도 "모든 근이 좌반평면에 있는가?"를 판정하는 19세기의 영리한 알고리즘.
+  매개변수 $K$의 안정 영역을 손으로 찾는 가장 빠른 방법입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>BIBO 안정성과 극점 위치</li>
+    <li>필요조건 — 모든 계수의 부호가 같아야 한다</li>
+    <li>Routh 표 만들기</li>
+    <li>예제: 3차·4차 시스템</li>
+    <li>매개변수 안정 영역 (가장 실용적인 사용)</li>
+    <li>인터랙티브: K를 돌려서 안정 경계 찾기</li>
+  </ol></div>
+
+  <h2>1. BIBO 안정성과 극점 위치</h2>
+
+  <p><strong>BIBO 안정 (Bounded-Input Bounded-Output)</strong>: 유한한 입력에 대해 출력이 유한히 머무르는 시스템.
+  LTI 시스템의 경우, 다음과 동치입니다.</p>
+
+  $$ \text{시스템이 안정} \iff \text{전달함수의 모든 극점이 좌반평면(Re < 0)에 있음} $$
+
+  <p>그런데 시스템이 4차, 5차, 그 이상이 되면 극점을 손으로 풀기가 어렵습니다.
+  Routh-Hurwitz 판별법은 다항식의 계수만 보고도 "양의 실수부 근의 개수"를 알려줍니다.</p>
+
+  <h2>2. 필요조건 — 부호 일치</h2>
+
+  <p>특성다항식 $a_n s^n + a_{n-1} s^{n-1} + \cdots + a_0 = 0$이 안정하려면:</p>
+
+  <ol>
+    <li>모든 계수가 존재해야 한다 (중간에 0이 없어야 함)</li>
+    <li>모든 계수의 부호가 같아야 한다 (모두 양수 또는 모두 음수)</li>
+  </ol>
+
+  <p>이 두 가지 중 하나라도 위반되면 그 시스템은 즉시 불안정. 충분조건은 아니라서 통과해도 다음 단계(Routh 표)를 거쳐야 합니다.</p>
+
+  <h2>3. Routh 표 만들기</h2>
+
+  <p>특성다항식 $s^n$의 계수부터 표를 만듭니다. 예: $s^4 + 3s^3 + 5s^2 + 4s + 2 = 0$</p>
+
+  <table>
+    <tbody>
+      <tr><td>$s^4$</td><td>1</td><td>5</td><td>2</td></tr>
+      <tr><td>$s^3$</td><td>3</td><td>4</td><td>0</td></tr>
+      <tr><td>$s^2$</td><td>$b_1$</td><td>$b_2$</td><td></td></tr>
+      <tr><td>$s^1$</td><td>$c_1$</td><td></td><td></td></tr>
+      <tr><td>$s^0$</td><td>$d_1$</td><td></td><td></td></tr>
+    </tbody>
+  </table>
+
+  <p>아래 행은 위 두 행에서 다음 공식으로 계산합니다.</p>
+
+  $$ b_1 = \frac{(3)(5) - (1)(4)}{3} = \frac{11}{3}, \quad
+     b_2 = \frac{(3)(2) - (1)(0)}{3} = 2 $$
+
+  $$ c_1 = \frac{(b_1)(4) - (3)(b_2)}{b_1} = \frac{(11/3)(4) - 6}{11/3} = \frac{44/3 - 6}{11/3} = \frac{26/3}{11/3} = \frac{26}{11} $$
+
+  $$ d_1 = \frac{(c_1)(b_2) - (b_1)(0)}{c_1} = b_2 = 2 $$
+
+  <p>완성된 표:</p>
+  <table>
+    <tbody>
+      <tr><td>$s^4$</td><td>1</td><td>5</td><td>2</td></tr>
+      <tr><td>$s^3$</td><td>3</td><td>4</td><td></td></tr>
+      <tr><td>$s^2$</td><td>11/3</td><td>2</td><td></td></tr>
+      <tr><td>$s^1$</td><td>26/11</td><td></td><td></td></tr>
+      <tr><td>$s^0$</td><td>2</td><td></td><td></td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>판정 규칙</strong>: <em>1열의 부호 변화 횟수 = 우반평면 근의 개수</em>. 위에서 1열은 1, 3, 11/3, 26/11, 2 → 모두 양수 → 부호 변화 0 → <strong>안정</strong>.</p>
+
+  <div class="note">
+    <strong>특수 상황 두 가지</strong> —
+    <ul>
+      <li><em>1열에 0이 나오면</em>: 그 자리를 작은 양수 ε로 두고 계산을 이어간 뒤 ε → 0의 부호를 본다.</li>
+      <li><em>한 행 전체가 0이면</em>: 그 위 행으로 보조다항식 $A(s)$를 만들어 미분 $dA/ds$ 계수로 그 행을 채운다 (허수축에 극점이 있음 — 경계 안정).</li>
+    </ul>
+  </div>
+
+  <h2>4. 예제: 폐루프 안정성</h2>
+
+  <p>플랜트 $G(s) = \dfrac{1}{s(s+1)(s+5)}$, 비례 제어기 $C(s) = K$, 단위 피드백.</p>
+  <p>특성방정식 $1 + KG(s) = 0$ → $s(s+1)(s+5) + K = 0$ → $s^3 + 6s^2 + 5s + K = 0$.</p>
+
+  <table>
+    <tbody>
+      <tr><td>$s^3$</td><td>1</td><td>5</td></tr>
+      <tr><td>$s^2$</td><td>6</td><td>K</td></tr>
+      <tr><td>$s^1$</td><td>(30 − K)/6</td><td></td></tr>
+      <tr><td>$s^0$</td><td>K</td><td></td></tr>
+    </tbody>
+  </table>
+
+  <p>안정 조건 (1열이 모두 양수):</p>
+  $$ K > 0 \quad \text{and} \quad \frac{30 - K}{6} > 0 \;\Rightarrow\; K < 30 $$
+
+  $$ \boxed{\, 0 < K < 30 \,} $$
+
+  <p>$K = 30$이 정확히 안정 경계. 이때 보조다항식 $6s^2 + 30 = 0$에서 진동 주파수
+  $\omega = \sqrt{30/6} = \sqrt{5} \approx 2.24$ rad/s를 바로 읽을 수 있습니다 — Ziegler-Nichols
+  튜닝(W12)의 임계 진동수가 바로 이것입니다.</p>
+
+  <h2>5. 매개변수 안정 영역</h2>
+
+  <p>현실에서 Routh-Hurwitz의 가장 실용적인 쓰임은 "이 시스템이 안정한 게인 K의 범위는?"입니다.
+  특성방정식의 한 계수에 K를 두고 표를 만들어 1열 양수 조건을 풀면 그게 답입니다.</p>
+
+  <p>두 변수($K_p$, $K_i$ 등)가 동시에 들어가면 평면 위 영역으로 표현됩니다. 이게 PID 튜닝의
+  '안정한 영역에서만 게인을 골라야 한다'는 안전망 역할을 합니다.</p>
+
+  <h2>6. 인터랙티브: K를 돌려서 안정 경계 찾기</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 위 예제 시스템에 K를 가변</h4>
+    <p>플랜트 $G(s) = 1/[s(s+1)(s+5)]$, P 제어기 K, 단위 피드백.
+    K를 움직이면서 폐루프 극점이 s-평면에서 어디로 가는지, 시간응답이 어떻게 변하는지 관찰하세요.
+    Routh가 예측한 임계값 K = 30에서 정확히 진동 시작.</p>
+    <canvas id="rh" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>게인 K <span class="val" id="rhKV">5</span><input type="range" id="rhK" min="0.1" max="60" step="0.1" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rh'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('rhKV').textContent=(+$('rhK').value).toFixed(1);};
+    $('rhK').oninput=upd;
+    // crude cubic root finder via Durand-Kerner
+    function roots3(a,b,c,d){
+      // s^3 + (b/a)s^2 + (c/a)s + d/a
+      const p2=b/a,p1=c/a,p0=d/a;
+      let r=[{re:1,im:1},{re:1,im:-1},{re:-1,im:0}];
+      for(let it=0;it<60;it++){
+        const nr=r.map((zi,i)=>{
+          // f(zi)
+          const z2={re:zi.re*zi.re-zi.im*zi.im, im:2*zi.re*zi.im};
+          const z3={re:z2.re*zi.re-z2.im*zi.im, im:z2.re*zi.im+z2.im*zi.re};
+          const f={re:z3.re + p2*z2.re + p1*zi.re + p0, im:z3.im + p2*z2.im + p1*zi.im};
+          // denom = prod (zi - zj)
+          let dn={re:1,im:0};
+          r.forEach((zj,j)=>{if(i===j)return;
+            const dr=zi.re-zj.re, di=zi.im-zj.im;
+            const nrt={re:dn.re*dr-dn.im*di, im:dn.re*di+dn.im*dr};
+            dn=nrt;});
+          // dz = f/dn
+          const denom=dn.re*dn.re+dn.im*dn.im;
+          const dz={re:(f.re*dn.re+f.im*dn.im)/denom, im:(f.im*dn.re-f.re*dn.im)/denom};
+          return {re:zi.re-dz.re, im:zi.im-dz.im};
+        });
+        r=nr;
+      }
+      return r;
+    }
+    function loop(){
+      const K=+$('rhK').value;
+      // characteristic: s^3 + 6 s^2 + 5 s + K = 0
+      const r=roots3(1,6,5,K);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // s-plane
+      const cx=160, cy=160, sc=30;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(20,cy);x.lineTo(300,cy);x.moveTo(cx,20);x.lineTo(cx,300);x.stroke();
+      x.fillStyle='rgba(198,40,40,0.07)';x.fillRect(cx,20,140,280);
+      x.fillStyle='#666';x.font='10px sans-serif';x.fillText('Re',290,cy-4);x.fillText('Im',cx+5,28);
+      r.forEach(p=>{const px=cx+p.re*sc, py=cy-p.im*sc;
+        x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+        x.moveTo(px-6,py-6);x.lineTo(px+6,py+6);x.moveTo(px-6,py+6);x.lineTo(px+6,py-6);x.stroke();});
+      // verdict
+      const unstable=r.some(p=>p.re>0.001);
+      const marginal=r.some(p=>Math.abs(p.re)<0.05);
+      x.fillStyle=unstable?'#c62828':marginal?'#f57c00':'#2e7d32';x.font='13px sans-serif';
+      x.fillText(unstable?'불안정 (우반평면 극점)':marginal?'경계 (허수축 근접)':'안정', 20, 290);
+      // step response of closed loop
+      const ox=340, oy=270, w=280, h=200, dt=0.04, N=400;
+      let y=0,yd=0,ydd=0;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(ox,oy-h*0.5);x.lineTo(ox+w,oy-h*0.5);x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let k=0;k<N;k++){
+        const ddd = K*(1-y) - 6*ydd - 5*yd;     // y''' + 6y'' + 5y' + K y = K r
+        ydd += dt*ddd; yd += dt*ydd; y += dt*yd;
+        const xx=ox+k*w/N, yy=oy-Math.max(-1,Math.min(2,y))*h*0.5;
+        if(k==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('폐루프 계단응답',ox,oy+18);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('Routh 예측 안정 영역: 0 < K < 30',ox-10,30);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>꼭 확인할 것</strong>:</p>
+  <ul>
+    <li>K = 5: 안정, 약간 진동하면서 수렴.</li>
+    <li>K = 25: 여전히 안정, 그러나 진동이 심해짐.</li>
+    <li>K = 30: 정확히 경계 — 극점이 허수축 위에 → 지속 진동.</li>
+    <li>K &gt; 30: 우반평면 극점 → 발산.</li>
+  </ul>
+
+  <h2>7. Python으로 자동화</h2>
+
+<pre><code class="language-python">import numpy as np
+from numpy.polynomial.polynomial import Polynomial
+
+def routh(coeffs):
+    """coeffs: [a_n, a_{n-1}, ..., a_0]  →  Routh table 1열만 반환"""
+    n = len(coeffs) - 1
+    rows = (n + 1) // 2
+    table = np.zeros((n + 1, rows + 1))
+    table[0, :len(coeffs[0::2])] = coeffs[0::2]
+    table[1, :len(coeffs[1::2])] = coeffs[1::2]
+    for i in range(2, n + 1):
+        for j in range(rows):
+            a = table[i-2, 0]; b = table[i-1, 0]
+            if b == 0: b = 1e-9
+            table[i, j] = (b * table[i-2, j+1] - a * table[i-1, j+1]) / b
+    return table[:, 0]
+
+# 예: s^3 + 6 s^2 + 5 s + K = 0,   K를 휘저으면서 안정 K 범위 찾기
+for K in [1, 10, 29, 30, 31, 50]:
+    col1 = routh([1, 6, 5, K])
+    sign_changes = np.sum(np.diff(np.sign(col1)) != 0)
+    print(f'K={K:3d}  1열={np.round(col1,3)}  부호변화={sign_changes}  → '
+          + ('안정' if sign_changes==0 else f'불안정 (우반평면 근 {sign_changes}개)'))</code></pre>
+
+  <h2>8. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>안정 = 모든 폐루프 극점이 좌반평면에 있는 것.</li>
+      <li>Routh-Hurwitz: 다항식의 근을 직접 구하지 않고도 "우반평면 근의 개수"를 1열 부호 변화로 알 수 있다.</li>
+      <li>실용 용도: 매개변수 K(또는 PID 게인)의 안정 영역을 손으로 찾을 때.</li>
+      <li>경계점에서 보조다항식으로 임계 진동 주파수 ωu도 함께 얻는다 → Ziegler-Nichols 튜닝의 출발점.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="07-steady-state-error.html"><small>← 이전</small>W7. 정상상태 오차</a>
+    <a href="09-root-locus.html" class="next"><small>다음 →</small>W9. 근궤적</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

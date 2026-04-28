@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W13. PID 응용 ① 모터·로봇 팔 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 13. PID 응용 ① — DC 모터 &amp; 로봇 팔</h1>
+  <p class="lead">캐스케이드 PID로 모터 위치를 제어하고, 로봇 팔에 중력 보상을 더해 정확하게 들어 올리기.
+  배운 PID가 실제 로봇 안에서 어떻게 살아 움직이는지 보는 첫 응용 시간.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 단일 PID가 아니라 캐스케이드인가</li>
+    <li>DC 모터 위치제어 — 3중 루프 구조</li>
+    <li>인터랙티브: 단일 vs 캐스케이드 PID 비교</li>
+    <li>로봇 매니퓰레이터 관절 모델</li>
+    <li>중력 보상 (Gravity Compensation)</li>
+    <li>인터랙티브: 1자유도 팔의 위치제어</li>
+    <li>코드: 임베디드 캐스케이드 PID</li>
+  </ol></div>
+
+  <h2>1. 왜 단일 PID가 아니라 캐스케이드인가</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>고속도로에서 옆 차선으로 들어갈 때 우리는 두 단계로 생각합니다. 먼저 "이쪽으로 차가 향하게 핸들을 살짝 돌리자"
+  (방향 결정), 그다음 "원하는 방향이 됐으니 핸들을 다시 똑바로" (속도 추종). 한 번에 위치만 바라보고 핸들을 돌리면
+  과민하거나 둔하기 쉽습니다.</p>
+
+  <p>캐스케이드 PID도 같은 발상입니다. <strong>안쪽 루프(빠른 변수)</strong>가 먼저 자기 일을 빠르게 끝내고, 그 결과를
+  <strong>바깥 루프(느린 변수)</strong>가 명령으로 줍니다. 모터에서는 보통 토크(전류)·속도·위치 세 단계.</p>
+
+  <ul>
+    <li><strong>단일 PID</strong>: 위치 오차를 바로 전압으로 변환. 모든 동특성을 한 PID가 떠안아야 해서 튜닝이 어렵다.</li>
+    <li><strong>캐스케이드</strong>: 각 루프가 한 가지만 책임. 안쪽일수록 단순한 시스템이라 튜닝이 쉽다.</li>
+  </ul>
+
+  <h2>2. DC 모터 위치제어 — 3중 루프 구조</h2>
+
+  <figure>
+    <svg viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arc" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <text x="20" y="100">θref →</text>
+      <circle cx="80" cy="95" r="12" fill="#fff" stroke="#333"/><text x="80" y="100" text-anchor="middle">−</text>
+      <rect x="110" y="75" width="80" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="150" y="98" text-anchor="middle" font-size="12">위치 PID</text>
+      <text x="200" y="92" font-size="11" fill="#666">ω̃</text>
+      <circle cx="220" cy="95" r="12" fill="#fff" stroke="#333"/><text x="220" y="100" text-anchor="middle">−</text>
+      <rect x="250" y="75" width="80" height="40" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="290" y="98" text-anchor="middle" font-size="12">속도 PID</text>
+      <text x="340" y="92" font-size="11" fill="#666">ĩ</text>
+      <circle cx="360" cy="95" r="12" fill="#fff" stroke="#333"/><text x="360" y="100" text-anchor="middle">−</text>
+      <rect x="390" y="75" width="80" height="40" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="430" y="98" text-anchor="middle" font-size="12">전류 PID</text>
+      <text x="480" y="92" font-size="11" fill="#666">V</text>
+      <rect x="500" y="75" width="80" height="40" fill="#fce4ec" stroke="#c62828"/>
+      <text x="540" y="98" text-anchor="middle" font-size="12">DC 모터</text>
+      <text x="595" y="100">→ θ, ω, i</text>
+      <!-- arrows -->
+      <line x1="60" y1="95" x2="68" y2="95" stroke="#333" marker-end="url(#arc)"/>
+      <line x1="92" y1="95" x2="108" y2="95" stroke="#333" marker-end="url(#arc)"/>
+      <line x1="190" y1="95" x2="208" y2="95" stroke="#333" marker-end="url(#arc)"/>
+      <line x1="232" y1="95" x2="248" y2="95" stroke="#333" marker-end="url(#arc)"/>
+      <line x1="330" y1="95" x2="348" y2="95" stroke="#333" marker-end="url(#arc)"/>
+      <line x1="372" y1="95" x2="388" y2="95" stroke="#333" marker-end="url(#arc)"/>
+      <line x1="470" y1="95" x2="498" y2="95" stroke="#333" marker-end="url(#arc)"/>
+      <line x1="580" y1="95" x2="595" y2="95" stroke="#333" marker-end="url(#arc)"/>
+      <!-- feedback paths -->
+      <line x1="640" y1="95" x2="640" y2="170" stroke="#888"/>
+      <line x1="640" y1="170" x2="360" y2="170" stroke="#888"/>
+      <line x1="360" y1="170" x2="360" y2="107" stroke="#888" marker-end="url(#arc)"/>
+      <line x1="540" y1="170" x2="540" y2="155" stroke="none"/>
+      <text x="500" y="160" font-size="10" fill="#666">전류 i 피드백</text>
+      <line x1="640" y1="170" x2="640" y2="180" stroke="none"/>
+      <line x1="540" y1="135" x2="540" y2="195" stroke="#888"/>
+      <line x1="540" y1="195" x2="220" y2="195" stroke="#888"/>
+      <line x1="220" y1="195" x2="220" y2="107" stroke="#888" marker-end="url(#arc)"/>
+      <text x="350" y="190" font-size="10" fill="#666">속도 ω 피드백</text>
+      <line x1="640" y1="170" x2="660" y2="170" stroke="#888"/>
+      <line x1="660" y1="170" x2="80" y2="170" stroke="none"/>
+    </svg>
+    <figcaption>그림 1. DC 모터 캐스케이드 PID — 위치 → 속도 → 전류 (안쪽이 가장 빠름).</figcaption>
+  </figure>
+
+  <p>전형적인 샘플링 주기:</p>
+  <ul>
+    <li>전류 루프: 10~20 kHz (가장 빠름, 모터의 전기 시정수 ~ms)</li>
+    <li>속도 루프: 1~5 kHz</li>
+    <li>위치 루프: 100~500 Hz (가장 느림, 사용자 명령 단위)</li>
+  </ul>
+
+  <p>보통 안쪽 루프가 바깥 루프보다 5~10배 빨라야 캐스케이드가 정상 동작합니다.
+  학생용 작은 모터는 전류 루프를 생략하고 위치-속도 두 단으로만 구성하는 일도 흔합니다.</p>
+
+  <h2>3. 인터랙티브: 단일 vs 캐스케이드 PID 비교</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 같은 모터, 두 가지 제어 구조</h4>
+    <p>단순화된 모터 (위치 = 속도의 적분, 속도 = 토크의 1차 응답).
+    위쪽은 위치 PID 단일 루프, 아래는 위치 → 속도 캐스케이드.
+    같은 위치 명령에 두 구조가 어떻게 다른지 보세요.</p>
+    <canvas id="cas" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>위치 Kp <span class="val" id="cKpV">2.0</span><input type="range" id="cKp" min="0" max="10" step="0.1" value="2.0"></label>
+      <label>위치 Kd <span class="val" id="cKdV">0.5</span><input type="range" id="cKd" min="0" max="3" step="0.05" value="0.5"></label>
+      <label>속도 Kp (캐스케이드) <span class="val" id="cKvV">5.0</span><input type="range" id="cKv" min="0" max="20" step="0.2" value="5.0"></label>
+      <button id="cStep">위치 명령 변경</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cas'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('cKpV').textContent=(+$('cKp').value).toFixed(1);$('cKdV').textContent=(+$('cKd').value).toFixed(2);$('cKvV').textContent=(+$('cKv').value).toFixed(1);};
+    ['cKp','cKd','cKv'].forEach(id=>$(id).oninput=upd);
+    let ref=2; $('cStep').onclick=()=>{ref=ref>0?-2:2;};
+    function loop(){
+      const Kp=+$('cKp').value, Kd=+$('cKd').value, Kv=+$('cKv').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // simulate two systems
+      const dt=0.02, N=400;
+      // single PID:  τ ω' + ω = u_torque ;  θ' = ω    → PID on θ
+      let th1=0, om1=0, prevE1=0;
+      const histT1=[], histR=[];
+      // cascade:   outer P-D on θ → ω_cmd ; inner P on (ω_cmd - ω) → u_torque
+      let th2=0, om2=0;
+      const histT2=[], histW2=[], histWcmd=[];
+      const tau_motor=0.3;
+      for(let k=0;k<N;k++){
+        // single
+        const e1=ref-th1, dE1=(e1-prevE1)/dt; prevE1=e1;
+        let u1=Kp*e1 + Kd*dE1;
+        u1=Math.max(-5,Math.min(5,u1));
+        const om1d=(u1 - om1)/tau_motor;
+        om1+=om1d*dt; th1+=om1*dt;
+        histT1.push(th1); histR.push(ref);
+        // cascade: outer Kp on (ref-th2), with derivative of measurement (D on -ẏ)
+        const om_cmd = Kp*(ref-th2) - Kd*om2;
+        const u2 = Kv*(om_cmd - om2);
+        const u2c=Math.max(-5,Math.min(5,u2));
+        const om2d=(u2c - om2)/tau_motor;
+        om2+=om2d*dt; th2+=om2*dt;
+        histT2.push(th2); histW2.push(om2); histWcmd.push(om_cmd);
+      }
+      const drawPlot=(yOff,title,curves)=>{
+        const ox=40, oy=yOff+150, w=560, h=130;
+        x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+        x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();
+        histR.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-v*h/4-h/2;
+          if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();x.setLineDash([]);
+        curves.forEach(({arr,col})=>{
+          x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+          arr.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-Math.max(-3,Math.min(3,v))*h/4-h/2;
+            if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();});
+        x.fillStyle='#444';x.font='13px sans-serif';x.fillText(title,ox,yOff+15);
+      };
+      drawPlot(0,'단일 위치 PID',[{arr:histT1,col:'#0b5fff'}]);
+      drawPlot(190,'캐스케이드 (위치 → 속도)',[{arr:histT2,col:'#0b5fff'},{arr:histW2,col:'#2e7d32'},{arr:histWcmd,col:'#f57c00'}]);
+      x.fillStyle='#666';x.font='10px sans-serif';
+      x.fillText('파랑: 위치 θ',520,200);x.fillText('녹색: 측정 ω',520,213);x.fillText('주황: 속도 명령 ω_cmd',520,226);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰</strong>:</p>
+  <ul>
+    <li>단일 PID는 위치 Kp를 키우면 빠르지만 진동.</li>
+    <li>캐스케이드는 안쪽 속도 루프가 빠르게 명령을 따라가므로 외부 위치 루프 게인을 더 크게 줘도 안정.</li>
+    <li>속도 명령(주황)이 위치 오차에 따라 매끄럽게 만들어지고, 측정 속도(녹)가 그를 따라가는 모습이 보임.</li>
+  </ul>
+
+  <h2>4. 로봇 매니퓰레이터 관절 모델</h2>
+
+  <p>1자유도 회전 관절 (어깨 또는 팔꿈치 하나)을 생각합시다. 끝에 무게 $m$의 페이로드가 있고 길이 $\ell$의 링크가 수직선 기준 각도 $\theta$를 이룹니다.</p>
+
+  $$ J\ddot{\theta} + b\dot{\theta} + \underbrace{m g \ell \sin\theta}_{\text{중력 토크}} = \tau $$
+
+  <p>중력 항 $m g \ell \sin\theta$는 비선형이고 위치에 따라 변합니다.
+  단순 PID로만 제어하면 팔이 무거울수록 처져 있고, 적분기가 그 처짐을 천천히 보정해야 해서 응답이 느려집니다.</p>
+
+  <h2>5. 중력 보상 (Gravity Compensation)</h2>
+
+  <p>해법은 간단합니다. 알고 있는 중력 토크를 미리 더해주는 <strong>피드포워드</strong>:</p>
+  $$ \tau = \underbrace{K_p e + K_i \int e + K_d \dot{e}}_{\text{PID}} + \underbrace{\hat{m}\hat{g}\hat{\ell}\sin\theta}_{\text{중력 보상}} $$
+
+  <p>$\hat{m}, \hat{g}, \hat{\ell}$은 추정값이고 실제와 살짝 다를 수 있지만, 그 차이만 PID가 다시 보정합니다.
+  PID가 처음부터 중력을 모두 떠맡지 않아도 되니 작은 게인으로도 부드럽게 동작.</p>
+
+  <p>이게 <strong>computed torque control</strong>의 가장 단순한 형태입니다.
+  완전한 computed torque는 관성행렬 $M(\theta)$, 코리올리·원심 $C(\theta,\dot\theta)$까지 모두 보상하지만,
+  보통 입문 단계에서는 중력 보상만으로도 큰 향상이 있습니다.</p>
+
+  <h2>6. 인터랙티브: 1자유도 팔의 위치제어</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 중력 보상 ON/OFF 비교</h4>
+    <p>1자유도 회전 팔의 각도 제어. PID는 동일, 중력 보상만 켜고 끄세요.
+    중력 OFF에서는 PID가 중력을 이기느라 위치 오차가 잔류하거나 큰 적분 와인드업이 일어납니다.</p>
+    <canvas id="arm" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="aKpV">8</span><input type="range" id="aKp" min="1" max="30" step="0.5" value="8"></label>
+      <label>Kd <span class="val" id="aKdV">2</span><input type="range" id="aKd" min="0" max="10" step="0.2" value="2"></label>
+      <label>페이로드 m [kg] <span class="val" id="amV">1.0</span><input type="range" id="am" min="0" max="3" step="0.1" value="1.0"></label>
+      <label><input type="checkbox" id="aGc" checked> 중력 보상 ON</label>
+      <button id="aStep">목표각 변경</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('arm'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('aKpV').textContent=(+$('aKp').value).toFixed(1);$('aKdV').textContent=(+$('aKd').value).toFixed(1);$('amV').textContent=(+$('am').value).toFixed(1);};
+    ['aKp','aKd','am'].forEach(id=>$(id).oninput=upd);
+    let ref=Math.PI/3; $('aStep').onclick=()=>{ref = ref>0 ? -Math.PI/4 : Math.PI/3;};
+    let th=0, thd=0;
+    function loop(){
+      const Kp=+$('aKp').value, Kd=+$('aKd').value, m=+$('am').value;
+      const gc=$('aGc').checked;
+      const J=0.5, b=0.3, g=9.81, L=0.5;
+      const e=ref-th, de=-thd;
+      const ff = gc ? m*g*L*Math.sin(th) : 0;
+      let tau = Kp*e + Kd*de + ff;
+      tau = Math.max(-30,Math.min(30,tau));
+      const thdd = (tau - b*thd - m*g*L*Math.sin(th))/J;
+      thd += thdd*0.02; th += thd*0.02;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // arm visualization
+      const cx=200, cy=170;
+      x.strokeStyle='#888';x.beginPath();x.moveTo(20,cy);x.lineTo(380,cy);x.stroke();
+      // target
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      x.moveTo(cx,cy);x.lineTo(cx+150*Math.cos(ref-Math.PI/2),cy+150*Math.sin(ref-Math.PI/2));x.stroke();x.setLineDash([]);
+      // arm
+      x.strokeStyle='#0b5fff';x.lineWidth=6;x.beginPath();
+      x.moveTo(cx,cy);
+      const ex=cx+150*Math.cos(th-Math.PI/2), ey=cy+150*Math.sin(th-Math.PI/2);
+      x.lineTo(ex,ey);x.stroke();
+      x.fillStyle='#444';x.beginPath();x.arc(cx,cy,8,0,Math.PI*2);x.fill();
+      x.fillStyle='#f57c00';x.beginPath();x.arc(ex,ey,10+m*4,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('θ_ref = '+(ref*180/Math.PI).toFixed(0)+'°',420,30);
+      x.fillText('θ     = '+(th*180/Math.PI).toFixed(1)+'°',420,50);
+      x.fillText('오차 = '+((ref-th)*180/Math.PI).toFixed(1)+'°',420,70);
+      x.fillText('토크 τ = '+tau.toFixed(2)+' Nm',420,90);
+      x.fillStyle=gc?'#2e7d32':'#c62828';
+      x.fillText(gc?'중력 보상 ON':'중력 보상 OFF',420,115);
+      // angle history
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('빨강 점선 = 목표,  파랑 = 현재 자세,  주황 원 = 페이로드 (크기=무게)',20,310);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>꼭 만져볼 것</strong>:</p>
+  <ul>
+    <li>중력 보상 OFF + m = 2 kg: 팔이 목표보다 살짝 처져서 정착 — 정상오차.</li>
+    <li>중력 보상 ON: 처짐이 사라지고 정확히 목표각에 도달.</li>
+    <li>m을 0으로: 두 모드의 차이가 거의 없어진다 (보상할 중력이 없으니).</li>
+    <li>목표각 변경 버튼: 큰 외란이 들어왔을 때의 응답.</li>
+  </ul>
+
+  <h2>7. 코드: 임베디드 캐스케이드 PID</h2>
+
+<pre><code class="language-python">class CascadePID:
+    """위치 → 속도 → 토크 (3중 캐스케이드, ARM Cortex-M에 그대로 이식 가능)"""
+    def __init__(self, kp_pos, kd_pos, kp_vel, dt):
+        self.kp_pos, self.kd_pos, self.kp_vel = kp_pos, kd_pos, kp_vel
+        self.dt = dt; self.iE_vel = 0.0
+
+    def step(self, theta_ref, theta, omega, omega_max=10.0, tau_max=5.0):
+        # 외부 위치 루프  →  속도 명령
+        omega_cmd = self.kp_pos * (theta_ref - theta) - self.kd_pos * omega
+        omega_cmd = max(-omega_max, min(omega_max, omega_cmd))
+        # 내부 속도 루프  →  토크
+        tau = self.kp_vel * (omega_cmd - omega)
+        return max(-tau_max, min(tau_max, tau))
+
+# 1자유도 팔 + 중력 보상
+class ArmController:
+    def __init__(self, m, L, g=9.81):
+        self.m, self.L, self.g = m, L, g
+        self.pid = CascadePID(kp_pos=20, kd_pos=2, kp_vel=8, dt=0.001)
+
+    def step(self, theta_ref, theta, omega):
+        tau_pid = self.pid.step(theta_ref, theta, omega)
+        tau_grav = self.m * self.g * self.L * np.sin(theta)   # 피드포워드
+        return tau_pid + tau_grav</code></pre>
+
+  <h2>8. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>모터는 토크 ↔ 속도 ↔ 위치 세 시간 척도가 다르다 → 캐스케이드가 자연스럽다.</li>
+      <li>안쪽이 5~10배 빠르게 돌면서 단순화 → 바깥 게인을 더 크게 줄 수 있다.</li>
+      <li>로봇 팔처럼 비선형 외력(중력)이 있는 곳은 PID + 피드포워드 보상이 표준.</li>
+      <li>PID가 잘 모르는 부분만 책임지면 작은 게인으로도 정확한 제어 가능.</li>
+      <li>완전한 computed torque로 가는 길은 <a href="../lectures/02-dynamics.html">로봇공학특론 L2 동역학</a>으로.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="12-pid-design.html"><small>← 이전</small>W12. PID 설계</a>
+    <a href="14-mobile-drone.html" class="next"><small>다음 →</small>W14. PID 응용 ② 모바일 로봇·드론</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
