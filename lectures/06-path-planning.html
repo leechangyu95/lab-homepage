@@ -29,9 +29,13 @@
     <li>그래프 표현과 탐색 전략</li>
     <li>BFS · Dijkstra · Greedy · A* 비교</li>
     <li>인터랙티브: 네 알고리즘 동시 비교</li>
-    <li>샘플링 기반: PRM, RRT, RRT*</li>
+    <li>반응형 (Reactive) — Bug 2 알고리즘</li>
+    <li>샘플링 기반: PRM, RRT, RRT* (+ RRT vs RRT* 비교)</li>
     <li>인공 포텐셜 필드</li>
+    <li>지역 경로 계획 — DWA (Dynamic Window Approach)</li>
     <li>Dubins 곡선 — 운동학적 제약</li>
+    <li>경로 평활화 — Cubic Spline (Catmull-Rom)</li>
+    <li>커버리지 — Boustrophedon 청소 패턴</li>
     <li>코드 예제 — A* (Python)</li>
   </ol></div>
 
@@ -147,7 +151,94 @@
   })();
   </script>
 
-  <h2>5. 샘플링 기반: PRM과 RRT</h2>
+  <h2>5. 반응형 (Reactive) — Bug 알고리즘</h2>
+  <p>전역 지도가 없거나 지도가 자주 바뀌는 환경에서는 <strong>로봇이 "지금 보이는 것"만 가지고</strong> 행동을 결정해야 합니다. Bug 알고리즘은 이런 반응형 접근의 가장 단순한 가족입니다 — 메모리 거의 없이 동작하면서도 도달 가능성을 보장합니다.</p>
+  <ul>
+    <li><strong>Bug 0</strong> — 목표를 향해 가다가 부딪히면 장애물을 따라 임의로 회전, 시야가 트이면 다시 목표로.</li>
+    <li><strong>Bug 1</strong> — 부딪히면 장애물 둘레를 한 바퀴 돌고, 목표에 가장 가까운 점에서 다시 출발. 보장은 강하지만 비효율적.</li>
+    <li><strong>Bug 2</strong> — 출발에서 목표를 잇는 <em>m-line</em>을 머릿속에 그려두고, 부딪히면 둘레를 따라가다가 m-line과 다시 만나면 (그리고 더 가까우면) 출발. 보통 가장 짧은 거리.</li>
+  </ul>
+  <p><a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/BugPlanning">PythonRobotics — Bug Planner</a> 참고.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Bug 2 시뮬레이션</h4>
+    <p>로봇(파랑)은 m-line(점선)을 따라 목표(빨강)로 향합니다. 장애물에 부딪히면 둘레를 시계반대 방향으로 돌다가 m-line과 다시 만나는 더 가까운 점에서 다시 직진합니다. <strong>시작</strong>을 눌러 보세요.</p>
+    <canvas id="bug" width="640" height="380"></canvas>
+    <div class="controls">
+      <button id="bugStart">시작 / 일시정지</button>
+      <button id="bugRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bug'),x=c.getContext('2d');
+    const obs=[{x:200,y:180,r:50},{x:380,y:130,r:42},{x:470,y:270,r:50}];
+    const start=[40,200],goal=[600,200];
+    let pos=[...start],state='goal',followObs=null,entryDist=0,trail=[],running=false,steps=0;
+    function reset(){pos=[...start];state='goal';followObs=null;trail=[start.slice()];running=false;steps=0;}
+    reset();
+    document.getElementById('bugStart').onclick=()=>{running=!running;};
+    document.getElementById('bugRst').onclick=reset;
+    function distGoal(p){return Math.hypot(p[0]-goal[0],p[1]-goal[1]);}
+    function distLine(p){
+      const dx=goal[0]-start[0],dy=goal[1]-start[1],L=Math.hypot(dx,dy);
+      return Math.abs(((p[0]-start[0])*dy-(p[1]-start[1])*dx)/L);
+    }
+    function obstacleAt(p,buf){
+      for(const o of obs){if(Math.hypot(p[0]-o.x,p[1]-o.y)<o.r+buf)return o;}
+      return null;
+    }
+    function step(){
+      if(distGoal(pos)<10){running=false;return;}
+      const STEP=1.6;
+      if(state==='goal'){
+        const dx=goal[0]-pos[0],dy=goal[1]-pos[1],d=Math.hypot(dx,dy);
+        const np=[pos[0]+dx/d*STEP,pos[1]+dy/d*STEP];
+        const o=obstacleAt(np,3);
+        if(o){state='wall';followObs=o;entryDist=distGoal(pos);steps=0;}
+        else pos=np;
+      }else{
+        const dx=pos[0]-followObs.x,dy=pos[1]-followObs.y,d=Math.hypot(dx,dy);
+        const tx=-dy/d, ty=dx/d;
+        const targetD=followObs.r+5;
+        const corr=(targetD-d)*0.15;
+        let np=[pos[0]+tx*STEP+(dx/d)*corr, pos[1]+ty*STEP+(dy/d)*corr];
+        for(const o of obs){
+          if(o===followObs)continue;
+          if(Math.hypot(np[0]-o.x,np[1]-o.y)<o.r+4){followObs=o;break;}
+        }
+        pos=np; steps++;
+        if(steps>20 && distLine(pos)<3 && distGoal(pos)<entryDist-2){
+          state='goal';followObs=null;
+        }
+      }
+      trail.push(pos.slice());
+      if(trail.length>3000)running=false;
+    }
+    function draw(){
+      if(running){for(let k=0;k<2;k++)step();}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#cfd8e3';x.setLineDash([6,4]);x.lineWidth=1.5;
+      x.beginPath();x.moveTo(start[0],start[1]);x.lineTo(goal[0],goal[1]);x.stroke();x.setLineDash([]);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('m-line',start[0]+10,start[1]-8);
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      trail.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0],start[1],8,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0],goal[1],10,0,Math.PI*2);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(pos[0],pos[1],6,0,Math.PI*2);x.fill();
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('상태: '+(state==='goal'?'🎯 목표 향해 직진':'🌀 장애물 둘레 추종'),12,22);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('총 이동: '+trail.length+' 스텝 · 목표까지 '+distGoal(pos).toFixed(0)+' px',12,c.height-12);
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+  </script>
+
+  <h2>6. 샘플링 기반: PRM과 RRT</h2>
   <p>격자가 아닌 연속 공간에서 장애물이 복잡하면 그래프 탐색 대신 <strong>공간을 무작위로 샘플링</strong>해 그래프를 만드는 편이 훨씬 효율적입니다. 대표 기법은 두 가지입니다:</p>
   <ul>
     <li><strong>PRM (Probabilistic Roadmap)</strong> — 전체 공간에서 유효한 점들을 다수 뽑고, 가까운 점끼리 연결해 로드맵을 만든 뒤 그 위에서 A*로 경로를 찾습니다. <em>다회 질의</em>에 유리(지도가 고정이면 로드맵 재사용).</li>
@@ -219,7 +310,12 @@
     <li>장애물에 부딪히지 않으면 트리에 추가.</li>
     <li>목표에 충분히 가까워지면 종료.</li>
   </ol>
-  <p><strong>RRT*</strong>는 새 노드를 추가할 때 주변 노드들을 다시 연결하여 최적성을 보장합니다.</p>
+  <p><strong>RRT*</strong>는 새 노드를 추가할 때 두 가지 추가 작업을 합니다:</p>
+  <ol>
+    <li><strong>최적 부모 선택</strong> — 반경 $r$ 안의 기존 노드들 중에서, 그 노드를 부모로 삼았을 때 누적 비용이 가장 작은 노드를 부모로 고름</li>
+    <li><strong>이웃 재배선 (rewire)</strong> — 새 노드를 부모로 삼으면 비용이 줄어드는 이웃들의 연결을 새 노드 쪽으로 다시 잇음</li>
+  </ol>
+  <p>이 두 단계 덕분에 노드 수가 늘어날수록 트리의 경로 비용이 점점 줄어들어 <strong>점근적 최적성</strong>이 성립합니다(Karaman & Frazzoli 2011). 시각적으로 보면 RRT는 가지가 들쭉날쭉하지만 RRT*는 곧고 매끈한 모습을 띄게 됩니다.</p>
 
   <div class="demo">
     <h4>🎮 인터랙티브: RRT 트리 자라기</h4>
@@ -276,7 +372,102 @@
   })();
   </script>
 
-  <h2>6. 인공 포텐셜 필드 (Artificial Potential Field)</h2>
+  <h3>5.2 RRT vs RRT* — 재배선의 효과</h3>
+  <p>같은 환경에서 두 알고리즘이 어떻게 다른 트리를 만드는지 직접 비교해 보세요. 모드를 바꾸고 자동 진행을 켜면 노드가 추가될수록 RRT*는 가지가 곧게 펴집니다. <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/RRTStar">PythonRobotics RRT*</a> 참고.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: RRT vs RRT*</h4>
+    <canvas id="rrtstar" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>알고리즘
+        <select id="rsMode">
+          <option value="basic">RRT (vanilla)</option>
+          <option value="star" selected>RRT*</option>
+        </select>
+      </label>
+      <label>재배선 반경 r <span class="val" id="rsRV">55</span><input type="range" id="rsR" min="20" max="100" value="55"></label>
+      <button id="rsStep">+10 노드</button>
+      <button id="rsAuto">자동 진행</button>
+      <button id="rsRst" class="alt">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>관찰</strong> — 같은 노드 수라도 RRT*는 경로 비용이 점차 줄어듭니다. 반경 $r$를 너무 작게 두면 재배선이 거의 일어나지 않고, 너무 크게 두면 매번 모든 이웃을 검토해 느려집니다.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rrtstar'),x=c.getContext('2d');
+    const obs=[{x:200,y:120,r:35},{x:340,y:240,r:45},{x:460,y:120,r:30},{x:300,y:60,r:25},{x:520,y:280,r:35}];
+    const start=[40,40],goal=[600,340];
+    let tree=[],running=false,goalIdx=null,mode='star';
+    function init(){tree=[{p:start,parent:null,cost:0}];goalIdx=null;}
+    init();
+    document.getElementById('rsMode').onchange=e=>{mode=e.target.value;init();};
+    document.getElementById('rsR').oninput=()=>{document.getElementById('rsRV').textContent=document.getElementById('rsR').value;};
+    document.getElementById('rsStep').onclick=()=>{for(let i=0;i<10;i++)stepRRT();};
+    document.getElementById('rsAuto').onclick=()=>{running=!running;};
+    document.getElementById('rsRst').onclick=init;
+    function collide(p){return obs.some(o=>(o.x-p[0])**2+(o.y-p[1])**2<o.r*o.r);}
+    function lineCol(a,b){const N=12;for(let i=0;i<=N;i++){const p=[a[0]+(b[0]-a[0])*i/N,a[1]+(b[1]-a[1])*i/N];if(collide(p))return true;}return false;}
+    function pathCost(idx){let cur=idx,c=0;while(tree[cur].parent!=null){const p=tree[cur].p,q=tree[tree[cur].parent].p;c+=Math.hypot(p[0]-q[0],p[1]-q[1]);cur=tree[cur].parent;}return c;}
+    function stepRRT(){
+      const q=[Math.random()<0.1?goal[0]:Math.random()*c.width,Math.random()<0.1?goal[1]:Math.random()*c.height];
+      let bi=0,bd=Infinity;
+      tree.forEach((n,i)=>{const d=(n.p[0]-q[0])**2+(n.p[1]-q[1])**2;if(d<bd){bd=d;bi=i;}});
+      const near=tree[bi];const dx=q[0]-near.p[0],dy=q[1]-near.p[1];const dist=Math.hypot(dx,dy);
+      const STEP=22;const np=[near.p[0]+dx/dist*STEP,near.p[1]+dy/dist*STEP];
+      if(lineCol(near.p,np))return;
+      let parent=bi, cost=near.cost+STEP;
+      const RAD=+document.getElementById('rsR').value;
+      if(mode==='star'){
+        // 1) 최적 부모 선택
+        tree.forEach((n,i)=>{
+          const d=Math.hypot(n.p[0]-np[0],n.p[1]-np[1]);
+          if(d<RAD && !lineCol(n.p,np) && n.cost+d<cost){cost=n.cost+d;parent=i;}
+        });
+      }
+      const newIdx=tree.length;
+      tree.push({p:np,parent:parent,cost:cost});
+      if(mode==='star'){
+        // 2) 이웃 재배선
+        tree.forEach((n,i)=>{
+          if(i===newIdx||i===parent)return;
+          const d=Math.hypot(n.p[0]-np[0],n.p[1]-np[1]);
+          if(d<RAD && !lineCol(np,n.p) && cost+d<n.cost){
+            n.parent=newIdx;n.cost=cost+d;
+          }
+        });
+      }
+      if(Math.hypot(np[0]-goal[0],np[1]-goal[1])<25){
+        if(goalIdx===null||cost<tree[goalIdx].cost)goalIdx=newIdx;
+      }
+      // 목표 노드 비용 재계산 (재배선 후)
+      if(goalIdx!=null)tree[goalIdx].cost=pathCost(goalIdx);
+    }
+    function loop(){
+      if(running)for(let k=0;k<3;k++)stepRRT();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#9eb9ff';x.lineWidth=1;
+      tree.forEach(n=>{if(n.parent!=null){const p=tree[n.parent].p;x.beginPath();x.moveTo(p[0],p[1]);x.lineTo(n.p[0],n.p[1]);x.stroke();}});
+      tree.forEach(n=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(n.p[0],n.p[1],1.8,0,Math.PI*2);x.fill();});
+      if(goalIdx!=null){
+        x.strokeStyle='#ff8c00';x.lineWidth=3;x.beginPath();
+        let cur=goalIdx;const pts=[];while(cur!=null){pts.push(tree[cur].p);cur=tree[cur].parent;}
+        pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      }
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0],start[1],8,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0],goal[1],10,0,Math.PI*2);x.fill();
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('알고리즘: '+(mode==='basic'?'RRT (vanilla)':'RRT* (rewiring)'),12,22);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      const cstr=goalIdx!=null?pathCost(goalIdx).toFixed(0):'—';
+      x.fillText('노드 '+tree.length+' · 경로 비용 '+cstr+(goalIdx!=null?' ✓':''),12,370);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>7. 인공 포텐셜 필드 (Artificial Potential Field)</h2>
   <p>로봇을 <strong>전기를 띤 입자</strong>로 가정해, 목표점에서 끌어당기는 힘과 장애물에서 미는 힘을 합성한 방향으로 움직입니다.
   PythonRobotics의 <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/PotentialFieldPlanning">Potential Field</a> 구현을 참고했습니다.</p>
   $$ U(x) = \underbrace{\tfrac12 k_a \|x - x_g\|^2}_{\text{인력}} + \underbrace{\sum_o \tfrac12 k_r \left(\tfrac{1}{d(x,o)} - \tfrac{1}{d_0}\right)^2}_{\text{척력}} $$
@@ -343,7 +534,105 @@
   })();
   </script>
 
-  <h2>7. Dubins 곡선 — 운동학적 제약</h2>
+  <h2>8. 지역 경로 계획 — DWA (Dynamic Window Approach)</h2>
+  <p>전역 경로계획이 "큰 그림"을 그렸다면, <strong>지역 경로계획</strong>은 그 길을 따라가면서 즉각 발견되는 장애물을 피해 짧은 시간 안에 명령을 만들어 내는 일을 합니다. <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/DynamicWindowApproach">DWA</a>는 이 분야에서 가장 널리 쓰이는 알고리즘 중 하나입니다(Fox et al. 1997).</p>
+  <ol>
+    <li><strong>동적 윈도우</strong> — 현재 속도 $v$, 각속도 $\omega$에서 한 스텝 안에 도달 가능한 ($v',\omega'$) 집합. 가속도 한계로 좁아짐.</li>
+    <li><strong>예측 시뮬레이션</strong> — 각 후보 ($v',\omega'$)를 짧은 시간 $T$ 동안 적분해 예상 궤적을 만듦.</li>
+    <li><strong>채점</strong> — 각 궤적에 점수를 매김:
+      $$ G = \alpha \cdot \text{heading} + \beta \cdot \text{clearance} + \gamma \cdot v $$
+      목표 방향 정렬도(heading), 장애물 여유(clearance), 속도(v)의 가중합.</li>
+    <li><strong>최고 후보 실행</strong> — 가장 점수 높은 ($v',\omega'$) 한 스텝 적용, 다시 1번부터 반복.</li>
+  </ol>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: DWA로 장애물 회피</h4>
+    <p>로봇이 매 프레임마다 ~150개 후보 궤적을 평가해 가장 좋은 것을 따라갑니다. 캔버스를 클릭해 목표를 옮겨 보세요. 파란 곡선들은 모두 후보 궤적, 빨강은 충돌, 주황 굵은 선이 선택된 명령.</p>
+    <canvas id="dwa" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>heading 가중치 α <span class="val" id="dwaAV">0.5</span><input type="range" id="dwaA" min="0" max="2" step="0.05" value="0.5"></label>
+      <label>clearance 가중치 β <span class="val" id="dwaBV">1</span><input type="range" id="dwaB" min="0" max="3" step="0.05" value="1"></label>
+      <label>velocity 가중치 γ <span class="val" id="dwaGV">0.3</span><input type="range" id="dwaG" min="0" max="2" step="0.05" value="0.3"></label>
+      <button id="dwaRst" class="alt">로봇 리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>실험</strong> — α를 키우면 목표로 직진하다 장애물에 잘 박힘. β를 키우면 장애물을 멀리 우회. γ를 키우면 빠르게 가지만 코너에서 위태로움.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dwa'),x=c.getContext('2d');
+    const obs=[{x:200,y:200,r:35},{x:380,y:120,r:30},{x:480,y:280,r:40},{x:300,y:300,r:25}];
+    let goal=[600,200];
+    let s={x:40,y:200,th:0,v:0,om:0};
+    function reset(){s={x:40,y:200,th:0,v:0,om:0};}
+    document.getElementById('dwaRst').onclick=reset;
+    c.onclick=e=>{const r=c.getBoundingClientRect();goal=[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height];};
+    const dt=0.1, T=1.6;
+    const vMax=45,omMax=2.2,vAcc=80,omAcc=4.5;
+    function collidePt(p){return obs.some(o=>(o.x-p[0])**2+(o.y-p[1])**2<(o.r+8)**2);}
+    function simTraj(v,om){
+      const pts=[];let xx=s.x,yy=s.y,th=s.th;
+      for(let t=0;t<=T;t+=dt){pts.push([xx,yy]);xx+=v*Math.cos(th)*dt;yy+=v*Math.sin(th)*dt;th+=om*dt;}
+      return pts;
+    }
+    function score(v,om,a,b,g){
+      const pts=simTraj(v,om);
+      for(const p of pts)if(collidePt(p))return {sc:-1e9,collide:true,pts};
+      const last=pts[pts.length-1];
+      const head=-Math.hypot(last[0]-goal[0],last[1]-goal[1])/100;
+      let clr=Infinity;
+      for(const p of pts)for(const o of obs)clr=Math.min(clr,Math.hypot(p[0]-o.x,p[1]-o.y)-o.r);
+      clr=Math.min(clr,40)/40;
+      const vv=v/vMax;
+      return {sc:a*head+b*clr+g*vv,collide:false,pts};
+    }
+    function loop(){
+      const a=+document.getElementById('dwaA').value, b=+document.getElementById('dwaB').value, g=+document.getElementById('dwaG').value;
+      ['dwaA','dwaB','dwaG'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const vMin=Math.max(0,s.v-vAcc*dt), vMaxW=Math.min(vMax,s.v+vAcc*dt);
+      const omMin=Math.max(-omMax,s.om-omAcc*dt), omMaxW=Math.min(omMax,s.om+omAcc*dt);
+      let bestV=0,bestOm=0,bestS=-Infinity,bestPts=null;
+      const all=[];
+      const Nv=8,Nom=15;
+      for(let i=0;i<=Nv;i++)for(let j=0;j<=Nom;j++){
+        const v=vMin+(vMaxW-vMin)*i/Nv, om=omMin+(omMaxW-omMin)*j/Nom;
+        const r=score(v,om,a,b,g);
+        all.push({v,om,...r});
+        if(r.sc>bestS){bestS=r.sc;bestV=v;bestOm=om;bestPts=r.pts;}
+      }
+      s.v=bestV;s.om=bestOm;
+      s.x+=s.v*Math.cos(s.th)*dt;s.y+=s.v*Math.sin(s.th)*dt;s.th+=s.om*dt;
+      if(s.x<10||s.x>c.width-10||s.y<10||s.y>c.height-10)reset();
+      if(Math.hypot(s.x-goal[0],s.y-goal[1])<15){reset();}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 후보 궤적
+      all.forEach(t=>{
+        if(t.collide){x.strokeStyle='rgba(198,40,40,0.18)';x.lineWidth=1;}
+        else{
+          const norm=Math.max(0,(t.sc-(bestS-2))/2);
+          x.strokeStyle='rgba(11,95,255,'+(0.08+0.25*norm)+')';x.lineWidth=1;
+        }
+        x.beginPath();t.pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      });
+      if(bestPts){
+        x.strokeStyle='#ff8c00';x.lineWidth=2.8;x.beginPath();
+        bestPts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      }
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(goal[0],goal[1],10,0,Math.PI*2);x.fill();
+      // 로봇 (삼각형)
+      x.save();x.translate(s.x,s.y);x.rotate(s.th);
+      x.fillStyle='#0b5fff';x.beginPath();x.moveTo(11,0);x.lineTo(-7,-6);x.lineTo(-7,6);x.closePath();x.fill();
+      x.restore();
+      x.fillStyle='#222';x.font='12px sans-serif';
+      x.fillText('v='+s.v.toFixed(1)+' px/s, ω='+s.om.toFixed(2)+' rad/s · 후보 '+all.length+'개 · best='+bestS.toFixed(2),12,20);
+      x.fillStyle='#666';x.fillText('캔버스를 클릭해 목표 이동',12,c.height-12);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>9. Dubins 곡선 — 운동학적 제약</h2>
   <p>자동차나 비행기는 제자리 회전을 못합니다. 최소 회전 반경 $R$이 정해져 있죠. 두 자세(위치+방향) 사이의 가장 짧은 경로는 항상 <strong>직선과 원호의 조합</strong> 6가지 중 하나입니다 (Dubins, 1957).
   PythonRobotics의 <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/DubinsPath">DubinsPath</a> 모듈이 표준 구현입니다.</p>
 
@@ -408,7 +697,183 @@
   })();
   </script>
 
-  <h2>8. 코드 예제 — A* (Python)</h2>
+  <h2>10. 경로 평활화 — Cubic Spline</h2>
+  <p>그래프 탐색이나 RRT가 만들어 준 경로는 보통 <strong>각진 꺾인 선</strong>입니다. 차량이나 비행체는 이런 갑작스런 방향 전환을 못하니, 후처리로 매끈하게 다듬는 단계가 필요합니다. 가장 흔한 두 가지:</p>
+  <ul>
+    <li><strong>Cubic Spline</strong> — 인접 두 점 사이를 3차 다항식으로 잇고, 점에서 1·2차 도함수가 연속이 되도록 매개변수를 잡음. 곡률이 부드럽고 모든 점을 정확히 지남.</li>
+    <li><strong>Bezier / B-Spline</strong> — 제어점을 원본 점으로 두고, 곡선이 점들을 "당기듯" 따라감. 점을 정확히 지나지는 않지만 형상 제어가 쉬움.</li>
+  </ul>
+  <p>아래 데모는 <strong>Catmull-Rom 스플라인</strong>(cubic spline의 한 변종)을 씁니다. 모든 웨이포인트를 정확히 지나면서, 인접 두 점의 차이로 접선을 자동 결정해 따로 풀 방정식이 없습니다. <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/CubicSpline">PythonRobotics CubicSpline</a> 참고.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 웨이포인트 → 매끈한 경로</h4>
+    <p>점을 드래그하면 곡선이 즉시 따라옵니다. 빈 공간을 클릭하면 새 점이 추가됩니다. 회색 점선은 직선 연결, 파란 곡선이 Catmull-Rom 스플라인입니다.</p>
+    <canvas id="spline" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>장력 τ <span class="val" id="splTV">0.5</span><input type="range" id="splT" min="0" max="1" step="0.05" value="0.5"></label>
+      <button id="splRst">기본 점 복원</button>
+      <button id="splClr" class="alt">모두 지우기</button>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>장력</strong>이 0이면 직선에 가깝게, 1이면 점에서 더 크게 휘어집니다. 표준 Catmull-Rom은 τ=0.5.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('spline'),x=c.getContext('2d');
+    let pts=[[60,200],[180,80],[300,260],[420,100],[540,220]];
+    let drag=-1;
+    c.onmousedown=e=>{
+      const r=c.getBoundingClientRect();const px=(e.clientX-r.left)*c.width/r.width;const py=(e.clientY-r.top)*c.height/r.height;
+      let bi=-1,bd=Infinity;
+      pts.forEach((p,i)=>{const d=Math.hypot(p[0]-px,p[1]-py);if(d<bd){bd=d;bi=i;}});
+      if(bd<15)drag=bi;else{pts.push([px,py]);drag=pts.length-1;}
+      draw();
+    };
+    c.onmousemove=e=>{
+      if(drag<0)return;
+      const r=c.getBoundingClientRect();
+      pts[drag]=[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height];
+      draw();
+    };
+    window.addEventListener('mouseup',()=>{drag=-1;});
+    document.getElementById('splRst').onclick=()=>{pts=[[60,200],[180,80],[300,260],[420,100],[540,220]];draw();};
+    document.getElementById('splClr').onclick=()=>{pts=[];draw();};
+    document.getElementById('splT').oninput=()=>{document.getElementById('splTV').textContent=document.getElementById('splT').value;draw();};
+    function catmull(p0,p1,p2,p3,t,tau){
+      const t2=t*t,t3=t2*t;
+      const f1=-tau*t+2*tau*t2-tau*t3;
+      const f2=1+(tau-3)*t2+(2-tau)*t3;
+      const f3=tau*t+(3-2*tau)*t2+(tau-2)*t3;
+      const f4=-tau*t2+tau*t3;
+      return [p0[0]*f1+p1[0]*f2+p2[0]*f3+p3[0]*f4, p0[1]*f1+p1[1]*f2+p2[1]*f3+p3[1]*f4];
+    }
+    function draw(){
+      const tau=+document.getElementById('splT').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 격자
+      x.strokeStyle='#eef0f3';
+      for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      if(pts.length<1){x.fillStyle='#666';x.font='14px sans-serif';x.fillText('빈 공간을 클릭해 점 추가',20,30);return;}
+      // 직선 경로
+      x.strokeStyle='#cfd8e3';x.lineWidth=1.5;x.setLineDash([4,4]);x.beginPath();
+      pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();x.setLineDash([]);
+      // 스플라인
+      if(pts.length>=2){
+        x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+        const ext=[pts[0],...pts,pts[pts.length-1]];
+        let totalLen=0,prev=null;
+        for(let i=0;i<pts.length-1;i++){
+          for(let t=0;t<=1.001;t+=0.04){
+            const q=catmull(ext[i],ext[i+1],ext[i+2],ext[i+3],t,tau);
+            if(i===0&&t===0){x.moveTo(q[0],q[1]);prev=q;}
+            else{x.lineTo(q[0],q[1]);if(prev)totalLen+=Math.hypot(q[0]-prev[0],q[1]-prev[1]);prev=q;}
+          }
+        }
+        x.stroke();
+        // 직선 길이
+        let linLen=0;
+        for(let i=1;i<pts.length;i++)linLen+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+        x.fillStyle='#666';x.font='12px sans-serif';
+        x.fillText('직선 합 '+linLen.toFixed(0)+' px → 스플라인 '+totalLen.toFixed(0)+' px',12,c.height-12);
+      }
+      // 점
+      pts.forEach((p,i)=>{
+        x.fillStyle=i===0?'#2e7d32':i===pts.length-1?'#c62828':'#0b5fff';
+        x.beginPath();x.arc(p[0],p[1],8,0,Math.PI*2);x.fill();
+        x.fillStyle='#fff';x.font='bold 11px sans-serif';x.textAlign='center';
+        x.fillText(i+1,p[0],p[1]+4);x.textAlign='start';
+      });
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('웨이포인트 '+pts.length+'개 (드래그/추가 가능)',12,22);
+    }
+    draw();
+  })();
+  </script>
+
+  <h2>11. 커버리지 계획 — Boustrophedon 패턴</h2>
+  <p>점에서 점으로 가는 경로계획과는 반대로, <strong>주어진 영역 전체를 빠짐없이 훑는</strong> 문제도 있습니다 — 잔디깎이, 청소 로봇, 항공 측량, 농업 드론. <strong>Boustrophedon</strong>(소가 밭을 가는 모양, 좌우 왕복)은 가장 단순하고 효율적인 패턴입니다.</p>
+  <ol>
+    <li>영역을 로봇 폭만큼의 <strong>가로 줄무늬</strong>로 자릅니다.</li>
+    <li>각 줄에서 좌→우, 다음 줄에서 우→좌, … 번갈아 진행.</li>
+    <li>줄 안에 장애물이 있으면 두 조각으로 나눠 건너뜀.</li>
+  </ol>
+  <p>실제 상용 청소기·잔디깎이 다수가 이 패턴의 변형을 씁니다. <a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/GridBasedSweepCPP">PythonRobotics GridBasedSweep</a> 참고.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Boustrophedon 청소 패턴</h4>
+    <p>장애물(빨강)을 피하며 영역 전체를 훑는 모습입니다. 줄 간격(로봇 폭)을 바꾸면 커버리지 밀도와 전체 길이가 달라집니다.</p>
+    <canvas id="cov" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>줄 간격 (로봇 폭) <span class="val" id="covSpV">22</span><input type="range" id="covSp" min="12" max="50" value="22"></label>
+      <button id="covPlay">진행 / 정지</button>
+      <button id="covRst" class="alt">처음부터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cov'),x=c.getContext('2d');
+    const field={x:40,y:40,w:560,h:300};
+    const obs=[{x:240,y:140,w:120,h:60},{x:430,y:230,w:90,h:70}];
+    let path=[],idx=0,running=false;
+    function inObs(px,py){return obs.some(o=>px>=o.x&&px<=o.x+o.w&&py>=o.y&&py<=o.y+o.h);}
+    function genPath(){
+      const sp=+document.getElementById('covSp').value;
+      path=[];
+      let dir=1;
+      for(let y=field.y+sp/2;y<field.y+field.h;y+=sp){
+        const segs=[];
+        // 한 줄을 장애물로 분할
+        let segStart=field.x;
+        for(let px=field.x;px<=field.x+field.w;px+=2){
+          const inO=inObs(px,y);
+          if(inO){
+            if(segStart<px-2)segs.push([segStart,px-3]);
+            // skip until exit
+            while(px<field.x+field.w&&inObs(px,y))px+=2;
+            segStart=px+2;
+          }
+        }
+        if(segStart<field.x+field.w)segs.push([segStart,field.x+field.w]);
+        if(segs.length===0)continue;
+        if(dir<0)segs.reverse().forEach(s=>s.reverse());
+        segs.forEach(s=>{path.push([s[0],y]);path.push([s[1],y]);});
+        dir*=-1;
+      }
+      idx=0;
+    }
+    document.getElementById('covSp').oninput=()=>{document.getElementById('covSpV').textContent=document.getElementById('covSp').value;genPath();};
+    document.getElementById('covPlay').onclick=()=>{running=!running;};
+    document.getElementById('covRst').onclick=()=>{idx=0;running=false;};
+    genPath();
+    function loop(){
+      if(running&&idx<path.length-1)idx=Math.min(path.length-1,idx+3);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 영역
+      x.fillStyle='rgba(46,125,50,0.08)';x.fillRect(field.x,field.y,field.w,field.h);
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.strokeRect(field.x,field.y,field.w,field.h);
+      // 장애물
+      obs.forEach(o=>{x.fillStyle='#c62828';x.fillRect(o.x,o.y,o.w,o.h);});
+      // 진행한 경로
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=idx;i++){const p=path[i];if(i===0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);}
+      x.stroke();
+      // 남은 경로
+      x.strokeStyle='rgba(11,95,255,0.18)';x.lineWidth=1.5;x.beginPath();
+      for(let i=idx;i<path.length;i++){const p=path[i];if(i===idx)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);}
+      x.stroke();
+      // 로봇
+      if(path[idx]){const p=path[idx];x.fillStyle='#ff8c00';x.beginPath();x.arc(p[0],p[1],8,0,Math.PI*2);x.fill();}
+      let totalLen=0;for(let i=1;i<path.length;i++)totalLen+=Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]);
+      let doneLen=0;for(let i=1;i<=idx;i++)doneLen+=Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('진행 '+(path.length>0?(idx*100/(path.length-1)).toFixed(0):0)+'% · 경로 길이 '+totalLen.toFixed(0)+' px · 누적 '+doneLen.toFixed(0)+' px',12,c.height-12);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>12. 코드 예제 — A* (Python)</h2>
   <pre><code>import heapq, math
 
 def astar(grid, start, goal):
