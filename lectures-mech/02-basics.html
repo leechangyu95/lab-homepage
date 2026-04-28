@@ -116,6 +116,59 @@
 
   <p>여기서 다루는 저항은 모두 <strong>선형 저항</strong> — $V$–$I$ 그래프가 원점을 지나는 직선이고 기울기가 $1/R$입니다. 다이오드·트랜지스터처럼 직선이 아닌 비선형 소자는 W9 이후에 등장합니다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 옴의 법칙 V–I 곡선</h4>
+    <p>저항값을 바꿔가며 V–I 그래프의 기울기 변화를 봅니다. 같은 전압에서 저항이 클수록 전류가 작고, 그래프 기울기 $1/R$도 작아집니다. 빨간 점이 현재 동작점이에요.</p>
+    <canvas id="ohmCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>저항 R <span class="val" id="ohmRV">5</span> Ω<input type="range" id="ohmR" min="1" max="20" step="0.5" value="5"></label>
+      <label>전압 V <span class="val" id="ohmVV">10</span> V<input type="range" id="ohmV" min="0" max="20" step="0.5" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ohmCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Vmax=20,Imax=5;
+    function x(v){return 60+(v/Vmax)*(W-90);}
+    function y(i){return H-50-(i/Imax)*(H-90);}
+    function draw(){
+      const R=+document.getElementById('ohmR').value;
+      const V=+document.getElementById('ohmV').value;
+      const I=V/R;
+      document.getElementById('ohmRV').textContent=R.toFixed(1);
+      document.getElementById('ohmVV').textContent=V.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;
+      for(let v=0;v<=Vmax;v+=2){ctx.beginPath();ctx.moveTo(x(v),y(0));ctx.lineTo(x(v),y(Imax));ctx.stroke();}
+      for(let i=0;i<=Imax;i+=1){ctx.beginPath();ctx.moveTo(x(0),y(i));ctx.lineTo(x(Vmax),y(i));ctx.stroke();}
+      ctx.strokeStyle='#666';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Vmax),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(0),y(Imax));ctx.stroke();
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('전압 V [V]',W/2-30,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('전류 I [A]',-25,0);ctx.restore();
+      for(let v=0;v<=Vmax;v+=4){ctx.fillText(v,x(v)-5,H-35);}
+      for(let i=0;i<=Imax;i+=1){ctx.fillText(i,30,y(i)+4);}
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(x(0),y(0));
+      const Iend=Math.min(Imax,Vmax/R);
+      ctx.lineTo(x(Iend*R),y(Iend));ctx.stroke();
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(x(V),y(Math.min(I,Imax)),7,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`I = V/R = ${V.toFixed(1)}/${R.toFixed(1)} = ${I.toFixed(2)} A`,60,30);
+      ctx.fillText(`P = VI = ${(V*I).toFixed(2)} W`,60,50);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText(`기울기 1/R = ${(1/R).toFixed(3)}`,W-180,30);
+    }
+    document.getElementById('ohmR').addEventListener('input',draw);
+    document.getElementById('ohmV').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
   <h3>예제 — 자동차 배터리 점검</h3>
   <p>정상 12V 배터리. 전압의 5% 이하로 떨어지면 교체 대상. 전압계가 고장이라 100Ω 램프를 연결하고 전류를 측정해 0.1A가 나왔다고 하자.</p>
   $$ V = IR = 0.1 \times 100 = 10\,\text{V} $$
@@ -131,6 +184,63 @@
     <li>$I$, $R$을 안다 → $P = I^2 R$</li>
     <li>$V$, $R$을 안다 → $P = V^2/R$</li>
   </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 와트의 법칙 — 세 식의 비교</h4>
+    <p>전압원/전류원에 따라 같은 "$R$ 두 배"가 정반대 결과를 줍니다. <strong>전압 고정</strong>이면 $P = V^2/R$로 저항이 늘면 전력 감소, <strong>전류 고정</strong>이면 $P = I^2 R$로 저항이 늘면 전력 증가.</p>
+    <canvas id="wattCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>모드
+        <select id="wattMode"><option value="V">전압 고정 (5V)</option><option value="I">전류 고정 (1A)</option></select>
+      </label>
+      <label>저항 R <span class="val" id="wattRV">5</span> Ω<input type="range" id="wattR" min="1" max="20" step="0.5" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('wattCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Rmax=20;
+    function draw(){
+      const mode=document.getElementById('wattMode').value;
+      const R=+document.getElementById('wattR').value;
+      document.getElementById('wattRV').textContent=R.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const fix=(mode==='V')?5:1;
+      const Pmax=(mode==='V')?(fix*fix/1):(fix*fix*Rmax);
+      function x(r){return 60+(r/Rmax)*(W-90);}
+      function y(p){return H-50-(p/Pmax)*(H-90);}
+      ctx.strokeStyle='#ddd';
+      for(let r=0;r<=Rmax;r+=2){ctx.beginPath();ctx.moveTo(x(r),y(0));ctx.lineTo(x(r),y(Pmax));ctx.stroke();}
+      ctx.strokeStyle='#666';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Rmax),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(0),y(Pmax));ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      for(let r=0.5;r<=Rmax;r+=0.2){
+        const p=(mode==='V')?(fix*fix/r):(fix*fix*r);
+        if(r<=0.5)ctx.moveTo(x(r),y(p));
+        else ctx.lineTo(x(r),y(p));
+      }
+      ctx.stroke();
+      const P=(mode==='V')?(fix*fix/R):(fix*fix*R);
+      const I=(mode==='V')?(fix/R):fix;
+      const V=(mode==='V')?fix:(fix*R);
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(x(R),y(P),7,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('저항 R [Ω]',W/2-30,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('전력 P [W]',-25,0);ctx.restore();
+      ctx.fillText(`V = ${V.toFixed(2)} V, I = ${I.toFixed(2)} A, P = ${P.toFixed(2)} W`,60,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(mode==='V'?'식: P = V²/R (R↑ → P↓)':'식: P = I²R (R↑ → P↑)',60,50);
+    }
+    document.getElementById('wattMode').addEventListener('change',draw);
+    document.getElementById('wattR').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h3>4.1 USB 컵 받침대 히터 선택 (예제)</h3>
   <p>USB 포트는 5V / 최대 500mA. 가장 따뜻하게 만드는 히터는 8/10/12.5/16Ω 중 어느 것일까요?</p>

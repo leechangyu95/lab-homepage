@@ -183,7 +183,37 @@
   </script>
 
   <h2>3. ReLU — 단순함의 승리</h2>
-  <p>$\max(0, x)$. 이게 전부입니다. 양수에서 미분이 1이라 곱해도 줄어들지 않고, 음수에서 0이라 일부 뉴런이 자연스럽게 꺼져 희소성을 얻습니다. 2010년경 Hinton·Krizhevsky의 ImageNet 승리 이후 사실상 표준이 되었습니다.</p>
+  <p>$f(x) = \max(0, x)$. 이게 전부입니다. 양수에서 미분이 1이라 곱해도 줄어들지 않고, 음수에서 0이라 일부 뉴런이 자연스럽게 꺼져 희소성을 얻습니다. 2010년경 Hinton·Krizhevsky의 ImageNet 승리 이후 사실상 표준이 되었습니다.</p>
+
+  <h3>3.1 왜 시그모이드/tanh보다 좋은가</h3>
+  <p>§2의 기울기 소실 분석을 다시 떠올려 봅시다. 시그모이드 미분의 <em>최댓값</em>은 $0.25$ — 100층 통과하면 $0.25^{100} \approx 10^{-60}$로 사라집니다. tanh는 좀 낫지만 양 끝에서 saturate되는 건 똑같아요. ReLU는 다릅니다.</p>
+  <ul>
+    <li><strong>양수 영역의 미분이 정확히 1</strong> — 곱해도 신호 크기가 줄지 않습니다. 깊은 망에서도 기울기가 살아남는 결정적 이유.</li>
+    <li><strong>계산이 단순하다</strong> — $\exp$ 호출 없이 비교 한 번. 시그모이드/tanh보다 6배 빠르다는 보고(AlexNet 논문 §3.1).</li>
+    <li><strong>희소 활성화(sparsity)</strong> — 평균적으로 약 절반의 뉴런이 0을 출력해, 표현이 자연스럽게 희소해지고 일반화에 도움이 됩니다.</li>
+    <li><strong>생물학적 그럴듯함</strong> — 실제 뉴런도 임계값 이하에서 침묵. tanh의 양/음 대칭보다 ReLU의 단방향 활성이 실제 뉴런 발화에 가깝습니다.</li>
+  </ul>
+
+  <h3>3.2 죽어가는 ReLU (Dying ReLU)</h3>
+  <p>ReLU에도 함정은 있습니다. 큰 음의 입력을 한 번 받으면 출력이 0, <em>미분도 0</em>이라 가중치 갱신이 일어나지 않고 그 뉴런은 영원히 죽은 채로 남습니다.</p>
+  $$ x < 0 \;\Rightarrow\; f(x) = 0,\;\; f'(x) = 0 \;\Rightarrow\; \nabla_W \mathcal{L} = 0 $$
+  <p>특히 학습률이 너무 크거나 가중치 초기화가 나빠 큰 음수 출력이 한꺼번에 발생하면, 망의 <strong>20–40%</strong>가 영구 사망하는 경우도 보고됐습니다(Lu et al. 2019). 대응은 두 가지 — (1) <em>학습률을 작게</em>(특히 초반), (2) <em>He 초기화</em>로 분산이 잘 잡힌 시작점을 두기 (§4 참고). 그래도 부족하면 변종을 씁니다.</p>
+
+  <h3>3.3 ReLU의 변종들 — 무엇을 언제 쓸까</h3>
+  <table>
+    <thead><tr><th>이름</th><th>식</th><th>특징·언제</th></tr></thead>
+    <tbody>
+      <tr><td>Leaky ReLU</td><td>$\max(\alpha x, x),\;\alpha=0.01$</td><td>음수 영역에 작은 기울기를 줘 죽음 방지. 가장 단순한 응급처치.</td></tr>
+      <tr><td>PReLU</td><td>$\max(\alpha x, x)$ ($\alpha$ 학습)</td><td>$\alpha$를 데이터로부터 학습. He 2015 ResNet에서 처음 채택.</td></tr>
+      <tr><td>ELU</td><td>$x>0?\,x:\alpha(e^x-1)$</td><td>음수 쪽이 부드럽게 saturate. 평균 활성을 0에 가깝게 유지해 학습 안정.</td></tr>
+      <tr><td>GELU</td><td>$x\cdot\Phi(x)$</td><td>가우시안 분포 분위수로 부드럽게 게이팅. <strong>BERT·GPT 표준</strong>.</td></tr>
+      <tr><td>Swish/SiLU</td><td>$x\cdot\sigma(x)$</td><td>Google이 자동탐색으로 발견. EfficientNet·MobileNetV3 채택.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>실무 선택 가이드</strong> — CNN 백본은 거의 ReLU(또는 가볍게 GELU/Swish), Transformer 계열은 GELU, 작은 모델·임베디드면 ReLU(빠름). 죽음 문제가 의심되면 Leaky ReLU($\alpha=0.01$)부터 시도하세요. 새 활성함수의 성능 이득은 보통 1% 미만이라, 데이터·구조 튜닝보다 우선순위는 낮습니다.
+  </div>
 
   <h2>4. 가중치 초기화</h2>
   <p>가중치를 모두 0으로 초기화하면 모든 뉴런이 같은 출력을 내고, 같은 기울기를 받아 영원히 똑같이 움직입니다(대칭성 문제). 무작위로 초기화하되 분산을 잘 골라야 합니다.</p>

@@ -137,7 +137,47 @@
   $$ Q = \frac{\omega_0 L}{R} = \frac{1}{R}\sqrt{\frac{L}{C}} $$
   <p>$Q$가 클수록 공진 봉우리가 뾰족해지고, 주변 주파수를 잘 거른다는 의미입니다. 라디오 튜너, 무선통신 필터의 핵심 지표입니다.</p>
 
-  <h2>6. 임피던스의 직병렬 합성</h2>
+  <h3>5.3 RC 필터의 위상 응답</h3>
+  <p>크기 응답만이 아니라 위상도 함께 봐야 필터를 제대로 이해합니다. RC LPF의 전달함수 $1/(1+j\omega RC)$의 위상은:</p>
+  $$ \angle H(j\omega) = -\arctan(\omega RC) $$
+  <ul>
+    <li>$\omega \to 0$: 위상 $\approx 0°$ (입력과 출력 동상)</li>
+    <li>$\omega = \omega_c = 1/RC$: 위상 $= -45°$ (출력이 입력에 45° 뒤짐)</li>
+    <li>$\omega \to \infty$: 위상 $\to -90°$ (커패시터의 본질이 드러남)</li>
+  </ul>
+  <p>제어공학에서 이 위상 변화는 시스템 안정성에 직접 영향을 줍니다 — <a href="../lectures/07-feedback-control.html">L7 피드백 제어</a>의 위상 마진 개념의 출발점이에요.</p>
+
+  <h2>6. AC 전력 — 유효·무효·역률</h2>
+  <p>AC 회로에서 "전력"이라는 단어는 실제로 세 종류가 있습니다. DC 시절의 단순한 $P = VI$가 통하지 않아서 임피던스를 따로 배운 것이죠.</p>
+
+  <h3>6.1 순간 전력과 평균 전력</h3>
+  <p>$v(t) = V_m\cos(\omega t)$, $i(t) = I_m\cos(\omega t - \phi)$일 때 순간 전력은:</p>
+  $$ p(t) = v(t)\,i(t) = V_m I_m \cos(\omega t)\cos(\omega t - \phi) = \frac{V_m I_m}{2}[\cos\phi + \cos(2\omega t - \phi)] $$
+  <p>한 주기 평균을 내면 $2\omega$ 항은 사라지고 다음만 남습니다.</p>
+  $$ \boxed{P = V_{\text{rms}} I_{\text{rms}} \cos\phi \quad [\text{W}, \text{Real Power}]} $$
+  <p>이것이 <strong>유효 전력(real power)</strong> — 실제로 저항에서 열로 소비되는 전력입니다.</p>
+
+  <h3>6.2 무효 전력과 피상 전력</h3>
+  <table>
+    <thead><tr><th>이름</th><th>식</th><th>단위</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>유효(Real) $P$</td><td>$V_{\text{rms}} I_{\text{rms}} \cos\phi$</td><td>W (와트)</td><td>실제 소비, 저항이 책임</td></tr>
+      <tr><td>무효(Reactive) $Q$</td><td>$V_{\text{rms}} I_{\text{rms}} \sin\phi$</td><td>VAR (바)</td><td>L·C가 한 주기 안에 받았다가 돌려줌</td></tr>
+      <tr><td>피상(Apparent) $S$</td><td>$V_{\text{rms}} I_{\text{rms}}$</td><td>VA (볼트암페어)</td><td>크기만의 전력, $S^2 = P^2 + Q^2$</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>역률(power factor)</strong> $\cos\phi$는 0과 1 사이의 값으로, "전압-전류 위상차의 코사인"인 동시에 "피상 전력 중 실제 일을 하는 비율"입니다.</p>
+  $$ \text{PF} = \cos\phi = \frac{P}{S} $$
+
+  <p>복소 표기로 묶으면 깔끔합니다.</p>
+  $$ \mathbf{S} = \mathbf{V}\mathbf{I}^* = P + jQ $$
+
+  <div class="tip">
+    <strong>왜 공장에서 역률 보상이 중요한가</strong> — 모터·인덕터 부하가 많은 공장은 $\cos\phi$가 낮아져 같은 일($P$)을 하기 위해 더 큰 전류가 필요해집니다. 한국전력은 역률이 낮은 산업 고객에게 추가 요금을 부과합니다. 그래서 공장에는 보통 큰 커패시터 뱅크를 병렬로 달아 인덕터의 무효 전력을 상쇄(역률 보상)시킵니다 — 이게 또 RLC 공진의 응용 중 하나죠.
+  </div>
+
+  <h2>7. 임피던스의 직병렬 합성</h2>
   <p>임피던스는 복소수 형태의 "저항"이므로 직병렬 합성이 저항과 똑같이 됩니다 — 단지 덧셈·역수가 모두 복소수 연산일 뿐입니다.</p>
   <ul>
     <li>직렬: $Z_T = Z_1 + Z_2 + \cdots$</li>
@@ -153,7 +193,7 @@
   $$ I = \frac{V_s}{Z} = \frac{10\angle 0°}{111.8\angle -26.6°} \approx 0.0894 \angle 26.6°\,\text{A} $$
   <p>위상차가 양수 → 회로 전체가 용량성(capacitive), 전류가 전압을 26.6° 앞서고 있습니다. 공진 주파수는 $\omega_0 = 1/\sqrt{LC} = 1/\sqrt{0.05 \times 10^{-5}} \approx 1414\,\text{rad/s}$이므로 우리는 공진보다 낮은 주파수에서 동작 중인 것이죠.</p>
 
-  <h2>7. 핵심 한눈 요약</h2>
+  <h2>8. 핵심 한눈 요약</h2>
   <table>
     <thead><tr><th>항목</th><th>식</th></tr></thead>
     <tbody>
@@ -165,7 +205,7 @@
     </tbody>
   </table>
 
-  <h2>8. Falstad 실습</h2>
+  <h2>9. Falstad 실습</h2>
   <ul>
     <li><strong>RC LPF 보드 그리기</strong> — $R = 1\,\text{k}\Omega$, $C = 1\,\mu\text{F}$ ($\omega_c = 1000\,\text{rad/s} \approx 159\,\text{Hz}$). 입력 주파수를 10Hz, 159Hz, 1kHz, 10kHz로 바꿔가며 출력 진폭을 측정. 159Hz에서 약 0.707배인지 확인.</li>
     <li><strong>RLC 공진 시각화</strong> — $R = 10\,\Omega$, $L = 1\,\text{mH}$, $C = 1\,\mu\text{F}$ 직렬. $\omega_0 = 1/\sqrt{10^{-9}} \approx 31{,}623\,\text{rad/s}$ ($\approx 5\,\text{kHz}$). 주파수를 1kHz~50kHz로 스윕하며 전류가 5kHz 근처에서 최대인지 관찰.</li>
@@ -176,7 +216,7 @@
     <strong>다른 강의와의 연결</strong> — 임피던스 개념은 <a href="../lectures/03-state-space.html">로봇공학특론 L3 상태공간</a>의 전달함수 $H(s)$와 직결됩니다. 페이저는 라플라스 변환의 정상상태 케이스 ($s = j\omega$)이고, 제어공학에서는 같은 형식이 $H(s) = N(s)/D(s)$의 모양으로 일반화됩니다. 이번 주의 RC 필터는 1차 시스템, RLC 공진은 2차 시스템의 가장 친숙한 예입니다.
   </div>
 
-  <h2>9. 중간고사 마무리</h2>
+  <h2>10. 중간고사 마무리</h2>
   <p>여기까지가 회로 해석의 기초 — DC 도구(W2–W5)와 AC 도구(W6–W8)가 임피던스라는 한 단어로 통합됩니다. 다음 주(W9)부터는 비선형 소자 — 다이오드 — 의 세계로 넘어갑니다.</p>
 
   <nav class="prevnext">

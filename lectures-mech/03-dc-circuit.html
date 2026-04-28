@@ -90,6 +90,54 @@
   <p>전류가 같으므로 $P_k = I^2 R_k$가 가장 편합니다. 전체 소비전력은 합과 같습니다.</p>
   $$ P_T = I^2 R_T = P_1 + P_2 + \cdots + P_n $$
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 전압 분배기</h4>
+    <p>$R_1$, $R_2$ 직렬에서 각 저항에 걸리는 전압이 저항비대로 어떻게 나뉘는지 봅니다. 같은 전류가 흐르므로 큰 저항에 큰 전압이 걸립니다 — $V_k = V_T \cdot R_k/R_T$.</p>
+    <canvas id="vdivCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>전체 전압 V_T <span class="val" id="vdivVTV">12</span> V<input type="range" id="vdivVT" min="1" max="20" step="0.5" value="12"></label>
+      <label>R₁ <span class="val" id="vdivR1V">100</span> Ω<input type="range" id="vdivR1" min="10" max="500" step="10" value="100"></label>
+      <label>R₂ <span class="val" id="vdivR2V">200</span> Ω<input type="range" id="vdivR2" min="10" max="500" step="10" value="200"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vdivCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const VT=+document.getElementById('vdivVT').value;
+      const R1=+document.getElementById('vdivR1').value;
+      const R2=+document.getElementById('vdivR2').value;
+      document.getElementById('vdivVTV').textContent=VT.toFixed(1);
+      document.getElementById('vdivR1V').textContent=R1;
+      document.getElementById('vdivR2V').textContent=R2;
+      const RT=R1+R2,I=VT/RT;
+      const V1=VT*R1/RT,V2=VT*R2/RT;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`R_T = R_1 + R_2 = ${RT} Ω,  I = V_T/R_T = ${(I*1000).toFixed(2)} mA`,30,30);
+      const xL=80,xR=W-80,yT=80,yB=H-60;
+      const total=xR-xL;
+      const w1=total*R1/RT;
+      ctx.fillStyle='#0b5fff';ctx.fillRect(xL,yT,w1,yB-yT);
+      ctx.fillStyle='#c62828';ctx.fillRect(xL+w1,yT,total-w1,yB-yT);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.strokeRect(xL,yT,total,yB-yT);
+      ctx.beginPath();ctx.moveTo(xL+w1,yT);ctx.lineTo(xL+w1,yB);ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='14px sans-serif';
+      ctx.fillText(`R_1=${R1}Ω`,xL+w1/2-32,yT+30);
+      ctx.fillText(`V_1=${V1.toFixed(2)}V`,xL+w1/2-32,yT+50);
+      ctx.fillText(`R_2=${R2}Ω`,xL+w1+(total-w1)/2-32,yT+30);
+      ctx.fillText(`V_2=${V2.toFixed(2)}V`,xL+w1+(total-w1)/2-32,yT+50);
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('막대 길이 = 저항 비, 전압 비도 같음',xL,yB+30);
+      ctx.fillText(`검산: V_1 + V_2 = ${(V1+V2).toFixed(2)} V = V_T ✓`,xL,yB+50);
+    }
+    ['vdivVT','vdivR1','vdivR2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>2. 병렬회로 (Parallel Circuit)</h2>
   <p>두 개 이상의 갈래(branch)가 같은 두 점 사이에 연결된 회로. 한 갈래가 끊어져도 다른 갈래는 살아 있습니다(현대 LED 조명, 가정 콘센트가 다 병렬 구성).</p>
 
@@ -121,6 +169,59 @@
   <p>전압이 같으므로 $P_k = V^2/R_k$가 편합니다.</p>
   $$ P_T = \frac{V^2}{R_T} = P_1 + P_2 + \cdots $$
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 병렬 합성저항과 전류 분배</h4>
+    <p>두 저항 $R_1$, $R_2$가 같은 두 노드 사이에 병렬로 연결됩니다. 합성저항 $R_T = R_1 R_2/(R_1 + R_2)$는 항상 두 저항 모두보다 작아요. 전류는 컨덕턴스 비대로 분배 — 작은 저항 쪽으로 더 많이 흐릅니다.</p>
+    <canvas id="pdivCanvas" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>전체 전압 V <span class="val" id="pdivVV">12</span> V<input type="range" id="pdivV" min="1" max="20" step="0.5" value="12"></label>
+      <label>R₁ <span class="val" id="pdivR1V">100</span> Ω<input type="range" id="pdivR1" min="10" max="500" step="10" value="100"></label>
+      <label>R₂ <span class="val" id="pdivR2V">300</span> Ω<input type="range" id="pdivR2" min="10" max="500" step="10" value="300"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pdivCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const V=+document.getElementById('pdivV').value;
+      const R1=+document.getElementById('pdivR1').value;
+      const R2=+document.getElementById('pdivR2').value;
+      document.getElementById('pdivVV').textContent=V.toFixed(1);
+      document.getElementById('pdivR1V').textContent=R1;
+      document.getElementById('pdivR2V').textContent=R2;
+      const RT=R1*R2/(R1+R2);
+      const I1=V/R1,I2=V/R2,IT=I1+I2;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`R_T = R_1‖R_2 = ${RT.toFixed(2)} Ω  (R_1=${R1}, R_2=${R2})`,30,28);
+      ctx.fillText(`I_T = V/R_T = ${(IT*1000).toFixed(2)} mA`,30,50);
+      const cx=180,cy=170,scale=400;
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(60,cy);ctx.lineTo(cx,cy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx,cy-60);ctx.lineTo(cx+200,cy-60);ctx.lineTo(cx+200,cy+60);ctx.lineTo(cx,cy+60);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy-60);ctx.moveTo(cx,cy);ctx.lineTo(cx,cy+60);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx+200,cy-60);ctx.lineTo(cx+200,cy);ctx.lineTo(W-40,cy);ctx.moveTo(cx+200,cy+60);ctx.lineTo(cx+200,cy);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText(`R_1=${R1}Ω`,cx+80,cy-65);
+      ctx.fillText(`I_1=${(I1*1000).toFixed(2)}mA`,cx+80,cy-40);
+      ctx.fillStyle='#c62828';
+      ctx.fillText(`R_2=${R2}Ω`,cx+80,cy+80);
+      ctx.fillText(`I_2=${(I2*1000).toFixed(2)}mA`,cx+80,cy+55);
+      const w1=Math.max(2,(I1/IT)*30);
+      const w2=Math.max(2,(I2/IT)*30);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=w1;ctx.beginPath();ctx.moveTo(cx+30,cy-60);ctx.lineTo(cx+170,cy-60);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=w2;ctx.beginPath();ctx.moveTo(cx+30,cy+60);ctx.lineTo(cx+170,cy+60);ctx.stroke();
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText(`전류 분배: I_1/I_T = ${(I1/IT*100).toFixed(1)}%, I_2/I_T = ${(I2/IT*100).toFixed(1)}%`,30,H-20);
+      ctx.fillText(`작은 저항 쪽으로 더 많이 흐름 (선 굵기 = 전류 크기)`,30,H-40);
+    }
+    ['pdivV','pdivR1','pdivR2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>3. 직렬 vs 병렬 — 한눈 비교</h2>
   <table>
     <thead><tr><th>항목</th><th>직렬</th><th>병렬</th></tr></thead>
@@ -141,13 +242,41 @@
     <li><strong>가지를 거꾸로 펼치며 분배 적용</strong> — 직렬 구간에서는 전압 분배, 병렬 구간에서는 전류 분배를 사용해 각 소자의 $V$와 $I$를 차례로 구합니다.</li>
   </ol>
 
-  <h3>예제 — 직렬-병렬 혼합</h3>
+  <h3>예제 1 — 직렬-병렬 혼합 (간단한 경우)</h3>
   <p>$R_1 = 10\,\Omega$이 $R_2\|R_3$ ($R_2 = 20\,\Omega$, $R_3 = 30\,\Omega$)와 직렬로 연결되어 있고 $V_T = 20\,\text{V}$가 인가되어 있다고 하자.</p>
   $$ R_2 \| R_3 = \frac{20 \cdot 30}{20+30} = 12\,\Omega, \quad R_T = 10 + 12 = 22\,\Omega $$
   $$ I_T = \frac{20}{22} \approx 0.909\,\text{A}, \quad V_{R_1} = 9.09\,\text{V}, \quad V_{R_2} = V_{R_3} = 10.91\,\text{V} $$
   <p>병렬 갈래의 전류는 전류 분배로:</p>
   $$ I_2 = 0.909 \cdot \frac{30}{20+30} = 0.545\,\text{A}, \quad I_3 = 0.909 \cdot \frac{20}{50} = 0.364\,\text{A} $$
   <p>검산: $I_2 + I_3 = 0.909\,\text{A} = I_T$ ✓</p>
+
+  <h3>예제 2 — 좀 더 복잡한 4개 저항 혼합</h3>
+  <p>$V_T = 24\,\text{V}$, 회로 구성: $R_1 = 4\,\Omega$이 입력 직렬, 그 뒤에 ($R_2 = 6\,\Omega$ 직렬에 $R_3 = 12\,\Omega$가 더해진 가지)와 ($R_4 = 18\,\Omega$ 단독 가지)가 병렬로 붙어 있다고 합시다.</p>
+
+  <p><strong>Step 1 — 가장 안쪽부터 묶기.</strong> $R_2$와 $R_3$가 직렬:</p>
+  $$ R_{23} = R_2 + R_3 = 6 + 12 = 18\,\Omega $$
+  <p>이 가지가 $R_4 = 18\,\Omega$ 가지와 병렬:</p>
+  $$ R_{234} = \frac{R_{23} \cdot R_4}{R_{23} + R_4} = \frac{18 \cdot 18}{36} = 9\,\Omega $$
+
+  <p><strong>Step 2 — 전체 등가저항과 입력 전류.</strong> $R_1$이 위 묶음과 직렬:</p>
+  $$ R_T = R_1 + R_{234} = 4 + 9 = 13\,\Omega $$
+  $$ I_T = I_1 = \frac{V_T}{R_T} = \frac{24}{13} \approx 1.846\,\text{A} $$
+
+  <p><strong>Step 3 — 가지를 거꾸로 펼치며 분배.</strong> $R_1$의 강하전압을 빼면 병렬부 양단 전압을 알 수 있어요.</p>
+  $$ V_{R_1} = I_1 R_1 = 1.846 \times 4 \approx 7.38\,\text{V} $$
+  $$ V_{R_{234}} = V_T - V_{R_1} = 24 - 7.38 \approx 16.62\,\text{V} $$
+  <p>이 전압이 두 병렬 가지 양단에 똑같이 걸립니다.</p>
+  $$ I_4 = \frac{V_{R_{234}}}{R_4} = \frac{16.62}{18} \approx 0.923\,\text{A} $$
+  $$ I_2 = I_3 = \frac{V_{R_{234}}}{R_{23}} = \frac{16.62}{18} \approx 0.923\,\text{A} $$
+  <p>($R_2$와 $R_3$는 같은 가지 직렬이니 같은 전류) 검산: $I_2 + I_4 = 1.846\,\text{A} = I_T$ ✓</p>
+
+  <p><strong>Step 4 — 각 저항 양단 전압.</strong></p>
+  $$ V_{R_2} = I_2 R_2 = 0.923 \times 6 \approx 5.54\,\text{V}, \quad V_{R_3} = 0.923 \times 12 \approx 11.08\,\text{V} $$
+  <p>검산: $V_{R_2} + V_{R_3} = 16.62\,\text{V} = V_{R_{234}}$ ✓</p>
+
+  <div class="tip">
+    <strong>풀이 절차의 핵심</strong> — 이런 회로는 결국 "묶기 → 전체 풀기 → 펼치기"의 세 박자입니다. 묶을 때는 직렬은 더하고 병렬은 곱/합 공식을, 펼칠 때는 직렬 구간은 전압 분배로 병렬 구간은 전류 분배로 — 어느 쪽이 어느 분배인지만 헷갈리지 않으면 됩니다.
+  </div>
 
   <h2>5. LED 직렬 저항 설계 (실전 예제)</h2>
   <p>5V USB 전원으로 LED 5개를 같이 구동하려면 어떻게 해야 할까요? LED 5개를 <strong>병렬</strong>로 연결하고 그 앞에 보호 저항(전류 제한 저항) 하나를 직렬로 둡니다. 각 LED에 20mA가 흐르려면 전체 100mA가 필요합니다.</p>

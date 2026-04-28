@@ -126,6 +126,79 @@
     <strong>중첩 vs 등가회로 — 언제 뭘 쓰나</strong> — 중첩의 원리는 회로를 그대로 두고 전원만 하나씩 살리며 푸는 방식입니다. 등가회로는 회로 일부를 통째로 단순화해서 재사용하는 방식이고요. <em>부하가 자주 바뀌는 상황</em>에서는 등가회로가 압도적으로 유리합니다(특히 다음에 다룰 최대 전력 전달의 기반).
   </div>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 테브난 등가 — 부하만 바꿔도 빠른 계산</h4>
+    <p>본문 예제 ($V_s=27\,\text{V}$, $R_1=6\,\Omega$, $R_2=3\,\Omega$)에서 부하 $R_L$만 바꿔도 같은 등가($V_{Th}=9\,\text{V}$, $R_{Th}=2\,\Omega$)로 즉시 계산 가능합니다. 양쪽이 같은 답인지 비교해보세요.</p>
+    <canvas id="thevCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>전원 V_s <span class="val" id="thevVsV">27</span> V<input type="range" id="thevVs" min="5" max="50" step="1" value="27"></label>
+      <label>R₁ <span class="val" id="thevR1V">6</span> Ω<input type="range" id="thevR1" min="1" max="20" step="0.5" value="6"></label>
+      <label>R₂ <span class="val" id="thevR2V">3</span> Ω<input type="range" id="thevR2" min="1" max="20" step="0.5" value="3"></label>
+      <label>R_L <span class="val" id="thevRLV">4</span> Ω<input type="range" id="thevRL" min="0.5" max="20" step="0.5" value="4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('thevCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const Vs=+document.getElementById('thevVs').value;
+      const R1=+document.getElementById('thevR1').value;
+      const R2=+document.getElementById('thevR2').value;
+      const RL=+document.getElementById('thevRL').value;
+      document.getElementById('thevVsV').textContent=Vs;
+      document.getElementById('thevR1V').textContent=R1.toFixed(1);
+      document.getElementById('thevR2V').textContent=R2.toFixed(1);
+      document.getElementById('thevRLV').textContent=RL.toFixed(1);
+      const Vth=Vs*R2/(R1+R2);
+      const Rth=R1*R2/(R1+R2);
+      // Original: full circuit voltage on RL
+      // Node A KCL: Vs/R1 = Va/R2 + Va/RL → Va = Vs*(R2*RL/(R2+RL))/(R1 + R2*RL/(R2+RL))
+      const Rpar=R2*RL/(R2+RL);
+      const Va=Vs*Rpar/(R1+Rpar);
+      const VLfull=Va;
+      const VLthev=Vth*RL/(Rth+RL);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('원본 회로',60,28);
+      ctx.fillText('테브난 등가',380,28);
+      // Original
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(40,80);ctx.lineTo(40,180);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='11px sans-serif';ctx.fillText(`${Vs}V`,20,75);
+      ctx.beginPath();ctx.moveTo(40,80);ctx.lineTo(190,80);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(80,80);ctx.lineTo(140,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_1=${R1}`,90,72);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(190,80);ctx.lineTo(190,180);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(190,110);ctx.lineTo(190,150);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_2=${R2}`,200,135);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(190,80);ctx.lineTo(290,80);ctx.lineTo(290,180);ctx.lineTo(40,180);ctx.stroke();
+      ctx.strokeStyle='#1b5e20';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(290,110);ctx.lineTo(290,150);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.fillText(`R_L=${RL}`,300,135);
+      ctx.fillText(`V_L = ${VLfull.toFixed(3)} V`,40,210);
+      // Thevenin
+      const tx=370;
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(tx,80);ctx.lineTo(tx,180);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='11px sans-serif';ctx.fillText(`V_Th=${Vth.toFixed(2)}V`,tx-30,75);
+      ctx.beginPath();ctx.moveTo(tx,80);ctx.lineTo(tx+200,80);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(tx+50,80);ctx.lineTo(tx+110,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_Th=${Rth.toFixed(2)}`,tx+55,72);
+      ctx.strokeStyle='#1b5e20';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(tx+200,110);ctx.lineTo(tx+200,150);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.fillText(`R_L=${RL}`,tx+210,135);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(tx+200,80);ctx.lineTo(tx+200,110);ctx.moveTo(tx+200,150);ctx.lineTo(tx+200,180);ctx.lineTo(tx,180);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.font='12px sans-serif';
+      ctx.fillText(`V_L = ${VLthev.toFixed(3)} V  (차이 ${(VLfull-VLthev).toFixed(4)})`,tx,210);
+    }
+    ['thevVs','thevR1','thevR2','thevRL'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>5. 최대 전력 전달 정리</h2>
   <p>테브난 등가회로 ($V_{Th}$, $R_{Th}$)에 부하 $R_L$을 달았을 때 부하에 전달되는 전력은:</p>
   $$ P_L = \left(\frac{V_{Th}}{R_{Th}+R_L}\right)^2 R_L $$

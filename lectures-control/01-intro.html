@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W1. 자동제어 개요 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../control.html" class="active">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 1. 자동제어 개요</h1>
+  <p class="lead">자동제어란 무엇이고, 왜 우리에게 필요한가?
+  개회로(open-loop)와 폐회로(closed-loop)의 차이를 일상 예시·인터랙티브 데모로 직감부터 잡는 첫 시간.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>자동제어란 무엇인가?</li>
+    <li>제어시스템의 구성 요소</li>
+    <li>개회로 vs 폐회로 — 두 가지 전략</li>
+    <li>인터랙티브: 외란이 있을 때 누가 살아남는가</li>
+    <li>일상과 산업 속의 자동제어</li>
+    <li>이 강의에서 배울 것 (14주 로드맵)</li>
+  </ol></div>
+
+  <h2>1. 자동제어란 무엇인가?</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>샤워기에서 따뜻한 물이 나오게 하는 일을 떠올려 보세요. 손등을 물줄기에 슬쩍 대보고 "조금 차갑네"
+  싶으면 빨강 쪽으로 살짝, "어이쿠 너무 뜨겁다" 싶으면 다시 파랑 쪽으로. 우리는 매 순간 <em>원하는 온도</em>(목표)와
+  <em>지금 손에 닿는 온도</em>(측정값) 사이의 차이를 보고 수도꼭지를 조금씩 돌립니다.</p>
+
+  <p>이 단순한 행동이 자동제어의 본질입니다. 누군가가 또는 무엇인가가 <strong>원하는 값(목표 reference)</strong>과
+  <strong>현재 값(출력 output)</strong>의 차이를 줄이려고 <strong>입력(actuator)</strong>을 조절하는 일 — 이걸 기계가
+  사람 대신 자동으로 하게 만드는 학문이 자동제어(Automatic Control)입니다.</p>
+
+  <h3>왜 사람이 직접 안 하고 자동으로 하나?</h3>
+  <ul>
+    <li><strong>빠르다</strong> — 사람의 반응 시간은 0.2초 내외. 드론 회전이나 모터 위치 제어에는 너무 느립니다.</li>
+    <li><strong>정확하다</strong> — 사람은 주의가 흐트러지지만 제어기는 매 5 ms마다 같은 일을 빠짐없이 합니다.</li>
+    <li><strong>지치지 않는다</strong> — 24시간 돌아가는 공장 라인, 위성, 발전소를 사람이 일일이 조작할 수 없습니다.</li>
+    <li><strong>위험한 환경</strong> — 원자로, 우주, 심해. 사람이 가지 못하는 곳에서도 시스템은 스스로 균형을 잡아야 합니다.</li>
+  </ul>
+
+  <div class="note">
+    <strong>자주 듣는 오해</strong> — "AI/딥러닝이 결국 다 대체하는 거 아닌가요?"
+    아닙니다. 학습 기반 제어가 등장한 지금도 <em>실제로 모터를 돌리고 액추에이터를 움직이는 가장 안쪽 루프</em>는
+    여전히 PID·LQR 같은 고전 제어가 담당합니다. 강화학습이 "어디로 갈까"를 정해도, "그 명령을
+    실제로 안정적으로 실행"하는 건 자동제어 이론입니다. 이 강의를 마치면 그 둘의 경계가 또렷해집니다.
+  </div>
+
+  <h2>2. 제어시스템의 구성 요소</h2>
+
+  <p>자동제어를 처음 배울 때 가장 헷갈리는 것이 용어입니다. 사실 다섯 개만 외우면 끝납니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 180" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <text x="20" y="100">r(t)</text>
+      <circle cx="80" cy="95" r="14" fill="#fff" stroke="#333"/>
+      <text x="80" y="100" text-anchor="middle">−</text>
+      <text x="100" y="80" font-size="12" fill="#666">e(t)</text>
+      <rect x="140" y="70" width="110" height="50" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="195" y="92" text-anchor="middle">제어기</text>
+      <text x="195" y="108" text-anchor="middle" font-size="12" fill="#666">Controller</text>
+      <text x="270" y="80" font-size="12" fill="#666">u(t)</text>
+      <rect x="300" y="70" width="110" height="50" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="355" y="92" text-anchor="middle">액추에이터</text>
+      <text x="355" y="108" text-anchor="middle" font-size="12" fill="#666">Actuator</text>
+      <rect x="430" y="70" width="110" height="50" fill="#fce4ec" stroke="#c62828"/>
+      <text x="485" y="92" text-anchor="middle">플랜트</text>
+      <text x="485" y="108" text-anchor="middle" font-size="12" fill="#666">Plant</text>
+      <text x="560" y="80" font-size="12" fill="#666">y(t)</text>
+      <text x="650" y="100">→ 출력</text>
+      <rect x="320" y="150" width="180" height="22" fill="#f3e5f5" stroke="#9c27b0"/>
+      <text x="410" y="165" text-anchor="middle" font-size="12">센서 (Sensor)</text>
+      <path d="M94,95 L138,95" stroke="#333" marker-end="url(#ar)"/>
+      <path d="M252,95 L298,95" stroke="#333" marker-end="url(#ar)"/>
+      <path d="M412,95 L428,95" stroke="#333" marker-end="url(#ar)"/>
+      <path d="M542,95 L645,95" stroke="#333" marker-end="url(#ar)"/>
+      <path d="M580,95 L580,160 L500,160" stroke="#333" fill="none" marker-end="url(#ar)"/>
+      <path d="M320,160 L80,160 L80,110" stroke="#333" fill="none" marker-end="url(#ar)"/>
+    </svg>
+    <figcaption>그림 1. 폐회로 제어시스템의 전형적인 구성. 신호의 흐름과 이름을 익히는 것이 첫 단계입니다.</figcaption>
+  </figure>
+
+  <table>
+    <thead><tr><th>기호</th><th>이름</th><th>의미</th><th>샤워 예시</th></tr></thead>
+    <tbody>
+      <tr><td>$r(t)$</td><td>기준입력 / 목표값</td><td>"이 값이 됐으면" 하는 출력</td><td>원하는 물 온도 40℃</td></tr>
+      <tr><td>$y(t)$</td><td>출력 / 제어량</td><td>실제 측정되는 시스템 상태</td><td>지금 손에 닿는 물 온도</td></tr>
+      <tr><td>$e(t)=r-y$</td><td>오차 (error)</td><td>목표와 실제의 차이</td><td>"3℃ 더 따뜻해야 함"</td></tr>
+      <tr><td>$u(t)$</td><td>제어입력 (control input)</td><td>제어기가 액추에이터에 보내는 명령</td><td>"수도꼭지 빨강 쪽으로 5° 회전"</td></tr>
+      <tr><td>플랜트</td><td>제어 대상 (plant)</td><td>우리가 다루는 물리 시스템 자체</td><td>보일러 + 배관</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 다섯 개만 정확히 구분해도 자동제어 책의 절반은 읽힙니다. 나머지는 "어떻게 좋은 $u$를 계산할까?"에 대한
+  여러 답일 뿐이에요.</p>
+
+  <h2>3. 개회로 vs 폐회로 — 두 가지 전략</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>같은 샤워라도 두 가지 방식이 있습니다.</p>
+  <ul>
+    <li><strong>개회로(Open-loop)</strong>: "어제 빨강 쪽으로 30도 돌렸을 때 딱 좋았으니까 오늘도 그렇게 하자"
+    하고 손도 안 대본 채 들어갑니다. 보일러 상태가 어제와 다르거나 옆집이 뜨거운 물을 쓰는 순간이라면 그대로 화상.</li>
+    <li><strong>폐회로(Closed-loop)</strong>: 손등으로 물을 만져보고 그 결과를 보면서 수도꼭지를 다시 조절합니다.
+    매 순간 측정해서 어긋난 만큼 보정하므로, 모델이 살짝 틀려도 외란이 와도 결국 목표에 닿습니다.</li>
+  </ul>
+
+  <h3>식으로 쓰면</h3>
+  <p>플랜트의 동특성을 $G$, 제어기를 $C$, 외란을 $d$라고 하면 두 구조는 각각 다음과 같이 쓸 수 있습니다.</p>
+  <ul>
+    <li><strong>개회로</strong>: $u = C\, r$, $\;\;y = G\, u + d = G\, C\, r + d$</li>
+    <li><strong>폐회로</strong>: $u = C(r - y)$, $\;\;y = \dfrac{G\, C}{1 + G\, C}\, r + \dfrac{1}{1 + G\, C}\, d$</li>
+  </ul>
+  <p>핵심 관찰: 폐회로의 외란 항 $\frac{1}{1+GC}$는 $|GC|$가 클수록 작아집니다. 즉 <em>충분한 게인</em>만 가지면
+  외란이 출력에 미치는 영향을 자동으로 줄여줍니다. 이것이 폐회로의 마법입니다.</p>
+
+  <div class="note">
+    <strong>그럼 그냥 폐회로만 쓰면 되겠네?</strong> — 절반 맞습니다. 다만 폐회로에는 <em>안정성</em>이라는 새 문제가
+    따라옵니다. 게인을 너무 키우면 보정이 과해서 진동하다 발산할 수도 있어요. 샤워에서 너무 성격 급하게
+    수도꼭지를 휙휙 돌리면 뜨거움-차가움이 반복되는 것과 같습니다. 그래서 폐회로 설계의 핵심 질문은
+    "<strong>얼마나 세게 보정할까(게인)</strong>"가 됩니다. 이 질문에 답하는 도구가 바로 W2~W11에서 배울
+    라플라스·전달함수·근궤적·Bode 선도입니다.
+  </div>
+
+  <h2>4. 인터랙티브: 외란이 있을 때 누가 살아남는가</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 개회로 vs 폐회로 — 외란과 모델 오차에 누가 강한가</h4>
+    <p>같은 1차 시스템 두 대(예: 가열기로 방 데우기)에 같은 목표 온도 $r$을 주었습니다.
+    <span style="color:#f57c00;font-weight:600">개회로(주황)</span>은 공칭 모델만 보고 미리 계산한
+    입력 $u_{ff} = r/\hat{K}$을 그대로 보냅니다.
+    <span style="color:#0b5fff;font-weight:600">폐회로(파랑)</span>은 측정된 출력으로 $u = K_p(r-y)$를 매 순간 갱신합니다.
+    외란(창문 열림)과 모델 게인 오차(난방기 효율 변화)를 흔들어 보세요.</p>
+    <canvas id="ol_cl" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>외란 d <span class="val" id="dV">0</span><input type="range" id="d" min="-3" max="3" step="0.1" value="0"></label>
+      <label>모델 오차 ΔK <span class="val" id="kV">0</span><input type="range" id="k" min="-0.5" max="0.5" step="0.05" value="0"></label>
+      <label>폐회로 게인 Kp <span class="val" id="kpV">3</span><input type="range" id="kp" min="0.5" max="10" step="0.1" value="3"></label>
+      <button id="stepBtn">목표 변경</button>
+      <button id="rstBtn" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ol_cl'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{
+      $('dV').textContent=(+$('d').value).toFixed(1);
+      $('kV').textContent=(+$('k').value).toFixed(2);
+      $('kpV').textContent=(+$('kp').value).toFixed(1);
+    };
+    ['d','k','kp'].forEach(id=>$(id).oninput=upd);
+    const Knom=1.0, tau=2.0;          // nominal first-order plant: tau*y' + y = K*u + d
+    let yo=0, yc=0, ref=3, hist=[];
+    const reset=()=>{yo=0;yc=0;hist=[];};
+    $('rstBtn').onclick=reset;
+    $('stepBtn').onclick=()=>{ref=ref>0?-3:3;};
+    function loop(){
+      const d=+$('d').value, dk=+$('k').value, Kp=+$('kp').value;
+      const Kact=Knom+dk;             // actual plant gain
+      const dt=0.04;
+      // open-loop: feedforward u = r / Knom
+      const uo=ref/Knom;
+      yo += dt*((Kact*uo + d - yo)/tau);
+      // closed-loop P controller
+      const uc=Kp*(ref-yc);
+      yc += dt*((Kact*uc + d - yc)/tau);
+      hist.push({yo,yc,ref}); if(hist.length>320)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // top: bar visualization (room temperature)
+      const drawBar=(y,cy,color,label)=>{
+        x.fillStyle='#eee';x.fillRect(40,cy-14,560,28);
+        const w=Math.max(0,Math.min(560,(y+5)/10*560));
+        x.fillStyle=color;x.fillRect(40,cy-14,w,28);
+        const rx=40+(ref+5)/10*560;
+        x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+        x.moveTo(rx,cy-22);x.lineTo(rx,cy+22);x.stroke();x.setLineDash([]);
+        x.fillStyle='#444';x.font='12px sans-serif';x.fillText(label,12,cy-20);
+        x.fillText(y.toFixed(2),610,cy+4);
+      };
+      drawBar(yo,40,'#f57c00','개루프 (u = r/K̂)');
+      drawBar(yc,100,'#0b5fff','폐루프 (P 제어)');
+      // bottom: response curves
+      const y0=280;
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(0,y0);x.lineTo(c.width,y0);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=y0-h.ref*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();x.setLineDash([]);
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=y0-h.yo*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=y0-h.yc*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('응답 y(t) — 빨강: 목표, 주황: 개루프, 파랑: 폐루프',10,160);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('잔여 오차    개루프: '+(ref-yo).toFixed(2)+'    폐루프: '+(ref-yc).toFixed(2),10,365);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>꼭 만져볼 시나리오</strong>:</p>
+  <ul>
+    <li><strong>외란 d ≠ 0</strong> (창문 살짝 열림): 개루프는 영구적인 잔류 오차가 생깁니다. 폐루프는 입력을
+    스스로 늘려서 다시 끌어옵니다.</li>
+    <li><strong>모델 오차 ΔK ≠ 0</strong> (난방기 효율이 가정과 다름): 개루프는 엉뚱한 위치에 정착, 폐루프는
+    실제 플랜트가 어떻든 목표에 수렴합니다.</li>
+    <li><strong>Kp를 너무 키우면?</strong>: 폐루프도 빠르게 따라가지만, 시스템이 더 복잡해지면 진동이 나타납니다.
+    "어디까지 키워도 되는가"가 W8~W11의 핵심 질문입니다.</li>
+    <li><strong>둘 다 0</strong>: 개루프도 그럭저럭 도달합니다. 모델이 완벽하고 외란이 없을 때만 개루프가
+    통한다는 뜻이에요.</li>
+  </ul>
+
+  <h2>5. 일상과 산업 속의 자동제어</h2>
+
+  <p>자동제어가 어디에 쓰이는지 한 번에 감을 잡으면 이후 14주가 훨씬 잘 와닿습니다.</p>
+
+  <table>
+    <thead><tr><th>분야</th><th>예시</th><th>목표 r</th><th>제어입력 u</th><th>출력 y</th></tr></thead>
+    <tbody>
+      <tr><td>가전</td><td>에어컨·냉장고</td><td>설정 온도</td><td>컴프레서 ON/OFF · 인버터 주파수</td><td>실내·실온 온도</td></tr>
+      <tr><td>자동차</td><td>크루즈 컨트롤</td><td>설정 속도 (예: 100 km/h)</td><td>스로틀·브레이크</td><td>실제 차속</td></tr>
+      <tr><td>로보틱스</td><td>로봇 팔 위치 제어</td><td>관절 각도</td><td>모터 토크</td><td>실제 관절 각도</td></tr>
+      <tr><td>드론</td><td>쿼드콥터 자세</td><td>roll/pitch/yaw 0°</td><td>4개 모터 RPM</td><td>IMU에서 측정한 자세각</td></tr>
+      <tr><td>공정</td><td>화학 반응기</td><td>반응 온도·pH</td><td>스팀·산/염기 주입량</td><td>측정 온도·pH</td></tr>
+      <tr><td>발전</td><td>풍력 터빈</td><td>정격 회전속도</td><td>블레이드 피치 각</td><td>로터 회전속도</td></tr>
+    </tbody>
+  </table>
+
+  <p>모두 같은 구조 — <em>측정 → 오차 계산 → 입력 갱신</em>의 반복 — 입니다. 이 강의는 그 "어떻게 갱신할까"의
+  체계적인 답을 단계별로 만듭니다.</p>
+
+  <h2>6. 14주 로드맵</h2>
+
+  <p>이 강의가 끝날 때 여러분은 다음 질문에 모두 답할 수 있게 됩니다.</p>
+  <ul>
+    <li>이 시스템은 얼마나 빠르게 목표에 도달하는가? (W5–W6 시간응답)</li>
+    <li>정상상태에서 오차가 0이 될 수 있는가? (W7 정상상태 오차)</li>
+    <li>이 게인 K에서 시스템이 안정한가, 진동하는가? (W8–W9)</li>
+    <li>잡음·외란이 있을 때도 동작하는가? (W10–W11 주파수영역)</li>
+    <li>현실에서 PID를 어떻게 튜닝하고, 로봇에 어떻게 적용하는가? (W12–W14)</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 700 130" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10"  y="40" width="90" height="50" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="55" y="60" text-anchor="middle" font-size="13">수학 도구</text>
+      <text x="55" y="78" text-anchor="middle" font-size="11" fill="#666">W1–W4</text>
+      <rect x="120" y="40" width="90" height="50" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="165" y="60" text-anchor="middle" font-size="13">시간응답</text>
+      <text x="165" y="78" text-anchor="middle" font-size="11" fill="#666">W5–W7</text>
+      <rect x="230" y="40" width="90" height="50" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="275" y="60" text-anchor="middle" font-size="13">안정성</text>
+      <text x="275" y="78" text-anchor="middle" font-size="11" fill="#666">W8–W9</text>
+      <rect x="340" y="40" width="100" height="50" fill="#f3e5f5" stroke="#9c27b0"/>
+      <text x="390" y="60" text-anchor="middle" font-size="13">주파수영역</text>
+      <text x="390" y="78" text-anchor="middle" font-size="11" fill="#666">W10–W11</text>
+      <rect x="460" y="40" width="90" height="50" fill="#fce4ec" stroke="#c62828"/>
+      <text x="505" y="60" text-anchor="middle" font-size="13">PID 설계</text>
+      <text x="505" y="78" text-anchor="middle" font-size="11" fill="#666">W12</text>
+      <rect x="570" y="40" width="120" height="50" fill="#fffde7" stroke="#fbc02d"/>
+      <text x="630" y="60" text-anchor="middle" font-size="13">로보틱스 응용</text>
+      <text x="630" y="78" text-anchor="middle" font-size="11" fill="#666">W13–W14</text>
+      <defs><marker id="ar2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#888"/></marker></defs>
+      <path d="M100,65 L120,65" stroke="#888" marker-end="url(#ar2)"/>
+      <path d="M210,65 L230,65" stroke="#888" marker-end="url(#ar2)"/>
+      <path d="M320,65 L340,65" stroke="#888" marker-end="url(#ar2)"/>
+      <path d="M440,65 L460,65" stroke="#888" marker-end="url(#ar2)"/>
+      <path d="M550,65 L570,65" stroke="#888" marker-end="url(#ar2)"/>
+    </svg>
+    <figcaption>그림 2. 14주 학습 흐름. 왼쪽에서 오른쪽으로, 도구를 쌓고 마지막에 응용으로 모입니다.</figcaption>
+  </figure>
+
+  <h2>7. 코드로 만나기 — 첫 번째 시뮬레이션</h2>
+
+  <p>위 인터랙티브 데모와 똑같은 1차 시스템 <code>τẏ + y = Ku + d</code>를 Python으로 직접 시뮬레이션해 보세요.
+  <code>numpy</code>와 <code>matplotlib</code>만 있으면 됩니다.</p>
+
+<pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+
+# 1차 플랜트:  tau * dy/dt + y = K * u + d
+tau, K_act = 2.0, 1.0       # 실제 플랜트
+K_nom      = 1.0             # 개루프가 가정하는 모델
+Kp         = 3.0             # 폐루프 P 게인
+dt, T      = 0.04, 12.0
+N          = int(T/dt)
+
+t  = np.arange(N) * dt
+r  = np.where(t < 6.0, 3.0, -3.0)         # 6초 후 목표 반전
+d  = np.where((t > 3.0) & (t < 9.0), 1.0, 0.0)  # 외란 펄스
+
+y_open, y_closed = 0.0, 0.0
+log_open, log_closed = [], []
+
+for k in range(N):
+    # 개루프: 모델 역연산 기반 피드포워드
+    u_open   = r[k] / K_nom
+    # 폐루프: P 제어
+    u_closed = Kp * (r[k] - y_closed)
+    # 1차 플랜트 적분 (오일러)
+    y_open   += dt * ((K_act*u_open   + d[k] - y_open)   / tau)
+    y_closed += dt * ((K_act*u_closed + d[k] - y_closed) / tau)
+    log_open.append(y_open); log_closed.append(y_closed)
+
+plt.plot(t, r, 'r--', label='reference')
+plt.plot(t, log_open,   label='open-loop')
+plt.plot(t, log_closed, label='closed-loop (P)')
+plt.xlabel('time [s]'); plt.ylabel('output y'); plt.legend(); plt.grid()
+plt.show()</code></pre>
+
+  <p>한 줄씩 바꿔보면서 직감을 키워 보세요. <code>K_act</code>를 1.5로 바꾸면 개루프만 어긋나고,
+  <code>Kp</code>를 50으로 키우면 폐루프가 진동을 시작합니다. 이 진동이 바로 W8 안정성 분석으로 이어집니다.</p>
+
+  <h2>8. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li><strong>자동제어</strong> = 측정 → 오차 → 입력 갱신을 자동으로 반복하는 일.</li>
+      <li><strong>개회로</strong>는 모델이 완벽할 때만 통하고, <strong>폐회로</strong>는 외란·모델 오차에 강하다.</li>
+      <li>폐회로의 무기는 <em>측정과 게인</em>. 게인이 클수록 외란 억제력은 커지지만 안정성은 위험해진다.</li>
+      <li>W2부터는 "얼마나 큰 게인까지 안정한가"를 정확히 계산하는 수학 도구를 쌓는다.</li>
+    </ul>
+  </div>
+
+  <h2>9. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Norman S. Nise, <em>Control Systems Engineering</em>, 8th ed. — 학부 표준 교재. 1장이 이 주차와 정확히 같은 범위.</li>
+    <li>Karl J. Åström &amp; Richard M. Murray, <em>Feedback Systems</em> (무료 PDF: <a href="https://fbswiki.org">fbswiki.org</a>) — 더 모던하고 시스템 사고에 강한 입문서.</li>
+    <li>관련 강의: <a href="../lectures/07-feedback-control.html">로봇공학특론 L7 피드백 제어</a>는 본 강의의 PID 부분(W12)을 로봇 관점에서 먼저 빠르게 훑은 버전입니다.</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="../control.html"><small>← 강의 목록</small>자동제어 14주 전체 보기</a>
+    <a href="02-laplace.html" class="next"><small>다음 →</small>W2. 라플라스 변환</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

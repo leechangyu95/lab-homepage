@@ -65,13 +65,101 @@
     <li><strong>옴의 법칙</strong>으로 각 저항의 전류를 거꾸로 계산합니다.</li>
   </ol>
 
-  <h3>2.2 예제 — KCL로 푸는 직병렬 회로</h3>
+  <h3>2.2 예제 — 노드 해석으로 푸는 직병렬 회로</h3>
   <p>$V_T = 1.5\,\text{V}$, $R_1 = R_2 = 0.5\,\text{k}\Omega$가 직렬, 그 뒤에 $R_3 = R_4 = 1\,\text{k}\Omega$가 병렬로 붙어 있습니다.</p>
   <p>병렬부 위쪽 노드에서 KCL: 들어오는 전류 = 나가는 전류.</p>
   $$ \frac{V_{1\!-\!2}}{R_1 + R_2} = \frac{V_3}{R_3} + \frac{V_4}{R_4} $$
   <p>병렬이므로 $V_3 = V_4$, 그래서 $V_{1\!-\!2} = 2 V_3$. 직렬 관계 $V_T = V_{1\!-\!2} + V_3$ 적용:</p>
   $$ 1.5 = 2 V_3 + V_3 = 3 V_3 \implies V_3 = V_4 = 0.5\,\text{V}, \;\; V_1 = V_2 = 0.5\,\text{V} $$
   $$ I_1 = I_2 = 1\,\text{mA}, \quad I_3 = I_4 = 0.5\,\text{mA} $$
+
+  <h3>2.3 표준 노드 해석 예제 — 변수 1개로 깔끔하게</h3>
+  <p>위 예제는 직병렬 직관으로 풀었지만, 좀 더 복잡한 회로를 위해 <strong>표준 노드 해석</strong>을 한 번 정식으로 적용해 봅시다. 예: 10V 전원이 $R_1 = 2\,\Omega$를 거쳐 노드 A에 연결, A에서 $R_2 = 4\,\Omega$로 접지, 그리고 A에서 $R_3 = 4\,\Omega$로 또 다른 노드 B, B는 $R_4 = 4\,\Omega$로 접지.</p>
+  <ol>
+    <li><strong>노드 식별</strong> — 미지수는 두 개: $V_A$, $V_B$ (접지는 0V).</li>
+    <li><strong>노드 A KCL</strong> — 들어오는 전류 = 나가는 전류.
+      $$ \frac{10 - V_A}{2} = \frac{V_A - 0}{4} + \frac{V_A - V_B}{4} $$
+      양변에 4를 곱해 정리: $20 - 2V_A = V_A + V_A - V_B \Rightarrow 20 = 4V_A - V_B$.</li>
+    <li><strong>노드 B KCL</strong> — B로 들어오는 전류는 A에서 오는 것뿐, 나가는 건 $R_4$로.
+      $$ \frac{V_A - V_B}{4} = \frac{V_B}{4} \Rightarrow V_A = 2V_B $$</li>
+    <li><strong>연립 풀이</strong> — $V_A = 2V_B$를 첫 식에 대입: $20 = 8V_B - V_B = 7V_B \Rightarrow V_B = 20/7 \approx 2.86\,\text{V}$, $V_A \approx 5.71\,\text{V}$.</li>
+    <li><strong>전류 역산</strong> — $I_1 = (10 - V_A)/2 = 2.14\,\text{A}$, $I_2 = V_A/4 = 1.43\,\text{A}$, $I_3 = (V_A - V_B)/4 = 0.71\,\text{A}$, $I_4 = V_B/4 = 0.71\,\text{A}$. 검산: $I_1 = I_2 + I_3$ ($2.14 = 1.43 + 0.71$ ✓), $I_3 = I_4$ ✓.</li>
+  </ol>
+  <p>핵심은 <strong>모든 미지수를 노드 전압 하나로 통일</strong>해 옴의 법칙으로 가지 전류를 표현한다는 점. 식을 어디에 쓰는지 헷갈릴 일이 없습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 노드 해석 — 두 노드 회로</h4>
+    <p>10V 전원 → $R_1$ → 노드 A → $R_3$ → 노드 B → $R_4$ → 접지, A에서 $R_2$로 접지. 노드 A, B 전압이 KCL 연립으로 어떻게 정해지는지 봅니다.</p>
+    <canvas id="kclCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R₁ <span class="val" id="kclR1V">2</span> Ω<input type="range" id="kclR1" min="1" max="10" step="0.5" value="2"></label>
+      <label>R₂ <span class="val" id="kclR2V">4</span> Ω<input type="range" id="kclR2" min="1" max="10" step="0.5" value="4"></label>
+      <label>R₃ <span class="val" id="kclR3V">4</span> Ω<input type="range" id="kclR3" min="1" max="10" step="0.5" value="4"></label>
+      <label>R₄ <span class="val" id="kclR4V">4</span> Ω<input type="range" id="kclR4" min="1" max="10" step="0.5" value="4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kclCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Vs=10;
+    function draw(){
+      const R1=+document.getElementById('kclR1').value;
+      const R2=+document.getElementById('kclR2').value;
+      const R3=+document.getElementById('kclR3').value;
+      const R4=+document.getElementById('kclR4').value;
+      document.getElementById('kclR1V').textContent=R1.toFixed(1);
+      document.getElementById('kclR2V').textContent=R2.toFixed(1);
+      document.getElementById('kclR3V').textContent=R3.toFixed(1);
+      document.getElementById('kclR4V').textContent=R4.toFixed(1);
+      // KCL: (Vs-Va)/R1 = Va/R2 + (Va-Vb)/R3
+      // (Va-Vb)/R3 = Vb/R4
+      // From eq2: Va = Vb*(1 + R3/R4)
+      const k=1+R3/R4;
+      // Eq1 multiplied by R1*R2*R3:
+      // R2*R3*(Vs-Va) = R1*R3*Va + R1*R2*(Va-Vb)
+      // R2*R3*Vs = (R2*R3 + R1*R3 + R1*R2)*Va - R1*R2*Vb
+      // Substitute Va = k*Vb
+      const A=R2*R3+R1*R3+R1*R2;
+      const B=R1*R2;
+      const Vb=R2*R3*Vs/(A*k - B);
+      const Va=k*Vb;
+      const I1=(Vs-Va)/R1, I2=Va/R2, I3=(Va-Vb)/R3, I4=Vb/R4;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(40,80);ctx.lineTo(40,200);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';ctx.fillText('10V',20,75);
+      ctx.beginPath();ctx.moveTo(40,80);ctx.lineTo(180,80);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(80,80);ctx.lineTo(140,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_1=${R1}Ω`,90,72);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(180,80);ctx.lineTo(180,200);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.fillText(`A: ${Va.toFixed(2)}V`,160,70);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(180,120);ctx.lineTo(180,160);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_2=${R2}Ω`,190,140);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(180,80);ctx.lineTo(380,80);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(240,80);ctx.lineTo(320,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_3=${R3}Ω`,250,72);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(380,80);ctx.lineTo(380,200);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.fillText(`B: ${Vb.toFixed(2)}V`,360,70);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(380,120);ctx.lineTo(380,160);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_4=${R4}Ω`,390,140);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(180,200);ctx.lineTo(380,200);ctx.lineTo(380,200);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(40,200);ctx.lineTo(180,200);ctx.stroke();
+      // GND symbol
+      ctx.beginPath();ctx.moveTo(170,210);ctx.lineTo(190,210);ctx.moveTo(173,215);ctx.lineTo(187,215);ctx.moveTo(177,220);ctx.lineTo(183,220);ctx.stroke();
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText(`I_1=${(I1*1000).toFixed(1)}mA, I_2=${(I2*1000).toFixed(1)}mA, I_3=${(I3*1000).toFixed(1)}mA, I_4=${(I4*1000).toFixed(1)}mA`,30,H-30);
+      ctx.fillText(`KCL 검산: I_1 - I_2 - I_3 = ${((I1-I2-I3)*1000).toFixed(2)} mA ≈ 0 ✓`,30,H-10);
+    }
+    ['kclR1','kclR2','kclR3','kclR4'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
 
   <h2>3. KVL — 키르히호프 전압법칙</h2>
   <p>"하나의 폐루프(loop)를 한 바퀴 돌면서 전위 변화를 모두 더하면 0". 곧 인가전압 = 강하전압의 합.</p>
@@ -133,10 +221,106 @@
   <h3>4.2 선형성이 핵심 가정</h3>
   <p>중첩의 원리는 <strong>선형 소자(저항)</strong>에만 성립합니다. 다이오드·트랜지스터처럼 $V$–$I$가 직선이 아닌 비선형 소자가 있으면 직접 적용할 수 없습니다(선형 영역으로 근사한 뒤 적용하는 트릭은 W11 op-amp에서 사용).</p>
 
-  <h3>4.3 예제 — 두 전압원 회로 분해</h3>
-  <p>3.3에서 푼 회로를 중첩으로 다시 풉시다. 84V만 있을 때와 21V만 있을 때 각각의 $I_3$를 구해 합산합니다.</p>
-  <p><em>케이스 1: 84V만 살리고 21V는 단락.</em> 그러면 $R_2$가 단락되어 우측 가지에는 $R_3$만 남습니다 — $R_3 \| (R_2\!=\!0) = 0$이므로 $I_1 = 84/12 = 7$, 모든 전류가 $R_3$ 쪽으로... (실제로는 21V 위치의 단락이라 $R_2$는 단락에 직렬). 이런 식으로 케이스별로 풀어 $I_3^{(1)}$, $I_3^{(2)}$를 구하고 합산하면 KVL로 푼 결과와 같은 4A가 나옵니다.</p>
-  <p>실전에서는 메쉬 해석이 단순한 회로에서는 KVL을 직접 푸는 편이 빠르지만, 중첩의 원리는 <em>한 전원의 영향만</em>을 따로 보고 싶을 때(노이즈 분석, 신호 분리 등) 매우 유용합니다.</p>
+  <h3>4.3 예제 — 두 전압원 회로 분해 (KVL 결과와 비교)</h3>
+  <p>3.3에서 KVL로 풀었던 회로를 중첩으로 다시 풉시다. 회로: 좌측에 84V 전원이 $R_1 = 12\,\Omega$를 거쳐 노드 A로, 우측에 21V 전원이 $R_2 = 3\,\Omega$를 거쳐 같은 노드 A로, A에서 $R_3 = 6\,\Omega$를 거쳐 접지로. 우리가 구할 양은 $R_3$에 흐르는 전류 $I_3$입니다.</p>
+
+  <p><strong>케이스 1: 84V만 살리고 21V는 단락.</strong> 21V 위치를 도선으로 단락하면 $R_2$가 한 끝은 노드 A, 다른 끝은 접지에 연결된 단순한 가지가 됩니다. 즉 노드 A에서 보면 $R_2$와 $R_3$가 <em>병렬</em>이고, 그것이 $R_1$과 직렬입니다.</p>
+  $$ R_2 \| R_3 = \frac{3 \cdot 6}{3 + 6} = 2\,\Omega, \quad R_{\text{eq}} = R_1 + (R_2 \| R_3) = 12 + 2 = 14\,\Omega $$
+  $$ I_1^{(1)} = \frac{84}{14} = 6\,\text{A}, \quad V_A^{(1)} = I_1^{(1)} \cdot 2 = 12\,\text{V} $$
+  $$ I_3^{(1)} = \frac{V_A^{(1)}}{R_3} = \frac{12}{6} = 2\,\text{A} $$
+
+  <p><strong>케이스 2: 21V만 살리고 84V는 단락.</strong> 같은 논리로 좌측 $R_1$과 $R_3$가 노드 A에서 병렬, 그것이 $R_2$와 직렬.</p>
+  $$ R_1 \| R_3 = \frac{12 \cdot 6}{12 + 6} = 4\,\Omega, \quad R_{\text{eq}} = R_2 + (R_1 \| R_3) = 3 + 4 = 7\,\Omega $$
+  $$ I_2^{(2)} = \frac{21}{7} = 3\,\text{A}, \quad V_A^{(2)} = I_2^{(2)} \cdot 4 = 12\,\text{V} $$
+  $$ I_3^{(2)} = \frac{V_A^{(2)}}{R_3} = \frac{12}{6} = 2\,\text{A} $$
+
+  <p><strong>합산:</strong> 두 케이스의 $I_3$가 같은 방향(노드 A → 접지)이므로 단순 합.</p>
+  $$ I_3 = I_3^{(1)} + I_3^{(2)} = 2 + 2 = 4\,\text{A} $$
+  <p>이는 3.3절의 KVL로 푼 결과(4A)와 정확히 일치합니다 ✓. 중첩의 원리는 같은 답을 더 직관적으로 분해해서 보여줍니다.</p>
+
+  <div class="tip">
+    <strong>왜 중첩이 유용한가</strong> — 메쉬 해석이 단순한 회로에서는 KVL을 직접 푸는 편이 빠릅니다. 중첩의 원리가 빛나는 자리는 <em>한 전원의 영향만 따로</em> 보고 싶을 때예요. 예를 들어 신호 입력 + 노이즈가 함께 들어오는 회로에서 "노이즈만 있을 때 출력이 얼마인가"를 구해 SNR을 분석한다든가, 다채널 오디오 믹서에서 한 채널의 영향만 보는 것 등 — 결국 W11의 op-amp 가산기와 같은 발상입니다.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 중첩의 원리 — 두 전원의 분해</h4>
+    <p>두 전압원 회로(섹션 4.3 예제)에서 각 전원이 만드는 $I_3$를 따로 계산해 합칩니다. <strong>전원 선택</strong>을 바꾸면 한 전원만 살리고 나머지를 끈 결과를 보고, "둘 다"를 고르면 전체 회로의 답이 두 케이스의 합인지 확인할 수 있어요.</p>
+    <canvas id="supCanvas" width="640" height="260"></canvas>
+    <div class="controls">
+      <label>전원 선택
+        <select id="supSel"><option value="both">둘 다 (=합)</option><option value="v1">84V만</option><option value="v2">21V만</option></select>
+      </label>
+      <label>R₁ <span class="val" id="supR1V">12</span> Ω<input type="range" id="supR1" min="1" max="30" step="1" value="12"></label>
+      <label>R₂ <span class="val" id="supR2V">3</span> Ω<input type="range" id="supR2" min="1" max="30" step="1" value="3"></label>
+      <label>R₃ <span class="val" id="supR3V">6</span> Ω<input type="range" id="supR3" min="1" max="30" step="1" value="6"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('supCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function calc(V1,V2,R1,R2,R3){
+      // Node A KCL: (V1-Va)/R1 + (V2-Va)/R2 = Va/R3
+      const Va=(V1/R1+V2/R2)/(1/R1+1/R2+1/R3);
+      const I3=Va/R3;
+      const I1=(V1-Va)/R1, I2=(V2-Va)/R2;
+      return {Va,I1,I2,I3};
+    }
+    function draw(){
+      const sel=document.getElementById('supSel').value;
+      const R1=+document.getElementById('supR1').value;
+      const R2=+document.getElementById('supR2').value;
+      const R3=+document.getElementById('supR3').value;
+      document.getElementById('supR1V').textContent=R1;
+      document.getElementById('supR2V').textContent=R2;
+      document.getElementById('supR3V').textContent=R3;
+      const V1=84,V2=21;
+      const both=calc(V1,V2,R1,R2,R3);
+      const c1=calc(V1,0,R1,R2,R3);
+      const c2=calc(0,V2,R1,R2,R3);
+      const cur=sel==='both'?both:(sel==='v1'?c1:c2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      // Left source
+      ctx.beginPath();ctx.moveTo(60,80);ctx.lineTo(60,160);ctx.stroke();
+      ctx.fillStyle=sel!=='v2'?'#0b5fff':'#999';ctx.font='12px sans-serif';
+      ctx.fillText(sel==='v2'?'단락':'84V',30,75);
+      // R1
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(110,120);ctx.lineTo(190,120);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_1=${R1}Ω`,120,110);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(60,120);ctx.lineTo(110,120);ctx.stroke();
+      // Node A
+      ctx.beginPath();ctx.moveTo(190,120);ctx.lineTo(320,120);ctx.stroke();
+      ctx.beginPath();ctx.arc(255,120,4,0,Math.PI*2);ctx.fillStyle='#1b5e20';ctx.fill();
+      ctx.fillText(`A: ${cur.Va.toFixed(2)}V`,225,108);
+      // R3 to ground
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(255,140);ctx.lineTo(255,200);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_3=${R3}Ω`,265,170);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(255,120);ctx.lineTo(255,140);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(245,210);ctx.lineTo(265,210);ctx.moveTo(248,215);ctx.lineTo(262,215);ctx.stroke();
+      // R2
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(380,120);ctx.lineTo(460,120);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_2=${R2}Ω`,400,110);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(320,120);ctx.lineTo(380,120);ctx.stroke();
+      // Right source
+      ctx.beginPath();ctx.moveTo(460,120);ctx.lineTo(530,120);ctx.lineTo(530,80);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(530,160);ctx.lineTo(530,200);ctx.lineTo(60,200);ctx.lineTo(60,160);ctx.stroke();
+      ctx.fillStyle=sel!=='v1'?'#0b5fff':'#999';ctx.fillText(sel==='v1'?'단락':'21V',520,75);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`I_3 = ${cur.I3.toFixed(3)} A`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`84V만: I_3 = ${c1.I3.toFixed(3)},  21V만: I_3 = ${c2.I3.toFixed(3)},  합 = ${(c1.I3+c2.I3).toFixed(3)},  실제 = ${both.I3.toFixed(3)} ✓`,40,52);
+    }
+    ['supSel','supR1','supR2','supR3'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.addEventListener('input',draw);el.addEventListener('change',draw);
+    });
+    draw();
+  })();
+  </script>
 
   <h2>5. 이상적 전원 vs 실제 전원</h2>
   <p>중첩의 원리에서 "전원 끄기"가 깨끗하려면 전원이 이상적이어야 합니다.</p>
