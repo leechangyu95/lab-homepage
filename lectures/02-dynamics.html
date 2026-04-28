@@ -584,11 +584,19 @@
       x.save();x.translate(s.x,s.y);x.rotate(s.th);
       const halfL=L*SCALE/2, halfW=Math.max(6,L*SCALE/4);
       x.fillStyle='#0b5fff';x.fillRect(-halfL,-halfW,halfL*2,halfW*2);
-      // 뒷바퀴
-      x.fillStyle='#222';x.fillRect(-halfL-2,-halfW-3,8,3);x.fillRect(-halfL-2,halfW,8,3);
-      // 앞바퀴 (조향각만큼 회전)
-      x.save();x.translate(halfL,-halfW-1);x.rotate(d);x.fillRect(-4,-1,12,3);x.restore();
-      x.save();x.translate(halfL,halfW+1);x.rotate(d);x.fillRect(-4,-2,12,3);x.restore();
+      // 바퀴 (앞·뒷 동일 크기, 차축 중심에 정렬)
+      const wheelLen=Math.max(8,halfL*0.5), wheelWid=3;
+      const wheelY=halfW+wheelWid/2;
+      x.fillStyle='#222';
+      // 뒷바퀴 (좌·우)
+      x.fillRect(-halfL-wheelLen/2,-wheelY-wheelWid/2,wheelLen,wheelWid);
+      x.fillRect(-halfL-wheelLen/2, wheelY-wheelWid/2,wheelLen,wheelWid);
+      // 앞바퀴 (좌·우, 조향각만큼 자기 중심 기준으로 회전)
+      [-wheelY,wheelY].forEach(wy=>{
+        x.save();x.translate(halfL,wy);x.rotate(d);
+        x.fillRect(-wheelLen/2,-wheelWid/2,wheelLen,wheelWid);
+        x.restore();
+      });
       x.restore();
       requestAnimationFrame(loop);
     }
