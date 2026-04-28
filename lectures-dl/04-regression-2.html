@@ -51,6 +51,61 @@
     <strong>실전 팁</strong> — 다변수 선형 회귀를 할 때 <em>표준화를 잊으면 학습률을 1000분의 1로 해도 발산</em>할 수 있습니다. 항상 먼저 특징을 $z$-score로 바꾸세요. 예측 시에는 학습 때 저장해둔 $\mu, \sigma$로 똑같이 변환해야 합니다. 안 그러면 "데이터 누수(leakage)"가 되어 테스트 성능이 사실과 달라집니다.
   </div>
 
+  <h3>1.2 정규방정식 — 행렬로 한눈에</h3>
+  <p>위에서 본 $\boldsymbol\beta^* = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}$는 짧지만, $\mathbf{X}$가 실제로 어떤 모양인지 그려보면 훨씬 직관적입니다. $N$개의 샘플과 $n$개의 특징이 있을 때, 편향 $b$를 가중치 벡터에 흡수하기 위해 첫 열을 모두 1로 둔 <strong>설계 행렬(design matrix)</strong>은 이렇게 생겼습니다:</p>
+  $$
+  \underbrace{\mathbf{X}}_{N \times (n+1)} =
+  \begin{bmatrix}
+  1 & x_{1,1} & x_{1,2} & \cdots & x_{1,n} \\
+  1 & x_{2,1} & x_{2,2} & \cdots & x_{2,n} \\
+  1 & x_{3,1} & x_{3,2} & \cdots & x_{3,n} \\
+  \vdots & \vdots & \vdots & \ddots & \vdots \\
+  1 & x_{N,1} & x_{N,2} & \cdots & x_{N,n}
+  \end{bmatrix},
+  \quad
+  \underbrace{\boldsymbol\beta}_{(n+1) \times 1} =
+  \begin{bmatrix} b \\ w_1 \\ w_2 \\ \vdots \\ w_n \end{bmatrix},
+  \quad
+  \underbrace{\mathbf{y}}_{N \times 1} =
+  \begin{bmatrix} y_1 \\ y_2 \\ \vdots \\ y_N \end{bmatrix}
+  $$
+  <p><strong>각 행이 한 샘플</strong>(예: 한 채의 집), <strong>각 열이 한 특징</strong>(예: 면적, 방 수, 연식 …). 첫 열의 1들은 편향 $b$를 위한 "더미 특징"입니다. 이렇게 두면 $N$개 예측이 한 번의 행렬-벡터 곱으로 끝납니다:</p>
+  $$
+  \mathbf{X}\boldsymbol\beta =
+  \begin{bmatrix}
+  1 & x_{1,1} & \cdots & x_{1,n} \\
+  1 & x_{2,1} & \cdots & x_{2,n} \\
+  \vdots & \vdots & \ddots & \vdots \\
+  1 & x_{N,1} & \cdots & x_{N,n}
+  \end{bmatrix}
+  \begin{bmatrix} b \\ w_1 \\ \vdots \\ w_n \end{bmatrix}
+  =
+  \begin{bmatrix}
+  b + w_1 x_{1,1} + \cdots + w_n x_{1,n} \\
+  b + w_1 x_{2,1} + \cdots + w_n x_{2,n} \\
+  \vdots \\
+  b + w_1 x_{N,1} + \cdots + w_n x_{N,n}
+  \end{bmatrix}
+  = \hat{\mathbf{y}}
+  $$
+  <p>비용 함수는 잔차 벡터 $\mathbf{X}\boldsymbol\beta - \mathbf{y}$의 제곱 길이입니다. $\boldsymbol\beta$에 대해 미분하고 0으로 놓는 1차 조건은:</p>
+  $$
+  \frac{\partial J}{\partial \boldsymbol\beta} = \frac{2}{N}\mathbf{X}^\top (\mathbf{X}\boldsymbol\beta - \mathbf{y}) = \mathbf{0}
+  \;\;\Longrightarrow\;\;
+  \mathbf{X}^\top \mathbf{X}\,\boldsymbol\beta = \mathbf{X}^\top \mathbf{y}
+  $$
+  <p>오른쪽 식이 바로 <strong>정규방정식(normal equation)</strong>입니다. $\mathbf{X}^\top \mathbf{X}$는 $(n+1) \times (n+1)$ 정사각 행렬이고, 가역이면 양변에 역행렬을 곱해 닫힌 형(closed-form) 해를 얻습니다:</p>
+  $$ \boxed{\;\boldsymbol\beta^* = (\mathbf{X}^\top \mathbf{X})^{-1}\, \mathbf{X}^\top \mathbf{y}\;} $$
+  <p>이 한 줄이 다중 회귀의 전부입니다 — 학습률도, 반복도 필요 없이 <em>한 번의 선형대수 계산</em>으로 최적 가중치가 나옵니다. 단, 두 가지 함정이 있습니다:</p>
+  <ul>
+    <li><strong>가역성</strong> — 두 특징이 선형 종속(예: 키[cm]와 키[m]를 둘 다 넣음)이거나 샘플 수 $N$이 특징 수 $n$보다 적으면 $\mathbf{X}^\top \mathbf{X}$가 가역이 아닙니다. 이때는 <strong>리지(Ridge) 회귀</strong>의 $(\mathbf{X}^\top \mathbf{X} + \lambda \mathbf{I})^{-1}$로 정규화하거나, 의사역행렬(pseudo-inverse, SVD)로 우회합니다.</li>
+    <li><strong>계산 비용</strong> — 역행렬 계산은 $\mathcal{O}(n^3)$. 특징이 수만 개를 넘어가면 비현실적이라, 이 영역은 경사하강법(특히 SGD)의 무대입니다. 정규방정식은 "특징이 수십~수백 개" 구간의 황금 도구.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>경사하강법 vs 정규방정식</strong> — 경사하강은 <em>점진적</em>으로 답에 다가가지만 학습률·반복·스케일링에 민감합니다. 정규방정식은 <em>한 방에</em> 정답을 주지만 큰 $n$에서 느리고 수치적으로 불안정할 수 있습니다. 실전에서는 작은 문제엔 NumPy의 <code>np.linalg.lstsq</code>(내부적으로 SVD)를, 큰 문제엔 SGD/Adam을 씁니다.
+  </div>
+
   <div class="demo">
     <h4>🎮 인터랙티브: 두 변수의 가중치 효과</h4>
     <p>$\hat{y} = w_1 x_1 + w_2 x_2$의 예측 평면을 색으로 그립니다. 두 가중치를 움직이며 평면이 어떻게 기우는지 보세요.</p>

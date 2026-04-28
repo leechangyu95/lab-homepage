@@ -121,6 +121,117 @@
   })();
   </script>
 
+  <h3>2.3 L2 vs L1 vs Huber — 이상치에 강건한 손실</h3>
+  <p>L2(MSE)는 큰 잔차를 제곱해서 "강하게 벌주는" 효과가 있지만, 데이터에 이상치가 섞이면 그 한 점이 손실 합 전체를 지배해 회귀선을 자기 쪽으로 끌어당깁니다. L1은 그 영향을 선형으로만 받기 때문에 이상치에 강건하지만, $r=0$에서 미분이 정의되지 않아 경사하강이 머뭇거립니다. <strong>Huber 손실</strong>은 이 둘의 절충안으로, 작은 잔차에는 L2처럼 부드럽게, 큰 잔차에는 L1처럼 선형으로 작동합니다:</p>
+  $$ L_\delta(r) \;=\; \begin{cases} \tfrac{1}{2} r^2 & |r| \le \delta \\ \delta\!\left(|r| - \tfrac{\delta}{2}\right) & |r| > \delta \end{cases} $$
+  <p>핵심은 그래디언트입니다. 경사하강은 $\partial L/\partial r$를 따라 움직이는데:</p>
+  <ul>
+    <li><strong>L2</strong>: $\partial L/\partial r = r$ — 잔차가 클수록 무한히 커진다 → 이상치 한 점이 거대한 그래디언트로 회귀선을 흔든다.</li>
+    <li><strong>L1</strong>: $\partial L/\partial r = \mathrm{sign}(r)$ — 잔차 크기와 무관하게 ±1로 클램프 → 이상치도 일반 점과 같은 강도로만 영향. 단 $r=0$에서 부드럽지 않음.</li>
+    <li><strong>Huber</strong>: $|r|\le\delta$ 영역은 L2처럼 $r$, 그 바깥은 L1처럼 $\pm\delta$로 클램프 → <em>그래디언트 크기에 상한이 생기면서 0 근처는 매끈함</em>.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 세 손실 함수와 그래디언트 비교</h4>
+    <p>$\delta$를 움직여 Huber가 어떻게 L2(작을 때)와 L1(클 때) 사이를 부드럽게 잇는지 보세요. 위 그래프는 손실값, 아래는 그래디언트입니다.</p>
+    <canvas id="lossCmp" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>Huber δ <span class="val" id="hdV">1.00</span><input type="range" id="hd" min="0.2" max="3.0" step="0.05" value="1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lossCmp');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const xmin=-4,xmax=4,lossYmax=6,gradYmax=3;
+    const padL=50,padR=20,topY=20,topH=140,gapY=30,botH=140;
+    const botY=topY+topH+gapY;
+    const plotW=W-padL-padR;
+    const xToPx=r=>padL+(r-xmin)/(xmax-xmin)*plotW;
+    const lossYToPy=v=>topY+topH-v/lossYmax*topH;
+    const gradYToPy=v=>botY+botH/2-v/gradYmax*(botH/2);
+    const huber=(r,d)=>Math.abs(r)<=d?0.5*r*r:d*(Math.abs(r)-d/2);
+    const huberG=(r,d)=>Math.abs(r)<=d?r:d*Math.sign(r);
+    const colors={L2:'#c62828',L1:'#0b5fff',Huber:'#2e7d32'};
+    const dEl=document.getElementById('hd'),dVal=document.getElementById('hdV');
+    function plot(fn,color,yMap,clampY){
+      ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=240;i++){
+        const r=xmin+(xmax-xmin)*i/240;
+        let v=fn(r);
+        if(clampY)v=Math.max(-clampY,Math.min(clampY,v));
+        else v=Math.min(v,lossYmax);
+        const px=xToPx(r),py=yMap(v);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    }
+    function draw(){
+      const d=+dEl.value;dVal.textContent=d.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // axes for top panel (loss)
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(padL,topY);ctx.lineTo(padL,topY+topH);ctx.lineTo(padL+plotW,topY+topH);ctx.stroke();
+      // axes for bottom panel (gradient): zero line in middle
+      ctx.beginPath();ctx.moveTo(padL,botY);ctx.lineTo(padL,botY+botH);ctx.stroke();
+      ctx.strokeStyle='#bbb';
+      ctx.beginPath();ctx.moveTo(padL,botY+botH/2);ctx.lineTo(padL+plotW,botY+botH/2);ctx.stroke();
+      // r=0 vertical
+      ctx.strokeStyle='#e5e7eb';
+      ctx.beginPath();ctx.moveTo(xToPx(0),topY);ctx.lineTo(xToPx(0),topY+topH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(xToPx(0),botY);ctx.lineTo(xToPx(0),botY+botH);ctx.stroke();
+      // delta dashed lines
+      ctx.strokeStyle='#9aa0a6';ctx.setLineDash([4,4]);
+      [-d,d].forEach(rd=>{
+        ctx.beginPath();ctx.moveTo(xToPx(rd),topY);ctx.lineTo(xToPx(rd),topY+topH);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(xToPx(rd),botY);ctx.lineTo(xToPx(rd),botY+botH);ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      // tick labels — x axis (residual)
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let r=-4;r<=4;r++){
+        ctx.fillText(r.toString(),xToPx(r)-4,topY+topH+14);
+        ctx.fillText(r.toString(),xToPx(r)-4,botY+botH+14);
+      }
+      // delta tick
+      ctx.fillStyle='#555';ctx.fillText('+δ',xToPx(d)-7,topY-4);
+      ctx.fillText('−δ',xToPx(-d)-9,topY-4);
+      // y labels
+      ctx.fillStyle='#666';
+      [0,2,4,6].forEach(v=>{ctx.fillText(v.toFixed(0),padL-22,lossYToPy(v)+4);});
+      [-3,0,3].forEach(v=>{ctx.fillText(v.toFixed(0),padL-22,gradYToPy(v)+4);});
+      // panel titles
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('손실  L(r)',padL+4,topY-6);
+      ctx.fillText('그래디언트  ∂L/∂r',padL+4,botY-6);
+      ctx.fillText('잔차 r',padL+plotW-40,topY+topH+26);
+      ctx.fillText('잔차 r',padL+plotW-40,botY+botH+26);
+      // curves: loss
+      plot(r=>0.5*r*r,colors.L2,lossYToPy,null);
+      plot(r=>Math.abs(r),colors.L1,lossYToPy,null);
+      plot(r=>huber(r,d),colors.Huber,lossYToPy,null);
+      // curves: gradient
+      plot(r=>r,colors.L2,gradYToPy,gradYmax);
+      plot(r=>Math.sign(r),colors.L1,gradYToPy,gradYmax);
+      plot(r=>huberG(r,d),colors.Huber,gradYToPy,gradYmax);
+      // legend (top-right)
+      const lx=padL+plotW-150,ly=topY+10;
+      [['L2 = ½r²',colors.L2],['L1 = |r|',colors.L1],['Huber(δ)',colors.Huber]].forEach((it,i)=>{
+        ctx.strokeStyle=it[1];ctx.lineWidth=3;
+        ctx.beginPath();ctx.moveTo(lx,ly+i*16);ctx.lineTo(lx+22,ly+i*16);ctx.stroke();
+        ctx.fillStyle='#333';ctx.font='12px sans-serif';
+        ctx.fillText(it[0],lx+28,ly+i*16+4);
+      });
+    }
+    dEl.addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <p>아래 그래디언트 그림이 핵심입니다. L2의 빨강 직선은 $r$이 커질수록 무한히 커지지만, Huber(초록)는 $\pm\delta$에서 평탄해집니다 — 이상치 한 점의 그래디언트가 일정 한도 이상 커지지 못한다는 뜻이고, 이게 "강건성(robustness)"의 실체입니다. 동시에 $r=0$ 근처는 L2와 같은 매끈한 곡선이라 최적화가 멈칫거리지 않습니다. PyTorch의 <code>SmoothL1Loss</code>, Faster R-CNN/SSD 같은 객체 검출의 박스 회귀 손실이 모두 이 형태를 씁니다. $\delta$는 보통 데이터의 잔차 표준편차 정도(예: 1.345·MAD)로 잡습니다.</p>
+
   <h2>3. 경사하강법 — 자동으로 내려가기</h2>
   <p>슬라이더로 직접 맞추는 건 직관을 얻는 데는 좋지만 차원이 많아지거나 데이터가 크면 손이 모자랍니다. 컴퓨터에게 자동으로 시키려면 비용함수의 <em>기울기(gradient)</em>를 따라 내려가게 만들면 됩니다. "안개 낀 산에서 내려가는 사람" 비유가 고전입니다: 시야가 전혀 없어도 발 밑의 경사를 느껴 가장 가파른 내리막 방향으로 한 걸음씩 옮기면 결국 골짜기 바닥에 도착합니다.</p>
   <p>이 "한 걸음"을 수식으로 적으면:</p>
@@ -265,6 +376,109 @@
   <p>선형회귀는 사실 미분을 0으로 놓고 풀면 닫힌 해가 존재합니다.</p>
   $$ \mathbf{w}^* = (X^\top X)^{-1} X^\top \mathbf{y} $$
   <p>장점은 한 번에 정확한 답을 얻는다는 것, 단점은 $X^\top X$의 역행렬을 구해야 해서 특성 수가 많아지면 비싸다는 것($O(n^3)$). 그래서 딥러닝처럼 특성이 수백만 개인 경우엔 무조건 경사하강 계열을 씁니다.</p>
+
+  <h3>5.1 1차원 닫힌 해 — 평균 편차로 떨어지는 공식</h3>
+  <p>특성이 하나일 때는 행렬을 펼쳐 쓸 수 있습니다. $\partial J/\partial w = 0$, $\partial J/\partial b = 0$ 두 식을 풀면:</p>
+  $$ w^* = \frac{\sum_{i=1}^{N} (x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^{N} (x_i - \bar{x})^2}, \quad b^* = \bar{y} - w^* \bar{x} $$
+  <p>분자는 $x$와 $y$의 <em>공분산</em>($N$배), 분모는 $x$의 <em>분산</em>($N$배)입니다. 그래서 통계학에서 $w^* = \mathrm{Cov}(x,y)/\mathrm{Var}(x)$로도 적습니다. 절편 $b^*$는 회귀직선이 항상 데이터의 무게중심 $(\bar x, \bar y)$를 지난다는 사실에서 바로 따라옵니다 — 한 번 외워두면 평생 씁니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 최소제곱법 — 클릭으로 점 추가</h4>
+    <p>그래프를 <strong>클릭</strong>하면 데이터 점이 추가되고, 점을 <strong>다시 클릭</strong>하면 삭제됩니다. 추가/삭제할 때마다 닫힌 해 $w^*, b^*$가 즉시 다시 계산되어 직선이 새로 그어집니다. 경사하강법처럼 반복이 없는 — 정말 "한 방에" 풀리는 모습을 확인해보세요.</p>
+    <canvas id="lsCanvas" width="640" height="340" style="cursor:crosshair"></canvas>
+    <div class="controls">
+      <button id="lsSample">예제 데이터</button>
+      <button id="lsClear">전부 지우기</button>
+      <span id="lsInfo" style="font-size:12px;color:#666"></span>
+    </div>
+    <div id="lsBreakdown" style="margin-top:10px;padding:10px;background:#f6f8fa;border-radius:6px;font-size:13px;font-family:ui-monospace,monospace;line-height:1.7"></div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lsCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const xmin=-1,xmax=9,ymin=-3,ymax=18;
+    const toPx=x=>40+(x-xmin)/(xmax-xmin)*(W-60);
+    const toPy=y=>H-30-(y-ymin)/(ymax-ymin)*(H-60);
+    const fromPx=px=>xmin+(px-40)/(W-60)*(xmax-xmin);
+    const fromPy=py=>ymin+(H-30-py)/(H-60)*(ymax-ymin);
+    let pts=[];
+    function sample(){
+      pts=[];
+      for(let i=0;i<12;i++){const x=0.5+i*0.7;pts.push({x,y:1.8*x+0.5+(Math.random()-0.5)*2.2});}
+    }
+    sample();
+    function fit(){
+      const N=pts.length;
+      if(N<2)return null;
+      let sx=0,sy=0;pts.forEach(p=>{sx+=p.x;sy+=p.y;});
+      const mx=sx/N,my=sy/N;
+      let num=0,den=0;
+      pts.forEach(p=>{num+=(p.x-mx)*(p.y-my);den+=(p.x-mx)*(p.x-mx);});
+      if(den<1e-9)return null;
+      const w=num/den,b=my-w*mx;
+      let J=0;pts.forEach(p=>{const e=w*p.x+b-p.y;J+=e*e;});J/=N;
+      return {w,b,mx,my,num,den,N,J};
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // grid
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;
+      for(let x=0;x<=8;x+=2){ctx.beginPath();ctx.moveTo(toPx(x),10);ctx.lineTo(toPx(x),H-30);ctx.stroke();}
+      for(let y=0;y<=15;y+=5){ctx.beginPath();ctx.moveTo(40,toPy(y));ctx.lineTo(W-20,toPy(y));ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,10);ctx.lineTo(40,H-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let x=0;x<=8;x+=2)ctx.fillText(x,toPx(x)-3,H-15);
+      for(let y=0;y<=15;y+=5)ctx.fillText(y,15,toPy(y)+4);
+      const r=fit();
+      const info=document.getElementById('lsInfo');
+      const bk=document.getElementById('lsBreakdown');
+      if(r){
+        // residuals
+        ctx.strokeStyle='rgba(150,150,150,0.5)';ctx.lineWidth=1;
+        pts.forEach(p=>{const yh=r.w*p.x+r.b;ctx.beginPath();ctx.moveTo(toPx(p.x),toPy(p.y));ctx.lineTo(toPx(p.x),toPy(yh));ctx.stroke();});
+        // line
+        ctx.strokeStyle='#ff8c00';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(r.w*xmin+r.b));ctx.lineTo(toPx(xmax),toPy(r.w*xmax+r.b));ctx.stroke();
+        // centroid
+        ctx.fillStyle='#22a06b';ctx.beginPath();ctx.arc(toPx(r.mx),toPy(r.my),6,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#22a06b';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(toPx(r.mx),toPy(r.my),9,0,Math.PI*2);ctx.stroke();
+        info.textContent=`N=${r.N}  w*=${r.w.toFixed(3)}  b*=${r.b.toFixed(3)}  J=${r.J.toFixed(3)}  (●=무게중심 (x̄,ȳ))`;
+        bk.innerHTML=
+          `x̄ = ${r.mx.toFixed(3)},  ȳ = ${r.my.toFixed(3)}<br>`+
+          `Σ(xᵢ−x̄)(yᵢ−ȳ) = ${r.num.toFixed(3)}<br>`+
+          `Σ(xᵢ−x̄)²       = ${r.den.toFixed(3)}<br>`+
+          `<b>w* = ${r.num.toFixed(3)} / ${r.den.toFixed(3)} = ${r.w.toFixed(4)}</b><br>`+
+          `<b>b* = ȳ − w*·x̄ = ${r.my.toFixed(3)} − ${r.w.toFixed(3)}·${r.mx.toFixed(3)} = ${r.b.toFixed(4)}</b>`;
+      }else{
+        info.textContent=pts.length<2?'점을 2개 이상 클릭으로 찍어주세요.':'점들이 같은 x 좌표에 있어 직선을 정의할 수 없습니다.';
+        bk.innerHTML='';
+      }
+      // points
+      pts.forEach(p=>{ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(toPx(p.x),toPy(p.y),4.5,0,Math.PI*2);ctx.fill();});
+    }
+    c.addEventListener('click',e=>{
+      const rect=c.getBoundingClientRect();
+      const px=(e.clientX-rect.left)*(W/rect.width);
+      const py=(e.clientY-rect.top)*(H/rect.height);
+      // delete if near existing point
+      for(let i=0;i<pts.length;i++){
+        const dx=toPx(pts[i].x)-px,dy=toPy(pts[i].y)-py;
+        if(dx*dx+dy*dy<100){pts.splice(i,1);draw();return;}
+      }
+      const x=fromPx(px),y=fromPy(py);
+      if(x>=xmin&&x<=xmax&&y>=ymin&&y<=ymax){pts.push({x,y});draw();}
+    });
+    document.getElementById('lsSample').onclick=()=>{sample();draw();};
+    document.getElementById('lsClear').onclick=()=>{pts=[];draw();};
+    draw();
+  })();
+  </script>
+
+  <div class="tip"><strong>왜 이 데모가 의미 있을까.</strong> 위의 슬라이더 데모(§2)는 <em>사람이 손으로</em> 맞추고, 경사하강 데모(§3)는 <em>한 걸음씩 반복</em>해서 다가갑니다. 최소제곱법은 — 이 데모처럼 — 데이터가 바뀌는 <em>그 순간</em> 답이 튀어나옵니다. 1차원 회귀에서 굳이 경사하강을 쓸 이유가 없는 이유, 그리고 그럼에도 딥러닝에서 닫힌 해를 못 쓰는 이유(역행렬의 $O(d^3)$ 비용)를 같이 체감해보세요.</div>
 
   <h2>6. 코드 예제</h2>
   <pre><code>from sklearn.linear_model import LinearRegression, SGDRegressor
