@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W8. 임피던스 — 기전공학기초</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html" class="active">기전공학기초</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mech.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 8. 임피던스 — AC용 옴의 법칙</h1>
+  <p class="lead">R, L, C 세 소자를 하나의 복소수로 통합하는 마법. $V = IZ$ 한 줄로 모든 RLC 회로가 풀립니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 새로운 "저항"이 필요한가</li>
+    <li>임피던스의 정의 $Z = V/I = R + jX$</li>
+    <li>R, L, C 각각의 임피던스</li>
+    <li>주파수 응답 — 필터의 시작</li>
+    <li>RLC 직렬 공진</li>
+    <li>임피던스의 직병렬 합성</li>
+  </ol></div>
+
+  <h2>1. 왜 임피던스인가</h2>
+  <p>같은 1V·1kHz AC 전원을 R, C, L에 각각 연결해 보면 전류 파형이 모두 다릅니다.</p>
+  <ul>
+    <li><strong>저항</strong>: 전압과 전류가 같은 위상 (in-phase)</li>
+    <li><strong>커패시터</strong>: 전류가 전압보다 90° 앞섬 (lead)</li>
+    <li><strong>인덕터</strong>: 전류가 전압보다 90° 뒤짐 (lag)</li>
+  </ul>
+  <p>"저항값(Ω)" 하나만으로는 이 차이를 표현할 수 없습니다. 우리에게 필요한 것은 <strong>크기</strong>와 <strong>위상</strong>을 동시에 담는 도구. 그것이 복소수 — <strong>임피던스 $Z$</strong>입니다.</p>
+
+  <h2>2. 임피던스의 정의 — AC용 옴의 법칙</h2>
+  $$ \boxed{Z = \frac{V}{I} = R + jX \quad [\Omega]} $$
+  <p>전압 페이저를 전류 페이저로 나눈 복소수가 임피던스입니다. 두 부분의 의미가 매우 다릅니다.</p>
+  <table>
+    <thead><tr><th>부분</th><th>이름</th><th>물리적 의미</th></tr></thead>
+    <tbody>
+      <tr><td>실수부 $R$</td><td>저항(resistance)</td><td>에너지를 <strong>열로 소비</strong> (비가역)</td></tr>
+      <tr><td>허수부 $X$</td><td>리액턴스(reactance)</td><td>에너지를 <strong>잠깐 저장했다 반환</strong> (가역)</td></tr>
+    </tbody>
+  </table>
+  <p>$R$, $X$, $|Z|$ 모두 단위는 옴($\Omega$)입니다. 임피던스의 크기 $|Z| = \sqrt{R^2 + X^2}$는 전류 크기 비, 위상 $\angle Z = \arctan(X/R)$는 전압-전류 위상차입니다.</p>
+
+  <h2>3. R, L, C 각각의 임피던스</h2>
+  <p>W6의 페이저 규칙(미분 = $\times j\omega$, 적분 = $\div j\omega$)을 W7의 구성 방정식에 적용하면 다음 표가 자연스럽게 떨어집니다.</p>
+
+  <h3>3.1 저항 — 주파수와 무관</h3>
+  $$ v = Ri \implies V = RI \implies \boxed{Z_R = R} $$
+  <p>실수, 위상차 0°.</p>
+
+  <h3>3.2 커패시터 — 미분이 $j\omega$</h3>
+  $$ i = C\,\frac{dv}{dt} \implies I = j\omega C\,V \implies \boxed{Z_C = \frac{1}{j\omega C} = -\frac{j}{\omega C}} $$
+  <p>$X_C = 1/(\omega C)$, 위상차 $-90°$ (전류가 전압보다 앞섬).</p>
+
+  <h3>3.3 인덕터 — 적분이 $1/(j\omega)$, 미분이 $j\omega$</h3>
+  $$ v = L\,\frac{di}{dt} \implies V = j\omega L\,I \implies \boxed{Z_L = j\omega L} $$
+  <p>$X_L = \omega L$, 위상차 $+90°$ (전압이 전류보다 앞섬).</p>
+
+  <table>
+    <thead><tr><th>소자</th><th>$Z$</th><th>크기 $|Z|$</th><th>위상</th><th>주파수 거동</th></tr></thead>
+    <tbody>
+      <tr><td>$R$</td><td>$R$</td><td>$R$</td><td>$0°$</td><td>주파수 무관</td></tr>
+      <tr><td>$L$</td><td>$j\omega L$</td><td>$\omega L$</td><td>$+90°$</td><td>$\omega$↑ → $|Z|$↑</td></tr>
+      <tr><td>$C$</td><td>$1/(j\omega C)$</td><td>$1/(\omega C)$</td><td>$-90°$</td><td>$\omega$↑ → $|Z|$↓</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>물 비유로 직관 잡기</strong> — 커패시터는 고무막이 달린 물탱크입니다. 수압이 변하면 고무막이 먼저 늘어나며(전류가 먼저 반응) 압력차가 늦게 따라옵니다 → 전류 lead. 인덕터는 무거운 물 바퀴 같아서 회전이 시작되려면 시간이 걸립니다(전류가 늦게) → 전압 lead.
+  </div>
+
+  <h2>4. 주파수 응답 — 필터의 시작</h2>
+  <p>임피던스가 주파수에 따라 변한다는 사실은 <strong>필터(filter)</strong>의 핵심 원리입니다. 단순 RC 회로 하나로 무엇이 되는지 봅시다.</p>
+
+  <h3>4.1 RC 저역통과 필터(LPF)</h3>
+  <p>저항 $R$을 직렬에 두고 커패시터 $C$의 양단을 출력으로 잡습니다. 전압 분배:</p>
+  $$ \frac{V_{\text{out}}}{V_{\text{in}}} = \frac{Z_C}{R + Z_C} = \frac{1/(j\omega C)}{R + 1/(j\omega C)} = \frac{1}{1 + j\omega RC} $$
+  <p>크기 응답:</p>
+  $$ \left|\frac{V_{\text{out}}}{V_{\text{in}}}\right| = \frac{1}{\sqrt{1 + (\omega RC)^2}} $$
+  <ul>
+    <li>저주파($\omega \ll 1/RC$): 거의 1배 — 통과</li>
+    <li>고주파($\omega \gg 1/RC$): 0에 수렴 — 차단</li>
+    <li><strong>차단 주파수</strong> $\omega_c = 1/RC$에서 출력은 입력의 $1/\sqrt{2} \approx 0.707$배 (−3dB 점)</li>
+  </ul>
+
+  <h3>4.2 RC 고역통과 필터(HPF)</h3>
+  <p>저항과 커패시터의 위치를 바꿔 저항 양단을 출력으로 잡으면 HPF가 됩니다.</p>
+  $$ \frac{V_{\text{out}}}{V_{\text{in}}} = \frac{R}{R + 1/(j\omega C)} = \frac{j\omega RC}{1 + j\omega RC} $$
+  <p>저주파에서 0, 고주파에서 1로 수렴합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+      <line x1="60" y1="180" x2="560" y2="180" stroke="#666" stroke-width="1"/>
+      <line x1="60" y1="40" x2="60" y2="180" stroke="#666" stroke-width="1"/>
+      <text x="35" y="50" font-size="11" fill="#666">1.0</text>
+      <text x="22" y="120" font-size="11" fill="#666">0.707</text>
+      <text x="50" y="180" font-size="11" fill="#666">0</text>
+      <text x="305" y="200" font-size="11" fill="#666">ω_c = 1/RC</text>
+      <text x="290" y="195" font-size="9" fill="#666">↓</text>
+      <line x1="305" y1="40" x2="305" y2="180" stroke="#ddd" stroke-dasharray="3"/>
+      <line x1="60" y1="120" x2="305" y2="120" stroke="#ddd" stroke-dasharray="3"/>
+      <path d="M60,40 L200,42 L280,55 L305,120 L380,160 L500,175 L560,178" fill="none" stroke="#0742b8" stroke-width="2.5"/>
+      <text x="100" y="65" font-size="11" fill="#0742b8">LPF: 통과</text>
+      <text x="450" y="160" font-size="11" fill="#0742b8">차단</text>
+      <path d="M60,178 L200,175 L280,160 L305,120 L380,55 L500,42 L560,40" fill="none" stroke="#c1121f" stroke-width="2.5" stroke-dasharray="6,3"/>
+      <text x="450" y="60" font-size="11" fill="#c1121f">HPF</text>
+      <text x="280" y="220" font-size="11" fill="#666" text-anchor="middle">log ω</text>
+    </svg>
+    <figcaption>그림 1. RC LPF와 HPF의 주파수 응답. 차단 주파수 $\omega_c = 1/RC$에서 −3dB(=0.707배).</figcaption>
+  </figure>
+
+  <h2>5. RLC 직렬 회로와 공진</h2>
+  <p>R, L, C를 직렬로 연결한 회로의 임피던스는 단순한 합:</p>
+  $$ Z = R + j\omega L + \frac{1}{j\omega C} = R + j\!\left(\omega L - \frac{1}{\omega C}\right) $$
+
+  <h3>5.1 공진 주파수</h3>
+  <p>허수부가 0이 되는 주파수 — 즉 $\omega L = 1/(\omega C)$ — 가 <strong>공진 주파수</strong>입니다.</p>
+  $$ \boxed{\omega_0 = \frac{1}{\sqrt{LC}}} $$
+  <p>이 주파수에서 임피던스는 순수 저항 $Z = R$로 최소가 되고, 전류는 최대가 됩니다. 인덕터의 자기장 에너지와 커패시터의 전기장 에너지가 서로 주고받으며 공명하는 상태예요.</p>
+
+  <h3>5.2 품질 계수 Q</h3>
+  $$ Q = \frac{\omega_0 L}{R} = \frac{1}{R}\sqrt{\frac{L}{C}} $$
+  <p>$Q$가 클수록 공진 봉우리가 뾰족해지고, 주변 주파수를 잘 거른다는 의미입니다. 라디오 튜너, 무선통신 필터의 핵심 지표입니다.</p>
+
+  <h2>6. 임피던스의 직병렬 합성</h2>
+  <p>임피던스는 복소수 형태의 "저항"이므로 직병렬 합성이 저항과 똑같이 됩니다 — 단지 덧셈·역수가 모두 복소수 연산일 뿐입니다.</p>
+  <ul>
+    <li>직렬: $Z_T = Z_1 + Z_2 + \cdots$</li>
+    <li>병렬: $1/Z_T = 1/Z_1 + 1/Z_2 + \cdots$</li>
+  </ul>
+  <p>두 개 병렬은 $Z_T = Z_1 Z_2/(Z_1 + Z_2)$. KVL·KCL·테브난·노턴·중첩의 원리 모두 임피던스에 그대로 적용됩니다 — DC 회로에서 배운 모든 도구가 살아납니다.</p>
+
+  <h3>예제 — RLC 직렬에서 전류 페이저</h3>
+  <p>$R = 100\,\Omega$, $L = 50\,\text{mH}$, $C = 10\,\mu\text{F}$, 전원 $v_s = 10\cos(1000t)$ ($\omega = 1000$ rad/s).</p>
+  $$ Z_L = j\omega L = j50, \quad Z_C = \frac{1}{j\omega C} = -j100 $$
+  $$ Z = 100 + j50 - j100 = 100 - j50 $$
+  $$ |Z| = \sqrt{100^2 + 50^2} \approx 111.8, \quad \angle Z = \arctan(-50/100) \approx -26.6° $$
+  $$ I = \frac{V_s}{Z} = \frac{10\angle 0°}{111.8\angle -26.6°} \approx 0.0894 \angle 26.6°\,\text{A} $$
+  <p>위상차가 양수 → 회로 전체가 용량성(capacitive), 전류가 전압을 26.6° 앞서고 있습니다. 공진 주파수는 $\omega_0 = 1/\sqrt{LC} = 1/\sqrt{0.05 \times 10^{-5}} \approx 1414\,\text{rad/s}$이므로 우리는 공진보다 낮은 주파수에서 동작 중인 것이죠.</p>
+
+  <h2>7. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>항목</th><th>식</th></tr></thead>
+    <tbody>
+      <tr><td>옴의 법칙(AC)</td><td>$V = IZ$</td></tr>
+      <tr><td>R, L, C 임피던스</td><td>$Z_R = R, \; Z_L = j\omega L, \; Z_C = 1/(j\omega C)$</td></tr>
+      <tr><td>RLC 직렬</td><td>$Z = R + j(\omega L - 1/(\omega C))$</td></tr>
+      <tr><td>공진 주파수</td><td>$\omega_0 = 1/\sqrt{LC}$</td></tr>
+      <tr><td>RC LPF 차단</td><td>$\omega_c = 1/RC$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. Falstad 실습</h2>
+  <ul>
+    <li><strong>RC LPF 보드 그리기</strong> — $R = 1\,\text{k}\Omega$, $C = 1\,\mu\text{F}$ ($\omega_c = 1000\,\text{rad/s} \approx 159\,\text{Hz}$). 입력 주파수를 10Hz, 159Hz, 1kHz, 10kHz로 바꿔가며 출력 진폭을 측정. 159Hz에서 약 0.707배인지 확인.</li>
+    <li><strong>RLC 공진 시각화</strong> — $R = 10\,\Omega$, $L = 1\,\text{mH}$, $C = 1\,\mu\text{F}$ 직렬. $\omega_0 = 1/\sqrt{10^{-9}} \approx 31{,}623\,\text{rad/s}$ ($\approx 5\,\text{kHz}$). 주파수를 1kHz~50kHz로 스윕하며 전류가 5kHz 근처에서 최대인지 관찰.</li>
+    <li><strong>위상차 측정</strong> — RC 직렬에서 입력 신호와 커패시터 양단 신호를 두 채널 스코프로 동시에 보고, 위상차가 차단 주파수에서 정확히 −45°인지 확인.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>다른 강의와의 연결</strong> — 임피던스 개념은 <a href="../lectures/03-state-space.html">로봇공학특론 L3 상태공간</a>의 전달함수 $H(s)$와 직결됩니다. 페이저는 라플라스 변환의 정상상태 케이스 ($s = j\omega$)이고, 제어공학에서는 같은 형식이 $H(s) = N(s)/D(s)$의 모양으로 일반화됩니다. 이번 주의 RC 필터는 1차 시스템, RLC 공진은 2차 시스템의 가장 친숙한 예입니다.
+  </div>
+
+  <h2>9. 중간고사 마무리</h2>
+  <p>여기까지가 회로 해석의 기초 — DC 도구(W2–W5)와 AC 도구(W6–W8)가 임피던스라는 한 단어로 통합됩니다. 다음 주(W9)부터는 비선형 소자 — 다이오드 — 의 세계로 넘어갑니다.</p>
+
+  <nav class="prevnext">
+    <a href="07-capacitor-inductor.html"><small>← 이전</small>W7. 커패시터와 인덕터</a>
+    <a href="09-diode.html" class="next"><small>다음 →</small>W9. 반도체와 다이오드</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

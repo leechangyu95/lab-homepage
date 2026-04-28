@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html" class="active">로봇공학특론</a>
     <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -223,6 +224,104 @@
     </svg>
     <figcaption>그림. Receding horizon의 핵심: 매 스텝 $N$개의 계획을 만들지만 첫 입력만 실행. 이 "버림"이 피드백을 만듭니다.</figcaption>
   </figure>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 호라이즌이 굴러간다 — Plan & Do의 실시간 시각화</h4>
+    <p>매 스텝마다 N개 미래를 예측(<span style="color:#f57c00">주황 점선 = 계획</span>)하지만 실제로는 첫 입력만 실행(<span style="color:#0b5fff">파랑 = 실현된 궤적</span>). 시간이 한 칸 흐르면 호라이즌이 한 칸 밀리고 새 계획이 나옵니다. 외란을 켜면 예측이 어긋나도 다음 스텝에서 자동 보정되는 게 보입니다.</p>
+    <canvas id="rh" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>호라이즌 N <span class="val" id="rhNV">15</span><input type="range" id="rhN" min="3" max="40" value="15"></label>
+      <label>레퍼런스
+        <select id="rhRef">
+          <option value="step" selected>계단</option>
+          <option value="sine">사인</option>
+          <option value="ramp">램프</option>
+        </select>
+      </label>
+      <label>외란 σ <span class="val" id="rhDV">0.0</span><input type="range" id="rhD" min="0" max="0.6" step="0.02" value="0"></label>
+      <button id="rhRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rh'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const Tmax=80;
+    let t,state,past;
+    function init(){t=0;state={p:0,v:0};past=[];}
+    init();
+    document.getElementById('rhRst').onclick=init;
+    function ref(k){
+      const m=document.getElementById('rhRef').value;
+      if(m==='step') return k<20?0:(k<50?2:1);
+      if(m==='sine') return 1.5*Math.sin(k*0.18);
+      return Math.min(2,k*0.04);
+    }
+    function px(k){return 30+k/Tmax*(W-60);}
+    function py(v){return H/2-v*60;}
+    function loop(){
+      const N=+document.getElementById('rhN').value;
+      const dist=+document.getElementById('rhD').value;
+      document.getElementById('rhNV').textContent=N;
+      document.getElementById('rhDV').textContent=dist.toFixed(2);
+      // simple predictive plan: from current state, simulate N steps with PD on tracking
+      const plan=[];
+      let pp=state.p,pv=state.v;
+      const Kp=1.5,Kd=1.2,umax=1.5,dt=0.25;
+      plan.push({k:t,p:pp,v:pv});
+      for(let i=1;i<=N;i++){
+        const r=ref(t+i);
+        let u=Kp*(r-pp)-Kd*pv;
+        u=Math.max(-umax,Math.min(umax,u));
+        pv+=u*dt;pp+=pv*dt;
+        plan.push({k:t+i,p:pp,v:pv});
+      }
+      // execute first plan step (with disturbance)
+      const r=ref(t);
+      let u=Kp*(r-state.p)-Kd*state.v;
+      u=Math.max(-umax,Math.min(umax,u));
+      const w=(Math.random()-0.5)*2*dist;
+      state.v+=(u+w)*dt;state.p+=state.v*dt;
+      past.push({k:t,p:state.p});
+      t++;
+      if(t>Tmax-N-2) init();
+      // render
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';
+      for(let i=0;i<=Tmax;i+=10){const xx=px(i);x.beginPath();x.moveTo(xx,30);x.lineTo(xx,H-30);x.stroke();}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(30,H/2);x.lineTo(W-30,H/2);x.stroke();
+      // reference
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=2;
+      x.beginPath();
+      for(let k=0;k<=Tmax;k++){const v=ref(k);if(k===0)x.moveTo(px(k),py(v));else x.lineTo(px(k),py(v));}
+      x.stroke();x.setLineDash([]);
+      // current-time vertical line
+      x.strokeStyle='rgba(0,0,0,0.35)';x.lineWidth=1.5;x.setLineDash([2,3]);
+      x.beginPath();x.moveTo(px(t),20);x.lineTo(px(t),H-30);x.stroke();x.setLineDash([]);
+      // horizon shading
+      x.fillStyle='rgba(255,140,0,0.08)';
+      x.fillRect(px(t),20,px(t+N)-px(t),H-50);
+      // past actual
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      past.forEach((p,i)=>{i?x.lineTo(px(p.k),py(p.p)):x.moveTo(px(p.k),py(p.p));});x.stroke();
+      // plan
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.setLineDash([5,4]);
+      x.beginPath();
+      plan.forEach((p,i)=>{i?x.lineTo(px(p.k),py(p.p)):x.moveTo(px(p.k),py(p.p));});x.stroke();x.setLineDash([]);
+      plan.forEach(p=>{x.fillStyle='rgba(245,124,0,0.6)';x.beginPath();x.arc(px(p.k),py(p.p),2.5,0,Math.PI*2);x.fill();});
+      // current state
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(px(t),py(state.p),5,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('현재 t = '+t,px(t)+6,28);
+      x.fillText('계획된 호라이즌 (N = '+N+')',px(t)+6,H-40);
+      x.fillText('실현된 입력 시퀀스',38,28);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
 
   <h2>6. 설계 파라미터: 샘플시간·호라이즌·가중치</h2>
 
@@ -483,6 +582,135 @@ u0 = sol.value(U[0,0])           # 첫 명령만 실제로 적용</code></pre>
     <li>3단계: 보정량을 입력에 더하고 1단계로 돌아감</li>
   </ul>
   <p>비선형 차량 모델에서도 수십 ms 안에 수렴해, 자율주행 차량과 드론에 널리 쓰입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: iLQR — 지역 이차 근사로 한 발씩</h4>
+    <p>비선형 비용 $f(x,y) = (1-x)^2 + 30(y - x^2)^2$ (Rosenbrock의 변형)을 iLQR이 푸는 방식입니다. 매 반복마다 현재 점 주변에서 <em>이차 근사</em>(흰 타원)를 만들고, 그 이차 모델의 최소점으로 한 발 갑니다. 정규화 $\mu$를 키우면 보수적인 짧은 스텝, 줄이면 공격적이지만 발산 위험. 비용 곡선이 단조 감소합니다.</p>
+    <canvas id="ilqr" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>정규화 μ <span class="val" id="ilMV">0.5</span><input type="range" id="ilM" min="0.05" max="5" step="0.05" value="0.5"></label>
+      <button id="ilStep">한 반복</button>
+      <button id="ilAuto">자동/정지</button>
+      <button id="ilRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ilqr'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const Lx={x0:30,x1:380,y0:30,y1:H-30};
+    const Lc={x0:400,x1:W-30,y0:30,y1:H-30};
+    const xR=[-1.5,2.5],yR=[-1.0,3.0];
+    function f(p){return(1-p[0])*(1-p[0])+30*(p[1]-p[0]*p[0])*(p[1]-p[0]*p[0]);}
+    function grad(p){
+      const a=1-p[0],b=p[1]-p[0]*p[0];
+      return[-2*a-120*b*p[0],60*b];
+    }
+    function hess(p){
+      const b=p[1]-p[0]*p[0];
+      const Hxx=2-120*b+240*p[0]*p[0];
+      const Hxy=-120*p[0];
+      const Hyy=60;
+      return[[Hxx,Hxy],[Hxy,Hyy]];
+    }
+    function px(p){return Lx.x0+(p[0]-xR[0])/(xR[1]-xR[0])*(Lx.x1-Lx.x0);}
+    function py(p){return Lx.y1-(p[1]-yR[0])/(yR[1]-yR[0])*(Lx.y1-Lx.y0);}
+    let pt,trail,history,running=false;
+    function init(){pt=[-1.0,2.5];trail=[pt.slice()];history=[f(pt)];}
+    init();
+    document.getElementById('ilRst').onclick=()=>{init();running=false;};
+    document.getElementById('ilStep').onclick=step;
+    document.getElementById('ilAuto').onclick=()=>{running=!running;};
+    function step(){
+      const mu=+document.getElementById('ilM').value;
+      const g=grad(pt),H2=hess(pt);
+      // (H + mu*I) dx = -g
+      const a=H2[0][0]+mu,b=H2[0][1],d=H2[1][1]+mu;
+      const det=a*d-b*b;
+      const dx=(-g[0]*d+g[1]*b)/det;
+      const dy=(g[0]*b-g[1]*a)/det;
+      // backtracking
+      let alpha=1;
+      const f0=f(pt);
+      for(let k=0;k<8;k++){
+        const np=[pt[0]+alpha*dx,pt[1]+alpha*dy];
+        if(f(np)<f0-1e-4*alpha*(g[0]*dx+g[1]*dy)){pt=np;break;}
+        alpha*=0.5;
+      }
+      trail.push(pt.slice());history.push(f(pt));
+      if(history.length>30) {trail.shift();history.shift();}
+    }
+    function loop(){
+      const mu=+document.getElementById('ilM').value;
+      document.getElementById('ilMV').textContent=mu.toFixed(2);
+      if(running) step();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // contour
+      const cell=8;
+      let mx=20;
+      for(let i=Lx.x0;i<Lx.x1;i+=cell){
+        for(let j=Lx.y0;j<Lx.y1;j+=cell){
+          const xv=(i-Lx.x0)/(Lx.x1-Lx.x0)*(xR[1]-xR[0])+xR[0];
+          const yv=Lx.y1-j;
+          const yvr=yv/(Lx.y1-Lx.y0)*(yR[1]-yR[0])+yR[0];
+          const v=Math.min(mx,f([xv,yvr]));
+          const t=Math.min(1,v/mx);
+          const r=Math.floor(40+t*200),g=Math.floor(140-t*100),b=Math.floor(255-t*200);
+          x.fillStyle=`rgb(${r},${g},${b})`;
+          x.fillRect(i,j,cell,cell);
+        }
+      }
+      // local quadratic ellipse around pt
+      const H2=hess(pt),mu2=+document.getElementById('ilM').value;
+      const a=H2[0][0]+mu2,b=H2[0][1],d=H2[1][1]+mu2;
+      // ellipse {p: 0.5 (p-pt)^T(H+mu I)(p-pt) = const}
+      x.strokeStyle='rgba(255,255,255,0.85)';x.lineWidth=1.5;
+      [0.3,1.5].forEach(level=>{
+        x.beginPath();
+        for(let th=0;th<=Math.PI*2+0.05;th+=0.05){
+          const ct=Math.cos(th),st=Math.sin(th);
+          // approx via 2x2 inverse sqrt — just sample using eigendecomp via numeric
+          // simpler: solve quadratic param
+          const det=a*d-b*b;
+          // ellipse axes from inverse of (H/2level)
+          const inv00=d/det,inv01=-b/det,inv11=a/det;
+          // (x,y) = sqrt(2*level) * R * unit, but R from inv
+          // approximate using radial scan: find r such that 0.5*(a r^2 ct^2 + 2b r^2 ct st + d r^2 st^2)=level
+          const denom=0.5*(a*ct*ct+2*b*ct*st+d*st*st);
+          const r=Math.sqrt(level/Math.max(denom,1e-6));
+          const xv=pt[0]+r*ct,yv=pt[1]+r*st;
+          if(th===0) x.moveTo(px([xv,yv]),py([xv,yv]));
+          else x.lineTo(px([xv,yv]),py([xv,yv]));
+        }
+        x.stroke();
+      });
+      // trail
+      x.strokeStyle='#ffeb3b';x.lineWidth=2;x.beginPath();
+      trail.forEach((p,i)=>{i?x.lineTo(px(p),py(p)):x.moveTo(px(p),py(p));});x.stroke();
+      trail.forEach(p=>{x.fillStyle='rgba(255,235,59,0.8)';x.beginPath();x.arc(px(p),py(p),2.5,0,Math.PI*2);x.fill();});
+      x.fillStyle='#fff';x.strokeStyle='#222';x.lineWidth=2;
+      x.beginPath();x.arc(px(pt),py(pt),6,0,Math.PI*2);x.fill();x.stroke();
+      x.fillStyle='#2e7d32';x.font='bold 18px sans-serif';
+      x.fillText('★',px([1,1])-6,py([1,1])+6);
+      // cost history panel
+      x.strokeStyle='#ddd';x.lineWidth=1;x.strokeRect(Lc.x0,Lc.y0,Lc.x1-Lc.x0,Lc.y1-Lc.y0);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('비용 f (로그)',Lc.x0+8,Lc.y0+14);
+      x.fillText('반복 →',Lc.x1-40,Lc.y1+12);
+      const lo=Math.log10(Math.max(1e-3,Math.min(...history))),hi=Math.log10(Math.max(...history)+1);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      history.forEach((v,i)=>{
+        const xx=Lc.x0+10+i/Math.max(1,history.length-1)*(Lc.x1-Lc.x0-20);
+        const yy=Lc.y1-10-(Math.log10(Math.max(v,1e-3))-lo)/Math.max(1e-3,hi-lo)*(Lc.y1-Lc.y0-30);
+        i?x.lineTo(xx,yy):x.moveTo(xx,yy);
+      });x.stroke();
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('현재 f = '+f(pt).toFixed(4)+'   ·   반복 '+(trail.length-1),Lx.x0+8,Lx.y0+14);
+      requestAnimationFrame(()=>setTimeout(loop,running?180:30));
+    }
+    loop();
+  })();
+  </script>
 
   <h2>11. 배경: LQR (무한 호라이즌, 제약 없음)</h2>
 

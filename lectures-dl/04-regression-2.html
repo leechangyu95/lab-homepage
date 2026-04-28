@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -228,6 +229,71 @@
   <div class="note">
     <strong>초보자가 자주 오해하는 것</strong> — "그럼 항상 크로스 엔트로피를 쓰면 되나?"가 아닙니다. 회귀(연속 출력)엔 MSE, 분류(이산 출력)엔 크로스 엔트로피가 원칙입니다. 각각이 서로 다른 우도 함수의 MLE에서 나왔기 때문에 목적 자체가 다릅니다.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 크로스 엔트로피 vs MSE — 손실 모양 비교</h4>
+    <p>정답이 $y=1$일 때, 예측 $\hat y$가 0~1을 움직이면 두 손실이 어떻게 다른지 보세요. <strong>CE</strong>는 틀릴수록 손실이 무한대로 가서 잘못된 자신감에 큰 벌점을 줍니다. <strong>MSE</strong>는 1로 닫혀 있어 학습 신호가 약해요.</p>
+    <canvas id="celoss" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>정답 y <select id="ceY">
+        <option value="1" selected>y = 1</option>
+        <option value="0">y = 0</option>
+      </select></label>
+      <label>예측 ŷ <span class="val" id="ceHV">0.50</span><input type="range" id="ceH" min="0.01" max="0.99" step="0.01" value="0.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('celoss');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const y=+document.getElementById('ceY').value;
+      const yh=+document.getElementById('ceH').value;
+      document.getElementById('ceHV').textContent=yh.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const xmin=0.01,xmax=0.99,ymin=0,ymax=5;
+      const px=v=>50+(v-xmin)/(xmax-xmin)*(W-70);
+      const py=v=>20+(1-v/ymax)*(H-50);
+      ctx.strokeStyle='#cfd8e3';
+      for(let i=0;i<=5;i++){const yy=20+i*(H-50)/5;ctx.beginPath();ctx.moveTo(50,yy);ctx.lineTo(W-20,yy);ctx.stroke();}
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let i=0;i<=5;i++)ctx.fillText((5-i),20,25+i*(H-50)/5);
+      // CE
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const yhI=xmin+(xmax-xmin)*i/200;
+        const ce=-(y*Math.log(yhI)+(1-y)*Math.log(1-yhI));
+        const yp=py(Math.min(ymax,ce));
+        if(i===0)ctx.moveTo(px(yhI),yp);else ctx.lineTo(px(yhI),yp);
+      }
+      ctx.stroke();
+      // MSE
+      ctx.strokeStyle='#ff8c00';ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const yhI=xmin+(xmax-xmin)*i/200;
+        const mse=(yhI-y)*(yhI-y);
+        const yp=py(Math.min(ymax,mse));
+        if(i===0)ctx.moveTo(px(yhI),yp);else ctx.lineTo(px(yhI),yp);
+      }
+      ctx.stroke();
+      // current marker
+      const ce=-(y*Math.log(yh)+(1-y)*Math.log(1-yh));
+      const mse=(yh-y)*(yh-y);
+      ctx.strokeStyle='#c62828';ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(px(yh),20);ctx.lineTo(px(yh),H-30);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';
+      ctx.fillText(`CE = ${ce.toFixed(3)}`,W-180,30);
+      ctx.fillStyle='#ff8c00';
+      ctx.fillText(`MSE = ${mse.toFixed(3)}`,W-180,50);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`예측 ŷ → (정답 y=${y})`,W-150,H-10);
+    }
+    document.getElementById('ceY').addEventListener('change',draw);
+    document.getElementById('ceH').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h2>4. 2D 로지스틱 결정경계</h2>
 

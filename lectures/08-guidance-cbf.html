@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html" class="active">로봇공학특론</a>
     <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -113,6 +114,81 @@
     <strong>실패 모드 — "내 차가 자꾸 흔들려요"</strong> — 거의 100% $L_d$가 너무 작거나, 차가 너무 빨라 $L_d$를 늘려야 할 때입니다. 디버깅 순서: ① $L_d$를 두 배 늘려본다 → 흔들림이 줄면 lookahead 문제. ② 그래도 흔들리면 조향 actuator의 시간 지연(latency) 문제일 가능성이 높습니다.
   </div>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: Pure Pursuit — Lookahead와 호 그리기</h4>
+    <p>곡선 경로(초록)를 자전거 모델 차량(파랑)이 Pure Pursuit으로 추종합니다. 주황 점이 lookahead 점, 점선이 차량과 lookahead 사이의 시선이고, 차는 매 순간 그 점에 도달하는 호의 곡률에 맞춰 조향합니다. $L_d$를 작게 줄이면 지그재그가, 크게 늘리면 코너 안쪽 자르기(cutting corners)가 나타납니다.</p>
+    <canvas id="pp" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Lookahead L_d <span class="val" id="ppLdV">70</span><input type="range" id="ppLd" min="20" max="180" value="70"></label>
+      <label>속도 v <span class="val" id="ppVV">2.0</span><input type="range" id="ppV" min="0.5" max="4" step="0.1" value="2"></label>
+      <button id="ppRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pp'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const path=[];
+    for(let s=0;s<W+50;s+=2){
+      path.push({x:s,y:H/2+55*Math.sin(s*0.012)});
+    }
+    const arc=[0];
+    for(let i=1;i<path.length;i++) arc.push(arc[i-1]+Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y));
+    const L=24;
+    let car;
+    function init(){car={x:30,y:H/2-40,th:0.0,trail:[]};}
+    init();
+    document.getElementById('ppRst').onclick=init;
+    function nearestIdx(px,py){
+      let best=0,bd=1e9;
+      for(let i=0;i<path.length;i++){
+        const d=(path[i].x-px)**2+(path[i].y-py)**2;
+        if(d<bd){bd=d;best=i;}
+      }
+      return best;
+    }
+    function loop(){
+      const Ld=+document.getElementById('ppLd').value;
+      const v=+document.getElementById('ppV').value;
+      document.getElementById('ppLdV').textContent=Ld;
+      document.getElementById('ppVV').textContent=v.toFixed(1);
+      const ni=nearestIdx(car.x,car.y);
+      let li=ni;
+      while(li<path.length-1 && arc[li]-arc[ni]<Ld) li++;
+      const tgt=path[li];
+      const lookAng=Math.atan2(tgt.y-car.y,tgt.x-car.x);
+      const alpha=((lookAng-car.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+      const delta=Math.atan2(2*L*Math.sin(alpha),Ld);
+      const dt=0.05;
+      car.x+=v*Math.cos(car.th)*dt*15;
+      car.y+=v*Math.sin(car.th)*dt*15;
+      car.th+=v/L*Math.tan(delta)*dt*15;
+      car.trail.push({x:car.x,y:car.y});
+      if(car.trail.length>600) car.trail.shift();
+      if(car.x>W-20) init();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#2e7d32';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(11,95,255,0.4)';x.lineWidth=2;x.beginPath();
+      car.trail.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='#ff8c00';x.setLineDash([4,4]);x.lineWidth=1;
+      x.beginPath();x.moveTo(car.x,car.y);x.lineTo(tgt.x,tgt.y);x.stroke();
+      x.setLineDash([]);
+      x.fillStyle='#ff8c00';x.beginPath();x.arc(tgt.x,tgt.y,6,0,Math.PI*2);x.fill();
+      x.save();x.translate(car.x,car.y);x.rotate(car.th);
+      x.fillStyle='#0b5fff';x.fillRect(-2,-7,L+2,14);
+      x.fillStyle='#222';x.fillRect(-3,-7,3,14);
+      x.translate(L,0);x.rotate(delta);
+      x.fillStyle='#c62828';x.fillRect(-3,-6,6,12);
+      x.restore();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('α = '+(alpha*180/Math.PI).toFixed(1)+'°   ·   δ = '+(delta*180/Math.PI).toFixed(1)+'°   ·   곡률 반경 R ≈ '+(Ld/(2*Math.sin(Math.abs(alpha))+0.001)).toFixed(0)+' px',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
   <h2>3. Stanley 방법 — 횡오차와 헤딩오차의 합</h2>
 
   <h3>한 줄 비유부터</h3>
@@ -161,6 +237,86 @@
   <div class="note">
     <strong>왜 Stanley가 그 이름?</strong> — 폭스바겐 투아렉을 베이스로 한 Stanford 팀의 자율주행 차 이름이 "Stanley"였습니다. 2005년 DARPA Grand Challenge에서 사막 212 km를 6시간 54분에 완주해 우승했고, 그때 사용된 lateral controller가 이 식이라 "Stanley method"라 불립니다.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Stanley — 횡오차 + 헤딩오차 분해</h4>
+    <p>같은 곡선 경로를 Stanley 방법으로 추종합니다. 빨강 점선이 <strong>앞바퀴 횡오차</strong> $e_\text{fa}$, 작은 회색 호가 <strong>헤딩오차</strong> $\theta_e$입니다. 게인 $k$를 키우면 경로 복귀가 빨라지지만 진동이, $v$를 늘리면 분모가 커져 자동으로 부드러워집니다.</p>
+    <canvas id="sl" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>게인 k <span class="val" id="slKV">2.0</span><input type="range" id="slK" min="0.2" max="6" step="0.1" value="2"></label>
+      <label>속도 v <span class="val" id="slVV">2.0</span><input type="range" id="slV" min="0.5" max="4" step="0.1" value="2"></label>
+      <button id="slRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sl'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const path=[];
+    for(let s=0;s<W+50;s+=2){
+      const px=s,py=H/2+55*Math.sin(s*0.012);
+      const dyx=55*0.012*Math.cos(s*0.012);
+      path.push({x:px,y:py,th:Math.atan2(dyx,1)});
+    }
+    const L=24;
+    let car;
+    function init(){car={x:30,y:H/2-50,th:0.25,trail:[]};}
+    init();
+    document.getElementById('slRst').onclick=init;
+    function nearestIdx(px,py){
+      let best=0,bd=1e9;
+      for(let i=0;i<path.length;i++){
+        const d=(path[i].x-px)**2+(path[i].y-py)**2;
+        if(d<bd){bd=d;best=i;}
+      }
+      return best;
+    }
+    function loop(){
+      const k=+document.getElementById('slK').value;
+      const v=+document.getElementById('slV').value;
+      document.getElementById('slKV').textContent=k.toFixed(1);
+      document.getElementById('slVV').textContent=v.toFixed(1);
+      const fx=car.x+L*Math.cos(car.th),fy=car.y+L*Math.sin(car.th);
+      const ni=nearestIdx(fx,fy);
+      const ref=path[ni];
+      const tx=Math.cos(ref.th),ty=Math.sin(ref.th);
+      const dx=fx-ref.x,dy=fy-ref.y;
+      const efa=tx*dy-ty*dx;
+      const thE=((ref.th-car.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+      const atanT=Math.atan2(k*efa,Math.max(v,0.5));
+      let delta=thE-atanT;
+      delta=Math.max(-0.7,Math.min(0.7,delta));
+      const dt=0.05;
+      car.x+=v*Math.cos(car.th)*dt*15;
+      car.y+=v*Math.sin(car.th)*dt*15;
+      car.th+=v/L*Math.tan(delta)*dt*15;
+      car.trail.push({x:car.x,y:car.y});
+      if(car.trail.length>600) car.trail.shift();
+      if(car.x>W-20) init();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#2e7d32';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(11,95,255,0.4)';x.lineWidth=2;x.beginPath();
+      car.trail.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.lineWidth=2;
+      x.beginPath();x.moveTo(fx,fy);x.lineTo(ref.x,ref.y);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.beginPath();x.arc(ref.x,ref.y,4,0,Math.PI*2);x.fill();
+      x.strokeStyle='#888';x.lineWidth=1;
+      x.beginPath();x.moveTo(fx,fy);x.lineTo(fx+25*Math.cos(ref.th),fy+25*Math.sin(ref.th));x.stroke();
+      x.beginPath();x.arc(fx,fy,16,Math.min(car.th,ref.th),Math.max(car.th,ref.th));x.stroke();
+      x.save();x.translate(car.x,car.y);x.rotate(car.th);
+      x.fillStyle='#0b5fff';x.fillRect(-2,-7,L+2,14);
+      x.fillStyle='#222';x.fillRect(-3,-7,3,14);
+      x.translate(L,0);x.rotate(delta);
+      x.fillStyle='#c62828';x.fillRect(-3,-6,6,12);
+      x.restore();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('θ_e = '+(thE*180/Math.PI).toFixed(1)+'°   ·   atan(k·e_fa/v) = '+(atanT*180/Math.PI).toFixed(1)+'°   ·   δ = '+(delta*180/Math.PI).toFixed(1)+'°   ·   e_fa = '+efa.toFixed(1)+' px',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
 
   <h2>4. LOS (Line-of-Sight) 경로 추종</h2>
 

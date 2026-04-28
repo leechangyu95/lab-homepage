@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html" class="active">로봇공학특론</a>
     <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -69,7 +70,7 @@
   </ul>
   <p>이 한계들을 깨려고 등장한 것이 NMPC, Robust MPC, Stochastic MPC, Scenario MPC, RTI, Learning MPC, Distributed MPC, MPPI, MPC+CBF — 즉 L12의 거의 전부입니다.</p>
 
-  <div class="tip"><strong>읽는 순서 팁</strong> — 시간이 부족하면 §1·§2·§4·§7·§11·§16만 보세요. 나머지는 SAIL 연구실의 특정 프로젝트(자율 운항선, 항만 자율 운영, 학습 기반 안전 제어)에 들어갈 때 필요한 도구입니다.</p>
+  <div class="tip"><strong>읽는 순서 팁</strong> — 시간이 부족하면 §1·§2·§4·§7·§11·§16만 보세요. 나머지는 SAIL 연구실의 특정 프로젝트(자율 운항선, 항만 자율 운영, 학습 기반 안전 제어)에 들어갈 때 필요한 도구입니다.</div>
 
   <h2>1. 안정성과 재귀 실현가능성</h2>
 
@@ -327,6 +328,108 @@
     <figcaption>그림. Tube MPC. 명목 궤적(진파랑)은 타이트닝된 제약 안에서 최적. 실제 상태는 보조 제어기 $Ke$ 덕분에 항상 mRPI 튜브 안에 머뭄.</figcaption>
   </figure>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: Tube MPC — 외란이 부풀리는 튜브, 타이트닝된 제약</h4>
+    <p>1D 시스템 $x_{k+1} = x_k + u_k + w_k$, $w \in [-w_\max, w_\max]$. <span style="color:#0b5fff">파란 명목 궤적</span>은 보조 제어기 $u = \bar u + K(x - \bar x)$의 폐루프 응답으로 정해지는 <span style="color:#9eb9ff">하늘색 튜브</span>에 둘러싸여 있고, 그 폭만큼 <span style="color:#c62828">원래 제약(빨강)</span>이 안쪽으로 <span style="color:#ff8c00">타이트닝(주황)</span>됩니다. "외란 샘플" 궤적이 어떻게 와도 튜브 안에 머무는 게 보입니다.</p>
+    <canvas id="tube" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>외란 w_max <span class="val" id="tWV">0.30</span><input type="range" id="tW" min="0" max="0.7" step="0.02" value="0.3"></label>
+      <label>피드백 게인 |K| <span class="val" id="tKV">0.6</span><input type="range" id="tK" min="0.1" max="0.95" step="0.05" value="0.6"></label>
+      <button id="tSamp">샘플 재추출</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tube'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const N=40;
+    const Xmax=4;
+    function px(k){return 30+k/N*(W-60);}
+    function py(v){return H-30-(v+1)/(Xmax+2)*(H-60);}
+    let samples=[];
+    function resample(){
+      samples=[];
+      const wmax=+document.getElementById('tW').value;
+      for(let s=0;s<8;s++){
+        const tr=[0];
+        let xs=0;
+        const xb=[0];
+        let xbar=0;
+        const K=+document.getElementById('tK').value;
+        for(let k=0;k<N;k++){
+          // nominal evolution: xbar grows toward (Xmax - tube)
+          const tube=wmax*(1-Math.pow(1-K,k+1))/Math.max(K,0.001);
+          const target=Xmax-tube;
+          const ubar=0.15*(target-xbar);
+          xbar=xbar+ubar;
+          xb.push(xbar);
+          // actual
+          const w=(Math.random()*2-1)*wmax;
+          const u=ubar+K*(xbar-xs);
+          xs=xs+u+w;
+          tr.push(xs);
+        }
+        samples.push({tr,xb});
+      }
+    }
+    resample();
+    document.getElementById('tSamp').onclick=resample;
+    function loop(){
+      const wmax=+document.getElementById('tW').value;
+      const K=+document.getElementById('tK').value;
+      document.getElementById('tWV').textContent=wmax.toFixed(2);
+      document.getElementById('tKV').textContent=K.toFixed(2);
+      // nominal trajectory
+      const xb=[0];let xbar=0;
+      const tubeArr=[0];
+      for(let k=0;k<N;k++){
+        const tube=wmax*(1-Math.pow(1-K,k+1))/Math.max(K,0.001);
+        tubeArr.push(tube);
+        const target=Xmax-tube;
+        const ubar=0.15*(target-xbar);
+        xbar=xbar+ubar;
+        xb.push(xbar);
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';
+      for(let k=0;k<=N;k+=5){const xx=px(k);x.beginPath();x.moveTo(xx,30);x.lineTo(xx,H-30);x.stroke();}
+      // x_max constraint
+      x.strokeStyle='#c62828';x.lineWidth=2;x.setLineDash([6,4]);
+      x.beginPath();x.moveTo(30,py(Xmax));x.lineTo(W-30,py(Xmax));x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('x_max (제약)',W-110,py(Xmax)-4);
+      // tightened constraint x_max - tube(k)
+      x.strokeStyle='#ff8c00';x.lineWidth=2;x.setLineDash([3,3]);x.beginPath();
+      for(let k=0;k<=N;k++){const v=Xmax-tubeArr[k];if(k===0)x.moveTo(px(k),py(v));else x.lineTo(px(k),py(v));}
+      x.stroke();x.setLineDash([]);
+      x.fillStyle='#ff8c00';x.fillText('타이트닝된 제약',W-130,py(Xmax-tubeArr[N])-4);
+      // tube band around nominal
+      x.fillStyle='rgba(11,95,255,0.13)';x.beginPath();
+      for(let k=0;k<=N;k++) x.lineTo(px(k),py(xb[k]+tubeArr[k]));
+      for(let k=N;k>=0;k--) x.lineTo(px(k),py(xb[k]-tubeArr[k]));
+      x.closePath();x.fill();
+      x.strokeStyle='#9eb9ff';x.lineWidth=1.5;x.setLineDash([4,3]);
+      x.beginPath();for(let k=0;k<=N;k++){if(k===0)x.moveTo(px(k),py(xb[k]+tubeArr[k]));else x.lineTo(px(k),py(xb[k]+tubeArr[k]));}x.stroke();
+      x.beginPath();for(let k=0;k<=N;k++){if(k===0)x.moveTo(px(k),py(xb[k]-tubeArr[k]));else x.lineTo(px(k),py(xb[k]-tubeArr[k]));}x.stroke();
+      x.setLineDash([]);
+      // samples
+      x.strokeStyle='rgba(100,100,100,0.5)';x.lineWidth=1;
+      samples.forEach(s=>{
+        x.beginPath();
+        s.tr.forEach((v,k)=>{if(k===0)x.moveTo(px(k),py(v));else x.lineTo(px(k),py(v));});
+        x.stroke();
+      });
+      // nominal
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      xb.forEach((v,k)=>{if(k===0)x.moveTo(px(k),py(v));else x.lineTo(px(k),py(v));});x.stroke();
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('명목 x̄  (파랑)  ·  튜브 폭(끝) ≈ '+tubeArr[N].toFixed(2)+'  ·  샘플 8개 모두 튜브 내부',12,H-10);
+      requestAnimationFrame(()=>setTimeout(loop,150));
+    }
+    loop();
+  })();
+  </script>
+
   <h2>9. Economic MPC</h2>
 
   <h3>한 줄 비유부터</h3>
@@ -439,6 +542,115 @@
     <li>가중 평균 $U \leftarrow \sum_k w^{(k)} U^{(k)}$로 입력을 갱신합니다.</li>
   </ol>
   <p>미분이 필요 없어 매우 비선형이거나 불연속적인 비용에도 잘 작동하고, GPU 병렬화에 이상적입니다. 자율주행 레이싱(Georgia Tech AutoRally, 2016)과 legged 로봇에서 주류가 되었습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: MPPI — K개 롤아웃을 가중평균</h4>
+    <p>2D 점이 빨강 장애물을 피해 초록 목표로 갑니다. 매 스텝 $K$개의 입력 시퀀스를 노이즈로 흔들어 시뮬레이션(<span style="color:#666">회색 롤아웃</span>), 비용에 따라 $w \propto e^{-S/\lambda}$로 가중평균한 시퀀스(<span style="color:#0b5fff">진한 파랑</span>)의 첫 입력만 실행합니다. $\lambda$를 키우면 평균이 부드러워지고 작으면 최저비용 샘플에 가까워집니다.</p>
+    <canvas id="mppi" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>샘플 K <span class="val" id="mpKV">40</span><input type="range" id="mpK" min="5" max="120" step="5" value="40"></label>
+      <label>온도 λ <span class="val" id="mpLV">2.0</span><input type="range" id="mpL" min="0.1" max="10" step="0.1" value="2"></label>
+      <label>노이즈 σ <span class="val" id="mpSV">0.6</span><input type="range" id="mpS" min="0.1" max="1.5" step="0.05" value="0.6"></label>
+      <button id="mpRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mppi'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const goal=[W-60,H/2-40],obs={x:W*0.55,y:H*0.5,r:42};
+    const Hh=18,dt=0.6;
+    let pos,vel,U,trail;
+    function init(){pos=[60,H/2+30];vel=[0,0];U=[];for(let k=0;k<Hh;k++)U.push([0,0]);trail=[];}
+    init();
+    document.getElementById('mpRst').onclick=init;
+    function rollout(p0,v0,seq){
+      let p=p0.slice(),v=v0.slice(),S=0;
+      const traj=[p.slice()];
+      for(let k=0;k<seq.length;k++){
+        const u=seq[k];
+        v[0]=0.85*v[0]+u[0];v[1]=0.85*v[1]+u[1];
+        const sp=Math.hypot(v[0],v[1]);
+        if(sp>2.5){v[0]*=2.5/sp;v[1]*=2.5/sp;}
+        p[0]+=v[0]*dt;p[1]+=v[1]*dt;
+        const dg=Math.hypot(p[0]-goal[0],p[1]-goal[1]);
+        const dob=Math.hypot(p[0]-obs.x,p[1]-obs.y);
+        S+=0.005*dg*dg+0.04*Math.max(0,(obs.r+10)-dob)**2;
+        if(p[0]<10||p[0]>W-10||p[1]<10||p[1]>H-10) S+=2000;
+        traj.push(p.slice());
+      }
+      return{S,traj};
+    }
+    function loop(){
+      const K=+document.getElementById('mpK').value;
+      const lam=+document.getElementById('mpL').value;
+      const sig=+document.getElementById('mpS').value;
+      document.getElementById('mpKV').textContent=K;
+      document.getElementById('mpLV').textContent=lam.toFixed(1);
+      document.getElementById('mpSV').textContent=sig.toFixed(2);
+      // sample
+      const eps=[],S=[],trajs=[];
+      for(let i=0;i<K;i++){
+        const ek=[];const seq=[];
+        for(let k=0;k<Hh;k++){
+          const e=[(Math.random()*2-1)*sig*1.5,(Math.random()*2-1)*sig*1.5];
+          ek.push(e);
+          seq.push([U[k][0]+e[0],U[k][1]+e[1]]);
+        }
+        const r=rollout(pos,vel,seq);
+        eps.push(ek);S.push(r.S);trajs.push(r.traj);
+      }
+      const Smin=Math.min(...S);
+      let Z=0;const w=S.map(s=>{const v=Math.exp(-(s-Smin)/lam);Z+=v;return v;});
+      // weighted update
+      const newU=[];
+      for(let k=0;k<Hh;k++){
+        let ax=U[k][0],ay=U[k][1];
+        let dx=0,dy=0;
+        for(let i=0;i<K;i++){dx+=w[i]*eps[i][k][0];dy+=w[i]*eps[i][k][1];}
+        newU.push([ax+dx/Z,ay+dy/Z]);
+      }
+      U=newU;
+      // execute first
+      const u0=U[0];
+      vel[0]=0.85*vel[0]+u0[0];vel[1]=0.85*vel[1]+u0[1];
+      const sp=Math.hypot(vel[0],vel[1]);if(sp>2.5){vel[0]*=2.5/sp;vel[1]*=2.5/sp;}
+      pos[0]+=vel[0]*dt;pos[1]+=vel[1]*dt;
+      trail.push(pos.slice());if(trail.length>300)trail.shift();
+      // shift
+      U.push([0,0]);U.shift();
+      if(Math.hypot(pos[0]-goal[0],pos[1]-goal[1])<15) init();
+      // render
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // rollouts (color by weight)
+      trajs.forEach((tr,i)=>{
+        const a=Math.min(0.5,w[i]/Z*K*0.3+0.04);
+        x.strokeStyle=`rgba(120,120,120,${a})`;x.lineWidth=1;x.beginPath();
+        tr.forEach((p,k)=>{k?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]);});x.stroke();
+      });
+      // weighted-mean trajectory
+      const avg=rollout(pos,vel,U).traj;
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      avg.forEach((p,k)=>{k?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]);});x.stroke();
+      // obstacle
+      x.fillStyle='#c62828';x.beginPath();x.arc(obs.x,obs.y,obs.r,0,Math.PI*2);x.fill();
+      x.fillStyle='#fff';x.font='bold 14px sans-serif';x.fillText('OBST',obs.x-22,obs.y+5);
+      // goal
+      x.fillStyle='#2e7d32';x.font='bold 26px sans-serif';x.fillText('★',goal[0]-9,goal[1]+8);
+      // trail
+      x.strokeStyle='rgba(11,95,255,0.4)';x.lineWidth=2;x.beginPath();
+      trail.forEach((p,i)=>{i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]);});x.stroke();
+      // vehicle
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(pos[0],pos[1],6,0,Math.PI*2);x.fill();
+      x.strokeStyle='#fff';x.lineWidth=1.5;x.stroke();
+      x.fillStyle='#333';x.font='12px sans-serif';
+      const eff=Math.exp(-Math.log(K))*Z*Z/Math.max(1e-9,K*K)*K; // crude effective sample
+      x.fillText('롤아웃 K = '+K+'   ·   최소비용 = '+Smin.toFixed(1)+'   ·   λ = '+lam.toFixed(2),12,H-10);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
 
   <h2>12. MPC + CBF — 안전 임베디드 최적화</h2>
   <p>L11의 MPC와 L8의 CBF를 결합하면, 매 스텝의 최적화 안에서 안전 제약을 <em>discrete-time CBF</em> 형태로 함께 풀 수 있습니다.</p>

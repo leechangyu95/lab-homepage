@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -52,6 +53,76 @@
   <h3>1.1 "이상치"는 항상 제거해야 하는가</h3>
   <p>그렇지 않습니다. 이상치는 세 종류로 나눌 수 있습니다. ① 센서 고장이나 입력 실수로 생긴 <em>진짜 오류</em>는 제거 또는 수정, ② 꼬리가 긴 분포에서 자연스럽게 나타나는 <em>극단값</em>은 보존(오히려 중요 정보), ③ <em>희귀하지만 의미 있는 사건</em>(사기, 결함)은 그 자체가 예측 대상이니 절대 버리면 안 됩니다. "3σ 밖의 점을 자동으로 지운다" 같은 규칙을 맹목적으로 적용하지 마세요.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 이상치가 평균·중앙값을 어떻게 흔드는가</h4>
+    <p>같은 데이터에 이상치 한두 개를 추가해 보세요. <strong>평균</strong>은 이상치에 끌려가지만 <strong>중앙값</strong>은 거의 움직이지 않습니다. 그래서 강건 통계(robust statistics)는 중앙값과 IQR을 선호해요.</p>
+    <canvas id="outDet" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>이상치 위치 <span class="val" id="oxV">15</span><input type="range" id="ox" min="0" max="30" step="0.5" value="15"></label>
+      <label>이상치 개수 <span class="val" id="onV">1</span><input type="range" id="on" min="0" max="10" step="1" value="1"></label>
+      <button id="oRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('outDet');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let base=[];
+    function gen(){
+      base=[];
+      for(let i=0;i<30;i++){
+        const u=Math.random(),v=Math.random();
+        const z=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+        base.push(5+z*1.2);
+      }
+      draw();
+    }
+    function draw(){
+      const ox=+document.getElementById('ox').value;
+      const on=+document.getElementById('on').value;
+      document.getElementById('oxV').textContent=ox.toFixed(1);
+      document.getElementById('onV').textContent=on;
+      const data=[...base];for(let i=0;i<on;i++)data.push(ox);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const lx=40,rx=W-20,y0=180;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(lx,y0);ctx.lineTo(rx,y0);ctx.stroke();
+      const rng=30;
+      // ticks
+      ctx.fillStyle='#888';ctx.font='11px sans-serif';
+      for(let v=0;v<=rng;v+=5){const x=lx+v/rng*(rx-lx);ctx.beginPath();ctx.moveTo(x,y0-3);ctx.lineTo(x,y0+3);ctx.stroke();ctx.fillText(v,x-5,y0+18);}
+      // points
+      data.forEach((v,i)=>{
+        const x=lx+v/rng*(rx-lx);
+        const isOut=i>=base.length;
+        ctx.fillStyle=isOut?'#c62828':'#0b5fff';
+        ctx.beginPath();ctx.arc(x,y0-15,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.stroke();
+      });
+      const sorted=[...data].sort((a,b)=>a-b);
+      const mean=data.reduce((a,b)=>a+b,0)/data.length;
+      const median=sorted.length%2?sorted[(sorted.length-1)/2]:(sorted[sorted.length/2-1]+sorted[sorted.length/2])/2;
+      const meanX=lx+mean/rng*(rx-lx),medX=lx+median/rng*(rx-lx);
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(meanX,40);ctx.lineTo(meanX,y0+20);ctx.stroke();
+      ctx.strokeStyle='#2e7d32';ctx.beginPath();ctx.moveTo(medX,40);ctx.lineTo(medX,y0+20);ctx.stroke();
+      ctx.fillStyle='#ff8c00';ctx.font='13px sans-serif';
+      ctx.fillText(`평균 = ${mean.toFixed(2)}`,meanX-30,30);
+      ctx.fillStyle='#2e7d32';
+      ctx.fillText(`중앙값 = ${median.toFixed(2)}`,medX-40,55);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`정상 데이터 ${base.length}개 + 이상치 ${on}개 (위치 ${ox.toFixed(1)})`,12,255);
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(160,250,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#666';ctx.fillText('정상',170,255);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(220,250,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#666';ctx.fillText('이상치',230,255);
+    }
+    document.getElementById('ox').addEventListener('input',draw);
+    document.getElementById('on').addEventListener('input',draw);
+    document.getElementById('oRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
   <h2>2. NumPy — 벡터화 사고</h2>
   <p>NumPy는 파이썬 리스트를 더 빠르게 만든 게 아니라 <strong>완전히 다른 사고방식</strong>입니다. 루프를 도는 대신 배열 전체에 한 번에 연산을 적용합니다.</p>
   <pre><code>import numpy as np
@@ -71,6 +142,82 @@ print(x.mean(), x.std())  # 3.0  1.414</code></pre>
 mu = np.array([1, 1, 1])          # (3,)
 X - mu                            # (2, 3) — mu가 각 행에 빼짐</code></pre>
   <p>표준화를 한 줄로 쓸 수 있는 것도 브로드캐스팅 덕분입니다: <code>(X - X.mean(0)) / X.std(0)</code>. 초보자가 자주 겪는 버그는 $(N,)$ 과 $(N,1)$을 혼동하는 것입니다. 전자는 1차원 벡터, 후자는 2차원 열벡터로 브로드캐스팅 결과가 완전히 달라집니다. 헷갈릴 때는 <code>reshape(-1,1)</code>로 명시해 주세요.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 브로드캐스팅 모양 시각화</h4>
+    <p>두 배열의 모양을 골라서 NumPy가 어떻게 자동으로 늘리는지 봅니다. 끝부터 비교해서 (a) 같거나 (b) 한쪽이 1이면 ✅, 둘 다 아니면 ❌ 에러.</p>
+    <canvas id="bcast" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>A 모양 <select id="bcA">
+        <option value="3,4">(3, 4)</option>
+        <option value="1,4">(1, 4)</option>
+        <option value="3,1">(3, 1)</option>
+        <option value="4">(4,)</option>
+        <option value="2,3,4" selected>(2, 3, 4)</option>
+        <option value="1,3,1">(1, 3, 1)</option>
+      </select></label>
+      <label>B 모양 <select id="bcB">
+        <option value="4" selected>(4,)</option>
+        <option value="3,4">(3, 4)</option>
+        <option value="3,1">(3, 1)</option>
+        <option value="1,4">(1, 4)</option>
+        <option value="2,1,4">(2, 1, 4)</option>
+        <option value="2,3,1">(2, 3, 1)</option>
+      </select></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bcast');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function pad(arr,n){return Array(n-arr.length).fill(1).concat(arr);}
+    function draw(){
+      const A=document.getElementById('bcA').value.split(',').map(Number);
+      const B=document.getElementById('bcB').value.split(',').map(Number);
+      const n=Math.max(A.length,B.length);
+      const Ap=pad(A,n),Bp=pad(B,n);
+      let ok=true,result=[];
+      for(let i=0;i<n;i++){
+        if(Ap[i]===Bp[i]||Ap[i]===1||Bp[i]===1)result.push(Math.max(Ap[i],Bp[i]));
+        else{ok=false;result.push('?');}
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#222';ctx.font='14px monospace';
+      const cell=70,startX=120,row=80;
+      ctx.fillText('A',60,row+12);
+      Ap.forEach((v,i)=>{
+        const realI=i-(Ap.length-A.length);
+        ctx.fillStyle=realI<0?'#999':'#0b5fff';
+        ctx.font='14px monospace';
+        ctx.fillText(realI<0?'(1)':v,startX+i*cell,row+12);
+      });
+      ctx.fillStyle='#222';ctx.fillText('B',60,row+50);
+      Bp.forEach((v,i)=>{
+        const realI=i-(Bp.length-B.length);
+        ctx.fillStyle=realI<0?'#999':'#ff8c00';
+        ctx.fillText(realI<0?'(1)':v,startX+i*cell,row+50);
+      });
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(60,row+62);ctx.lineTo(startX+(n-1)*cell+30,row+62);ctx.stroke();
+      ctx.fillStyle='#222';ctx.fillText('=',60,row+90);
+      result.forEach((v,i)=>{
+        ctx.fillStyle=v==='?'?'#c62828':'#2e7d32';
+        ctx.font='bold 14px monospace';
+        ctx.fillText(v,startX+i*cell,row+90);
+      });
+      // verdict
+      ctx.fillStyle=ok?'#2e7d32':'#c62828';
+      ctx.font='bold 18px sans-serif';
+      ctx.fillText(ok?`✅ 결과 모양: (${result.join(', ')})`:`❌ 호환되지 않음 — 차원이 안 맞아요`,60,200);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('규칙: 끝에서부터 비교해 같거나 한쪽이 1이면 OK. 짧은 배열은 앞에 1을 채움.',60,235);
+      ctx.fillText('파랑 = A의 실제 차원, 회색 = 자동 추가된 1, 주황 = B의 실제 차원',60,255);
+    }
+    document.getElementById('bcA').addEventListener('change',draw);
+    document.getElementById('bcB').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
 
   <h2>3. pandas — 표 데이터의 엑셀</h2>
   <p>pandas의 <code>DataFrame</code>은 컬럼마다 이름이 붙은 표입니다. SQL과 엑셀의 사고방식을 모두 흉내 낼 수 있습니다.</p>

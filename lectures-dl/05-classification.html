@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -48,6 +49,70 @@
   <div class="tip">
     <strong>실전 팁</strong> — $K$는 보통 홀수로 잡습니다(동점 방지). 시작은 $K = \sqrt{N}$ 근처, 그 다음 교차 검증으로 ±2~3 범위를 탐색. 클래스 불균형이 심하면 <em>가중치를 클래스 빈도의 역수</em>로 조정하는 것도 효과적입니다.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 차원의 저주 — 가까운 이웃이 가까운가?</h4>
+    <p>$d$차원 단위 입방체 안에 1000개의 점을 무작위로 뿌리고, 한 점에서 <strong>가장 가까운 이웃과 가장 먼 이웃 사이의 거리 비</strong>를 봅니다. $d$가 커질수록 그 비율이 1로 수렴합니다 — "가장 가까운 점"의 의미가 사라지는 순간이에요.</p>
+    <canvas id="cod" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>차원 $d$ <span class="val" id="codDV">2</span><input type="range" id="codD" min="1" max="100" step="1" value="2"></label>
+      <button id="codRun">다시 샘플</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cod');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const history=[];
+    function run(){
+      const d=+document.getElementById('codD').value;
+      document.getElementById('codDV').textContent=d;
+      const N=400;
+      const pts=[];for(let i=0;i<N;i++){const p=[];for(let k=0;k<d;k++)p.push(Math.random());pts.push(p);}
+      let totalRatio=0,n=0;
+      for(let i=0;i<60;i++){
+        let mn=Infinity,mx=0;
+        for(let j=0;j<N;j++){if(i===j)continue;
+          let s=0;for(let k=0;k<d;k++){const a=pts[i][k]-pts[j][k];s+=a*a;}
+          const dist=Math.sqrt(s);
+          if(dist<mn)mn=dist;
+          if(dist>mx)mx=dist;
+        }
+        totalRatio+=mn/mx;n++;
+      }
+      const avgRatio=totalRatio/n;
+      history.push({d,r:avgRatio});if(history.length>40)history.shift();
+      draw(avgRatio);
+    }
+    function draw(r){
+      const d=+document.getElementById('codD').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      for(let i=0;i<=10;i++){const y=20+i*(H-50)/10;ctx.moveTo(50,y);ctx.lineTo(W-20,y);}
+      ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let i=0;i<=5;i++){const y=20+i*(H-50)/5;ctx.fillText((1-i*0.2).toFixed(1),20,y+3);}
+      ctx.fillText('d→',W-30,H-10);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      history.forEach((h,i)=>{
+        const x=50+(h.d/100)*(W-70);
+        const y=20+(1-h.r)*(H-50);
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();
+      const x=50+(d/100)*(W-70),y=20+(1-r)*(H-50);ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('d='+d+': 최근접/최원접 거리 비 = '+r.toFixed(3),60,H-10);
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText(r>0.85?'⚠ 이웃의 의미가 거의 없음':r>0.6?'⚠ 거리 정보가 약해지는 중':'✓ 거리 척도가 의미 있음',W-260,20);
+    }
+    document.getElementById('codD').addEventListener('input',run);
+    document.getElementById('codRun').addEventListener('click',run);
+    run();
+  })();
+  </script>
 
   <h2>2. SVM — 가장 넓은 도로 만들기</h2>
   <p>SVM(Support Vector Machine, Vapnik & Chervonenkis, 1963; 실용적 버전은 1995년)은 두 클래스를 가르는 수많은 직선 중에서 하나를 고르는 원칙을 명확하게 정합니다: <strong>"도로를 가장 넓게 내라"</strong>. 즉 데이터가 양쪽 클래스로 가장 멀리 떨어진, <em>가장 두꺼운 경계 띠</em>를 찾는 것입니다. 이 띠 위(또는 안)에 있는 점들이 <strong>서포트 벡터</strong>로, SVM은 이 몇 개의 점에만 의존해 경계를 결정합니다 — 그래서 이름이 "Support Vector" Machine.</p>
@@ -82,6 +147,54 @@
     <li><strong>시그모이드 커널</strong> $K = \tanh(\alpha \mathbf x^\top \mathbf x' + c)$ — 신경망 흉내</li>
   </ul>
   <p>RBF 커널의 파라미터 $\gamma$는 "국소성"을 조절합니다 — 크면 각 샘플 주변만 영향을 미쳐 복잡한 경계가 가능하지만 과적합 위험이, 작으면 경계가 부드러워집니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: RBF 커널과 $\gamma$의 효과</h4>
+    <p>두 클래스가 동심원으로 섞인 데이터입니다. <strong>선형 경계로는 절대 못 가르지만</strong> RBF 커널의 결정 함수는 가능합니다. $\gamma$를 키우면 경계가 점점 데이터 점 모양에 딱 붙어 과적합이 일어나는 모습을 보세요.</p>
+    <canvas id="rbf" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$\gamma$ (국소성) <span class="val" id="gmV">1.0</span><input type="range" id="gm" min="0.2" max="20" step="0.2" value="1.0"></label>
+      <button id="rbfRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rbf');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<30;i++){const a=Math.random()*Math.PI*2,r=0.05+Math.random()*0.08;pts.push({x:0.5+r*Math.cos(a),y:0.5+r*Math.sin(a),c:0});}
+      for(let i=0;i<40;i++){const a=Math.random()*Math.PI*2,r=0.22+Math.random()*0.08;pts.push({x:0.5+r*Math.cos(a),y:0.5+r*Math.sin(a),c:1});}
+      draw();
+    }
+    function draw(){
+      const g=+document.getElementById('gm').value;
+      document.getElementById('gmV').textContent=g.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const STEP=8;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        let s=0;
+        const xn=i/W,yn=j/H;
+        pts.forEach(p=>{
+          const dx=xn-p.x,dy=yn-p.y;
+          const k=Math.exp(-g*(dx*dx+dy*dy)*100);
+          s+=(p.c?-1:1)*k;
+        });
+        const a=Math.min(0.5,Math.abs(s)*0.05);
+        ctx.fillStyle=s>0?`rgba(11,95,255,${a})`:`rgba(255,140,0,${a})`;
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach(p=>{ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(p.x*W,p.y*H,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(g<1?'γ 작음 → 경계 부드러움':g<5?'γ 적당 → 좋은 일반화':'γ 큼 → 점에 달라붙음 (과적합)',12,22);
+    }
+    document.getElementById('gm').addEventListener('input',draw);
+    document.getElementById('rbfRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
 
   <div class="note">
     <strong>역사적 한 토막</strong> — 1990년대 후반부터 2010년대 초반까지 SVM은 머신러닝의 "황제"였습니다. 작은 데이터셋, 고차원 입력(텍스트, 생물정보), 수학적 엄밀함에서 타의 추종을 불허했습니다. 딥러닝이 2012년 이후 시각·음성·자연어를 차례로 장악하면서 주류 자리를 내줬지만, 여전히 작은 데이터·고해석성이 필요한 분야에서 첫 선택지입니다.
@@ -215,6 +328,81 @@
   <p>순수하면 0, 균등하면 $\log_2 K$. 한 번의 분할이 제공하는 <em>정보 이득(information gain)</em>은 부모 엔트로피 빼기 자식 엔트로피의 가중 평균입니다. 트리는 매 분할에서 정보 이득이 가장 큰 질문을 탐욕적으로 고릅니다.</p>
   <p>실전에서 지니와 엔트로피는 거의 같은 결과를 냅니다(지니가 약간 빠름). CART 알고리즘은 지니, ID3/C4.5는 엔트로피를 씁니다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정보이득 — 어디서 자르는 게 좋을까</h4>
+    <p>1차원 데이터에 두 클래스가 섞여 있습니다. <strong>분할선</strong>을 움직이며 왼쪽/오른쪽 영역의 지니 불순도와 정보이득(Information Gain)이 어떻게 변하는지 보세요. 정보이득이 가장 큰 곳이 결정트리가 자동으로 고르는 분할입니다.</p>
+    <canvas id="ig" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>분할 위치 <span class="val" id="igTV">0.50</span><input type="range" id="igT" min="0.05" max="0.95" step="0.01" value="0.5"></label>
+      <button id="igRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ig');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<25;i++)pts.push({x:0.1+Math.random()*0.35,c:0});
+      for(let i=0;i<8;i++)pts.push({x:0.45+Math.random()*0.5,c:0});
+      for(let i=0;i<25;i++)pts.push({x:0.55+Math.random()*0.35,c:1});
+      for(let i=0;i<8;i++)pts.push({x:0.05+Math.random()*0.5,c:1});
+      draw();
+    }
+    function gini(arr){if(!arr.length)return 0;const c0=arr.filter(p=>p.c==0).length/arr.length;return 1-c0*c0-(1-c0)*(1-c0);}
+    function bestT(){
+      let best=null;
+      for(let t=0.05;t<=0.95;t+=0.01){
+        const L=pts.filter(p=>p.x<t),R=pts.filter(p=>p.x>=t);
+        if(!L.length||!R.length)continue;
+        const wg=(L.length*gini(L)+R.length*gini(R))/pts.length;
+        const ig=gini(pts)-wg;
+        if(!best||ig>best.ig)best={t,ig};
+      }
+      return best;
+    }
+    function draw(){
+      const t=+document.getElementById('igT').value;
+      document.getElementById('igTV').textContent=t.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const yLine=H-90;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,yLine);ctx.lineTo(W-20,yLine);ctx.stroke();
+      pts.forEach(p=>{
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        const x=40+p.x*(W-60);
+        ctx.beginPath();ctx.arc(x,yLine+(p.c?15:-15),5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.stroke();
+      });
+      const tx=40+t*(W-60);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.moveTo(tx,30);ctx.lineTo(tx,H-20);ctx.stroke();ctx.setLineDash([]);
+      const L=pts.filter(p=>p.x<t),R=pts.filter(p=>p.x>=t);
+      const gL=gini(L),gR=gini(R),gP=gini(pts);
+      const wg=(L.length*gL+R.length*gR)/pts.length;
+      const igVal=gP-wg;
+      const best=bestT();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`부모 Gini ${gP.toFixed(3)} | 분할 후 가중평균 ${wg.toFixed(3)}`,12,22);
+      ctx.fillText(`왼쪽 (n=${L.length}) Gini=${gL.toFixed(3)} | 오른쪽 (n=${R.length}) Gini=${gR.toFixed(3)}`,12,42);
+      ctx.fillStyle=Math.abs(t-best.t)<0.02?'#2e7d32':'#0b5fff';
+      ctx.font='bold 14px sans-serif';
+      ctx.fillText(`정보이득 IG = ${igVal.toFixed(3)}  (최적값 ${best.ig.toFixed(3)} @ t=${best.t.toFixed(2)})`,12,64);
+      // bar
+      const bw=(W-80),bx=40,by=H-50;
+      ctx.fillStyle='#eef0f4';ctx.fillRect(bx,by,bw,16);
+      ctx.fillStyle='#0b5fff';ctx.fillRect(bx,by,bw*igVal/Math.max(0.01,best.ig),16);
+      ctx.strokeStyle='#999';ctx.strokeRect(bx,by,bw,16);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('IG 비율 (현재/최대)',bx,by-3);
+    }
+    document.getElementById('igT').addEventListener('input',draw);
+    document.getElementById('igRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
   <h3>3.2 과적합과 가지치기</h3>
   <p>트리를 깊게 키우면 훈련 데이터를 완벽히 외웁니다 (순수 리프 = 0 오차). 하지만 새 데이터에 대한 성능은 급격히 떨어집니다. 과적합의 전형입니다. 해법:</p>
   <ul>
@@ -235,6 +423,89 @@
   <div class="tip">
     <strong>특성 중요도</strong> — 랜덤포레스트의 또 다른 매력은 각 특성이 <em>평균적으로 얼마나 불순도를 줄였는지</em>를 계산해 특성 중요도(feature importance)를 제공한다는 점입니다. 이 덕분에 "어떤 변수가 예측에 큰 역할을 했나"를 쉽게 볼 수 있어 의료, 금융처럼 해석이 중요한 분야에서 많이 쓰입니다.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 랜덤포레스트 — 약한 트리들의 다수결</h4>
+    <p>$T$개의 얕은 결정트리를 각각 다른 부트스트랩 표본으로 학습시킵니다. 단일 트리는 들쭉날쭉하지만 평균(다수결)을 내면 매끈한 경계가 나오는 걸 보세요. <strong>나무 수</strong>를 늘리면 분산이 줄고, <strong>최대 깊이</strong>를 키우면 개별 트리는 강해지지만 다양성이 줄어요.</p>
+    <canvas id="rf" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>나무 수 $T$ <span class="val" id="rfTV">12</span><input type="range" id="rfT" min="1" max="40" step="1" value="12"></label>
+      <label>최대 깊이 <span class="val" id="rfDV">3</span><input type="range" id="rfD" min="1" max="6" step="1" value="3"></label>
+      <button id="rfRegen">새 데이터</button>
+      <button id="rfShow" class="alt">개별 트리 보이기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rf');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[],trees=[],showSingle=false;
+    function gen(){
+      pts=[];
+      for(let i=0;i<70;i++){
+        const x=Math.random(),y=Math.random();
+        const r=Math.hypot(x-0.5,y-0.5);
+        const c=(r<0.22||r>0.36)?0:1;
+        if(Math.random()<0.05)pts.push({x,y,c:1-c});
+        else pts.push({x,y,c});
+      }
+      build();
+    }
+    function gini(arr){if(!arr.length)return 0;const c0=arr.filter(p=>p.c==0).length/arr.length;return 1-c0*c0-(1-c0)*(1-c0);}
+    function buildTree(arr,depth,box){
+      if(depth===0||arr.length<3||gini(arr)<0.1){
+        const c0=arr.filter(p=>p.c==0).length;
+        return {leaf:true,pred:c0>=arr.length/2?0:1,box};
+      }
+      let best=null;const f=Math.random()<0.5?0:1;
+      for(let t=0.1;t<0.9;t+=0.08){
+        const L=arr.filter(p=>(f?p.y:p.x)<t),R=arr.filter(p=>(f?p.y:p.x)>=t);
+        if(!L.length||!R.length)continue;
+        const g=(L.length*gini(L)+R.length*gini(R))/arr.length;
+        if(!best||g<best.g)best={g,t,L,R,f};
+      }
+      if(!best){const c0=arr.filter(p=>p.c==0).length;return {leaf:true,pred:c0>=arr.length/2?0:1,box};}
+      const b1={...box},b2={...box};
+      if(best.f===0){b1.x1=best.t;b2.x0=best.t;}else{b1.y1=best.t;b2.y0=best.t;}
+      return {leaf:false,f:best.f,t:best.t,L:buildTree(best.L,depth-1,b1),R:buildTree(best.R,depth-1,b2)};
+    }
+    function predict(node,p){if(node.leaf)return node.pred;const v=node.f?p.y:p.x;return predict(v<node.t?node.L:node.R,p);}
+    function build(){
+      const T=+document.getElementById('rfT').value;
+      const D=+document.getElementById('rfD').value;
+      document.getElementById('rfTV').textContent=T;
+      document.getElementById('rfDV').textContent=D;
+      trees=[];
+      for(let i=0;i<T;i++){
+        const samp=[];for(let k=0;k<pts.length;k++)samp.push(pts[Math.floor(Math.random()*pts.length)]);
+        trees.push(buildTree(samp,D,{x0:0,y0:0,x1:1,y1:1}));
+      }
+      draw();
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const STEP=8;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const p={x:i/W,y:j/H};
+        let s=0;
+        if(showSingle){s=predict(trees[0],p);}
+        else{trees.forEach(t=>{s+=predict(t,p);});s=s/trees.length;}
+        const a=Math.abs(s-0.5)*0.5;
+        ctx.fillStyle=s<0.5?`rgba(11,95,255,${a})`:`rgba(255,140,0,${a})`;
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach(p=>{ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(p.x*W,p.y*H,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(showSingle?'단일 트리 (들쭉날쭉)':`${trees.length}개 트리 다수결 (매끈)`,12,22);
+    }
+    document.getElementById('rfT').addEventListener('input',build);
+    document.getElementById('rfD').addEventListener('input',build);
+    document.getElementById('rfRegen').addEventListener('click',gen);
+    document.getElementById('rfShow').addEventListener('click',()=>{showSingle=!showSingle;draw();});
+    gen();
+  })();
+  </script>
 
   <h2>5. 코드 예제</h2>
   <pre><code>from sklearn.svm import SVC

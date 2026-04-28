@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -201,6 +202,69 @@
   $$ W_\text{out} = \left\lfloor \frac{W_\text{in} + 2p - k}{s} \right\rfloor + 1 $$
   <p>예를 들어 $28 \times 28$ 입력에 $3 \times 3$ 커널, $s=1$, $p=1$을 쓰면 출력은 $28 \times 28$ 그대로. 이를 "same padding"이라 부르고, 크기를 유지하면서 합성곱을 적용합니다. $s=2$로 바꾸면 출력은 $14 \times 14$로 절반.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 스트라이드·패딩·출력 크기 계산기</h4>
+    <p>입력 위에 필터가 어떻게 미끄러지는지 직접 봅니다. 슬라이더를 움직이면 격자가 다시 그려지고, 공식 $(W_\text{in}+2p-k)/s + 1$의 결과가 위에 표시돼요.</p>
+    <canvas id="conv2" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>입력 W <span class="val" id="cv2WV">7</span><input type="range" id="cv2W" min="5" max="12" step="1" value="7"></label>
+      <label>커널 k <span class="val" id="cv2KV">3</span><input type="range" id="cv2K" min="1" max="5" step="2" value="3"></label>
+      <label>스트라이드 s <span class="val" id="cv2SV">1</span><input type="range" id="cv2S" min="1" max="3" step="1" value="1"></label>
+      <label>패딩 p <span class="val" id="cv2PV">0</span><input type="range" id="cv2P" min="0" max="3" step="1" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('conv2');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const Win=+document.getElementById('cv2W').value;
+      const k=+document.getElementById('cv2K').value;
+      const s=+document.getElementById('cv2S').value;
+      const p=+document.getElementById('cv2P').value;
+      document.getElementById('cv2WV').textContent=Win;
+      document.getElementById('cv2KV').textContent=k;
+      document.getElementById('cv2SV').textContent=s;
+      document.getElementById('cv2PV').textContent=p;
+      const Wout=Math.floor((Win+2*p-k)/s)+1;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText(`W_out = ⌊(${Win}+2·${p}-${k})/${s}⌋+1 = ${Wout>0?Wout:'유효하지 않음'}`,12,22);
+      // draw input grid (with padding shown as gray)
+      const total=Win+2*p;
+      const cell=Math.min(220/total,28);
+      const Lx=40,Ly=50;
+      for(let j=0;j<total;j++)for(let i=0;i<total;i++){
+        const isPad=(i<p||i>=Win+p||j<p||j>=Win+p);
+        ctx.fillStyle=isPad?'#e0e6ee':'#cce5ff';
+        ctx.fillRect(Lx+i*cell,Ly+j*cell,cell-1,cell-1);
+      }
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`입력 ${Win}×${Win} (+패딩 ${p})`,Lx,Ly-5);
+      // draw output grid
+      const Rx=Lx+total*cell+50;
+      const ocell=cell*1.2;
+      const Wo=Math.max(0,Wout);
+      for(let j=0;j<Wo;j++)for(let i=0;i<Wo;i++){
+        ctx.fillStyle='#ffe1c2';ctx.fillRect(Rx+i*ocell,Ly+j*ocell,ocell-1,ocell-1);
+      }
+      ctx.fillStyle='#222';ctx.fillText(`출력 ${Wo}×${Wo}`,Rx,Ly-5);
+      if(Wo>0){
+        // animated filter slot on input
+        const t=(Date.now()/600)%(Wo*Wo);
+        const fi=Math.floor(t)%Wo,fj=Math.floor(t/Wo)%Wo;
+        ctx.strokeStyle='#c62828';ctx.lineWidth=3;
+        ctx.strokeRect(Lx+fi*s*cell-1,Ly+fj*s*cell-1,k*cell+1,k*cell+1);
+        ctx.fillStyle='rgba(198,40,40,0.5)';
+        ctx.fillRect(Rx+fi*ocell,Ly+fj*ocell,ocell-1,ocell-1);
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+  </script>
+
   <h3>3.2 풀링 — 해상도 줄이기와 불변성 얻기</h3>
   <p><strong>풀링(pooling)</strong>은 합성곱의 짝꿍입니다. 특징 맵을 작은 영역(보통 $2 \times 2$)으로 나누고, 각 영역에서 대표값 하나만 남깁니다.</p>
   <ul>
@@ -229,6 +293,64 @@
     <li><strong>Out</strong>: 84 → 10 (클래스 개수).</li>
   </ol>
   <p>공간 해상도는 $28 \to 24 \to 12 \to 8 \to 4$로 줄고, 채널 수(특징의 종류)는 $1 \to 6 \to 16$으로 늘어납니다. "해상도는 줄이고 추상화는 높이는" 이 피라미드 구조가 현대 CNN의 보편적 패턴입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: LeNet 텐서 모양 따라가기</h4>
+    <p>입력 이미지가 LeNet의 8개 층을 통과하면서 모양이 어떻게 변하는지 봅니다. <strong>입력 크기</strong>를 바꾸면 모든 후속 모양이 자동으로 다시 계산됩니다 — "왜 32×32 입력은 안 되고 28×28만 되나?" 같은 질문도 직접 확인 가능.</p>
+    <canvas id="lenet" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>입력 크기 <span class="val" id="lnIV">28</span><input type="range" id="lnI" min="20" max="40" step="1" value="28"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lenet');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const I=+document.getElementById('lnI').value;
+      document.getElementById('lnIV').textContent=I;
+      const layers=[];
+      let s=I,ch=1;layers.push({n:'Input',s,ch,p:0});
+      let s1=s-5+1;layers.push({n:'Conv1 5×5',s:s1,ch:6,p:6*5*5+6});
+      s=Math.floor(s1/2);layers.push({n:'Pool1 2×2',s,ch:6,p:0});
+      s1=s-5+1;layers.push({n:'Conv2 5×5',s:s1,ch:16,p:16*6*5*5+16});
+      s=Math.floor(s1/2);layers.push({n:'Pool2 2×2',s,ch:16,p:0});
+      const flat=16*s*s;
+      layers.push({n:'Flatten',s:1,ch:flat,p:0});
+      layers.push({n:'FC1',s:1,ch:120,p:flat*120+120});
+      layers.push({n:'FC2',s:1,ch:84,p:120*84+84});
+      layers.push({n:'Out',s:1,ch:10,p:84*10+10});
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const colW=W/layers.length;
+      let totalP=0;
+      layers.forEach((L,i)=>{
+        totalP+=L.p;
+        const cx=i*colW+colW/2;
+        const sz=Math.max(8,Math.min(60,L.s*1.5));
+        const stack=Math.min(L.ch,8);
+        for(let k=0;k<stack;k++){
+          const x=cx-sz/2-k*2,y=120-sz/2-k*2;
+          ctx.fillStyle=L.s>1?'#cce5ff':'#ffe1c2';
+          ctx.fillRect(x,y,sz,sz);
+          ctx.strokeStyle='#666';ctx.strokeRect(x,y,sz,sz);
+        }
+        ctx.fillStyle=L.s===0||L.s<0?'#c62828':'#333';
+        ctx.font='11px sans-serif';
+        ctx.fillText(L.n,cx-colW/2+4,200);
+        ctx.fillText(L.s>1?`${L.ch}×${L.s}×${L.s}`:`${L.ch}`,cx-colW/2+4,215);
+        if(L.p>0){ctx.fillStyle='#888';ctx.fillText(`p=${L.p.toLocaleString()}`,cx-colW/2+4,230);}
+        if(i<layers.length-1){ctx.strokeStyle='#0b5fff';ctx.beginPath();ctx.moveTo(cx+sz/2+5,120);ctx.lineTo((i+1)*colW+colW/2-30,120);ctx.stroke();}
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`총 파라미터 약 ${totalP.toLocaleString()}개 · 입력 ${I}×${I}`,12,260);
+      const last=layers[layers.length-1].s;
+      if(last<1){ctx.fillStyle='#c62828';ctx.fillText('⚠ 입력 크기가 너무 작아 음수 차원이 나옵니다',12,280);}
+    }
+    document.getElementById('lnI').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h2>6. 코드 예제 (PyTorch)</h2>
   <pre><code>import torch.nn as nn

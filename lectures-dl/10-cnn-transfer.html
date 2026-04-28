@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -72,6 +73,58 @@
   <p>Inception의 진짜 주역은 1×1 합성곱입니다. "1×1이 무슨 의미가 있지? 픽셀 하나만 보는데?" 라고 생각하기 쉬운데, 채널 차원에서 보면 이야기가 다릅니다. 입력이 $H\times W \times 256$일 때 1×1 합성곱 64개를 적용하면 출력은 $H\times W \times 64$ — 즉 <strong>공간 정보는 그대로 두고 채널을 압축</strong>합니다. 이것은 각 픽셀 위치에서 256차원 벡터를 64차원으로 선형 투영하는 것과 정확히 같고, 따라서 채널 간의 의미 있는 조합을 학습합니다.</p>
   <p>이 "채널 병목(bottleneck)"을 3×3, 5×5 앞에 끼우면 계산량이 극적으로 줄어듭니다. 예: $28\times 28 \times 192$ 입력에 $5\times 5 \times 32$ 합성곱 → $28\times 28\times 32$ 출력을 직접 하면 곱셈이 약 1.2억 회. 중간에 1×1로 16채널까지 줄이면 약 1200만 회로 10분의 1이 됩니다. 이 트릭 덕분에 GoogLeNet은 VGG보다 12배 적은 파라미터(약 7M)로 더 좋은 성능을 냈습니다.</p>
   <p>또 하나, GoogLeNet은 완전연결층을 <strong>전역 평균 풀링</strong>으로 대체했습니다. 마지막 feature map이 $7\times 7 \times 1024$라면, 각 채널의 49개 값을 평균 내서 1024차원 벡터 하나를 얻고 이걸로 바로 분류합니다. 파라미터가 0개인 데다 공간적으로 robust 합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1×1 합성곱 — 채널 병목의 마법</h4>
+    <p>5×5 합성곱을 그냥 적용할 때 vs 1×1로 채널을 먼저 줄인 뒤 5×5를 적용할 때의 <strong>곱셈 횟수</strong>를 직접 계산해 봅니다. 입력 채널을 키울수록 차이가 극적으로 벌어져요.</p>
+    <canvas id="ococ" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>입력 채널 $C_{in}$ <span class="val" id="oc1V">192</span><input type="range" id="oc1" min="32" max="512" step="16" value="192"></label>
+      <label>출력 채널 $C_{out}$ <span class="val" id="oc2V">32</span><input type="range" id="oc2" min="16" max="128" step="8" value="32"></label>
+      <label>1×1 병목 채널 <span class="val" id="oc3V">16</span><input type="range" id="oc3" min="4" max="64" step="4" value="16"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ococ');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const Ci=+document.getElementById('oc1').value;
+      const Co=+document.getElementById('oc2').value;
+      const Cb=+document.getElementById('oc3').value;
+      document.getElementById('oc1V').textContent=Ci;
+      document.getElementById('oc2V').textContent=Co;
+      document.getElementById('oc3V').textContent=Cb;
+      const Hsize=28;
+      const direct=Hsize*Hsize*5*5*Ci*Co;
+      const bottleneck=Hsize*Hsize*1*1*Ci*Cb + Hsize*Hsize*5*5*Cb*Co;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const max=Math.max(direct,bottleneck);
+      const barH=40,bx=180,bw=W-220;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('5×5 직접 적용',12,55);
+      ctx.fillStyle='#ff8c00';ctx.fillRect(bx,40,bw*direct/max,barH);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(direct.toLocaleString()+' 곱셈',bx+8,68);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('1×1 → 5×5',12,135);
+      ctx.fillStyle='#0b5fff';ctx.fillRect(bx,120,bw*bottleneck/max,barH);
+      ctx.fillStyle='#fff';ctx.font='12px sans-serif';
+      ctx.fillText(bottleneck.toLocaleString()+' 곱셈',bx+8,148);
+      const ratio=direct/bottleneck;
+      ctx.fillStyle='#2e7d32';ctx.font='bold 16px sans-serif';
+      ctx.fillText(`병목 적용 시 ${ratio.toFixed(1)}× 빠름 (계산량 ${(100*(1-bottleneck/direct)).toFixed(0)}% 감소)`,12,210);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`28×28×${Ci} → 28×28×${Co} 변환 기준`,12,235);
+      ctx.fillText(`병목 = 1×1 (${Ci}→${Cb}) + 5×5 (${Cb}→${Co})`,12,253);
+    }
+    document.getElementById('oc1').addEventListener('input',draw);
+    document.getElementById('oc2').addEventListener('input',draw);
+    document.getElementById('oc3').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h2>4. ResNet (2015) — 층을 무한히 쌓는 법</h2>
   <p>층을 너무 깊이 쌓으면 오히려 학습이 안 됩니다(기울기 소실의 친구인 "성능 열화"). He Kaiming이 제안한 잔차 연결(residual connection)로 이 문제를 깼습니다.</p>
@@ -192,6 +245,63 @@
   <h2>6. 학습률 스케줄</h2>
   <p>전이학습에서는 보통 매우 작은 학습률($10^{-5}$~$10^{-4}$)로 시작합니다. 큰 학습률은 사전학습된 가중치를 망가뜨리기 때문입니다. 워밍업(warmup)과 코사인 감쇠를 함께 쓰는 게 표준입니다.</p>
   <p>워밍업이란 처음 수백 스텝 동안 lr을 0에서 목표값까지 선형으로 올리는 것입니다. 초기에 큰 lr을 바로 주면 랜덤 초기화된 새 분류기 층이 이상한 방향으로 튀면서 그 뒤쪽의 안정된 층까지 흔들어 버리는데, 워밍업이 이걸 막습니다. 그 후에는 코사인 곡선을 따라 lr을 부드럽게 0으로 줄여 나가며 최종 수렴을 다듬습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 학습률 스케줄 4종 비교</h4>
+    <p>같은 epoch 수에서 <strong>일정·계단·코사인·워밍업+코사인</strong>이 어떻게 다른 모양을 그리는지 보세요. 워밍업은 초반 작은 lr로 안정화한 뒤 본 학습률에 도달, 코사인은 부드럽게 끝까지 0으로 내려갑니다.</p>
+    <canvas id="lrSched" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>총 epoch <span class="val" id="lrEV">100</span><input type="range" id="lrE" min="20" max="200" step="10" value="100"></label>
+      <label>최대 lr <span class="val" id="lrMV">0.01</span><input type="range" id="lrM" min="0.001" max="0.1" step="0.001" value="0.01"></label>
+      <label>워밍업 비율 <span class="val" id="lrWV">10</span>%<input type="range" id="lrW" min="0" max="30" step="1" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lrSched');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const E=+document.getElementById('lrE').value;
+      const M=+document.getElementById('lrM').value;
+      const wp=+document.getElementById('lrW').value/100;
+      document.getElementById('lrEV').textContent=E;
+      document.getElementById('lrMV').textContent=M.toFixed(3);
+      document.getElementById('lrWV').textContent=Math.round(wp*100);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';
+      for(let i=0;i<=4;i++){const y=20+i*(H-50)/4;ctx.beginPath();ctx.moveTo(50,y);ctx.lineTo(W-20,y);ctx.stroke();}
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let i=0;i<=4;i++){ctx.fillText((M*(1-i/4)).toFixed(3),5,25+i*(H-50)/4);}
+      const fns=[
+        {n:'일정',col:'#999',f:t=>M},
+        {n:'계단 (0.1× /50%)',col:'#ff8c00',f:t=>t<0.5?M:M*0.1},
+        {n:'코사인',col:'#0b5fff',f:t=>0.5*M*(1+Math.cos(Math.PI*t))},
+        {n:'워밍업+코사인',col:'#2e7d32',f:t=>t<wp?M*(t/wp):0.5*M*(1+Math.cos(Math.PI*(t-wp)/(1-wp)))}
+      ];
+      fns.forEach((F,k)=>{
+        ctx.strokeStyle=F.col;ctx.lineWidth=2;ctx.beginPath();
+        for(let i=0;i<=200;i++){
+          const t=i/200;
+          const lr=Math.max(0,F.f(t));
+          const x=50+t*(W-70);
+          const y=20+(1-lr/M)*(H-50);
+          if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+        ctx.fillStyle=F.col;ctx.font='12px sans-serif';
+        ctx.fillText(F.n,W-180,30+k*16);
+        ctx.fillRect(W-200,22+k*16,12,8);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('epoch →',W-60,H-10);
+    }
+    document.getElementById('lrE').addEventListener('input',draw);
+    document.getElementById('lrM').addEventListener('input',draw);
+    document.getElementById('lrW').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <div class="note"><strong>자기지도 사전학습의 시대.</strong> 2020년 이후에는 ImageNet 라벨 없이도 사전학습을 하는 SimCLR, MoCo, MAE 같은 방법들이 주류가 됐습니다. "라벨이 있는 1000만 장"이 아니라 "라벨 없는 1억 장"으로 더 좋은 표현을 얻을 수 있다는 발견이 비전 전이학습의 두 번째 혁명이었습니다.</div>
 

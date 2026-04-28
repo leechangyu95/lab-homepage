@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W11. 아날로그 기초·연산증폭기 — 기전공학기초</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html" class="active">기전공학기초</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mech.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 11. 아날로그 기초·연산증폭기 — 두 줄 규칙으로 풀리는 마법</h1>
+  <p class="lead">트랜지스터 수십 개를 한 칩에 모아둔 op-amp. "두 입력은 같다 + 입력 전류는 0" 단 두 줄로 거의 모든 회로가 풀립니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 증폭이 필요한가</li>
+    <li>증폭의 핵심 원칙 — 선형성과 동작점(Q점)</li>
+    <li>신호 전달의 황금률 — 임피던스 매칭</li>
+    <li>op-amp의 정체 — 가상접지·버퍼·부궤환</li>
+    <li>이상적 op-amp의 두 황금규칙</li>
+    <li>반전·비반전·가산기·차동·계측 증폭기</li>
+    <li>4단계 풀이 레시피</li>
+  </ol></div>
+
+  <h2>1. 왜 증폭인가</h2>
+  <p>주변의 거의 모든 신호는 처음에는 매우 작습니다.</p>
+  <ul>
+    <li>마이크 음성 신호: 수 mV</li>
+    <li>온도·압력 센서: 수 mV ~ 수십 mV</li>
+    <li>안테나에서 받은 무선 신호: 마이크로볼트(μV)</li>
+  </ul>
+  <p>스피커는 수 V·수 W를 요구하고, MCU 입력은 보통 1~3.3V 범위. 그래서 <strong>수천~수백만 배 증폭</strong>이 필요합니다. 라디오 안테나 신호(1μV)를 들을 수 있는 음량(1V)으로 키우려면 백만 배 증폭. 이런 것이 모든 아날로그 시스템의 첫 단계입니다.</p>
+
+  <h2>2. 증폭의 핵심 — 선형성과 Q점</h2>
+  <p>이상적 증폭기의 식은 한 줄.</p>
+  $$ v_O = A \cdot v_I $$
+  <p>출력이 입력에 정확히 비례해야 신호의 모양이 망가지지 않습니다. 그런데 트랜지스터(W10)의 I-V 곡선은 곡선이라 그대로 쓰면 출력이 찌그러져요. 해결책은 곡선 위 한 점($Q$점)을 동작점으로 잡고 그 주변 좁은 구간만 사용하는 것 — 이 영역에서는 곡선이 거의 직선으로 보입니다.</p>
+  <ul>
+    <li><strong>바이어스</strong> = 트랜지스터를 켜놓는 배경(DC) 전압. Q점을 정해 줌.</li>
+    <li><strong>신호</strong> = 그 위에서 흔들리는 작은 변화(AC).</li>
+  </ul>
+  <p>마이크 앰프를 너무 세게 켜면 소리가 찢어지는 이유 — 신호가 너무 커져 선형 영역을 벗어났기 때문입니다(클리핑).</p>
+
+  <h2>3. 신호 전달의 황금률 — 임피던스 매칭</h2>
+  <p>어떤 신호원이 부하에 신호를 보낼 때 손실 없이 전달하는 조건은 신호의 종류에 따라 다릅니다.</p>
+
+  <table>
+    <thead><tr><th>신호 종류</th><th>신호원 모델</th><th>황금률</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>전압 신호</td><td>테브난 ($v_S, R_S$)</td><td>$R_L \gg R_S$ (이상적 $R_L = \infty$)</td><td>전압 분배에서 $v_S$ 전체가 부하에 걸리려면</td></tr>
+      <tr><td>전류 신호</td><td>노턴 ($i_S, R_S$)</td><td>$R_L \ll R_S$ (이상적 $R_L = 0$)</td><td>전류 분배에서 모든 전류가 부하로 가려면</td></tr>
+    </tbody>
+  </table>
+
+  <p>다음에 볼 op-amp가 모든 곳에서 환영받는 이유 중 하나가, <strong>입력 임피던스 ≈ ∞, 출력 임피던스 ≈ 0</strong>이라는 점입니다 — 전압 신호 전달의 황금률을 양쪽에서 모두 만족합니다.</p>
+
+  <h2>4. 연산증폭기(Op-Amp)의 정체</h2>
+  <p>저항 두 개로 신호를 키워보려는 시도가 왜 실패하는지부터 봅시다. $V_{\text{out}} = R_2/(R_1)\,V_{\text{in}}$이 나오는 듯하지만, 실제로는 두 가지 문제가 있어요.</p>
+  <ol>
+    <li><strong>접지로 전류가 새어 나감</strong> → 두 저항에 흐르는 전류가 같지 않음.</li>
+    <li><strong>출력단에 연결된 게 없음</strong> → 두 번째 저항에 흐를 곳이 없음.</li>
+  </ol>
+  <p>이 두 문제를 해결하는 세 아이디어가 합쳐진 것이 op-amp입니다.</p>
+
+  <h3>4.1 가상접지(Virtual Ground)</h3>
+  <p>"전압은 0V인데 만지면 통과 못하는 투명 벽" 같은 노드. 이 노드의 전압은 0이지만 외부로 전류가 새지 않습니다 → 두 저항의 전류가 자동으로 같아져 깔끔한 증폭이 가능해집니다.</p>
+
+  <h3>4.2 버퍼(Buffer)</h3>
+  <p>"전압을 그대로 복사하되, 전류 공급 능력은 훨씬 큰" 통역사 역할. 입력 전압을 출력에 그대로 옮기지만(이득 1) 출력 쪽에서는 부하가 요구하는 전류를 양방향으로 충분히 공급합니다.</p>
+
+  <h3>4.3 부궤환(Negative Feedback)</h3>
+  <p>샤워기 온도 조절과 같습니다 — 너무 뜨거우면 찬물 쪽으로, 너무 차가우면 따뜻한 쪽으로. 결과를 다시 입력에 빼는 방향으로 되돌려 자동으로 안정점에 수렴시키는 메커니즘. op-amp는 출력의 일부를 (−) 입력으로 되돌려 두 입력을 자동으로 같아지게 만듭니다.</p>
+
+  <p>이 세 가지가 한 칩에 들어 있는 것이 op-amp입니다 — 우리는 외부에 저항 두 개만 붙여서 <strong>얼마나 증폭할지</strong>만 결정하면 됩니다.</p>
+
+  <h2>5. Op-Amp 회로 기호와 신호</h2>
+  <p>삼각형, 다리 5개:</p>
+  <ul>
+    <li><strong>(+) 입력 (비반전)</strong> $v_+$ — 이쪽으로 들어가면 그대로 출력</li>
+    <li><strong>(−) 입력 (반전)</strong> $v_-$ — 이쪽으로 들어가면 뒤집혀 출력</li>
+    <li><strong>출력</strong> $v_o$</li>
+    <li>$V_{CC}$, $V_{EE}$ — 양·음 전원 (회로도에는 종종 생략하지만 실제로는 반드시 필요)</li>
+  </ul>
+
+  <p>op-amp의 출력 식:</p>
+  $$ v_o = A\,(v_+ - v_-) $$
+  <p>실제 op-amp의 개방 루프 이득 $A$는 $10^5 \sim 10^6$ — 엄청 큽니다. 그래서 입력 차가 0.00001V만 돼도 출력이 공급전압 한계(±15V)까지 튕겨 올라가 포화됩니다. 그대로는 못 쓰고 <strong>반드시 부궤환</strong>을 걸어 길들여서 사용합니다.</p>
+
+  <h2>6. 이상적 op-amp의 두 황금규칙</h2>
+  <p>$A \to \infty$ 가정에서 $v_o$가 유한하려면 $v_+ - v_- = 0$이 되어야 합니다. 또 입력 임피던스가 무한대라 입력 전류도 0. 결과는 단 두 줄의 황금규칙입니다.</p>
+  $$ \boxed{v_+ = v_- \qquad I_+ = I_- = 0} $$
+  <p>이 두 줄로 거의 모든 op-amp 회로를 푸는 게 가능합니다 — 이 강의의 가장 중요한 식이에요.</p>
+
+  <h2>7. Op-Amp 회로 풀이 — 4단계 레시피</h2>
+  <ol>
+    <li><strong>부궤환 확인</strong> — 출력이 (−) 입력단자로 어떤 식으로든 연결되어 있는지(직접 또는 저항을 통해).</li>
+    <li><strong>가상접지 적용</strong> — $v_-$를 $v_+$ 값과 같게 둠.</li>
+    <li><strong>전류 경로 그리기</strong> — 입력 → 가상접지 노드 → 출력. 입력단자로는 안 들어감(규칙 2).</li>
+    <li><strong>옴의 법칙 + KCL</strong> — 가상접지 노드에서 들어오는 전류 = 나가는 전류로 식을 세우고 $v_O$에 대해 풉니다.</li>
+  </ol>
+
+  <h2>8. 대표 회로</h2>
+
+  <h3>8.1 반전 증폭기(Inverting)</h3>
+  <p>입력이 $R_1$을 거쳐 (−) 단자로, 출력이 $R_2$를 거쳐 (−) 단자로 되먹임. (+) 단자는 접지.</p>
+  <p>가상접지 → $v_- = 0$. KCL:</p>
+  $$ \frac{v_S - 0}{R_1} = \frac{0 - v_O}{R_2} \implies \boxed{v_O = -\frac{R_2}{R_1} v_S} $$
+  <p>이득의 크기는 저항 비율 $R_2/R_1$로 결정되고 부호는 반전. 예: $R_1 = 10\,\text{k}$, $R_2 = 100\,\text{k}$, $v_S = 0.1\,\text{V}$ → $v_O = -1\,\text{V}$ (10배 증폭, 부호 반전).</p>
+
+  <h3>8.2 비반전 증폭기(Non-inverting)</h3>
+  <p>입력이 (+) 단자로 직접, (−) 단자는 $R_1$로 접지, $R_2$로 출력에 연결.</p>
+  <p>가상접지 → $v_- = v_+ = v_S$. KCL:</p>
+  $$ \frac{0 - v_S}{R_1} = \frac{v_S - v_O}{R_2} \implies \boxed{v_O = \left(1 + \frac{R_2}{R_1}\right) v_S} $$
+  <p>이득은 양수, 항상 1 이상. 입력 임피던스가 매우 커서 신호원에 부담을 안 줍니다.</p>
+
+  <h3>8.3 버퍼(전압 팔로워)</h3>
+  <p>비반전의 특수 경우 ($R_1 = \infty$, $R_2 = 0$). 출력이 (−) 단자에 직접 연결.</p>
+  $$ v_O = v_S \qquad (\text{이득 = 1}) $$
+  <p>이득은 1이지만 입력 임피던스가 무한대, 출력 임피던스가 0 — 신호원과 부하 사이의 <strong>임피던스 변환기</strong> 역할. 약한 신호원을 큰 부하에 연결할 때 끼워 넣습니다.</p>
+
+  <h3>8.4 가산기(Summing Amplifier)</h3>
+  <p>여러 입력 $v_1, v_2, v_3$을 각자 $R_1, R_2, R_3$를 거쳐 (−) 단자(가상접지)로. 피드백은 $R_f$로.</p>
+  $$ v_O = -\left(\frac{R_f}{R_1}v_1 + \frac{R_f}{R_2}v_2 + \frac{R_f}{R_3}v_3\right) $$
+  <p>각 입력을 가중치를 주고 합친 뒤 부호 반전. $R_1 = R_2 = R_3 = R_f$이면 $v_O = -(v_1+v_2+v_3)$로 단순 합산. 노래방 마이크 + 반주를 한 스피커로 보내는 오디오 믹서가 이 구조입니다.</p>
+
+  <h3>8.5 차동 증폭기(Differential)</h3>
+  <p>두 입력의 <strong>차이</strong>를 증폭. 잡음에 매우 강해 센서·계측에서 빠지지 않습니다.</p>
+  $$ v_O = \frac{R_f}{R_1}(v_2 - v_1) $$
+  <p>두 입력에 공통으로 실린 잡음(common-mode)은 빠지고 차이만 증폭됩니다.</p>
+
+  <h3>8.6 계측 증폭기(Instrumentation Amp)</h3>
+  <p>차동 증폭기의 입력 두 단자 앞에 버퍼를 하나씩 추가한 3-op-amp 구조. 입력 임피던스가 매우 크고 동상신호 제거비(CMRR)가 매우 높아 <strong>스트레인 게이지·심전도(ECG)·서모커플</strong> 등 매우 작은 차분 신호 측정의 표준 회로입니다(W5 휘트스톤 브릿지의 출력을 받는 곳!).</p>
+
+  <h2>9. 적분기와 미분기</h2>
+  <p>저항 자리에 커패시터를 두면 새로운 동작이 생깁니다.</p>
+
+  <h3>9.1 적분기</h3>
+  <p>반전 증폭기의 $R_2$ 자리에 커패시터 $C$를 넣으면:</p>
+  $$ v_O(t) = -\frac{1}{RC}\int v_S(t)\,dt $$
+  <p>즉 PID 제어기의 I항을 아날로그로 직접 구현합니다 — <a href="../lectures/07-feedback-control.html">로봇공학특론 L7 PID 제어</a>의 적분 항이 바로 이런 회로로 만들어집니다.</p>
+
+  <h3>9.2 미분기</h3>
+  <p>$R_1$ 자리에 커패시터를 두면:</p>
+  $$ v_O(t) = -RC\,\frac{d v_S(t)}{dt} $$
+  <p>PID의 D항. 다만 미분기는 노이즈 증폭 문제 때문에 보통 추가 필터와 함께 씁니다.</p>
+
+  <h2>10. 출력 동작 범위 — 무한정 키울 수는 없다</h2>
+  <p>이상적 op-amp는 출력에 한계가 없지만 실제 op-amp는 공급전압 $V_{CC}$, $V_{EE}$ 사이에서만 출력할 수 있습니다 — 그 한계에 닿으면 <strong>포화(saturation)</strong>되어 신호가 잘립니다.</p>
+  $$ V_{EE} + V_{\text{drop}} \le v_O \le V_{CC} - V_{\text{drop}} $$
+  <p>±15V 공급의 일반 op-amp라면 출력은 대략 ±13V 사이까지. 입력이 너무 크거나 이득이 너무 큰 경우 포화되어 사인파가 사각파처럼 잘리니 설계 단계에서 마진 확인이 중요합니다.</p>
+
+  <h2>11. 741 — 전설의 op-amp</h2>
+  <p>1968년 출시된 8핀 DIP IC. 50년 넘게 표준으로 쓰이고 있어요.</p>
+  <ul>
+    <li>2번 핀: 반전 입력 (−)</li>
+    <li>3번 핀: 비반전 입력 (+)</li>
+    <li>4번 핀: $V_{EE}$ (보통 −15V)</li>
+    <li>6번 핀: 출력</li>
+    <li>7번 핀: $V_{CC}$ (보통 +15V)</li>
+  </ul>
+  <p>요즘은 LM358 (단일 전원 동작 가능), TL072 (저잡음), MCP6002 (rail-to-rail) 등 더 좋은 op-amp들이 흔하지만 회로 해석의 출발점은 여전히 741입니다.</p>
+
+  <h2>12. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>회로</th><th>전압이득</th></tr></thead>
+    <tbody>
+      <tr><td>반전</td><td>$-R_2/R_1$</td></tr>
+      <tr><td>비반전</td><td>$1 + R_2/R_1$</td></tr>
+      <tr><td>버퍼</td><td>$1$</td></tr>
+      <tr><td>가산기</td><td>$-\sum R_f v_i / R_i$</td></tr>
+      <tr><td>차동</td><td>$(R_f/R_1)(v_2 - v_1)$</td></tr>
+      <tr><td>적분기</td><td>$-(1/RC)\!\int v\,dt$</td></tr>
+      <tr><td>미분기</td><td>$-RC\,dv/dt$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>13. Falstad 실습</h2>
+  <ul>
+    <li><strong>반전 증폭기</strong> — $R_1 = 10\text{k}$, $R_2 = 100\text{k}$로 -10배 증폭기 구성. 입력 사인파(0.1V)에 출력이 -1V로 위상이 뒤집혀 나오는지 확인.</li>
+    <li><strong>비반전 증폭기</strong> — 같은 저항으로 +11배 증폭기. 입력 0.1V → 출력 1.1V, 위상 동일인지 확인.</li>
+    <li><strong>가산기</strong> — 세 입력(0.5, 0.3, 0.2V)을 가산. 출력이 약 -1V (모든 저항 같다면 -합)인지 확인.</li>
+    <li><strong>적분기로 사각파 → 삼각파</strong> — 사각파 입력에 적분기를 붙이면 삼각파 출력이 나오는지 시각적으로 관찰.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>다른 강의와의 연결</strong> — op-amp는 PID 제어기(<a href="../lectures/07-feedback-control.html">L7</a>)의 P·I·D 항을 그대로 아날로그로 만들 수 있습니다. 또 휘트스톤 브릿지(<a href="05-dc-analysis-2.html">W5</a>)의 미세 출력 신호는 계측 증폭기로 받아 MCU의 ADC가 읽을 수 있는 크기로 키웁니다 — "센서 → 신호 조절 → 디지털화"의 두 번째 블록이 op-amp인 셈이에요.
+  </div>
+
+  <nav class="prevnext">
+    <a href="10-transistor.html"><small>← 이전</small>W10. 트랜지스터</a>
+    <a href="12-digital.html" class="next"><small>다음 →</small>W12. 디지털 논리</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

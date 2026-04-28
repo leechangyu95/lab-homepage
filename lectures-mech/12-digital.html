@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W12. 디지털 논리 — 기전공학기초</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html" class="active">기전공학기초</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mech.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 12. 디지털 논리 — 0과 1로 짓는 컴퓨터</h1>
+  <p class="lead">잡음에 강한 0/1의 세계, 부울 대수와 논리 게이트, 그리고 "기억하는 회로"의 첫 발걸음.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 디지털인가 — 잡음 강건성</li>
+    <li>2진수와 2의 보수 (음수 표현)</li>
+    <li>부울 대수와 기본 7개 공리</li>
+    <li>논리 게이트 — AND·OR·NOT·NAND·NOR·XOR</li>
+    <li>조합 논리 회로 — 진리표에서 게이트로</li>
+    <li>순차 논리 회로 — 래치·플립플롭의 "기억"</li>
+    <li>대표 응용 — 카운터·레지스터·FSM</li>
+  </ol></div>
+
+  <h2>1. 왜 디지털인가</h2>
+  <p>아날로그 카세트 테이프는 복사할수록 음질이 나빠지지만 MP3는 100번 복사해도 원본과 똑같습니다. 그 차이는 단 하나 — <strong>아날로그는 연속값, 디지털은 0/1 두 값만</strong>이라는 점입니다.</p>
+
+  <h3>1.1 잡음 강건성</h3>
+  <p>전송선을 지나며 잡음이 섞이는 건 피할 수 없습니다.</p>
+  <ul>
+    <li>아날로그라면 3.2V를 보냈는데 3.5V로 도착하면 영원히 복원 불가.</li>
+    <li>디지털이라면 "3V 이상은 1, 2V 이하는 0"이라는 약속만 있으면 3.5V도 그냥 1로 읽고 끝 — 원본 완벽 복원.</li>
+  </ul>
+
+  <h3>1.2 왜 하필 2진수인가</h3>
+  <p>0~5V를 10단계로 쪼개면 한 칸이 0.5V — 잡음 0.3V만 섞여도 헷갈립니다. 2단계로 쪼개면 한 칸이 2.5V — 잡음 1V가 와도 안전. 가장 덜 쪼갠 것이 2진수이고, 그래서 잡음·회로 단순성 모두에서 압도적으로 유리해 디지털 시스템의 표준이 되었습니다.</p>
+
+  <h2>2. 2진수와 2의 보수</h2>
+  <p>10진수 235 = $2 \cdot 100 + 3 \cdot 10 + 5 \cdot 1$ (자리값 100, 10, 1).<br>
+  2진수 $(1011)_2$ = $1 \cdot 8 + 0 \cdot 4 + 1 \cdot 2 + 1 \cdot 1 = 11$ (자리값 8, 4, 2, 1).</p>
+  <ul>
+    <li><strong>비트(bit)</strong> = 2진수 한 자리 (Binary Digit)</li>
+    <li><strong>MSB</strong> = 가장 큰 자리 비트 (Most Significant Bit)</li>
+    <li><strong>LSB</strong> = 가장 작은 자리 비트 (Least Significant Bit)</li>
+  </ul>
+
+  <h3>2.1 음수 표현 — 2의 보수</h3>
+  <p>컴퓨터는 덧셈 회로만 잘 만들어두고 뺄셈은 "−값을 더하는 것"으로 처리합니다. 그러려면 −3을 어떻게 2진수로 쓸지 정해야 하는데, 표준이 <strong>2의 보수(two's complement)</strong>입니다.</p>
+
+  <h4>만드는 법 (2단계)</h4>
+  <ol>
+    <li>모든 비트를 뒤집는다 (1의 보수)</li>
+    <li>1을 더한다</li>
+  </ol>
+
+  <p><strong>예제:</strong> $(1101100)_2$의 2의 보수.</p>
+  <ol>
+    <li>뒤집기: $1101100 \to 0010011$</li>
+    <li>+1: $0010011 + 1 = 0010100$</li>
+  </ol>
+  <p>검산: $1101100 + 0010100 = 10000000$. 맨 왼쪽 1은 오버플로로 버려져 결과는 0 — 두 수의 합이 0이므로 서로 반대 부호 관계 ✓.</p>
+
+  <p>2의 보수가 1의 보수보다 표준이 된 이유는 1의 보수는 +0과 −0 두 가지가 따로 존재해 혼란스럽기 때문입니다(2의 보수는 0이 하나뿐).</p>
+
+  <h2>3. 부울 대수</h2>
+  <p>변수가 0 또는 1만 가지는 특별한 수학. 영국의 조지 부울(George Boole)이 1850년대에 만들었고, 디지털 회로 설계의 공용 언어가 되었습니다. 단 세 가지 기본 연산만 있으면 모든 디지털 회로를 표현할 수 있어요.</p>
+
+  <table>
+    <thead><tr><th>연산</th><th>기호</th><th>의미</th><th>스위치 비유</th></tr></thead>
+    <tbody>
+      <tr><td>AND (곱)</td><td>$A \cdot B$ 또는 $AB$</td><td>둘 다 1일 때만 1</td><td>직렬 스위치 (둘 다 켜야 전등 ON)</td></tr>
+      <tr><td>OR (합)</td><td>$A + B$</td><td>하나라도 1이면 1</td><td>병렬 스위치 (하나만 켜도 전등 ON)</td></tr>
+      <tr><td>NOT (부정)</td><td>$\bar{A}$ 또는 $A'$</td><td>0↔1 반전</td><td>반대로 작동</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.1 기본 공리 7개</h3>
+  $$ A \cdot 0 = 0, \;\; A \cdot 1 = A, \;\; A + 0 = A, \;\; A + 1 = 1 $$
+  $$ A \cdot A = A, \;\; A + A = A, \;\; A \cdot \bar{A} = 0, \;\; A + \bar{A} = 1 $$
+
+  <p>일반 대수와 가장 다른 두 가지: $A + A = A$, $1 + 1 = 1$. "켜짐 + 켜짐 = 켜짐", 그냥 켜짐일 뿐입니다. 외울 때 한 줄: <strong>0과의 연산 — AND는 먹음, OR는 무시 / 1과의 연산 — AND는 무시, OR는 먹음</strong>.</p>
+
+  <h3>3.2 세 가지 핵심 법칙</h3>
+  <p><strong>분배법칙</strong>: $A(B+C) = AB + AC$ (일반 대수와 동일)</p>
+  <p><strong>드모르간 법칙</strong> — 회로 변환의 핵심:</p>
+  $$ \overline{A \cdot B} = \bar{A} + \bar{B}, \qquad \overline{A + B} = \bar{A} \cdot \bar{B} $$
+  <p>"바깥의 NOT = 안에서 AND/OR를 바꾸고 각자에 NOT". 즉 NAND를 NOT-OR(입력 둘 다 반전)로, NOR를 NOT-AND로 변환할 수 있어요.</p>
+
+  <h2>4. 논리 게이트</h2>
+  <p>입력 신호를 받아 규칙대로 출력을 내보내는 작은 부품(gate = 문). 모든 디지털 IC가 이 게이트들의 조합입니다.</p>
+
+  <table>
+    <thead><tr><th>게이트</th><th>출력</th><th>진리표</th></tr></thead>
+    <tbody>
+      <tr><td>NOT</td><td>$\bar{A}$</td><td>$0\to 1, 1\to 0$</td></tr>
+      <tr><td>AND</td><td>$AB$</td><td>11일 때만 1</td></tr>
+      <tr><td>OR</td><td>$A+B$</td><td>둘 다 0일 때만 0</td></tr>
+      <tr><td>NAND</td><td>$\overline{AB}$</td><td>11일 때만 0</td></tr>
+      <tr><td>NOR</td><td>$\overline{A+B}$</td><td>둘 다 0일 때만 1</td></tr>
+      <tr><td>XOR (배타적 OR)</td><td>$A \oplus B$</td><td>다를 때만 1</td></tr>
+      <tr><td>XNOR (등가)</td><td>$A \odot B$</td><td>같을 때만 1</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>NAND의 놀라운 성질</strong> — NAND 게이트 하나만 가지고 다른 모든 게이트(AND·OR·NOT)를 만들 수 있습니다. <em>NOT</em>: 두 입력에 같은 신호 → NAND. <em>AND</em>: NAND 결과를 다시 NAND(=NOT). <em>OR</em>: 두 입력을 각각 NOT한 뒤 NAND. CMOS 공정에서 NAND가 가장 만들기 쉬워서 모든 디지털 IC의 기본 블록이 됩니다.
+  </div>
+
+  <h3>4.1 XOR의 의미와 응용</h3>
+  <p>XOR 진리표: $00 \to 0$, $01 \to 1$, $10 \to 1$, $11 \to 0$. "두 입력이 다르면 1".</p>
+  <ul>
+    <li>비밀번호 일치 검사 — 두 비트열이 정확히 같은지 빠르게 확인</li>
+    <li>덧셈 회로 — 캐리 없이 두 비트의 합 (반가산기)</li>
+    <li>패리티 검사 — 데이터 무결성 확인</li>
+  </ul>
+
+  <h2>5. 조합 논리 회로 — 진리표에서 게이트로</h2>
+  <p>"지금 입력만 보고 지금 출력을 결정"하는 회로. 설계 절차는 거의 항상 동일합니다.</p>
+  <ol>
+    <li><strong>원하는 동작을 진리표로</strong> 작성. 입력이 $n$개면 행 수는 $2^n$.</li>
+    <li><strong>논리식 유도</strong> — 출력이 1인 행마다 입력 조합을 AND로 묶고, 그것들을 OR로 합침(SOP, Sum of Products).</li>
+    <li><strong>간략화</strong> — 부울 대수 법칙이나 카르노 맵(K-map)으로 식을 단순화.</li>
+    <li><strong>게이트 조립</strong> — 간략화된 식을 그대로 게이트로 그림.</li>
+  </ol>
+
+  <h3>5.1 반가산기(Half Adder)와 전가산기(Full Adder)</h3>
+  <p>두 비트 $A$, $B$의 덧셈을 생각해 봅시다.</p>
+  <ul>
+    <li>합 $S = A \oplus B$ (XOR — 다르면 1)</li>
+    <li>자리올림 $C = A \cdot B$ (AND — 둘 다 1일 때만 올림)</li>
+  </ul>
+  <p>이것이 <strong>반가산기</strong>. 자리올림 입력까지 받는 <strong>전가산기</strong>를 $n$개 직렬로 연결하면 $n$비트 덧셈기가 만들어집니다 — CPU의 ALU(Arithmetic Logic Unit) 핵심 블록의 시작점입니다.</p>
+
+  <h3>5.2 디코더와 멀티플렉서</h3>
+  <ul>
+    <li><strong>디코더(Decoder)</strong> — $n$비트 입력을 받아 $2^n$개 출력 중 하나만 1로 내보냄. 메모리 주소 디코딩, 7-세그먼트 표시 등에.</li>
+    <li><strong>멀티플렉서(MUX)</strong> — $2^n$개 입력 중 하나를 선택해 출력. 데이터 버스 공유, ALU 연산 선택에.</li>
+  </ul>
+
+  <h2>6. 순차 논리 회로 — 기억하는 회로</h2>
+  <p>지금까지 배운 회로는 <em>지금 입력만</em> 보고 출력을 결정합니다. 그런데 카운터·메모리는 <strong>과거의 상태</strong>도 기억해야 해요. 이 "기억"을 가능하게 하는 것이 피드백 루프 — 출력이 입력으로 다시 돌아오는 구조입니다.</p>
+
+  <h3>6.1 SR 래치 — 가장 간단한 1비트 메모리</h3>
+  <p>NOR 두 개를 교차 연결한 회로:</p>
+  <ul>
+    <li>S(Set) = 1 → Q = 1로 기록</li>
+    <li>R(Reset) = 1 → Q = 0으로 기록</li>
+    <li>S = R = 0 → 이전 상태 유지 (이것이 "기억"!)</li>
+    <li>S = R = 1 → 금지(둘 다 동시에 1로 만들 수 없음)</li>
+  </ul>
+
+  <h3>6.2 D 플립플롭 — 클럭에 동기화된 1비트 저장소</h3>
+  <p>래치는 입력이 변하면 즉시 출력이 변하지만, <strong>플립플롭</strong>은 클럭(clock) 신호의 모서리(edge)에서만 입력을 받아들입니다. 모든 디지털 시스템이 같은 클럭에 맞춰 일제히 갱신되도록 동기화하는 핵심 부품이에요.</p>
+  <p>D 플립플롭의 동작: 클럭 상승 에지에서 D 입력 값이 Q로 복사되고, 그 다음 클럭까지 유지.</p>
+  $$ Q_{\text{next}} = D \quad (\text{at rising edge of clock}) $$
+
+  <h3>6.3 레지스터와 카운터</h3>
+  <ul>
+    <li><strong>레지스터(Register)</strong> — D 플립플롭 $n$개를 같은 클럭에 묶어 $n$비트 데이터 저장. CPU의 작업 메모리.</li>
+    <li><strong>카운터(Counter)</strong> — 클럭마다 1씩 증가하는 회로. 시계, 타이머, PWM의 기반.</li>
+  </ul>
+
+  <h2>7. 유한상태기계(FSM)</h2>
+  <p>플립플롭으로 현재 상태를 저장하고, 조합 논리로 입력에 따라 다음 상태와 출력을 결정하는 구조. 신호등 제어, 자판기, 게임 컨트롤러, 통신 프로토콜 — 모든 디지털 시스템의 행동 패턴이 결국 FSM입니다.</p>
+  <p>예: 신호등 = 녹/황/적 3상태. 타이머가 정해진 시간이 되면 다음 상태로 전이, 출력 LED 조합이 상태마다 다름. 이런 사양을 상태 다이어그램으로 그리고 → 진리표 → 게이트 + 플립플롭으로 회로화합니다.</p>
+
+  <h2>8. 디지털과 아날로그의 접점</h2>
+  <p>실제 시스템은 디지털만으로 안 됩니다 — 센서는 아날로그 신호를 내고, 액추에이터는 아날로그 전력을 받아야 합니다. 그 사이에 두 가지 변환기가 들어갑니다.</p>
+  <ul>
+    <li><strong>ADC (Analog-to-Digital Converter)</strong> — 아날로그 전압을 0/1 비트열로. 마이크 → 디지털 오디오 등.</li>
+    <li><strong>DAC (Digital-to-Analog Converter)</strong> — 비트열을 아날로그 전압으로. 디지털 오디오 → 스피커 등.</li>
+  </ul>
+  <p>이 두 변환기가 들어가는 자리에는 거의 항상 W11의 op-amp(저역통과 필터·계측 증폭기)가 같이 등장합니다.</p>
+
+  <h2>9. 우리가 다룬 모든 것의 종착지</h2>
+  <p>아두이노 같은 마이크로컨트롤러 안에는 다음이 한 칩에 들어 있습니다.</p>
+  <ul>
+    <li><strong>CPU 코어</strong> — 트랜지스터(W10) 수만 개로 만든 게이트(W12)들의 조합으로 만들어진 ALU와 제어 유닛.</li>
+    <li><strong>메모리</strong> — 플립플롭과 더 정교한 셀 구조의 거대한 배열.</li>
+    <li><strong>ADC/DAC</strong> — 아날로그 회로(W6–W11)의 결정체.</li>
+    <li><strong>GPIO/PWM</strong> — 디지털 출력으로 외부 트랜지스터 스위치(W10)를 제어해 모터·LED 구동.</li>
+  </ul>
+
+  <p>한 학기 동안 배운 옴의 법칙(W2)부터 디지털 논리(W12)까지의 모든 조각이 이 한 칩 안에 다 들어 있습니다. 기전공학 전공자에게 마이크로컨트롤러는 "전기 위에서 도는 작은 컴퓨터"가 아니라 — <strong>이번 학기에 배운 모든 회로 개념의 통합 결과물</strong>입니다.</p>
+
+  <h2>10. Falstad 실습</h2>
+  <ul>
+    <li><strong>NAND로 NOT/AND/OR 만들기</strong> — Falstad의 NAND 게이트만으로 다른 게이트의 동작을 직접 구현해 보세요. 진리표를 입력 토글로 검증.</li>
+    <li><strong>반가산기</strong> — XOR 1개 + AND 1개로 반가산기 회로. 두 입력 비트를 토글하며 합 $S$와 자리올림 $C$를 확인.</li>
+    <li><strong>SR 래치</strong> — NOR 두 개를 교차 연결. S, R 입력을 토글하며 출력 Q가 1비트 메모리처럼 동작하는지 확인.</li>
+    <li><strong>D 플립플롭 + 클럭</strong> — 클럭 상승 에지에서만 입력이 출력으로 복사되는 모습을 스코프로 관찰.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>다음 단계</strong> — 이 강의로 회로의 기초가 끝납니다. 다음 학기/심화 과목에서는 다음을 다룹니다:
+    <ul>
+      <li><strong>마이크로컨트롤러 프로그래밍</strong> — Arduino C++로 GPIO·ADC·PWM·인터럽트·타이머 다루기.</li>
+      <li><strong>센서와 액추에이터</strong> — 온도·압력·IMU·인코더의 신호 조절과 모터의 토크-속도 곡선.</li>
+      <li><strong>모터 제어</strong> — H-bridge, PWM, 인코더 피드백, P 제어 → <a href="../lectures/07-feedback-control.html">로봇공학특론 L7</a>의 PID로 자연스럽게 이어집니다.</li>
+    </ul>
+  </div>
+
+  <h2>11. 한 학기 마무리</h2>
+  <p>축하합니다. 옴의 법칙 한 줄에서 시작해 디지털 IC가 어떻게 만들어지는지까지 한 바퀴 돌았습니다. 회로 분야는 깊이가 끝없지만, 이 12주의 기초가 단단히 자리 잡혀 있으면 어떤 심화 과목·연구 분야에서도 든든한 발판이 될 거예요.</p>
+
+  <nav class="prevnext">
+    <a href="11-opamp.html"><small>← 이전</small>W11. 아날로그 기초·연산증폭기</a>
+    <a href="../mech.html" class="next"><small>다음 →</small>강의 목록으로</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -113,6 +114,57 @@
     <li><strong>기울기 폭발(exploding)</strong> — 반대로 곱이 $\infty$로 발산. 업데이트가 너무 커서 NaN이 뜨거나 발산. <em>그래디언트 클리핑(gradient clipping)</em>으로 어느 정도 완화 가능.</li>
   </ul>
   <p>이 문제는 <a href="08-dnn-backprop.html">W8 §2 기울기 소실</a>에서 본 현상과 본질적으로 같습니다. 다만 시간축에서 발생할 뿐. 1994년 Bengio 등이 이 문제를 수학적으로 분석해 "vanilla RNN은 장기 의존성을 본질적으로 학습하기 어렵다"는 부정적 결론을 내리면서 RNN 연구는 한동안 침체되었습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 시간을 거슬러 사라지는 기울기</h4>
+    <p>가중치 $W_h$의 절대값을 바꾸며 BPTT 기울기 $|W_h|^t$가 시간이 거슬러 올라갈 때 어떻게 변하는지 봅니다. 1보다 약간만 작아도 20스텝 후엔 기울기가 거의 0, 1보다 살짝만 커도 폭발해요.</p>
+    <canvas id="vbptt" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>$|W_h|$ <span class="val" id="vbWV">0.9</span><input type="range" id="vbW" min="0.4" max="1.6" step="0.05" value="0.9"></label>
+      <label>시퀀스 길이 T <span class="val" id="vbTV">30</span><input type="range" id="vbT" min="5" max="50" step="1" value="30"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vbptt');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const w=+document.getElementById('vbW').value;
+      const T=+document.getElementById('vbT').value;
+      document.getElementById('vbWV').textContent=w.toFixed(2);
+      document.getElementById('vbTV').textContent=T;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';
+      for(let i=0;i<=4;i++){const y=20+i*(H-50)/4;ctx.beginPath();ctx.moveTo(50,y);ctx.lineTo(W-20,y);ctx.stroke();}
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      const labels=['10⁰','10⁻²','10⁻⁴','10⁻⁶','10⁻⁸+'];
+      for(let i=0;i<=4;i++){ctx.fillText(labels[i],10,25+i*(H-50)/4);}
+      const xs=W-90;
+      const norm=v=>Math.max(0,Math.min(1,(Math.log10(Math.max(1e-10,v))+8)/8));
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=3;ctx.beginPath();
+      for(let t=0;t<=T;t++){
+        const g=Math.pow(w,t);
+        const x=50+t/T*xs;
+        const y=20+(1-norm(g))*(H-50);
+        if(t===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      const finalG=Math.pow(w,T);
+      ctx.fillStyle=finalG<1e-3?'#c62828':finalG>10?'#c62828':'#2e7d32';
+      ctx.font='bold 14px sans-serif';
+      ctx.fillText(`T=${T}: |기울기 곱|≈${finalG.toExponential(2)}`,60,H-10);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const verdict=finalG<1e-3?'⚠ 기울기 소실 — 옛 정보 학습 불가':finalG>10?'⚠ 기울기 폭발 — NaN 위험':'✓ 안정적인 기울기 흐름';
+      ctx.fillStyle=finalG<1e-3||finalG>10?'#c62828':'#2e7d32';
+      ctx.fillText(verdict,W-280,30);
+      ctx.fillStyle='#666';ctx.fillText('과거 ←       시간 t       → 현재',60,H-30);
+    }
+    document.getElementById('vbW').addEventListener('input',draw);
+    document.getElementById('vbT').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h2>4. LSTM — 정보의 고속도로</h2>
   <p>해답은 놀랍게도 Bengio의 분석과 거의 같은 시기에 이미 제시되어 있었습니다. 1997년 Sepp Hochreiter와 Jürgen Schmidhuber는 논문 "Long Short-Term Memory"에서 RNN 셀을 완전히 재설계한 <strong>LSTM</strong>을 발표했습니다. 핵심 아이디어는 하나입니다: <em>은닉 상태 외에 "셀 상태(cell state) $C_t$"라는 별도의 정보 통로를 두고, 이 통로는 곱셈이 아닌 덧셈으로 업데이트되게 하자.</em></p>
@@ -217,6 +269,52 @@
   $$ h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde h_t $$
   <p>GRU의 파라미터 수는 LSTM의 약 3/4입니다. 성능은 작업에 따라 비슷하거나 살짝 다른데, 일반적으로 <em>작은 데이터셋</em>에서는 GRU가 유리하고(과적합이 덜함), 큰 데이터셋에서는 LSTM이 약간 더 잘 작동하는 경향이 있습니다. 실무에서는 둘 다 시도해보고 검증 성능이 좋은 쪽을 선택합니다.</p>
   <p>이후 Transformer(<a href="13-transformer-llm.html">W13</a>)가 등장하면서 RNN 계열은 자연어 처리 주류에서 물러났지만, 여전히 센서 신호 처리, 시계열 예측, 음성 인식 같은 특수 분야에서는 LSTM/GRU가 기본 선택입니다. 특히 <em>엣지 디바이스</em>나 <em>실시간 처리</em>가 필요한 환경에서는 Transformer의 $O(n^2)$ 메모리가 부담이라 RNN이 여전히 선호됩니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: RNN · LSTM · GRU 파라미터 수 비교</h4>
+    <p>같은 입력·은닉 차원에서 세 셀의 파라미터 수가 어떻게 다른지 봅니다. LSTM은 4개의 게이트로 4배, GRU는 3개로 3배. 같은 표현력이라면 GRU가 25% 효율적이에요.</p>
+    <canvas id="cellp" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>입력 차원 d <span class="val" id="cpDV">128</span><input type="range" id="cpD" min="32" max="512" step="32" value="128"></label>
+      <label>은닉 차원 h <span class="val" id="cpHV">256</span><input type="range" id="cpH" min="32" max="1024" step="32" value="256"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cellp');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const d=+document.getElementById('cpD').value;
+      const h=+document.getElementById('cpH').value;
+      document.getElementById('cpDV').textContent=d;
+      document.getElementById('cpHV').textContent=h;
+      const rnn=h*(d+h)+h;
+      const lstm=4*(h*(d+h)+h);
+      const gru=3*(h*(d+h)+h);
+      const max=Math.max(rnn,lstm,gru);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const items=[
+        {n:'Vanilla RNN',v:rnn,col:'#999'},
+        {n:'GRU (3 게이트)',v:gru,col:'#0b5fff'},
+        {n:'LSTM (4 게이트)',v:lstm,col:'#ff8c00'}
+      ];
+      items.forEach((it,i)=>{
+        const y=30+i*60;
+        ctx.fillStyle='#222';ctx.font='13px sans-serif';
+        ctx.fillText(it.n,12,y+20);
+        ctx.fillStyle=it.col;ctx.fillRect(150,y,it.v/max*(W-200),36);
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(it.v.toLocaleString()+' 파라미터',158,y+22);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`(d=${d}, h=${h}: 한 셀당 파라미터 = k·(h·(d+h)+h), k=1/3/4)`,12,220);
+    }
+    document.getElementById('cpD').addEventListener('input',draw);
+    document.getElementById('cpH').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h2>6. 시계열 예측 데모</h2>
 

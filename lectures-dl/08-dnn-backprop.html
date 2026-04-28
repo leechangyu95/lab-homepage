@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -63,6 +64,76 @@
   <div class="tip">
     <strong>실전 팁</strong> — 역전파를 구현할 때는 Forward pass 중 중간 값($z_l, a_l$)을 모두 저장해 두어야 Backward pass에서 재사용할 수 있습니다. 이 메모리 비용이 모델 크기의 병목이 되어, 딥러닝에서는 "gradient checkpointing"이라는 기법으로 일부 중간값을 버리고 필요할 때 다시 계산하는 트레이드오프를 씁니다.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 연쇄법칙으로 기울기 흘리기</h4>
+    <p>2층 망의 forward와 backward를 단계별로 따라갑니다. 각 노드를 클릭하면 그 노드까지 도달한 기울기 값이 강조됩니다. <strong>backward 진행</strong> 슬라이더를 움직이면 출력층부터 차례로 기울기가 흘러내려요.</p>
+    <canvas id="bp2" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>입력 x <span class="val" id="bpXV">1.0</span><input type="range" id="bpX" min="-2" max="2" step="0.1" value="1"></label>
+      <label>정답 y <span class="val" id="bpYV">1.0</span><input type="range" id="bpY" min="-2" max="2" step="0.1" value="1"></label>
+      <label>backward 진행 <span class="val" id="bpSV">5</span>/5<input type="range" id="bpS" min="0" max="5" step="1" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bp2');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const w1=0.7,b1=0.1,w2=0.5,b2=0.0;
+    function draw(){
+      const x=+document.getElementById('bpX').value;
+      const y=+document.getElementById('bpY').value;
+      const s=+document.getElementById('bpS').value;
+      document.getElementById('bpXV').textContent=x.toFixed(1);
+      document.getElementById('bpYV').textContent=y.toFixed(1);
+      document.getElementById('bpSV').textContent=s;
+      const z1=w1*x+b1,a1=Math.tanh(z1);
+      const z2=w2*a1+b2,yhat=Math.tanh(z2);
+      const L=0.5*(yhat-y)*(yhat-y);
+      const dyhat=(yhat-y);
+      const dz2=dyhat*(1-yhat*yhat);
+      const dw2=dz2*a1,db2=dz2;
+      const da1=dz2*w2,dz1=da1*(1-a1*a1);
+      const dw1=dz1*x,db1=dz1;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const nodes=[
+        {x:60,y:160,label:'x',val:x.toFixed(2),grad:'-',active:false},
+        {x:170,y:120,label:'z₁=w₁x+b₁',val:z1.toFixed(2),grad:dz1.toFixed(3),active:s>=4},
+        {x:170,y:200,label:'(w₁,b₁)',val:`${w1},${b1}`,grad:`${dw1.toFixed(3)},${db1.toFixed(3)}`,active:s>=5},
+        {x:300,y:120,label:'a₁=tanh(z₁)',val:a1.toFixed(2),grad:da1.toFixed(3),active:s>=3},
+        {x:430,y:120,label:'z₂=w₂a₁+b₂',val:z2.toFixed(2),grad:dz2.toFixed(3),active:s>=2},
+        {x:430,y:200,label:'(w₂,b₂)',val:`${w2},${b2}`,grad:`${dw2.toFixed(3)},${db2.toFixed(3)}`,active:s>=2},
+        {x:560,y:120,label:'ŷ=tanh(z₂)',val:yhat.toFixed(2),grad:dyhat.toFixed(3),active:s>=1},
+        {x:560,y:60,label:'L',val:L.toFixed(3),grad:'1',active:s>=1}
+      ];
+      // edges
+      const edges=[[0,1],[2,1],[1,3],[3,4],[5,4],[4,6],[6,7]];
+      edges.forEach(([a,b])=>{
+        ctx.strokeStyle=nodes[b].active?'#c62828':'#cfd8e3';
+        ctx.lineWidth=nodes[b].active?2:1;
+        ctx.beginPath();ctx.moveTo(nodes[a].x+30,nodes[a].y);ctx.lineTo(nodes[b].x-30,nodes[b].y);ctx.stroke();
+      });
+      nodes.forEach(n=>{
+        ctx.fillStyle=n.active?'#fff3e0':'#fff';
+        ctx.strokeStyle=n.active?'#c62828':'#999';
+        ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(n.x,n.y,28,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle='#222';ctx.font='11px sans-serif';
+        ctx.fillText(n.label,n.x-25,n.y-3);
+        ctx.fillStyle='#0b5fff';ctx.fillText('v='+n.val,n.x-25,n.y+10);
+        if(n.active){ctx.fillStyle='#c62828';ctx.fillText('∂L='+n.grad,n.x-25,n.y+40);}
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('→ Forward (파랑) ← Backward (빨강, '+s+'단계 진행)',12,22);
+      ctx.fillText(`손실 L = ${L.toFixed(4)}`,12,290);
+    }
+    document.getElementById('bpX').addEventListener('input',draw);
+    document.getElementById('bpY').addEventListener('input',draw);
+    document.getElementById('bpS').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h2>2. 기울기 소실 — 깊은 망의 죽음</h2>
   <p>역전파를 알게 되었으니 이제 깊은 신경망을 쉽게 학습할 수 있어야 할 것 같습니다. 그런데 1990년대에 연구자들은 층을 4~5개 이상 쌓으면 학습이 <em>멈추는</em> 이상한 현상을 목격했습니다. 원인은 <strong>기울기 소실(vanishing gradient)</strong>입니다.</p>
@@ -189,6 +260,75 @@
   <div class="tip">
     <strong>BN vs LN vs GN</strong> — 배치 정규화는 미니배치 크기에 의존적이라 작은 배치에서는 추정이 불안정합니다. 그래서 대안으로 <em>레이어 정규화(LayerNorm)</em>, <em>그룹 정규화(GroupNorm)</em> 등이 제안되었고, Transformer 계열에서는 LayerNorm이 표준입니다. 각자 "무엇을 기준으로 통계를 내는가"가 다릅니다: BN은 배치 차원, LN은 특징 차원, GN은 특징 그룹 차원.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: BN 적용 전후 활성값 분포</h4>
+    <p>스케일이 큰 가중치를 통과한 활성값은 분포가 한쪽으로 쏠리거나 너무 넓게 퍼집니다. <strong>BN 적용</strong>을 켜면 평균 0, 분산 1로 다시 맞춰지면서 ReLU 입력으로 적절한 분포가 됩니다. 학습률을 키울 수 있는 이유가 보여요.</p>
+    <canvas id="bn" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>가중치 σ <span class="val" id="bnSV">1.0</span><input type="range" id="bnS" min="0.2" max="3" step="0.1" value="1"></label>
+      <label><input type="checkbox" id="bnOn" checked> BN 적용</label>
+      <label>γ (스케일) <span class="val" id="bnGV">1.0</span><input type="range" id="bnG" min="0.5" max="2" step="0.1" value="1"></label>
+      <label>β (시프트) <span class="val" id="bnBV">0.0</span><input type="range" id="bnB" min="-2" max="2" step="0.1" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bn');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const std=+document.getElementById('bnS').value;
+      const on=document.getElementById('bnOn').checked;
+      const g=+document.getElementById('bnG').value;
+      const beta=+document.getElementById('bnB').value;
+      document.getElementById('bnSV').textContent=std.toFixed(1);
+      document.getElementById('bnGV').textContent=g.toFixed(1);
+      document.getElementById('bnBV').textContent=beta.toFixed(1);
+      const N=600;
+      let xs=[];
+      for(let i=0;i<N;i++){const u=Math.random(),v=Math.random();xs.push(Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*std+std*0.5);}
+      let pre=[...xs];
+      let post=[...xs];
+      if(on){
+        const mu=post.reduce((a,b)=>a+b,0)/post.length;
+        const va=post.reduce((a,b)=>a+(b-mu)*(b-mu),0)/post.length;
+        const sd=Math.sqrt(va+1e-8);
+        post=post.map(v=>g*(v-mu)/sd+beta);
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function hist(arr,col,y0,label){
+        const B=40,mn=-5,mx=5,bins=new Array(B).fill(0);
+        arr.forEach(v=>{const b=Math.floor((v-mn)/(mx-mn)*B);if(b>=0&&b<B)bins[b]++;});
+        const peak=Math.max(...bins,1);
+        ctx.fillStyle='#666';ctx.font='12px sans-serif';
+        ctx.fillText(label,12,y0-5);
+        bins.forEach((v,i)=>{
+          const x=40+i*((W-60)/B);
+          const h=(v/peak)*80;
+          ctx.fillStyle=col;ctx.fillRect(x,y0+90-h,(W-60)/B-1,h);
+        });
+        // axis
+        ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,y0+90);ctx.lineTo(W-20,y0+90);ctx.stroke();
+        // mean & std markers
+        const mu=arr.reduce((a,b)=>a+b,0)/arr.length;
+        const va=arr.reduce((a,b)=>a+(b-mu)*(b-mu),0)/arr.length;
+        const sd=Math.sqrt(va);
+        const muX=40+(mu-mn)/(mx-mn)*(W-60);
+        ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(muX,y0);ctx.lineTo(muX,y0+90);ctx.stroke();
+        ctx.fillStyle='#c62828';ctx.font='11px sans-serif';
+        ctx.fillText(`μ=${mu.toFixed(2)} σ=${sd.toFixed(2)}`,muX+4,y0+15);
+      }
+      hist(pre,'#cfd8e3',20,'BN 이전');
+      hist(post,on?'#0b5fff':'#cfd8e3',150,on?'BN 이후':'BN OFF (이전과 동일)');
+    }
+    document.getElementById('bnS').addEventListener('input',draw);
+    document.getElementById('bnOn').addEventListener('change',draw);
+    document.getElementById('bnG').addEventListener('input',draw);
+    document.getElementById('bnB').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 드롭아웃 마스크 시각화</h4>

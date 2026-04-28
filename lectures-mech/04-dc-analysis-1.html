@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W4. 직류회로 해석 1 — 기전공학기초</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html" class="active">기전공학기초</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mech.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 4. 직류회로 해석 1 — KCL · KVL · 중첩</h1>
+  <p class="lead">합성저항만으로 안 풀리는 회로를 다루는 세 가지 도구의 첫 두 개.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 새로운 해석 도구가 필요한가</li>
+    <li>키르히호프 전류법칙 (KCL) — 노드 해석</li>
+    <li>키르히호프 전압법칙 (KVL) — 메쉬(루프) 해석</li>
+    <li>중첩의 원리</li>
+    <li>이상적 전원과 실제 전원</li>
+  </ol></div>
+
+  <h2>1. 합성저항으로 안 풀리는 회로</h2>
+  <p>지금까지(W3) 다룬 회로는 모두 <em>저항만</em>, <em>전원 1개</em>인 단순한 형태였습니다. 하지만 실제 회로에는 다음과 같은 상황이 자주 나타납니다.</p>
+  <ul>
+    <li>전원이 <strong>여러 개</strong>인 회로 (양쪽에서 동시에 전압을 걸어주는 등)</li>
+    <li><strong>브릿지</strong> 회로 — 어떤 두 저항도 직렬도 병렬도 아닌 형태</li>
+    <li>전류원과 전압원이 섞여 있는 회로</li>
+  </ul>
+  <p>이런 회로는 합성저항만으로 축약이 안 됩니다. 해법은 세 가지입니다.</p>
+  <table>
+    <thead><tr><th>도구</th><th>핵심 아이디어</th><th>주차</th></tr></thead>
+    <tbody>
+      <tr><td>키르히호프 법칙(KCL/KVL)</td><td>노드/루프마다 보존 식을 세워 연립</td><td>이번 주</td></tr>
+      <tr><td>중첩의 원리</td><td>"전원 하나씩 따로" 풀고 합산</td><td>이번 주</td></tr>
+      <tr><td>테브난·노턴 등가</td><td>복잡한 회로를 "전압원 하나 + 저항"으로 단순화</td><td>다음 주</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. KCL — 키르히호프 전류법칙</h2>
+  <p>"한 노드에 들어오는 전류의 합 = 나가는 전류의 합". 곧 한 노드에서 모든 전류의 대수 합은 0입니다.</p>
+  $$ \boxed{\sum_{\text{node}} I = 0} $$
+  <p>물리적 근거는 <strong>전하 보존 법칙</strong>입니다. 노드는 전하를 저장하지 않으니, 시간당 들어온 만큼 시간당 나가야 합니다.</p>
+
+  <h3>2.1 노드 해석법(Nodal Analysis) 절차</h3>
+  <ol>
+    <li><strong>노드 식별</strong> — 세 개 이상의 지로가 만나는 노드를 찾고, 한 노드를 기준(0V, 접지)으로 정합니다.</li>
+    <li><strong>각 비기준 노드의 전압을 미지수</strong>로 잡습니다 ($V_a, V_b, \ldots$).</li>
+    <li><strong>각 노드에서 KCL 식</strong>을 세웁니다. 옴의 법칙으로 각 지로 전류를 노드 전압의 차이로 표현합니다 — 예: 두 노드 사이 저항 $R$이면 $I = (V_a - V_b)/R$.</li>
+    <li><strong>연립 1차 방정식</strong>을 풀어 노드 전압을 구합니다.</li>
+    <li><strong>옴의 법칙</strong>으로 각 저항의 전류를 거꾸로 계산합니다.</li>
+  </ol>
+
+  <h3>2.2 예제 — KCL로 푸는 직병렬 회로</h3>
+  <p>$V_T = 1.5\,\text{V}$, $R_1 = R_2 = 0.5\,\text{k}\Omega$가 직렬, 그 뒤에 $R_3 = R_4 = 1\,\text{k}\Omega$가 병렬로 붙어 있습니다.</p>
+  <p>병렬부 위쪽 노드에서 KCL: 들어오는 전류 = 나가는 전류.</p>
+  $$ \frac{V_{1\!-\!2}}{R_1 + R_2} = \frac{V_3}{R_3} + \frac{V_4}{R_4} $$
+  <p>병렬이므로 $V_3 = V_4$, 그래서 $V_{1\!-\!2} = 2 V_3$. 직렬 관계 $V_T = V_{1\!-\!2} + V_3$ 적용:</p>
+  $$ 1.5 = 2 V_3 + V_3 = 3 V_3 \implies V_3 = V_4 = 0.5\,\text{V}, \;\; V_1 = V_2 = 0.5\,\text{V} $$
+  $$ I_1 = I_2 = 1\,\text{mA}, \quad I_3 = I_4 = 0.5\,\text{mA} $$
+
+  <h2>3. KVL — 키르히호프 전압법칙</h2>
+  <p>"하나의 폐루프(loop)를 한 바퀴 돌면서 전위 변화를 모두 더하면 0". 곧 인가전압 = 강하전압의 합.</p>
+  $$ \boxed{\sum_{\text{loop}} V = 0} $$
+  <p>물리적 근거는 <strong>에너지 보존</strong>입니다. 산을 한 바퀴 돌고 돌아왔는데 5m 떠 있다는 게 말이 안 되듯, 한 점에서 출발해 한 바퀴 돈 뒤 같은 점에 도착했는데 전위가 +5V 올라간다는 건 모순입니다.</p>
+
+  <h3>3.1 메쉬 해석법 절차</h3>
+  <ol>
+    <li><strong>독립 메쉬</strong>(폐루프)를 식별. 모든 가지를 한 번씩만 거치도록 메쉬 전류 $I_A, I_B, \ldots$를 시계 방향(또는 일정 방향)으로 정의.</li>
+    <li>각 메쉬에서 KVL 식. <strong>공유 저항</strong>의 전류는 메쉬 전류의 차로 표현 — 예: $R_2$가 메쉬 A와 B의 공유 저항이라면 $I_{R_2} = I_A - I_B$.</li>
+    <li>모든 메쉬 식을 모아 행렬 형태로 정리하고 연립을 풉니다.</li>
+    <li>실제 가지 전류는 메쉬 전류의 합 또는 차로 계산하고, 옴의 법칙으로 각 저항의 전압을 구합니다.</li>
+  </ol>
+
+  <h3>3.2 두 메쉬 회로의 표준형</h3>
+  <p>메쉬 A에 전압원 $V_T$가 있고 $R_1$, $R_2$, $R_3$가 있고, 메쉬 B에 $R_2$(공유), $R_4$가 있다면:</p>
+  $$
+  \begin{cases}
+  V_T = (R_1 + R_2 + R_3)\,I_A - R_2\,I_B \\
+  0 = -R_2\,I_A + (R_2 + R_4)\,I_B
+  \end{cases}
+  $$
+  $$ \begin{bmatrix} R_1+R_2+R_3 & -R_2 \\ -R_2 & R_2+R_4 \end{bmatrix} \begin{bmatrix} I_A \\ I_B \end{bmatrix} = \begin{bmatrix} V_T \\ 0 \end{bmatrix} $$
+  <p>대각 항은 그 메쉬가 통과하는 모든 저항의 합, 비대각 항은 두 메쉬가 공유한 저항에 음수가 붙은 형태로 깔끔하게 패턴이 보입니다.</p>
+
+  <h3>3.3 예제 — 두 전원이 있는 회로</h3>
+  <p>왼쪽에 84V, 오른쪽에 21V. $R_1 = 12\,\Omega$, $R_2 = 3\,\Omega$, $R_3 = 6\,\Omega$ ($R_3$이 두 메쉬의 공유 저항).</p>
+  <p>메쉬 A: $-84 + 12\,I_A + 6(I_A - I_B) = 0 \Rightarrow 18\,I_A - 6\,I_B = 84$<br>
+  메쉬 B: $6(I_B - I_A) + 3\,I_B + 21 = 0 \Rightarrow -6\,I_A + 9\,I_B = -21$</p>
+  <p>연립을 풀면 $I_A = 5\,\text{A}$, $I_B = 1\,\text{A}$. 따라서:</p>
+  $$ I_1 = 5,\quad I_2 = 1,\quad I_3 = I_A - I_B = 4\,\text{A} $$
+  $$ V_1 = 60,\quad V_2 = 3,\quad V_3 = 24\,\text{V} $$
+  <p>검산 — 메쉬 A: $-84 + 60 + 24 = 0$ ✓, 메쉬 B: $-24 + 3 + 21 = 0$ ✓.</p>
+
+  <div class="tip">
+    <strong>KCL이 편한 회로 vs KVL이 편한 회로</strong> — 노드가 적으면 KCL이, 메쉬가 적으면 KVL이 빠릅니다. 전류원이 있으면 KCL이 자연스럽고(전류원이 한 노드에서 직접 식에 들어감), 전압원이 많으면 KVL이 자연스럽습니다. 같은 회로에서 두 방법은 반드시 같은 답을 줍니다.
+  </div>
+
+  <h2>4. 중첩의 원리(Superposition)</h2>
+  <p>여러 전원이 동시에 작용하는 <strong>선형 회로</strong>에서, 어떤 소자에 걸리는 전압·전류는 <strong>전원 하나만 살리고 나머지를 끈 회로 여러 개</strong>의 결과를 대수적으로 합한 것과 같습니다.</p>
+  $$ V_R = V_R^{(\text{전원 1만})} + V_R^{(\text{전원 2만})} + \cdots $$
+
+  <h3>4.1 절차</h3>
+  <ol>
+    <li>한 전원만 살리고 나머지는 "끕니다".
+      <ul>
+        <li><strong>전압원 끄기 = 단락(short)</strong> — 전압원을 0V로 두면 두 단자가 같은 전위가 되어 단락된 것과 같습니다.</li>
+        <li><strong>전류원 끄기 = 개방(open)</strong> — 전류원을 0A로 두면 그 가지에 전류가 안 흐르는 것과 같으니 끊어 놓는 것과 동등합니다.</li>
+      </ul>
+    </li>
+    <li>각 케이스별로 회로를 풀어 관심 소자의 $V$, $I$를 구합니다.</li>
+    <li>방향(극성)에 주의하며 결과를 대수적으로 합합니다.</li>
+  </ol>
+
+  <div class="tip">
+    <strong>왜 단락/개방인가</strong> — 전압원을 0V로 만들면 양 단자 전위가 같아져서 단락 회로와 동등합니다. 전류원을 0A로 만들면 그 가지에 전류가 안 흐르는 상태이므로 가지를 잘라낸 것과 동등합니다. 이 두 변환을 헷갈리면 모든 게 어긋나니 한 번에 외워두세요: <strong>전압원=단락, 전류원=개방</strong>.
+  </div>
+
+  <h3>4.2 선형성이 핵심 가정</h3>
+  <p>중첩의 원리는 <strong>선형 소자(저항)</strong>에만 성립합니다. 다이오드·트랜지스터처럼 $V$–$I$가 직선이 아닌 비선형 소자가 있으면 직접 적용할 수 없습니다(선형 영역으로 근사한 뒤 적용하는 트릭은 W11 op-amp에서 사용).</p>
+
+  <h3>4.3 예제 — 두 전압원 회로 분해</h3>
+  <p>3.3에서 푼 회로를 중첩으로 다시 풉시다. 84V만 있을 때와 21V만 있을 때 각각의 $I_3$를 구해 합산합니다.</p>
+  <p><em>케이스 1: 84V만 살리고 21V는 단락.</em> 그러면 $R_2$가 단락되어 우측 가지에는 $R_3$만 남습니다 — $R_3 \| (R_2\!=\!0) = 0$이므로 $I_1 = 84/12 = 7$, 모든 전류가 $R_3$ 쪽으로... (실제로는 21V 위치의 단락이라 $R_2$는 단락에 직렬). 이런 식으로 케이스별로 풀어 $I_3^{(1)}$, $I_3^{(2)}$를 구하고 합산하면 KVL로 푼 결과와 같은 4A가 나옵니다.</p>
+  <p>실전에서는 메쉬 해석이 단순한 회로에서는 KVL을 직접 푸는 편이 빠르지만, 중첩의 원리는 <em>한 전원의 영향만</em>을 따로 보고 싶을 때(노이즈 분석, 신호 분리 등) 매우 유용합니다.</p>
+
+  <h2>5. 이상적 전원 vs 실제 전원</h2>
+  <p>중첩의 원리에서 "전원 끄기"가 깨끗하려면 전원이 이상적이어야 합니다.</p>
+  <table>
+    <thead><tr><th>전원</th><th>이상적</th><th>실제</th><th>제거 시 등가</th></tr></thead>
+    <tbody>
+      <tr><td>전압원</td><td>내부저항 $0$, 항상 일정 $V_s$</td><td>$r_s$ (보통 $&lt;1\,\Omega$)가 직렬에 숨어 있음</td><td>이상적 → 단락 / 실제 → $r_s$만 남김</td></tr>
+      <tr><td>전류원</td><td>내부저항 $\infty$, 항상 일정 $I_s$</td><td>$r_p$ (MΩ급)가 병렬에 숨어 있음</td><td>이상적 → 개방 / 실제 → $r_p$만 남김</td></tr>
+    </tbody>
+  </table>
+  <p>건전지가 닳으면 출력 전압이 부하 전류에 따라 떨어지는 것은 내부저항 $r_s$가 점점 커지기 때문입니다. 부하 저항 $R_L$이 $r_s$보다 충분히 크면 이상적 전압원으로 근사할 수 있어요.</p>
+
+  <h2>6. 핵심 비교 — 한눈에</h2>
+  <table>
+    <thead><tr><th>방법</th><th>식의 미지수</th><th>잘 맞는 회로</th></tr></thead>
+    <tbody>
+      <tr><td>노드 해석 (KCL)</td><td>노드 전압</td><td>노드가 적은 회로, 전류원 포함</td></tr>
+      <tr><td>메쉬 해석 (KVL)</td><td>메쉬 전류</td><td>메쉬가 적은 회로, 전압원 위주</td></tr>
+      <tr><td>중첩의 원리</td><td>케이스별 결과</td><td>전원 하나의 영향을 따로 보고 싶을 때</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. 연습</h2>
+  <ol>
+    <li>3개의 저항이 같은 노드에 병렬로 연결된 회로(전원 1개). KCL과 KVL 두 방법으로 풀어 같은 답($V = 25\,\text{V}$, $I_1 = 2.5\,\text{A}$ 등)이 나오는지 확인하세요.</li>
+    <li>두 전압원 + 세 저항 회로를 KCL과 KVL로 모두 풀어보세요. 답: $I_1 \approx 21.4\,\text{mA}$, $I_2 \approx 442.9\,\text{mA}$, $I_3 \approx 464.3\,\text{mA}$.</li>
+    <li>전류원이 포함된 회로는 KCL이 더 편한 이유를 한 줄로 설명하세요.</li>
+  </ol>
+
+  <h2>8. Falstad 실습</h2>
+  <ul>
+    <li><strong>두 전원 회로 시뮬레이션</strong> — 위 예제(84V, 21V, 12/3/6Ω)를 그대로 만들어 시뮬레이터의 전류값과 손계산값($I_1=5$, $I_2=1$, $I_3=4\,\text{A}$)이 일치하는지 확인.</li>
+    <li><strong>중첩 검증</strong> — 21V 전원을 도선으로 단락(우클릭 → Delete가 아닌 단락), 84V만 작동시켜 $I_3^{(1)}$ 측정. 다음으로 84V를 단락하고 21V만 작동시켜 $I_3^{(2)}$ 측정. 두 값의 합이 4A에 가까운지 확인.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="03-dc-circuit.html"><small>← 이전</small>W3. 직류회로</a>
+    <a href="05-dc-analysis-2.html" class="next"><small>다음 →</small>W5. 직류회로 해석 2</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

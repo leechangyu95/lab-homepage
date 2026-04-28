@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W7. 커패시터와 인덕터 — 기전공학기초</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html" class="active">기전공학기초</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mech.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 7. 커패시터와 인덕터 — 에너지를 저장하는 두 소자</h1>
+  <p class="lead">전기를 저장하는 두 가지 방법. 커패시터는 전기장에, 인덕터는 자기장에. 그리고 RC·RL 회로의 시정수 $\tau$.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>R/L/C — 세 수동 소자의 위치</li>
+    <li>커패시터 — $i = C\,dv/dt$, 충·방전과 시정수</li>
+    <li>커패시터의 직병렬은 저항과 정반대</li>
+    <li>인덕터 — $v = L\,di/dt$, 전자기 유도</li>
+    <li>인덕터의 직병렬은 저항과 같음</li>
+    <li>실용 — 디커플링·평활·초크</li>
+  </ol></div>
+
+  <h2>1. R/L/C — 세 수동 소자</h2>
+  <table>
+    <thead><tr><th>소자</th><th>역할</th><th>저장 형태</th><th>구성 방정식</th></tr></thead>
+    <tbody>
+      <tr><td>저항 $R$</td><td>에너지 <strong>소비</strong></td><td>(없음, 열로 발산)</td><td>$v = Ri$</td></tr>
+      <tr><td>커패시터 $C$</td><td>에너지 <strong>저장</strong></td><td>전기장 (두 도체판 사이)</td><td>$i = C\,\dfrac{dv}{dt}$</td></tr>
+      <tr><td>인덕터 $L$</td><td>에너지 <strong>저장</strong></td><td>자기장 (코일 주변)</td><td>$v = L\,\dfrac{di}{dt}$</td></tr>
+    </tbody>
+  </table>
+  <p>이 세 가지가 모든 아날로그 회로의 가장 작은 벽돌입니다. 두 저장 소자 — 커패시터와 인덕터 — 가 들어오면 회로 식이 <strong>미분방정식</strong>으로 바뀌고, 시간이 핵심 변수가 됩니다.</p>
+
+  <h2>2. 커패시터(Capacitor)</h2>
+  <p>두 개의 금속판을 가까이 마주 놓고 그 사이에 유전체(공기·종이·세라믹)를 채운 소자. 한쪽에 +, 반대쪽에 −가 쌓이며 두 판 사이의 전기장에 에너지를 저장합니다.</p>
+
+  <h3>2.1 커패시턴스 $C$ — 단위 전압당 저장 전하</h3>
+  $$ C = \frac{Q}{V} \qquad [\text{F = C/V}] $$
+  <p>1F는 매우 큰 값이라 실무에서는 pF~μF가 주로 쓰입니다 — pF($10^{-12}$F), nF, μF, mF.</p>
+
+  <h3>2.2 평행판 커패시터의 기하학</h3>
+  $$ C = \frac{\varepsilon_r \varepsilon_0 A}{d} $$
+  <ul>
+    <li>$A$ — 도체판 면적이 클수록 더 많은 전하 저장 → $C$ 증가</li>
+    <li>$d$ — 두 판 사이 거리가 가까울수록 전기장 강화 → $C$ 증가</li>
+    <li>$\varepsilon_r$ — 유전체의 비유전율, 공기 ≈ 1, 종이 ≈ 3.7, 유리 4–10, 물 ≈ 80</li>
+  </ul>
+  <p>물의 비유전율이 80으로 큰 것은 생체막 커패시턴스, 세포 신호 측정 등 생리학에서도 핵심적 의미를 갖습니다.</p>
+
+  <h3>2.3 충·방전과 시정수 $\tau = RC$</h3>
+  <p>RC 직렬 회로(저항 $R$, 커패시터 $C$, 전원 $V_0$)에서:</p>
+  <p><strong>충전</strong>(전원 ON 직후, 초기 충전 0):</p>
+  $$ v_C(t) = V_0\left(1 - e^{-t/\tau}\right), \qquad i(t) = \frac{V_0}{R}e^{-t/\tau}, \qquad \tau = RC $$
+  <p><strong>방전</strong>(전원 OFF, 초기 충전 $V_0$):</p>
+  $$ v_C(t) = V_0\,e^{-t/\tau}, \qquad i(t) = -\frac{V_0}{R}e^{-t/\tau} $$
+  <p>시정수 $\tau$의 의미:</p>
+  <ul>
+    <li>$t = \tau$에서 변화량의 약 63%가 진행 (충전이면 63%까지, 방전이면 37%로 감소)</li>
+    <li>$t = 5\tau$이면 99%까지 진행 → 실무에서 "5τ면 끝났다"고 봅니다</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+      <line x1="60" y1="180" x2="560" y2="180" stroke="#666" stroke-width="1"/>
+      <line x1="60" y1="40" x2="60" y2="180" stroke="#666" stroke-width="1"/>
+      <text x="35" y="50" font-size="11" fill="#666">V₀</text>
+      <text x="50" y="180" font-size="11" fill="#666">0</text>
+      <text x="290" y="200" font-size="11" fill="#666">τ</text>
+      <text x="540" y="200" font-size="11" fill="#666">5τ</text>
+      <line x1="160" y1="40" x2="160" y2="180" stroke="#ddd" stroke-dasharray="2"/>
+      <text x="155" y="35" font-size="9" fill="#aaa">τ</text>
+      <path d="M60,180 Q120,90 160,80 Q260,55 540,42" fill="none" stroke="#0742b8" stroke-width="2.5"/>
+      <text x="380" y="40" font-size="12" fill="#0742b8">충전: V₀(1 − e^(−t/τ))</text>
+      <path d="M60,40 Q120,130 160,140 Q260,170 540,179" fill="none" stroke="#c1121f" stroke-width="2.5"/>
+      <text x="380" y="178" font-size="12" fill="#c1121f">방전: V₀ e^(−t/τ)</text>
+      <line x1="60" y1="92" x2="160" y2="92" stroke="#aaa" stroke-dasharray="3"/>
+      <text x="35" y="95" font-size="9" fill="#666">63%</text>
+    </svg>
+    <figcaption>그림 1. RC 회로의 충·방전 곡선. 시정수 $\tau$가 시간 스케일을 결정합니다.</figcaption>
+  </figure>
+
+  <h3>2.4 커패시터의 직병렬 — 저항과 <em>반대</em></h3>
+  <p>$C = \varepsilon A/d$이라는 기하학에서 다음이 자연스럽게 나옵니다.</p>
+  <ul>
+    <li><strong>병렬 → 면적이 합쳐짐</strong> → $C_T = C_1 + C_2 + \cdots$ (단순 합)</li>
+    <li><strong>직렬 → 거리가 합쳐짐</strong> → $\dfrac{1}{C_T} = \dfrac{1}{C_1} + \dfrac{1}{C_2} + \cdots$ (역수의 합)</li>
+  </ul>
+  <p>저항과 정반대라는 점을 꼭 기억해두세요. 이유는 $C$가 정의상 "전도성"에 가까운 양이기 때문입니다.</p>
+
+  <h3>2.5 응용 — 디커플링과 정류 평활</h3>
+  <ul>
+    <li><strong>디커플링(decoupling) 커패시터</strong> — 디지털 IC가 갑자기 큰 전류를 끌어가면 공급 전압이 출렁입니다. IC 바로 옆 전원-GND 사이에 0.1~10μF 커패시터를 두면 그 출렁임을 흡수해 안정화합니다. 모든 PC 메인보드, 스마트폰 PCB에 수십 개씩 박혀 있어요.</li>
+    <li><strong>정류 평활(smoothing)</strong> — AC를 다이오드로 정류하면 맥류(pulsating DC)가 나오는데, 그 뒤에 큰 커패시터를 병렬로 달면 골짜기를 채워 거의 평탄한 DC가 됩니다. 모든 어댑터·충전기에 들어 있는 회로입니다(W9에서 다이오드 정류와 함께 자세히).</li>
+  </ul>
+
+  <h2>3. 인덕터(Inductor)</h2>
+  <p>도선을 코일 형태로 감은 소자. 전류가 흐르면 코일 주변에 자기장이 생기고, 그 <strong>자기장 변화에 저항하는 방향</strong>으로 전압이 유도됩니다(렌츠의 법칙).</p>
+
+  <h3>3.1 구성 방정식 — $v = L\,di/dt$</h3>
+  $$ \boxed{v(t) = L\,\frac{di(t)}{dt}} \qquad [\text{H = V·s/A}] $$
+  <p>인덕터 양단의 전압은 인덕턴스와 <strong>전류의 시간 변화율</strong>의 곱입니다. 핵심 함의:</p>
+  <ul>
+    <li>전류가 일정하면 ($di/dt = 0$) 인덕터 양단 전압도 0 → <strong>DC에서는 그냥 도선처럼</strong> 행동.</li>
+    <li>전류가 빠르게 변하면 ($di/dt$가 큼) 매우 큰 전압이 유도됨 → 스위치를 갑자기 끊으면 <strong>스파크</strong>가 튀는 이유.</li>
+  </ul>
+
+  <h3>3.2 코일의 인덕턴스</h3>
+  $$ L = \frac{\mu N^2 A}{\ell} $$
+  <p>권선수 $N$의 <strong>제곱</strong>으로 들어가는 게 핵심입니다. 면적·코어의 투자율도 큰 요인이고, 철심(ferrite core)을 넣으면 공심 대비 수천~수만 배의 인덕턴스를 얻을 수 있어 실제 전력용 인덕터에는 거의 항상 코어를 씁니다.</p>
+
+  <div class="tip">
+    <strong>커패시터 vs 인덕터 — 직관적 대칭</strong> — 커패시터는 <em>전압의 급격한 변화에 저항</em>합니다(전압을 안정화하는 에너지 저수지). 인덕터는 <em>전류의 급격한 변화에 저항</em>합니다(전류를 안정화하는 전기적 관성). 그래서 <strong>커패시터=전압 평활, 인덕터=전류 평활</strong>로 기억하면 응용이 머리에 들어옵니다.
+  </div>
+
+  <h3>3.3 RL 시정수 $\tau = L/R$</h3>
+  <p>RL 직렬 회로의 과도응답:</p>
+  <p><strong>전류 상승</strong>(전원 ON):</p>
+  $$ i(t) = \frac{V_0}{R}\left(1 - e^{-t/\tau}\right), \qquad \tau = \frac{L}{R} $$
+  <p><strong>전류 감쇠</strong>(전원 OFF, 초기 전류 $i_0$):</p>
+  $$ i(t) = i_0\,e^{-t/\tau} $$
+  <p>형태는 RC와 똑같이 지수함수, 다만 시정수가 $L/R$이라는 점만 다릅니다.</p>
+
+  <h3>3.4 인덕터의 직병렬 — 저항과 <em>같음</em></h3>
+  <ul>
+    <li>직렬: $L_T = L_1 + L_2 + \cdots$ (단순 합)</li>
+    <li>병렬: $\dfrac{1}{L_T} = \dfrac{1}{L_1} + \dfrac{1}{L_2} + \cdots$ (역수의 합)</li>
+  </ul>
+  <p>저항과 같은 규칙입니다. 헷갈릴 때 한 줄: <strong>R과 L은 같은 규칙, C만 반대</strong>.</p>
+
+  <h3>3.5 응용 — 초크와 스위칭 레귤레이터</h3>
+  <ul>
+    <li><strong>초크(choke) 코일</strong> — 인덕터는 DC는 통과시키고 AC(특히 고주파)는 막습니다. 전원 라인의 노이즈 제거에 자주 쓰여요.</li>
+    <li><strong>스위칭 레귤레이터</strong> — Buck/Boost 컨버터 등 모든 현대 SMPS의 핵심에 인덕터가 있습니다. 빠른 스위칭으로 인덕터에 에너지를 모았다 풀었다 하며 전압을 효율적으로 변환합니다.</li>
+    <li><strong>스파크 회로</strong> — 자동차 점화 코일에서 1차 코일의 전류를 갑자기 끊으면 $L\,di/dt$가 폭발적으로 커져 2차 코일에 수만 V의 점화 스파크를 만듭니다.</li>
+  </ul>
+
+  <h2>4. 세 소자의 직병렬 비교</h2>
+  <table>
+    <thead><tr><th>연결</th><th>저항 $R$</th><th>커패시터 $C$</th><th>인덕터 $L$</th></tr></thead>
+    <tbody>
+      <tr><td>직렬</td><td>$R_1 + R_2$</td><td>$\dfrac{C_1 C_2}{C_1 + C_2}$</td><td>$L_1 + L_2$</td></tr>
+      <tr><td>병렬</td><td>$\dfrac{R_1 R_2}{R_1 + R_2}$</td><td>$C_1 + C_2$</td><td>$\dfrac{L_1 L_2}{L_1 + L_2}$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. 예제와 연습</h2>
+
+  <h3>예제 1 — 인덕터 직병렬</h3>
+  <p>$L_1 = L_2 = 60\,\text{mH}$가 직렬, 그 결과가 $L_3 = 120\,\text{mH}$와 병렬, 거기에 $L_4 = 50\,\text{mH}$가 직렬로 붙어 있습니다. 전체 인덕턴스는?</p>
+  $$ L_{12} = 120\,\text{mH}, \quad L_{12} \| L_3 = \frac{120 \times 120}{240} = 60\,\text{mH}, \quad L_T = 60 + 50 = 110\,\text{mH} $$
+
+  <h3>예제 2 — 도체 삽입</h3>
+  <p>평행판 커패시터 중간에 두께 $d/3$인 도체를 삽입하면 양단 전압은 어떻게 변하나? 도체 내부는 전기장이 0이므로 유효 거리는 $d - d/3 = 2d/3$. 같은 전하량 $Q$에 대해:</p>
+  $$ V = E \cdot \frac{2d}{3} = V_0 \cdot \frac{2}{3} $$
+
+  <h3>예제 3 — 스파크 회로 (RL 감쇠)</h3>
+  <p>$\varepsilon$-$R$-$L$ 직렬에서 정상상태 전류 $i_0 = \varepsilon/R$이 흐르다가 $t=0$에서 스위치를 끊으면, 인덕터는 전류를 유지하려 하므로:</p>
+  $$ R\,i + L\,\frac{di}{dt} = 0 \implies i(t) = i_0\,e^{-t/\tau}, \quad \tau = \frac{L}{R} $$
+  <p>스위치 직후 $di/dt$가 매우 크기 때문에 $V_L = L\,di/dt$가 폭발적으로 커지며 — 이것이 점화 코일과 같은 스파크 발생의 원리입니다.</p>
+
+  <h2>6. Falstad 실습</h2>
+  <ul>
+    <li><strong>RC 충방전</strong> — $R = 1\,\text{k}\Omega$, $C = 100\,\mu\text{F}$ ($\tau = 0.1\,\text{s}$)로 직렬 회로 구성. 5V 펄스를 넣고 커패시터 양단 전압이 지수적으로 0~5V 사이를 오가는지 스코프로 관찰. $\tau$ 후 전압이 약 3.16V(63%)인지 확인.</li>
+    <li><strong>RL 감쇠</strong> — $R = 100\,\Omega$, $L = 1\,\text{H}$ ($\tau = 10\,\text{ms}$)로 RL 직렬. 전원 차단 시 전류가 지수 감쇠하는 모습과 인덕터 양단의 큰 전압(스파크 원리)을 확인.</li>
+    <li><strong>커패시터 직병렬 vs 저항</strong> — 같은 값 $C$ 두 개를 직렬, 또는 병렬로 연결해 합성값을 시뮬레이터로 측정. 직렬 → $C/2$, 병렬 → $2C$로 저항과 정반대인지 확인.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>다음 주차로의 다리</strong> — 정상상태 AC 회로에서 $i = C\,dv/dt$, $v = L\,di/dt$를 W6의 페이저로 변환하면 모든 소자가 하나의 복소수 — <strong>임피던스 $Z$</strong> — 로 통합됩니다. $Z_R = R$, $Z_L = j\omega L$, $Z_C = 1/(j\omega C)$. 그러면 옴의 법칙 $V = IZ$가 모든 R/L/C에 똑같이 적용되는 마법이 펼쳐집니다 — 그게 W8입니다.
+  </div>
+
+  <nav class="prevnext">
+    <a href="06-ac-circuit.html"><small>← 이전</small>W6. 교류회로</a>
+    <a href="08-impedance.html" class="next"><small>다음 →</small>W8. 임피던스</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W2. 전기회로 기초 — 기전공학기초</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html" class="active">기전공학기초</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mech.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 2. 전기회로 기초</h1>
+  <p class="lead">옴의 법칙과 와트의 법칙 — 모든 회로 해석의 두 출발점.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>네 가지 핵심 물리량: 전하·전류·전압·전력</li>
+    <li>저항 — 전류를 방해하는 정도</li>
+    <li>옴의 법칙 ($V = IR$)</li>
+    <li>와트의 법칙 ($P = VI$)과 세 가지 변형</li>
+    <li>전력량과 전기요금</li>
+    <li>예제와 실습</li>
+  </ol></div>
+
+  <h2>1. 네 가지 핵심 물리량</h2>
+  <p>회로 해석은 결국 <strong>전하가 어떻게 움직이고 얼마나 일을 하는가</strong>를 묻는 일입니다. 단어 네 개로 시작합니다.</p>
+
+  <table>
+    <thead><tr><th>이름</th><th>기호</th><th>단위</th><th>한 줄 비유</th></tr></thead>
+    <tbody>
+      <tr><td>전하 (Charge)</td><td>$q$</td><td>쿨롱 [C]</td><td>물 분자 한 알갱이</td></tr>
+      <tr><td>전류 (Current)</td><td>$i$ 또는 $I$</td><td>암페어 [A]</td><td>관을 흐르는 물의 양 / 시간</td></tr>
+      <tr><td>전압 (Voltage)</td><td>$V$</td><td>볼트 [V]</td><td>물을 미는 압력</td></tr>
+      <tr><td>전력 (Power)</td><td>$P$</td><td>와트 [W]</td><td>일을 할 수 있는 능력 / 시간</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.1 전하와 전류</h3>
+  <p>전자 1개의 전하량은 매우 작습니다 — $1.6 \times 10^{-19}\,\text{C}$. 즉 1쿨롱은 약 $6.25 \times 10^{18}$개의 전자가 모여야 만들어지는 양입니다.
+  전류는 그 전하의 흐름량(시간 변화율)으로 정의합니다.</p>
+  $$ i(t) = \frac{dq(t)}{dt} \qquad [1\,\text{A} = 1\,\text{C/s}] $$
+  <p>즉 도선 한 단면을 1초 동안 1C의 전하가 통과하면 그 전류가 1A입니다. 방향은 관습적으로 <strong>양전하의 이동 방향</strong>으로 정의되므로, 실제 전자의 흐름 방향과는 반대라는 점을 헷갈리지 마세요.</p>
+
+  <h3>1.2 직류 vs 교류</h3>
+  <ul>
+    <li><strong>DC (Direct Current)</strong>: 한 방향으로만 일정하게 흐름. 건전지·자동차 12V 배터리·USB 전원.</li>
+    <li><strong>AC (Alternating Current)</strong>: 주기적으로 방향이 바뀜. 한국 가정용 220V/60Hz 콘센트.</li>
+  </ul>
+  <p>전반부(W2–W5)는 모두 DC 위에서 다루고, W6부터 AC와 교류회로의 세계로 넘어갑니다.</p>
+
+  <h3>1.3 전압 — 전위차</h3>
+  <p>"높이가 다른 두 점 사이에서 물이 흐른다"는 직관처럼, 전기는 전위가 다른 두 점 사이에서 흐릅니다. 어떤 지점의 전위는 <em>단위 전하가 갖는 위치에너지</em>로 정의됩니다.</p>
+  $$ W = qV \qquad [\text{J}] $$
+  <p>두 지점 A, B의 전위차가 곧 전압이고, 단위 정리는 $1\,\text{V} = 1\,\text{J/C}$입니다.</p>
+
+  <div class="tip">
+    <strong>접지(Ground)는 0V 약속</strong> — 건물 층수에서 지면을 0층으로 정하듯, 회로에서도 한 점을 "0V"로 약속해 모든 전위를 그 기준으로 표기합니다. 기준점을 바꿔도 <em>두 점 사이의 전위차</em>는 변하지 않습니다.
+  </div>
+
+  <h3>1.4 전력</h3>
+  <p>전력은 에너지의 시간 변화율, 즉 <strong>에너지 소비 속도</strong>입니다.</p>
+  $$ P = \frac{dW}{dt} = \frac{d(qV)}{dt} = V\,\frac{dq}{dt} = VI $$
+  <p>같은 에너지라도 짧은 시간에 소비하면 전력이 큽니다. 100J을 1초 동안 쓰면 100W, 10초 동안 쓰면 10W입니다.</p>
+
+  <h2>2. 저항</h2>
+  <p>전류의 흐름을 방해하는 정도. 단위는 옴 [Ω]이고 기호는 $R$. 물리적으로는 재료의 저항률($\rho$), 길이($\ell$), 단면적($A$)에 의해 결정됩니다.</p>
+  $$ R = \rho \cdot \frac{\ell}{A} $$
+  <p>비유로 보면 복도 통과와 같습니다 — 복도가 <em>길수록</em>, <em>좁을수록</em> 사람이 지나가기 힘듭니다.
+  같은 형상이라도 재료에 따라 어마어마하게 달라요. 구리는 $\rho \approx 1.69 \times 10^{-8}\,\Omega\cdot\text{m}$, 유리는 $10^{10}\,\Omega\cdot\text{m}$ — <strong>약 10¹⁸ 배</strong> 차이입니다. 이것이 도체와 부도체의 경계입니다.</p>
+
+  <div class="tip">
+    <strong>온도와 저항</strong> — 금속은 온도가 올라가면 원자 진동이 커져 자유전자와 충돌이 늘어나 저항이 <em>커집니다</em>. 반대로 반도체는 온도가 올라가면 자유전자 수가 늘어 저항이 <em>줄어듭니다</em>(W9에서 다룸).
+  </div>
+
+  <h2>3. 옴의 법칙 — $V = IR$</h2>
+  <p>저항 양단에 전압을 인가하면 전류는 전압에 <strong>비례</strong>하고 저항에 <strong>반비례</strong>합니다.</p>
+  $$ \boxed{V = I\,R} \qquad I = \frac{V}{R} \qquad R = \frac{V}{I} $$
+
+  <figure>
+    <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+      <line x1="80" y1="80" x2="80" y2="140" stroke="#333" stroke-width="3"/>
+      <line x1="70" y1="80" x2="90" y2="80" stroke="#333" stroke-width="2"/>
+      <line x1="65" y1="90" x2="95" y2="90" stroke="#333" stroke-width="3"/>
+      <line x1="70" y1="100" x2="90" y2="100" stroke="#333" stroke-width="2"/>
+      <line x1="65" y1="110" x2="95" y2="110" stroke="#333" stroke-width="3"/>
+      <text x="50" y="100" font-size="13" font-weight="bold" fill="#0742b8">V</text>
+      <text x="50" y="125" font-size="11" fill="#666">10V</text>
+      <line x1="80" y1="140" x2="80" y2="170" stroke="#333" stroke-width="2"/>
+      <line x1="80" y1="170" x2="500" y2="170" stroke="#333" stroke-width="2"/>
+      <line x1="500" y1="170" x2="500" y2="130" stroke="#333" stroke-width="2"/>
+      <rect x="475" y="80" width="50" height="50" fill="none" stroke="#333" stroke-width="2"/>
+      <path d="M475,90 L485,80 L500,100 L515,80 L525,100" fill="none" stroke="#333" stroke-width="2" transform="translate(0,5)"/>
+      <text x="540" y="110" font-size="13" font-weight="bold" fill="#c1121f">R</text>
+      <text x="540" y="130" font-size="11" fill="#666">5Ω</text>
+      <line x1="500" y1="80" x2="500" y2="50" stroke="#333" stroke-width="2"/>
+      <line x1="80" y1="50" x2="500" y2="50" stroke="#333" stroke-width="2"/>
+      <line x1="80" y1="50" x2="80" y2="80" stroke="#333" stroke-width="2"/>
+      <path d="M250,45 L265,55 L250,65 z" fill="#0742b8"/>
+      <text x="270" y="60" font-size="13" font-weight="bold" fill="#0742b8">I = 2A</text>
+    </svg>
+    <figcaption>그림 1. 옴의 법칙 회로. 10V 전원에 5Ω 저항을 연결하면 2A의 전류가 흐릅니다.</figcaption>
+  </figure>
+
+  <p>여기서 다루는 저항은 모두 <strong>선형 저항</strong> — $V$–$I$ 그래프가 원점을 지나는 직선이고 기울기가 $1/R$입니다. 다이오드·트랜지스터처럼 직선이 아닌 비선형 소자는 W9 이후에 등장합니다.</p>
+
+  <h3>예제 — 자동차 배터리 점검</h3>
+  <p>정상 12V 배터리. 전압의 5% 이하로 떨어지면 교체 대상. 전압계가 고장이라 100Ω 램프를 연결하고 전류를 측정해 0.1A가 나왔다고 하자.</p>
+  $$ V = IR = 0.1 \times 100 = 10\,\text{V} $$
+  <p>정상 기준의 하한은 $12 \times 0.95 = 11.4\,\text{V}$. 측정값 10V가 이보다 낮으므로 <strong>교체 필요</strong>입니다.</p>
+
+  <h2>4. 와트의 법칙 — $P = VI$</h2>
+  <p>전력은 전압과 전류의 곱입니다. 옴의 법칙과 결합하면 두 가지만 알아도 모든 양을 계산할 수 있습니다.</p>
+  $$ \boxed{P = V\,I = I^2\,R = \frac{V^2}{R}} $$
+
+  <p>세 식은 같은 식의 다른 모습입니다. 알고 있는 양에 따라 가장 편한 형태를 골라 쓰세요.</p>
+  <ul>
+    <li>$V$, $I$를 안다 → $P = VI$</li>
+    <li>$I$, $R$을 안다 → $P = I^2 R$</li>
+    <li>$V$, $R$을 안다 → $P = V^2/R$</li>
+  </ul>
+
+  <h3>4.1 USB 컵 받침대 히터 선택 (예제)</h3>
+  <p>USB 포트는 5V / 최대 500mA. 가장 따뜻하게 만드는 히터는 8/10/12.5/16Ω 중 어느 것일까요?</p>
+  <p>전류 한도($I_{\max}=0.5$ A)를 넘으면 안 되므로 최소 저항은 $R_{\min} = 5/0.5 = 10\,\Omega$. 따라서 <strong>8Ω는 제외</strong>입니다. 나머지 후보의 전력은:</p>
+  <table>
+    <thead><tr><th>저항</th><th>전류 $I=V/R$</th><th>전력 $P=V^2/R$</th></tr></thead>
+    <tbody>
+      <tr><td>10Ω</td><td>0.5A</td><td><strong>2.5W</strong></td></tr>
+      <tr><td>12.5Ω</td><td>0.4A</td><td>2.0W</td></tr>
+      <tr><td>16Ω</td><td>0.3125A</td><td>1.5625W</td></tr>
+    </tbody>
+  </table>
+  <p>전압이 일정할 때 $P \propto 1/R$이므로 허용 한도 내에서 저항이 작을수록 전력이 큽니다 → <strong>10Ω 히터</strong>가 정답.</p>
+
+  <div class="tip">
+    <strong>전압 고정 vs 전류 고정</strong> — 같은 "$R$이 두 배가 되었다"도 결과가 정반대입니다.<br>
+    전압원 회로($V$ 고정): $P = V^2/R$이라 전력은 <em>절반</em>으로.<br>
+    전류원 회로($I$ 고정): $P = I^2 R$이라 전력은 <em>두 배</em>로.<br>
+    전원이 무엇인지를 먼저 보세요.
+  </div>
+
+  <h2>5. 전력량과 전기요금</h2>
+  <p>전력 $P$는 "쓰는 속도"입니다. 일정 시간 동안 누적된 에너지가 <strong>전력량</strong>이고, 이게 전기요금의 단위입니다.</p>
+  $$ W = P \cdot t \qquad [\text{Wh, kWh}] $$
+  <p>비유하면 전력 = 자동차의 속력, 전력량 = 주행거리. 한국 가정용 전기요금은 보통 1 kWh당 100~200원 사이입니다.</p>
+
+  <h3>예제 — 냉장고 전기요금</h3>
+  <p>800W 냉장고를 24시간 가동, 1 kWh당 100원이라고 하자.</p>
+  $$ W = 0.8\,\text{kW} \times 24\,\text{h} = 19.2\,\text{kWh} \implies 1{,}920\,\text{원/일} $$
+  <p>냉장고는 24시간 켜져 있어 누적 전력량이 큰 가전입니다. 효율 등급이 중요한 이유예요.</p>
+
+  <h3>예제 — 쿼드콥터 비행시간</h3>
+  <p>2100 mAh / 11.1V (3.7V × 3 셀) 리튬폴리머. 모터 4개, 각 1A 소모.</p>
+  $$ I_{\text{total}} = 4 \times 1 = 4\,\text{A}, \quad t = \frac{2100\,\text{mAh}}{4000\,\text{mA}} = 0.525\,\text{h} \approx 31.5\,\text{분} $$
+  <p>이는 이상적 한계로, 실제로는 효율 손실·부하 변동으로 더 짧아집니다.</p>
+
+  <h2>6. 연습문제</h2>
+  <ol>
+    <li><strong>3Ω 저항에 12V를 인가하면?</strong> $P = V^2/R = 144/3 = 48\,\text{W}$.</li>
+    <li><strong>20kΩ 저항에 60V.</strong> $I = V/R = 3\,\text{mA}$, $P = V^2/R = 0.18\,\text{W}$. 저항이 두 배가 되면 전력은 절반(0.09W).</li>
+    <li><strong>$1\,\text{kWh} = ?\,\text{J}$</strong> &nbsp; $1\,\text{kWh} = 10^3\,\text{W} \times 3600\,\text{s} = 3.6 \times 10^6\,\text{J}$.</li>
+    <li><strong>대기전력</strong> — TV 정상 70W·대기 5W, 하루 2시간 시청 × 30일. 플러그를 꽂아두면 7.5 kWh, 빼면 4.2 kWh — 차이 3.3 kWh × 100원 = 월 330원. 작아 보이지만 누적되면 무시 못 합니다.</li>
+  </ol>
+
+  <h2>7. Falstad 실습</h2>
+  <p>이 강의의 핵심 실습 도구는 <a href="https://www.falstad.com/circuit/circuitjs.html">Falstad Circuit Simulator</a>입니다. 브라우저에서 바로 동작하고 전류는 색·굵기로, 전압은 호버로 보입니다.</p>
+
+  <h3>실험 1 — 옴의 법칙 검증</h3>
+  <ol>
+    <li><code>File → New Blank Circuit</code>로 빈 회로 시작.</li>
+    <li><code>Draw → Inputs/Sources → Voltage Source (2-terminal)</code>로 전압원 배치.</li>
+    <li><code>Draw → Resistor</code>로 저항 배치 (값 더블클릭으로 20Ω 설정).</li>
+    <li><code>Draw → Ground</code>로 접지.</li>
+    <li>모든 노드를 선으로 연결한 뒤 시뮬레이터 실행. 전류 표시는 노란색 점의 흐름 속도로 나타납니다.</li>
+    <li>전압을 0 → 10V로 바꿔가며 전류 측정. $I = V/R$ 직선이 그려지는지 확인.</li>
+  </ol>
+
+  <h3>실험 2 — 와트의 법칙</h3>
+  <p>저항을 우클릭 → <code>View in new scope</code> → 그래프 우클릭 → <code>Properties → Show Power Consumed ✓</code>. 그러면 시뮬레이터가 직접 표시하는 전력과 손으로 계산한 $P=VI$가 일치하는지 검증할 수 있습니다.</p>
+
+  <div class="tip">
+    <strong>다음 주차로의 다리</strong> — 이번 주에는 저항 1개짜리 회로만 다뤘습니다. 실제 회로는 저항이 여러 개 직렬·병렬로 묶여 있어요. 다음 주(W3)에서는 저항을 묶는 두 가지 방법과, 그 위에서 통하는 <strong>키르히호프의 법칙</strong>을 배웁니다.
+  </div>
+
+  <nav class="prevnext">
+    <a href="01-intro.html"><small>← 이전</small>W1. 강의 소개</a>
+    <a href="03-dc-circuit.html" class="next"><small>다음 →</small>W3. 직류회로</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

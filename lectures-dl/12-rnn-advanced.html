@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -116,6 +117,66 @@
   </ul>
   <p>그러나 이 모두는 증상 완화였고, 근본 치료는 전혀 다른 아이디어에서 나왔습니다: <em>"애초에 모든 정보를 하나의 벡터로 압축하지 말자."</em></p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 고정 컨텍스트 벡터의 정보 손실</h4>
+    <p>입력 문장의 단어 수에 따라 <strong>한 개의 컨텍스트 벡터</strong>가 어떻게 정보가 흐려지는지 봅니다. 단어가 많을수록 각 단어가 평균에 묻히고, 디코더는 출력 첫 단어를 만들 때 이미 입력 앞부분을 거의 잊습니다.</p>
+    <canvas id="bottle" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>입력 길이 <span class="val" id="bnLV">5</span><input type="range" id="bnL" min="3" max="30" step="1" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bottle');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const L=+document.getElementById('bnL').value;
+      document.getElementById('bnLV').textContent=L;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // input boxes
+      const cell=Math.min(40,(W-100)/L);
+      const y0=60;
+      const colors=['#0b5fff','#ff8c00','#2e7d32','#c62828','#6a1b9a','#00838f'];
+      for(let i=0;i<L;i++){
+        const col=colors[i%6];
+        ctx.fillStyle=col;
+        ctx.fillRect(40+i*cell,y0,cell-2,30);
+      }
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`입력 ${L}개 단어 (각각 정보 100%)`,40,y0-8);
+      // arrows
+      for(let i=0;i<L;i++){
+        ctx.strokeStyle='#666';ctx.beginPath();
+        ctx.moveTo(40+i*cell+cell/2,y0+30);
+        ctx.lineTo(W/2,170);
+        ctx.stroke();
+      }
+      // bottleneck circle
+      const ctxR=40;
+      ctx.beginPath();ctx.arc(W/2,180,ctxR,0,Math.PI*2);
+      ctx.fillStyle='#fff3e0';ctx.fill();ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.stroke();
+      // mixed-color blob inside
+      for(let i=0;i<L;i++){
+        const a=2*Math.PI*i/L;
+        ctx.fillStyle=colors[i%6];ctx.globalAlpha=Math.max(0.15,1/L);
+        ctx.beginPath();ctx.arc(W/2+Math.cos(a)*15,180+Math.sin(a)*15,15,0,Math.PI*2);ctx.fill();
+      }
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('컨텍스트 c (고정 크기)',W/2-70,135);
+      // info per word
+      ctx.fillStyle='#c62828';ctx.font='bold 16px sans-serif';
+      const perW=(100/L).toFixed(1);
+      ctx.fillText(`단어당 평균 정보 ≈ ${perW}%`,W/2-100,250);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('→ 길어질수록 각 단어의 정보가 희석되어 디코더가 첫 부분을 잊음',12,270);
+    }
+    document.getElementById('bnL').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
   <h2>4. Attention — "집중"을 학습하다</h2>
   <p>2014년 9월, Dzmitry Bahdanau, Kyunghyun Cho, Yoshua Bengio가 ICLR에 투고한 논문 "Neural Machine Translation by Jointly Learning to Align and Translate"가 <strong>어텐션 메커니즘</strong>을 처음 선보였습니다. 아이디어는 심플하지만 혁명적입니다.</p>
   <div class="tip">
@@ -194,6 +255,63 @@
   </script>
 
   <div class="tip"><strong>왜 어텐션이 혁명이었나.</strong> 거리에 상관없이 모든 위치를 직접 연결하므로 장기 의존성이 자연스럽게 풀립니다. 그리고 가중치가 학습 가능하므로 데이터가 알아서 어디를 봐야 할지 결정합니다. 이 통찰이 트랜스포머로 이어집니다.</div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 점수 함수 비교 — Bahdanau vs Luong</h4>
+    <p>같은 디코더 상태와 인코더 출력에 대해 두 점수 함수가 만드는 어텐션 분포를 비교합니다. <strong>온도</strong>를 낮추면 분포가 한 곳에 집중되고, 높이면 균등에 가까워져요.</p>
+    <canvas id="scoreFn" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>온도 τ <span class="val" id="sfTV">1.0</span><input type="range" id="sfT" min="0.1" max="3" step="0.1" value="1"></label>
+      <button id="sfNew">새 입력</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('scoreFn');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let s=[],h=[];
+    function gen(){
+      s=Array(4).fill(0).map(()=>Math.random()*2-1);
+      h=Array(8).fill(0).map(()=>Array(4).fill(0).map(()=>Math.random()*2-1));
+      draw();
+    }
+    function softmax(arr,tau){const m=Math.max(...arr);const e=arr.map(v=>Math.exp((v-m)/tau));const Z=e.reduce((a,b)=>a+b);return e.map(v=>v/Z);}
+    function draw(){
+      const tau=+document.getElementById('sfT').value;
+      document.getElementById('sfTV').textContent=tau.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // additive: tanh-based, simulated with sum of squared diff
+      const additive=h.map(hi=>{let v=0;for(let k=0;k<4;k++)v+=Math.tanh(s[k]+hi[k]);return v;});
+      // dot
+      const dot=h.map(hi=>{let v=0;for(let k=0;k<4;k++)v+=s[k]*hi[k];return v;});
+      const aA=softmax(additive,tau);
+      const aD=softmax(dot,tau);
+      const cell=(W-80)/8;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('Bahdanau (additive)',12,40);
+      aA.forEach((v,i)=>{
+        ctx.fillStyle='#0b5fff';ctx.fillRect(60+i*cell,80-v*60,cell-4,v*60);
+        ctx.fillStyle='#666';ctx.font='10px sans-serif';
+        ctx.fillText(v.toFixed(2),60+i*cell,95);
+        ctx.fillText('h'+(i+1),60+i*cell+8,110);
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('Luong (dot product)',12,160);
+      aD.forEach((v,i)=>{
+        ctx.fillStyle='#ff8c00';ctx.fillRect(60+i*cell,200-v*60,cell-4,v*60);
+        ctx.fillStyle='#666';ctx.font='10px sans-serif';
+        ctx.fillText(v.toFixed(2),60+i*cell,215);
+        ctx.fillText('h'+(i+1),60+i*cell+8,230);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('두 분포 모두 합 = 1. Bahdanau는 비선형이라 부드럽고 Luong은 한 곳에 집중되기 쉬움.',12,260);
+    }
+    document.getElementById('sfT').addEventListener('input',draw);
+    document.getElementById('sfNew').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
 
   <h2>5. 빔 서치(Beam Search)</h2>
   <p>디코딩 시 매 시점 가장 확률 높은 단어 하나만 고르는 그리디 디코딩은 근시안적입니다. <strong>빔 서치</strong>는 상위 $k$개 후보를 동시에 유지하며 전체적으로 점수가 높은 시퀀스를 찾습니다. $k=1$이면 그리디, $k$가 크면 더 좋은 결과지만 느립니다.</p>

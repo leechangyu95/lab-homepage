@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -192,6 +193,71 @@
   <div class="note">
     <strong>KNN의 숨은 함정 — 스케일과 차원.</strong> 길이(cm)와 무게(g)를 같이 쓰면, 숫자가 큰 무게가 거리 계산을 지배해 길이는 거의 무시됩니다. 반드시 표준화해야 합니다(<a href="02-data-handling.html">W2</a>에서 다룹니다). 또 차원이 수십 개를 넘어가면 "가장 가까운 이웃"과 "가장 먼 이웃"의 거리 차이가 0에 수렴하는 <em>차원의 저주</em>가 일어나, KNN은 무용지물이 됩니다. 그래서 고차원 데이터에는 PCA(<a href="06-unsupervised.html">W6</a>)로 차원을 먼저 줄이거나 아예 다른 모델을 씁니다.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 스케일이 KNN 결정 경계를 망친다</h4>
+    <p>같은 데이터를 한 축의 단위만 바꿔서 봅니다. <strong>무게 스케일</strong>을 키우면 무게축이 거리를 지배해 결정 경계가 거의 수직선이 되고, 길이축은 무시됩니다. 표준화가 왜 필수인지 직접 느껴보세요.</p>
+    <canvas id="knnScale" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>무게 단위 <select id="ksU">
+        <option value="0.001">kg (작음)</option>
+        <option value="1" selected>g (원본)</option>
+        <option value="1000">mg (큼)</option>
+      </select></label>
+      <label><input type="checkbox" id="ksZ"> 표준화 적용</label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('knnScale');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const pts=[];
+    for(let i=0;i<15;i++)pts.push({len:25+Math.random()*8,wt:240+Math.random()*100,c:0});
+    for(let i=0;i<15;i++)pts.push({len:9+Math.random()*4,wt:5+Math.random()*8,c:1});
+    function draw(){
+      const u=+document.getElementById('ksU').value;
+      const z=document.getElementById('ksZ').checked;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // transform points
+      let xs=pts.map(p=>p.len);
+      let ys=pts.map(p=>p.wt*u);
+      if(z){
+        const mx=xs.reduce((a,b)=>a+b)/xs.length;
+        const sx=Math.sqrt(xs.reduce((a,b)=>a+(b-mx)**2,0)/xs.length);
+        const my=ys.reduce((a,b)=>a+b)/ys.length;
+        const sy=Math.sqrt(ys.reduce((a,b)=>a+(b-my)**2,0)/ys.length);
+        xs=xs.map(v=>(v-mx)/sx);ys=ys.map(v=>(v-my)/sy);
+      }
+      const xmin=Math.min(...xs),xmax=Math.max(...xs);
+      const ymin=Math.min(...ys),ymax=Math.max(...ys);
+      const xR=xmax-xmin+1e-9,yR=ymax-ymin+1e-9;
+      const STEP=12;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const px=xmin+(i/W)*xR,py=ymin+(1-j/H)*yR;
+        const ds=pts.map((p,k)=>({d:Math.hypot(px-xs[k],py-ys[k]),c:p.c})).sort((a,b)=>a.d-b.d).slice(0,5);
+        const v=ds.reduce((s,d)=>s+(d.c==0?1:-1),0);
+        ctx.fillStyle=v>=0?'rgba(11,95,255,0.10)':'rgba(255,140,0,0.10)';
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach((p,k)=>{
+        const x=(xs[k]-xmin)/xR*W;
+        const y=(1-(ys[k]-ymin)/yR)*H;
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.stroke();
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      const unit=document.getElementById('ksU').selectedOptions[0].textContent;
+      ctx.fillText(`길이(cm) × 무게(${unit})${z?' · 표준화 적용':' · 원본 스케일'}`,12,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('스케일이 다르면 큰 축이 결정 경계를 거의 결정 → 표준화로 둘 다 동일 비중',12,H-10);
+    }
+    document.getElementById('ksU').addEventListener('change',draw);
+    document.getElementById('ksZ').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
 
   <h2>4. 거리 척도 비교</h2>
   <p>"가깝다"의 정의는 한 가지가 아닙니다. 유클리드는 직선 거리, 맨해튼은 도시 블록을 따라가는 거리입니다. 차원이 높아질수록 두 거리의 차이가 커지는데, 이를 <em>차원의 저주</em>라고도 합니다.</p>

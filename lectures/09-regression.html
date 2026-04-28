@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html" class="active">로봇공학특론</a>
     <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -168,6 +169,128 @@
   <div class="tip">
     <strong>핵심 직감</strong> — "가장 그럴듯한 직선을 찾는다"(MLE)와 "잔차 제곱합을 최소화한다"(LSE)는 보통 같은 답을 내놓습니다. 단, 그 동등성은 <em>가우시안 잡음이라는 가정 아래에서만</em> 성립해요. 그래서 이상치(outlier)가 많은 실제 데이터에서는 MSE 대신 Huber/L1을 쓰는 게 더 합리적입니다.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정규방정식 — SSE 곡면 위의 유일한 최소점</h4>
+    <p>$\beta_0$(절편)과 $\beta_1$(기울기)을 직접 움직여 보세요. 빨강 막대가 잔차고, 그 제곱합 SSE가 위에 표시됩니다. <strong>SSE 곡면(우측)</strong>의 노란 점이 현재 위치, <strong>초록 ★</strong>이 정규방정식 해 $(X^\top X)^{-1}X^\top y$ — 유일한 최소점입니다. 버튼을 누르면 해로 점프합니다.</p>
+    <canvas id="ne" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>β₀ (절편) <span class="val" id="neB0V">0.0</span><input type="range" id="neB0" min="-3" max="3" step="0.05" value="0"></label>
+      <label>β₁ (기울기) <span class="val" id="neB1V">0.0</span><input type="range" id="neB1" min="-2" max="2" step="0.05" value="0"></label>
+      <button id="neSolve">정규방정식으로 점프</button>
+      <button id="neReg" class="alt">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ne'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const Lx={x0:30,x1:340,y0:30,y1:H-30};   // scatter panel
+    const Lc={x0:360,x1:W-30,y0:30,y1:H-30}; // SSE panel
+    let pts;
+    function regen(){
+      const trueB0=0.5+Math.random()*0.6,trueB1=0.7+Math.random()*0.5;
+      pts=[];
+      for(let i=0;i<10;i++){
+        const xi=-2+i*0.4+0.05*(Math.random()-0.5);
+        const yi=trueB0+trueB1*xi+(Math.random()-0.5)*0.8;
+        pts.push({x:xi,y:yi});
+      }
+    }
+    regen();
+    document.getElementById('neReg').onclick=regen;
+    function solve(){
+      let n=pts.length,sx=0,sy=0,sxx=0,sxy=0;
+      pts.forEach(p=>{sx+=p.x;sy+=p.y;sxx+=p.x*p.x;sxy+=p.x*p.y;});
+      const b1=(n*sxy-sx*sy)/(n*sxx-sx*sx);
+      const b0=(sy-b1*sx)/n;
+      return{b0,b1};
+    }
+    document.getElementById('neSolve').onclick=()=>{
+      const s=solve();
+      document.getElementById('neB0').value=s.b0.toFixed(2);
+      document.getElementById('neB1').value=s.b1.toFixed(2);
+    };
+    function sse(b0,b1){
+      let s=0;pts.forEach(p=>{const r=p.y-(b0+b1*p.x);s+=r*r;});return s;
+    }
+    function px(p){return Lx.x0+(p.x+3)/6*(Lx.x1-Lx.x0);}
+    function py(p){return Lx.y1-(p.y+1)/5*(Lx.y1-Lx.y0);}
+    function loop(){
+      const b0=+document.getElementById('neB0').value;
+      const b1=+document.getElementById('neB1').value;
+      document.getElementById('neB0V').textContent=b0.toFixed(2);
+      document.getElementById('neB1V').textContent=b1.toFixed(2);
+      const opt=solve();
+      const curSSE=sse(b0,b1),optSSE=sse(opt.b0,opt.b1);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // scatter panel
+      x.strokeStyle='#ddd';x.lineWidth=1;
+      x.strokeRect(Lx.x0,Lx.y0,Lx.x1-Lx.x0,Lx.y1-Lx.y0);
+      // axes (x=0, y=0 lines if visible)
+      x.strokeStyle='#eee';
+      const ox=px({x:0}),oy=py({y:0});
+      x.beginPath();x.moveTo(ox,Lx.y0);x.lineTo(ox,Lx.y1);x.moveTo(Lx.x0,oy);x.lineTo(Lx.x1,oy);x.stroke();
+      // residuals
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      pts.forEach(p=>{
+        const yh=b0+b1*p.x;
+        x.beginPath();x.moveTo(px(p),py(p));x.lineTo(px(p),py({y:yh}));x.stroke();
+      });
+      // line
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;
+      x.beginPath();x.moveTo(px({x:-3}),py({y:b0+b1*(-3)}));x.lineTo(px({x:3}),py({y:b0+b1*3}));x.stroke();
+      // points
+      pts.forEach(p=>{x.fillStyle='#222';x.beginPath();x.arc(px(p),py(p),3.5,0,Math.PI*2);x.fill();});
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('SSE = '+curSSE.toFixed(2)+'   (최소 '+optSSE.toFixed(2)+')',Lx.x0+8,Lx.y0+15);
+      // SSE contour panel
+      x.strokeStyle='#ddd';x.strokeRect(Lc.x0,Lc.y0,Lc.x1-Lc.x0,Lc.y1-Lc.y0);
+      const Cw=Lc.x1-Lc.x0,Ch=Lc.y1-Lc.y0;
+      const NB=40;
+      const b0R=[-3,3],b1R=[-2,2];
+      let mx=0;
+      const grid=[];
+      for(let i=0;i<NB;i++){
+        const row=[];
+        for(let j=0;j<NB;j++){
+          const bb0=b0R[0]+(b0R[1]-b0R[0])*i/NB;
+          const bb1=b1R[0]+(b1R[1]-b1R[0])*j/NB;
+          const v=sse(bb0,bb1);row.push(v);if(v>mx)mx=v;
+        }
+        grid.push(row);
+      }
+      const minV=optSSE;
+      for(let i=0;i<NB;i++){
+        for(let j=0;j<NB;j++){
+          const v=grid[i][j];
+          const t=Math.min(1,(v-minV)/(mx-minV+1e-6));
+          const cx=Lc.x0+(i+0.5)/NB*Cw;
+          const cy=Lc.y1-(j+0.5)/NB*Ch;
+          const r=Math.floor(40+t*200),g=Math.floor(140-t*100),b=Math.floor(255-t*200);
+          x.fillStyle=`rgb(${r},${g},${b})`;
+          x.fillRect(cx-Cw/NB/2-0.5,cy-Ch/NB/2-0.5,Cw/NB+1,Ch/NB+1);
+        }
+      }
+      // current
+      const ux=Lc.x0+(b0-b0R[0])/(b0R[1]-b0R[0])*Cw;
+      const uy=Lc.y1-(b1-b1R[0])/(b1R[1]-b1R[0])*Ch;
+      x.fillStyle='#ffeb3b';x.strokeStyle='#222';x.lineWidth=2;
+      x.beginPath();x.arc(ux,uy,5,0,Math.PI*2);x.fill();x.stroke();
+      // optimum
+      const sx2=Lc.x0+(opt.b0-b0R[0])/(b0R[1]-b0R[0])*Cw;
+      const sy2=Lc.y1-(opt.b1-b1R[0])/(b1R[1]-b1R[0])*Ch;
+      x.fillStyle='#2e7d32';x.font='bold 18px sans-serif';
+      x.fillText('★',sx2-7,sy2+6);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('SSE(β₀,β₁) 곡면',Lc.x0+8,Lc.y0+14);
+      x.fillText('β₀ →',Lc.x1-30,Lc.y1+12);
+      x.save();x.translate(Lc.x0-8,Lc.y0+30);x.rotate(-Math.PI/2);x.fillText('β₁ →',0,0);x.restore();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
 
   <h2>4. L2 vs L1 손실, 그리고 Huber</h2>
 

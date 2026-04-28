@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html" class="active">딥러닝 & 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -67,6 +68,94 @@
     <li><strong>엘보우(Elbow) 방법</strong> — $K$를 1부터 늘려가며 $J$의 감소 폭을 본다. 어느 지점에서 "팔꿈치"처럼 감소가 둔화되면 그 $K$가 적정. 직관적이지만 정확한 기준이 모호.</li>
     <li><strong>실루엣 계수(Silhouette)</strong> — 각 점이 자기 군집 안에서 얼마나 가깝고 가장 가까운 다른 군집과는 얼마나 먼지를 $[-1, 1]$로 측정. 평균 실루엣이 최대가 되는 $K$를 선택. 엘보우보다 엄밀.</li>
   </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 엘보우 방법으로 K 찾기</h4>
+    <p>실제 클러스터 수가 정해진 데이터에 K=1~8을 차례로 적용하고, 각 $K$의 비용 $J$(클러스터 내 분산 합)를 그립니다. <strong>꺾이는 지점</strong>이 적정 $K$입니다. "실제 클러스터 수"를 바꿔보면 엘보우의 위치가 따라 움직여요.</p>
+    <canvas id="elbow" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>실제 클러스터 수 <span class="val" id="elKV">3</span><input type="range" id="elK" min="2" max="6" step="1" value="3"></label>
+      <button id="elGen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('elbow');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      const trueK=+document.getElementById('elK').value;
+      document.getElementById('elKV').textContent=trueK;
+      pts=[];
+      for(let k=0;k<trueK;k++){
+        const cx=80+Math.random()*(W-160),cy=60+Math.random()*120;
+        for(let i=0;i<30;i++){
+          const u=Math.random(),v=Math.random();
+          const z0=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*22;
+          const z1=Math.sqrt(-2*Math.log(u))*Math.sin(2*Math.PI*v)*22;
+          pts.push({x:cx+z0,y:cy+z1});
+        }
+      }
+      draw();
+    }
+    function kmeansJ(K){
+      let centers=[];const idx=new Set();
+      while(centers.length<K){const i=Math.floor(Math.random()*pts.length);if(!idx.has(i)){idx.add(i);centers.push({x:pts[i].x,y:pts[i].y});}}
+      let assign=new Array(pts.length).fill(0);
+      for(let it=0;it<20;it++){
+        for(let i=0;i<pts.length;i++){
+          let bd=Infinity,bi=0;
+          centers.forEach((c,k)=>{const d=(pts[i].x-c.x)**2+(pts[i].y-c.y)**2;if(d<bd){bd=d;bi=k;}});
+          assign[i]=bi;
+        }
+        const ns=new Array(K).fill(0),sx=new Array(K).fill(0),sy=new Array(K).fill(0);
+        for(let i=0;i<pts.length;i++){ns[assign[i]]++;sx[assign[i]]+=pts[i].x;sy[assign[i]]+=pts[i].y;}
+        for(let k=0;k<K;k++)if(ns[k]){centers[k].x=sx[k]/ns[k];centers[k].y=sy[k]/ns[k];}
+      }
+      let J=0;
+      for(let i=0;i<pts.length;i++){const c=centers[assign[i]];J+=(pts[i].x-c.x)**2+(pts[i].y-c.y)**2;}
+      return J;
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // dataset on left
+      const PW=240;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(10,30,PW,H-50);
+      pts.forEach(p=>{ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(10+p.x*PW/W,30+p.y*(H-50)/H,3,0,Math.PI*2);ctx.fill();});
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';ctx.fillText('데이터',12,22);
+      // elbow plot
+      const PX=PW+50,PY=30,PWP=W-PX-20,PHP=H-70;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(PX,PY,PWP,PHP);
+      const Js=[];for(let K=1;K<=8;K++){let bestJ=Infinity;for(let r=0;r<3;r++){const j=kmeansJ(K);if(j<bestJ)bestJ=j;}Js.push(bestJ);}
+      const Jmax=Math.max(...Js),Jmin=Math.min(...Js);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      Js.forEach((j,i)=>{
+        const x=PX+(i+1)/8*PWP*0.9+10;
+        const y=PY+(1-(j-Jmin)/(Jmax-Jmin+0.001))*PHP*0.85+10;
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+      Js.forEach((j,i)=>{
+        const x=PX+(i+1)/8*PWP*0.9+10;
+        const y=PY+(1-(j-Jmin)/(Jmax-Jmin+0.001))*PHP*0.85+10;
+        ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#666';ctx.font='10px sans-serif';ctx.fillText('K='+(i+1),x-10,PY+PHP+12);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('비용 J vs K (엘보우)',PX,22);
+      // mark true K
+      const trueK=+document.getElementById('elK').value;
+      const xT=PX+(trueK)/8*PWP*0.9+10;
+      ctx.strokeStyle='#c62828';ctx.setLineDash([5,5]);
+      ctx.beginPath();ctx.moveTo(xT,PY);ctx.lineTo(xT,PY+PHP);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='11px sans-serif';ctx.fillText('실제 K='+trueK,xT-22,PY+PHP+24);
+    }
+    document.getElementById('elK').addEventListener('input',gen);
+    document.getElementById('elGen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
 
   <h3>2.3 K-평균의 한계</h3>
   <p>단점도 분명합니다:</p>
@@ -178,6 +267,73 @@
   <div class="tip">
     <strong>실전 팁</strong> — minPts 기본값은 $2d$ ($d$는 특징 차원). 2D면 4 정도가 무난. $\varepsilon$은 각 점의 $k$번째 최근접 이웃까지 거리를 정렬해 "팔꿈치"가 보이는 지점으로 설정. scikit-learn의 <code>NearestNeighbors</code>로 쉽게 계산.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: DBSCAN — 반달 모양도 거뜬</h4>
+    <p>K-평균이 절대 못 푸는 <strong>두 반달(half-moons)</strong> 데이터입니다. DBSCAN은 밀도만 보고 모양을 신경 쓰지 않으니 한 방에 가릅니다. <strong>$\varepsilon$</strong>을 너무 작게 하면 클러스터가 잘게 쪼개지고, 너무 크면 모두 하나로 합쳐져요. 회색 X는 잡음으로 분류된 점입니다.</p>
+    <canvas id="dbs" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$\varepsilon$ (반경) <span class="val" id="dbEV">0.06</span><input type="range" id="dbE" min="0.02" max="0.20" step="0.01" value="0.06"></label>
+      <label>minPts <span class="val" id="dbMV">4</span><input type="range" id="dbM" min="2" max="10" step="1" value="4"></label>
+      <button id="dbGen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dbs');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLORS=['#0b5fff','#ff8c00','#2e7d32','#c62828','#6a1b9a','#00838f'];
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<60;i++){const t=Math.PI*Math.random();pts.push({x:0.3+0.2*Math.cos(t)+(Math.random()-0.5)*0.04,y:0.4-0.18*Math.sin(t)+(Math.random()-0.5)*0.04});}
+      for(let i=0;i<60;i++){const t=Math.PI*Math.random();pts.push({x:0.5+0.2*Math.cos(t)+(Math.random()-0.5)*0.04,y:0.55+0.18*Math.sin(t)+(Math.random()-0.5)*0.04});}
+      for(let i=0;i<8;i++)pts.push({x:Math.random(),y:Math.random()}); // noise
+      run();
+    }
+    function run(){
+      const eps=+document.getElementById('dbE').value;
+      const minPts=+document.getElementById('dbM').value;
+      document.getElementById('dbEV').textContent=eps.toFixed(2);
+      document.getElementById('dbMV').textContent=minPts;
+      const N=pts.length;
+      const labels=new Array(N).fill(undefined);
+      const visited=new Array(N).fill(false);
+      function neighbors(i){const out=[];for(let j=0;j<N;j++){if(i===j)continue;if(Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y)<eps)out.push(j);}return out;}
+      let cl=0;
+      for(let i=0;i<N;i++){
+        if(visited[i])continue;visited[i]=true;
+        const nb=neighbors(i);
+        if(nb.length<minPts){labels[i]=-1;continue;}
+        labels[i]=cl;
+        const seeds=[...nb];
+        while(seeds.length){
+          const j=seeds.shift();
+          if(!visited[j]){visited[j]=true;const nb2=neighbors(j);if(nb2.length>=minPts)nb2.forEach(k=>{if(!seeds.includes(k))seeds.push(k);});}
+          if(labels[j]===undefined||labels[j]===-1)labels[j]=cl;
+        }
+        cl++;
+      }
+      draw(labels,cl);
+    }
+    function draw(labels,nClusters){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      pts.forEach((p,i)=>{
+        const lab=labels[i];
+        if(lab===-1){ctx.strokeStyle='#888';ctx.beginPath();const x=p.x*W,y=p.y*H;ctx.moveTo(x-5,y-5);ctx.lineTo(x+5,y+5);ctx.moveTo(x-5,y+5);ctx.lineTo(x+5,y-5);ctx.stroke();}
+        else{ctx.fillStyle=COLORS[lab%6];ctx.beginPath();ctx.arc(p.x*W,p.y*H,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();}
+      });
+      const noise=labels.filter(l=>l===-1).length;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`발견 클러스터 ${nClusters}개 · 잡음 ${noise}개`,12,22);
+    }
+    document.getElementById('dbE').addEventListener('input',run);
+    document.getElementById('dbM').addEventListener('input',run);
+    document.getElementById('dbGen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
 
   <h2>4. PCA — 주성분 분석으로 차원 줄이기</h2>
   <p>100차원 데이터를 어떻게 시각화할까요? 모니터는 2D입니다. <strong>주성분 분석(Principal Component Analysis, PCA)</strong>은 칼 피어슨이 1901년에 제안한 고전적 기법으로, "분산이 가장 큰 방향"을 찾아 그 방향으로 데이터를 투영해 차원을 줄입니다. 정보를 가장 많이 보존하면서 차원을 낮추는 최적의 선형 방법입니다.</p>

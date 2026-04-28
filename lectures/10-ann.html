@@ -17,6 +17,7 @@
   <nav>
     <a href="../index.html" class="active">로봇공학특론</a>
     <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
   </nav>
 </div></header>
 
@@ -103,6 +104,103 @@
   <div class="note">
     <strong>흔한 오해</strong> — "퍼셉트론은 0/1만 출력한다"고 알고 계신 분이 많습니다. 1958년 Rosenblatt의 원조 퍼셉트론은 계단 함수(step function)였지만, 현대에는 거의 항상 ReLU/Sigmoid 같은 연속 함수를 씁니다. 이유는 미분이 가능해야 역전파가 작동하기 때문 — 계단 함수는 거의 모든 곳에서 기울기가 0이라 학습이 안 됩니다.
   </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 퍼셉트론 — 가중치·편향이 결정경계가 된다</h4>
+    <p>2D 데이터(파랑 클래스 0, 빨강 클래스 1)를 한 개 뉴런이 분류합니다. 가중치 $w_1, w_2$와 편향 $b$를 움직이면 직선 $w_1 x_1 + w_2 x_2 + b = 0$이 회전·평행이동합니다. 배경 색은 sigmoid 출력이고, "학습 시작" 버튼은 한 스텝씩 가중치를 갱신해 자동 분류해 봅니다.</p>
+    <canvas id="pc" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>w₁ <span class="val" id="pcW1V">1.0</span><input type="range" id="pcW1" min="-3" max="3" step="0.05" value="1"></label>
+      <label>w₂ <span class="val" id="pcW2V">1.0</span><input type="range" id="pcW2" min="-3" max="3" step="0.05" value="1"></label>
+      <label>b <span class="val" id="pcBV">0.0</span><input type="range" id="pcB" min="-3" max="3" step="0.05" value="0"></label>
+      <button id="pcTrain">학습 시작</button>
+      <button id="pcReg" class="alt">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pc'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    let pts,training=false;
+    function regen(){
+      pts=[];
+      const a=Math.random()*Math.PI;
+      const dirX=Math.cos(a),dirY=Math.sin(a);
+      for(let i=0;i<30;i++){
+        const xi=(Math.random()-0.5)*4,yi=(Math.random()-0.5)*4;
+        const proj=xi*dirX+yi*dirY+(Math.random()-0.5)*0.6;
+        pts.push({x:xi,y:yi,t:proj>0?1:0});
+      }
+    }
+    regen();
+    document.getElementById('pcReg').onclick=()=>{regen();training=false;document.getElementById('pcTrain').textContent='학습 시작';};
+    document.getElementById('pcTrain').onclick=function(){
+      training=!training;this.textContent=training?'학습 중지':'학습 시작';
+    };
+    function px(p){return 30+(p.x+2.5)/5*(W-60);}
+    function py(p){return H-30-(p.y+2.5)/5*(H-60);}
+    function sig(z){return 1/(1+Math.exp(-z));}
+    function loop(){
+      const w1=+document.getElementById('pcW1').value;
+      const w2=+document.getElementById('pcW2').value;
+      const b=+document.getElementById('pcB').value;
+      document.getElementById('pcW1V').textContent=w1.toFixed(2);
+      document.getElementById('pcW2V').textContent=w2.toFixed(2);
+      document.getElementById('pcBV').textContent=b.toFixed(2);
+      // SGD step
+      if(training){
+        let nw1=w1,nw2=w2,nb=b;
+        const lr=0.05;
+        pts.forEach(p=>{
+          const z=nw1*p.x+nw2*p.y+nb;const a=sig(z);
+          const e=a-p.t;
+          nw1-=lr*e*p.x;nw2-=lr*e*p.y;nb-=lr*e;
+        });
+        document.getElementById('pcW1').value=nw1.toFixed(2);
+        document.getElementById('pcW2').value=nw2.toFixed(2);
+        document.getElementById('pcB').value=Math.max(-3,Math.min(3,nb)).toFixed(2);
+      }
+      // background
+      const cell=12;
+      for(let i=0;i<W;i+=cell){
+        for(let j=0;j<H;j+=cell){
+          const xi=(i-30)/(W-60)*5-2.5;
+          const yi=2.5-(j-30)/(H-60)*5;
+          const z=w1*xi+w2*yi+b;const a=sig(z);
+          const r=Math.floor(220*a+30*(1-a));
+          const g=Math.floor(60*a+90*(1-a));
+          const bl=Math.floor(60*a+220*(1-a));
+          x.fillStyle=`rgba(${r},${g},${bl},0.18)`;
+          x.fillRect(i,j,cell,cell);
+        }
+      }
+      // decision line w1*x + w2*y + b = 0  =>  y = -(w1 x + b)/w2
+      x.strokeStyle='#222';x.lineWidth=2.5;x.beginPath();
+      if(Math.abs(w2)>0.01){
+        const xa=-2.5,xb=2.5;
+        const ya=-(w1*xa+b)/w2,yb=-(w1*xb+b)/w2;
+        x.moveTo(px({x:xa}),py({y:ya}));x.lineTo(px({x:xb}),py({y:yb}));
+      }else{
+        const xv=-b/w1;
+        x.moveTo(px({x:xv}),py({y:-2.5}));x.lineTo(px({x:xv}),py({y:2.5}));
+      }
+      x.stroke();
+      // points
+      let correct=0;
+      pts.forEach(p=>{
+        const z=w1*p.x+w2*p.y+b;const pred=z>0?1:0;
+        if(pred===p.t)correct++;
+        x.fillStyle=p.t===1?'#c62828':'#0b5fff';
+        x.strokeStyle=pred===p.t?'#fff':'#ff0';x.lineWidth=2;
+        x.beginPath();x.arc(px(p),py(p),5,0,Math.PI*2);x.fill();x.stroke();
+      });
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('정확도 '+correct+'/'+pts.length+'   ·   z = w₁x₁ + w₂x₂ + b   (배경: σ(z))',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
 
   <h2>3. 활성화 함수</h2>
 
@@ -314,6 +412,102 @@ y_hat = a</code></pre>
     <li><strong>Momentum</strong> — 최근 그라디언트의 지수 가중 평균을 따라 진행. "공이 골짜기에서 굴러갈 때 속도가 누적되듯" 진동을 줄이고 수렴을 빠르게 합니다.</li>
     <li><strong>Adam</strong> — 모멘텀 + 적응적 학습률(파라미터마다 학습률을 자동 조절). 거의 모든 기본 설정에서 잘 작동해 현대 딥러닝의 기본 옵티마이저로 자리 잡았습니다.</li>
   </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 손실 곡면 위의 경사 하강 — η와 모멘텀</h4>
+    <p>늘어진 타원 손실 $f(x,y) = x^2 + 10y^2$ 위에서 GD가 골짜기로 내려갑니다. $\eta$가 너무 크면 진동·발산하고, 모멘텀 $\beta$를 키우면 진동이 누적 평균으로 잡혀 수렴이 빨라집니다. 캔버스를 클릭하면 시작점을 옮길 수 있어요.</p>
+    <canvas id="bp" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>학습률 η <span class="val" id="bpEtaV">0.05</span><input type="range" id="bpEta" min="0.005" max="0.20" step="0.005" value="0.05"></label>
+      <label>모멘텀 β <span class="val" id="bpMV">0.0</span><input type="range" id="bpM" min="0" max="0.95" step="0.01" value="0"></label>
+      <button id="bpRun">시작/정지</button>
+      <button id="bpStep" class="alt">한 스텝</button>
+      <button id="bpRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bp'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const xR=[-2.5,2.5],yR=[-1.2,1.2];
+    function f(p){return p[0]*p[0]+10*p[1]*p[1];}
+    function grad(p){return[2*p[0],20*p[1]];}
+    function px(p){return 30+(p[0]-xR[0])/(xR[1]-xR[0])*(W-60);}
+    function py(p){return H-30-(p[1]-yR[0])/(yR[1]-yR[0])*(H-60);}
+    let pt,vel,trail,running=false;
+    function init(){pt=[-2.0,1.0];vel=[0,0];trail=[pt.slice()];}
+    init();
+    document.getElementById('bpRst').onclick=()=>{init();running=false;};
+    document.getElementById('bpRun').onclick=()=>{running=!running;};
+    document.getElementById('bpStep').onclick=step;
+    c.addEventListener('click',(e)=>{
+      const r=c.getBoundingClientRect();
+      const cx=e.clientX-r.left,cy=e.clientY-r.top;
+      const xv=(cx-30)/(W-60)*(xR[1]-xR[0])+xR[0];
+      const yv=(H-30-cy)/(H-60)*(yR[1]-yR[0])+yR[0];
+      pt=[xv,yv];vel=[0,0];trail=[pt.slice()];
+    });
+    function step(){
+      const eta=+document.getElementById('bpEta').value;
+      const beta=+document.getElementById('bpM').value;
+      const g=grad(pt);
+      vel[0]=beta*vel[0]-eta*g[0];
+      vel[1]=beta*vel[1]-eta*g[1];
+      pt[0]=Math.max(xR[0],Math.min(xR[1],pt[0]+vel[0]));
+      pt[1]=Math.max(yR[0],Math.min(yR[1],pt[1]+vel[1]));
+      trail.push(pt.slice());
+      if(trail.length>200) trail.shift();
+    }
+    function loop(){
+      const eta=+document.getElementById('bpEta').value;
+      const beta=+document.getElementById('bpM').value;
+      document.getElementById('bpEtaV').textContent=eta.toFixed(3);
+      document.getElementById('bpMV').textContent=beta.toFixed(2);
+      if(running) step();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // contour fill
+      const cell=8;
+      let mx=f([xR[1],yR[1]]);
+      for(let i=30;i<W-30;i+=cell){
+        for(let j=30;j<H-30;j+=cell){
+          const xv=(i-30)/(W-60)*(xR[1]-xR[0])+xR[0];
+          const yv=(H-30-j)/(H-60)*(yR[1]-yR[0])+yR[0];
+          const v=f([xv,yv]);
+          const t=Math.min(1,v/mx);
+          const r=Math.floor(40+t*200),g=Math.floor(140-t*100),b=Math.floor(255-t*200);
+          x.fillStyle=`rgb(${r},${g},${b})`;
+          x.fillRect(i,j,cell,cell);
+        }
+      }
+      // contour lines
+      x.strokeStyle='rgba(255,255,255,0.55)';x.lineWidth=1;
+      [0.2,0.8,2,4,8,16].forEach(level=>{
+        x.beginPath();
+        for(let th=0;th<=Math.PI*2+0.05;th+=0.05){
+          const a=Math.sqrt(level),b=Math.sqrt(level/10);
+          const xv=a*Math.cos(th),yv=b*Math.sin(th);
+          const ix=px([xv,yv]),iy=py([xv,yv]);
+          if(th===0) x.moveTo(ix,iy); else x.lineTo(ix,iy);
+        }
+        x.stroke();
+      });
+      // trail
+      x.strokeStyle='#ffeb3b';x.lineWidth=2;x.beginPath();
+      trail.forEach((p,i)=>{i?x.lineTo(px(p),py(p)):x.moveTo(px(p),py(p));});x.stroke();
+      trail.forEach(p=>{x.fillStyle='rgba(255,235,59,0.7)';x.beginPath();x.arc(px(p),py(p),2,0,Math.PI*2);x.fill();});
+      // current
+      x.fillStyle='#fff';x.strokeStyle='#222';x.lineWidth=2;
+      x.beginPath();x.arc(px(pt),py(pt),6,0,Math.PI*2);x.fill();x.stroke();
+      // minimum at origin
+      x.fillStyle='#2e7d32';x.font='bold 18px sans-serif';
+      x.fillText('★',px([0,0])-6,py([0,0])+6);
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('손실 f = '+f(pt).toFixed(3)+'   ·   스텝 '+(trail.length-1)+'   ·   캔버스 클릭으로 시작점 변경',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
 
   <h2>7. 학습 하이퍼파라미터와 과적합</h2>
 
