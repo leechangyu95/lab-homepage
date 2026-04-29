@@ -91,6 +91,82 @@
 
   <p>이 한 사이클이 지금 손에 든 스마트폰부터 화성 탐사 로버까지 똑같이 흐릅니다. 차이는 깊이일 뿐.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: Sense → Think → Act, 시나리오로 보기</h4>
+    <p>예시 시나리오를 골라보세요. 시나리오마다 어떤 센서가 보고, 어떤 알고리즘이 생각하고, 어떤 액추에이터가 움직이는지 한눈에 비교됩니다.</p>
+    <canvas id="staDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>시나리오
+        <select id="staSel">
+          <option value="dslr">DSLR 자동초점</option>
+          <option value="cruise">자동차 크루즈컨트롤</option>
+          <option value="drone">드론 호버링</option>
+          <option value="vacuum">로봇 청소기</option>
+          <option value="thermo">에어컨 온도조절</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('staDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data={
+      dslr:{sense:'거리 센서 (PD AF)',think:'목표 거리 − 현재 거리 → 모터 명령',act:'렌즈 모터 (보이스코일)',plant:'촬영 렌즈군',cycle:'1 사이클 ≈ 30 ms'},
+      cruise:{sense:'휠 엔코더 (속도)',think:'PID: 목표속도 − 측정속도',act:'스로틀·브레이크 액추에이터',plant:'차량 종방향 동역학',cycle:'1 사이클 ≈ 10 ms'},
+      drone:{sense:'IMU + 기압계 + 광류',think:'자세·고도 칼만 + PID',act:'4개 BLDC 모터 PWM',plant:'쿼드로터 6-DOF',cycle:'1 사이클 ≈ 2 ms'},
+      vacuum:{sense:'범퍼·LiDAR·낭떠러지 IR',think:'SLAM + 경로계획 (A*)',act:'좌·우 바퀴 모터, 흡입팬',plant:'차동 구동 로봇',cycle:'1 사이클 ≈ 100 ms'},
+      thermo:{sense:'서미스터 (온도)',think:'On/Off 또는 PI 제어',act:'압축기 인버터',plant:'실내 공기 + 열용량',cycle:'1 사이클 ≈ 1 s'}
+    };
+    function draw(){
+      const k=document.getElementById('staSel').value, d=data[k];
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cols=[
+        {x:30,t:'SENSE',sub:d.sense,fill:'#eef3ff',stroke:'#0742b8',label:'#0742b8'},
+        {x:230,t:'THINK',sub:d.think,fill:'#fff3e0',stroke:'#f57c00',label:'#e65100'},
+        {x:430,t:'ACT',sub:d.act,fill:'#e8f5e9',stroke:'#2e7d32',label:'#1b5e20'}
+      ];
+      cols.forEach(c0=>{
+        ctx.fillStyle=c0.fill;ctx.strokeStyle=c0.stroke;ctx.lineWidth=2;
+        ctx.beginPath();ctx.roundRect(c0.x,60,170,140,12);ctx.fill();ctx.stroke();
+        ctx.fillStyle=c0.label;ctx.font='bold 16px sans-serif';
+        ctx.fillText(c0.t,c0.x+12,90);
+        ctx.fillStyle='#333';ctx.font='12px sans-serif';
+        wrap(ctx,c0.sub,c0.x+12,115,150,16);
+      });
+      // arrows
+      ctx.strokeStyle='#666';ctx.lineWidth=2;
+      [[200,130,230],[400,130,430]].forEach(([x1,y1,x2])=>{
+        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y1);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x2-6,y1-4);ctx.lineTo(x2,y1);ctx.lineTo(x2-6,y1+4);ctx.fill();
+      });
+      // feedback loop
+      ctx.strokeStyle='#c62828';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+      ctx.beginPath();ctx.moveTo(515,200);ctx.lineTo(515,235);ctx.lineTo(115,235);ctx.lineTo(115,200);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.moveTo(115-4,200-6);ctx.lineTo(115,200);ctx.lineTo(115+4,200-6);ctx.fill();
+      ctx.font='11px sans-serif';ctx.fillText('피드백 (다음 사이클에 반영)',225,250);
+      // header
+      ctx.fillStyle='#222';ctx.font='bold 14px sans-serif';
+      ctx.fillText('대상(plant): '+d.plant,30,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(d.cycle,30,48);
+    }
+    function wrap(ctx,text,x,y,maxW,lh){
+      const words=text.split(' ');let line='',yy=y;
+      words.forEach((w,i)=>{
+        const test=line+w+' ';
+        if(ctx.measureText(test).width>maxW&&i>0){ctx.fillText(line,x,yy);line=w+' ';yy+=lh;}
+        else line=test;
+      });
+      ctx.fillText(line,x,yy);
+    }
+    if(!ctx.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){this.beginPath();this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this;};}
+    document.getElementById('staSel').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+
   <h2>4. 제어 시스템의 5요소</h2>
   <p>제어 시스템(control system)은 보통 다음 5요소로 구성됩니다.</p>
 
@@ -111,6 +187,66 @@
     <li><strong>폐루프(피드백)</strong>: 결과를 측정해 오차를 보정. 자율주행, 로봇팔 — 외란·불확실성이 있어도 안정적.</li>
   </ul>
   <p>이번 학기 후반(W11)의 PID·피드백 제어가 폐루프의 핵심 도구입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 개루프 vs 폐루프 — 언덕에서의 차이</h4>
+    <p>크루즈 컨트롤이 평지에서 100km/h로 달리다가 <em>언덕(외란)</em>을 만났을 때 두 방식의 반응을 비교합니다. 개루프는 "정해진 스로틀량"만 보내고 결과를 안 봐서 속도가 떨어지지만, 폐루프는 측정으로 오차를 잡아 보정합니다.</p>
+    <canvas id="loopDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>외란 (언덕 경사) <span class="val" id="dV">3</span>°<input type="range" id="d" min="0" max="8" step="0.5" value="3"></label>
+      <label>피드백 게인 K <span class="val" id="kV">0.6</span><input type="range" id="k" min="0" max="2" step="0.05" value="0.6"></label>
+      <button id="rstLoop">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 목표 100 km/h &nbsp; 🔴 개루프 &nbsp; 🔵 폐루프</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('loopDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t=0,vO=100,vC=100,hist=[],raf=null;
+    function reset(){t=0;vO=100;vC=100;hist=[];}
+    document.getElementById('rstLoop').onclick=reset;
+    ['d','k'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{document.getElementById(id+'V').textContent=document.getElementById(id).value;}));
+    function step(){
+      const d=+document.getElementById('d').value;
+      const k=+document.getElementById('k').value;
+      const dt=0.1, ref=100;
+      // disturbance starts at t=4
+      const slope = t>4 ? d : 0;
+      const dragO = 0.05*vO + 0.7*slope;       // hill slows the car
+      const throttleO = 5;                      // fixed open-loop throttle
+      vO += dt*(throttleO - dragO);
+      const dragC = 0.05*vC + 0.7*slope;
+      const throttleC = 5 + k*(ref - vC);       // closed-loop P controller
+      vC += dt*(throttleC - dragC);
+      hist.push({t,vO,vC,slope});
+      if(hist.length>300)hist.shift();
+      t+=dt;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#eee';for(let i=40;i<H-30;i+=30){ctx.beginPath();ctx.moveTo(40,i);ctx.lineTo(W-10,i);ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-10,H-30);ctx.moveTo(40,30);ctx.lineTo(40,H-30);ctx.stroke();
+      const sx=i=>40+i*2, sy=v=>H-30-(v-60)*4;
+      // hill region shading
+      const hillStart = sx(Math.max(0,(4-(t-hist.length*dt))/dt));
+      ctx.fillStyle='rgba(255,140,0,0.08)';ctx.fillRect(hillStart,30,Math.max(0,W-10-hillStart),H-60);
+      // ref line
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(40,sy(100));ctx.lineTo(W-10,sy(100));ctx.stroke();ctx.setLineDash([]);
+      // open
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.vO);if(i==0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      // closed
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.vC);if(i==0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('속도 (km/h)',8,40);ctx.fillText('시간 →',W-60,H-10);
+      ctx.fillStyle='#c62828';ctx.fillText('개루프 = '+vO.toFixed(1),W-220,50);
+      ctx.fillStyle='#0b5fff';ctx.fillText('폐루프 = '+vC.toFixed(1),W-100,50);
+      ctx.fillStyle='#e65100';ctx.fillText('← 언덕 진입(외란 시작)',hillStart+6,H-40);
+      raf=requestAnimationFrame(step);
+    }
+    step();
+  })();
+  </script>
 
   <h2>5. 한 학기 로드맵</h2>
   <p>13주 동안 sense → think → act를 한 사이클 완주합니다.</p>

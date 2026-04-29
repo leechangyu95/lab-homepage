@@ -131,12 +131,142 @@
     <figcaption>그림 1. 정확도 vs 정밀도 — 과녁의 빨간 중심이 참값. 점들이 측정값.</figcaption>
   </figure>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 바이어스와 산포 직접 만지기</h4>
+    <p>슬라이더로 <strong>바이어스(평균이 참값에서 얼마나 벗어났는지)</strong>와 <strong>산포(측정 표준편차)</strong>를 바꿔보세요. 산포가 작으면 정밀도↑, 바이어스가 작으면 정확도↑. 두 축이 독립적이라는 점을 직접 확인하세요.</p>
+    <canvas id="apDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>바이어스 (정확도 ↔) <span class="val" id="apBV">0.0</span><input type="range" id="apB" min="-2" max="2" step="0.1" value="0.5"></label>
+      <label>산포 σ (정밀도 ↔) <span class="val" id="apSV">0.5</span><input type="range" id="apS" min="0.05" max="2" step="0.05" value="0.5"></label>
+      <button id="apNew">새 측정</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('apDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function regen(){
+      const b=+document.getElementById('apB').value;
+      const s=+document.getElementById('apS').value;
+      pts=[];for(let i=0;i<20;i++)pts.push([b+gauss()*s, gauss()*s*0.6]);
+    }
+    function draw(){
+      const b=+document.getElementById('apB').value;
+      const s=+document.getElementById('apS').value;
+      document.getElementById('apBV').textContent=b.toFixed(1);
+      document.getElementById('apSV').textContent=s.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=200,cy=160,SC=50;
+      // target rings
+      [3,2,1].forEach(r=>{ctx.fillStyle=r===1?'#fff3e0':'#fff';ctx.strokeStyle='#999';
+        ctx.beginPath();ctx.arc(cx,cy,r*SC,0,Math.PI*2);ctx.fill();ctx.stroke();});
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fill();
+      // crosshair
+      ctx.strokeStyle='#bbb';ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(cx-3*SC,cy);ctx.lineTo(cx+3*SC,cy);ctx.moveTo(cx,cy-3*SC);ctx.lineTo(cx,cy+3*SC);ctx.stroke();
+      ctx.setLineDash([]);
+      // points
+      ctx.fillStyle='#0b5fff';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(cx+p[0]*SC,cy+p[1]*SC,3.5,0,Math.PI*2);ctx.fill();});
+      // mean point
+      const mx=pts.reduce((a,p)=>a+p[0],0)/pts.length, my=pts.reduce((a,p)=>a+p[1],0)/pts.length;
+      ctx.fillStyle='#7b1fa2';ctx.strokeStyle='#fff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx+mx*SC,cy+my*SC,7,0,Math.PI*2);ctx.fill();ctx.stroke();
+      // scale & labels
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('🔴 참값 (과녁 중심)',400,40);
+      ctx.fillStyle='#0b5fff';ctx.fillText('🔵 개별 측정값 (20개)',400,62);
+      ctx.fillStyle='#7b1fa2';ctx.fillText('🟣 측정 평균',400,84);
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('정확도 = 평균이 참값에서 얼마나 떨어졌나',400,120);
+      const acc=Math.hypot(mx,my);
+      ctx.fillText(`  → ‖평균 − 참값‖ = ${acc.toFixed(2)}`,400,138);
+      ctx.fillText('정밀도 = 점들이 얼마나 모여 있나',400,170);
+      const spread=Math.sqrt(pts.reduce((a,p)=>a+(p[0]-mx)**2+(p[1]-my)**2,0)/pts.length);
+      ctx.fillText(`  → 표본 σ = ${spread.toFixed(2)}`,400,188);
+      const verdict = (acc<0.4?'정확↑':'정확↓')+'  '+(spread<0.4?'정밀↑':'정밀↓');
+      ctx.fillStyle='#c62828';ctx.font='bold 14px sans-serif';
+      ctx.fillText(verdict,400,230);
+    }
+    document.getElementById('apB').addEventListener('input',()=>{regen();draw();});
+    document.getElementById('apS').addEventListener('input',()=>{regen();draw();});
+    document.getElementById('apNew').addEventListener('click',()=>{regen();draw();});
+    regen();draw();
+  })();
+  </script>
+
   <h3>3.3 민감도(Sensitivity)</h3>
   <p>입력 변화에 대한 출력 변화의 비율. 예: $0.5\,\text{V}/°C$인 온도 센서는 1°C 올라가면 출력이 0.5V 증가.</p>
   $$ S = \frac{\Delta\,\text{output}}{\Delta\,\text{input}} $$
 
   <h3>3.4 이력현상(Hysteresis)</h3>
   <p>같은 입력값이라도 입력이 <em>증가하다 도달</em>한 경우와 <em>감소하다 도달</em>한 경우 출력이 다른 현상. 강자성체나 일부 기계 부품의 마찰에서 흔히 나타납니다. 정밀 측정에서는 이력 곡선의 면적으로 정량화합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 이력 곡선 그려보기</h4>
+    <p>입력 슬라이더를 좌우로 천천히 움직여 보세요. 입력을 키울 때와 줄일 때 출력이 다른 경로를 그리며, 닫힌 고리가 만들어집니다. <strong>이력 폭</strong>이 클수록 같은 입력에 대한 출력 차이가 큽니다.</p>
+    <canvas id="hyDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>입력 <span class="val" id="hyXV">0.0</span><input type="range" id="hyX" min="-1" max="1" step="0.02" value="0"></label>
+      <label>이력 폭 <span class="val" id="hyHV">0.3</span><input type="range" id="hyH" min="0" max="0.6" step="0.02" value="0.3"></label>
+      <button id="hyRst">곡선 지우기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('hyDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let prevX=0,direction=1,trail=[];
+    let yState=0;
+    function f(x,h){
+      // simple play/backlash hysteresis: output lags by h depending on direction
+      if(direction>0) return Math.tanh(2*(x-h/2));
+      return Math.tanh(2*(x+h/2));
+    }
+    document.getElementById('hyRst').onclick=()=>{trail=[];};
+    function draw(){
+      const x=+document.getElementById('hyX').value;
+      const h=+document.getElementById('hyH').value;
+      document.getElementById('hyXV').textContent=x.toFixed(2);
+      document.getElementById('hyHV').textContent=h.toFixed(2);
+      if(x>prevX+1e-4)direction=1;else if(x<prevX-1e-4)direction=-1;
+      prevX=x;
+      const target=f(x,h);
+      // smooth follow with rate limit (small)
+      yState += 0.4*(target-yState);
+      trail.push([x,yState,direction]);
+      if(trail.length>800)trail.shift();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,SC=110;
+      // axes
+      ctx.strokeStyle='#999';
+      ctx.beginPath();ctx.moveTo(50,cy);ctx.lineTo(W-30,cy);ctx.moveTo(cx,30);ctx.lineTo(cx,H-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('입력 x →',W-90,cy-6);ctx.fillText('출력 y',cx+6,40);
+      // ideal line (no hysteresis)
+      ctx.strokeStyle='#cfd8e3';ctx.setLineDash([4,3]);ctx.beginPath();
+      for(let xx=-1;xx<=1;xx+=0.02){const yy=Math.tanh(2*xx);
+        const px=cx+xx*SC,py=cy-yy*SC;if(xx===-1)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+      ctx.stroke();ctx.setLineDash([]);
+      // trail
+      trail.forEach(t=>{const px=cx+t[0]*SC,py=cy-t[1]*SC;
+        ctx.fillStyle=t[2]>0?'rgba(11,95,255,0.6)':'rgba(198,40,40,0.6)';
+        ctx.beginPath();ctx.arc(px,py,2,0,Math.PI*2);ctx.fill();});
+      // current point
+      ctx.fillStyle='#222';ctx.beginPath();ctx.arc(cx+x*SC,cy-yState*SC,5,0,Math.PI*2);ctx.fill();
+      ctx.font='12px sans-serif';
+      ctx.fillStyle='#0b5fff';ctx.fillText('🔵 입력 증가 중',W-180,40);
+      ctx.fillStyle='#c62828';ctx.fillText('🔴 입력 감소 중',W-180,58);
+      ctx.fillStyle='#999';ctx.fillText('-- 이상적 (이력 없음)',W-180,76);
+    }
+    document.getElementById('hyX').addEventListener('input',draw);
+    document.getElementById('hyH').addEventListener('input',draw);
+    setInterval(draw,30);
+    draw();
+  })();
+  </script>
 
   <h3>3.5 비선형 오차</h3>
   <p>이상적으로 출력이 입력에 직선 비례해야 하지만 실제로는 곡선. 그 편차의 최댓값을 풀스케일 대비 %로 표시합니다.</p>
@@ -167,6 +297,62 @@
     <li><strong>상승시간 $t_r$</strong>: 출력이 10%에서 90%까지 도달하는 시간.</li>
     <li><strong>정착시간 $t_s$</strong>: 최종값의 ±2% 이내로 들어와 머무는 시간.</li>
   </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 센서의 스텝 응답과 시정수</h4>
+    <p>$\tau$를 바꿔보세요. $t = \tau$에서 정확히 63.2%, $5\tau$에서 약 99% 도달. <strong>참값(스텝)은 즉시</strong>이지만 센서 출력은 시정수만큼 늦게 따라갑니다. 빠른 변화를 측정하려면 $\tau$가 작은 센서가 필요합니다.</p>
+    <canvas id="tauDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>시정수 τ <span class="val" id="tauV">0.5</span> s<input type="range" id="tau" min="0.1" max="3" step="0.1" value="0.5"></label>
+      <label>최종값 y∞ <span class="val" id="yfV">10</span><input type="range" id="yf" min="1" max="20" step="0.5" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tauDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const tau=+document.getElementById('tau').value;
+      const yf=+document.getElementById('yf').value;
+      document.getElementById('tauV').textContent=tau.toFixed(1);
+      document.getElementById('yfV').textContent=yf.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=60,oy=H-40,w=W-90,h=H-80,T=Math.max(5*tau,3);
+      // grid
+      ctx.strokeStyle='#eee';for(let g=0;g<=5;g++){const yy=oy-g/5*h;ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      // step (truth)
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w*0.05,oy);ctx.lineTo(ox+w*0.05,oy-yf/20*h);ctx.lineTo(ox+w,oy-yf/20*h);ctx.stroke();
+      ctx.setLineDash([]);
+      // sensor curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=400;i++){
+        const t=i/400*T;
+        const y = t<T*0.05 ? 0 : yf*(1-Math.exp(-(t-T*0.05)/tau));
+        const xx=ox+(t/T)*w, yy=oy-y/20*h;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      // mark τ, 2τ, 5τ
+      [[1,'τ',0.632],[2,'2τ',0.865],[5,'5τ',0.993]].forEach(([k,lbl,frac])=>{
+        const t=T*0.05+k*tau;if(t>T)return;
+        const xx=ox+(t/T)*w, yy=oy-yf*frac/20*h;
+        ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(xx,yy,4,0,Math.PI*2);ctx.fill();
+        ctx.font='11px sans-serif';ctx.fillText(`${lbl} (${(frac*100).toFixed(1)}%)`,xx+5,yy-4);
+        ctx.strokeStyle='#c62828';ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(xx,oy);ctx.lineTo(xx,yy);ctx.stroke();ctx.setLineDash([]);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 t (s)',W-80,oy+25);ctx.fillText('출력',12,40);
+      ctx.fillStyle='#2e7d32';ctx.fillText('— 참값 (스텝)',ox+10,55);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 센서 출력',ox+10,75);
+    }
+    document.getElementById('tau').addEventListener('input',draw);
+    document.getElementById('yf').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h2>5. 대표 센서들</h2>
 

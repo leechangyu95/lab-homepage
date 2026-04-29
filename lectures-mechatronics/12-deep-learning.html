@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W12. 딥러닝 — 메카트로닉스</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 12. 딥러닝 in 메카트로닉스</h1>
+  <p class="lead">모델식을 모르는 시스템·인지가 어려운 환경에서 데이터로부터 직접 학습. 그리고 그 출력을 제어 루프에 연결하기.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 메카트로닉스에 딥러닝이 들어왔나</li>
+    <li>퍼셉트론과 다층 신경망(MLP)</li>
+    <li>학습의 3요소: 손실 함수·역전파·옵티마이저</li>
+    <li>메카트로닉스 응용 4가지</li>
+    <li>실시간성과 임베디드 배포</li>
+  </ol></div>
+
+  <h2>1. 왜 딥러닝인가</h2>
+  <p>지난 W7~W11에서 우리는 시스템을 <strong>미분방정식</strong>으로 모델링하고 PID로 제어했어요. 하지만 실제 메카트로닉스에는 두 가지 어려운 상황이 있습니다.</p>
+  <ul>
+    <li><strong>모델을 적기 어려운 경우</strong>: 마찰·온도·재료 변형 같은 비선형성, 인간 운전자의 행동, 비정형 환경.</li>
+    <li><strong>인지가 필요한 경우</strong>: 카메라 영상에서 보행자·차선·표지판을 알아내야 함. 미분방정식으로는 답이 안 나오는 문제.</li>
+  </ul>
+  <p>이런 자리에 <strong>데이터에서 직접 함수를 학습</strong>하는 딥러닝이 들어옵니다. 충분한 데이터가 있다면, 모델을 손으로 적지 않아도 입력→출력 관계를 잡아줍니다.</p>
+
+  <h2>2. 퍼셉트론과 다층 신경망</h2>
+
+  <h3>2.1 퍼셉트론(Perceptron)</h3>
+  <p>가장 작은 인공 뉴런. 입력에 가중치를 곱해 합한 뒤 활성화 함수를 통과:</p>
+  $$ y = f\!\left(\sum_{i=1}^{n} w_i x_i + b\right) $$
+  <p>$w_i$는 가중치(weights), $b$는 바이어스. 학습이란 결국 데이터로 이 $w$, $b$ 값을 찾는 일입니다.</p>
+
+  <h3>2.2 활성화 함수 — 비선형성의 도입</h3>
+  <p>가중합만으로는 선형 함수만 표현 가능. 활성화 함수가 비선형성을 더해줍니다.</p>
+  <ul>
+    <li><strong>Sigmoid</strong> $\sigma(x) = 1/(1+e^{-x})$: 0~1 출력, 확률 해석에 좋음</li>
+    <li><strong>ReLU</strong> $\max(0, x)$: 가장 흔히 씀. 학습이 빠르고 vanishing gradient 적음</li>
+    <li><strong>Tanh</strong> $\tanh(x)$: −1~1 출력, RNN의 게이트에 자주</li>
+  </ul>
+
+  <h3>2.3 다층 신경망(MLP)과 "Deep"</h3>
+  <p>퍼셉트론을 여러 층으로 쌓으면 <strong>다층 신경망(MLP, Multi-Layer Perceptron)</strong>. 그중 은닉층(hidden layer)이 여러 개 있는 신경망을 <strong>심층 신경망(DNN, Deep Neural Network)</strong>이라 부르고, 이를 학습하는 분야가 딥러닝입니다.</p>
+  <p>"Deep"의 핵심은 깊이에서 오는 <strong>표현력</strong>입니다. 1개 은닉층으로도 임의 함수를 근사할 수 있다는 정리(보편 근사 정리)가 있지만, 실제로는 깊게 쌓을수록 같은 정확도를 더 적은 파라미터로 달성합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+      <g fill="#0742b8" stroke="#0742b8" stroke-width="1.5">
+        <circle cx="60" cy="60" r="14" fill="#eef3ff"/>
+        <circle cx="60" cy="110" r="14" fill="#eef3ff"/>
+        <circle cx="60" cy="160" r="14" fill="#eef3ff"/>
+      </g>
+      <text x="60" y="195" text-anchor="middle" font-size="11" fill="#666">입력층</text>
+      <g fill="#1b5e20" stroke="#1b5e20" stroke-width="1.5">
+        <circle cx="200" cy="40" r="14" fill="#e8f5e9"/>
+        <circle cx="200" cy="90" r="14" fill="#e8f5e9"/>
+        <circle cx="200" cy="140" r="14" fill="#e8f5e9"/>
+        <circle cx="200" cy="190" r="14" fill="#e8f5e9"/>
+      </g>
+      <g fill="#1b5e20" stroke="#1b5e20" stroke-width="1.5">
+        <circle cx="340" cy="40" r="14" fill="#e8f5e9"/>
+        <circle cx="340" cy="90" r="14" fill="#e8f5e9"/>
+        <circle cx="340" cy="140" r="14" fill="#e8f5e9"/>
+        <circle cx="340" cy="190" r="14" fill="#e8f5e9"/>
+      </g>
+      <text x="270" y="215" text-anchor="middle" font-size="11" fill="#666">은닉층 (deep!)</text>
+      <g fill="#c62828" stroke="#c62828" stroke-width="1.5">
+        <circle cx="480" cy="90" r="14" fill="#fce4ec"/>
+        <circle cx="480" cy="140" r="14" fill="#fce4ec"/>
+      </g>
+      <text x="480" y="195" text-anchor="middle" font-size="11" fill="#666">출력층</text>
+      <g stroke="#aaa" stroke-width="0.8" fill="none">
+        <line x1="74" y1="60" x2="186" y2="40"/><line x1="74" y1="60" x2="186" y2="90"/>
+        <line x1="74" y1="110" x2="186" y2="90"/><line x1="74" y1="110" x2="186" y2="140"/>
+        <line x1="74" y1="160" x2="186" y2="140"/><line x1="74" y1="160" x2="186" y2="190"/>
+        <line x1="214" y1="40" x2="326" y2="40"/><line x1="214" y1="90" x2="326" y2="90"/>
+        <line x1="214" y1="140" x2="326" y2="140"/><line x1="214" y1="190" x2="326" y2="190"/>
+        <line x1="354" y1="40" x2="466" y2="90"/><line x1="354" y1="90" x2="466" y2="90"/>
+        <line x1="354" y1="140" x2="466" y2="140"/><line x1="354" y1="190" x2="466" y2="140"/>
+      </g>
+    </svg>
+    <figcaption>그림 1. 다층 신경망. 입력 → 은닉층(다중) → 출력 구조.</figcaption>
+  </figure>
+
+  <h2>3. 학습의 3요소</h2>
+
+  <h3>3.1 손실 함수(Loss Function)</h3>
+  <p>예측 $\hat{y}$가 정답 $y$에 얼마나 가까운가를 수치로. 가장 흔한 두 가지:</p>
+  <ul>
+    <li><strong>회귀</strong> (연속값): 평균제곱오차(MSE) $L = \frac{1}{N}\sum (y_i - \hat{y}_i)^2$</li>
+    <li><strong>분류</strong> (클래스 라벨): 교차 엔트로피 $L = -\sum y_i \log \hat{y}_i$</li>
+  </ul>
+
+  <h3>3.2 역전파(Backpropagation)</h3>
+  <p>각 가중치 $w$가 손실 $L$에 미치는 영향(편미분 $\partial L/\partial w$)을 효율적으로 계산하는 알고리즘. 핵심은 <strong>연쇄 법칙(chain rule)</strong>으로 출력층에서 입력층으로 거슬러 올라가며 그래디언트를 계산.</p>
+  $$ \frac{\partial L}{\partial w} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z} \cdot \frac{\partial z}{\partial w} $$
+  <p>이 알고리즘이 1986년 다시 주목받으면서 신경망의 두 번째 봄이 시작되었어요(W7-W8 <a href="../dl.html">딥러닝 트랙</a>에서 자세히).</p>
+
+  <h3>3.3 옵티마이저(Optimizer)</h3>
+  <p>그래디언트 정보로 가중치를 업데이트하는 규칙. 가장 단순한 형태는 <strong>경사 하강법</strong>:</p>
+  $$ w \leftarrow w - \eta \frac{\partial L}{\partial w} $$
+  <p>$\eta$는 학습률(learning rate). 너무 크면 발산, 너무 작으면 학습이 더딤. 실무에서는 <strong>Adam</strong>이 표준에 가까움.</p>
+
+  <h2>4. 메카트로닉스에서의 응용 4가지</h2>
+
+  <h3>4.1 인지 (Perception)</h3>
+  <p>카메라·LiDAR로 본 환경을 이해. 자율주행에서 가장 큰 사용처.</p>
+  <ul>
+    <li><strong>객체 검출</strong>: YOLO, Faster R-CNN — 보행자·차량·표지판 위치와 종류.</li>
+    <li><strong>의미 분할</strong>: 픽셀마다 클래스 라벨 — 차선·도로·하늘 구분.</li>
+    <li><strong>3D 인식</strong>: PointPillars, PointNet — LiDAR 점군에서 객체 검출.</li>
+  </ul>
+  <p>이 모든 출력이 다시 <strong>제어 루프의 입력</strong>으로 들어갑니다. 예: "전방 5m에 보행자" → 정지 명령.</p>
+
+  <h3>4.2 시스템 식별 (System Identification)</h3>
+  <p>물리 모델을 적기 어려운 시스템에서 입출력 데이터로 직접 동역학을 학습. 비선형 마찰·간극·온도 효과까지 잡아낼 수 있음.</p>
+  <ul>
+    <li><strong>응용 예</strong>: 4족 로봇의 다리 동역학, 부드러운 로봇(soft robot), 산업 펌프의 마찰 모델.</li>
+    <li><strong>방법</strong>: 신경망 ODE, RNN/LSTM, Transformer 기반 dynamics 모델.</li>
+  </ul>
+
+  <h3>4.3 강화학습 제어 (Reinforcement Learning)</h3>
+  <p>"보상이 큰 행동을 점점 더 자주" 하도록 학습. PID로는 풀기 어려운 다관절·접촉 풍부한 작업에 강력.</p>
+  <ul>
+    <li><strong>응용 예</strong>: 로봇 팔의 물체 잡기(grasping), 4족 로봇 보행, 드론 곡예비행.</li>
+    <li><strong>주의</strong>: 시뮬레이션→실제(sim-to-real) 격차, 안전 보장이 약점.</li>
+  </ul>
+
+  <h3>4.4 예지 보전 (Predictive Maintenance)</h3>
+  <p>모터 진동·전류·온도 시계열을 분석해 고장이 일어나기 전에 예측. 산업 IoT의 표준 응용.</p>
+  <ul>
+    <li><strong>방법</strong>: LSTM, Transformer, Autoencoder 기반 이상 탐지.</li>
+    <li><strong>가치</strong>: 갑작스런 정지를 사전 경보로 바꿔 가동률·안전 향상.</li>
+  </ul>
+
+  <h2>5. 실시간성과 임베디드 배포</h2>
+  <p>제어 루프는 보통 1~1000Hz로 돕니다. 신경망이 들어가도 같은 속도로 동작해야 한다는 게 임베디드의 큰 도전.</p>
+
+  <h3>5.1 모델 경량화 기법</h3>
+  <ul>
+    <li><strong>양자화(Quantization)</strong>: 32-bit float → 8-bit int. 모델 크기 4배, 속도 2~4배.</li>
+    <li><strong>가지치기(Pruning)</strong>: 영향이 작은 가중치를 0으로 만들고 희소 행렬로 처리.</li>
+    <li><strong>지식 증류(Knowledge Distillation)</strong>: 큰 모델의 지식을 작은 모델로 옮김.</li>
+    <li><strong>전용 NPU/GPU</strong>: Jetson Nano/Orin, Coral TPU, Raspberry Pi AI Kit 등.</li>
+  </ul>
+
+  <h3>5.2 안전 보장의 어려움</h3>
+  <p>전통적 제어공학은 <strong>안정성 증명</strong>이 가능하지만, 신경망 정책은 보장하기 어렵습니다. 그래서 실제 차량·항공기에서는:</p>
+  <ul>
+    <li>인식·계획에는 딥러닝을 쓰되</li>
+    <li>저수준 제어는 여전히 PID/MPC를 쓰고</li>
+    <li>안전 조건 위반 시 폴백(fallback)으로 강제 전환하는 구조</li>
+  </ul>
+  <p>신경망과 고전 제어가 함께 가는 <strong>하이브리드</strong>가 현 단계 산업의 표준입니다.</p>
+
+  <h2>6. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>요소</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td>퍼셉트론</td><td>$y = f(\sum w_i x_i + b)$ — 가장 작은 단위</td></tr>
+      <tr><td>활성화</td><td>비선형성 도입 (ReLU, Sigmoid, Tanh)</td></tr>
+      <tr><td>손실</td><td>예측-정답 차이의 수치 (MSE, Cross-Entropy)</td></tr>
+      <tr><td>역전파</td><td>연쇄 법칙으로 그래디언트 계산</td></tr>
+      <tr><td>옵티마이저</td><td>SGD, Adam — 가중치 업데이트 규칙</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. 더 깊이 보기</h2>
+  <ul>
+    <li><a href="../dl.html">딥러닝 트랙 전체</a> — 본 강의의 13주 풀버전. CNN(W9-10), RNN(W11-12), Transformer(W13)까지.</li>
+    <li><a href="../lectures-dl/07-mlp.html">DL W7 MLP</a> — 퍼셉트론과 XOR 문제, 보편 근사 정리의 깊은 유도.</li>
+    <li><a href="../lectures-dl/08-dnn-backprop.html">DL W8 역전파</a> — 2층 신경망 역전파 손계산, 옵티마이저 비교.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>한 줄 요약</strong> — 딥러닝은 메카트로닉스의 "모델을 적기 어려운" 자리에 데이터로 답을 찾아주는 도구입니다. 다만 안전 보장이 약해 안전 critical 시스템에서는 고전 제어와 함께 하이브리드로 씁니다.
+  </div>
+
+  <nav class="prevnext">
+    <a href="11-feedback-control.html"><small>← 이전</small>W11. 피드백 제어</a>
+    <a href="13-path-planning.html" class="next"><small>다음 →</small>W13. 경로 계획</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W13. 경로 계획 — 메카트로닉스</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 13. 경로 계획(Path Planning) — 시작에서 목표까지의 길 찾기</h1>
+  <p class="lead">출발점에서 장애물을 피해 목표까지 가는 가장 좋은 길. 그래프 탐색 vs 샘플링 기반의 두 가지 큰 흐름.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>경로 계획이란</li>
+    <li>전역 경로 vs 지역 경로 vs 추종 제어</li>
+    <li>맵 표현 — 노드와 간선</li>
+    <li>그래프 탐색: BFS · Dijkstra · A*</li>
+    <li>샘플링 기반: PRM · RRT · RRT*</li>
+    <li>최적화 기반과 동역학 제약</li>
+  </ol></div>
+
+  <h2>1. 경로 계획이란</h2>
+  <p>주어진 환경에서 <strong>출발점(start)</strong>에서 <strong>목표점(end)</strong>까지 <strong>장애물을 피하면서</strong> 갈 수 있는 길을 찾는 문제. 자율주행·드론·로봇청소기·창고 로봇 등 모든 모바일 시스템의 핵심 기능입니다.</p>
+
+  <p>"좋은 길"의 기준은 응용에 따라 달라요.</p>
+  <ul>
+    <li>가장 짧은 거리</li>
+    <li>가장 짧은 시간 (속도 한계 고려)</li>
+    <li>에너지 최소</li>
+    <li>가장 안전한(장애물에서 멀리 떨어진) 길</li>
+    <li>혹은 이들의 가중 평균</li>
+  </ul>
+
+  <h2>2. 모바일 로봇의 3계층 — 전역·지역·추종</h2>
+  <p>실제 로봇 시스템에서 경로 계획은 보통 세 단계로 나뉩니다.</p>
+
+  <table>
+    <thead><tr><th>계층</th><th>주기</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td><strong>전역 계획</strong></td><td>~분 (한 번)</td><td>지도 위에서 목표까지의 큰 그림 경로 (도로망 위)</td></tr>
+      <tr><td><strong>지역 계획</strong></td><td>~Hz</td><td>현재 시점의 장애물·동적 객체 회피 (로컬 맵 위)</td></tr>
+      <tr><td><strong>추종 제어</strong></td><td>10~100Hz</td><td>경로를 실제로 따라가는 차량 제어 (PID, Pure Pursuit)</td></tr>
+    </tbody>
+  </table>
+
+  <p>이번 강의는 주로 전역·지역 계획을 다룹니다. 추종은 W11 피드백 제어와 <a href="../lectures/07-feedback-control.html">로봇공학특론 L7</a>에서 자세히.</p>
+
+  <h2>3. 맵 표현 — 노드와 간선</h2>
+  <p>알고리즘이 다루기 쉽게 환경을 <strong>그래프</strong>로 추상화합니다.</p>
+  <ul>
+    <li><strong>노드(node)</strong>: 위치(셀, 교차로, 방).</li>
+    <li><strong>간선(edge)</strong>: 한 노드에서 다른 노드로의 직접 이동 경로. 가중치(거리·시간·비용)를 가질 수 있음.</li>
+  </ul>
+
+  <p>대표적인 표현 방식 두 가지:</p>
+  <ul>
+    <li><strong>Pathfinding grid</strong>: 환경을 격자로 쪼개고 각 칸을 노드. 인접 8칸으로 이동 가능. 게임·청소 로봇에 자주.</li>
+    <li><strong>Topological graph</strong>: 의미 있는 위치(방·문)만 노드로. 도로망·창고에 자주.</li>
+  </ul>
+
+  <h2>4. 그래프 탐색 알고리즘</h2>
+
+  <h3>4.1 BFS (너비 우선 탐색)</h3>
+  <p>출발 노드에서 가까운 순서로 한 겹씩 펼쳐가며 탐색. 모든 간선 비용이 같다고 가정.</p>
+  <ul>
+    <li><strong>장점</strong>: 단순, 균등 가중치에서는 최적해 보장.</li>
+    <li><strong>단점</strong>: 가중치가 다를 때 비효율, 탐색 범위가 빨리 커짐.</li>
+  </ul>
+
+  <h3>4.2 Dijkstra 알고리즘</h3>
+  <p>BFS의 일반화. 간선마다 비용이 다를 때 누적 비용이 가장 작은 노드부터 펼침. 우선순위 큐(min-heap)로 구현.</p>
+  $$ g(n) = \text{출발에서 } n \text{까지의 최소 누적 비용} $$
+  <p>모든 간선 비용이 0 이상이면 항상 최적해를 보장. 1959년 발표 — 60년 넘은 알고리즘이 지금도 GPS 내비게이션의 기본.</p>
+
+  <h3>4.3 A* 알고리즘 — 휴리스틱의 도입</h3>
+  <p>Dijkstra는 <em>출발에서 현재까지</em>의 비용 $g(n)$만 사용. 이게 비효율적인 이유는 목표에서 멀어지는 방향까지 탐색하기 때문이에요.</p>
+  <p>A*는 휴리스틱 $h(n)$을 추가 — "여기서 목표까지의 추정 거리". 두 비용을 합한 $f(n) = g(n) + h(n)$이 가장 작은 노드부터 탐색.</p>
+  $$ f(n) = g(n) + h(n) $$
+  <ul>
+    <li>$g(n)$: 시작에서 $n$까지 실제 비용 (Dijkstra와 같음)</li>
+    <li>$h(n)$: $n$에서 목표까지 <strong>추정</strong> 비용 (보통 직선거리)</li>
+  </ul>
+
+  <p><strong>최적성 조건</strong> — $h(n)$이 실제 남은 비용을 절대 초과하지 않으면(<em>admissible</em>) A*가 항상 최적해를 보장합니다. 격자에서는 맨해튼 거리·유클리드 거리가 흔히 admissible.</p>
+
+  <table>
+    <thead><tr><th>알고리즘</th><th>탐색 폭</th><th>최적성</th><th>속도</th></tr></thead>
+    <tbody>
+      <tr><td>BFS</td><td>매우 넓음</td><td>균등 가중치만</td><td>느림</td></tr>
+      <tr><td>Dijkstra</td><td>넓음 (전 방향)</td><td>항상 최적</td><td>중간</td></tr>
+      <tr><td>A*</td><td>좁음 (목표 방향)</td><td>$h$ admissible 시 최적</td><td>빠름</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. 샘플링 기반 경로 계획</h2>
+  <p>그래프 탐색은 격자 해상도가 높아지면 차원 폭발 — 6-DOF 로봇팔에서는 격자가 너무 커집니다. 샘플링 기반은 전체 공간을 격자로 나누지 않고 <strong>임의의 점들을 샘플링해 그래프를 즉시 만들어가는</strong> 접근.</p>
+
+  <h3>5.1 PRM (Probabilistic Roadmap)</h3>
+  <p>두 단계:</p>
+  <ol>
+    <li><strong>학습 단계</strong>: 자유공간(장애물 없는 영역)에서 랜덤 점 $N$개 샘플링, 가까운 점끼리 연결해 로드맵 그래프 구축.</li>
+    <li><strong>질의 단계</strong>: 출발-목표 점을 로드맵에 붙이고 그래프 탐색(예: A*).</li>
+  </ol>
+  <p>로드맵은 한 번 만들면 여러 출발-목표에 재활용 가능. 다중 질의에 유리.</p>
+
+  <h3>5.2 RRT (Rapidly-Exploring Random Tree)</h3>
+  <p>출발점에서 트리를 키워가며 랜덤 점으로 빠르게 확장.</p>
+  <ol>
+    <li>현재 트리에서 가장 가까운 노드를 찾음.</li>
+    <li>그 노드에서 랜덤 점 방향으로 일정 거리만큼 진행한 새 점을 추가.</li>
+    <li>충돌이 없으면 트리에 노드·간선으로 등록.</li>
+    <li>목표에 충분히 가까워질 때까지 반복.</li>
+  </ol>
+  <p>고차원·복잡한 구속에서도 잘 동작 — 로봇팔, 자율주행 같은 응용에 표준. 단점: 결과가 랜덤이라 매번 다르고, 최적 보장이 없음.</p>
+
+  <h3>5.3 RRT*</h3>
+  <p>RRT의 개선판. 새 노드를 추가할 때 주변 기존 노드들과의 비용을 비교해 부모를 다시 선택(<em>rewiring</em>). 샘플 수가 무한대로 가면 최적해로 수렴(<em>asymptotically optimal</em>). 자율주행·드론 동적 회피에 자주.</p>
+
+  <table>
+    <thead><tr><th>알고리즘</th><th>특징</th><th>적합 응용</th></tr></thead>
+    <tbody>
+      <tr><td>PRM</td><td>오프라인 맵 구축, 다중 질의</td><td>고정된 환경의 반복 작업</td></tr>
+      <tr><td>RRT</td><td>빠른 확장, 단일 질의, 비최적</td><td>고차원 모션 계획</td></tr>
+      <tr><td>RRT*</td><td>점근적 최적, 느림</td><td>품질이 중요한 단발성 계획</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. 최적화 기반 경로 계획</h2>
+  <p>경로를 직접 변수로 두고 비용 함수를 최소화. 동역학·차량 제약을 그대로 반영할 수 있다는 게 강점.</p>
+
+  $$ \min_{\mathbf{x}_0,\dots,\mathbf{x}_N,\mathbf{u}_0,\dots,\mathbf{u}_{N-1}} \sum_k \ell(\mathbf{x}_k, \mathbf{u}_k) \quad \text{s.t.}\;\mathbf{x}_{k+1} = f(\mathbf{x}_k, \mathbf{u}_k),\;\text{충돌 없음} $$
+
+  <p>비용에 거리·연료·승차감·안전 마진 등을 자유롭게 넣을 수 있음. <a href="../lectures/11-mpc.html">로봇공학특론 L11 MPC</a>가 이 접근법의 정점입니다 — 짧은 시간 단위로 최적화를 반복하며 미래 N스텝을 예측·제어.</p>
+
+  <h2>7. 동역학 제약과 Dubins 경로</h2>
+  <p>지금까지의 알고리즘은 "임의 방향으로 회전·이동 가능"을 가정합니다. 하지만 자동차는 후진 없이 일정 회전반경 이상으로만 돌 수 있어요. 이런 <strong>비홀로노믹(nonholonomic) 제약</strong> 하에서의 최단 경로가 <strong>Dubins 경로</strong>입니다.</p>
+  <p>Dubins 경로는 직선과 일정 반경 호의 6가지 조합(LRL, RLR, LSL, LSR, RSL, RSR)으로 구성. 자율주행·드론 항법에 표준.</p>
+
+  <h2>8. 알고리즘 결과를 제어 루프로 보내기</h2>
+  <p>경로가 일련의 점들 또는 곡선으로 나오면, 그것을 차량이 실제로 따라가게 하는 게 다음 단계. 두 가지 표준 방법:</p>
+  <ul>
+    <li><strong>Pure Pursuit</strong>: 경로 위 일정 거리 앞의 "목표점"을 잡고 그쪽으로 핸들. 단순하고 강건.</li>
+    <li><strong>Stanley Controller</strong>: 횡방향 오차 + 헤딩 오차의 결합. Stanford 자율주행팀이 DARPA 우승할 때 사용.</li>
+  </ul>
+  <p>두 컨트롤러 모두 <a href="../lectures/07-feedback-control.html">로봇공학특론 L7</a>에 깊은 설명이 있습니다.</p>
+
+  <h2>9. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>문제 유형</th><th>알고리즘</th></tr></thead>
+    <tbody>
+      <tr><td>2D 격자, 균등 비용</td><td>BFS</td></tr>
+      <tr><td>2D 격자, 가중치</td><td>Dijkstra, A*</td></tr>
+      <tr><td>고차원, 단일 질의</td><td>RRT, RRT*</td></tr>
+      <tr><td>고정 환경, 다중 질의</td><td>PRM</td></tr>
+      <tr><td>동역학 + 최적성 + 실시간</td><td>MPC, 최적화 기반</td></tr>
+      <tr><td>차량 (비홀로노믹)</td><td>Dubins 경로 + Hybrid A*</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. 더 깊이 보기</h2>
+  <ul>
+    <li><a href="../lectures/06-path-planning.html">로봇공학특론 L6 경로 계획</a> — BFS·Dijkstra·A*·RRT의 의사코드와 인터랙티브 시각화.</li>
+    <li><a href="../lectures/11-mpc.html">L11 MPC</a> — 최적화 기반 제어의 본격 풀이.</li>
+    <li><a href="https://github.com/AtsushiSakai/PythonRobotics">PythonRobotics</a> — 모든 알고리즘의 짧은 파이썬 구현 모음.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>한 학기 마무리</strong> — 메카트로닉스의 sense → think → act 한 사이클을 한 바퀴 돌아왔습니다. W2~W5(센서·필터)에서 보는 법을, W7~W10에서 모델링과 응답을, W11에서 제어를, W12~W13에서 학습과 계획을. 이제 여러분은 자율 시스템을 처음부터 끝까지 한 줄로 설명할 수 있을 겁니다 — <em>"센서로 보고, 필터로 잡음을 누르고, 모델로 미래를 예측하고, 제어로 결정을 행하고, 그 위에 학습이 인지·계획을 더한다"</em>.
+  </div>
+
+  <nav class="prevnext">
+    <a href="12-deep-learning.html"><small>← 이전</small>W12. 딥러닝</a>
+    <a href="../mechatronics.html" class="next"><small>다음 →</small>강의 목록으로</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
