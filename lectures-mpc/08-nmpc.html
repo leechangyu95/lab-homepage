@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W8. 비선형 MPC (NMPC) — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html" class="active">MPC</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../mpc.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 8. 비선형 MPC (NMPC)</h1>
+  <p class="lead">로봇 매니퓰레이터·드론·자율차의 동역학은 본질적으로 비선형입니다. 선형화로는 큰 동작 범위를 다루기 어려워, 비선형 모델을 그대로 쓰는 <strong>NMPC</strong>가 표준이 됐어요. QP가 NLP가 되고, SQP·Real-Time Iteration 같은 영리한 트릭들로 ms 단위에 풀어냅니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 NMPC인가 — 선형화의 한계</li>
+    <li>NLP 정식화</li>
+    <li>Direct vs Indirect — 두 학파</li>
+    <li>SQP — 비선형을 QP로 잘게 풀기</li>
+    <li>Real-Time Iteration (RTI)</li>
+    <li>iLQR — 큰 문제를 위한 그래디언트 기반</li>
+  </ol></div>
+
+  <h2>1. 왜 NMPC인가</h2>
+
+  <p>선형 MPC는 동작점 근처의 작은 영역에선 잘 작동하지만:</p>
+  <ul>
+    <li>로봇 팔이 0°에서 90°까지 큰 각도로 움직이면 자코비안이 크게 변함 → 선형화 오차 ↑</li>
+    <li>드론의 자세 제어는 회전 행렬 자체가 비선형 manifold</li>
+    <li>차량의 횡방향 동역학은 슬립 각도, 타이어 비선형성으로 dominant</li>
+    <li>화학 공정의 Arrhenius 항 ($e^{-E/RT}$) 같은 강한 비선형</li>
+  </ul>
+
+  <p>여러 동작점에서 선형화한 모델을 갈아끼우는 <em>gain-scheduling</em>이나 <em>LPV-MPC</em>도 있지만, 비선형 모델을 그대로 들고 가는 NMPC가 가장 일반적이고 정확.</p>
+
+  <h2>2. NLP 정식화</h2>
+
+  <p>비선형 시스템 $x_{k+1} = f(x_k, u_k)$, 비용·제약도 비선형 가능:</p>
+  $$ \min_{X, U}\ \sum_{k=0}^{N-1} \ell(x_k, u_k) + V_f(x_N) $$
+  $$ \text{s.t.}\quad x_{k+1} = f(x_k, u_k) $$
+  $$ g(x_k, u_k) \le 0,\quad x_0 = x(t),\quad x_N \in \mathcal X_f $$
+
+  <p>이건 일반 <strong>비선형 계획법 (Nonlinear Programming, NLP)</strong>. QP보다 훨씬 어렵습니다 (비볼록 가능, 지역 최솟값).</p>
+
+  <h2>3. Direct vs Indirect</h2>
+
+  <h3>Indirect (변분법 기반)</h3>
+  <p>최적성 조건 (Pontryagin Maximum Principle, KKT)을 미분방정식으로 유도해 풀음. 수학적으로 우아하나 수치적으로 까다로움.</p>
+
+  <h3>Direct (이산화 후 유한차원 NLP)</h3>
+  <p>시간을 이산화하고 직접 NLP 솔버에 넘김. 현재 표준. 두 가지 sub-방법:</p>
+  <ul>
+    <li><strong>Single Shooting</strong> — 입력 $U$만 결정 변수, 상태는 forward simulation으로 계산. 변수 적지만 수치적으로 민감.</li>
+    <li><strong>Multiple Shooting</strong> — 상태와 입력 모두 결정 변수, 동역학을 등식 제약으로. 변수 많지만 sparse + 수치적으로 안정 + 병렬화 가능. <em>현재 표준</em>.</li>
+    <li><strong>Collocation</strong> — 다항식 근사로 동역학을 더 정확히. 화학 공정에서 인기.</li>
+  </ul>
+
+  <h2>4. SQP — Sequential Quadratic Programming</h2>
+
+  <p>NLP를 푸는 가장 흔한 방법. 아이디어: <strong>현재 추정 $z_k$ 주변에서 NLP를 QP로 근사 → 풀이 → 업데이트 → 반복</strong>.</p>
+
+  <h3>한 SQP 반복</h3>
+  <ol>
+    <li>현재 $z_k$에서 비용·제약을 1·2차 Taylor 전개:
+        $$ \min_{\Delta z}\ \nabla f(z_k)^\top \Delta z + \tfrac{1}{2} \Delta z^\top H \Delta z $$
+        $$ \text{s.t.}\ \nabla c(z_k)^\top \Delta z + c(z_k) = 0,\ \nabla g(z_k)^\top \Delta z + g(z_k) \le 0 $$
+        ($H$는 Lagrangian의 Hessian 또는 quasi-Newton 근사 BFGS).</li>
+    <li>이 QP를 풀어 step $\Delta z$.</li>
+    <li>$z_{k+1} = z_k + \alpha \Delta z$ ($\alpha$는 line search).</li>
+    <li>수렴 검사 후 반복.</li>
+  </ol>
+
+  <p>각 반복이 QP 한 번 풀이. 따라서 NLP 한 번 = QP 여러 번. 보통 5~20 반복.</p>
+
+  <h3>대표 솔버</h3>
+  <ul>
+    <li><strong>IPOPT</strong> — interior-point. 대규모 문제에 강함. CasADi의 기본.</li>
+    <li><strong>SNOPT</strong> — active-set SQP. 상용. 큰 변화 추적 빠름.</li>
+    <li><strong>fmincon</strong> (MATLAB) — 범용.</li>
+    <li><strong>FORCES Pro / acados</strong> — 임베디드 NMPC 특화.</li>
+  </ul>
+
+  <h2>5. Real-Time Iteration (RTI)</h2>
+
+  <p>실시간 NMPC의 핵심 트릭. NLP를 매 샘플마다 완전히 풀지 않고 <strong>SQP를 한 번만 반복</strong>. Diehl 등(2002)이 개발.</p>
+
+  <h3>아이디어</h3>
+  <ul>
+    <li>이전 샘플에서 풀어둔 해를 워밍 스타트로 사용.</li>
+    <li>현재 샘플에서는 SQP를 한 번만 돌려 step $\Delta z$를 얻고 그 게 새 입력.</li>
+    <li>다음 샘플에서 또 한 번 SQP.</li>
+    <li>샘플 간격이 짧으면 시스템이 천천히 변하니, 한 번씩 SQP만 해도 점근적으로 수렴.</li>
+  </ul>
+
+  <h3>장점</h3>
+  <ul>
+    <li>예측 가능한 계산 시간 (한 번의 QP 풀이만).</li>
+    <li>임베디드에 적합 — ms 단위로 NMPC 실현.</li>
+    <li>ACADO Toolkit, acados의 표준 모드.</li>
+  </ul>
+
+  <h3>단점</h3>
+  <p>큰 외란이 들어와 상태가 갑자기 멀어지면 한 번의 SQP로 따라잡기 부족. 그럴 때만 다회 반복으로 fallback.</p>
+
+  <h2>6. iLQR — 큰 문제를 위한 그래디언트 기반</h2>
+
+  <p>iLQR (iterative LQR)은 NMPC의 또 다른 인기 접근. 로봇 운동 계획에서 표준.</p>
+
+  <h3>아이디어</h3>
+  <p>현재 trajectory 주변에서 동역학을 선형화 + 비용을 이차근사 → 시변 LQR 풀이 → 새 trajectory → 반복. SQP의 단순화 버전으로 볼 수도 있음.</p>
+
+  <h3>한 반복</h3>
+  <ol>
+    <li>Forward pass: 현재 입력 시퀀스로 trajectory 시뮬레이션.</li>
+    <li>Backward pass: 시간을 거꾸로 돌면서 LQR Riccati 재귀로 게인 $K_k$, $k_k$ 계산.</li>
+    <li>Forward rollout: 새 게인으로 다시 시뮬레이션.</li>
+    <li>비용 감소 확인하고 line search.</li>
+  </ol>
+
+  <p>장점: 제약 처리는 부족하지만 <strong>큰 N (수백 스텝)에서도 매우 빠름</strong>. 로봇 매니퓰레이션, 사족 보행에서 <em>"DDP / iLQR"</em>이 표준.</p>
+
+  <p>제약 추가 버전: <strong>Constrained iLQR</strong>, <strong>AL-iLQR</strong> (Augmented Lagrangian).</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비선형 진자 NMPC</h4>
+    <p>비선형 진자 $\ddot\theta = -\sin\theta + u$를 $\theta = 0$ (위쪽)으로 swing-up하는 NMPC. <strong>호라이즌 N</strong>을 키우면 swing-up 동작이 부드러워지고, <strong>$u_{\max}$</strong>을 줄이면 여러 번 흔들어 올려야 합니다.</p>
+    <canvas id="pendDemo" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>호라이즌 N <span class="val" id="pNV">25</span><input type="range" id="pN" min="10" max="50" step="1" value="25"></label>
+      <label>$u_{\max}$ <span class="val" id="pUV">2.0</span><input type="range" id="pU" min="0.5" max="5" step="0.1" value="2"></label>
+      <button id="pRun">시작/정지</button>
+      <button id="pRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pendDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let theta=Math.PI,omega=0,running=false,raf=null,trace=[];
+    function dynamics(th,om,u,dt){return [th+dt*om,om+dt*(-Math.sin(th)+u-0.1*om)];}
+    function solveNMPC(th0,om0){
+      const N=+document.getElementById('pN').value;
+      const uMax=+document.getElementById('pU').value;
+      const dt=0.05;
+      // Simple shooting: random search refined (toy NMPC)
+      let bestU=0,bestC=Infinity;
+      for(let trial=0;trial<60;trial++){
+        const u0=(Math.random()*2-1)*uMax;
+        let th=th0,om=om0,cost=0;
+        for(let k=0;k<N;k++){
+          // Use u0 for first step, then "shrinking" toward equilibrium-stabilizing PD
+          let u;
+          if(k===0)u=u0;
+          else{u=Math.max(-uMax,Math.min(uMax,-3*Math.sin(th)-1*om));}
+          const nx=dynamics(th,om,u,dt);
+          th=nx[0];om=nx[1];
+          // Cost: deviation from 0 (mod 2pi) and energy
+          const thErr=Math.atan2(Math.sin(th),Math.cos(th));
+          cost+=10*thErr*thErr+0.5*om*om+0.1*u*u;
+        }
+        if(cost<bestC){bestC=cost;bestU=u0;}
+      }
+      return bestU;
+    }
+    function step(){
+      const u=solveNMPC(theta,omega);
+      const dt=0.05;
+      const nx=dynamics(theta,omega,u,dt);
+      theta=nx[0];omega=nx[1];
+      trace.push(Math.atan2(Math.sin(theta),Math.cos(theta)));
+      if(trace.length>200)trace.shift();
+      draw(u);
+    }
+    function draw(u){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // pendulum
+      const cx=W/4,cy=H/2,L=100;
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(cx-100,cy);ctx.lineTo(cx+100,cy);ctx.moveTo(cx,cy-100);ctx.lineTo(cx,cy+100);ctx.stroke();
+      // upright dashed (target)
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy-L);ctx.stroke();ctx.setLineDash([]);
+      // pendulum (pivot at bottom, theta=0 is up)
+      const px=cx+L*Math.sin(theta),py=cy-L*Math.cos(theta);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(px,py,12,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();
+      // theta history
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      ctx.moveTo(W/2+10,H/2);ctx.lineTo(W-20,H/2);
+      ctx.moveTo(W/2+10,30);ctx.lineTo(W/2+10,H-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('θ(t) (목표: 0, 윗쪽)',W/2+10,22);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      trace.forEach((v,i)=>{const x=W/2+10+i*((W-20-W/2-10)/200);const y=H/2-v/Math.PI*((H-60)/2);
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('θ='+theta.toFixed(2)+'  ω='+omega.toFixed(2)+'  u='+(u||0).toFixed(2),12,30);
+    }
+    function tick(){if(running){step();raf=requestAnimationFrame(tick);}}
+    document.getElementById('pN').addEventListener('input',()=>{document.getElementById('pNV').textContent=document.getElementById('pN').value;});
+    document.getElementById('pU').addEventListener('input',()=>{document.getElementById('pUV').textContent=(+document.getElementById('pU').value).toFixed(1);});
+    document.getElementById('pRun').onclick=()=>{running=!running;if(running)tick();};
+    document.getElementById('pRst').onclick=()=>{running=false;cancelAnimationFrame(raf);theta=Math.PI;omega=0;trace=[];draw(0);};
+    draw(0);
+  })();
+  </script>
+
+  <h2>7. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>실제 동역학이 큰 동작 범위에서 비선형이면 NMPC.</li>
+      <li>NLP는 직접 이산화 + multiple shooting + collocation이 표준.</li>
+      <li>SQP는 NLP를 QP의 연속으로 풂. IPOPT, SNOPT가 대표 솔버.</li>
+      <li>RTI: 매 샘플 SQP 한 번만. 임베디드 실시간 NMPC의 핵심.</li>
+      <li>iLQR/DDP: 제약 없거나 약한 큰 문제에 빠른 그래디언트 기반.</li>
+      <li>도구: <a href="https://web.casadi.org/">CasADi</a> (모델링) + <a href="https://docs.acados.org/">acados</a> (실시간 풀이).</li>
+    </ul>
+  </div>
+
+  <h2>📖 더 깊이</h2>
+  <ul>
+    <li><strong>Nonlinear Model Predictive Control</strong> — Grüne·Pannek, 2017 Springer.</li>
+    <li><strong>Numerical Optimization</strong> — Nocedal·Wright, 2006 Springer. SQP·IP의 결정판.</li>
+    <li><strong>로봇공학특론 L11 §10 iLQR 데모</strong> — <a href="../lectures/11-mpc.html">lectures/11-mpc.html</a>.</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="07-robust.html"><small>← 이전</small>W7. 강건 MPC</a>
+    <a href="09-explicit.html" class="next"><small>다음 →</small>W9. Explicit MPC</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

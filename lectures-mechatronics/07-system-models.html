@@ -105,6 +105,89 @@
   <p>정리하면 표준형 2차 미분방정식:</p>
   $$ \boxed{m\ddot{x} + b\dot{x} + kx = f(t)} $$
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 스프링-매스-댐퍼 실시간 시뮬레이션</h4>
+    <p>스텝 외력을 가했을 때 질량이 어떻게 흔들리며 평형으로 가는지 실시간으로 봅니다. <strong>스프링 $k$↑이면 빨라지고, 댐퍼 $b$↑이면 진동이 잦아듭니다</strong>. 위쪽은 질량 애니메이션, 아래쪽은 시간응답 곡선.</p>
+    <canvas id="smdDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>질량 m <span class="val" id="smdMV">1.0</span> kg<input type="range" id="smdM" min="0.2" max="5" step="0.1" value="1"></label>
+      <label>스프링 k <span class="val" id="smdKV">10</span> N/m<input type="range" id="smdK" min="1" max="80" step="1" value="10"></label>
+      <label>댐퍼 b <span class="val" id="smdBV">1.0</span> N·s/m<input type="range" id="smdB" min="0" max="20" step="0.1" value="1"></label>
+      <label>외력 f <span class="val" id="smdFV">5</span> N<input type="range" id="smdF" min="0" max="20" step="0.5" value="5"></label>
+      <button id="smdRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('smdDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let x=0,v=0,t=0,hist=[];
+    document.getElementById('smdRst').onclick=()=>{x=0;v=0;t=0;hist=[];};
+    function loop(){
+      const m=+document.getElementById('smdM').value;
+      const k=+document.getElementById('smdK').value;
+      const b=+document.getElementById('smdB').value;
+      const f=+document.getElementById('smdF').value;
+      ['smdM','smdK','smdB','smdF'].forEach(id=>document.getElementById(id+'V').textContent=document.getElementById(id).value);
+      const dt=0.016;
+      // a = (f - b*v - k*x)/m
+      const a=(f - b*v - k*x)/m;
+      v += a*dt; x += v*dt;
+      t += dt;
+      hist.push({t,x});
+      if(hist.length>500)hist.shift();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // top: animation
+      const ay=80,baseX=80,XScale=8;
+      ctx.strokeStyle='#333';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(baseX,40);ctx.lineTo(baseX,120);ctx.stroke();
+      // hatch wall
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      for(let yy=40;yy<120;yy+=8){ctx.beginPath();ctx.moveTo(baseX-8,yy);ctx.lineTo(baseX,yy+6);ctx.stroke();}
+      const massX=baseX+200+x*XScale;
+      // spring
+      ctx.strokeStyle='#0742b8';ctx.lineWidth=2;ctx.beginPath();
+      const turns=8, sStart=baseX, sEnd=massX-30;
+      ctx.moveTo(sStart,ay);
+      for(let i=0;i<=turns*4;i++){const fr=i/(turns*4);const xx=sStart+fr*(sEnd-sStart);
+        const yy=ay+(i%2===0?0:(Math.floor(i/2)%2===0?-12:12));ctx.lineTo(xx,yy);}
+      ctx.lineTo(sEnd,ay);ctx.stroke();
+      // damper
+      ctx.strokeStyle='#c1121f';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(sStart,ay+30);ctx.lineTo(sStart+60,ay+30);
+      ctx.rect(sStart+60,ay+18,40,24);
+      ctx.moveTo(sStart+90,ay+30);ctx.lineTo(massX-30,ay+30);ctx.stroke();
+      // mass
+      ctx.fillStyle='#1b5e20';ctx.fillRect(massX-30,ay-25,60,55);
+      ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.fillText('m',massX-7,ay+8);
+      // force arrow
+      if(f>0){ctx.strokeStyle='#666';ctx.lineWidth=2;ctx.beginPath();
+        ctx.moveTo(massX+30,ay);ctx.lineTo(massX+30+f*5,ay);
+        ctx.lineTo(massX+25+f*5,ay-5);ctx.moveTo(massX+30+f*5,ay);ctx.lineTo(massX+25+f*5,ay+5);ctx.stroke();
+        ctx.fillStyle='#666';ctx.font='12px sans-serif';ctx.fillText('f='+f,massX+35+f*5,ay+5);}
+      // x label
+      ctx.strokeStyle='#0742b8';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(baseX+200,ay+50);ctx.lineTo(massX,ay+50);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0742b8';ctx.fillText(`x = ${x.toFixed(3)} m`,baseX+205,ay+65);
+      // bottom: time response
+      const ox=40,oy=H-30,w=W-60,h=130;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,oy-h);ctx.lineTo(ox,oy);ctx.stroke();
+      const xss = k>0 ? f/k : 0;
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oy-xss/(Math.max(2,xss*1.8))*h);ctx.lineTo(ox+w,oy-xss/(Math.max(2,xss*1.8))*h);ctx.stroke();ctx.setLineDash([]);
+      const xRange=Math.max(2,xss*1.8);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h0,i)=>{const xx=ox+i/500*w,yy=oy-Math.max(0,h0.x)/xRange*h;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const wn=Math.sqrt(k/m), zeta=b/(2*Math.sqrt(k*m));
+      ctx.fillText(`ωₙ = ${wn.toFixed(2)} rad/s,  ζ = ${zeta.toFixed(3)}`,ox,oy-h-5);
+      const cls = zeta<0.001?'무감쇠':zeta<1?'저감쇠 (진동)':zeta<1.001?'임계감쇠':'과감쇠';
+      ctx.fillText(`정상상태 x∞ = f/k = ${xss.toFixed(3)} m  /  ${cls}`,ox+260,oy-h-5);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
   <h2>4. 표준형의 의미 — 자연 주파수와 감쇠비</h2>
   <p>위 식을 양변을 $m$으로 나누면:</p>
   $$ \ddot{x} + \frac{b}{m}\dot{x} + \frac{k}{m}x = \frac{f(t)}{m} $$
@@ -129,6 +212,70 @@
   </table>
 
   <p>이 분류와 실제 응답 곡선은 다음 주(W9)에서 자세히 그려봅니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 감쇠비 ζ에 따른 응답 모양</h4>
+    <p>$\zeta$를 0 → 0.5 → 0.7 → 1 → 1.5로 옮겨보세요. 무감쇠는 영원히 진동, 저감쇠는 오버슈트 후 진동하며 수렴, 임계감쇠는 가장 빠르게 진동 없이, 과감쇠는 느리게 비진동. <strong>$\zeta = 0.7$이 빠름과 안정의 균형점</strong>으로 대부분의 설계 기본값.</p>
+    <canvas id="zetaDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>감쇠비 ζ <span class="val" id="zV">0.4</span><input type="range" id="zVal" min="0" max="2" step="0.02" value="0.4"></label>
+      <label>고유 주파수 ωₙ <span class="val" id="wnV">2.0</span><input type="range" id="wnVal" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('zetaDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function step(t,z,wn){
+      if(z<0.001) return 1-Math.cos(wn*t);
+      if(z<1){const wd=wn*Math.sqrt(1-z*z);
+        return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z)*Math.sin(wd*t+Math.acos(z));}
+      if(Math.abs(z-1)<1e-3) return 1-(1+wn*t)*Math.exp(-wn*t);
+      const a=z*wn,b=wn*Math.sqrt(z*z-1);
+      const r1=-a+b,r2=-a-b;
+      return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);
+    }
+    function draw(){
+      const z=+document.getElementById('zVal').value;
+      const wn=+document.getElementById('wnVal').value;
+      document.getElementById('zV').textContent=z.toFixed(2);
+      document.getElementById('wnV').textContent=wn.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-30,w=W-70,h=H-80,T=10;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      // 1.0 reference
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(ox,oy-h*0.5);ctx.lineTo(ox+w,oy-h*0.5);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='10px sans-serif';ctx.fillText('1.0',ox-22,oy-h*0.5+4);
+      // overlay several zetas faded
+      const zetas=[0,0.3,0.7,1,1.5];
+      zetas.forEach(zz=>{
+        ctx.strokeStyle=zz===z?'#0b5fff':'rgba(180,180,200,0.5)';
+        ctx.lineWidth=zz===z?2.5:1;
+        ctx.beginPath();
+        for(let i=0;i<=400;i++){const t=i*T/400, y=step(t,zz,wn);
+          const xx=ox+i*w/400, yy=oy-Math.max(0,Math.min(2,y))*h*0.5;
+          if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+        ctx.stroke();
+      });
+      // current zeta in blue (recompute on top to be sure)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=400;i++){const t=i*T/400, y=step(t,z,wn);
+        const xx=ox+i*w/400, yy=oy-Math.max(0,Math.min(2,y))*h*0.5;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      const Mp = z<1 ? Math.exp(-Math.PI*z/Math.sqrt(1-z*z))*100 : 0;
+      const ts = z>0.001 ? 4/(z*wn) : Infinity;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`ζ=${z.toFixed(2)}, ωₙ=${wn.toFixed(1)}`,ox,25);
+      ctx.fillText(`오버슈트 Mp = ${Mp.toFixed(1)}%, 정착시간 ts ≈ ${isFinite(ts)?ts.toFixed(2)+'s':'∞'}`,ox+170,25);
+      ctx.fillStyle='#999';ctx.font='11px sans-serif';
+      ctx.fillText('회색: 다른 ζ 비교 (0, 0.3, 0.7, 1, 1.5)',ox,oy+22);
+    }
+    document.getElementById('zVal').addEventListener('input',draw);
+    document.getElementById('wnVal').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h2>5. 전기-기계 유사 — 같은 수학, 다른 도메인</h2>
   <p>흥미로운 사실: <strong>RLC 회로의 미분방정식이 스프링-매스-댐퍼와 정확히 같은 형태</strong>입니다.</p>
@@ -162,6 +309,64 @@
   <p>비선형. 작은 각에서 $\sin\theta \approx \theta$로 근사하면:</p>
   $$ \ddot{\theta} + \frac{g}{\ell}\theta = 0 \quad \Rightarrow \quad \omega_n = \sqrt{g/\ell} $$
   <p>이게 단진자의 주기 식 $T = 2\pi\sqrt{\ell/g}$의 출처. 작은 각 한정 — 큰 각에서는 비선형 효과가 무시 못 함.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 진자의 비선형 vs 선형 근사</h4>
+    <p>작은 초기각에서는 두 곡선이 거의 겹쳐요. 그런데 초기각을 60° 이상으로 키우면, <strong>선형 근사가 진동 주기를 짧게 잘못 예측</strong>합니다. 큰 각에서는 비선형 효과로 진자가 더 느리게 흔들립니다.</p>
+    <canvas id="penDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>초기각 θ₀ <span class="val" id="penAV">20</span> °<input type="range" id="penA" min="5" max="170" step="1" value="20"></label>
+      <label>줄 길이 ℓ <span class="val" id="penLV">1.0</span> m<input type="range" id="penL" min="0.2" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('penDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const a0=+document.getElementById('penA').value*Math.PI/180;
+      const L=+document.getElementById('penL').value;
+      document.getElementById('penAV').textContent=(a0*180/Math.PI).toFixed(0);
+      document.getElementById('penLV').textContent=L.toFixed(1);
+      const g=9.81, wn=Math.sqrt(g/L);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H/2,w=W-70,h=H-80,T=4*2*Math.PI/wn;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      // simulate full nonlinear with RK4
+      const N=600,dt=T/N;
+      let th=a0,om=0;
+      const nl=[];
+      for(let i=0;i<=N;i++){nl.push(th);
+        const k1a=om, k1b=-g/L*Math.sin(th);
+        const k2a=om+k1b*dt/2, k2b=-g/L*Math.sin(th+k1a*dt/2);
+        const k3a=om+k2b*dt/2, k3b=-g/L*Math.sin(th+k2a*dt/2);
+        const k4a=om+k3b*dt, k4b=-g/L*Math.sin(th+k3a*dt);
+        th += dt/6*(k1a+2*k2a+2*k3a+k4a);
+        om += dt/6*(k1b+2*k2b+2*k3b+k4b);}
+      // linearized: th(t) = a0*cos(wn*t)
+      const yMax=Math.max(Math.abs(a0),0.3);
+      function yp(v){return oy-v/yMax*h*0.4;}
+      // linear (gray)
+      ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.beginPath();
+      for(let i=0;i<=N;i++){const t=i*dt;const v=a0*Math.cos(wn*t);
+        const xx=ox+i/N*w,yy=yp(v);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();ctx.setLineDash([]);
+      // nonlinear (blue)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      nl.forEach((v,i)=>{const xx=ox+i/N*w,yy=yp(v);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`선형 주기 T_lin = ${(2*Math.PI/wn).toFixed(2)} s`,ox,25);
+      // estimate nonlinear period
+      let Tnl=0;for(let i=1;i<N;i++)if(nl[i-1]>0&&nl[i]<=0&&nl[i-1]>0.01){Tnl=(i*dt)*2;break;}
+      ctx.fillText(`비선형 주기 ≈ ${Tnl.toFixed(2)} s  (편차 ${((Tnl-2*Math.PI/wn)/(2*Math.PI/wn)*100).toFixed(1)}%)`,ox+220,25);
+      ctx.fillStyle='#888';ctx.fillText('-- 선형 근사 (sinθ ≈ θ)',ox+10,H-15);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 비선형 (실제)',ox+200,H-15);
+    }
+    document.getElementById('penA').addEventListener('input',draw);
+    document.getElementById('penL').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
 
   <h2>7. 핵심 한눈 요약</h2>
   <table>

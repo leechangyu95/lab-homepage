@@ -55,6 +55,53 @@
   </ul>
   <p>타원의 주축은 <strong>고유벡터(eigenvector)</strong>, 길이는 <strong>고유값(eigenvalue)</strong>의 제곱근에 비례. 즉 공분산의 PCA가 곧 불확실성의 주방향을 알려줍니다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 공분산 행렬 → 타원</h4>
+    <p>$\sigma^2_x, \sigma^2_y$는 각 축 분산, $\sigma_{xy}$는 공분산. 비대각 항을 양수로 키우면 타원이 우상향, 음수로 키우면 좌상향으로 기웁니다. 1·2·3σ 등고선이 함께 그려져요.</p>
+    <canvas id="covMc" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>σ²ₓ <span class="val" id="cmsxV">2</span><input type="range" id="cmsx" min="0.5" max="6" step="0.1" value="2"></label>
+      <label>σ²ᵧ <span class="val" id="cmsyV">1</span><input type="range" id="cmsy" min="0.5" max="6" step="0.1" value="1"></label>
+      <label>σₓᵧ <span class="val" id="cmsxyV">0.5</span><input type="range" id="cmsxy" min="-3" max="3" step="0.1" value="0.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('covMc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const sx=+document.getElementById('cmsx').value, sy=+document.getElementById('cmsy').value, sxy=+document.getElementById('cmsxy').value;
+      ['cmsx','cmsy','cmsxy'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,SC=40;
+      ctx.strokeStyle='#eee';for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+      for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(20,cy);ctx.lineTo(W-20,cy);ctx.moveTo(cx,30);ctx.lineTo(cx,H-30);ctx.stroke();
+      const det=sx*sy-sxy*sxy;
+      if(det<=0){ctx.fillStyle='#c62828';ctx.font='14px sans-serif';ctx.fillText('⚠ 비양정부호 (det = '+det.toFixed(2)+')',20,30);return;}
+      const tr=sx+sy,disc=Math.sqrt((sx-sy)**2+4*sxy*sxy);
+      const l1=(tr+disc)/2,l2=(tr-disc)/2;
+      const ang=0.5*Math.atan2(2*sxy,sx-sy);
+      [[3,'rgba(11,95,255,0.05)'],[2,'rgba(11,95,255,0.10)'],[1,'rgba(11,95,255,0.20)']].forEach(([k,col])=>{
+        ctx.fillStyle=col;ctx.strokeStyle='#0b5fff';
+        ctx.beginPath();ctx.ellipse(cx,cy,Math.sqrt(l1)*k*SC,Math.sqrt(l2)*k*SC,ang,0,Math.PI*2);ctx.fill();ctx.stroke();
+      });
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(cx-Math.cos(ang)*Math.sqrt(l1)*SC*1.2,cy-Math.sin(ang)*Math.sqrt(l1)*SC*1.2);
+      ctx.lineTo(cx+Math.cos(ang)*Math.sqrt(l1)*SC*1.2,cy+Math.sin(ang)*Math.sqrt(l1)*SC*1.2);ctx.stroke();
+      ctx.strokeStyle='#ff8c00';
+      ctx.beginPath();ctx.moveTo(cx-Math.sin(ang)*Math.sqrt(l2)*SC*1.2,cy+Math.cos(ang)*Math.sqrt(l2)*SC*1.2);
+      ctx.lineTo(cx+Math.sin(ang)*Math.sqrt(l2)*SC*1.2,cy-Math.cos(ang)*Math.sqrt(l2)*SC*1.2);ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('λ₁='+l1.toFixed(2)+', λ₂='+l2.toFixed(2)+',  θ='+(ang*180/Math.PI).toFixed(1)+'°',20,30);
+      ctx.fillStyle='#c62828';ctx.fillText('— 가장 불확실한 방향 (1차 주축)',20,50);
+      ctx.fillStyle='#ff8c00';ctx.fillText('— 2차 주축',20,68);
+    }
+    ['cmsx','cmsy','cmsxy'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>3. 2D 칼만 필터 — 행렬 형식</h2>
   <p>1D 식이 그대로 행렬로 일반화됩니다.</p>
 
@@ -90,6 +137,83 @@
     <li>위치 측정만으로도 <strong>속도까지 추정 가능</strong>합니다. 어떻게? 공분산 행렬의 비대각 항이 위치와 속도의 상관관계를 학습해서, "위치가 이렇게 변하니 속도는 대략 얼마"를 자동으로 추론합니다.</li>
     <li>등속 모델이 잘 맞으면 추정이 빨리 수렴, 가속이 자주 바뀌면 $Q$를 키워야 합니다.</li>
   </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 위치 측정만으로 속도까지 추정</h4>
+    <p>차량이 등속도 모델로 움직입니다. 위치만 측정(잡음 ±$\sqrt{R}$)하지만 칼만 필터는 위치+속도를 모두 추정해요. 위쪽 그래프가 위치, 아래쪽이 추정 속도. <strong>측정값엔 속도 정보가 없는데도 공분산의 비대각 항으로 속도가 학습됩니다</strong>.</p>
+    <canvas id="kf2Mc" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>측정 잡음 R <span class="val" id="k2RV">4</span><input type="range" id="k2R" min="0.1" max="20" step="0.1" value="4"></label>
+      <label>과정 잡음 q <span class="val" id="k2QV">0.1</span><input type="range" id="k2Q" min="0" max="2" step="0.05" value="0.1"></label>
+      <button id="k2Rst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 진짜 위치/속도 &nbsp; 🔴 측정 위치 &nbsp; 🔵 KF 추정</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kf2Mc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t=0,p=0,v=2,xh=[0,0],P=[[1,0],[0,1]],hist=[];
+    document.getElementById('k2Rst').onclick=()=>{t=0;p=0;v=2;xh=[0,0];P=[[1,0],[0,1]];hist=[];};
+    function loop(){
+      const R=+document.getElementById('k2R').value;
+      const q=+document.getElementById('k2Q').value;
+      document.getElementById('k2RV').textContent=R.toFixed(1);
+      document.getElementById('k2QV').textContent=q.toFixed(2);
+      const dt=0.1;
+      // truth: occasional velocity bumps
+      if(Math.random()<0.01)v += (Math.random()-0.5)*1.5;
+      p += v*dt;
+      const z = p + (Math.random()*2-1)*Math.sqrt(R)*1.2;
+      // predict
+      const F=[[1,dt],[0,1]];
+      const xp=[F[0][0]*xh[0]+F[0][1]*xh[1], F[1][0]*xh[0]+F[1][1]*xh[1]];
+      const FP=[[F[0][0]*P[0][0]+F[0][1]*P[1][0], F[0][0]*P[0][1]+F[0][1]*P[1][1]],
+                [F[1][0]*P[0][0]+F[1][1]*P[1][0], F[1][0]*P[0][1]+F[1][1]*P[1][1]]];
+      const Pp=[[FP[0][0]*F[0][0]+FP[0][1]*F[0][1]+q*0.01, FP[0][0]*F[1][0]+FP[0][1]*F[1][1]],
+                [FP[1][0]*F[0][0]+FP[1][1]*F[0][1], FP[1][0]*F[1][0]+FP[1][1]*F[1][1]+q]];
+      // update
+      const S=Pp[0][0]+R;
+      const K=[Pp[0][0]/S, Pp[1][0]/S];
+      const y=z-xp[0];
+      xh=[xp[0]+K[0]*y, xp[1]+K[1]*y];
+      P=[[(1-K[0])*Pp[0][0], (1-K[0])*Pp[0][1]],
+         [Pp[1][0]-K[1]*Pp[0][0], Pp[1][1]-K[1]*Pp[0][1]]];
+      hist.push({p,v,z,ph:xh[0],vh:xh[1]});
+      if(hist.length>250)hist.shift();
+      t+=dt;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // top: position
+      const ox=40,oy=160,w=W-60,h=120;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';ctx.fillText('위치',12,40);
+      const allP=hist.map(h=>[h.p,h.z,h.ph]).flat();
+      const pmin=Math.min(...allP),pmax=Math.max(...allP);
+      const sy1=v=>oy-(v-pmin)/(pmax-pmin+0.01)*(h-10);
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=ox+i/250*w,yy=sy1(h.p);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#c62828';
+      hist.forEach((h,i)=>{ctx.beginPath();ctx.arc(ox+i/250*w,sy1(h.z),1.4,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=ox+i/250*w,yy=sy1(h.ph);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      // bottom: velocity
+      const oy2=H-30,h2=120;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy2);ctx.lineTo(ox+w,oy2);ctx.moveTo(ox,oy2-h2);ctx.lineTo(ox,oy2);ctx.stroke();
+      ctx.fillStyle='#666';ctx.fillText('속도 (측정 안함! 추정만)',12,oy2-h2+10);
+      const allV=hist.map(h=>[h.v,h.vh]).flat();
+      const vmin=Math.min(-3,...allV),vmax=Math.max(3,...allV);
+      const sy2=v=>oy2-(v-vmin)/(vmax-vmin+0.01)*(h2-10);
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=ox+i/250*w,yy=sy2(h.v);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=ox+i/250*w,yy=sy2(h.vh);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText(`P[0][1] (위치-속도 공분산) = ${P[0][1].toFixed(3)}`,W-260,oy2-h2+10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
 
   <h3>4.3 Python 예제</h3>
   <pre><code>import numpy as np

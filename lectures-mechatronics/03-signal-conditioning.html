@@ -345,4 +345,115 @@
       // verdict
       const Nyq=fs/2;
       const aliasF = f<=Nyq ? f : Math.abs(f - Math.round(f/fs)*fs);
-      ctx.fillStyle='#222';c
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`나이퀴스트 = fs/2 = ${Nyq.toFixed(1)} Hz`,ox,25);
+      ctx.fillStyle=f>Nyq?'#c62828':'#2e7d32';
+      ctx.fillText(f>Nyq?`⚠ 에일리어싱! ${f.toFixed(1)}Hz가 ${aliasF.toFixed(1)}Hz로 보임`:`✓ 안전 (${f.toFixed(1)}Hz < ${Nyq.toFixed(1)}Hz)`,ox+220,25);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('— 진짜 신호 (연속)',ox+10,H-15);
+      ctx.fillStyle='#c62828';ctx.fillText('● 표본 → 인식되는 신호',ox+170,H-15);
+    }
+    document.getElementById('aF').addEventListener('input',draw);
+    document.getElementById('aFs').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>6. 이동 평균 필터(Moving Average)</h2>
+  <p>가장 단순한 디지털 LPF. 최근 $N$개 샘플의 평균을 출력으로 내보냅니다.</p>
+  $$ y[n] = \frac{1}{N}\sum_{k=0}^{N-1} x[n-k] $$
+
+  <h3>6.1 효과와 한계</h3>
+  <ul>
+    <li><strong>효과</strong>: 평균이 잡음을 누르고 신호의 추세를 부드럽게 함. 구현이 매우 쉬움 (3~4줄 C 코드).</li>
+    <li><strong>한계</strong>: 응답이 늦어짐(평균창 크기만큼 지연). 빠른 변화에 둔감해짐.</li>
+  </ul>
+
+  <h3>6.2 Python 예제</h3>
+  <pre><code>import numpy as np
+def moving_average(x, N):
+    return np.convolve(x, np.ones(N)/N, mode='valid')
+
+# 잡음 섞인 신호
+t = np.linspace(0, 1, 200)
+clean = np.sin(2*np.pi*5*t)
+noisy = clean + 0.3*np.random.randn(len(t))
+
+filtered = moving_average(noisy, N=10)</code></pre>
+
+  <p>이동 평균은 연산량이 적어 임베디드에 자주 쓰지만 정밀 측정에는 IIR/FIR 필터를 별도로 설계합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 이동 평균 윈도우 N의 효과</h4>
+    <p>$N$을 키우면 잡음이 더 부드럽게 눌리지만, 신호의 빠른 변화에 늦게 반응(<strong>지연 ≈ N/2 샘플</strong>)합니다. 이게 LPF/이동평균의 본질적 trade-off입니다.</p>
+    <canvas id="maDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>윈도우 N <span class="val" id="maNV">5</span><input type="range" id="maN" min="1" max="40" step="1" value="5"></label>
+      <label>잡음 σ <span class="val" id="maNV2">0.3</span><input type="range" id="maS" min="0" max="0.8" step="0.02" value="0.3"></label>
+      <button id="maNew">새 잡음</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('maDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Nx=300;
+    let noise=Array.from({length:Nx},()=>{const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);});
+    document.getElementById('maNew').onclick=()=>{noise=noise.map(()=>{const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);});draw();};
+    function draw(){
+      const N=+document.getElementById('maN').value;
+      const sN=+document.getElementById('maS').value;
+      document.getElementById('maNV').textContent=N;
+      document.getElementById('maNV2').textContent=sN.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=40,oy=H/2,w=W-60,h=H-60;
+      // axis
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      const clean=Array.from({length:Nx},(_,i)=>{const t=i/Nx*4;return Math.sin(2*Math.PI*1.5*t)+(t>2?0.5:0);});
+      const noisy=clean.map((v,i)=>v+noise[i]*sN);
+      const filt=[];for(let i=0;i<Nx;i++){let s=0,k=0;for(let j=Math.max(0,i-N+1);j<=i;j++){s+=noisy[j];k++;}filt.push(s/k);}
+      function plot(arr,col,lw){ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();
+        arr.forEach((v,i)=>{const xx=ox+i/Nx*w, yy=oy-v*h*0.3;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();}
+      plot(noisy,'#cfd8e3',1);
+      plot(clean,'#2e7d32',1.5);
+      plot(filt,'#0b5fff',2.5);
+      // metrics
+      const rmse=(a,b)=>Math.sqrt(a.reduce((s,v,i)=>s+(v-b[i])**2,0)/a.length);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`잡음 RMSE: ${rmse(noisy,clean).toFixed(3)}  →  필터 후: ${rmse(filt,clean).toFixed(3)}`,ox,25);
+      ctx.fillText(`예상 지연 ≈ N/2 = ${(N/2).toFixed(1)} 샘플`,ox+360,25);
+      ctx.fillStyle='#cfd8e3';ctx.fillText('— 잡음 섞인 입력',ox,H-15);
+      ctx.fillStyle='#2e7d32';ctx.fillText('— 진짜 신호',ox+130,H-15);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 이동평균 출력',ox+220,H-15);
+    }
+    document.getElementById('maN').addEventListener('input',draw);
+    document.getElementById('maS').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>7. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>단계</th><th>도구</th><th>해결하는 문제</th></tr></thead>
+    <tbody>
+      <tr><td>증폭</td><td>op-amp (비반전·계측)</td><td>너무 작은 신호</td></tr>
+      <tr><td>필터</td><td>RC LPF, op-amp 필터</td><td>잡음·고주파 성분</td></tr>
+      <tr><td>안티앨리어싱</td><td>$f_s/2$ 이하만 통과</td><td>표본화 왜곡 예방</td></tr>
+      <tr><td>ADC</td><td>SAR/시그마-델타</td><td>아날로그 → 디지털</td></tr>
+      <tr><td>디지털 후처리</td><td>이동 평균, IIR/FIR</td><td>SW에서 추가 잡음 제거</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>다음 주차로의 다리</strong> — 필터·평균은 잡음을 줄이지만 <em>물리 모델을 모릅니다</em>. 그러나 우리가 측정하는 시스템(예: 자동차 위치)은 가속·감속 같은 동역학 모델이 있어요. 이 모델 정보까지 함께 활용해 잡음을 더 잘 누르는 도구가 다음 주(W4)의 <strong>칼만 필터</strong>입니다.
+  </div>
+
+  <nav class="prevnext">
+    <a href="02-sensor.html"><small>← 이전</small>W2. 센서와 트랜스듀서</a>
+    <a href="04-kalman-1d.html" class="next"><small>다음 →</small>W4. 칼만 필터 (1D)</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

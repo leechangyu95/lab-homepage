@@ -79,6 +79,62 @@
   $$ \mu = \frac{9 \cdot 75 + 25 \cdot 79}{25 + 9} \approx 77.94, \quad \sigma^2 = \frac{25 \cdot 9}{34} \approx 6.62, \;\; \sigma \approx 2.57 $$
   <p>새 추정의 분산이 둘 다보다 작아진 게 보입니다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 가우시안 곱하기</h4>
+    <p>두 측정의 평균과 표준편차를 바꿔보세요. <strong>합쳐진 분포(보라)는 항상 더 좁고</strong>, 분산이 작은 쪽 평균에 더 가깝게 끌려갑니다. 이게 칼만 필터의 모든 마법입니다.</p>
+    <canvas id="mergeMc" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>μ₁ <span class="val" id="m1V">75</span><input type="range" id="m1" min="50" max="100" step="0.5" value="75"></label>
+      <label>σ₁ <span class="val" id="s1V">5</span><input type="range" id="s1" min="1" max="15" step="0.5" value="5"></label>
+      <label>μ₂ <span class="val" id="m2V">79</span><input type="range" id="m2" min="50" max="100" step="0.5" value="79"></label>
+      <label>σ₂ <span class="val" id="s2V">3</span><input type="range" id="s2" min="1" max="15" step="0.5" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mergeMc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function gauss(x,m,s){return Math.exp(-(x-m)*(x-m)/(2*s*s))/(s*Math.sqrt(2*Math.PI));}
+    function draw(){
+      const m1=+document.getElementById('m1').value, s1=+document.getElementById('s1').value;
+      const m2=+document.getElementById('m2').value, s2=+document.getElementById('s2').value;
+      ['m1','s1','m2','s2'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const v1=s1*s1, v2=s2*s2;
+      const vN=v1*v2/(v1+v2), sN=Math.sqrt(vN);
+      const mN=(v2*m1+v1*m2)/(v1+v2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=40,oy=H-40,w=W-60,h=H-80;
+      const xMin=40,xMax=110;
+      function px(x){return ox+(x-xMin)/(xMax-xMin)*w;}
+      const peakAll=Math.max(gauss(m1,m1,s1),gauss(m2,m2,s2),gauss(mN,mN,sN));
+      function py(p){return oy-p/peakAll*h;}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.stroke();
+      function curve(m,s,col,fill){
+        ctx.strokeStyle=col;ctx.fillStyle=fill;ctx.lineWidth=2;
+        ctx.beginPath();
+        for(let i=0;i<=300;i++){const xx=xMin+(xMax-xMin)*i/300;const p=gauss(xx,m,s);
+          if(i===0)ctx.moveTo(px(xx),py(p));else ctx.lineTo(px(xx),py(p));}
+        ctx.lineTo(ox+w,oy);ctx.lineTo(ox,oy);ctx.closePath();ctx.fill();
+        ctx.beginPath();
+        for(let i=0;i<=300;i++){const xx=xMin+(xMax-xMin)*i/300;const p=gauss(xx,m,s);
+          if(i===0)ctx.moveTo(px(xx),py(p));else ctx.lineTo(px(xx),py(p));}
+        ctx.stroke();
+      }
+      curve(m1,s1,'#c62828','rgba(198,40,40,0.10)');
+      curve(m2,s2,'#0b5fff','rgba(11,95,255,0.10)');
+      curve(mN,sN,'#7b1fa2','rgba(123,31,162,0.18)');
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('x',ox+w-12,oy+15);
+      ctx.fillStyle='#c62828';ctx.fillText(`측정1: μ=${m1.toFixed(1)}, σ=${s1.toFixed(1)}`,ox+10,30);
+      ctx.fillStyle='#0b5fff';ctx.fillText(`측정2: μ=${m2.toFixed(1)}, σ=${s2.toFixed(1)}`,ox+10,48);
+      ctx.fillStyle='#7b1fa2';ctx.font='bold 13px sans-serif';
+      ctx.fillText(`결합: μ=${mN.toFixed(2)}, σ=${sN.toFixed(2)}  ← 항상 두 입력보다 좁음`,ox+10,70);
+    }
+    ['m1','s1','m2','s2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>4. 두 단계 — 예측과 갱신</h2>
   <p>칼만 필터는 매 시점마다 두 단계를 돌립니다.</p>
 
@@ -118,6 +174,53 @@ for z in measurements:
 
   <p>10줄짜리 코드인데도 동영상 추적·드론 자세·차량 위치추정 같은 핵심 응용에 쓰입니다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D 칼만 필터 — 사인파 추적</h4>
+    <p>참값(녹색)이 사인파처럼 움직이고, 측정(빨강)에는 잡음이 많아요. 측정 잡음 $R$과 모델 잡음 $Q$를 바꾸며 추정(파랑)이 어떻게 변하는지 보세요. <strong>$R$↑이면 측정 무시, $Q$↑이면 모델 무시</strong>.</p>
+    <canvas id="kfMc" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>측정 잡음 R <span class="val" id="kfRV">3</span><input type="range" id="kfR" min="0.1" max="10" step="0.1" value="3"></label>
+      <label>모델 잡음 Q <span class="val" id="kfQV">0.1</span><input type="range" id="kfQ" min="0.01" max="2" step="0.01" value="0.1"></label>
+      <button id="kfRst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 진짜 &nbsp; 🔴 측정 &nbsp; 🔵 KF 추정</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kfMc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t=0,xh=0,P=1,hist=[];
+    document.getElementById('kfRst').onclick=()=>{t=0;xh=0;P=1;hist=[];};
+    function loop(){
+      const R=+document.getElementById('kfR').value,Q=+document.getElementById('kfQ').value,dt=0.05,A=1,Hh=1;
+      document.getElementById('kfRV').textContent=R.toFixed(1);
+      document.getElementById('kfQV').textContent=Q.toFixed(2);
+      const truth=20+15*Math.sin(t*0.5);
+      const meas=truth+(Math.random()*2-1)*Math.sqrt(R)*1.5;
+      const xp=A*xh, Pp=A*P*A+Q;
+      const K=Pp*Hh/(Hh*Pp*Hh+R);
+      xh=xp+K*(meas-Hh*xp);
+      P=(1-K*Hh)*Pp;
+      hist.push({truth,meas,est:xh});
+      if(hist.length>300)hist.shift();
+      t+=dt;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#eee';for(let i=0;i<H;i+=40){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(W,i);ctx.stroke();}
+      const sx=v=>v*2.1, sy=v=>140-(v-20)*5;
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.truth);if(i==0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#c62828';
+      hist.forEach((h,i)=>{ctx.beginPath();ctx.arc(sx(i),sy(h.meas),1.5,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.est);if(i==0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('K = '+K.toFixed(3)+'    P = '+P.toFixed(3),12,260);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
   <h2>6. 응용 — 1D 위치 추정</h2>
   <p>차량이 일정 속도 10m/s로 이동 중. GPS는 1초마다 위치를 알려주는데 잡음이 ±3m. 단순히 GPS만 쓰면 위치가 마구 흔들리고, LPF를 쓰면 지연이 생겨요. 칼만 필터를 쓰면:</p>
   <ul>
@@ -126,6 +229,51 @@ for z in measurements:
   </ul>
 
   <p>실제 자율주행은 GPS·IMU·휠 엔코더 등 여러 센서를 모두 칼만 필터로 융합하는 <strong>센서 퓨전</strong>으로 위치를 추정합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 칼만 이득 K의 시간 변화</h4>
+    <p>처음에는 $P$가 커서 $K \approx 1$ — 측정을 거의 그대로 받습니다. 시간이 지나며 $P$가 줄고 $K$도 작아져 어떤 정상값에 수렴해요. <strong>$Q = 0$</strong>이면 $P$가 계속 줄어 결국 측정을 무시하기 시작합니다.</p>
+    <canvas id="kgMc" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="kgRV2">5</span><input type="range" id="kgR2" min="0.5" max="20" step="0.5" value="5"></label>
+      <label>Q <span class="val" id="kgQV2">0.1</span><input type="range" id="kgQ2" min="0" max="2" step="0.05" value="0.1"></label>
+      <button id="kgRst2">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kgMc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let P,Khist,Phist,frame=0;
+    function init(){P=100;Khist=[];Phist=[];frame=0;}
+    init();document.getElementById('kgRst2').onclick=init;
+    function loop(){
+      if(frame++%5===0){
+        const R=+document.getElementById('kgR2').value;
+        const Q=+document.getElementById('kgQ2').value;
+        P=P+Q;
+        const K=P/(P+R);
+        Khist.push(K);Phist.push(P);
+        if(Khist.length>120){Khist.shift();Phist.shift();}
+        P=(1-K)*P;
+      }
+      ['kgR2','kgQ2'].forEach(k=>document.getElementById(k+'V2').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,240);ctx.lineTo(620,240);ctx.moveTo(40,30);ctx.lineTo(40,240);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';ctx.fillText('스텝 →',560,255);ctx.fillText('K, P (정규화)',12,40);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      Khist.forEach((v,i)=>{const xx=40+i*4.8,yy=240-v*180;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      const Pmax=Math.max(...Phist,1);
+      ctx.strokeStyle='#ff8c00';ctx.beginPath();
+      Phist.forEach((v,i)=>{const xx=40+i*4.8,yy=240-v/Pmax*180;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.fillText('🔵 K (칼만 이득)',40,30);
+      ctx.fillStyle='#ff8c00';ctx.fillText('🟠 P (정규화 분산)',180,30);
+      ctx.fillStyle='#666';ctx.fillText('현재 K ≈ '+(Khist[Khist.length-1]||0).toFixed(3),330,30);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
 
   <h2>7. 핵심 한눈 요약</h2>
   <table>

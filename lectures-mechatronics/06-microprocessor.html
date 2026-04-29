@@ -125,6 +125,66 @@ void loop() {
 }
 </code></pre>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: PWM 듀티 ↔ 평균 전압</h4>
+    <p>듀티 사이클을 바꾸면 사각파의 ON 시간이 달라지고, 부하가 RC LPF처럼 동작하면 평균전압 $V_\text{avg} = V_\text{HIGH} \cdot D$가 부드러운 DC로 보입니다. <strong>PWM 주파수</strong>를 낮추면 부하가 사각파를 그대로 따라가 깜빡이게 됩니다.</p>
+    <canvas id="pwmDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>듀티 사이클 D <span class="val" id="pwDV">50</span> %<input type="range" id="pwD" min="0" max="100" step="1" value="50"></label>
+      <label>PWM 주파수 <span class="val" id="pwFV">2</span> kHz<input type="range" id="pwF" min="0.05" max="10" step="0.05" value="2"></label>
+      <label>부하 LPF τ <span class="val" id="pwTV">2</span> ms<input type="range" id="pwT" min="0.05" max="20" step="0.05" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pwmDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const D=+document.getElementById('pwD').value/100;
+      const f=+document.getElementById('pwF').value*1000;
+      const tau=+document.getElementById('pwT').value/1000;
+      document.getElementById('pwDV').textContent=(D*100).toFixed(0);
+      document.getElementById('pwFV').textContent=(f/1000).toFixed(2);
+      document.getElementById('pwTV').textContent=(tau*1000).toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-30,w=W-70,h=H-60;
+      const Twin = 6/Math.max(f,200);
+      const dt=Twin/600, period=1/f;
+      function px(t){return ox+t/Twin*w;}
+      function py(v){return oy-v/5.5*h;}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      // 5V mark
+      ctx.strokeStyle='#ddd';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(ox,py(5));ctx.lineTo(ox+w,py(5));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#999';ctx.font='11px sans-serif';ctx.fillText('5V',ox-25,py(5)+4);
+      // PWM signal
+      ctx.strokeStyle='#666';ctx.lineWidth=1.5;ctx.beginPath();
+      for(let t=0;t<=Twin;t+=dt){const phase=(t%period)/period;const v=phase<D?5:0;
+        const xx=px(t),yy=py(v);if(t===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // RC filtered output
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      let vOut=0;
+      for(let t=0;t<=Twin;t+=dt){const phase=(t%period)/period;const vIn=phase<D?5:0;
+        vOut += dt/tau*(vIn-vOut);
+        const xx=px(t),yy=py(vOut);if(t===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // ideal average
+      ctx.strokeStyle='#c62828';ctx.setLineDash([5,3]);ctx.beginPath();ctx.moveTo(ox,py(5*D));ctx.lineTo(ox+w,py(5*D));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`V_avg = 5V × ${(D*100).toFixed(0)}% = ${(5*D).toFixed(2)} V`,ox,25);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const ratio=tau*f;
+      ctx.fillText(`τ × f = ${ratio.toFixed(2)}  ${ratio>3?'(LPF가 PWM을 잘 누름 → 매끈)':ratio>0.5?'(중간)':'(LPF가 부족 → 리플)'}`,ox+260,25);
+      ctx.fillStyle='#666';ctx.fillText('— PWM',ox+10,H-10);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 부하 출력 (RC 필터링)',ox+90,H-10);
+      ctx.fillStyle='#c62828';ctx.fillText('-- 이상적 평균',ox+260,H-10);
+    }
+    ['pwD','pwF','pwT'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h3>5.1 PWM의 실제 응용</h3>
   <ul>
     <li><strong>LED 밝기 조절</strong> — 듀티만 바꾸면 됨.</li>
@@ -219,6 +279,65 @@ void loop() {
 </code></pre>
 
   <p>이 패턴 하나만 익히면 임베디드 코드의 90%를 짤 수 있습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비차단 루프 — 여러 일을 동시에</h4>
+    <p>각 작업은 자기 주기에 맞춰 실행되고, <code>millis()</code>로 마지막 실행 시각만 기억합니다. 시간 축의 색깔 막대가 실제로 언제 어떤 작업이 돌았는지 보여줘요. <strong>주기를 다르게 잡아도 서로 막지 않고</strong> 동시에 흐릅니다.</p>
+    <canvas id="nbDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>센서 주기 <span class="val" id="nbS1V">10</span> ms<input type="range" id="nbS1" min="1" max="100" step="1" value="10"></label>
+      <label>제어 주기 <span class="val" id="nbS2V">50</span> ms<input type="range" id="nbS2" min="5" max="200" step="5" value="50"></label>
+      <label>LED 깜빡 주기 <span class="val" id="nbS3V">200</span> ms<input type="range" id="nbS3" min="50" max="1000" step="10" value="200"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('nbDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const p1=+document.getElementById('nbS1').value;
+      const p2=+document.getElementById('nbS2').value;
+      const p3=+document.getElementById('nbS3').value;
+      document.getElementById('nbS1V').textContent=p1;
+      document.getElementById('nbS2V').textContent=p2;
+      document.getElementById('nbS3V').textContent=p3;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const Twin=1000;
+      const tracks=[
+        {name:'센서 읽기',period:p1,col:'#0742b8'},
+        {name:'제어 계산',period:p2,col:'#e65100'},
+        {name:'LED 깜빡',period:p3,col:'#2e7d32'}
+      ];
+      const ox=130,w=W-150,trackH=50,gap=15;
+      tracks.forEach((tr,idx)=>{
+        const y=40+idx*(trackH+gap);
+        ctx.fillStyle='#f5f5f5';ctx.fillRect(ox,y,w,trackH);
+        ctx.fillStyle='#222';ctx.font='13px sans-serif';
+        ctx.fillText(tr.name,12,y+20);
+        ctx.fillStyle='#666';ctx.font='11px sans-serif';
+        ctx.fillText(`${tr.period} ms`,12,y+38);
+        ctx.fillStyle='#999';ctx.font='10px sans-serif';
+        ctx.fillText(`= ${(1000/tr.period).toFixed(1)} Hz`,75,y+38);
+        // events
+        ctx.fillStyle=tr.col;
+        for(let t=0;t<=Twin;t+=tr.period){
+          const xx=ox+t/Twin*w;
+          ctx.fillRect(xx-1,y+8,3,trackH-16);
+        }
+      });
+      // time axis
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,H-25);ctx.lineTo(ox+w,H-25);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let t=0;t<=Twin;t+=200){const xx=ox+t/Twin*w;
+        ctx.beginPath();ctx.moveTo(xx,H-25);ctx.lineTo(xx,H-20);ctx.stroke();
+        ctx.fillText(t+' ms',xx-12,H-8);}
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('1초간의 실행 타임라인 (각 막대 = 한 번의 실행)',12,25);
+    }
+    ['nbS1','nbS2','nbS3'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
 
   <h2>9. 핵심 한눈 요약</h2>
   <table>
