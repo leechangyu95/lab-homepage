@@ -145,6 +145,81 @@
     <li><strong>분기점 이동</strong>: 분기점을 블록 앞/뒤로 옮기려면 그 블록을 한 번 더 끼워 넣거나 빼서 보정.</li>
   </ul>
 
+  <h3>왜 곱하거나 나누어 보정해야 하는가? — 한 줄 직관</h3>
+
+  <p>핵심은 단 한 가지: <strong>이동 후의 신호 흐름이 이동 전과 정확히 같은 식을 표현하도록</strong> 새 블록을 넣어 균형을 맞추는 일입니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arBD" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <!-- LEFT: BEFORE — summing junction is BEFORE block G -->
+      <text x="20" y="20" font-size="12" fill="#444" font-weight="600">변환 전</text>
+      <text x="10" y="65">A →</text>
+      <line x1="40" y1="60" x2="76" y2="60" stroke="#333"/>
+      <circle cx="92" cy="60" r="14" fill="#fff" stroke="#333"/>
+      <text x="92" y="64" text-anchor="middle">+</text>
+      <text x="115" y="50" font-size="11">+</text>
+      <line x1="115" y1="50" x2="115" y2="20" stroke="#333"/>
+      <text x="100" y="15" font-size="11">B</text>
+      <line x1="106" y1="60" x2="155" y2="60" stroke="#333" marker-end="url(#arBD)"/>
+      <rect x="155" y="40" width="60" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="185" y="64" text-anchor="middle">G</text>
+      <line x1="215" y1="60" x2="280" y2="60" stroke="#333" marker-end="url(#arBD)"/>
+      <text x="290" y="65">→ Y</text>
+      <text x="20" y="100" font-size="11" fill="#666">식: Y = G·(A + B)</text>
+
+      <!-- LEFT BOTTOM: AFTER (move summing AFTER G) -->
+      <text x="20" y="160" font-size="12" fill="#444" font-weight="600">가산점을 G 뒤로 이동 — B에 G를 곱한다</text>
+      <text x="10" y="205">A →</text>
+      <line x1="40" y1="200" x2="76" y2="200" stroke="#333" marker-end="url(#arBD)"/>
+      <rect x="76" y="180" width="60" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="106" y="204" text-anchor="middle">G</text>
+      <line x1="136" y1="200" x2="186" y2="200" stroke="#333"/>
+      <circle cx="202" cy="200" r="14" fill="#fff" stroke="#333"/>
+      <text x="202" y="204" text-anchor="middle">+</text>
+      <text x="225" y="190" font-size="11">+</text>
+      <line x1="225" y1="190" x2="225" y2="160" stroke="#333"/>
+      <rect x="195" y="130" width="60" height="30" fill="#fce4ec" stroke="#c62828"/>
+      <text x="225" y="150" text-anchor="middle" font-size="13">G</text>
+      <line x1="225" y1="105" x2="225" y2="130" stroke="#333" marker-end="url(#arBD)"/>
+      <text x="210" y="100" font-size="11">B</text>
+      <line x1="216" y1="200" x2="280" y2="200" stroke="#333" marker-end="url(#arBD)"/>
+      <text x="290" y="205">→ Y</text>
+      <text x="20" y="250" font-size="11" fill="#666">식: Y = G·A + G·B = G·(A+B) ✓</text>
+
+      <!-- RIGHT: branching takeoff move -->
+      <text x="400" y="20" font-size="12" fill="#444" font-weight="600">분기점을 G 앞으로 이동 — 가지에 G를 추가</text>
+      <text x="380" y="65">U →</text>
+      <line x1="410" y1="60" x2="450" y2="60" stroke="#333" marker-end="url(#arBD)"/>
+      <rect x="450" y="40" width="60" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="480" y="64" text-anchor="middle">G</text>
+      <line x1="510" y1="60" x2="600" y2="60" stroke="#333"/>
+      <circle cx="565" cy="60" r="3" fill="#333"/>
+      <line x1="565" y1="60" x2="565" y2="100" stroke="#333" marker-end="url(#arBD)"/>
+      <text x="555" y="115" font-size="11">Y₁ = G·U</text>
+      <line x1="600" y1="60" x2="660" y2="60" stroke="#333" marker-end="url(#arBD)"/>
+      <text x="668" y="65">Y</text>
+
+      <text x="400" y="160" font-size="12" fill="#444">  → 변환 후 (분기점이 G 앞에)</text>
+      <text x="380" y="205">U →</text>
+      <line x1="410" y1="200" x2="500" y2="200" stroke="#333"/>
+      <circle cx="450" cy="200" r="3" fill="#333"/>
+      <line x1="450" y1="200" x2="450" y2="230" stroke="#333"/>
+      <rect x="425" y="230" width="50" height="30" fill="#fce4ec" stroke="#c62828"/>
+      <text x="450" y="250" text-anchor="middle" font-size="13">G</text>
+      <line x1="450" y1="260" x2="450" y2="270" stroke="#333" marker-end="url(#arBD)"/>
+      <text x="455" y="275" font-size="11">Y₁ = G·U ✓</text>
+      <line x1="500" y1="200" x2="540" y2="200" stroke="#333" marker-end="url(#arBD)"/>
+      <rect x="540" y="180" width="60" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="570" y="204" text-anchor="middle">G</text>
+      <line x1="600" y1="200" x2="660" y2="200" stroke="#333" marker-end="url(#arBD)"/>
+      <text x="668" y="205">Y</text>
+    </svg>
+    <figcaption>그림 2. 두 가지 등가 변환의 직관. <span style="color:#c62828">빨간 블록</span>이 보정용으로 추가/유지하는 블록입니다.</figcaption>
+  </figure>
+
+  <p><strong>왜 그런가?</strong> "변환 전의 출력 = 변환 후의 출력"이 되어야 하니, 새 신호 경로가 잃어버린 곱셈을 빨간 블록이 채워주는 것입니다. 처음에 헷갈리면 "<em>변환 전 출력 = ?, 변환 후 출력 = ?</em> 두 식이 같아지려면 어디에 G를 끼워 넣어야 할까?"를 종이에 적어 보세요. 다섯 번 정도 해보면 자동으로 손에 익습니다.</p>
+
   <p>실무에서는 이 변환을 손으로 하는 일이 거의 없고, 아래 Python 한 줄로 풀어버립니다.</p>
 
   <h2>5. 인터랙티브: 블록선도 → 단일 전달함수</h2>

@@ -81,6 +81,43 @@
   <p>이 단순한 분리만으로도 라인트레이서·창고 AGV·자동 청소기가 충분히 동작합니다.
   더 정밀한 차량용 경로 추종은 <a href="../lectures/07-feedback-control.html">로봇공학특론 L7</a>의 Pure Pursuit·Stanley로 발전합니다.</p>
 
+  <h3>전방 주시 거리 $L_d$ — "어디를 향해 핸들을 돌릴 것인가"</h3>
+
+  <p>운전을 처음 배울 때 강사가 흔히 하는 말: "<em>차 앞범퍼 끝을 보지 말고, 그 너머 코너 출구를 보세요</em>". 너무 가까이 보면 매번 핸들이 떨리고 너무 멀리 보면 코너를 가로지르며 안쪽으로 컷팅합니다. 모바일 로봇도 똑같습니다.</p>
+
+  <ul>
+    <li><strong>전방 주시 거리(Lookahead Distance) $L_d$</strong>: 현재 위치로부터 경로를 따라 $L_d$만큼 앞에 있는 점을 "추종할 점"으로 삼습니다. 그 점을 향해 헤딩 PID가 핸들($\omega$)을 조절.</li>
+    <li>$L_d$가 <strong>너무 짧음</strong> → 즉각 반응이라 좋아 보이지만 노이즈·곡률 변화에 민감 → 좌우 흔들림(진동 추종).</li>
+    <li>$L_d$가 <strong>너무 김</strong> → 부드럽지만 코너 안쪽으로 컷팅 → 큰 추종 오차.</li>
+  </ul>
+
+  <p><strong>실무 권장값</strong>:</p>
+  <table>
+    <thead><tr><th>로봇 종류</th><th>$L_d$의 어림</th><th>왜?</th></tr></thead>
+    <tbody>
+      <tr><td>저속 청소·AGV</td><td>$2 \sim 3 \times$ 휠베이스</td><td>코너 안전 + 부드러움 절충</td></tr>
+      <tr><td>중속 자율주행 자동차</td><td>$L_d \approx k \cdot v$ ($k$ ≈ 0.5~1 s)</td><td>속도가 빠를수록 더 멀리 봐야 함 — "1초 앞을 보라"</td></tr>
+      <tr><td>드론·격주행</td><td>경로 곡률에 적응 — 직선 길이 짧고 코너 길이</td><td>곡률 큰 곳일수록 짧게 잡아 코너 정확히 추종</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>속도와 묶기</strong>: 너무 정직한 사람은 위험하다(차에서). $L_d = k_1 + k_2 \cdot v$로 속도가 커지면 자연스럽게 늘리는 게 표준입니다 — 0.5 m/s에선 0.5 m, 5 m/s에선 5 m처럼.</p>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>📐 한 발 더 — Pure Pursuit와 Stanley는 본 강의의 헤딩 PID와 어떻게 다른가</strong></summary>
+    <p>본 절의 헤딩 PID($\omega = K_p \cdot \Delta\psi$)는 가장 단순한 형태입니다. 산업·자율주행에서는 두 변형이 표준.</p>
+    <ul>
+      <li><strong>Pure Pursuit</strong> — 같은 "전방 점을 향해"라는 발상이지만 "원호 추종"으로 푼다. 차량 후축에서 전방 점까지 원호를 그리는 곡률
+        $$ \kappa = \frac{2 \sin(\Delta\psi)}{L_d} \;\Longrightarrow\; \omega = v \kappa $$
+        와 같이 명시적으로 계산. 휠베이스가 큰 차량에서 정확. <em>로봇공학특론 L7</em>에서 자세히.</li>
+      <li><strong>Stanley</strong> — 전방 점이 아닌 <em>전방 차축에서 가장 가까운 경로 점</em>을 봅니다. 헤딩 오차 $\Delta\psi$와 측방향 오차 $e$를 동시에 보정:
+        $$ \delta = \Delta\psi + \arctan\!\left(\frac{k_e\, e}{v}\right) $$
+        DARPA 그랜드 챌린지 우승 차량의 비결. 코너에서 안 컷팅하고 측방 오차가 빠르게 0으로 수렴.</li>
+      <li>본 절의 헤딩 PID = <em>측방 오차를 무시한 Pure Pursuit의 직관적 P 근사</em>로 보면 됩니다. 작은 $\Delta\psi$에서 두 식이 거의 같아짐.</li>
+    </ul>
+    <p><strong>한 줄 비교</strong>: PID는 "방향만", Pure Pursuit는 "원호로", Stanley는 "측방 + 방향". 정밀이 필요할수록 오른쪽으로 이동.</p>
+  </details>
+
   <h2>3. 인터랙티브: 모바일 로봇 경로 추종</h2>
 
   <div class="demo">
@@ -143,11 +180,13 @@
   })();
   </script>
 
-  <p><strong>관찰</strong>:</p>
+  <p><strong>꼭 만져볼 시나리오</strong>:</p>
   <ul>
-    <li>전방 주시 거리 짧음 + 헤딩 Kp 큼 → 진동(좌우 핸들 떨림).</li>
-    <li>전방 주시 거리 김 → 부드럽지만 코너 안쪽으로 컷팅.</li>
-    <li>적정 균형이 자율주행 분야의 영원한 튜닝 문제.</li>
+    <li><strong>$L_d = 10$, 헤딩 Kp = 6</strong>: 짧은 시야 + 강한 핸들 → 좌우로 핸들이 떨리며 경로 위에서 진동. 이 패턴이 "전방 주시가 부족할 때"의 전형.</li>
+    <li><strong>$L_d = 100$, 헤딩 Kp = 1.5</strong>: 멀리 보고 천천히 → 직선에서는 부드럽지만 8자 곡선의 코너에서 안쪽을 그대로 가로질러 컷팅.</li>
+    <li><strong>$L_d = 35$, 헤딩 Kp = 2.5 (기본값)</strong>: 절충값. 진동 없이 코너도 따라감 — 적정 균형의 모습.</li>
+    <li>거리 Kp는 직진 속도 $v$를 결정. 작으면 못 따라가고, 크면 코너에서 비현실적으로 빨라져 컷팅이 심해짐.</li>
+    <li>$L_d$ 튜닝은 자율주행 분야의 영원한 문제. 더 영리한 방법은 위 박스 안의 Pure Pursuit · Stanley로.</li>
   </ul>
 
   <h2>4. 쿼드콥터 자세 제어 — 캐스케이드 PID</h2>

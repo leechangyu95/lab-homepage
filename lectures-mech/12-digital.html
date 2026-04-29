@@ -77,6 +77,83 @@
 
   <p>2의 보수가 1의 보수보다 표준이 된 이유는 1의 보수는 +0과 −0 두 가지가 따로 존재해 혼란스럽기 때문입니다(2의 보수는 0이 하나뿐).</p>
 
+  <div class="tip">
+    <strong>$N$비트로 표현 가능한 범위</strong> — 2의 보수 8비트는 $-128 \sim +127$, 16비트는 $-32{,}768 \sim +32{,}767$. MSB가 부호 비트 역할을 하지만 단순히 부호만 떼는 게 아니라 자리값이 음수($-2^{N-1}$)가 됩니다. 예를 들어 8비트 $11111111$은 $-128 + 64 + 32 + 16 + 8 + 4 + 2 + 1 = -1$.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2의 보수 변환기 — 비트 뒤집기 + 1</h4>
+    <p>10진수를 입력하면 8비트 2의 보수로 변환하는 과정을 단계별로 보여줍니다. 부호 있는 8비트로 표현 가능한 범위는 −128 ~ +127.</p>
+    <canvas id="twosCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>10진수 (−128 ~ 127) <span class="val" id="twosNV">−5</span><input type="range" id="twosN" min="-128" max="127" step="1" value="-5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('twosCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function bits(n){
+      // 8-bit two's complement
+      const x=(n<0)?(256+n):n;
+      return x.toString(2).padStart(8,'0');
+    }
+    function draw(){
+      const N=+document.getElementById('twosN').value;
+      document.getElementById('twosNV').textContent=N<0?'−'+(-N):''+N;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      const absBits=bits(Math.abs(N));
+      const flipped=absBits.split('').map(b=>b==='0'?'1':'0').join('');
+      // +1
+      let carry=1, addRes='';
+      for(let i=flipped.length-1;i>=0;i--){const b=+flipped[i]+carry;addRes=(b%2)+addRes;carry=b>=2?1:0;}
+      const finalBits=N>=0?absBits:(N===-128?'10000000':addRes);
+      const labelY=[60,110,160,210];
+      function bitRow(y,bits,label,colorFn){
+        ctx.fillStyle='#222';ctx.font='13px sans-serif';
+        ctx.fillText(label,30,y-15);
+        const cellW=42,startX=240;
+        for(let i=0;i<8;i++){
+          const x=startX+i*cellW;
+          ctx.fillStyle=colorFn?colorFn(bits[i],i):(bits[i]==='1'?'#0b5fff':'#eee');
+          ctx.fillRect(x,y-25,cellW-3,32);
+          ctx.strokeStyle='#222';ctx.strokeRect(x,y-25,cellW-3,32);
+          ctx.fillStyle=bits[i]==='1'?'#fff':'#666';
+          ctx.font='bold 16px monospace';
+          ctx.fillText(bits[i],x+15,y);
+        }
+      }
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      if(N>=0){
+        ctx.fillText(`양수: 그대로 2진수로 변환`,30,30);
+        bitRow(80,absBits,`+${N} (8비트 2진수)`,null);
+        ctx.fillStyle='#666';ctx.font='12px sans-serif';
+        ctx.fillText(`MSB=0 (양수). 자리값: ${[128,64,32,16,8,4,2,1].join(' ')}`,30,160);
+        let sum=0;absBits.split('').forEach((b,i)=>{if(b==='1')sum+=Math.pow(2,7-i);});
+        ctx.fillText(`검산 합: ${sum} ✓`,30,180);
+      } else if(N===-128){
+        ctx.fillText(`경계 케이스: −128`,30,30);
+        bitRow(80,'10000000','−128 (8비트 2의 보수)',null);
+        ctx.fillStyle='#666';ctx.font='12px sans-serif';
+        ctx.fillText('10000000 → MSB=−128, 나머지=0 → 합 = −128',30,160);
+      } else {
+        ctx.fillText(`Step 1: |N| = ${-N}을 2진수로`,30,30);
+        bitRow(80,absBits,`|${N}| = ${-N}`,null);
+        ctx.fillStyle='#222';
+        ctx.fillText('Step 2: 모든 비트 뒤집기 (1의 보수)',30,120);
+        bitRow(160,flipped,'~|N|',(b,i)=>b==='1'?'#f5a623':'#fff8e1');
+        ctx.fillStyle='#222';
+        ctx.fillText('Step 3: +1 → 2의 보수 (= N의 8비트 표현)',30,200);
+        bitRow(245,finalBits,`${N}`,(b,i)=>b==='1'?'#c62828':'#ffebee');
+      }
+    }
+    document.getElementById('twosN').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
   <h2>3. 부울 대수</h2>
   <p>변수가 0 또는 1만 가지는 특별한 수학. 영국의 조지 부울(George Boole)이 1850년대에 만들었고, 디지털 회로 설계의 공용 언어가 되었습니다. 단 세 가지 기본 연산만 있으면 모든 디지털 회로를 표현할 수 있어요.</p>
 
@@ -196,7 +273,16 @@
   <h3>5.1 카르노 맵(K-Map)으로 식 간소화</h3>
   <p>SOP로 뽑은 식은 보통 너무 복잡합니다. 카르노 맵은 진리표를 격자로 그려놓고 인접한 1을 묶어 식을 단순화하는 시각적 도구예요. 2변수, 3변수 K-map의 핵심 규칙은 <strong>"인접한 1들의 직사각형(2의 거듭제곱 크기)을 가능한 크게 묶는다"</strong>입니다.</p>
 
-  <p>예 — $F(A,B,C) = \sum m(1, 3, 5, 7)$ (즉 $C=1$인 모든 행에서 $F=1$).</p>
+  <h4>그루핑 규칙 4가지</h4>
+  <ol>
+    <li><strong>크기는 1, 2, 4, 8, ... — 2의 거듭제곱</strong>만 가능. 3개나 5개로는 묶지 못함.</li>
+    <li><strong>가능한 크게</strong> 묶기. 한 그룹이 클수록 식의 항이 단순해짐 (한 그룹 = 한 곱항).</li>
+    <li>모든 1은 적어도 한 그룹에 속해야 함 (중복 허용).</li>
+    <li>K-map의 행/열은 <strong>그레이 코드 순서</strong>(00, 01, 11, 10) — 인접 칸은 비트 한 개만 다름. 그래서 양쪽 끝(맨 위/아래, 좌/우)도 인접 취급해 "랩어라운드 묶음"이 가능.</li>
+  </ol>
+  <p>한 그룹이 같은 변수의 두 값(0과 1) 모두를 포함하면 그 변수는 식에서 사라집니다. 그래서 그룹이 클수록 살아남는 변수가 적어 식이 짧아져요.</p>
+
+  <p>예 1 — $F(A,B,C) = \sum m(1, 3, 5, 7)$ (즉 $C=1$인 모든 행에서 $F=1$).</p>
   <table>
     <thead><tr><th>$AB$ \ $C$</th><th>$C=0$</th><th>$C=1$</th></tr></thead>
     <tbody>
@@ -206,9 +292,23 @@
       <tr><td>10</td><td>0</td><td><strong>1</strong></td></tr>
     </tbody>
   </table>
-  <p>$C=1$ 열 전체가 1로 묶이므로 $A$, $B$는 don't care. 결과:</p>
+  <p>$C=1$ 열 전체(4칸)가 한 그룹으로 묶이므로 $A$, $B$는 변수에서 제거. 결과:</p>
   $$ F = C $$
   <p>SOP로 뽑으면 $\bar A\bar B C + \bar A B C + AB C + A\bar B C$인데 부울 대수로 정리해도 결국 $C$가 됩니다. K-map은 그 정리 과정을 격자에서 즉시 보게 해줘요.</p>
+
+  <p>예 2 — 두 그룹이 필요한 경우. $F(A,B,C) = \sum m(0, 2, 5, 7)$.</p>
+  <table>
+    <thead><tr><th>$AB$ \ $C$</th><th>$C=0$</th><th>$C=1$</th></tr></thead>
+    <tbody>
+      <tr><td>00</td><td><strong>1</strong></td><td>0</td></tr>
+      <tr><td>01</td><td>0</td><td>0</td></tr>
+      <tr><td>11</td><td>0</td><td><strong>1</strong></td></tr>
+      <tr><td>10</td><td><strong>1</strong></td><td><strong>1</strong></td></tr>
+    </tbody>
+  </table>
+  <p>$AB=00$의 $C=0$ 칸과 $AB=10$의 $C=0$ 칸이 인접 → $\bar B \bar C$ 묶음 (2칸). $AB=11$의 $C=1$과 $AB=10$의 $C=1$이 인접 → $A C$ 묶음 (2칸). 결과:</p>
+  $$ F = \bar B \bar C + A C $$
+  <p>SOP 4항이 2항으로 줄었어요. 게이트 수도 그만큼 줄어듭니다 — K-map의 효용.</p>
 
   <h3>5.2 반가산기(Half Adder)와 전가산기(Full Adder)</h3>
   <p>두 비트 $A$, $B$의 덧셈을 생각해 봅시다. 진리표:</p>

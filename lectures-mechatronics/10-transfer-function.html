@@ -34,13 +34,24 @@
     <li>전달 함수의 정의</li>
     <li>1차·2차 시스템의 전달 함수</li>
     <li>극점과 영점 — 시스템 거동의 지문</li>
+    <li>시정수와 응답</li>
     <li>예제 — 서모커플 응답</li>
+    <li>주파수 응답과 보드 플롯</li>
+    <li>직렬·병렬·피드백 결합</li>
   </ol></div>
 
   <h2>1. 왜 라플라스 변환인가</h2>
   <p>지난 주(W9)에 본 것처럼 1차·2차 시스템의 시간 응답은 미분방정식을 직접 풀어 얻을 수 있어요. 그러나 시스템이 복잡해지면(예: 4차 시스템, 다단 직렬·병렬) 미분방정식 풀이가 끔찍해집니다.</p>
   <p>해결책 — <strong>라플라스 변환</strong>으로 시간 영역을 $s$ 영역으로 옮기면 미분방정식이 <strong>대수 방정식</strong>이 됩니다. 그리고 풀이가 끝나면 역변환으로 시간 영역으로 돌아오면 됩니다.</p>
   $$ F(s) = \int_0^\infty f(t)\,e^{-st}\,dt $$
+
+  <p><strong>30초 직관</strong> — 라플라스 변환은 시간 함수 $f(t)$를 "이 함수에는 $e^{st}$ 형태의 성분이 얼마나 들어 있는가"라는 물음으로 바꿔 봅니다. $s$가 복소수($s = \sigma + j\omega$)라서 $e^{st}$는 <strong>지수적으로 커지거나 작아지면서 회전하는 함수</strong>예요. 모든 시스템 응답이 이 형태들의 합으로 표현 가능하다는 게 이론의 핵심입니다.</p>
+  <ul>
+    <li>$s = j\omega$(허수축 위)이면 $e^{st} = e^{j\omega t}$ — 순수 정현파. <a href="../lectures-mech/08-impedance.html">기전공학기초 W8 임피던스</a>가 이 자리에 한정된 분석.</li>
+    <li>$s = -\sigma$(음의 실수)이면 $e^{st} = e^{-\sigma t}$ — 1차 시스템의 감쇠 응답.</li>
+    <li>$s = -\sigma + j\omega$이면 감쇠하면서 진동 — 저감쇠 2차 응답.</li>
+  </ul>
+  <p>그래서 시스템의 거동을 알려면 $s$ 평면 위에서 어디에 극점이 있는지만 보면 됩니다. 이게 5절의 주제예요.</p>
 
   <h2>2. 핵심 변환 표</h2>
   <table>
@@ -76,6 +87,113 @@
   $$ H(s) = \frac{K\omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2} $$
   <p>분모가 2차 — 2차 시스템. $\zeta$, $\omega_n$이 동특성을 결정한다는 사실이 분모에 직접 보입니다.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 전달 함수 → 시간 응답</h4>
+    <p>좌측은 $s$ 평면(복소 평면)의 극점 위치, 우측은 단위 스텝 응답. 1차/2차를 토글하고 파라미터를 만져보세요. <strong>극점이 좌반평면에 깊숙이</strong> 들어갈수록 응답이 빨라지고, <strong>허수축에 가까울수록</strong> 느려지며, <strong>실수부가 양수가 되면 발산</strong>합니다.</p>
+    <canvas id="tfStepDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>시스템 종류
+        <select id="tfKind">
+          <option value="1">1차: K/(τs+1)</option>
+          <option value="2" selected>2차: Kωn²/(s²+2ζωn·s+ωn²)</option>
+        </select>
+      </label>
+      <label>τ 또는 ζ <span class="val" id="tfP1V">0.5</span><input type="range" id="tfP1" min="0.05" max="1.5" step="0.02" value="0.5"></label>
+      <label>K 또는 ωn <span class="val" id="tfP2V">2.0</span><input type="range" id="tfP2" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tfStepDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function step1(t,tau,K){return K*(1-Math.exp(-t/tau));}
+    function step2(t,z,wn){
+      if(z<0.001) return 1-Math.cos(wn*t);
+      if(z<1){const wd=wn*Math.sqrt(1-z*z);
+        return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z)*Math.sin(wd*t+Math.acos(z));}
+      if(Math.abs(z-1)<1e-3) return 1-(1+wn*t)*Math.exp(-wn*t);
+      const a=z*wn,b=wn*Math.sqrt(z*z-1),r1=-a+b,r2=-a-b;
+      return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);
+    }
+    function draw(){
+      const kind=document.getElementById('tfKind').value;
+      const p1=+document.getElementById('tfP1').value;
+      const p2=+document.getElementById('tfP2').value;
+      // labels
+      const isFirst=kind==='1';
+      document.getElementById('tfP1V').textContent=isFirst?p1.toFixed(2):p1.toFixed(2);
+      document.getElementById('tfP2V').textContent=p2.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // ----- left: s-plane -----
+      const cx=140,cy=H/2,SC=45,box=240;
+      ctx.fillStyle='#fff';ctx.strokeStyle='#bbb';
+      ctx.fillRect(20,40,box,box-30);ctx.strokeRect(20,40,box,box-30);
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(20,cy);ctx.lineTo(20+box,cy);ctx.moveTo(cx,40);ctx.lineTo(cx,40+box-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('Re',20+box-15,cy-4);ctx.fillText('Im',cx+4,50);
+      // shade right half-plane = unstable
+      ctx.fillStyle='rgba(198,40,40,0.08)';ctx.fillRect(cx,40,20+box-cx,box-30);
+      ctx.fillStyle='#c62828';ctx.font='10px sans-serif';ctx.fillText('불안정 영역',cx+10,55);
+      ctx.fillStyle='#2e7d32';ctx.fillText('안정 영역',cx-90,55);
+      // poles
+      let poles=[];
+      if(isFirst){
+        poles=[{re:-1/p1,im:0}];
+      }else{
+        const z=p1, wn=p2;
+        if(z<1){poles=[{re:-z*wn,im:wn*Math.sqrt(1-z*z)},{re:-z*wn,im:-wn*Math.sqrt(1-z*z)}];}
+        else if(Math.abs(z-1)<1e-3){poles=[{re:-wn,im:0},{re:-wn,im:0}];}
+        else{const a=z*wn,b=wn*Math.sqrt(z*z-1);poles=[{re:-a+b,im:0},{re:-a-b,im:0}];}
+      }
+      poles.forEach(p=>{
+        const xx=cx+p.re*SC, yy=cy-p.im*SC;
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(xx-7,yy-7);ctx.lineTo(xx+7,yy+7);ctx.moveTo(xx-7,yy+7);ctx.lineTo(xx+7,yy-7);ctx.stroke();
+      });
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText('✕ = 극점 (분모=0인 s)',30,box+25);
+      // formula
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      if(isFirst){
+        ctx.fillText(`H(s) = K/(${p1.toFixed(2)}s+1),  K=${p2.toFixed(1)}`,30,30);
+      }else{
+        ctx.fillText(`H(s) = ωn²/(s²+2ζωn·s+ωn²)`,30,22);
+        ctx.fillText(`ζ=${p1.toFixed(2)}, ωn=${p2.toFixed(1)}`,30,38);
+      }
+      // ----- right: step response -----
+      const ox2=300,oy2=H-40,w2=W-320,h2=H-70;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox2,oy2);ctx.lineTo(ox2+w2,oy2);ctx.moveTo(ox2,30);ctx.lineTo(ox2,oy2);ctx.stroke();
+      const Kgain = isFirst?p2:1;
+      const T = isFirst?5*p1+1 : Math.max(8/(p1*p2+0.1),5);
+      const ymax = isFirst ? Kgain*1.2 : 2;
+      function py2(v){return oy2-v/ymax*h2;}
+      // final
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      const fin=isFirst?Kgain:1;
+      ctx.moveTo(ox2,py2(fin));ctx.lineTo(ox2+w2,py2(fin));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='11px sans-serif';
+      ctx.fillText(`y∞ = ${fin.toFixed(2)}`,ox2+w2-70,py2(fin)-4);
+      // curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=400;i++){
+        const t=i/400*T;
+        const y = isFirst ? step1(t,p1,Kgain) : step2(t,p1,p2);
+        const xx=ox2+t/T*w2, yy=py2(Math.max(0,Math.min(ymax,y)));
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('단위 스텝 응답 y(t)',ox2,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 t (s)',ox2+w2-70,oy2+22);
+    }
+    document.getElementById('tfKind').addEventListener('change',draw);
+    document.getElementById('tfP1').addEventListener('input',draw);
+    document.getElementById('tfP2').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
   <h2>5. 극점과 영점 — 시스템의 지문</h2>
 
   <h3>5.1 정의</h3>
@@ -104,6 +222,132 @@
 
   <p>이래서 제어기 설계의 가장 큰 그림이 <strong>"극점을 좌반평면 깊숙이 가져다 놓는 것"</strong>입니다. 그러면 응답이 빠르고 안정. 고전 제어공학(<a href="../lectures/07-feedback-control.html">로봇공학특론 L7</a>)의 모든 도구가 결국 이 게임이에요.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 극점을 직접 끌어보기 — 위치가 응답을 결정한다</h4>
+    <p>좌측 $s$ 평면의 빨간 ✕(극점)을 마우스로 끌어보세요. 위·아래 대칭(켤레쌍)으로 함께 움직이며, 우측에 시간 응답이 즉시 반영됩니다. 다음을 직접 확인해 보세요:</p>
+    <ol style="margin:6px 0 6px 20px;font-size:13px;color:#444">
+      <li>극점을 <strong>왼쪽으로 멀리</strong> 보내면 → 빠르게 정착.</li>
+      <li>극점이 <strong>허수축에 가까워지면</strong>(위·아래로 멀리) → 진동이 심해짐.</li>
+      <li>극점이 <strong>실수축 위(im=0)</strong>에 있으면 → 진동 없음(과/임계감쇠).</li>
+      <li>극점이 <strong>우반평면</strong>으로 넘어가면 → 응답이 발산(불안정).</li>
+    </ol>
+    <canvas id="poleDragDemo" width="640" height="320" style="cursor:grab"></canvas>
+    <div class="controls">
+      <button id="pdReset">기본값으로</button>
+      <span style="font-size:12px;color:#666;margin-left:10px">실수부 σ = <span id="pdSig">−1.0</span>, 허수부 ω = <span id="pdOmg">2.0</span></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('poleDragDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let sig=-1.0, omg=2.0, dragging=false;
+    const cx=140,cy=H/2,SC=45;
+    function reset(){sig=-1.0;omg=2.0;draw();}
+    document.getElementById('pdReset').onclick=reset;
+    function poleXY(){return {x:cx+sig*SC, y:cy-omg*SC};}
+    c.addEventListener('mousedown',e=>{
+      const r=c.getBoundingClientRect();
+      const mx=e.clientX-r.left, my=e.clientY-r.top;
+      const p=poleXY();
+      if(Math.hypot(mx-p.x,my-p.y)<14 || Math.hypot(mx-p.x,my-(2*cy-p.y))<14){dragging=true;c.style.cursor='grabbing';}
+    });
+    window.addEventListener('mousemove',e=>{
+      if(!dragging)return;
+      const r=c.getBoundingClientRect();
+      const mx=e.clientX-r.left, my=e.clientY-r.top;
+      sig=Math.max(-4,Math.min(1.5,(mx-cx)/SC));
+      omg=Math.max(-3.5,Math.min(3.5,(cy-my)/SC));
+      // touch handling: snap small omega to 0
+      if(Math.abs(omg)<0.15)omg=0;
+      draw();
+    });
+    window.addEventListener('mouseup',()=>{dragging=false;c.style.cursor='grab';});
+    function step(t){
+      // for poles at sig ± j*omg, response of  y'' - 2σy' + (σ²+ω²)y  to step is...
+      // standard 2nd-order response with poles at sig±jomg
+      const sig0=-Math.abs(sig)>0?-sig:0; // dummy
+      // We'll just do generic 2nd-order from these poles, unit gain at s=0
+      // H(s) = (sig²+omg²) / ((s-sig)²+omg²);  step response by inverse Laplace
+      const wn=Math.sqrt(sig*sig+omg*omg);
+      if(wn<0.01)return 0;
+      const z=-sig/wn;
+      if(sig>=0){
+        // unstable: simulate divergence
+        if(Math.abs(omg)<0.01)return 1-Math.exp(sig*t);
+        return 1 - Math.exp(sig*t)*(Math.cos(omg*t) - sig/omg*Math.sin(omg*t));
+      }
+      // stable
+      if(Math.abs(omg)<0.01){
+        // real poles
+        if(Math.abs(z-1)<1e-3) return 1-(1+wn*t)*Math.exp(-wn*t);
+        return 1-Math.exp(sig*t);
+      }
+      // complex
+      return 1 - Math.exp(sig*t)*(Math.cos(omg*t) - sig/omg*Math.sin(omg*t));
+    }
+    function draw(){
+      document.getElementById('pdSig').textContent=sig.toFixed(2);
+      document.getElementById('pdOmg').textContent=omg.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // left s-plane
+      const box=240;
+      ctx.fillStyle='#fff';ctx.strokeStyle='#bbb';ctx.fillRect(20,40,box,box-30);ctx.strokeRect(20,40,box,box-30);
+      // right half-plane shading
+      ctx.fillStyle='rgba(198,40,40,0.08)';ctx.fillRect(cx,40,20+box-cx,box-30);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let g=-3;g<=2;g++){const xx=cx+g*SC;if(xx>20&&xx<20+box){ctx.beginPath();ctx.moveTo(xx,40);ctx.lineTo(xx,40+box-30);ctx.stroke();}}
+      for(let g=-3;g<=3;g++){const yy=cy-g*SC;if(yy>40&&yy<40+box-30){ctx.beginPath();ctx.moveTo(20,yy);ctx.lineTo(20+box,yy);ctx.stroke();}}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(20,cy);ctx.lineTo(20+box,cy);ctx.moveTo(cx,40);ctx.lineTo(cx,40+box-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('Re',20+box-15,cy-4);ctx.fillText('Im',cx+4,50);
+      ctx.fillStyle='#c62828';ctx.font='10px sans-serif';ctx.fillText('불안정',cx+10,55);
+      ctx.fillStyle='#2e7d32';ctx.fillText('안정',cx-50,55);
+      // poles (conjugate pair if omg≠0)
+      const draws=[{re:sig,im:omg}];
+      if(Math.abs(omg)>0.01)draws.push({re:sig,im:-omg});
+      draws.forEach(p=>{
+        const xx=cx+p.re*SC, yy=cy-p.im*SC;
+        ctx.strokeStyle=sig>=0?'#c62828':'#0b5fff';ctx.lineWidth=3;
+        ctx.beginPath();ctx.moveTo(xx-9,yy-9);ctx.lineTo(xx+9,yy+9);ctx.moveTo(xx-9,yy+9);ctx.lineTo(xx+9,yy-9);ctx.stroke();
+      });
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText('극점을 끌어보세요 (켤레쌍 함께 이동)',30,box+25);
+      // status
+      ctx.font='13px sans-serif';
+      let cls='';
+      if(sig>=0){ctx.fillStyle='#c62828';cls='⚠ 불안정 (발산)';}
+      else if(Math.abs(omg)<0.01){ctx.fillStyle='#2e7d32';cls='과/임계감쇠 (진동 없음)';}
+      else if(Math.abs(sig)>Math.abs(omg)){ctx.fillStyle='#2e7d32';cls='저감쇠, 약한 진동';}
+      else{ctx.fillStyle='#f57c00';cls='저감쇠, 강한 진동';}
+      ctx.fillText(cls,30,30);
+      // right time response
+      const ox2=300,oy2=H-40,w2=W-320,h2=H-70;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox2,oy2);ctx.lineTo(ox2+w2,oy2);ctx.moveTo(ox2,30);ctx.lineTo(ox2,oy2);ctx.stroke();
+      const T=10, ymax=3;
+      function py2(v){return oy2-(v+0.5)/ymax*h2;}
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      ctx.moveTo(ox2,py2(1));ctx.lineTo(ox2+w2,py2(1));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='11px sans-serif';ctx.fillText('1.0 (목표)',ox2+w2-65,py2(1)-4);
+      ctx.strokeStyle=sig>=0?'#c62828':'#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=500;i++){
+        const t=i/500*T, y=step(t);
+        const yc=Math.max(-1,Math.min(3,y));
+        const xx=ox2+t/T*w2, yy=py2(yc);
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('단위 스텝 응답',ox2,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('t →',ox2+w2-30,oy2+22);
+    }
+    draw();
+  })();
+  </script>
+
   <h2>6. 시정수와 응답</h2>
   <p>1차 시스템에서 극점 $s = -1/\tau$가 시정수 $\tau$를 직접 알려줍니다. 극점 위치만 보면 응답 속도를 즉시 알 수 있다는 뜻.</p>
 
@@ -126,7 +370,98 @@
 
   <p>이 식 하나로 다른 입력에 대한 응답도 모두 계산 가능합니다. 예: 100°C 환경에서 30초 후 25°C 환경으로 다시 옮겼을 때의 응답 등.</p>
 
-  <h2>8. 직렬·병렬·피드백 결합</h2>
+  <h2>8. 주파수 응답 — $s = j\omega$로 잘라보기</h2>
+  <p>$s$를 순수 허수 $j\omega$로 두면 전달 함수가 정현파 입력에 대한 정상상태 응답이 됩니다. <strong>$|H(j\omega)|$</strong>은 진폭이 어떻게 통과·감쇠되는지, <strong>$\angle H(j\omega)$</strong>은 출력이 입력에 비해 얼마나 늦는지를 알려줘요. 이걸 로그 스케일로 그린 게 <a href="../lectures-mech/08-impedance.html">기전공학기초 W8</a>의 보드 플롯입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2차 시스템의 보드 플롯과 공진</h4>
+    <p>$\zeta$를 작게 키우면 보드 플롯의 크기 응답에 <strong>공진 봉우리</strong>(peaking)가 생깁니다. $\zeta &lt; 0.707$이면 항상 $\omega_n$ 부근에서 공진이 보여요. 위상은 항상 $\omega_n$에서 정확히 $-90°$를 통과합니다 — 이게 시스템 식별 실험에서 $\omega_n$을 찾는 방법.</p>
+    <canvas id="bodeDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>감쇠비 ζ <span class="val" id="bdZV">0.3</span><input type="range" id="bdZ" min="0.05" max="2" step="0.02" value="0.3"></label>
+      <label>고유 주파수 ωn <span class="val" id="bdWV">5</span> rad/s<input type="range" id="bdW" min="1" max="20" step="0.5" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bodeDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const z=+document.getElementById('bdZ').value;
+      const wn=+document.getElementById('bdW').value;
+      document.getElementById('bdZV').textContent=z.toFixed(2);
+      document.getElementById('bdWV').textContent=wn.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=60, w=W-90;
+      const fmin=wn/100, fmax=wn*100;
+      function fx(f){return ox+(Math.log10(f/fmin))/4*w;}
+      // top: magnitude (dB)
+      const oyM=130, hM=90;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oyM);ctx.lineTo(ox+w,oyM);ctx.moveTo(ox,30);ctx.lineTo(ox,oyM);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.fillText('|H| (dB)',12,40);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let dB=-60;dB<=20;dB+=20){const yy=oyM-(dB+60)/80*hM;
+        if(yy>30){ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}}
+      for(let p=-2;p<=2;p++){const f=wn*Math.pow(10,p);const xx=fx(f);
+        ctx.beginPath();ctx.moveTo(xx,30);ctx.lineTo(xx,oyM);ctx.stroke();}
+      // 0 dB line
+      ctx.strokeStyle='#aaa';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oyM-60/80*hM);ctx.lineTo(ox+w,oyM-60/80*hM);ctx.stroke();ctx.setLineDash([]);
+      // mag curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const w_=Math.pow(10,lf);
+        const re=wn*wn-w_*w_, im=2*z*wn*w_;
+        const mag=wn*wn/Math.sqrt(re*re+im*im);
+        const dB=20*Math.log10(Math.max(1e-3,mag));
+        const xx=fx(w_), yy=oyM-(dB+60)/80*hM;
+        if(lf===Math.log10(fmin))ctx.moveTo(xx,Math.max(30,Math.min(oyM,yy)));
+        else ctx.lineTo(xx,Math.max(30,Math.min(oyM,yy)));
+      }
+      ctx.stroke();
+      // mark wn
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(fx(wn),30);ctx.lineTo(fx(wn),oyM);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='11px sans-serif';ctx.fillText('ωn='+wn.toFixed(1),fx(wn)+4,40);
+      // bottom: phase
+      const oyP=H-40, hP=90, oyP0=oyP-hP;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oyP);ctx.lineTo(ox+w,oyP);ctx.moveTo(ox,oyP0);ctx.lineTo(ox,oyP);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.fillText('∠H (°)',12,oyP0+10);
+      ctx.strokeStyle='#eee';
+      for(let p=0;p>=-180;p-=45){const yy=oyP0+(-p)/180*hP;
+        ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();
+        ctx.fillStyle='#888';ctx.font='10px sans-serif';ctx.fillText(p+'°',ox-28,yy+3);}
+      // -90 line
+      ctx.strokeStyle='#aaa';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oyP0+90/180*hP);ctx.lineTo(ox+w,oyP0+90/180*hP);ctx.stroke();ctx.setLineDash([]);
+      // phase curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const w_=Math.pow(10,lf);
+        const re=wn*wn-w_*w_, im=2*z*wn*w_;
+        let phi=-Math.atan2(im,re)*180/Math.PI;
+        if(phi>0)phi-=360;
+        const xx=fx(w_), yy=oyP0+(-phi)/180*hP;
+        if(lf===Math.log10(fmin))ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(fx(wn),oyP0);ctx.lineTo(fx(wn),oyP);ctx.stroke();ctx.setLineDash([]);
+      // labels
+      const Mp_dB = z<1/Math.sqrt(2) ? 20*Math.log10(1/(2*z*Math.sqrt(1-z*z))) : 0;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`공진 피크: ${z<0.707?'+'+Mp_dB.toFixed(1)+' dB ('+(Math.pow(10,Mp_dB/20)).toFixed(2)+'배)':'없음 (ζ ≥ 0.707)'}`,ox+200,22);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('주파수 ω (log)',W-110,oyP+22);
+    }
+    document.getElementById('bdZ').addEventListener('input',draw);
+    document.getElementById('bdW').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>9. 직렬·병렬·피드백 결합</h2>
   <p>여러 시스템이 결합된 경우 전달 함수가 어떻게 합쳐지는지:</p>
 
   <table>
@@ -140,7 +475,7 @@
 
   <p>마지막 피드백 식이 W11 폐루프 제어의 기본 식입니다.</p>
 
-  <h2>9. 핵심 한눈 요약</h2>
+  <h2>10. 핵심 한눈 요약</h2>
   <table>
     <thead><tr><th>개념</th><th>식·의미</th></tr></thead>
     <tbody>
@@ -152,7 +487,7 @@
     </tbody>
   </table>
 
-  <h2>10. 더 깊이 보기</h2>
+  <h2>11. 더 깊이 보기</h2>
   <ul>
     <li><a href="../lectures/03-state-space.html">로봇공학특론 L3 상태공간</a> — 전달 함수와 등가인 1차 벡터 미분방정식 표현.</li>
     <li><a href="../lectures-mech/08-impedance.html">기전공학기초 W8 임피던스</a> — $s = j\omega$로 한정하면 정현파 정상상태 응답이 임피던스 그 자체.</li>

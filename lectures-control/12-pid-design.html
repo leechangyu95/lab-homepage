@@ -84,10 +84,54 @@
 
   <h3>방법 ② 계단응답법 (Open-loop)</h3>
   <p>플랜트에 단위 스텝을 가하고 계단응답에서 두 값을 측정합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arZN" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#444"/></marker></defs>
+      <!-- axes -->
+      <line x1="50" y1="40" x2="50" y2="240" stroke="#999"/>
+      <line x1="50" y1="240" x2="580" y2="240" stroke="#999"/>
+      <text x="20" y="40" font-size="12" fill="#666">y(t)</text>
+      <text x="585" y="244" font-size="12" fill="#666">t</text>
+      <!-- final value line K -->
+      <line x1="50" y1="60" x2="580" y2="60" stroke="#c62828" stroke-dasharray="4,3"/>
+      <text x="585" y="64" font-size="11" fill="#c62828">K (정상값)</text>
+      <!-- step input arrow at t=0 -->
+      <line x1="50" y1="240" x2="50" y2="220" stroke="#0b5fff" stroke-width="2"/>
+      <text x="20" y="220" font-size="11" fill="#0b5fff">스텝 인가</text>
+      <!-- delay region (no response yet) -->
+      <rect x="50" y="60" width="80" height="180" fill="rgba(255,193,7,0.10)"/>
+      <text x="60" y="55" font-size="11" fill="#f57c00">L 동안 응답 없음</text>
+      <!-- s-shaped response -->
+      <path d="M50,240 L130,240 C170,240 200,160 250,100 C300,80 400,65 580,60"
+        stroke="#0b5fff" fill="none" stroke-width="2.5"/>
+      <!-- inflection point and tangent line -->
+      <!-- inflection ~ x=210, y=140 -->
+      <circle cx="210" cy="140" r="4" fill="#2e7d32"/>
+      <text x="215" y="135" font-size="11" fill="#2e7d32">변곡점</text>
+      <!-- tangent line from inflection extending both directions -->
+      <line x1="120" y1="240" x2="380" y2="60" stroke="#2e7d32" stroke-width="1.5" stroke-dasharray="3,3"/>
+      <!-- L marker (where tangent crosses time axis) -->
+      <line x1="120" y1="240" x2="120" y2="255" stroke="#444"/>
+      <line x1="50" y1="265" x2="120" y2="265" stroke="#444" marker-end="url(#arZN)" marker-start="url(#arZN)"/>
+      <text x="80" y="278" font-size="13" fill="#f57c00" font-weight="600">L</text>
+      <!-- T marker (where tangent reaches K) -->
+      <line x1="380" y1="60" x2="380" y2="255" stroke="#444"/>
+      <line x1="120" y1="265" x2="380" y2="265" stroke="#444" marker-end="url(#arZN)"/>
+      <text x="240" y="278" font-size="13" fill="#2e7d32" font-weight="600">T</text>
+      <!-- helper note -->
+      <text x="200" y="30" font-size="12" fill="#444">변곡점에서 접선을 그어 두 교점을 읽는다</text>
+      <text x="200" y="45" font-size="11" fill="#666">L = (접선과 t축의 교점) − 0,   T = (접선과 K의 교점) − L</text>
+    </svg>
+    <figcaption>그림 1. 계단응답법의 핵심 기하 — 변곡점 접선이 시간축과 정상값선과 만나는 두 점이 L과 T를 정의합니다.</figcaption>
+  </figure>
+
   <ul>
-    <li>$L$: 지연시간 (응답이 시작되는 시점)</li>
-    <li>$T$: 시정수 (변곡점에서 접선이 정상값에 닿는 데 걸리는 추가 시간)</li>
+    <li><strong>$L$ (지연시간, dead time)</strong>: 스텝을 가한 시점부터 변곡점 접선이 시간축을 가로지를 때까지의 시간. "시스템이 반응을 시작하기까지의 늑장".</li>
+    <li><strong>$T$ (시정수, time constant)</strong>: 그 접선이 시간축을 가로친 점에서 정상값 $K$에 닿기까지의 추가 시간. "반응이 시작된 뒤 얼마나 빨리 자라는가".</li>
+    <li><strong>$K$ (정상값)</strong>: 충분히 긴 시간 뒤 출력이 도달하는 값.</li>
   </ul>
+
   <p>이를 1차 + 시간지연 모델 $G(s) \approx K e^{-Ls}/(Ts+1)$로 근사한 뒤:</p>
 
   <table>
@@ -100,9 +144,28 @@
   </table>
 
   <div class="note">
-    <strong>경고</strong> — Ziegler-Nichols는 출발점일 뿐. 보통 1/4 감쇠비를 목표로 하므로 오버슈트가
-    20~50%로 큽니다. 응용에 맞게 더 보수적으로 줄이는 것이 일반적 (ITAE 튜닝, IMC 튜닝 등 더 부드러운 변형 존재).
+    <strong>실측 팁</strong> — 노이즈가 있는 실제 응답에서 변곡점 위치를 정확히 잡기는 어렵습니다. 실무에서는
+    (a) 응답을 사보쳬프 필터로 부드럽게 만들고, (b) 출력의 28%, 63% 도달 시간 두 값으로
+    "두 점법(Two-point method)"을 쓰는 것이 더 안정적입니다 — $T = 1.5(t_{63\%} - t_{28\%})$, $L = t_{63\%} - T$.
   </div>
+
+  <details class="warn" style="margin:12px 0">
+    <summary><strong>🤔 왜 ZN 추천값은 오버슈트가 20~50%로 클까? — "1/4 감쇠비"의 정체</strong></summary>
+    <p>Ziegler와 Nichols(1942)는 화학공정 엔지니어들에게 "한 진동 다음 진동의 진폭이 1/4로 줄어드는 응답"을 표준이라 보고 표를 맞췄습니다. 이를 <strong>Quarter Amplitude Decay (QAD)</strong>라고 부릅니다.</p>
+    <ol>
+      <li>"한 진동 → 다음 진동의 진폭이 1/4"는 <em>한 주기 동안 감쇠 $e^{-\zeta\omega_n T_d} = 1/4$</em>를 뜻합니다.</li>
+      <li>한 주기 $T_d = 2\pi/\omega_d$이므로 $\zeta\omega_n \cdot 2\pi/\omega_d = \ln 4$.</li>
+      <li>$\omega_d = \omega_n\sqrt{1-\zeta^2}$를 대입하면 $\zeta/\sqrt{1-\zeta^2} = \ln 4 / (2\pi) \approx 0.221$.</li>
+      <li>풀면 $\zeta \approx 0.215$.</li>
+    </ol>
+    <p>$\zeta \approx 0.22$ → 오버슈트 약 <strong>50%</strong>! 그래서 ZN 추천값을 그대로 쓰면 화면에서 응답이 한참 출렁입니다. 1942년 화학공정에서는 외란 회복(load disturbance rejection)이 우선이라 이 정도 진동이 허용됐지만, 모터·로봇처럼 정밀이 중요한 곳에서는 매우 거칠죠.</p>
+    <p><strong>실무 보정</strong>:</p>
+    <ul>
+      <li>오버슈트 줄이기: $K_p$를 ZN 추천값의 50% 정도로 (또는 "Tyreus-Luyben" 표 사용 — $K_p = K_u/3.2$, $T_i = 2.2 T_u$).</li>
+      <li>로봇/모터: ITAE-튜닝(시간 가중 절대 오차 적분 최소) 또는 IMC-PID(내부모델 기반)가 더 부드러운 응답을 줌.</li>
+      <li>오토튜닝 옵션: Åström-Hägglund의 릴레이 방법은 ZN 임계 진동법을 자동화한 것으로 산업 컨트롤러에 내장돼 있음.</li>
+    </ul>
+  </details>
 
   <h2>3. 안티 와인드업 — 적분기를 살아있게 하기</h2>
 

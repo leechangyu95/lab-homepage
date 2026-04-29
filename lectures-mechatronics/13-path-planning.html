@@ -101,6 +101,13 @@
 
   <p><strong>최적성 조건</strong> — $h(n)$이 실제 남은 비용을 절대 초과하지 않으면(<em>admissible</em>) A*가 항상 최적해를 보장합니다. 격자에서는 맨해튼 거리·유클리드 거리가 흔히 admissible.</p>
 
+  <p><strong>한 줄 비유</strong>:</p>
+  <ul>
+    <li><em>BFS</em>: "출발점에서 한 걸음씩 동심원으로 펼쳐가기" — 모든 방향 균등 탐색.</li>
+    <li><em>Dijkstra</em>: "가장 싼 노드부터 차례로 펼치기" — 가중치 있을 때 BFS의 일반화.</li>
+    <li><em>A*</em>: "Dijkstra + 목표 방향 컴퍼스" — 같은 비용이면 목표에 가까운 쪽을 먼저.</li>
+  </ul>
+
   <table>
     <thead><tr><th>알고리즘</th><th>탐색 폭</th><th>최적성</th><th>속도</th></tr></thead>
     <tbody>
@@ -109,6 +116,161 @@
       <tr><td>A*</td><td>좁음 (목표 방향)</td><td>$h$ admissible 시 최적</td><td>빠름</td></tr>
     </tbody>
   </table>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: BFS · Dijkstra · A* — 같은 미로, 다른 탐색</h4>
+    <p>같은 격자에서 세 알고리즘을 실행해 비교하세요. <strong>탐색한 칸 수</strong>(연한 색)와 <strong>최종 경로 길이</strong>(진한 선)를 보면 A*가 왜 표준이 됐는지 한눈에 보입니다. 칸을 클릭해 장애물을 추가/제거하고, 출발(S)·목표(G)도 마우스로 끌어 옮길 수 있어요.</p>
+    <canvas id="astarDemo" width="640" height="400" style="cursor:crosshair"></canvas>
+    <div class="controls">
+      <label>알고리즘
+        <select id="astarAlg">
+          <option value="bfs">BFS</option>
+          <option value="dijkstra">Dijkstra</option>
+          <option value="astar" selected>A*</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="astarDiag" checked> 대각선 이동 허용</label>
+      <button id="astarRandom">랜덤 장애물</button>
+      <button id="astarClear">초기화</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 출발 S &nbsp; 🔴 목표 G &nbsp; ⬛ 장애물 &nbsp; 🟦 탐색됨 &nbsp; 🟣 최종 경로</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('astarDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLS=32, ROWS=20, CELL=W/COLS;
+    let grid=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>0)); // 0 free, 1 obstacle
+    let start={r:3,c:3}, goal={r:ROWS-3,c:COLS-3};
+    let drag=null;
+    function inBounds(r,c){return r>=0&&r<ROWS&&c>=0&&c<COLS;}
+    function neighbors(r,c,diag){
+      const nbs=[];
+      const off4=[[-1,0],[1,0],[0,-1],[0,1]];
+      const off8=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+      const list=diag?off8:off4;
+      for(const [dr,dc] of list){
+        const nr=r+dr, nc=c+dc;
+        if(!inBounds(nr,nc))continue;
+        if(grid[nr][nc]===1)continue;
+        const cost=(dr&&dc)?Math.SQRT2:1;
+        nbs.push([nr,nc,cost]);
+      }
+      return nbs;
+    }
+    function manhattan(r,c){return Math.abs(r-goal.r)+Math.abs(c-goal.c);}
+    function octile(r,c){const dr=Math.abs(r-goal.r),dc=Math.abs(c-goal.c);return Math.max(dr,dc)+(Math.SQRT2-1)*Math.min(dr,dc);}
+    function search(alg,diag){
+      const visited=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>false));
+      const dist=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>Infinity));
+      const parent={};
+      dist[start.r][start.c]=0;
+      const open=[{r:start.r,c:start.c,f:0}];
+      let visitedCount=0;
+      while(open.length>0){
+        // pop min
+        let bestI=0;
+        for(let i=1;i<open.length;i++)if(open[i].f<open[bestI].f)bestI=i;
+        const cur=open.splice(bestI,1)[0];
+        if(visited[cur.r][cur.c])continue;
+        visited[cur.r][cur.c]=true;
+        visitedCount++;
+        if(cur.r===goal.r&&cur.c===goal.c)break;
+        for(const [nr,nc,cost] of neighbors(cur.r,cur.c,diag)){
+          const newDist = (alg==='bfs') ? dist[cur.r][cur.c]+1 : dist[cur.r][cur.c]+cost;
+          if(newDist<dist[nr][nc]){
+            dist[nr][nc]=newDist;
+            parent[nr+','+nc]=cur.r+','+cur.c;
+            let f=newDist;
+            if(alg==='astar')f=newDist+(diag?octile(nr,nc):manhattan(nr,nc));
+            open.push({r:nr,c:nc,f});
+          }
+        }
+      }
+      // path
+      const path=[];
+      if(visited[goal.r][goal.c]){
+        let cur=goal.r+','+goal.c;
+        while(cur){path.push(cur);cur=parent[cur];}
+      }
+      return {visited,visitedCount,path,distGoal:dist[goal.r][goal.c]};
+    }
+    function draw(){
+      const alg=document.getElementById('astarAlg').value;
+      const diag=document.getElementById('astarDiag').checked;
+      const res=search(alg,diag);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // grid
+      for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+        const x=c*CELL, y=r*CELL;
+        if(grid[r][c]===1){ctx.fillStyle='#333';ctx.fillRect(x,y,CELL,CELL);}
+        else if(res.visited[r][c]){ctx.fillStyle='rgba(11,95,255,0.20)';ctx.fillRect(x,y,CELL,CELL);}
+        else{ctx.fillStyle='#fff';ctx.fillRect(x,y,CELL,CELL);}
+        ctx.strokeStyle='#e5e5e5';ctx.strokeRect(x,y,CELL,CELL);
+      }
+      // path
+      if(res.path.length>0){
+        ctx.strokeStyle='#7b1fa2';ctx.lineWidth=4;ctx.beginPath();
+        res.path.forEach((id,i)=>{const [r,c]=id.split(',').map(Number);
+          const x=c*CELL+CELL/2, y=r*CELL+CELL/2;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+      }
+      // start/goal
+      const sx=start.c*CELL+CELL/2, sy=start.r*CELL+CELL/2;
+      const gx=goal.c*CELL+CELL/2, gy=goal.r*CELL+CELL/2;
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(sx,sy,CELL*0.4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold '+(CELL*0.5)+'px sans-serif';ctx.textAlign='center';
+      ctx.fillText('S',sx,sy+CELL*0.18);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(gx,gy,CELL*0.4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.fillText('G',gx,gy+CELL*0.18);
+      ctx.textAlign='left';
+      // stats overlay (top-left)
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,260,55);
+      ctx.strokeStyle='#bbb';ctx.strokeRect(8,8,260,55);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`알고리즘: ${alg.toUpperCase()}`,16,28);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`탐색 칸: ${res.visitedCount},  경로 길이: ${isFinite(res.distGoal)?res.distGoal.toFixed(2):'경로 없음'}`,16,48);
+    }
+    function getCell(e){
+      const r=c.getBoundingClientRect();
+      const x=e.clientX-r.left, y=e.clientY-r.top;
+      return {r:Math.floor(y/CELL), c:Math.floor(x/CELL)};
+    }
+    c.addEventListener('mousedown',e=>{
+      const {r,c:cc}=getCell(e);
+      if(!inBounds(r,cc))return;
+      if(r===start.r&&cc===start.c){drag='start';return;}
+      if(r===goal.r&&cc===goal.c){drag='goal';return;}
+      drag={mode:grid[r][cc]===0?'add':'remove'};
+      grid[r][cc]=grid[r][cc]===0?1:0;
+      draw();
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!drag)return;
+      const {r,c:cc}=getCell(e);
+      if(!inBounds(r,cc))return;
+      if(drag==='start'){if(grid[r][cc]===0){start={r,c:cc};draw();}}
+      else if(drag==='goal'){if(grid[r][cc]===0){goal={r,c:cc};draw();}}
+      else{grid[r][cc]=drag.mode==='add'?1:0;draw();}
+    });
+    window.addEventListener('mouseup',()=>{drag=null;});
+    document.getElementById('astarAlg').addEventListener('change',draw);
+    document.getElementById('astarDiag').addEventListener('change',draw);
+    document.getElementById('astarRandom').onclick=()=>{
+      grid=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>Math.random()<0.25?1:0));
+      grid[start.r][start.c]=0;grid[goal.r][goal.c]=0;
+      draw();
+    };
+    document.getElementById('astarClear').onclick=()=>{
+      grid=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>0));draw();
+    };
+    // initial obstacles
+    for(let r=5;r<15;r++)grid[r][12]=1;
+    for(let c=15;c<25;c++)grid[10][c]=1;
+    draw();
+  })();
+  </script>
 
   <h2>5. 샘플링 기반 경로 계획</h2>
   <p>그래프 탐색은 격자 해상도가 높아지면 차원 폭발 — 6-DOF 로봇팔에서는 격자가 너무 커집니다. 샘플링 기반은 전체 공간을 격자로 나누지 않고 <strong>임의의 점들을 샘플링해 그래프를 즉시 만들어가는</strong> 접근.</p>
@@ -133,6 +295,117 @@
 
   <h3>5.3 RRT*</h3>
   <p>RRT의 개선판. 새 노드를 추가할 때 주변 기존 노드들과의 비용을 비교해 부모를 다시 선택(<em>rewiring</em>). 샘플 수가 무한대로 가면 최적해로 수렴(<em>asymptotically optimal</em>). 자율주행·드론 동적 회피에 자주.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: RRT가 트리를 어떻게 키우는지</h4>
+    <p>"성장" 버튼을 누르면 한 스텝씩 트리가 자랍니다. <strong>랜덤 점</strong> → <strong>가장 가까운 노드</strong> → <strong>그 방향으로 일정 거리만큼 새 노드 추가</strong>. 격자 기반 A*가 모든 칸을 평가하는 것과 달리 RRT는 자유공간을 빠르게 "찔러" 채워가요. 이래서 고차원에서도 동작합니다.</p>
+    <canvas id="rrtDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="rrtStep">1 스텝</button>
+      <button id="rrtRun">자동 성장 (50 스텝)</button>
+      <button id="rrtRst">리셋</button>
+      <label>스텝 길이 <span class="val" id="rrtSV">25</span><input type="range" id="rrtS" min="10" max="60" step="5" value="25"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rrtDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const start={x:60,y:H-60}, goal={x:W-60,y:60};
+    const obstacles=[
+      {x:200,y:80,w:80,h:140},
+      {x:380,y:140,w:60,h:160},
+      {x:300,y:280,w:120,h:30}
+    ];
+    let nodes=[{x:start.x,y:start.y,parent:-1}];
+    let pathFound=false;
+    function reset(){nodes=[{x:start.x,y:start.y,parent:-1}];pathFound=false;draw();}
+    document.getElementById('rrtRst').onclick=reset;
+    function inObstacle(x,y){
+      for(const o of obstacles){if(x>o.x&&x<o.x+o.w&&y>o.y&&y<o.y+o.h)return true;}
+      return false;
+    }
+    function lineHitsObstacle(x1,y1,x2,y2){
+      const N=20;
+      for(let i=0;i<=N;i++){const t=i/N;const x=x1+t*(x2-x1),y=y1+t*(y2-y1);
+        if(inObstacle(x,y))return true;}
+      return false;
+    }
+    function step(){
+      if(pathFound)return;
+      const stepLen=+document.getElementById('rrtS').value;
+      // sample
+      let rx=Math.random()*W, ry=Math.random()*H;
+      // bias toward goal 10%
+      if(Math.random()<0.1){rx=goal.x;ry=goal.y;}
+      // nearest
+      let bestI=0,bestD=Infinity;
+      for(let i=0;i<nodes.length;i++){
+        const d=Math.hypot(nodes[i].x-rx,nodes[i].y-ry);
+        if(d<bestD){bestD=d;bestI=i;}
+      }
+      const near=nodes[bestI];
+      const ang=Math.atan2(ry-near.y, rx-near.x);
+      const nx=near.x+stepLen*Math.cos(ang);
+      const ny=near.y+stepLen*Math.sin(ang);
+      if(nx<0||nx>W||ny<0||ny>H)return;
+      if(inObstacle(nx,ny))return;
+      if(lineHitsObstacle(near.x,near.y,nx,ny))return;
+      nodes.push({x:nx,y:ny,parent:bestI});
+      if(Math.hypot(nx-goal.x,ny-goal.y)<stepLen && !lineHitsObstacle(nx,ny,goal.x,goal.y)){
+        nodes.push({x:goal.x,y:goal.y,parent:nodes.length-1});
+        pathFound=true;
+      }
+    }
+    document.getElementById('rrtStep').onclick=()=>{step();draw();};
+    document.getElementById('rrtRun').onclick=()=>{
+      let i=0;
+      const itv=setInterval(()=>{
+        if(pathFound||i>=50){clearInterval(itv);return;}
+        step();draw();i++;
+      },40);
+    };
+    document.getElementById('rrtS').addEventListener('input',()=>{
+      document.getElementById('rrtSV').textContent=document.getElementById('rrtS').value;
+    });
+    function draw(){
+      document.getElementById('rrtSV').textContent=document.getElementById('rrtS').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // obstacles
+      ctx.fillStyle='#444';obstacles.forEach(o=>ctx.fillRect(o.x,o.y,o.w,o.h));
+      // tree edges
+      ctx.strokeStyle='#90caf9';ctx.lineWidth=1;
+      for(let i=1;i<nodes.length;i++){
+        const n=nodes[i],p=nodes[n.parent];
+        ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(n.x,n.y);ctx.stroke();
+      }
+      // tree nodes
+      ctx.fillStyle='#0b5fff';
+      nodes.forEach(n=>{ctx.beginPath();ctx.arc(n.x,n.y,2.5,0,Math.PI*2);ctx.fill();});
+      // path
+      if(pathFound){
+        ctx.strokeStyle='#7b1fa2';ctx.lineWidth=3;ctx.beginPath();
+        let i=nodes.length-1;
+        ctx.moveTo(nodes[i].x,nodes[i].y);
+        while(nodes[i].parent>=0){i=nodes[i].parent;ctx.lineTo(nodes[i].x,nodes[i].y);}
+        ctx.stroke();
+      }
+      // start, goal
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(start.x,start.y,10,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+      ctx.fillText('S',start.x,start.y+5);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(goal.x,goal.y,10,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.fillText('G',goal.x,goal.y+5);
+      ctx.textAlign='left';
+      // status
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,200,40);
+      ctx.strokeStyle='#bbb';ctx.strokeRect(8,8,200,40);
+      ctx.fillStyle=pathFound?'#2e7d32':'#666';ctx.font='13px sans-serif';
+      ctx.fillText(`노드 ${nodes.length}개 ${pathFound?'· 경로 발견!':'· 탐색 중'}`,14,30);
+    }
+    draw();
+  })();
+  </script>
 
   <table>
     <thead><tr><th>알고리즘</th><th>특징</th><th>적합 응용</th></tr></thead>

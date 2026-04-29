@@ -51,6 +51,17 @@
 
   <h2>2. 이득여유 GM과 위상여유 PM의 정의</h2>
 
+  <h3>한 줄 직관 — 왜 두 개를 모두 보는가?</h3>
+
+  <p>폐루프가 발산하는 조건은 단 하나, $L(j\omega) = -1$입니다(나이퀴스트 점). 복소수 −1은 <em>크기 1, 위상 −180°</em>인 점이라서 두 가지 다른 경로로 거기에 도달할 수 있습니다.</p>
+
+  <ul>
+    <li><strong>위상은 그대로인데 크기만 커지다 보면</strong> 크기가 1(즉 0 dB)에 닿는 순간 발산. 이때 "내 위상은 이미 −180°였는가?"를 봐서, 위상이 이미 −180°에 닿은 주파수($\omega_{pc}$)에서 크기가 0 dB까지 얼마 남았는지를 잰 것이 <strong>이득여유 GM</strong>.</li>
+    <li><strong>크기는 그대로인데 위상이 더 늦다 보면</strong> 위상이 −180°에 닿는 순간 발산. 이때 "내 크기는 이미 1이었는가?"를 봐서, 크기가 이미 0 dB인 주파수($\omega_{gc}$)에서 위상이 −180°까지 얼마 남았는지를 잰 것이 <strong>위상여유 PM</strong>.</li>
+  </ul>
+
+  <p>현실의 모델 오차는 두 가지가 섞여 들어옵니다 — 부품 게인이 ±20% 어긋날 수도 있고, 액추에이터·필터·통신지연이 위상을 더 늦출 수도 있습니다. 그래서 <em>두 방향 모두</em>의 여유가 필요합니다.</p>
+
   <p>개루프 전달함수 $L(s) = G(s)C(s)$의 Bode 선도에서:</p>
 
   <ul>
@@ -65,6 +76,13 @@
   </ul>
 
   <p>둘 다 양수일 때 폐루프가 안정합니다. 0이면 안정 경계, 음수면 불안정.</p>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>📐 PM이 시간 지연으로 환산하면 얼마인가?</strong></summary>
+    <p>시간 지연 $T_d$의 위상 효과는 $-\omega T_d$ rad, 즉 $-\omega T_d \cdot 180/\pi$ 도. PM[°]만큼의 위상을 까먹으면 발산하니까, 견딜 수 있는 최대 지연은:
+    $$ T_{d,\max} = \frac{\text{PM}[\text{rad}]}{\omega_{gc}} = \frac{\text{PM}[\degree]}{\omega_{gc}} \cdot \frac{\pi}{180} $$</p>
+    <p>예: PM = 60°, $\omega_{gc} = 5$ rad/s → $T_{d,\max} \approx 0.21$ s. 통신지연이 0.21초를 넘는 시스템은 발산. 분산 제어·원격조종에서 매우 중요한 숫자.</p>
+  </details>
 
   <h2>3. Bode 선도에서 마진 읽기</h2>
 
@@ -218,6 +236,31 @@
 
   <p>예: PM = 45° → ζ ≈ 0.45 → 오버슈트 약 20%. PM = 60° → ζ ≈ 0.6 → 오버슈트 약 9%.
   Bode를 보면 시간응답을 짐작할 수 있다는 의미.</p>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>📐 왜 100ζ인가? — 표준 2차 시스템에서의 짧은 유도</strong></summary>
+    <p>표준 2차 개루프 $L(s) = \dfrac{\omega_n^2}{s(s + 2\zeta\omega_n)}$로 단위 피드백을 걸면 폐루프가 정확히 표준형이 됩니다. 이 $L$의 PM을 따져 봅니다.</p>
+    <ol>
+      <li><strong>이득 교차주파수</strong>: $|L(j\omega_{gc})| = 1$ 조건에서
+      $$ \omega_{gc}^2 = \omega_n^2\sqrt{4\zeta^4 + 1} - 2\zeta^2\omega_n^2 $$
+      복잡해 보이지만 $\omega_{gc}/\omega_n \equiv u$로 두면 $u = \sqrt{\sqrt{4\zeta^4+1} - 2\zeta^2}$.</li>
+      <li><strong>위상 계산</strong>: $\angle L(j\omega_{gc}) = -90° - \arctan(u/(2\zeta))$. 따라서
+      $$ \text{PM} = 90° - \arctan\!\bigl(u/(2\zeta)\bigr) = \arctan\!\bigl(2\zeta/u\bigr) $$
+      </li>
+      <li><strong>작은 ζ에 대한 전개</strong>: $\zeta$가 작으면 $u \approx 1$이라 $\text{PM} \approx \arctan(2\zeta)$. 라디안에서 $\arctan(2\zeta) \approx 2\zeta - (2\zeta)^3/3 + \cdots$
+      이를 도(°)로 바꾸면 $\text{PM}[°] \approx (2\zeta)\cdot(180/\pi) \approx 114.6\,\zeta$.</li>
+      <li>$\zeta < 0.6$ 영역에서 보정해 평균을 잡으면 표 값이 100ζ에 가까워집니다.</li>
+    </ol>
+    <p><strong>유효 범위</strong> — PM ≲ 60° (즉 ζ ≲ 0.6)에서만 잘 맞고, PM이 더 커지면 실제 ζ는 더 빨리 1로 다가갑니다. 표로 보면:</p>
+    <table>
+      <tbody>
+        <tr><th>PM</th><td>10°</td><td>30°</td><td>45°</td><td>60°</td><td>70°</td></tr>
+        <tr><th>실제 ζ</th><td>0.09</td><td>0.29</td><td>0.42</td><td>0.61</td><td>0.76</td></tr>
+        <tr><th>근사 PM/100</th><td>0.10</td><td>0.30</td><td>0.45</td><td>0.60</td><td>0.70</td></tr>
+      </tbody>
+    </table>
+    <p>또한 이 식은 <strong>2차 표준형에 한정</strong>. 시스템에 영점·시간지연·고차극이 있으면 PM과 ζ의 관계가 살짝 달라집니다. 그래도 "PM ≈ 100ζ"는 첫 어림에 매우 유용한 손어림입니다.</p>
+  </details>
 
   <h2>7. Python으로 마진 계산</h2>
 

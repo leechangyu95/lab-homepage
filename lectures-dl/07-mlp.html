@@ -189,6 +189,117 @@
   })();
   </script>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 은닉층은 "특징 공간을 새로 그린다"</h4>
+    <p>왼쪽: 원래 입력 공간 $(x_1, x_2)$ — XOR 네 점이 직선으로 분리 불가능. 오른쪽: 은닉 뉴런 두 개의 출력 $(h_1, h_2)$가 만드는 새 공간 — 4개 점이 어떻게 위치를 바꾸는지 보세요. 좋은 가중치 조합(예: 프리셋 "AND-NOT 트릭")에서는 정답이 같은 점들이 겹쳐지면서 <strong>한 직선으로 분리 가능한 모양</strong>이 됩니다.</p>
+    <canvas id="featSpace" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>w₁₁ <span class="val" id="fw11V">2</span><input type="range" id="fw11" min="-3" max="3" step="0.1" value="2"></label>
+      <label>w₁₂ <span class="val" id="fw12V">-2</span><input type="range" id="fw12" min="-3" max="3" step="0.1" value="-2"></label>
+      <label>b₁ <span class="val" id="fb1V">-1</span><input type="range" id="fb1" min="-3" max="3" step="0.1" value="-1"></label>
+      <label>w₂₁ <span class="val" id="fw21V">-2</span><input type="range" id="fw21" min="-3" max="3" step="0.1" value="-2"></label>
+      <label>w₂₂ <span class="val" id="fw22V">2</span><input type="range" id="fw22" min="-3" max="3" step="0.1" value="2"></label>
+      <label>b₂ <span class="val" id="fb2V">-1</span><input type="range" id="fb2" min="-3" max="3" step="0.1" value="-1"></label>
+      <button id="fPreset">프리셋: AND-NOT 트릭</button>
+      <button id="fZero">초기화 (0)</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('featSpace');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const sigmoid=z=>1/(1+Math.exp(-z));
+    const pts=[{x:0,y:0,c:0},{x:1,y:1,c:0},{x:0,y:1,c:1},{x:1,y:0,c:1}];
+    function draw(){
+      const w11=+document.getElementById('fw11').value,w12=+document.getElementById('fw12').value,b1=+document.getElementById('fb1').value;
+      const w21=+document.getElementById('fw21').value,w22=+document.getElementById('fw22').value,b2=+document.getElementById('fb2').value;
+      ['fw11','fw12','fb1','fw21','fw22','fb2'].forEach(id=>document.getElementById(id+'V').textContent=document.getElementById(id).value);
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      // left: input space
+      const lx=20,ly=30,lw=W*0.45,lh=H-50;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(lx,ly,lw,lh);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('① 입력 공간 (x₁, x₂)',lx,ly-6);
+      const cxL=lx+lw/2,cyL=ly+lh/2,scL=Math.min(lw,lh)*0.32;
+      ctx.strokeStyle='#eee';
+      ctx.beginPath();ctx.moveTo(lx,cyL);ctx.lineTo(lx+lw,cyL);ctx.moveTo(cxL,ly);ctx.lineTo(cxL,ly+lh);ctx.stroke();
+      pts.forEach(p=>{
+        const px=cxL+(p.x-0.5)*2*scL,py=cyL-(p.y-0.5)*2*scL;
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(px,py,11,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';
+        ctx.fillText(`(${p.x},${p.y})`,px-15,py+4);
+      });
+      // right: hidden space
+      const rx=lx+lw+30,ry=30,rw=W-rx-15,rh=H-50;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(rx,ry,rw,rh);
+      ctx.fillStyle='#333';ctx.fillText('② 은닉 공간 (h₁, h₂) — 시그모이드 뒤',rx,ry-6);
+      const cxR=rx+rw*0.18,cyR=ry+rh*0.82,scR=Math.min(rw,rh)*0.7;
+      ctx.strokeStyle='#eee';
+      ctx.beginPath();ctx.moveTo(rx,cyR);ctx.lineTo(rx+rw,cyR);ctx.moveTo(cxR,ry);ctx.lineTo(cxR,ry+rh);ctx.stroke();
+      // grid: shade by output decision (linear OR after hidden)
+      const STEP=12;
+      for(let i=0;i<rw;i+=STEP)for(let j=0;j<rh;j+=STEP){
+        const h1=(rx+i-cxR)/scR,h2=(cyR-(ry+j))/scR;
+        if(h1<-0.05||h1>1.05||h2<-0.05||h2>1.05)continue;
+        // try simple decision: predicted=1 if h1+h2 > 0.5 (a candidate output layer)
+        const score=h1+h2-0.5;
+        ctx.fillStyle=score>0?'rgba(255,140,0,0.07)':'rgba(11,95,255,0.07)';
+        ctx.fillRect(rx+i,ry+j,STEP,STEP);
+      }
+      // axis labels
+      ctx.fillStyle='#999';ctx.font='11px sans-serif';
+      ctx.fillText('h₁',cxR+scR*1.05,cyR+4);ctx.fillText('h₂',cxR-12,cyR-scR*1.05);
+      ctx.fillText('0',cxR-10,cyR+12);ctx.fillText('1',cxR+scR-3,cyR+12);ctx.fillText('1',cxR-12,cyR-scR);
+      // mapped points
+      pts.forEach(p=>{
+        const z1=w11*p.x+w12*p.y+b1,z2=w21*p.x+w22*p.y+b2;
+        const h1=sigmoid(z1),h2=sigmoid(z2);
+        const px=cxR+h1*scR,py=cyR-h2*scR;
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(px,py,11,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      });
+      // separability test: try linear separation in (h1,h2)
+      const proj=pts.map(p=>{
+        const z1=w11*p.x+w12*p.y+b1,z2=w21*p.x+w22*p.y+b2;
+        return {h1:sigmoid(z1),h2:sigmoid(z2),c:p.c};
+      });
+      // is linearly separable in 2D? Use simple try via SVM-ish: check if class-1 mean and class-0 mean differ enough
+      const c0=proj.filter(p=>p.c===0),c1=proj.filter(p=>p.c===1);
+      const m0=[c0.reduce((a,b)=>a+b.h1,0)/c0.length,c0.reduce((a,b)=>a+b.h2,0)/c0.length];
+      const m1=[c1.reduce((a,b)=>a+b.h1,0)/c1.length,c1.reduce((a,b)=>a+b.h2,0)/c1.length];
+      const wL=[m1[0]-m0[0],m1[1]-m0[1]];const bL=-(wL[0]*(m0[0]+m1[0])/2+wL[1]*(m0[1]+m1[1])/2);
+      let ok=true;
+      proj.forEach(p=>{const s=wL[0]*p.h1+wL[1]*p.h2+bL;const pred=s>0?1:0;if(pred!==p.c)ok=false;});
+      ctx.fillStyle=ok?'#2e7d32':'#c62828';ctx.font='bold 13px sans-serif';
+      ctx.fillText(ok?'✓ 새 공간에서 직선 분리 가능!':'✗ 아직 직선으로 분리 불가능',rx+8,ry+rh+18);
+      if(ok){
+        // draw separating line in hidden space
+        ctx.strokeStyle='rgba(46,125,50,0.6)';ctx.lineWidth=2;ctx.setLineDash([5,3]);
+        ctx.beginPath();
+        const dx=-wL[1],dy=wL[0];const cx0=cxR+(m0[0]+m1[0])/2*scR,cy0=cyR-(m0[1]+m1[1])/2*scR;
+        ctx.moveTo(cx0-dx*scR,cy0+dy*scR);ctx.lineTo(cx0+dx*scR,cy0-dy*scR);ctx.stroke();ctx.setLineDash([]);
+      }
+    }
+    ['fw11','fw12','fb1','fw21','fw22','fb2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    document.getElementById('fPreset').onclick=()=>{
+      // hidden 1 ≈ AND(x1, NOT x2): w11=+5, w12=-5, b1=-2.5  → fires when x1=1, x2=0
+      // hidden 2 ≈ AND(NOT x1, x2): w21=-5, w22=+5, b2=-2.5  → fires when x1=0, x2=1
+      document.getElementById('fw11').value=5;document.getElementById('fw12').value=-5;document.getElementById('fb1').value=-2.5;
+      document.getElementById('fw21').value=-5;document.getElementById('fw22').value=5;document.getElementById('fb2').value=-2.5;
+      draw();
+    };
+    document.getElementById('fZero').onclick=()=>{
+      ['fw11','fw12','fb1','fw21','fw22','fb2'].forEach(id=>document.getElementById(id).value=0);draw();
+    };
+    draw();
+  })();
+  </script>
+
+  <p>"AND-NOT 트릭" 프리셋을 눌러 보세요. 입력 네 점이 은닉 공간에서 어떻게 흘러가는지 보면, 정답이 같은 두 점(0과 1, 그리고 0과 1)이 거의 같은 자리로 모여 자연스레 한 직선으로 갈라집니다. 슬라이더를 무작위로 흔들면 다시 분리 불가능한 상태가 되고, 학습 알고리즘(역전파)이 하는 일이란 결국 이 6개 슬라이더를 자동으로 "분리 가능한 위치"로 미세조정하는 것입니다. 출력층의 단순 OR(또는 선형 분류)는 그저 마무리일 뿐 — 신경망의 진짜 일은 <strong>은닉층에서 좋은 표현(representation)을 만드는 것</strong>이라는 사실이 이 데모의 핵심입니다.</p>
+
   <h2>3. 다층 퍼셉트론 (MLP) — 비선형의 열쇠</h2>
   <p>해결책은 의외로 단순했습니다 — <strong>층을 하나 더 쌓고 비선형 활성함수를 넣자</strong>. 입력층-은닉층-출력층의 구조에서 은닉층 뉴런 두 개만 있어도 XOR을 풀 수 있습니다.</p>
   $$ \mathbf{h} = \sigma(W_1 \mathbf{x} + \mathbf{b}_1), \quad \hat{y} = \sigma(W_2 \mathbf{h} + b_2) $$

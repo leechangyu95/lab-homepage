@@ -59,9 +59,265 @@
     <li><strong>Tanh</strong> $\tanh(x)$: −1~1 출력, RNN의 게이트에 자주</li>
   </ul>
 
+  <p><strong>왜 비선형성이 필요한가?</strong> 활성화 함수가 없거나 모두 선형이면, 아무리 층을 깊게 쌓아도 결국 한 번의 행렬 곱 $y = W_{\text{eff}}\,x + b_{\text{eff}}$로 합쳐집니다 — XOR 같은 단순한 문제도 못 풀어요. 비선형 활성화가 끼어들면 층마다 새로운 "꺾임"이 생겨 임의의 곡선·결정경계를 만들 수 있게 됩니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 활성화 함수와 그 도함수(=그래디언트)</h4>
+    <p>같은 입력에 대해 세 활성화의 모양과 도함수를 비교하세요. 도함수가 학습에 직결됩니다 — <strong>도함수가 0이 되는 영역</strong>이 많으면 그래디언트가 사라져(vanishing gradient) 학습이 멈춰요.</p>
+    <ul style="font-size:13px;color:#444;margin:6px 0">
+      <li>Sigmoid: 양 끝(|x|>4)에서 도함수 ≈ 0 → 깊은 망에서 학습 멈춤. 1986년 이후 한참 사용했지만 ReLU에 밀림.</li>
+      <li>Tanh: 0 중심, sigmoid보다 좋음. 하지만 여전히 양 끝에서 saturate.</li>
+      <li>ReLU: 양수 영역에서 도함수가 1 → 그래디언트가 살아 있음. 음수 영역에선 도함수 0 ("Dying ReLU" 문제).</li>
+    </ul>
+    <canvas id="actDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>활성화
+        <select id="actSel">
+          <option value="sigmoid">Sigmoid</option>
+          <option value="tanh">Tanh</option>
+          <option value="relu" selected>ReLU</option>
+          <option value="leaky">Leaky ReLU</option>
+        </select>
+      </label>
+      <label>입력 x <span class="val" id="actXV">0</span><input type="range" id="actX" min="-5" max="5" step="0.05" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('actDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const fns={
+      sigmoid: x=>1/(1+Math.exp(-x)),
+      tanh: x=>Math.tanh(x),
+      relu: x=>Math.max(0,x),
+      leaky: x=>x>0?x:0.1*x
+    };
+    const dfns={
+      sigmoid: x=>{const s=1/(1+Math.exp(-x));return s*(1-s);},
+      tanh: x=>1-Math.tanh(x)*Math.tanh(x),
+      relu: x=>x>0?1:0,
+      leaky: x=>x>0?1:0.1
+    };
+    function draw(){
+      const k=document.getElementById('actSel').value;
+      const x0=+document.getElementById('actX').value;
+      document.getElementById('actXV').textContent=x0.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // two side-by-side panels
+      const pW=W/2-30, panels=[
+        {ox:30,title:'활성화 f(x)',fn:fns[k],col:'#0b5fff',ymax:1.5,ymin:-1.2},
+        {ox:W/2+10,title:"도함수 f'(x)",fn:dfns[k],col:'#c62828',ymax:1.2,ymin:-0.2}
+      ];
+      panels.forEach(p=>{
+        const oy=H-40, h=H-70;
+        ctx.strokeStyle='#999';ctx.beginPath();
+        ctx.moveTo(p.ox,oy);ctx.lineTo(p.ox+pW,oy);
+        ctx.moveTo(p.ox+pW/2,30);ctx.lineTo(p.ox+pW/2,oy);ctx.stroke();
+        ctx.fillStyle='#222';ctx.font='13px sans-serif';ctx.fillText(p.title,p.ox+5,22);
+        // x = 0 line is the vertical axis
+        const xMin=-5,xMax=5;
+        function px(x){return p.ox+(x-xMin)/(xMax-xMin)*pW;}
+        function py(v){return oy-(v-p.ymin)/(p.ymax-p.ymin)*h;}
+        // grid
+        ctx.strokeStyle='#eee';
+        for(let xv=-4;xv<=4;xv+=2){const xx=px(xv);ctx.beginPath();ctx.moveTo(xx,30);ctx.lineTo(xx,oy);ctx.stroke();}
+        // 0 line
+        ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(p.ox,py(0));ctx.lineTo(p.ox+pW,py(0));ctx.stroke();
+        // curve
+        ctx.strokeStyle=p.col;ctx.lineWidth=2.5;ctx.beginPath();
+        for(let i=0;i<=200;i++){const x=xMin+(xMax-xMin)*i/200;const v=p.fn(x);
+          const xx=px(x),yy=py(Math.max(p.ymin,Math.min(p.ymax,v)));
+          if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+        ctx.stroke();
+        // current point
+        const v0=p.fn(x0);
+        const xx=px(x0),yy=py(v0);
+        ctx.fillStyle='#222';ctx.beginPath();ctx.arc(xx,yy,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.setLineDash([2,2]);
+        ctx.beginPath();ctx.moveTo(xx,oy);ctx.lineTo(xx,yy);ctx.moveTo(p.ox,yy);ctx.lineTo(xx,yy);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle=p.col;ctx.font='12px sans-serif';
+        ctx.fillText(`= ${v0.toFixed(3)}`,xx+8,yy-6);
+        // x label
+        ctx.fillStyle='#666';ctx.font='11px sans-serif';
+        ctx.fillText('x',p.ox+pW-12,oy-4);
+      });
+    }
+    document.getElementById('actSel').addEventListener('change',draw);
+    document.getElementById('actX').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
   <h3>2.3 다층 신경망(MLP)과 "Deep"</h3>
   <p>퍼셉트론을 여러 층으로 쌓으면 <strong>다층 신경망(MLP, Multi-Layer Perceptron)</strong>. 그중 은닉층(hidden layer)이 여러 개 있는 신경망을 <strong>심층 신경망(DNN, Deep Neural Network)</strong>이라 부르고, 이를 학습하는 분야가 딥러닝입니다.</p>
   <p>"Deep"의 핵심은 깊이에서 오는 <strong>표현력</strong>입니다. 1개 은닉층으로도 임의 함수를 근사할 수 있다는 정리(보편 근사 정리)가 있지만, 실제로는 깊게 쌓을수록 같은 정확도를 더 적은 파라미터로 달성합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 퍼셉트론 1개로 풀 수 없는 문제 — XOR</h4>
+    <p>퍼셉트론(은닉층 없음) = 직선 결정 경계만 가능 → XOR(대각선 패턴)을 절대 못 풀어요. 은닉층을 추가하면 휘어진 경계가 가능해지고 XOR이 풀립니다. 데이터 패턴을 바꿔보고, 은닉 뉴런 수를 0과 4로 바꿔 결과를 비교하세요.</p>
+    <canvas id="xorDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>패턴
+        <select id="xorPat">
+          <option value="and">AND (선형 가능)</option>
+          <option value="or">OR (선형 가능)</option>
+          <option value="xor" selected>XOR (선형 불가능!)</option>
+          <option value="circle">원형 (선형 불가능)</option>
+        </select>
+      </label>
+      <label>은닉 뉴런 수 <span class="val" id="xorHV">4</span><input type="range" id="xorH" min="0" max="8" step="1" value="4"></label>
+      <button id="xorTrain">학습 (1000 epochs)</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('xorDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let model=null;
+    function genData(pat){
+      const data=[];
+      if(pat==='and'){data.push([[0,0],0],[[0,1],0],[[1,0],0],[[1,1],1]);}
+      else if(pat==='or'){data.push([[0,0],0],[[0,1],1],[[1,0],1],[[1,1],1]);}
+      else if(pat==='xor'){data.push([[0,0],0],[[0,1],1],[[1,0],1],[[1,1],0]);}
+      else if(pat==='circle'){
+        for(let i=0;i<40;i++){
+          const r=Math.random()*0.3, th=Math.random()*2*Math.PI;
+          data.push([[0.5+r*Math.cos(th), 0.5+r*Math.sin(th)],1]);
+        }
+        for(let i=0;i<40;i++){
+          const r=0.4+Math.random()*0.2, th=Math.random()*2*Math.PI;
+          data.push([[0.5+r*Math.cos(th), 0.5+r*Math.sin(th)],0]);
+        }
+      }
+      return data;
+    }
+    function sigmoid(x){return 1/(1+Math.exp(-x));}
+    function trainModel(pat,nH){
+      const data=genData(pat);
+      // 2 -> nH (or skip) -> 1
+      let W1, b1, W2, b2;
+      if(nH===0){W1=null;b1=null;W2=[[Math.random()*0.5-0.25],[Math.random()*0.5-0.25]];b2=[Math.random()*0.5-0.25];}
+      else{
+        W1=Array.from({length:2},()=>Array.from({length:nH},()=>Math.random()*1-0.5));
+        b1=Array.from({length:nH},()=>Math.random()*0.5-0.25);
+        W2=Array.from({length:nH},()=>[Math.random()*1-0.5]);
+        b2=[Math.random()*0.5-0.25];
+      }
+      const eta=0.5;
+      for(let ep=0;ep<1500;ep++){
+        for(const [x,y] of data){
+          // forward
+          let h, hOut;
+          if(nH===0){
+            const z=W2[0][0]*x[0]+W2[1][0]*x[1]+b2[0];
+            const yhat=sigmoid(z);
+            const dy=yhat-y;
+            // dL/dz = dy * yhat*(1-yhat) ... using simple BCE: dL/dz = yhat - y for sigmoid+BCE
+            W2[0][0] -= eta*dy*x[0];
+            W2[1][0] -= eta*dy*x[1];
+            b2[0] -= eta*dy;
+          }else{
+            const zh=Array.from({length:nH},(_,j)=>W1[0][j]*x[0]+W1[1][j]*x[1]+b1[j]);
+            const ah=zh.map(v=>Math.tanh(v));
+            const z2=ah.reduce((s,v,j)=>s+W2[j][0]*v,0)+b2[0];
+            const yhat=sigmoid(z2);
+            const dz2=yhat-y;
+            for(let j=0;j<nH;j++){
+              const dah=dz2*W2[j][0];
+              const dzh=dah*(1-ah[j]*ah[j]);
+              W1[0][j] -= eta*dzh*x[0];
+              W1[1][j] -= eta*dzh*x[1];
+              b1[j] -= eta*dzh;
+              W2[j][0] -= eta*dz2*ah[j];
+            }
+            b2[0] -= eta*dz2;
+          }
+        }
+      }
+      return {W1,b1,W2,b2,nH,data};
+    }
+    function predict(m,x){
+      if(m.nH===0){
+        return sigmoid(m.W2[0][0]*x[0]+m.W2[1][0]*x[1]+m.b2[0]);
+      }
+      const zh=Array.from({length:m.nH},(_,j)=>m.W1[0][j]*x[0]+m.W1[1][j]*x[1]+m.b1[j]);
+      const ah=zh.map(v=>Math.tanh(v));
+      const z2=ah.reduce((s,v,j)=>s+m.W2[j][0]*v,0)+m.b2[0];
+      return sigmoid(z2);
+    }
+    function draw(){
+      const pat=document.getElementById('xorPat').value;
+      const nH=+document.getElementById('xorH').value;
+      document.getElementById('xorHV').textContent=nH;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=160,cy=H/2,SC=120;
+      function px(x){return cx+(x-0.5)*SC*1.5;}
+      function py(y){return cy-(y-0.5)*SC*1.5;}
+      // background grid: model prediction
+      if(model){
+        const N=40;
+        for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+          const x=i/(N-1), y=1-j/(N-1);
+          const p=predict(model,[x,y]);
+          const c0=p>0.5?[33,150,243]:[244,67,54];
+          const a=Math.min(0.4,Math.abs(p-0.5)*0.8);
+          ctx.fillStyle=`rgba(${c0[0]},${c0[1]},${c0[2]},${a})`;
+          ctx.fillRect(px(x)-SC*1.5/N/2, py(y)-SC*1.5/N/2, SC*1.5/N+1, SC*1.5/N+1);
+        }
+      }
+      // axes box
+      ctx.strokeStyle='#999';ctx.strokeRect(px(0),py(1),px(1)-px(0),py(0)-py(1));
+      // data points
+      const data = model? model.data : genData(pat);
+      data.forEach(([x,y])=>{
+        ctx.fillStyle=y===1?'#0b5fff':'#c62828';
+        ctx.strokeStyle='#fff';ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(px(x[0]),py(x[1]),7,0,Math.PI*2);ctx.fill();ctx.stroke();
+      });
+      // labels
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('패턴: '+pat.toUpperCase()+',  은닉 뉴런 = '+nH,30,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('🔵 클래스 1, 🔴 클래스 0',30,H-15);
+      // info panel
+      const ox=350;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('네트워크 구조',ox,40);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      if(nH===0){
+        ctx.fillText('입력(2) → 출력(1)',ox,62);
+        ctx.fillText('= 단일 퍼셉트론 (선형 분리만 가능)',ox,80);
+      }else{
+        ctx.fillText(`입력(2) → 은닉(${nH}, tanh) → 출력(1, sigmoid)`,ox,62);
+        ctx.fillText('= 2층 MLP (비선형 경계 가능)',ox,80);
+      }
+      if(model){
+        let correct=0;
+        model.data.forEach(([x,y])=>{const p=predict(model,x);if((p>0.5?1:0)===y)correct++;});
+        const acc=(correct/model.data.length*100).toFixed(0);
+        ctx.fillStyle=acc>=99?'#2e7d32':acc>=70?'#f57c00':'#c62828';
+        ctx.font='14px sans-serif';
+        ctx.fillText(`학습 후 정확도: ${acc}%`,ox,108);
+        if(nH===0 && (pat==='xor'||pat==='circle')){
+          ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+          ctx.fillText('⚠ 퍼셉트론으로는 절대 100% 못 함',ox,128);
+        }
+      }else{
+        ctx.fillStyle='#888';ctx.font='12px sans-serif';
+        ctx.fillText('▶ "학습" 버튼을 누르세요',ox,108);
+      }
+    }
+    document.getElementById('xorTrain').onclick=()=>{
+      const pat=document.getElementById('xorPat').value;
+      const nH=+document.getElementById('xorH').value;
+      model=trainModel(pat,nH);
+      draw();
+    };
+    document.getElementById('xorPat').addEventListener('change',()=>{model=null;draw();});
+    document.getElementById('xorH').addEventListener('input',()=>{model=null;draw();});
+    draw();
+  })();
+  </script>
 
   <figure>
     <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
@@ -120,6 +376,91 @@
   <p>그래디언트 정보로 가중치를 업데이트하는 규칙. 가장 단순한 형태는 <strong>경사 하강법</strong>:</p>
   $$ w \leftarrow w - \eta \frac{\partial L}{\partial w} $$
   <p>$\eta$는 학습률(learning rate). 너무 크면 발산, 너무 작으면 학습이 더딤. 실무에서는 <strong>Adam</strong>이 표준에 가까움.</p>
+
+  <p><strong>직관 — "안개 낀 산에서 가장 낮은 곳 찾기"</strong>: 손실 함수는 가중치 공간에서의 지형이고, 우리는 가장 낮은 골짜기(=손실 최소점)를 찾고 싶어요. 그래디언트는 "지금 위치에서 가장 가파르게 올라가는 방향"이므로 그 반대로 한 발씩 내려가면 됩니다. 한 발의 크기가 학습률 $\eta$.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 경사 하강법으로 손실 최소점 찾기</h4>
+    <p>1차원 손실 $L(w) = (w-2)^2$의 최소점은 $w=2$입니다. 시작점과 학습률을 바꾸며 경로를 관찰하세요. 학습률이 너무 크면(>1) 발산하고, 너무 작으면(<0.05) 한참 걸려요. <strong>"적당히 큰 학습률 + 모멘텀"</strong>이 실무의 표준입니다.</p>
+    <canvas id="gdDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>시작점 w₀ <span class="val" id="gdWV">-3</span><input type="range" id="gdW" min="-5" max="5" step="0.1" value="-3"></label>
+      <label>학습률 η <span class="val" id="gdLV">0.3</span><input type="range" id="gdL" min="0.01" max="1.1" step="0.01" value="0.3"></label>
+      <label>스텝 수 <span class="val" id="gdNV">15</span><input type="range" id="gdN" min="1" max="40" step="1" value="15"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gdDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function L(w){return (w-2)*(w-2);}
+    function dL(w){return 2*(w-2);}
+    function draw(){
+      const w0=+document.getElementById('gdW').value;
+      const eta=+document.getElementById('gdL').value;
+      const N=+document.getElementById('gdN').value;
+      document.getElementById('gdWV').textContent=w0.toFixed(1);
+      document.getElementById('gdLV').textContent=eta.toFixed(2);
+      document.getElementById('gdNV').textContent=N;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-40,w=W-70,h=H-70;
+      const wMin=-6,wMax=6;
+      function px(wv){return ox+(wv-wMin)/(wMax-wMin)*w;}
+      const Lmax=Math.max(L(wMin),L(wMax),L(w0))*1.1;
+      function py(Lv){return oy-Lv/Lmax*h;}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('w',ox+w-15,oy+22);ctx.fillText('L(w)',12,40);
+      // tick marks
+      for(let wv=-6;wv<=6;wv+=2){const xx=px(wv);ctx.fillStyle='#888';ctx.font='11px sans-serif';
+        ctx.fillText(wv.toString(),xx-4,oy+18);}
+      // L curve
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=200;i++){const wv=wMin+(wMax-wMin)*i/200;const Lv=L(wv);
+        const xx=px(wv),yy=py(Math.min(Lmax,Lv));if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // gradient descent steps
+      let wCurr=w0;
+      const path=[wCurr];
+      for(let i=0;i<N;i++){
+        const grad=dL(wCurr);
+        wCurr -= eta*grad;
+        if(Math.abs(wCurr)>50){path.push(wCurr);break;}
+        path.push(wCurr);
+      }
+      // draw arrows along path
+      for(let i=0;i<path.length-1;i++){
+        const wa=path[i], wb=path[i+1];
+        if(Math.abs(wa)>20||Math.abs(wb)>20)continue;
+        const xa=px(wa), ya=py(L(wa));
+        const xb=px(wb), yb=py(L(wb));
+        const t=Math.min(1,i/(path.length-1));
+        ctx.strokeStyle=`rgba(11,95,255,${0.3+0.6*t})`;
+        ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke();
+        ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(xb,yb,3,0,Math.PI*2);ctx.fill();
+      }
+      // start point
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(px(w0),py(L(w0)),6,0,Math.PI*2);ctx.fill();
+      // optimum
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(px(2),py(0),6,0,Math.PI*2);ctx.fill();
+      // status
+      const wFin=path[path.length-1];
+      let cls='';
+      if(Math.abs(wFin)>20){cls='⚠ 발산 (η가 너무 큼)';ctx.fillStyle='#c62828';}
+      else if(Math.abs(wFin-2)<0.01){cls='✓ 수렴';ctx.fillStyle='#2e7d32';}
+      else if(Math.abs(wFin-2)<0.5){cls='수렴 진행 중';ctx.fillStyle='#f57c00';}
+      else {cls='더 많은 스텝 필요 (η가 작음)';ctx.fillStyle='#f57c00';}
+      ctx.font='13px sans-serif';
+      ctx.fillText(`최종 w = ${wFin.toFixed(3)}  (목표 w*=2)  ${cls}`,ox,22);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('🔴 시작 → 🔵 매 스텝 → 🟢 최소점',ox,oy+22);
+    }
+    ['gdW','gdL','gdN'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
 
   <h2>4. 메카트로닉스에서의 응용 4가지</h2>
 

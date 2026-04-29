@@ -182,6 +182,96 @@
   $$ I_C = \frac{5 - 0.1}{10\text{k}} = 0.49\,\text{mA} $$
   <p>같은 트랜지스터, 같은 베이스 입력 — <strong>$R_C$만 바꿔도 동작 모드가 완전히 달라집니다</strong>. 회로 설계의 핵심.</p>
 
+  <h3>4.2 부하선(Load Line) — "왜 동작 모드가 갈리나"의 시각화</h3>
+  <p>위 예제처럼 $R_C$만 바꿨는데 능동 ↔ 포화가 갈리는 이유를 한 그림으로 보는 도구가 <strong>부하선</strong>입니다. 컬렉터 회로에 KVL을 적용하면:</p>
+  $$ V_{CC} = I_C R_C + V_{CE} \implies I_C = \frac{V_{CC} - V_{CE}}{R_C} $$
+  <p>$V_{CE}$-$I_C$ 평면에서 이는 직선 — $V_{CE}$ 절편 $V_{CC}$, $I_C$ 절편 $V_{CC}/R_C$의 부하선. 한편 트랜지스터 자신의 출력 특성 곡선($I_C = \beta I_B$, $V_{CE}$에 거의 무관한 수평선)도 이 평면에 그릴 수 있습니다. 두 곡선이 만나는 점이 곧 회로의 <strong>동작점(Q점)</strong>입니다.</p>
+  <ul>
+    <li>Q점이 직선 중간 어딘가($V_{CE} > 0.1$) → <strong>능동 영역</strong></li>
+    <li>Q점이 부하선의 좌상단(거의 $V_{CE} \approx 0$, $I_C$ 한계까지 차오름) → <strong>포화</strong></li>
+    <li>$I_B = 0$ → 수평선이 바닥에 깔림 → Q점이 우하단($V_{CE} = V_{CC}$, $I_C = 0$) → <strong>차단</strong></li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: BJT 부하선과 동작점</h4>
+    <p>$R_C$를 늘리면 부하선이 평평해지고($I_C$ 절편이 작아짐) Q점이 좌상단으로 이동 → 결국 포화 영역에 박힙니다. $I_B$를 늘리면 수평선이 위로 올라가 같은 일이 생기고요. <strong>같은 $V_{CE}$-$I_C$ 평면에서 직선과 수평선의 교점 = 회로 풀이</strong>의 시각화.</p>
+    <canvas id="loadCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>R_C <span class="val" id="loadRCV">1.0</span> kΩ<input type="range" id="loadRC" min="0.2" max="20" step="0.1" value="1"></label>
+      <label>I_B <span class="val" id="loadIBV">23</span> μA<input type="range" id="loadIB" min="0" max="100" step="1" value="23"></label>
+      <label>β <span class="val" id="loadBV">100</span><input type="range" id="loadB" min="20" max="300" step="10" value="100"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('loadCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Vcc=5,Vsat=0.1;
+    function draw(){
+      const RC=+document.getElementById('loadRC').value*1000;
+      const IB=+document.getElementById('loadIB').value*1e-6;
+      const beta=+document.getElementById('loadB').value;
+      document.getElementById('loadRCV').textContent=(RC/1000).toFixed(1);
+      document.getElementById('loadIBV').textContent=(IB*1e6).toFixed(0);
+      document.getElementById('loadBV').textContent=beta;
+      const ICmax_axis=Math.max(Vcc/RC,beta*IB)*1.1*1000; // mA scale
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(v){return 60+v/Vcc*(W-100);}
+      function y(i){return H-50-i/ICmax_axis*(H-90);}
+      // Grid
+      ctx.strokeStyle='#ddd';
+      for(let v=0;v<=Vcc;v+=1){ctx.beginPath();ctx.moveTo(x(v),y(0));ctx.lineTo(x(v),y(ICmax_axis));ctx.stroke();}
+      // Axes
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Vcc),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(0),y(ICmax_axis));ctx.stroke();
+      // Saturation boundary (V_CE = 0.1 V)
+      ctx.fillStyle='rgba(198,40,40,0.08)';
+      ctx.fillRect(x(0),y(ICmax_axis),x(Vsat)-x(0),H-50-y(ICmax_axis));
+      ctx.strokeStyle='#c62828';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(x(Vsat),y(0));ctx.lineTo(x(Vsat),y(ICmax_axis));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='11px sans-serif';
+      ctx.fillText('포화',x(0)+5,y(ICmax_axis)+15);
+      // Load line: I_C = (Vcc - Vce)/RC
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      ctx.moveTo(x(0),y(Vcc/RC*1000));ctx.lineTo(x(Vcc),y(0));
+      ctx.stroke();
+      // Horizontal line: I_C = beta * I_B (active region) — only for V_CE > 0.1
+      const ICactive=beta*IB*1000; // mA
+      ctx.strokeStyle='#1b5e20';ctx.lineWidth=2.5;ctx.beginPath();
+      ctx.moveTo(x(Vsat),y(ICactive));ctx.lineTo(x(Vcc),y(ICactive));
+      ctx.stroke();
+      // Q-point
+      let Vq,Iq,region,col;
+      if(IB===0){Vq=Vcc;Iq=0;region='차단';col='#999';}
+      else{
+        const Vactive=Vcc-ICactive*1e-3*RC;
+        if(Vactive>Vsat){Vq=Vactive;Iq=ICactive;region='능동';col='#0b5fff';}
+        else{Vq=Vsat;Iq=(Vcc-Vsat)/RC*1000;region='포화';col='#c62828';}
+      }
+      ctx.fillStyle=col;
+      ctx.beginPath();ctx.arc(x(Vq),y(Iq),8,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      // Labels
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      for(let v=0;v<=Vcc;v+=1){ctx.fillText(v,x(v)-5,H-35);}
+      ctx.fillText('V_CE [V]',W/2-25,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('I_C [mA]',-25,0);ctx.restore();
+      ctx.font='13px sans-serif';
+      ctx.fillStyle='#0b5fff';ctx.fillText('파란선: 부하선  I_C = (V_CC − V_CE)/R_C',40,28);
+      ctx.fillStyle='#1b5e20';ctx.fillText(`초록선: I_C = β·I_B = ${ICactive.toFixed(2)} mA (능동 가정)`,40,48);
+      ctx.fillStyle=col;
+      ctx.fillText(`Q점: V_CE = ${Vq.toFixed(2)} V, I_C = ${Iq.toFixed(2)} mA  →  ${region}`,40,68);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText(`교점이 V_CE > 0.1V 영역에 있으면 능동, 좌측 빨간 영역에 갇히면 포화`,40,H-15);
+    }
+    ['loadRC','loadIB','loadB'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>5. BJT를 디지털 스위치로</h2>
   <p>아두이노 한 핀의 출력은 5V·최대 약 20mA. 모터·릴레이를 켜기엔 턱없이 부족합니다. BJT 스위치 회로 하나면 해결됩니다.</p>
 

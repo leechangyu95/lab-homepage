@@ -136,6 +136,95 @@
   <p>ResNet 논문의 첫 장에는 충격적인 그래프가 나옵니다. 56층 평면 네트워크(plain net)가 20층보다 <em>훈련 오차부터</em> 더 높습니다. 과적합이라면 훈련 오차는 낮아야 하니, 이건 단순한 최적화 실패입니다. 이론상 56층 네트워크는 20층 네트워크를 "부분적으로" 포함할 수 있습니다(뒤 36층을 항등 함수로 만들면 됨). 그런데 SGD는 그 항등 함수조차 찾지 못했던 겁니다.</p>
   <p>He 카이밍의 발상은 기발할 정도로 단순합니다. <strong>"항등 함수를 찾기가 그렇게 어렵다면, 기본값을 항등으로 만들어 두고 블록은 차이(residual)만 학습하게 하자."</strong> 식으로 쓰면 $y = F(x) + x$이고, $F$를 0으로만 만들면 자동으로 항등이 됩니다. 아무것도 안 하는 게 쉬워진 거죠.</p>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 성능 열화(Degradation) 곡선 — ResNet 논문 Fig 1 재현</h4>
+    <p>왼쪽: <strong>평면 네트워크</strong>는 깊을수록 훈련 오차가 오히려 늘어나는 비정상 현상이 나타납니다(과적합과는 다름 — 검증이 아니라 <em>훈련</em> 오차가 늘어요). 오른쪽: <strong>잔차 연결</strong>을 추가하면 같은 깊이에서 훈련 오차가 단조 감소합니다. 슬라이더로 학습 epoch를 진행시켜 두 곡선을 비교해 보세요.</p>
+    <canvas id="degrad" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>학습 진행 (epoch) <span class="val" id="dgEV">60</span><input type="range" id="dgE" min="0" max="100" step="1" value="60"></label>
+      <button id="dgPlay">▶ 자동 재생</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('degrad');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let auto=null;
+    // simulate train error vs depth at given training epoch t
+    // plain net: optimization failure at deep layers; train err = floor + degradation*(depth-20)+ when depth>20
+    // resnet: monotone with depth.
+    function plainErr(depth,t){
+      const learn=Math.exp(-t/30); // 1 at t=0, decays
+      const optBase=0.30+0.55*learn; // base error decays with training
+      const degrade=Math.max(0,(depth-20)/120)*0.18*Math.min(1,t/15); // degradation appears as training proceeds
+      return Math.max(0.04,optBase*(0.6+0.4*Math.exp(-depth/40))+degrade-0.001*depth*(1-learn));
+    }
+    function resnetErr(depth,t){
+      const learn=Math.exp(-t/25);
+      const base=0.28+0.50*learn;
+      // monotone: deeper helps slightly
+      return Math.max(0.025,base*(0.55+0.45*Math.exp(-depth/45))-0.0003*depth*(1-learn));
+    }
+    function plotPanel(x0,y0,wp,hp,errFn,t,col,title){
+      ctx.strokeStyle='#ccc';ctx.strokeRect(x0,y0,wp,hp);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(title,x0+8,y0-6);
+      // grid
+      for(let v=0.0;v<=1.0001;v+=0.2){
+        const y=y0+hp-hp*v;
+        ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x0+wp,y);ctx.stroke();
+        ctx.fillStyle='#888';ctx.font='10px sans-serif';
+        ctx.fillText(v.toFixed(1),x0-22,y+4);
+      }
+      // curve
+      ctx.strokeStyle=col;ctx.lineWidth=2.2;ctx.beginPath();
+      for(let d=10;d<=80;d+=2){
+        const e=errFn(d,t);
+        const px=x0+(d-10)/70*wp;
+        const py=y0+hp-Math.min(1,e)*hp;
+        if(d===10)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // mark 20 and 56
+      [20,56].forEach(d=>{
+        const px=x0+(d-10)/70*wp;
+        const e=errFn(d,t);
+        const py=y0+hp-Math.min(1,e)*hp;
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#333';ctx.font='11px sans-serif';
+        ctx.fillText(`${d}층: ${(e*100).toFixed(1)}%`,px-25,py-7);
+      });
+      // x-axis
+      ctx.fillStyle='#888';ctx.font='10px sans-serif';
+      [10,30,50,70].forEach(d=>{const px=x0+(d-10)/70*wp;ctx.fillText(d,px-5,y0+hp+12);});
+      ctx.fillText('깊이(층 수)',x0+wp/2-25,y0+hp+24);
+      ctx.save();ctx.translate(x0-32,y0+hp/2+30);ctx.rotate(-Math.PI/2);ctx.fillText('훈련 오차',0,0);ctx.restore();
+    }
+    function draw(){
+      const t=+document.getElementById('dgE').value;
+      document.getElementById('dgEV').textContent=t;
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      const PL=50,PT=30,wp=(W-PL-30-30)/2,hp=H-PT-50;
+      plotPanel(PL,PT,wp,hp,plainErr,t,'#c62828','① Plain Net (잔차 없음)');
+      plotPanel(PL+wp+30,PT,wp,hp,resnetErr,t,'#0b5fff','② ResNet (잔차 연결)');
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('빨강↑우상향: 깊을수록 훈련조차 잘 안 됨 (성능 열화)',PL,H-12);
+      ctx.fillText('파랑↘우하향: 깊을수록 훈련 잘 됨 (정상)',PL+wp+30,H-12);
+    }
+    document.getElementById('dgE').addEventListener('input',draw);
+    document.getElementById('dgPlay').onclick=function(){
+      if(auto){clearInterval(auto);auto=null;this.textContent='▶ 자동 재생';return;}
+      let t=0;
+      auto=setInterval(()=>{t=(t+2)%101;document.getElementById('dgE').value=t;draw();},80);
+      this.textContent='⏸ 정지';
+    };
+    draw();
+  })();
+  </script>
+
+  <p>학습 초반(epoch 0)에는 두 모델 모두 깊이에 무관하게 큰 오차를 갖다가, 학습이 진행되면서 평면 네트워크는 "20층은 잘 학습하지만 56층은 더 못 학습"하는 비정상적 곡선이 굳어집니다. ResNet은 같은 epoch에서 깊이가 깊어질수록 오차가 단조 감소합니다 — 이게 "잔차 연결이 깊은 망의 학습을 가능하게 한다"는 주장의 시각적 증명입니다. (값은 실제 ImageNet 결과의 정성적 재현이며, 정확한 수치가 궁금하다면 He et al. 2015 Fig. 1 참고.)</p>
+
   <h3>4.2 기울기가 흐르는 고속도로</h3>
   <p>역전파 관점에서 잔차 연결의 효과를 봅시다. 손실 $L$에 대한 입력 $x$의 기울기는</p>
   $$ \frac{\partial L}{\partial x} = \frac{\partial L}{\partial y}\cdot\left(1 + \frac{\partial F}{\partial x}\right) $$

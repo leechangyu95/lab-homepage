@@ -309,6 +309,102 @@ df.groupby('species').mean()    # 집계</code></pre>
 
   <div class="tip"><strong>주의!</strong> 표준화 파라미터(평균, 표준편차)는 <em>학습 데이터에서만</em> 계산해야 합니다. 그렇지 않으면 테스트 데이터의 정보가 학습으로 새어 들어가는 <em>데이터 누수(data leakage)</em>가 발생합니다.</div>
 
+  <p><strong>왜 테스트는 <code>fit_transform</code>이 아니라 <code>transform</code>만 써야 할까?</strong> 테스트 데이터는 "본 적 없는 미래 데이터"의 대역(代役)입니다. 실제 배포 환경에서는 새 샘플 한 건만 들어오는데, 그 한 건만으로 평균/표준편차를 다시 구할 수는 없죠. 그래서 학습 시점에 측정한 통계를 그대로 적용해야 평가 결과가 "실제 배포 시 성능"과 일치합니다. 학습+테스트를 합쳐서 표준화하면 테스트 데이터의 평균이 학습에 새어들어, 검증 정확도가 비현실적으로 높게 나옵니다 — 그리고 실제 배포 후에 성능이 뚝 떨어집니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 데이터 누수의 함정</h4>
+    <p>"테스트 데이터에는 학습보다 평균이 다른 분포"가 들어오는 상황을 시뮬레이션합니다. (A) 학습+테스트를 통째로 표준화한 경우, (B) 학습으로만 표준화한 경우의 테스트 분류 정확도를 비교합니다. (A)는 <em>거짓 안도</em>를 줍니다 — 보고된 정확도와 실제 정확도가 다릅니다.</p>
+    <canvas id="leak" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>테스트 분포 이동 <span class="val" id="lkSV">2.0</span><input type="range" id="lkS" min="0" max="5" step="0.1" value="2.0"></label>
+      <button id="lkRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('leak');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let train=[],test=[];
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(){
+      train=[];test=[];
+      // train: class0 ~N(2,1), class1 ~N(6,1)
+      for(let i=0;i<60;i++)train.push({x:2+gauss(),c:0});
+      for(let i=0;i<60;i++)train.push({x:6+gauss(),c:1});
+      // test: shifted by shift, same class separation
+      const shift=+document.getElementById('lkS').value;
+      for(let i=0;i<30;i++)test.push({x:2+shift+gauss(),c:0});
+      for(let i=0;i<30;i++)test.push({x:6+shift+gauss(),c:1});
+      draw();
+    }
+    function classify(point,thresh){return point<thresh?0:1;}
+    function draw(){
+      const shift=+document.getElementById('lkS').value;
+      document.getElementById('lkSV').textContent=shift.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Method A: standardize using train+test combined statistics
+      const allX_A=[...train.map(p=>p.x),...test.map(p=>p.x)];
+      const muA=allX_A.reduce((a,b)=>a+b,0)/allX_A.length;
+      const sdA=Math.sqrt(allX_A.reduce((a,b)=>a+(b-muA)**2,0)/allX_A.length);
+      // Method B: standardize using train statistics
+      const trX=train.map(p=>p.x);
+      const muB=trX.reduce((a,b)=>a+b,0)/trX.length;
+      const sdB=Math.sqrt(trX.reduce((a,b)=>a+(b-muB)**2,0)/trX.length);
+      // Train a simple threshold classifier on standardized train (method A and B)
+      // Threshold = midpoint of standardized class means
+      function trainAcc(mu,sd){
+        const z=train.map(p=>({z:(p.x-mu)/sd,c:p.c}));
+        const m0=z.filter(p=>p.c===0).reduce((a,b)=>a+b.z,0)/(z.filter(p=>p.c===0).length);
+        const m1=z.filter(p=>p.c===1).reduce((a,b)=>a+b.z,0)/(z.filter(p=>p.c===1).length);
+        const thr=(m0+m1)/2;
+        return {thr,m0,m1};
+      }
+      function testAcc(mu,sd,thr){
+        let ok=0;
+        test.forEach(p=>{const z=(p.x-mu)/sd;const pred=z<thr?0:1;if(pred===p.c)ok++;});
+        return ok/test.length;
+      }
+      const {thr:thrA}=trainAcc(muA,sdA);
+      const {thr:thrB}=trainAcc(muB,sdB);
+      const accA=testAcc(muA,sdA,thrA);
+      const accB=testAcc(muB,sdB,thrB);
+      // training-set self-accuracy under each method (this is the "보고된" accuracy if we look at train+test commingled)
+      const reportedA=(()=>{
+        // simulate: what if we accidentally evaluated on (test standardized using train+test stats) — reports inflated train-like split
+        let ok=0;test.forEach(p=>{const z=(p.x-muA)/sdA;const pred=z<thrA?0:1;if(pred===p.c)ok++;});
+        return ok/test.length;
+      })();
+      // bars: A reported (cheating), B real
+      const PL=40,PT=30,plotH=H-PT-50;
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText('테스트 분포 이동 = '+shift.toFixed(1)+' (학습 평균에서 떨어진 정도)',PL,20);
+      const bars=[
+        {lab:'(A) 누수: train+test로 표준화',v:accA,col:'#c62828'},
+        {lab:'(B) 정직: train으로만 표준화',v:accB,col:'#0b5fff'},
+      ];
+      const bw=200,gap=80;
+      bars.forEach((b,i)=>{
+        const x=PL+i*(bw+gap);
+        const h=plotH*b.v;
+        const y=PT+plotH-h;
+        ctx.fillStyle=b.col;ctx.fillRect(x,y,bw,h);
+        ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';
+        ctx.fillText((b.v*100).toFixed(1)+'%',x+bw/2-25,y+24);
+        ctx.fillStyle='#333';ctx.font='12px sans-serif';
+        ctx.fillText(b.lab,x,PT+plotH+18);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('정확도 차이 = '+((accA-accB)*100).toFixed(1)+'%p — 누수가 결과를 왜곡합니다',PL,PT+plotH+38);
+    }
+    document.getElementById('lkS').addEventListener('input',gen);
+    document.getElementById('lkRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <p>슬라이더로 "테스트 분포 이동"을 키워보세요. 이동이 0일 때(=배포 환경이 학습 환경과 같을 때)는 두 방법이 거의 같은 정확도를 보이지만, 이동이 커질수록 (A) 누수 방법이 (B) 정직 방법보다 비현실적으로 높은 점수를 냅니다. 실제 운영에서는 (B)의 점수가 진짜 성능에 가깝고, (A)의 점수는 "이미 답을 본 시험"이라 신뢰할 수 없습니다. <strong>scikit-learn에서는 항상 <code>scaler.fit(X_train)</code> 다음 <code>scaler.transform(X_test)</code></strong> 순서를 지키세요.</p>
+
   <h2>5. 학습/검증/테스트 분할</h2>
   <p>모델이 새 데이터에 잘 작동하는지 알려면, 학습에 쓰지 않은 데이터로 평가해야 합니다. 보통 다음과 같이 나눕니다.</p>
   <ul>

@@ -276,6 +276,97 @@
   <p>$2 \times 2$ 풀링은 공간 해상도를 4분의 1로 줄입니다. 해상도가 낮아진 만큼 다음 층의 필터는 <em>더 넓은 실제 영역</em>을 보게 됩니다. 이를 "수용장(receptive field)이 커진다"고 표현합니다. 이 계층적 확대 덕분에, 깊은 층은 전체 이미지 수준의 큰 구조(얼굴 전체, 자동차 전체)를 볼 수 있게 됩니다.</p>
   <p>풀링의 또 다른 장점은 <strong>작은 평행이동에 대한 불변성</strong>입니다. 입력이 1픽셀 움직여도 $2 \times 2$ 풀링의 출력은 대개 바뀌지 않습니다 — "대략 이 영역에 특징이 있다"만 중요하기 때문. 이는 CNN이 정확한 위치 대신 "있음/없음"에 집중하게 만듭니다.</p>
 
+  <h3>3.3 수용장(Receptive Field)을 직접 추적하기</h3>
+  <p>"이 깊은 층의 한 픽셀이 원본 이미지의 어느 영역을 보고 있는가?"라는 질문이 수용장의 정의입니다. 한 층의 합성곱은 $k \times k$ 영역만 보지만, 같은 위치 한 칸을 만들기 위해 그 아래 층은 더 넓은 영역을, 또 그 아래 층은 더 넓은 영역을 봐야 합니다 — 마치 망원경을 거꾸로 보는 것처럼 깊이가 깊어질수록 원본의 시야가 누적적으로 넓어집니다. 수식으로 적으면 다음 두 점화식이 핵심입니다:</p>
+  $$ \text{RF}_l = \text{RF}_{l-1} + (k_l - 1) \cdot J_{l-1}, \qquad J_l = J_{l-1} \cdot s_l $$
+  <p>여기서 $\text{RF}_l$은 $l$층의 한 출력이 원본에서 보는 영역 크기, $J_l$은 그 층 출력 한 칸당 원본에서의 점프 간격(jump), $k_l$과 $s_l$은 그 층의 커널 크기와 스트라이드입니다. 풀링이 stride 2인 다운샘플링이면 그 뒤 층의 점프가 2배가 되고, 그 후 합성곱은 같은 $k$로도 두 배 넓은 영역을 볼 수 있게 됩니다. <strong>이게 "깊으면 큰 그림을 본다"는 말의 정확한 메커니즘입니다.</strong></p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 수용장 추적기</h4>
+    <p>가상 입력(64×64)에 합성곱·풀링 층을 자유롭게 쌓고, 가장 깊은 층의 빨간 출력 한 칸이 원본 이미지의 어떤 영역을 "보고" 있는지 노란 박스로 표시합니다. 층을 더 추가하거나 풀링을 끼워넣으며 수용장이 어떻게 자라는지 직접 확인하세요.</p>
+    <canvas id="rf" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>레이어 1
+        <select id="rfL1"><option value="c3">Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="c7">Conv 7×7 s=1</option><option value="p2">MaxPool 2×2 s=2</option></select>
+      </label>
+      <label>레이어 2
+        <select id="rfL2"><option value="c3">Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="p2" selected>MaxPool 2×2 s=2</option><option value="none">(없음)</option></select>
+      </label>
+      <label>레이어 3
+        <select id="rfL3"><option value="c3" selected>Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="p2">MaxPool 2×2 s=2</option><option value="none">(없음)</option></select>
+      </label>
+      <label>레이어 4
+        <select id="rfL4"><option value="c3">Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="p2" selected>MaxPool 2×2 s=2</option><option value="none">(없음)</option></select>
+      </label>
+      <label>레이어 5
+        <select id="rfL5"><option value="c3" selected>Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="p2">MaxPool 2×2 s=2</option><option value="none">(없음)</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rf');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const SPECS={c3:{k:3,s:1,name:'Conv 3×3'},c5:{k:5,s:1,name:'Conv 5×5'},c7:{k:7,s:1,name:'Conv 7×7'},p2:{k:2,s:2,name:'MaxPool 2×2'},none:null};
+    function draw(){
+      const ids=['rfL1','rfL2','rfL3','rfL4','rfL5'];
+      const layers=ids.map(id=>SPECS[document.getElementById(id).value]).filter(Boolean);
+      // compute RF and jump per layer
+      let RF=1,J=1,size=64;
+      const trace=[{name:'Input',RF:1,J:1,size:64}];
+      layers.forEach(L=>{
+        RF=RF+(L.k-1)*J;
+        size=Math.floor((size-L.k)/L.s)+1;
+        J=J*L.s;
+        trace.push({name:L.name,RF,J,size});
+      });
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      // top: input image grid (64×64) with RF region
+      const lx=20,ly=30,lwh=H-60;
+      const gridSize=64;const cell=lwh/gridSize;
+      ctx.strokeStyle='#bbb';ctx.strokeRect(lx,ly,gridSize*cell,gridSize*cell);
+      // checkerboard
+      for(let i=0;i<gridSize;i+=2)for(let j=0;j<gridSize;j+=2){
+        ctx.fillStyle='#f5f5f5';ctx.fillRect(lx+i*cell,ly+j*cell,cell,cell);
+      }
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`입력 64×64`,lx,ly-6);
+      // RF box centered
+      const rfPx=Math.min(64,RF)*cell;
+      const cx0=lx+(gridSize/2)*cell,cy0=ly+(gridSize/2)*cell;
+      ctx.fillStyle='rgba(255,200,40,0.45)';
+      ctx.fillRect(cx0-rfPx/2,cy0-rfPx/2,rfPx,rfPx);
+      ctx.strokeStyle='#e08e00';ctx.lineWidth=2;
+      ctx.strokeRect(cx0-rfPx/2,cy0-rfPx/2,rfPx,rfPx);
+      // mark center "1 output pixel" deep
+      ctx.fillStyle='#c62828';
+      ctx.fillRect(cx0-3,cy0-3,6,6);
+
+      // right: layer-by-layer text
+      const rx=lx+gridSize*cell+30;
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('층별 수용장(RF) 누적',rx,ly+10);
+      ctx.font='12px sans-serif';
+      trace.forEach((t,i)=>{
+        const y=ly+30+i*22;
+        ctx.fillStyle=i===trace.length-1?'#c62828':'#444';
+        ctx.fillText(`${i}. ${t.name}: 출력 ${t.size}×${t.size}, RF=${t.RF}, jump=${t.J}`,rx,y);
+      });
+      // summary
+      ctx.fillStyle='#222';ctx.font='bold 13px sans-serif';
+      const last=trace[trace.length-1];
+      ctx.fillText(`최종: 출력 한 픽셀이 원본의 ${Math.min(64,last.RF)}×${Math.min(64,last.RF)} 영역을 봅니다`,rx,H-30);
+      ctx.font='12px sans-serif';ctx.fillStyle='#666';
+      ctx.fillText(`(노란 박스=수용장, 빨간 점=깊은 층의 한 출력 픽셀)`,rx,H-12);
+    }
+    ['rfL1','rfL2','rfL3','rfL4','rfL5'].forEach(id=>document.getElementById(id).addEventListener('change',draw));
+    draw();
+  })();
+  </script>
+
+  <p>레이어를 모두 Conv 3×3로 두면 깊이 5층에서도 RF가 11에 그치지만, 중간에 풀링을 두 번 끼우면 같은 깊이로 RF가 30 이상으로 자라는 것을 확인할 수 있습니다. <em>VGG, ResNet 같은 깊은 네트워크의 마지막 합성곱 층은 입력 이미지 거의 전체를 수용장으로 갖습니다</em> — "이미지 전체를 보고 분류한다"는 직관이 수학적으로 정당화되는 메커니즘이 바로 이것입니다.</p>
+
   <h2>5. LeNet — 최초의 성공 사례</h2>
   <p>1989~1998년에 걸쳐 Bell Labs의 Yann LeCun이 개발한 <strong>LeNet-5</strong>는 CNN의 현대적 원형입니다. 1998년 논문 "Gradient-Based Learning Applied to Document Recognition"에서 우편번호 손글씨 인식과 수표 금액 판독에 쓰였고, 실제로 1990년대 후반 미국 은행의 수표 처리 시스템에 배치되어 전체 수표 처리량의 10-20%를 자동 처리했습니다. 이는 딥러닝 이전에 CNN이 실용화된 거의 유일한 사례로 기록됩니다.</p>
   <p>LeNet-5의 구조: [Conv5→Pool2→Conv5→Pool2→FC→FC→Out]. 파라미터 수는 약 6만 개, 현대 기준으로 보면 극도로 작지만 당시 하드웨어로는 큰 편이었습니다. 이 단순한 구조가 오늘날 ResNet, Inception 같은 거대 모델의 기본 레이아웃을 이미 보여주고 있습니다 — "합성곱으로 특징 추출, 풀링으로 공간 축소, 마지막에 완전연결층으로 분류".</p>

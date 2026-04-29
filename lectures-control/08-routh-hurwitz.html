@@ -103,6 +103,56 @@
     </ul>
   </div>
 
+  <details class="warn" style="margin:12px 0">
+    <summary><strong>📝 특수상황 ① — 1열에 0이 나올 때 (ε 트릭, 손계산)</strong></summary>
+    <p>예제: $s^4 + s^3 + 2s^2 + 2s + 3 = 0$. 표를 만들어 봅시다.</p>
+    <table>
+      <tbody>
+        <tr><td>$s^4$</td><td>1</td><td>2</td><td>3</td></tr>
+        <tr><td>$s^3$</td><td>1</td><td>2</td><td></td></tr>
+        <tr><td>$s^2$</td><td>$\dfrac{1\cdot2 - 1\cdot2}{1} = 0$</td><td>$\dfrac{1\cdot3 - 1\cdot0}{1} = 3$</td><td></td></tr>
+      </tbody>
+    </table>
+    <p>1열에 0이 나왔습니다. <strong>다음 행을 계산하려고 0으로 나누면 안 되니까</strong> 그 0을 작은 양수 ε로 치환합니다.</p>
+    <table>
+      <tbody>
+        <tr><td>$s^2$</td><td>ε</td><td>3</td></tr>
+        <tr><td>$s^1$</td><td>$\dfrac{\varepsilon \cdot 2 - 1 \cdot 3}{\varepsilon} = \dfrac{2\varepsilon - 3}{\varepsilon}$</td><td></td></tr>
+        <tr><td>$s^0$</td><td>3</td><td></td></tr>
+      </tbody>
+    </table>
+    <p><strong>ε → 0⁺ 극한의 부호</strong>: $s^1$ 행 1열은 $(2\varepsilon - 3)/\varepsilon \to -3/\varepsilon \to -\infty$ (음수).</p>
+    <p>1열을 모아 보면: <strong>1, 1, ε(+), −∞, 3</strong> — 부호가 (+ → +) → (+ → −) → (− → +) 두 번 바뀝니다. 즉 우반평면 근이 <strong>2개</strong>. 시스템 불안정.</p>
+    <p><em>왜 ε 트릭이 통하나?</em> 0이 나온 행은 "원래는 작은 양수든 음수든 될 수 있는 자리"입니다. ε로 두면 그 부호가 다음 행을 통해 전파되어 우반평면 근의 개수를 정확히 세줍니다.</p>
+  </details>
+
+  <details class="warn" style="margin:12px 0">
+    <summary><strong>📝 특수상황 ② — 한 행 전체가 0일 때 (보조다항식, 허수축 극점)</strong></summary>
+    <p>예제: $s^5 + 2s^4 + 24s^3 + 48s^2 - 25s - 50 = 0$.</p>
+    <table>
+      <tbody>
+        <tr><td>$s^5$</td><td>1</td><td>24</td><td>−25</td></tr>
+        <tr><td>$s^4$</td><td>2</td><td>48</td><td>−50</td></tr>
+        <tr><td>$s^3$</td><td>$\dfrac{2\cdot24-1\cdot48}{2}=0$</td><td>$\dfrac{2\cdot(-25)-1\cdot(-50)}{2}=0$</td><td></td></tr>
+      </tbody>
+    </table>
+    <p>$s^3$ 행이 <strong>전부 0</strong>입니다. 이는 <em>특성다항식이 허수축 대칭의 짝-쌍 근</em>(예: $\pm j\omega$ 또는 $\pm \omega$)을 가진다는 신호입니다.</p>
+    <p><strong>처방 — 보조다항식</strong>: 0행 바로 위 행($s^4$)의 계수로 $s$의 짝수차 다항식을 만듭니다.
+      $$ A(s) = 2s^4 + 48s^2 - 50 $$</p>
+    <p>이를 $s$로 미분: $\dfrac{dA}{ds} = 8s^3 + 96s$. <strong>이 미분 계수로 0행을 채웁니다</strong>.</p>
+    <table>
+      <tbody>
+        <tr><td>$s^3$</td><td>8</td><td>96</td><td></td></tr>
+        <tr><td>$s^2$</td><td>$\dfrac{8\cdot48 - 2\cdot96}{8} = 24$</td><td>−50</td><td></td></tr>
+        <tr><td>$s^1$</td><td>$\dfrac{24\cdot96 - 8\cdot(-50)}{24} \approx 112.7$</td><td></td><td></td></tr>
+        <tr><td>$s^0$</td><td>−50</td><td></td><td></td></tr>
+      </tbody>
+    </table>
+    <p>1열: 1, 2, 8, 24, 112.7, <strong>−50</strong>. 마지막에서 부호 변화 1번 → 우반평면 근 1개 → <strong>불안정</strong>.</p>
+    <p><strong>덤으로 얻는 정보</strong>: 보조다항식의 근 $A(s) = 0$ → $2s^4 + 48s^2 - 50 = 0$ → $s^2 = 1$ 또는 $s^2 = -25$ → $s = \pm 1, \pm j5$. 즉 <em>허수축 위 $\pm j5$, 우반평면 +1</em>이 정확히 보입니다.</p>
+    <p><em>왜 이게 통하나?</em> 0행은 보조다항식이 특성다항식의 인수임을 의미합니다. $A(s)$의 미분이 $A$와 같은 근을 공유하므로, 미분 계수를 채우면 표가 그 근들을 "통과"하면서 나머지 근의 부호도 정확히 셀 수 있게 됩니다.</p>
+  </details>
+
   <h2>4. 예제: 폐루프 안정성</h2>
 
   <p>플랜트 $G(s) = \dfrac{1}{s(s+1)(s+5)}$, 비례 제어기 $C(s) = K$, 단위 피드백.</p>

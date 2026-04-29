@@ -236,6 +236,91 @@
 
   <div class="tip"><strong>K는 어떻게 정하나?</strong> 엘보우 방법(클러스터 수에 따른 비용 곡선의 꺾이는 지점)이나 실루엣 점수 같은 휴리스틱을 씁니다. 정답은 대개 도메인 지식에서 옵니다.</div>
 
+  <h3>2.4 비용함수 $J$의 의미를 손으로 만져보기</h3>
+  <p>"각 점에서 자기 클러스터 중심까지 거리의 제곱 합"이라는 정의는 글로 보면 추상적이지만, 시각화하면 의외로 직관적입니다. 데모에서 클러스터 중심(별표)을 마우스로 드래그해보세요. 점에서 중심까지 그어진 빨간 선분들이 곧 $J$에 더해지는 "벌점"입니다 — 중심을 클러스터 한가운데로 옮기면 선분의 총 길이가 줄어들고 $J$가 떨어집니다. K-평균의 갱신 단계가 정확히 이 "선분의 제곱합을 줄이는 점"을 분석적으로 찾는 작업인데, 그 답이 바로 클러스터 점들의 평균이라는 사실은 미분 한 줄로 증명됩니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: K-평균 비용함수 J를 직접 줄여보기</h4>
+    <p>3개의 중심(별표)을 <strong>드래그</strong>해 옮길 수 있습니다. 각 점에서 가장 가까운 중심까지 빨간 선분이 그어지고, 길이의 제곱합이 $J$입니다. <strong>"평균으로 점프"</strong> 버튼은 K-평균의 갱신 단계 — 각 중심을 자기 클러스터 평균으로 이동시킵니다. 직접 옮긴 결과보다 항상 $J$가 작거나 같다는 사실을 확인하세요.</p>
+    <canvas id="jcost" width="640" height="380" style="cursor:grab"></canvas>
+    <div class="controls">
+      <button id="jcReset">새 데이터</button>
+      <button id="jcMean">평균으로 점프</button>
+      <span style="font-size:12px;color:#666">중심을 마우스로 드래그하세요</span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('jcost');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLS=['#0b5fff','#ff8c00','#2e7d32'];
+    let pts=[],cents=[],dragging=-1;
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(){
+      pts=[];cents=[];
+      const C=[[160,120],[470,140],[320,290]];
+      C.forEach(c=>{for(let i=0;i<28;i++)pts.push({x:c[0]+gauss()*30,y:c[1]+gauss()*30,c:0});});
+      // initial centers: deliberately bad
+      cents=[{x:100,y:300},{x:560,y:80},{x:380,y:200}];
+      assign();
+    }
+    function assign(){
+      pts.forEach(p=>{
+        let bd=Infinity,bi=0;
+        cents.forEach((cc,i)=>{const d=(p.x-cc.x)**2+(p.y-cc.y)**2;if(d<bd){bd=d;bi=i;}});
+        p.c=bi;
+      });
+    }
+    function J(){
+      let s=0;
+      pts.forEach(p=>{const cc=cents[p.c];s+=(p.x-cc.x)**2+(p.y-cc.y)**2;});
+      return s;
+    }
+    function jumpToMean(){
+      cents.forEach((cc,i)=>{
+        const grp=pts.filter(p=>p.c===i);
+        if(grp.length){cc.x=grp.reduce((a,b)=>a+b.x,0)/grp.length;cc.y=grp.reduce((a,b)=>a+b.y,0)/grp.length;}
+      });
+      assign();draw();
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // segments
+      ctx.strokeStyle='rgba(220,40,40,0.4)';ctx.lineWidth=1;
+      pts.forEach(p=>{const cc=cents[p.c];ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(cc.x,cc.y);ctx.stroke();});
+      // points
+      pts.forEach(p=>{ctx.fillStyle=COLS[p.c];ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();});
+      // centers
+      cents.forEach((cc,i)=>{
+        ctx.fillStyle=COLS[i];ctx.strokeStyle='#000';ctx.lineWidth=2;
+        ctx.beginPath();
+        for(let k=0;k<10;k++){const a=Math.PI*2*k/10-Math.PI/2,r=k%2===0?14:6;
+          const x=cc.x+Math.cos(a)*r,y=cc.y+Math.sin(a)*r;if(k===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+        ctx.closePath();ctx.fill();ctx.stroke();
+      });
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText(`J = ${(J()/1000).toFixed(1)} × 10³  (작을수록 좋은 군집화)`,12,24);
+    }
+    c.addEventListener('mousedown',e=>{
+      const r=c.getBoundingClientRect();const mx=(e.clientX-r.left)*c.width/r.width,my=(e.clientY-r.top)*c.height/r.height;
+      cents.forEach((cc,i)=>{if(Math.hypot(mx-cc.x,my-cc.y)<18)dragging=i;});
+    });
+    c.addEventListener('mousemove',e=>{
+      if(dragging<0)return;
+      const r=c.getBoundingClientRect();const mx=(e.clientX-r.left)*c.width/r.width,my=(e.clientY-r.top)*c.height/r.height;
+      cents[dragging].x=mx;cents[dragging].y=my;assign();draw();
+    });
+    c.addEventListener('mouseup',()=>{dragging=-1;});
+    c.addEventListener('mouseleave',()=>{dragging=-1;});
+    document.getElementById('jcReset').onclick=()=>{gen();draw();};
+    document.getElementById('jcMean').onclick=jumpToMean;
+    gen();draw();
+  })();
+  </script>
+
+  <p><strong>왜 평균이 정답인가?</strong> 한 클러스터 안의 점들 $\{\mathbf x_1, \dots, \mathbf x_n\}$에 대해 $\sum_i \|\mathbf x_i - \mathbf c\|^2$를 $\mathbf c$로 미분하고 0으로 두면 $\mathbf c^* = \frac{1}{n}\sum_i \mathbf x_i$가 곧바로 나옵니다. 그래서 갱신 단계는 "그냥 평균"이 아니라, 비용을 최소화하는 분석해를 한 줄로 적은 것입니다 — 이게 K-평균이 매 반복마다 $J$를 줄인다는 것을 보장하는 수학적 근거입니다.</p>
+
   <h2>3. DBSCAN — 밀도가 곧 클러스터</h2>
   <p>K-평균은 클러스터가 둥글고 비슷한 크기임을 암묵적으로 가정합니다. 그래서 길쭉하거나 반달, 도넛 모양 클러스터에선 실패합니다. <strong>DBSCAN(Density-Based Spatial Clustering of Applications with Noise, Ester et al. 1996)</strong>은 전혀 다른 관점을 취합니다: "클러스터는 <em>밀도가 높은 점들이 서로 연결된 영역</em>이고, 주변에 점이 거의 없는 점은 잡음(noise)"입니다.</p>
   <p>DBSCAN이 사용하는 두 하이퍼파라미터:</p>
@@ -353,6 +438,99 @@
 
   <h3>4.2 PCA의 기하학적 의미</h3>
   <p>PCA를 기하학적으로 보면 "데이터를 가장 잘 근사하는 저차원 평면(또는 초평면)을 찾는 것"입니다. 2D에서 PCA 1차원 투영은 "점들을 가장 가까이 지나는 직선"과 같고, 이는 사실 최소제곱법과도 관련이 있지만 <em>수평/수직 잔차가 아니라 직각 잔차</em>를 최소화합니다 (total least squares). 그래서 PCA는 <em>축의 선택에 독립적</em>입니다.</p>
+
+  <p><strong>직각 잔차와 수직 잔차의 차이</strong>는 의외로 결정적입니다. 회귀(W3)는 "$x$가 입력, $y$가 정답"이라는 비대칭 가정 아래 $y$ 방향 오차만 줄입니다 — 그래서 $x$와 $y$의 역할을 바꾸면 다른 직선이 나옵니다. 반면 PCA는 두 축을 <em>대칭으로</em> 다루므로 점에서 직선까지의 진짜 수직 거리를 최소화하고, 어느 축을 "입력"이라고 부르든 같은 결과를 줍니다. 비지도학습이라는 명제와도 일치합니다 — "정답"이 따로 없기 때문에 어느 한 축을 특별 취급할 이유가 없죠.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 고유벡터 찾기 = "분산이 가장 큰 방향 찾기"</h4>
+    <p>타원형 데이터에 후보 축(빨간 직선)을 둡니다. 각도 슬라이더로 축을 회전시키며 그 방향으로 투영했을 때의 <strong>분산</strong>이 어떻게 변하는지 보세요. 분산이 최대가 되는 각도가 곧 첫 번째 주성분(고유벡터) 방향입니다 — "고유분해"라는 어려운 말의 정체는 결국 이 작업입니다.</p>
+    <canvas id="eigfind" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>축 각도 <span class="val" id="efAV">0</span>°<input type="range" id="efA" min="0" max="180" step="1" value="0"></label>
+      <button id="efOpt">최적 각도로 점프</button>
+      <button id="efGen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('eigfind');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    let history=[];
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(){
+      pts=[];history=[];
+      const truA=Math.random()*Math.PI;const ca=Math.cos(truA),sa=Math.sin(truA);
+      for(let i=0;i<100;i++){const a=gauss()*2.5,b=gauss()*0.7;pts.push({x:a*ca-b*sa,y:a*sa+b*ca});}
+      draw();
+    }
+    function projVar(angDeg){
+      const a=angDeg*Math.PI/180;const ux=Math.cos(a),uy=Math.sin(a);
+      const projs=pts.map(p=>p.x*ux+p.y*uy);
+      const m=projs.reduce((x,y)=>x+y,0)/projs.length;
+      const v=projs.reduce((x,y)=>x+(y-m)**2,0)/projs.length;
+      return v;
+    }
+    function bestAngle(){
+      let bd=-1,ba=0;
+      for(let a=0;a<180;a++){const v=projVar(a);if(v>bd){bd=v;ba=a;}}
+      return ba;
+    }
+    function draw(){
+      const angDeg=+document.getElementById('efA').value;
+      document.getElementById('efAV').textContent=angDeg;
+      const ang=angDeg*Math.PI/180;
+      const ux=Math.cos(ang),uy=Math.sin(ang);
+      const v=projVar(angDeg);
+      // history of (angle, variance)
+      history.push({a:angDeg,v});if(history.length>500)history.shift();
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      // left: scatter+axis
+      const lx=20,ly=20,lw=W*0.55,lh=H-40;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(lx,ly,lw,lh);
+      const cx=lx+lw/2,cy=ly+lh/2,sc=45;
+      ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(lx,cy);ctx.lineTo(lx+lw,cy);ctx.moveTo(cx,ly);ctx.lineTo(cx,ly+lh);ctx.stroke();
+      // data
+      ctx.fillStyle='#0b5fff';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(cx+p.x*sc,cy+p.y*sc,3,0,Math.PI*2);ctx.fill();});
+      // candidate axis
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(cx-ux*lw*0.5,cy-uy*lw*0.5);ctx.lineTo(cx+ux*lw*0.5,cy+uy*lw*0.5);ctx.stroke();
+      // projection points
+      ctx.fillStyle='#ff8c00';
+      pts.forEach(p=>{const proj=p.x*ux+p.y*uy;ctx.beginPath();ctx.arc(cx+ux*proj*sc,cy+uy*proj*sc,2.5,0,Math.PI*2);ctx.fill();});
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`각도 ${angDeg}° → 투영 분산 = ${v.toFixed(2)}`,lx+8,ly-4);
+      // right: variance vs angle plot
+      const rx=lx+lw+10,ry=20,rw=W-rx-15,rh=H-40;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(rx,ry,rw,rh);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('분산',rx+4,ry+12);
+      ctx.fillText('각도',rx+rw-30,ry+rh+12);
+      // sample full curve
+      let mx=0;const samples=[];
+      for(let a=0;a<=180;a+=2){const vv=projVar(a);samples.push({a,v:vv});if(vv>mx)mx=vv;}
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;ctx.beginPath();
+      samples.forEach((s,i)=>{const px=rx+(s.a/180)*rw;const py=ry+rh-(s.v/(mx*1.05))*rh;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});
+      ctx.stroke();
+      // current point
+      const px=rx+(angDeg/180)*rw;const py=ry+rh-(v/(mx*1.05))*rh;
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fill();
+      const ba=bestAngle();
+      const bx=rx+(ba/180)*rw;
+      ctx.strokeStyle='rgba(46,125,50,0.7)';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(bx,ry);ctx.lineTo(bx,ry+rh);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';
+      ctx.fillText(`최적 ${ba}° (PC1)`,bx-30,ry+12);
+    }
+    document.getElementById('efA').addEventListener('input',draw);
+    document.getElementById('efOpt').onclick=()=>{document.getElementById('efA').value=bestAngle();draw();};
+    document.getElementById('efGen').onclick=gen;
+    gen();
+  })();
+  </script>
+
+  <p>오른쪽 그래프(각도→분산)의 봉우리가 곧 첫 번째 주성분 방향이고, 그 봉우리의 높이가 첫 번째 고윳값 $\lambda_1$입니다. 일반적인 $d$차원 데이터에서는 이렇게 일일이 회전시켜 볼 수 없으니 "고유분해"라는 선형대수 도구로 한 번에 답을 구할 뿐, 본질은 "분산이 가장 큰 방향 찾기"라는 똑같은 작업입니다.</p>
 
   <div class="note">
     <strong>정규화(standardization)이 거의 항상 필요</strong> — PCA는 분산을 기준으로 하기 때문에, 단위가 다른 특징(키 cm, 체중 kg)을 그냥 쓰면 큰 숫자 특징이 지배합니다. 반드시 <a href="02-data-handling.html">W2 §표준화</a>처럼 각 특징을 $z$-score로 변환한 뒤 PCA를 적용하세요.

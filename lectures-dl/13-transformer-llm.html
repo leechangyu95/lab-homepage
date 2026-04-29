@@ -75,6 +75,80 @@
   <h3>2.1 왜 $\sqrt{d_k}$로 나누는가</h3>
   <p>작은 디테일처럼 보이지만 중요합니다. 차원 $d_k$가 크면 $Q$와 $K$의 내적이 큰 분산을 가집니다 (각 원소의 분산이 $O(d_k)$). softmax의 입력이 너무 크면 한 값이 지배해 그래디언트가 거의 0이 됩니다 (softmax가 "날카로워"져서 one-hot에 가까워짐 → 학습 신호 증발). $\sqrt{d_k}$로 나누면 내적의 분산이 $O(1)$로 유지되어 softmax가 부드러운 분포를 만들고 그래디언트가 건강하게 흐릅니다. 작은 수학적 세부지만 이 한 수 없으면 Transformer는 학습이 안 됩니다.</p>
 
+  <p>왜 분산이 $O(d_k)$인지 한 줄 증명: 각 원소가 $\mathcal{N}(0, 1)$인 두 벡터 $\mathbf q, \mathbf k$의 내적은 $\sum_{i=1}^{d_k} q_i k_i$인데, 각 $q_i k_i$의 분산이 1이라 독립 합의 분산은 $d_k$가 됩니다. 따라서 표준편차는 $\sqrt{d_k}$, 그것으로 나누면 단위 분산이 회복됩니다. 단순한 통계학이지만, 이 한 줄을 빠뜨린 초기 어텐션 변형들은 모두 학습이 망가졌습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: $\sqrt{d_k}$ 정규화의 효과 — softmax가 살아있는가 죽었는가</h4>
+    <p>5개의 키와 1개의 쿼리(랜덤 정규분포)에서 내적을 계산하고, (A) 정규화 없음, (B) $\sqrt{d_k}$로 나누기, 두 경우의 softmax 분포와 그 <strong>최대 그래디언트</strong>를 비교합니다. 차원 $d_k$를 키워보면, 정규화 없는 쪽은 분포가 "한 칸"에 몰리며 그래디언트가 0에 수렴하는 반면, 정규화한 쪽은 부드러운 분포를 유지합니다.</p>
+    <canvas id="sqdk" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>키 차원 d_k <span class="val" id="dkV">64</span><input type="range" id="dk" min="2" max="512" step="1" value="64"></label>
+      <button id="dkRegen">새 무작위 벡터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sqdk');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let q=null,Ks=null;
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function regen(){
+      const dk=+document.getElementById('dk').value;
+      q=Array.from({length:dk},gauss);
+      Ks=Array.from({length:5},()=>Array.from({length:dk},gauss));
+      draw();
+    }
+    function softmax(arr){const m=Math.max(...arr);const e=arr.map(v=>Math.exp(v-m));const s=e.reduce((a,b)=>a+b);return e.map(v=>v/s);}
+    function softmaxJacobianMaxAbs(p){
+      // ∂p_i/∂z_j = p_i(δ_ij - p_j); max abs over (i,j) = max over diag terms p_i(1-p_i)
+      let m=0;p.forEach(pi=>{const v=pi*(1-pi);if(v>m)m=v;});
+      return m;
+    }
+    function draw(){
+      const dk=+document.getElementById('dk').value;
+      document.getElementById('dkV').textContent=dk;
+      if(!q||q.length!==dk)regen();
+      const dots=Ks.map(k=>{let s=0;for(let i=0;i<dk;i++)s+=q[i]*k[i];return s;});
+      const dotsScaled=dots.map(d=>d/Math.sqrt(dk));
+      const probA=softmax(dots);
+      const probB=softmax(dotsScaled);
+      const gA=softmaxJacobianMaxAbs(probA);
+      const gB=softmaxJacobianMaxAbs(probB);
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      const PL=40,PT=40;
+      function barPanel(x0,y0,wp,hp,probs,title,col,grad){
+        ctx.strokeStyle='#ccc';ctx.strokeRect(x0,y0,wp,hp);
+        ctx.fillStyle='#333';ctx.font='13px sans-serif';
+        ctx.fillText(title,x0+8,y0-6);
+        const bw=(wp-30)/probs.length,gap=4;
+        probs.forEach((p,i)=>{
+          const bx=x0+12+i*bw;
+          const bhP=p*(hp-40);
+          ctx.fillStyle=col;ctx.fillRect(bx,y0+hp-20-bhP,bw-gap,bhP);
+          ctx.fillStyle='#222';ctx.font='11px sans-serif';
+          ctx.fillText(p.toFixed(3),bx,y0+hp-bhP-24);
+          ctx.fillText(`k${i+1}`,bx+(bw-gap)/2-8,y0+hp-6);
+        });
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(`max |∂softmax/∂z| = ${grad.toFixed(4)} ${grad<0.005?'(거의 0 — 죽음)':'(살아있음)'}`,x0+8,y0+hp+18);
+      }
+      const wp=(W-PL-30-30)/2,hp=H-PT-70;
+      barPanel(PL,PT,wp,hp,probA,`(A) 정규화 없음 — 내적 raw (분산≈${dk})`,'#c62828',gA);
+      barPanel(PL+wp+30,PT,wp,hp,probB,`(B) ÷√d_k 정규화 — 분산≈1`,'#0b5fff',gB);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`d_k = ${dk}: dot 평균크기 ${(dots.reduce((a,b)=>a+Math.abs(b),0)/5).toFixed(1)} vs scaled ${(dotsScaled.reduce((a,b)=>a+Math.abs(b),0)/5).toFixed(1)}`,PL,20);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`그래디언트 비율 (B/A) = ${(gB/Math.max(gA,1e-9)).toFixed(0)}× — 큰 d_k에서 정규화의 효과가 극단적`,PL,H-15);
+    }
+    document.getElementById('dk').addEventListener('input',draw);
+    document.getElementById('dkRegen').onclick=regen;
+    regen();
+  })();
+  </script>
+
+  <p>$d_k$를 16에서 256으로 끌어올려 보세요. (A) 정규화 없는 쪽은 분포가 한 키에 0.99 이상 쏠리고 softmax 야코비안의 최댓값이 1e-3 이하로 떨어집니다 — <em>역전파에서 어텐션 가중치를 거의 학습할 수 없는 상태</em>. (B) 정규화된 쪽은 분포가 0.1~0.4 정도로 골고루 퍼져 그래디언트가 건강합니다. <strong>$\sqrt{d_k}$ 한 글자가 차원이 큰 모델에서 학습 가능 여부를 결정합니다</strong> — 그래서 GPT-3의 $d_k = 128$, GPT-4 추정치 $d_k \ge 128$ 같은 큰 모델에서 이 정규화 없이는 학습이 시작되지도 못합니다.</p>
+
   <h3>2.2 간단한 예시로 Q·K·V 감 잡기</h3>
   <p>"The cat sat on the mat"라는 6단어 문장을 생각해봅시다. 각 단어가 3차원 임베딩이라고 치고, "cat"이라는 단어의 표현이 self-attention을 통해 어떻게 갱신되는지 상상해봅시다. "cat"의 Query는 "나는 동물이고, 내 행동과 위치가 궁금해"라는 의미를 담을 수 있습니다. 각 단어의 Key는 "sat: 동작이야", "mat: 장소야" 등. 내적하면 "sat"와 "mat"이 높은 점수를 받고, softmax로 가중치가 되어 그들의 Value가 "cat"의 새 표현에 섞입니다. 결과적으로 "cat"은 이제 "자기 자신 + 자기가 한 행동(sat) + 자기가 있는 곳(mat)"의 풍부한 의미를 담은 새 벡터가 됩니다. 이 과정을 모든 토큰이 병렬로 수행.</p>
 

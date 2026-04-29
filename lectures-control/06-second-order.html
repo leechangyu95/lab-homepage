@@ -121,6 +121,23 @@
     </tbody>
   </table>
 
+  <details class="note" style="margin:12px 0">
+    <summary><strong>📐 오버슈트 공식은 어디서 왔는가? — 한 페이지 유도</strong></summary>
+    <p>학생들이 가장 많이 묻는 질문: "왜 하필 $e^{-\pi\zeta/\sqrt{1-\zeta^2}}$인가?" 짧게 풀어 봅니다.</p>
+    <ol>
+      <li><strong>피크 시간 찾기</strong>: 미감쇠 계단응답 $y(t) = 1 - \dfrac{e^{-\zeta\omega_n t}}{\sqrt{1-\zeta^2}} \sin(\omega_d t + \phi)$를 $t$로 미분하고 0으로 두면, 최초의 극값 시간이 $t_p = \pi/\omega_d$.</li>
+      <li><strong>$t_p$를 응답에 대입</strong>: $\sin(\omega_d t_p + \phi) = \sin(\pi + \phi) = -\sin\phi$. 그런데 $\phi = \arccos\zeta$이므로 $\sin\phi = \sqrt{1-\zeta^2}$.</li>
+      <li><strong>정리</strong>:
+        $$ y(t_p) = 1 - \frac{e^{-\zeta\omega_n \cdot \pi/\omega_d}}{\sqrt{1-\zeta^2}} \cdot (-\sqrt{1-\zeta^2}) = 1 + e^{-\zeta\omega_n \pi / \omega_d} $$
+      </li>
+      <li><strong>지수 단순화</strong>: $\omega_d = \omega_n\sqrt{1-\zeta^2}$이므로
+        $$ \frac{\zeta\omega_n \pi}{\omega_d} = \frac{\pi\zeta}{\sqrt{1-\zeta^2}} \;\Rightarrow\; \boxed{\,M_p = e^{-\pi\zeta/\sqrt{1-\zeta^2}}\,} $$
+      </li>
+    </ol>
+    <p><strong>의미 한 줄</strong>: 한 진동 주기에 감쇠가 얼마나 일어나는지의 비율. 분자 $\pi\zeta$는 "반주기 동안의 감쇠량", 분모 $\sqrt{1-\zeta^2}$는 "감쇠 때문에 진동주기가 늘어난 보정". $\zeta \to 0$이면 지수가 0 → 감쇠 없음(100% 오버슈트), $\zeta \to 1$이면 지수가 $-\infty$ → 오버슈트 0.</p>
+    <p><strong>역으로 푸는 법</strong>: 명세 "$M_p \le 5\%$"가 주어지면 $\ln(0.05) = -\pi\zeta/\sqrt{1-\zeta^2}$에서 $\zeta \ge 0.690$이 나옵니다 — "5% 명세 → ζ ≈ 0.7"의 출처.</p>
+  </details>
+
   <div class="note">
     <strong>외워두면 좋은 빠른 표</strong> — $\zeta$ 값별 오버슈트:
     $\zeta=0.4 \to 25\%$, $0.5 \to 16\%$, $0.6 \to 9.5\%$, $0.7 \to 4.6\%$, $0.8 \to 1.5\%$.
@@ -138,8 +155,133 @@
     <li>허수부 $\omega_d$ = 진동 주파수</li>
   </ul>
 
-  <p>설계 명세 "오버슈트 5%, 정착 1초 이내"가 주어지면, 이 기하학으로 s-평면에서 "허용 영역"을 그리고
-  그 안에 폐루프 극점이 들어오게 하는 것이 W12 PID 설계의 직관입니다.</p>
+  <h3>설계 명세 ↔ s-평면 영역 — 한 그림으로 정리</h3>
+
+  <p>학생들이 가장 헷갈리는 부분: "오버슈트 5%, 정착 1초 이내"라는 시간영역 명세가 어떻게 s-평면의 "부채꼴 영역"이 되는가? 세 줄로 정리합니다.</p>
+
+  <table>
+    <thead><tr><th>시간영역 명세</th><th>$\zeta, \omega_n$ 조건</th><th>s-평면에서 의미</th></tr></thead>
+    <tbody>
+      <tr><td>오버슈트 $M_p \le M^*$</td><td>$\zeta \ge \zeta^*$</td><td>음의 실축에서 각도 $\beta \le \arccos\zeta^*$ 이내 — <em>좌측으로 열린 부채꼴</em></td></tr>
+      <tr><td>정착시간 $t_s \le t_s^*$</td><td>$\zeta\omega_n \ge 4/t_s^*$</td><td>실수부 $\le -4/t_s^*$ — <em>수직선 왼쪽의 반평면</em></td></tr>
+      <tr><td>피크시간 $t_p \le t_p^*$</td><td>$\omega_d \ge \pi/t_p^*$</td><td>허수부 $\ge \pi/t_p^*$ — <em>수평선 위쪽 영역</em></td></tr>
+    </tbody>
+  </table>
+
+  <p>세 영역의 <strong>교집합</strong>이 "허용 영역". 폐루프 극점이 그 안에 들어오게 게인을 조절하는 것이 W9 근궤적과 W12 PID 설계의 핵심 직관입니다. 아래 인터랙티브에서 이 영역을 직접 그려 보세요.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 설계 명세 → s-평면 허용 영역 → 시간응답</h4>
+    <p>왼쪽 슬라이더로 시간영역 명세 (오버슈트 한계, 정착시간 한계)를 정하면, s-평면 위에 <span style="color:#2e7d32;font-weight:600">초록 영역</span>이 자동으로 그려집니다.
+    오른쪽에서 빨간 점(극점)을 마우스로 옮겨 영역 안/밖에서 응답이 어떻게 다른지 확인하세요.</p>
+    <canvas id="dspec" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>오버슈트 한계 Mp* [%] <span class="val" id="mpsV">10</span><input type="range" id="mps" min="1" max="50" step="1" value="10"></label>
+      <label>정착시간 한계 ts* [s] <span class="val" id="tssV">2.0</span><input type="range" id="tss" min="0.5" max="5" step="0.1" value="2.0"></label>
+      <label>극점 실수부 σ <span class="val" id="dpSig">-2.0</span><input type="range" id="dsig" min="-6" max="0.5" step="0.05" value="-2.0"></label>
+      <label>극점 허수부 ω <span class="val" id="dpOm">2.0</span><input type="range" id="dom" min="0" max="6" step="0.05" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dspec'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('mpsV').textContent=$('mps').value;$('tssV').textContent=(+$('tss').value).toFixed(1);
+      $('dpSig').textContent=(+$('dsig').value).toFixed(2);$('dpOm').textContent=(+$('dom').value).toFixed(2);};
+    ['mps','tss','dsig','dom'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const Mp=+$('mps').value/100, ts=+$('tss').value;
+      const sig=+$('dsig').value, om=+$('dom').value;
+      // derive zeta_min from Mp:  Mp = exp(-pi*z/sqrt(1-z^2))
+      const lnMp = Math.log(Mp);
+      const zMin = Math.sqrt(lnMp*lnMp/(Math.PI*Math.PI + lnMp*lnMp));
+      const sigMax = -4/ts;  // settling 2% rule
+      // current pole properties
+      const wn = Math.sqrt(sig*sig + om*om);
+      const zCur = wn>1e-3 ? -sig/wn : 1;
+      const Mp_cur = (zCur<1 && zCur>0) ? Math.exp(-Math.PI*zCur/Math.sqrt(1-zCur*zCur))*100 : (zCur>=1?0:NaN);
+      const ts_cur = zCur>1e-3 ? 4/(zCur*wn) : Infinity;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // s-plane
+      const cx=170, cy=190, sc=40;
+      // unstable shading
+      x.fillStyle='rgba(198,40,40,0.05)';x.fillRect(cx,20,180,340);
+      // allowed region (green): Re <= sigMax  AND  angle from neg real <= acos(zMin)
+      x.fillStyle='rgba(46,125,50,0.18)';
+      const angMax = Math.acos(zMin); // angle from negative real axis
+      // shade
+      for(let px=20;px<cx;px+=2){
+        for(let py=20;py<360;py+=2){
+          const sx=(px-cx)/sc, sy=(cy-py)/sc;
+          if(sx>sigMax/sc*sc) continue;  // simple
+          if(sx>sigMax) continue;
+          // angle from negative real axis
+          const ang = Math.atan2(Math.abs(sy), -sx);
+          if(ang<=angMax) x.fillRect(px,py,2,2);
+        }
+      }
+      // axes
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,cy);x.lineTo(340,cy);x.moveTo(cx,20);x.lineTo(cx,360);x.stroke();
+      // sigma boundary line
+      x.strokeStyle='#2e7d32';x.setLineDash([4,3]);x.beginPath();
+      x.moveTo(cx+sigMax*sc,20);x.lineTo(cx+sigMax*sc,360);x.stroke();x.setLineDash([]);
+      x.fillStyle='#2e7d32';x.font='10px sans-serif';x.fillText('Re='+sigMax.toFixed(2),cx+sigMax*sc-30,18);
+      // angle lines (zeta boundary)
+      x.strokeStyle='#2e7d32';x.lineWidth=1.5;
+      x.beginPath();x.moveTo(cx,cy);x.lineTo(cx-300*Math.cos(angMax),cy-300*Math.sin(angMax));x.stroke();
+      x.beginPath();x.moveTo(cx,cy);x.lineTo(cx-300*Math.cos(angMax),cy+300*Math.sin(angMax));x.stroke();
+      x.fillText('ζ≥'+zMin.toFixed(2),cx-100,cy-50);
+      // pole and conjugate
+      const px=cx+sig*sc, py=cy-om*sc, py2=cy+om*sc;
+      const inAllowed = (sig<=sigMax) && (Math.atan2(om,-sig)<=angMax) && sig<0;
+      x.fillStyle=inAllowed?'#2e7d32':'#c62828';
+      x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+      if(om>0.05){x.beginPath();x.arc(px,py2,7,0,Math.PI*2);x.fill();}
+      x.fillStyle='#666';x.font='10px sans-serif';x.fillText('Re',335,cy-4);x.fillText('Im',cx+5,28);
+      // info
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('현재 극점: ζ='+zCur.toFixed(2)+', ωn='+wn.toFixed(2),20,30);
+      x.fillText('Mp='+(isNaN(Mp_cur)?'발산':Mp_cur.toFixed(1)+'%')+'  ts='+(isFinite(ts_cur)?ts_cur.toFixed(2)+'s':'∞'),20,375);
+      x.fillStyle=inAllowed?'#2e7d32':'#c62828';
+      x.fillText(inAllowed?'✓ 명세 만족':'✗ 명세 위반',270,375);
+      // step response right
+      const ox=380, oy=290, w=240, h=200;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      // ts band
+      x.fillStyle='rgba(46,125,50,0.08)';x.fillRect(ox,oy-h*0.51,(ts/ts*w)*0+ts/8*w,h*0.04);
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,oy-h*0.5);x.lineTo(ox+w,oy-h*0.5);x.stroke();
+      x.beginPath();x.moveTo(ox,oy-h*0.5*(1+Mp));x.lineTo(ox+w,oy-h*0.5*(1+Mp));x.stroke();
+      x.beginPath();x.moveTo(ox+ts/8*w,oy);x.lineTo(ox+ts/8*w,oy-h);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='10px sans-serif';
+      x.fillText('1+Mp*',ox+w-40,oy-h*0.5*(1+Mp)-2);
+      x.fillText('ts*',ox+ts/8*w-10,oy-h-2);
+      // simulate response
+      x.strokeStyle=inAllowed?'#2e7d32':'#c62828';x.lineWidth=2;x.beginPath();
+      const T=8, dt=T/240;
+      let yp=0,vp=0;
+      const wn2=wn*wn, twoz=2*zCur*wn;
+      for(let i=0;i<240;i++){
+        const t=i*dt;
+        const a = -twoz*vp - wn2*yp + wn2;  // step input
+        vp += a*dt; yp += vp*dt;
+        const xx=ox+i*w/240, yy=oy-Math.max(-1,Math.min(2.5,yp))*h*0.5;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';x.fillText('계단응답',ox,oy-h-10);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>꼭 만져볼 시나리오</strong>:</p>
+  <ul>
+    <li>$M_p^* = 5\%$로 설정 → 부채꼴이 좁아짐 (ζ ≥ 0.69 요구).</li>
+    <li>$t_s^* = 1$ s → 수직 경계가 더 왼쪽(σ ≤ −4)으로 이동 → 영역이 더 깊어진다.</li>
+    <li>극점을 영역 안/밖으로 옮기며 시간응답이 명세를 어떻게 위반/만족하는지 확인.</li>
+    <li>오른쪽 점선이 명세선이고 파란/빨간 응답이 그 선 안에 들어오면 통과.</li>
+  </ul>
 
   <h2>5. 인터랙티브: ζ와 ωₙ 만져보기</h2>
 

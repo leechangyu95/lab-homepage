@@ -120,7 +120,7 @@
 
   <h3>2.1 마진 폭 유도 — 왜 $2/\|\mathbf w\|$인가</h3>
   <p>결정 경계가 $\mathbf w^\top \mathbf x + b = 0$인 초평면이라 합시다. 여기서 "도로의 폭(margin)"이란 어떤 것일까요? 경계로부터 한쪽 클래스의 가장 가까운 점까지 거리의 두 배가 도로 폭입니다.</p>
-  <p>일반성을 잃지 않고 서포트 벡터가 $\mathbf w^\top \mathbf x + b = \pm 1$을 만족하도록 $\mathbf w, b$를 스케일링할 수 있습니다. 그럼 두 초평면 $\mathbf w^\top \mathbf x + b = 1$과 $\mathbf w^\top \mathbf x + b = -1$ 사이의 거리는 점-초평면 거리 공식으로:</p>
+  <p>일반성을 잃지 않고 서포트 벡터가 $\mathbf w^\top \mathbf x + b = \pm 1$을 만족하도록 $\mathbf w, b$를 스케일링할 수 있습니다. <em>왜 정확히 $\pm 1$인가?</em> 결정 경계는 $\mathbf w^\top \mathbf x + b = 0$이라 $\mathbf w$와 $b$를 같은 양수배 해도 같은 경계를 정의합니다. 즉, "어떤 값으로 정규화할지"가 자유로워, 식이 깔끔해지도록 $\pm 1$로 약속한 것입니다. 만약 $\pm 5$로 약속해도 결과는 같고 분자만 5배가 됩니다 — 단지 표기 편의일 뿐입니다. 그럼 두 초평면 $\mathbf w^\top \mathbf x + b = 1$과 $\mathbf w^\top \mathbf x + b = -1$ 사이의 거리는 점-초평면 거리 공식으로:</p>
   $$ \text{margin} = \frac{|1 - (-1)|}{\|\mathbf w\|} = \frac{2}{\|\mathbf w\|} $$
   <p>따라서 "마진을 최대화"하려면 $\|\mathbf w\|$를 <em>최소화</em>하면 됩니다. 수학적 편의상 $\|\mathbf w\|^2$로 바꿔도 최적해는 같으므로 표준 형태가 나옵니다:</p>
   $$ \min_{\mathbf{w}, b} \frac{1}{2}\|\mathbf{w}\|^2 \quad \text{s.t.} \quad y_i(\mathbf{w}^\top \mathbf{x}_i + b) \ge 1,\; i = 1, \dots, N $$
@@ -148,6 +148,107 @@
     <li><strong>시그모이드 커널</strong> $K = \tanh(\alpha \mathbf x^\top \mathbf x' + c)$ — 신경망 흉내</li>
   </ul>
   <p>RBF 커널의 파라미터 $\gamma$는 "국소성"을 조절합니다 — 크면 각 샘플 주변만 영향을 미쳐 복잡한 경계가 가능하지만 과적합 위험이, 작으면 경계가 부드러워집니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 커널 트릭 — "들어 올리면 직선이 된다"</h4>
+    <p>왼쪽은 원래 2D 공간 — 안쪽 클래스(파랑)와 바깥쪽 클래스(주황)가 동심원을 이루어 어떤 직선으로도 분리 불가능합니다. 오른쪽은 같은 데이터를 $\phi(x_1, x_2) = (x_1, x_2, x_1^2 + x_2^2)$로 3차원에 들어 올린 모습 — 회전시켜보면 <strong>수평면 하나로 깔끔히 분리</strong>되는 것을 볼 수 있습니다. 이게 바로 SVM이 비선형 데이터를 푸는 비밀입니다.</p>
+    <canvas id="lift" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>회전 각도 <span class="val" id="liftAV">30</span>°<input type="range" id="liftA" min="0" max="80" step="2" value="30"></label>
+      <label>리프트 강도 <span class="val" id="liftLV">1.0</span><input type="range" id="liftL" min="0" max="2" step="0.05" value="1.0"></label>
+      <button id="liftAnim">▶ 애니메이션</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lift');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[],anim=null;
+    function gen(){
+      pts=[];
+      for(let i=0;i<35;i++){const a=Math.random()*Math.PI*2,r=0.05+Math.random()*0.18;pts.push({x:r*Math.cos(a),y:r*Math.sin(a),c:0});}
+      for(let i=0;i<45;i++){const a=Math.random()*Math.PI*2,r=0.5+Math.random()*0.18;pts.push({x:r*Math.cos(a),y:r*Math.sin(a),c:1});}
+    }
+    gen();
+    function draw(){
+      const ang=+document.getElementById('liftA').value*Math.PI/180;
+      const L=+document.getElementById('liftL').value;
+      document.getElementById('liftAV').textContent=document.getElementById('liftA').value;
+      document.getElementById('liftLV').textContent=L.toFixed(2);
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      // left: 2D
+      const lx=20,ly=20,lw=W/2-30,lh=H-60;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(lx,ly,lw,lh);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('① 원래 2D 공간 — 직선으로 못 가름',lx,ly-4);
+      pts.forEach(p=>{
+        const px=lx+lw/2+p.x*lw*0.8;
+        const py=ly+lh/2+p.y*lh*0.8;
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+      });
+      // try a line: any line will fail — draw a sample line to make point
+      ctx.strokeStyle='#888';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(lx+10,ly+lh/2);ctx.lineTo(lx+lw-10,ly+lh/2);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#888';ctx.font='11px sans-serif';ctx.fillText('어떤 직선도 두 클래스를 못 가름',lx+8,ly+lh-6);
+
+      // right: 3D
+      const rx=W/2+15,ry=20,rw=W/2-30,rh=H-60;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(rx,ry,rw,rh);
+      ctx.fillStyle='#333';ctx.fillText('② 3D로 리프트: z = x²+y² ⇒ 평면 하나로 분리',rx,ry-4);
+      // Project 3D (x,y,z) where z = L*(x*x+y*y) to 2D:
+      // First rotate around x-axis by ang
+      const cx=rx+rw/2,cy=ry+rh/2;
+      const scale=Math.min(rw,rh)*0.42;
+      const proj3d=(x,y,z)=>{
+        // rotate around x-axis: (y,z) -> (y*cos - z*sin, y*sin + z*cos)
+        const ry2=y*Math.cos(ang)-z*Math.sin(ang);
+        const rz2=y*Math.sin(ang)+z*Math.cos(ang);
+        return {px:cx+x*scale,py:cy+ry2*scale-rz2*scale*0.0,depth:rz2};
+      };
+      // draw separating plane z = 0.15 (in lifted coords)
+      const zPlane=0.15*L;
+      const corners=[[-0.85,-0.85],[0.85,-0.85],[0.85,0.85],[-0.85,0.85]].map(([x,y])=>proj3d(x,y,zPlane));
+      ctx.fillStyle='rgba(46,125,50,0.18)';ctx.strokeStyle='rgba(46,125,50,0.6)';
+      ctx.beginPath();ctx.moveTo(corners[0].px,corners[0].py);
+      for(let k=1;k<4;k++)ctx.lineTo(corners[k].px,corners[k].py);
+      ctx.closePath();ctx.fill();ctx.stroke();
+      // axes
+      const O=proj3d(0,0,0),Xa=proj3d(0.9,0,0),Ya=proj3d(0,0.9,0),Za=proj3d(0,0,0.9);
+      ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(O.px,O.py);ctx.lineTo(Xa.px,Xa.py);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(O.px,O.py);ctx.lineTo(Ya.px,Ya.py);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(O.px,O.py);ctx.lineTo(Za.px,Za.py);ctx.stroke();
+      ctx.fillStyle='#888';ctx.font='11px sans-serif';
+      ctx.fillText('x',Xa.px+2,Xa.py);ctx.fillText('y',Ya.px+2,Ya.py);ctx.fillText('z=x²+y²',Za.px+4,Za.py);
+      // points lifted, sorted by depth so far points draw first
+      const lifted=pts.map(p=>{const z=L*(p.x*p.x+p.y*p.y);const pr=proj3d(p.x,p.y,z);return {...p,...pr,z};});
+      lifted.sort((a,b)=>a.depth-b.depth);
+      lifted.forEach(p=>{
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(p.px,p.py,4,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.stroke();
+      });
+    }
+    document.getElementById('liftA').addEventListener('input',draw);
+    document.getElementById('liftL').addEventListener('input',draw);
+    document.getElementById('liftAnim').onclick=function(){
+      if(anim){clearInterval(anim);anim=null;this.textContent='▶ 애니메이션';return;}
+      let t=0;
+      anim=setInterval(()=>{
+        t+=0.04;
+        const a=30+25*Math.sin(t);
+        const L=1+0.5*Math.sin(t*0.7);
+        document.getElementById('liftA').value=a;
+        document.getElementById('liftL').value=L;
+        draw();
+      },50);
+      this.textContent='⏸ 정지';
+    };
+    draw();
+  })();
+  </script>
+
+  <p>위 데모의 핵심 메시지: <strong>비선형 분류는 "더 어려운 결정 함수"가 아니라, "더 좋은 특징 공간으로 옮긴 뒤의 선형 분류"</strong>입니다. 커널 트릭의 위대함은 이 "옮기기"를 명시적으로 하지 않고 내적 함수만으로 같은 효과를 낸다는 점입니다 — RBF 커널은 사실 "무한차원" 공간으로 옮기는 것에 해당하지만, 우리는 식 한 줄 $\exp(-\gamma\|\mathbf x - \mathbf x'\|^2)$만 알면 됩니다. 이 "더 좋은 특징 공간을 자동으로 학습한다"는 아이디어는 <a href="07-mlp.html">W7 신경망</a>에서 다른 방식으로 다시 등장합니다.</p>
 
   <div class="demo">
     <h4>🎮 인터랙티브: RBF 커널과 $\gamma$의 효과</h4>

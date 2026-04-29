@@ -130,6 +130,117 @@
     <figcaption>그림. 고전 설계는 제약에서 거리를 두어 안전한 대신 suboptimal. MPC는 제약을 최적화에 직접 포함해 최적점에서 작동.</figcaption>
   </figure>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: PID vs MPC — 입력 한계가 있을 때 누가 이길까?</h4>
+    <p>1차원 위치 시스템에 <em>같은 가속도 한계</em>($|u|\le u_\text{max}$)를 걸고, PID(빨강)와 MPC(파랑)에게 동일한 계단 명령을 주었을 때의 응답을 나란히 보여줍니다. 한계를 줄여보세요. PID는 한계를 모르고 큰 명령을 내리다 포화에 걸려 <strong>오버슛</strong>·<strong>적분 와인드업</strong>이 생기지만, MPC는 한계 안에서 미리 감속을 계획해 부드럽게 도착합니다. 하단 그래프는 실제로 인가된 가속도를 보여주는데, PID 쪽이 한계에서 평평하게 잘려나가는(saturation) 모습이 보입니다.</p>
+    <canvas id="pidmpc" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>가속도 한계 u<sub>max</sub> <span class="val" id="pmUV">1.5</span><input type="range" id="pmU" min="0.3" max="5" step="0.1" value="1.5"></label>
+      <label>목표 위치 변화량 <span class="val" id="pmRV">3.0</span><input type="range" id="pmR" min="1" max="6" step="0.5" value="3"></label>
+      <label>PID Kp <span class="val" id="pmKpV">2.5</span><input type="range" id="pmKp" min="0.5" max="6" step="0.1" value="2.5"></label>
+      <label>PID Ki <span class="val" id="pmKiV">0.8</span><input type="range" id="pmKi" min="0" max="3" step="0.1" value="0.8"></label>
+      <label><input type="checkbox" id="pmAW" checked> PID 와인드업 방지</label>
+      <button id="pmRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pidmpc'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const dt=0.1;
+    let t,pidS,mpcS,pidH,mpcH,pidU,mpcU,refH;
+    function init(){t=0;pidS={p:0,v:0,ei:0};mpcS={p:0,v:0};pidH=[];mpcH=[];pidU=[];mpcU=[];refH=[];}
+    init();
+    document.getElementById('pmRst').onclick=init;
+    function clip(u,umax){return Math.max(-umax,Math.min(umax,u));}
+    function refAt(tt){const R=+document.getElementById('pmR').value;return tt<2?0:R;}
+    // tiny MPC: gradient descent on N-step open-loop accelerations
+    function mpcStep(state,umax,N){
+      const Q=10,R=0.4;
+      let u=new Array(N).fill(0);
+      for(let it=0;it<25;it++){
+        let p=state.p,v=state.v;const ps=[p],vs=[v];
+        for(let i=0;i<N;i++){v+=u[i]*dt;p+=v*dt;ps.push(p);vs.push(v);}
+        for(let i=0;i<N;i++){
+          const r=refAt(t+(i+1)*dt);
+          let g=2*R*u[i];
+          for(let k=i+1;k<=N;k++){const rk=refAt(t+k*dt);g+=2*Q*(ps[k]-rk)*dt*(k-i)*dt;}
+          u[i]-=0.04*g;
+          if(u[i]>umax)u[i]=umax;if(u[i]<-umax)u[i]=-umax;
+        }
+      }
+      return u[0];
+    }
+    function loop(){
+      const umax=+document.getElementById('pmU').value;
+      const Kp=+document.getElementById('pmKp').value;
+      const Ki=+document.getElementById('pmKi').value;
+      const aw=document.getElementById('pmAW').checked;
+      ['pmU','pmR','pmKp','pmKi'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const r=refAt(t);
+      // PID with optional anti-windup (clamp integrator if saturated)
+      const ePid=r-pidS.p;
+      const Kd=1.5;
+      let uPidRaw=Kp*ePid+Ki*pidS.ei-Kd*pidS.v;
+      let uPid=clip(uPidRaw,umax);
+      if(!aw||(uPid===uPidRaw)) pidS.ei+=ePid*dt; // freeze integrator on saturation if AW on
+      pidS.v+=uPid*dt;pidS.p+=pidS.v*dt;
+      // MPC
+      const uMpc=clip(mpcStep(mpcS,umax,15),umax);
+      mpcS.v+=uMpc*dt;mpcS.p+=mpcS.v*dt;
+      pidH.push(pidS.p);mpcH.push(mpcS.p);pidU.push(uPid);mpcU.push(uMpc);refH.push(r);
+      const Tmax=120;
+      if(pidH.length>Tmax){pidH.shift();mpcH.shift();pidU.shift();mpcU.shift();refH.shift();}
+      t+=dt;
+      // render
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // top: position trace
+      const Tx0=40,Tx1=W-20,Ty0=20,Ty1=210;
+      const Bx0=40,Bx1=W-20,By0=240,By1=H-20;
+      x.strokeStyle='#ddd';x.strokeRect(Tx0,Ty0,Tx1-Tx0,Ty1-Ty0);
+      x.strokeStyle='#ddd';x.strokeRect(Bx0,By0,Bx1-Bx0,By1-By0);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('위치 응답',Tx0+6,Ty0+14);
+      x.fillText('가속도(입력) — 한계: ±'+umax.toFixed(1),Bx0+6,By0+14);
+      // axes
+      const pxT=(i)=>Tx0+i/Tmax*(Tx1-Tx0);
+      const Rmax=+document.getElementById('pmR').value;
+      const pyT=(p)=>Ty1-((p+0.5)/(Rmax+1))*(Ty1-Ty0-20)-10;
+      const pxB=pxT;
+      const pyB=(u)=>{const m=Math.max(umax*1.1,0.5);return (By0+By1)/2 - u/m*((By1-By0)/2-10);};
+      // ref
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=2;x.beginPath();
+      refH.forEach((rr,i)=>{i?x.lineTo(pxT(i),pyT(rr)):x.moveTo(pxT(i),pyT(rr));});x.stroke();x.setLineDash([]);
+      // PID position
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      pidH.forEach((p,i)=>{i?x.lineTo(pxT(i),pyT(p)):x.moveTo(pxT(i),pyT(p));});x.stroke();
+      // MPC position
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      mpcH.forEach((p,i)=>{i?x.lineTo(pxT(i),pyT(p)):x.moveTo(pxT(i),pyT(p));});x.stroke();
+      // saturation lines on bottom
+      x.strokeStyle='#aaa';x.setLineDash([3,3]);
+      x.beginPath();x.moveTo(Bx0,pyB(umax));x.lineTo(Bx1,pyB(umax));x.stroke();
+      x.beginPath();x.moveTo(Bx0,pyB(-umax));x.lineTo(Bx1,pyB(-umax));x.stroke();
+      x.setLineDash([]);
+      x.strokeStyle='#666';x.beginPath();x.moveTo(Bx0,(By0+By1)/2);x.lineTo(Bx1,(By0+By1)/2);x.stroke();
+      // PID input
+      x.strokeStyle='#c62828';x.lineWidth=1.8;x.beginPath();
+      pidU.forEach((u,i)=>{i?x.lineTo(pxB(i),pyB(u)):x.moveTo(pxB(i),pyB(u));});x.stroke();
+      // MPC input
+      x.strokeStyle='#0b5fff';x.lineWidth=1.8;x.beginPath();
+      mpcU.forEach((u,i)=>{i?x.lineTo(pxB(i),pyB(u)):x.moveTo(pxB(i),pyB(u));});x.stroke();
+      // legend
+      x.fillStyle='#c62828';x.fillRect(Tx1-150,Ty0+22,12,3);x.fillStyle='#444';x.fillText('PID',Tx1-130,Ty0+26);
+      x.fillStyle='#0b5fff';x.fillRect(Tx1-90,Ty0+22,12,3);x.fillStyle='#444';x.fillText('MPC',Tx1-70,Ty0+26);
+      x.fillStyle='#c62828';x.fillText('--- 목표',Tx1-150,Ty0+42);
+      requestAnimationFrame(()=>setTimeout(loop,40));
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="tip"><strong>관찰 포인트</strong> — 한계 $u_\text{max}$를 0.5 정도로 줄이고 $K_p$를 4 이상으로 올려보세요. PID는 큰 오차에 큰 입력을 요구하지만 한계에 잘려 더 빨리 가지 못하고, 잘리는 동안 적분기에 오차가 쌓여 도착 후 <em>오버슛</em>이 생깁니다. 와인드업 방지를 끄면 그 효과가 더 극적이에요. MPC는 처음부터 "한계 안에서 어떻게 가야 하는가"를 풀기 때문에 같은 한계에서도 부드럽게 안착합니다.</div>
+
   <h2>4. 수학적 정식화 (OCP)</h2>
 
   <h3>한 줄 비유부터</h3>
@@ -172,6 +283,11 @@
     <li>$P \succeq 0$ — <strong>종단 비용</strong>. 이후 무한 호라이즌을 근사해 안정성을 보장하는 핵심 장치 (뒤 L12에서 자세히).</li>
   </ul>
 
+  <h3>종단 비용 $P$가 왜 그렇게 중요한가? — 직관 한 줄</h3>
+  <p>호라이즌 $N=10$만 본다고 합시다. MPC는 "10 스텝 안에" 좋아 보이는 입력을 고를 수 있어요. 하지만 <em>11 스텝 이후</em>는 안 보이니까, MPC가 <strong>"호라이즌 끝에서 위험한 자리에 우리를 데려다 놓는"</strong> 입력을 고를 수도 있습니다. 예를 들어, 끝에서 매우 빠른 속도로 절벽을 향해 달리는 상태로 도착해도, 호라이즌 안에서 비용이 작으면 MPC는 그 입력을 고릅니다.</p>
+  <p>$P$는 이 문제를 막는 장치예요. <em>"호라이즌 끝의 상태가 좋은 자리인지"</em>를 페널티로 적습니다. 어떻게 잡을까? 가장 자연스러운 답은 <strong>그 시점부터 영원히 LQR로 운전한다고 가정했을 때의 비용</strong>입니다. 그 비용은 정확히 LQR 리카티 방정식의 해 $P$로 주어집니다 (섹션 11에서 식 확인). 즉:</p>
+  <div class="tip"><strong>$P$ 잡는 표준 방법</strong> — "$N$ 스텝 동안은 제약을 만족하도록 MPC가 풀고, 호라이즌 끝부터는 무제약 LQR로 따라간다"고 가정. 이때 종단 비용은 LQR 리카티 해 $P_\infty$. 이렇게 잡으면 N이 충분히 길고 종단 상태가 LQR이 처리 가능한 영역(invariant set) 안에 들어오면 폐루프 안정성이 수학적으로 증명됩니다 (Mayne et al. 2000).</div>
+
   <h2>5. 수신지평선 전략 — Plan & Do</h2>
 
   <h3>한 줄 비유부터</h3>
@@ -182,6 +298,14 @@
   <p>첫 입력만 쓰고 다시 푸는 것이 <strong>피드백</strong>을 만듭니다. 측정값이 새로 들어올 때마다 계획이 갱신되므로, 모델 오차가 계속 보정돼요. <em>"미래 예측이 항상 새로운 정보로 업데이트된다"</em>가 receding horizon의 정수입니다.</p>
 
   <div class="note"><strong>흔한 오해</strong> — "MPC는 미래를 정확히 알아야 한다." 아니에요. MPC는 모델로 <em>예측</em>할 뿐이고, 그 예측이 틀려도 다음 스텝에서 새 측정값으로 다시 계획됩니다. 사실 receding horizon의 진짜 가치는 <strong>예측이 틀려도 작동한다</strong>는 점에 있습니다.</div>
+
+  <h3>왜 첫 입력만 쓰는 게 중요한지 — 숫자로</h3>
+  <p>1D 점 질량을 외란 $w$가 매 스텝 더해지는 환경에서 시뮬레이션한다고 합시다. 호라이즌 $N=20$, 외란이 $w \sim \mathcal{N}(0, 0.1)$. 두 가지 전략을 비교:</p>
+  <ul>
+    <li><strong>(A) Open-loop</strong>: 한 번 OCP를 풀어 $u_0, u_1, \dots, u_{19}$ 모두 그대로 적용. 첫 풀이 후엔 측정값을 안 봄.</li>
+    <li><strong>(B) Receding horizon (MPC)</strong>: 매 스텝마다 새 측정값으로 다시 풀고, 첫 입력만 적용.</li>
+  </ul>
+  <p>20 스텝 후 위치 오차의 RMS는 보통 (A)가 (B)보다 <strong>3~10배</strong> 큽니다. 이유는 단순해요 — (A)는 외란이 한 번 들어오면 그게 누적되어도 보정 기회가 없습니다. (B)는 매 스텝 새로 시작하니, 1 스텝 만큼의 외란만 누적되고 즉시 보정됩니다. 이게 receding horizon이 "버리는 것 같은 입력 시퀀스"로 만들어내는 <strong>피드백 효과</strong>의 정량적 의미입니다.</p>
 
   <p>MPC는 매 샘플마다 다음을 반복합니다:</p>
   <ol>
@@ -346,31 +470,113 @@
     <li><strong>예측 호라이즌 $N$</strong> — 길수록 미래를 멀리 내다보지만 계산량이 $\mathcal{O}(N)$로 늘고, 문제 크기(변수 수)는 $\mathcal{O}(Nn_u)$. 최소한 지배적 과도응답이 끝나는 데 걸리는 시간보다는 길어야 합니다.</li>
     <li><strong>가중치 $Q, R, P$</strong> — Bryson의 규칙: "허용 가능한 최대 편차의 제곱의 역수"로 대각 원소를 시작. 이후 시뮬레이션으로 조율.</li>
   </ul>
-  <p>제어 호라이즌 $N_c \le N$을 따로 둬서 $k \ge N_c$ 이후에는 $u_k = u_{k-1}$로 묶으면(input blocking) 변수 수를 더 줄일 수 있습니다.</p>
+  <h3>입력 블로킹(Input Blocking) — 변수 수 줄이는 트릭</h3>
+  <p>호라이즌 $N$이 길어지면 입력 변수도 같이 늘어 계산이 무거워집니다. 그런데 보통 <em>가까운 미래</em>의 입력은 정밀해야 하지만 <em>먼 미래</em>의 입력은 어차피 다음에 다시 풀 거니까 정밀할 필요가 없어요. 그래서 이런 식으로 묶습니다:</p>
+  $$ u_0,\, u_1,\, u_2,\, \underbrace{u_3 = u_4 = u_5}_{\text{한 덩어리}},\, \underbrace{u_6 = u_7 = u_8 = u_9}_{\text{한 덩어리}} $$
+  <p>변수 수가 $N$ → $N_c$($N$ 보다 한참 작은 수)로 줄어 QP/NLP가 훨씬 빠릅니다. 자동차 MPC처럼 50 Hz 실시간 풀이가 필요한 경우에 자주 쓰는 표준 트릭이에요. <em>제어 호라이즌(control horizon) $N_c$ < 예측 호라이즌 $N$</em>이라고 부릅니다.</p>
 
   <h2>7. 인터랙티브: 1D MPC 위치 추종</h2>
 
+  <h3>먼저 — Q와 R로 응답 모양이 어떻게 바뀌나?</h3>
+  <p>본격적인 1D 추종 데모로 가기 전에, 가중치 $Q$(상태 페널티)와 $R$(입력 페널티)이 응답에 어떻게 작용하는지 한 번 손에 익혀봅시다. <strong>$Q$/$R$ 비율이 MPC 튜닝의 90%</strong>예요.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Q와 R의 줄다리기 — 가중치가 응답을 만든다</h4>
+    <p>$Q$를 키우면 "오차 페널티가 커서" MPC가 빨리 따라가려 입력을 크게 씁니다. $R$을 키우면 "입력 페널티가 커서" 부드럽지만 느려집니다. 두 슬라이더를 움직이며 위치 응답(파랑)과 인가 가속도(주황)가 어떻게 변하는지 보세요. 같은 호라이즌·같은 모델인데, 가중치 하나로 "공격적/부드러운" 두 다른 컨트롤러가 됩니다.</p>
+    <canvas id="qr" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>Q (상태 가중치) <span class="val" id="qrQV">10</span><input type="range" id="qrQ" min="0.5" max="50" step="0.5" value="10"></label>
+      <label>R (입력 가중치) <span class="val" id="qrRV">0.3</span><input type="range" id="qrR" min="0.01" max="5" step="0.01" value="0.3"></label>
+      <label>호라이즌 N <span class="val" id="qrNV">15</span><input type="range" id="qrN" min="5" max="40" value="15"></label>
+      <label>가속도 한계 <span class="val" id="qrUV">3</span><input type="range" id="qrU" min="0.5" max="6" step="0.1" value="3"></label>
+      <button id="qrRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('qr'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const dt=0.1,Tmax=120;
+    let state,t,posH,uH,refH;
+    function init(){state={p:0,v:0};t=0;posH=[];uH=[];refH=[];}
+    init();
+    document.getElementById('qrRst').onclick=init;
+    function refAt(tt){return tt<2?0:(tt<10?2:1);}
+    function mpcStep(){
+      const Q=+document.getElementById('qrQ').value;
+      const R=+document.getElementById('qrR').value;
+      const N=+document.getElementById('qrN').value;
+      const umax=+document.getElementById('qrU').value;
+      let u=new Array(N).fill(0);
+      for(let it=0;it<30;it++){
+        let p=state.p,v=state.v;const ps=[p];
+        for(let i=0;i<N;i++){v+=u[i]*dt;p+=v*dt;ps.push(p);}
+        for(let i=0;i<N;i++){
+          let g=2*R*u[i];
+          for(let k=i+1;k<=N;k++){const rk=refAt(t+k*dt);g+=2*Q*(ps[k]-rk)*dt*(k-i)*dt;}
+          u[i]-=0.025*g;
+          if(u[i]>umax)u[i]=umax;if(u[i]<-umax)u[i]=-umax;
+        }
+      }
+      return u[0];
+    }
+    function loop(){
+      ['qrQ','qrR','qrN','qrU'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const umax=+document.getElementById('qrU').value;
+      const u0=Math.max(-umax,Math.min(umax,mpcStep()));
+      state.v+=u0*dt;state.p+=state.v*dt;
+      const r=refAt(t);
+      posH.push(state.p);uH.push(u0);refH.push(r);
+      if(posH.length>Tmax){posH.shift();uH.shift();refH.shift();}
+      t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const Tx0=40,Tx1=W-20,Ty0=20,Ty1=200;
+      const Bx0=40,Bx1=W-20,By0=230,By1=H-20;
+      x.strokeStyle='#ddd';x.strokeRect(Tx0,Ty0,Tx1-Tx0,Ty1-Ty0);
+      x.strokeRect(Bx0,By0,Bx1-Bx0,By1-By0);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('위치 응답 (파랑) · 목표 (빨강 점선)',Tx0+6,Ty0+14);
+      x.fillText('인가 가속도 (주황) · 한계: ±'+umax.toFixed(1),Bx0+6,By0+14);
+      const pxT=(i)=>Tx0+i/Tmax*(Tx1-Tx0);
+      const pyT=(p)=>Ty1-((p+0.5)/3)*(Ty1-Ty0-20)-10;
+      const pyB=(u)=>{const m=Math.max(umax*1.1,0.5);return (By0+By1)/2 - u/m*((By1-By0)/2-12);};
+      // ref
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=2;x.beginPath();
+      refH.forEach((rr,i)=>{i?x.lineTo(pxT(i),pyT(rr)):x.moveTo(pxT(i),pyT(rr));});x.stroke();x.setLineDash([]);
+      // pos
+      x.strokeStyle='#0b5fff';x.lineWidth=2.4;x.beginPath();
+      posH.forEach((p,i)=>{i?x.lineTo(pxT(i),pyT(p)):x.moveTo(pxT(i),pyT(p));});x.stroke();
+      // saturation
+      x.strokeStyle='#aaa';x.setLineDash([3,3]);
+      x.beginPath();x.moveTo(Bx0,pyB(umax));x.lineTo(Bx1,pyB(umax));x.stroke();
+      x.beginPath();x.moveTo(Bx0,pyB(-umax));x.lineTo(Bx1,pyB(-umax));x.stroke();
+      x.setLineDash([]);
+      x.strokeStyle='#999';x.beginPath();x.moveTo(Bx0,(By0+By1)/2);x.lineTo(Bx1,(By0+By1)/2);x.stroke();
+      // u
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      uH.forEach((u,i)=>{i?x.lineTo(pxT(i),pyB(u)):x.moveTo(pxT(i),pyB(u));});x.stroke();
+      // helper text
+      const Q=+document.getElementById('qrQ').value,R=+document.getElementById('qrR').value;
+      const ratio=Q/R;
+      let advice='';
+      if(ratio>200) advice='Q/R 매우 큼 → 공격적, 입력 한계 활용 많음';
+      else if(ratio>20) advice='Q/R 적당 → 균형 잡힌 추종';
+      else if(ratio>3) advice='Q/R 작음 → 부드럽지만 느림';
+      else advice='Q/R 매우 작음 → 거의 입력 안 씀, 추종 안 됨';
+      x.fillStyle='#0742b8';x.font='12px sans-serif';
+      x.fillText('Q/R = '+ratio.toFixed(1)+'   ·   '+advice,Tx0+6,Ty0+34);
+      requestAnimationFrame(()=>setTimeout(loop,50));
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="note"><strong>실전 팁</strong> — 절대값 $Q=10, R=0.3$이 중요한 게 아니라 <strong>비율 $Q/R$</strong>이 응답을 결정합니다. 같은 비율이면 응답은 거의 같아요. 그래서 보통 $R = I$로 고정하고 $Q$만 조정하거나, Bryson 규칙(허용 오차의 제곱의 역수)으로 첫 값을 잡고 비율로 미세조정합니다.</div>
+
   <h3>이 데모로 무엇을 느낄 수 있나</h3>
-  <p>아래 두 섹션은 1차원 위치 추종(가속도가 입력)에서 MPC가 어떻게 작동하는지 보여줍니다. 마우스로 빨강 점선(목표)을 끌고 다니면 파란 차가 따라옵니다. 점선이 갑자기 멀리 이동해도 가속도 한계 안에서 부드럽게 수렴해요 — 이게 PID와의 가장 큰 차이입니다. PID는 한계를 모르니 명령이 한계 너머로 폭주할 수 있지만, MPC는 한계를 안 채로 최적의 가속 프로필을 만듭니다.</p>
+  <p>아래 데모는 1차원 위치 추종(가속도가 입력)에서 MPC가 어떻게 작동하는지 보여줍니다. 마우스로 빨강 점선(목표)을 끌고 다니면 파란 차가 따라옵니다. 점선이 갑자기 멀리 이동해도 가속도 한계 안에서 부드럽게 수렴해요 — 이게 PID와의 가장 큰 차이입니다. PID는 한계를 모르니 명령이 한계 너머로 폭주할 수 있지만, MPC는 한계를 안 채로 최적의 가속 프로필을 만듭니다.</p>
 
-  <h2>2. 수신지평선 (Receding Horizon)</h2>
-
-  <h3>한 줄 비유부터</h3>
-  <p>$N$ 스텝 미래 예측을 펼쳐 보여주는 그림입니다. 운전자가 100 m 앞을 시선으로 훑는 모습을 떠올려 보세요 — 시야 끝까지 다 본 뒤 그 정보를 가지고 <em>지금 이 순간의 핸들 조작</em>을 결정합니다. 다음 순간이 되면 시야가 한 칸 앞으로 밀리고, 다시 같은 일을 합니다. 그래서 "이동 지평(receding horizon)"입니다.</p>
-  <figure>
-    <svg viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
-      <line x1="20" y1="120" x2="480" y2="120" stroke="#333"/>
-      <g fill="#0b5fff"><circle cx="60" cy="120" r="5"/></g>
-      <g fill="#9eb9ff"><circle cx="100" cy="100" r="4"/><circle cx="140" cy="85" r="4"/><circle cx="180" cy="80" r="4"/><circle cx="220" cy="78" r="4"/><circle cx="260" cy="80" r="4"/></g>
-      <text x="60" y="145" text-anchor="middle" font-size="12">지금</text>
-      <text x="180" y="65" text-anchor="middle" font-size="11" fill="#0742b8">N 스텝 예측 후 첫 행동만 실행</text>
-      <line x1="60" y1="120" x2="60" y2="135" stroke="#0b5fff"/>
-    </svg>
-  </figure>
-
-  <h2>3. 최적화 문제</h2>
-
-  <h3>식 한 줄씩 풀어보기</h3>
+  <h3>이 데모가 매 스텝 푸는 OCP</h3>
   <p>이 식이 1D 위치 추종 데모가 매 순간 푸는 문제예요.</p>
   <ul>
     <li><strong>$\min_{u_0,\dots,u_{N-1}}$</strong> — "다음 $N$개의 가속도 시퀀스를 변수로 두고, 비용을 최소화하라."</li>

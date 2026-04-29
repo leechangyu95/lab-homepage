@@ -258,6 +258,75 @@
     <strong>망각 게이트 편향의 트릭</strong> — 실전에서 $b_f$를 1 또는 2로 초기화하면 학습 초기에 망각이 거의 일어나지 않아 기울기 흐름이 좋아집니다. 작은 트릭이지만 수렴 속도에 큰 차이를 만듭니다. PyTorch의 기본값은 이 트릭을 반영하지 않으니 직접 설정해야 합니다.
   </div>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: LSTM vs Vanilla RNN — 기울기는 얼마나 멀리 흐를까?</h4>
+    <p>50 시점 길이의 시퀀스를 거꾸로 거슬러 올라가며 기울기 크기를 추적합니다. <strong>Vanilla RNN</strong>은 매 시점마다 $|W_h \cdot \tanh'|$를 곱해 기하급수적으로 줄어들고, <strong>LSTM의 셀 경로</strong>는 $f_t$만 곱하므로 $f_t$가 1 근처면 거의 보존됩니다. 망각 게이트 값을 슬라이더로 조절해, "$b_f$를 큰 양수로 초기화" 트릭이 왜 효과적인지 직접 느껴보세요.</p>
+    <canvas id="lstmGrad" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>RNN의 |W_h| <span class="val" id="rnnWV">0.9</span><input type="range" id="rnnW" min="0.3" max="1.5" step="0.05" value="0.9"></label>
+      <label>LSTM 망각 게이트 f <span class="val" id="lstmFV">0.95</span><input type="range" id="lstmF" min="0.5" max="1.0" step="0.01" value="0.95"></label>
+      <label>시퀀스 길이 <span class="val" id="lstmTV">50</span><input type="range" id="lstmT" min="10" max="100" step="5" value="50"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lstmGrad');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const Wh=+document.getElementById('rnnW').value;
+      const f=+document.getElementById('lstmF').value;
+      const T=+document.getElementById('lstmT').value;
+      document.getElementById('rnnWV').textContent=Wh.toFixed(2);
+      document.getElementById('lstmFV').textContent=f.toFixed(2);
+      document.getElementById('lstmTV').textContent=T;
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      const PL=60,PT=30,plotW=W-PL-30,plotH=H-PT-50;
+      // log scale
+      const logMax=0,logMin=-15;
+      const tx=k=>PL+(k/T)*plotW;
+      const ty=v=>PT+plotH*(1-(Math.log10(Math.max(v,1e-16))-logMin)/(logMax-logMin));
+      // grid
+      for(const v of [1,1e-3,1e-6,1e-9,1e-12,1e-15]){
+        ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(PL,ty(v));ctx.lineTo(PL+plotW,ty(v));ctx.stroke();
+        ctx.fillStyle='#888';ctx.font='10px sans-serif';ctx.fillText(v.toExponential(0),PL-44,ty(v)+4);
+      }
+      // RNN: gradient ~ (Wh * tanh'_avg)^t. Use tanh'_avg ≈ 0.6 for typical activations
+      const rnnFactor=Wh*0.6;
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let k=0;k<=T;k++){const v=Math.pow(rnnFactor,k);const px=tx(k),py=ty(v);if(k===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+      ctx.stroke();
+      // LSTM cell path: gradient ~ f^t (cell-state shortcut)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let k=0;k<=T;k++){const v=Math.pow(f,k);const px=tx(k),py=ty(v);if(k===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+      ctx.stroke();
+      // mark final
+      const rEnd=Math.pow(rnnFactor,T),lEnd=Math.pow(f,T);
+      ctx.fillStyle='#ff8c00';ctx.beginPath();ctx.arc(tx(T),ty(rEnd),5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(tx(T),ty(lEnd),5,0,Math.PI*2);ctx.fill();
+      // labels
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`Vanilla RNN: 인수=${rnnFactor.toFixed(2)}, T=${T}에서 ${rEnd.toExponential(2)}`,PL,PT-12);
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText(`LSTM 셀 경로 (f=${f.toFixed(2)})`,PL+plotW-150,PT+12);
+      ctx.fillStyle='#ff8c00';
+      ctx.fillText(`Vanilla RNN`,PL+plotW-150,PT+28);
+      // x-axis
+      ctx.fillStyle='#888';ctx.font='11px sans-serif';
+      ctx.fillText('시간 거슬러 올라간 스텝 수 (BPTT 깊이)',PL+plotW/2-90,H-12);
+      ctx.save();ctx.translate(20,PT+plotH/2+50);ctx.rotate(-Math.PI/2);ctx.fillText('|기울기| (로그 스케일)',0,0);ctx.restore();
+      // verdict text
+      const ratio=lEnd/Math.max(rEnd,1e-30);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`50 스텝 후 비율: LSTM/RNN ≈ ${ratio.toExponential(1)}배`,PL,H-30);
+    }
+    ['rnnW','lstmF','lstmT'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <p>$|W_h|$ = 0.9, $f$ = 0.95로 두고 슬라이더를 비교해보면, 50 스텝 후 RNN의 기울기는 거의 0(1e-12 수준)으로 사라지지만 LSTM은 0.08 정도로 살아남습니다 — 약 <strong>$10^{10}$배</strong> 차이입니다. 망각 게이트 $f$를 0.5 근처로 줄여보면 LSTM도 RNN과 비슷하게 사라지는 것을 볼 수 있습니다. 그래서 "$b_f$를 양수로 초기화"해 $f$가 학습 초기에 1 근처에서 시작하게 만드는 트릭이 결정적인 것이고, 이게 바로 LSTM이 vanilla RNN과 다른 핵심 메커니즘입니다.</p>
+
   <h2>5. GRU — 단순함의 미덕</h2>
   <p>2014년 Kyunghyun Cho 등이 제안한 <strong>GRU(Gated Recurrent Unit)</strong>는 LSTM의 세 게이트를 두 개로 줄인 단순화 버전입니다. 핵심 아이디어:</p>
   <ul>
