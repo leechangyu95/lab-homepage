@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W12. CBF 장애물 회피 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html" class="active">경로계획 &amp; 추종</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 12. CBF — 안전을 수학적으로 보장하기</h1>
+  <p class="lead">Pure Pursuit는 경로를 잘 따라가지만 장애물 자체는 모릅니다. A*+Costmap은 정적 장애물엔 강하지만 갑자기 튀어나오는 보행자엔 약합니다.
+  오늘은 <strong>제어 입력에 안전 제약을 수학적으로 부과</strong>하는 도구 — Control Barrier Function(CBF) — 을 만나봅니다.
+  핵심 비유는 <strong>"개 목줄"</strong>입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 안전 보장이 어려운가? — 개 목줄 비유</li>
+    <li>Safe Set과 안전 함수 $h(x)$</li>
+    <li>CBF 핵심 부등식 $\dot h \ge -\alpha h$</li>
+    <li>인터랙티브: 1D — 벽 앞에 자동 정지</li>
+    <li>인터랙티브: 2D — 장애물 우회 (CBF on/off 비교)</li>
+    <li>인터랙티브: α 게인 효과 (보수적 vs 공격적)</li>
+    <li>QP-CBF 안전 필터 — 기존 제어기에 끼우기</li>
+    <li>한계와 실무 팁</li>
+    <li>핵심 정리</li>
+  </ol></div>
+
+  <h2>1. 왜 안전 보장이 어려운가?</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>강아지를 산책 시킨다고 상상해 보세요. 강아지(기본 제어기)는 자유롭게 뛰어다니고 싶어합니다.
+  주인은 차도 쪽으로는 못 가게 하고 싶어요. 둘을 화해시키는 도구가 <strong>목줄</strong>입니다.</p>
+  <ul>
+    <li>안전 영역 안에서는 목줄이 <strong>느슨</strong> — 강아지는 마음대로 뜁니다.</li>
+    <li>경계에 가까워지면 목줄이 팽팽해지면서 <strong>최소한만 잡아당겨</strong> 안전 영역 안으로 돌립니다.</li>
+  </ul>
+  <p>CBF는 정확히 이 "목줄"을 수학적 부등식으로 쓴 것입니다. 평소엔 컨트롤러를 그대로 두고, 위험할 때만 살짝 수정해요.</p>
+
+  <h2>2. Safe Set과 안전 함수 $h(x)$</h2>
+
+  <p>먼저 "안전한 상태들의 집합"을 함수 한 줄로 표현합니다.</p>
+  <ul>
+    <li>$h(x) \ge 0$ → 안전 (Safe Set 안)</li>
+    <li>$h(x) < 0$ → 충돌 (Safe Set 바깥)</li>
+  </ul>
+  <p>예를 들어 장애물 중심 $(x_o, y_o)$, 반지름 $R$의 원형 장애물이라면:</p>
+  $$ h(x, y) = (x - x_o)^2 + (y - y_o)^2 - R^2 $$
+  <p>차량 위치가 장애물 밖에 있으면 $h > 0$, 충돌 직전엔 $h = 0$, 안에 있으면 $h < 0$입니다. <strong>"$h$를 0 이상으로 영원히 유지"</strong>하는 게 우리의 목표예요.</p>
+
+  <h2>3. CBF 핵심 부등식</h2>
+
+  <p>$h(x)$를 "0 이상"으로 유지하는 가장 간단한 충분조건은 다음과 같습니다.</p>
+  $$ \dot h(x, u) \ge -\alpha\,h(x), \qquad \alpha > 0 $$
+  <p>의미를 풀어 쓰면:</p>
+  <ul>
+    <li>$h$가 큰 값(안전한 상태)일 땐 $\dot h$가 음수여도 OK — 약간 줄어도 괜찮음.</li>
+    <li>$h$가 0 가까이 갈수록 $\dot h$의 허용 하한 $-\alpha h$가 0에 가까워져 — 더는 줄어들 수 없음.</li>
+    <li>$h = 0$ 경계에서는 $\dot h \ge 0$이 강제 — <strong>안전 집합에서 절대 빠져나갈 수 없음</strong>.</li>
+  </ul>
+  <p>$\alpha$가 작을수록 멀리서부터 조심(보수적), 클수록 경계 근처까지 풀가속(공격적).</p>
+
+  <p>제어 affine 시스템 $\dot x = f(x) + g(x)u$에서는 부등식이 입력 $u$에 대해 선형이 됩니다.</p>
+  $$ L_f h(x) + L_g h(x)\,u \ge -\alpha\,h(x) $$
+  <p>여기서 $L_f h = \nabla h \cdot f$, $L_g h = \nabla h \cdot g$입니다. 이 부등식을 만족하는 $u$만 허용하면 안전이 보장됩니다.</p>
+
+  <h2>4. 인터랙티브: 1D — 벽 앞에 자동 정지</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: $h(x) = x_\text{wall} - x$</h4>
+    <p>1차원 차량이 벽($x = 10$)을 향해 갑니다. PID는 항상 "5 m/s로 가자"고 명령하지만, CBF가 "벽에서 멀 때만 그렇게 가도 된다"고 자동 제한합니다.
+    α를 흔들어 보세요.</p>
+    <canvas id="cbf1d" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>α <span class="val" id="aV">1.0</span><input type="range" id="a" min="0.2" max="3.0" step="0.1" value="1.0"></label>
+      <label>희망 속도 v_des <span class="val" id="vdV">5</span><input type="range" id="vd" min="1" max="10" step="0.5" value="5"></label>
+      <button id="rst1d" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cbf1d'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('aV').textContent=(+$('a').value).toFixed(1);$('vdV').textContent=(+$('vd').value).toFixed(1);};
+    ['a','vd'].forEach(id=>$(id).oninput=upd);
+    let X,V,t,hist;
+    function reset(){X=0;V=0;t=0;hist=[];}
+    reset();$('rst1d').onclick=reset;
+    function loop(){
+      const al=+$('a').value,vd=+$('vd').value,xw=10,dt=0.04;
+      const h=xw-X;const vmax=al*Math.max(0,h);V=Math.min(vd,vmax);X+=V*dt;t+=dt;
+      hist.push({t,X,V,h});if(hist.length>500)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h2=c.height,pad=42;const xa=tt=>pad+tt/15*(w-2*pad);const ya=v=>h2-pad-v/12*(h2-2*pad);
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(pad,ya(0));x.lineTo(w-pad,ya(0));x.moveTo(pad,h2-pad);x.lineTo(pad,pad);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('t [s]',w-pad-30,h2-pad+18);
+      // wall line
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(pad,ya(10));x.lineTo(w-pad,ya(10));x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.fillText('벽 x=10',pad+8,ya(10)-4);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=ya(p.X);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='#f57c00';x.lineWidth=1.6;x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=ya(p.V);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#0b5fff';x.fillText('파랑 X(t)',12,18);x.fillStyle='#f57c00';x.fillText('주황 V(t) (CBF 제한 후)',12,34);
+      x.fillStyle='#222';x.fillText('지금 X='+X.toFixed(2)+', V='+V.toFixed(2)+', h='+(10-X).toFixed(2),12,h2-10);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p>α가 작으면 멀리서부터 부드럽게 감속, 크면 벽 근처까지 풀가속하다 급제동. 어느 쪽도 절대 벽을 통과하지 않습니다 — 그게 CBF의 보장입니다.</p>
+
+  <h2>5. 인터랙티브: 2D — 장애물 우회 (CBF on/off 비교)</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 같은 목표, CBF 켰을 때 vs 껐을 때</h4>
+    <p>차량(녹색)이 목표(빨강)로 직선 진행을 시도합니다. 장애물(분홍)을 지나가는 도중 — CBF OFF는 그대로 충돌, CBF ON은 살짝 우회합니다.</p>
+    <canvas id="cbf2d" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>α <span class="val" id="a2V">1.5</span><input type="range" id="a2" min="0.2" max="4.0" step="0.1" value="1.5"></label>
+      <label><input type="checkbox" id="cbfOn" checked> CBF 활성</label>
+      <button id="rst2d" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cbf2d'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('a2V').textContent=(+$('a2').value).toFixed(1);};$('a2').oninput=upd;
+    const W=24,H=12;const sc=Math.min(c.width/W,c.height/H);
+    const goal=[22,6],obsArr=[[10,5,2.0],[14,7,1.5]];
+    let ego,trail;
+    function reset(){ego=[1,5];trail=[];}
+    reset();$('rst2d').onclick=reset;
+    function loop(){
+      const al=+$('a2').value,on=$('cbfOn').checked;
+      const dt=0.05;
+      // desired velocity: toward goal, speed 2.0
+      let vd=[goal[0]-ego[0],goal[1]-ego[1]];const dn=Math.hypot(vd[0],vd[1]);if(dn>1e-3){vd=[vd[0]/dn*2.0,vd[1]/dn*2.0];}
+      let v=vd.slice();
+      if(on){
+        for(const o of obsArr){
+          const d=[ego[0]-o[0],ego[1]-o[1]];const h=d[0]*d[0]+d[1]*d[1]-o[2]*o[2];
+          const gh=[2*d[0],2*d[1]];const lhs=gh[0]*v[0]+gh[1]*v[1]+al*h;
+          if(lhs<0){const g2=gh[0]*gh[0]+gh[1]*gh[1];v=[v[0]-(lhs/g2)*gh[0],v[1]-(lhs/g2)*gh[1]];}
+        }
+      }
+      ego=[ego[0]+v[0]*dt,ego[1]+v[1]*dt];trail.push(ego.slice());if(trail.length>500)trail.shift();
+      if(Math.hypot(goal[0]-ego[0],goal[1]-ego[1])<0.5)reset();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obsArr.forEach(o=>{x.beginPath();x.arc(o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,7,0,2*Math.PI);x.fill();
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      trail.forEach((p,i)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(ego[0]*sc,c.height-ego[1]*sc,7,0,2*Math.PI);x.fill();
+      x.fillStyle='#222';x.font='13px sans-serif';x.fillText('CBF: '+(on?'ON':'OFF'),12,18);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <h2>6. 인터랙티브: α 게인 효과</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: α를 작게/크게 설정해 보세요</h4>
+    <p>같은 환경에서 α만 다르게 — 작으면 멀리서부터 우회(보수적), 크면 장애물에 더 다가간 뒤 회피(공격적).</p>
+    <canvas id="aCmp" width="640" height="260"></canvas>
+    <div class="controls">
+      <button id="goA">3개 동시 실행</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('aCmp'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const W=22,H=8;const sc=Math.min(c.width/W,c.height/H);
+    const goal=[20,4],ob=[10,4,1.5];
+    const cfgs=[{al:0.5,col:'#0b5fff'},{al:1.5,col:'#2e7d32'},{al:5.0,col:'#c62828'}];
+    let runs;
+    function reset(){runs=cfgs.map(cf=>({al:cf.al,col:cf.col,p:[1,4],trail:[],done:false}));}
+    reset();
+    $('goA').onclick=()=>{reset();const id=setInterval(()=>{const dt=0.05;
+      runs.forEach(r=>{if(r.done)return;let vd=[goal[0]-r.p[0],goal[1]-r.p[1]];const dn=Math.hypot(vd[0],vd[1]);if(dn>1e-3){vd=[vd[0]/dn*2,vd[1]/dn*2];}
+        const d=[r.p[0]-ob[0],r.p[1]-ob[1]];const h=d[0]*d[0]+d[1]*d[1]-ob[2]*ob[2];const gh=[2*d[0],2*d[1]];
+        const lhs=gh[0]*vd[0]+gh[1]*vd[1]+r.al*h;let v=vd.slice();
+        if(lhs<0){const g2=gh[0]*gh[0]+gh[1]*gh[1];v=[vd[0]-(lhs/g2)*gh[0],vd[1]-(lhs/g2)*gh[1]];}
+        r.p=[r.p[0]+v[0]*dt,r.p[1]+v[1]*dt];r.trail.push(r.p.slice());if(Math.hypot(goal[0]-r.p[0],goal[1]-r.p[1])<0.5)r.done=true;});
+      draw();if(runs.every(r=>r.done))clearInterval(id);},40);};
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';x.beginPath();x.arc(ob[0]*sc,c.height-ob[1]*sc,ob[2]*sc,0,2*Math.PI);x.fill();x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,6,0,2*Math.PI);x.fill();
+      runs.forEach((r,i)=>{x.strokeStyle=r.col;x.lineWidth=2.2;x.beginPath();
+        r.trail.forEach((p,j)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(j==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+        x.fillStyle=r.col;x.font='13px sans-serif';x.fillText('α='+r.al,12,18+i*16);});
+    }
+    draw();
+  })();
+  </script>
+
+  <p>α=0.5는 멀리서부터 부드럽게 곡선을 그리며 우회, α=5.0은 장애물 바로 앞까지 직진하다 급격히 회피. 후자는 짧지만 승차감이 나쁘고 동역학 제약을 위반할 위험이 있습니다.</p>
+
+  <h2>7. QP-CBF 안전 필터 — 기존 제어기에 끼우기</h2>
+
+  <p>실제 시스템에서는 기본 컨트롤러(Pure Pursuit, MPC, …)가 만든 명령 $u_\text{des}$를 그대로 쓰지 않고, 가장 가까운 안전 명령으로 살짝 수정합니다. 이게 QP-CBF 안전 필터입니다.</p>
+  $$ u^* = \arg\min_{u}\;\|u - u_\text{des}\|^2 \quad \text{s.t.}\quad L_f h + L_g h\,u \ge -\alpha h $$
+
+  <p>제약이 1개면 닫힌 해(projection)가 있고, 여러 장애물이면 여러 부등식을 동시에 만족하는 QP를 풉니다.</p>
+
+<pre><code class="language-python">import numpy as np
+
+def cbf_filter(u_des, ego, obstacles, alpha=1.5):
+    """단일 적분기 ego, 다수 원형 장애물에 대한 QP-CBF (간단 projection)."""
+    u = u_des.copy()
+    for (cx, cy, R) in obstacles:
+        d  = ego - np.array([cx, cy])
+        h  = d @ d - R**2
+        gh = 2*d
+        lhs = gh @ u + alpha * h
+        if lhs < 0:                     # 안전 제약 위반
+            u = u - (lhs / (gh @ gh)) * gh   # projection
+    return u
+
+# 메인 루프
+ego = np.array([0.0, 0.0])
+goal = np.array([20.0, 0.0])
+obs = [(10.0, 0.0, 2.5), (14.0, 1.0, 1.5)]
+for t in np.arange(0, 12, 0.05):
+    u_des = (goal - ego) / np.linalg.norm(goal - ego) * 2.0
+    u = cbf_filter(u_des, ego, obs, alpha=1.5)
+    ego += u * 0.05</code></pre>
+
+  <h3>Pure Pursuit과의 결합</h3>
+  <p>실차에서는 입력이 (조향, 가속)이고 시스템이 비홀로노믹 차량입니다. 위 1차 적분기 예제의 아이디어는 그대로지만, $\nabla h$의 그래디언트를 차량 동역학으로 한 번 더 유도해야 해요. <a href="https://github.com/HybridRobotics/CBF" target="_blank">cvxpy</a>로 손쉽게 풀 수 있습니다.</p>
+
+  <h2>8. 한계와 실무 팁</h2>
+
+  <table>
+    <thead><tr><th>이슈</th><th>설명</th><th>대처</th></tr></thead>
+    <tbody>
+      <tr><td>지역 최소(local min)</td><td>장애물 너머에 갇힘</td><td>전역 계획기(A*)와 함께 사용 (CBF는 안전 필터 역할)</td></tr>
+      <tr><td>가속도 한계 위반</td><td>α 너무 크면 급제동/급조향 요구</td><td>QP에 입력 제약 추가</td></tr>
+      <tr><td>Higher-order 시스템</td><td>이중 적분기·차량은 단순 CBF가 안 통함</td><td>HO-CBF (Higher-Order CBF) 사용</td></tr>
+      <tr><td>여러 장애물 동시</td><td>제약 충돌 가능</td><td>QP 풀이는 가능, 실현 가능성 확인 필요</td></tr>
+      <tr><td>잡음/모델 오차</td><td>$h$ 추정이 부정확</td><td>안전 마진 추가, robust CBF 연구 활발</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>지역 최소 주의</strong> — CBF는 그 자체로 "안전"만 보장합니다. 목표 도달은 별개의 문제예요.
+    그래서 실무에서는 <strong>전역 경로 계획(A*) + Pure Pursuit/MPC + CBF 안전 필터</strong> 형태의 계층 구조가 표준입니다.
+  </div>
+
+  <h2>9. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>$h(x) \ge 0$ = 안전, $\dot h \ge -\alpha h$ = 안전 집합 이탈 금지.</li>
+      <li>CBF는 <strong>안전 필터</strong>: 평소엔 컨트롤러를 그대로, 위험할 때만 최소한 수정.</li>
+      <li>α가 작으면 보수적, 크면 공격적. 차량 동역학 한계와 연동해 선택.</li>
+      <li>QP-CBF는 단일/다중 장애물에 모두 일반화 가능.</li>
+      <li>지역 최소 회피·동적 모델 적용은 더 발전된 형태(HO-CBF, robust CBF)가 다룸.</li>
+      <li>한 줄: <strong>"개 목줄 = CBF"</strong>.</li>
+    </ul>
+  </div>
+
+  <h2>10. 더 깊이 공부하기</h2>
+  <ul>
+    <li>A. Ames et al., "Control Barrier Functions: Theory and Applications", ECC 2019 — 표준 튜토리얼.</li>
+    <li><a href="https://github.com/HybridRobotics/CBF" target="_blank">HybridRobotics/CBF</a> — 자율주행 CBF 예제 모음(MATLAB/Python).</li>
+    <li>관련 강의: <a href="13-mpc-basics.html">W13 MPC</a>는 CBF와 짝꿍으로 자주 쓰입니다(MPC-CBF). <a href="../mpc.html">MPC 특강</a>의 W12 응용에서 더 깊게 다룹니다.</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="11-integrated-sim.html"><small>← 이전</small>W11. 통합 시뮬레이션</a>
+    <a href="13-mpc-basics.html" class="next"><small>다음 →</small>W13. MPC 기초</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

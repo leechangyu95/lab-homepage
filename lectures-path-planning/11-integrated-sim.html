@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W11. 통합 시뮬레이션 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html" class="active">경로계획 &amp; 추종</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 11. 경로계획 + 유도제어 통합 시뮬레이션</h1>
+  <p class="lead">10주에 걸쳐 만든 레고 블록들 — 차량 모델, 지도, A*, 스플라인, 속도 프로파일, Pure Pursuit, PID — 을
+  하나의 시뮬레이터에 끼워 맞춥니다. 오늘은 새 알고리즘을 배우는 날이 아니라, <strong>각 모듈을 어떤 인터페이스로 잇고
+  어디서 자주 깨지는지</strong>를 배우는 날입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>전체 시스템 블록도</li>
+    <li>모듈별 인터페이스 정리</li>
+    <li>속도 프로파일 — 곡률 기반 감속</li>
+    <li>인터랙티브: A* + Pure Pursuit + PID 통합 데모</li>
+    <li>인터랙티브: 동적 장애물 등장 → 재계획</li>
+    <li>로그 분석 (cross-track error · 헤딩 오차 · 입력 이력)</li>
+    <li>흔한 통합 버그와 해결</li>
+    <li>핵심 정리 &amp; 프로젝트 가이드</li>
+  </ol></div>
+
+  <h2>1. 전체 시스템 블록도</h2>
+
+  <figure>
+    <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#555"/></marker></defs>
+      <rect x="10"  y="20" width="120" height="50" fill="#f3e5f5" stroke="#9c27b0"/><text x="70"  y="42" text-anchor="middle">지도 (W5)</text><text x="70"  y="58" text-anchor="middle" font-size="11" fill="#666">Occupancy Grid</text>
+      <rect x="150" y="20" width="120" height="50" fill="#eef3ff" stroke="#0b5fff"/><text x="210" y="42" text-anchor="middle">A* (W7)</text><text x="210" y="58" text-anchor="middle" font-size="11" fill="#666">최단 경로</text>
+      <rect x="290" y="20" width="120" height="50" fill="#e8f5e9" stroke="#2e7d32"/><text x="350" y="42" text-anchor="middle">Smoothing</text><text x="350" y="58" text-anchor="middle" font-size="11" fill="#666">Shortcut + Spline</text>
+      <rect x="430" y="20" width="140" height="50" fill="#fff3e0" stroke="#f57c00"/><text x="500" y="42" text-anchor="middle">속도 프로파일</text><text x="500" y="58" text-anchor="middle" font-size="11" fill="#666">v(s) ∝ √(ay/κ)</text>
+
+      <rect x="80"  y="120" width="160" height="55" fill="#fce4ec" stroke="#c62828"/><text x="160" y="142" text-anchor="middle">Pure Pursuit (W10)</text><text x="160" y="158" text-anchor="middle" font-size="11" fill="#666">→ 조향각 δ</text>
+      <rect x="270" y="120" width="120" height="55" fill="#fce4ec" stroke="#c62828"/><text x="330" y="142" text-anchor="middle">PID (W9)</text><text x="330" y="158" text-anchor="middle" font-size="11" fill="#666">→ 가속 a</text>
+      <rect x="420" y="120" width="160" height="55" fill="#fffde7" stroke="#fbc02d"/><text x="500" y="142" text-anchor="middle">차량 시뮬 (W2/W4)</text><text x="500" y="158" text-anchor="middle" font-size="11" fill="#666">Bicycle + Euler</text>
+
+      <path d="M130,45 L150,45" stroke="#555" marker-end="url(#arr)"/>
+      <path d="M270,45 L290,45" stroke="#555" marker-end="url(#arr)"/>
+      <path d="M410,45 L430,45" stroke="#555" marker-end="url(#arr)"/>
+      <path d="M500,75 L500,118" stroke="#555" fill="none" marker-end="url(#arr)"/>
+      <path d="M500,75 L160,75 L160,118" stroke="#555" fill="none" marker-end="url(#arr)"/>
+      <path d="M500,75 L330,75 L330,118" stroke="#555" fill="none" marker-end="url(#arr)"/>
+      <path d="M240,150 L268,150" stroke="#555" marker-end="url(#arr)"/>
+      <path d="M390,150 L418,150" stroke="#555" marker-end="url(#arr)"/>
+      <path d="M580,150 L600,150 L600,200 L160,200 L160,178" stroke="#555" fill="none" marker-end="url(#arr)"/>
+      <text x="370" y="212" text-anchor="middle" font-size="11" fill="#666">차량 상태 피드백</text>
+    </svg>
+    <figcaption>그림 1. 통합 시스템 — 지도/계획은 한 번, 추종 루프는 매 20 ms마다 반복.</figcaption>
+  </figure>
+
+  <h2>2. 모듈별 인터페이스</h2>
+
+  <table>
+    <thead><tr><th>모듈</th><th>입력</th><th>출력</th><th>주기</th></tr></thead>
+    <tbody>
+      <tr><td>지도 (W5)</td><td>—</td><td>Occupancy Grid + Costmap</td><td>1회 / 갱신 시</td></tr>
+      <tr><td>A* (W7)</td><td>start, goal, grid</td><td>경로 (격자 셀 리스트)</td><td>1회 / 재계획</td></tr>
+      <tr><td>Smoothing</td><td>거친 경로</td><td>매끈한 (x,y) 리스트</td><td>1회</td></tr>
+      <tr><td>속도 프로파일</td><td>경로 곡률 κ(s)</td><td>$v_\text{ref}(s)$</td><td>1회</td></tr>
+      <tr><td>Pure Pursuit (W10)</td><td>차량 상태, 경로</td><td>조향 δ</td><td>50 Hz</td></tr>
+      <tr><td>PID (W9)</td><td>$v_\text{ref}, v$</td><td>가속 a</td><td>50 Hz</td></tr>
+      <tr><td>차량 시뮬 (W2/W4)</td><td>(δ, a)</td><td>(x, y, ψ, v)</td><td>50 Hz</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>설계 원칙</strong> — 각 블록은 독립 모듈이고, 인터페이스(어떤 데이터를 주고받을지)만 명확히 하면 누가 어디를 짜도 잘 합쳐집니다.
+    실무에서는 이 인터페이스가 ROS 토픽 메시지의 형태로 굳어집니다.
+  </div>
+
+  <h2>3. 속도 프로파일 — 곡률 기반 감속</h2>
+
+  <p>곡선이 급할수록 횡가속 한도($a_{y,\max}$, 보통 2.5 m/s²) 안에서만 돌 수 있는 속도가 정해집니다.</p>
+  $$ v_\text{limit}(s) = \sqrt{\frac{a_{y,\max}}{|\kappa(s)|}}, \qquad v_\text{ref}(s) = \min\!\big(v_\text{limit}(s),\;v_\text{cruise}\big) $$
+
+<pre><code class="language-python">dx = csx(s_fine, 1); dy = csy(s_fine, 1)
+ddx = csx(s_fine, 2); ddy = csy(s_fine, 2)
+kappa = (dx*ddy - dy*ddx) / (dx**2 + dy**2)**1.5
+v_limit = np.sqrt(a_y_max / np.clip(np.abs(kappa), 1e-3, None))
+v_ref   = np.minimum(v_limit, 15.0)            # 최대 15 m/s 순항</code></pre>
+
+  <p>이렇게 미리 계산된 $v_\text{ref}(s)$를 W9의 PID가 추종합니다. 곡선에서 자동으로 감속, 직선에서 최대속.</p>
+
+  <h2>4. 인터랙티브: A* + Pure Pursuit + PID 통합 데모</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 클릭으로 출발점·목표점 변경 → 자동 계획·추종</h4>
+    <p>좌클릭으로 <strong>출발점</strong>, 우클릭(또는 Shift+클릭)으로 <strong>목표점</strong>을 옮기면 즉시 A*로 재계획하고 차량이 따라가기 시작합니다.
+    Look-ahead와 Kp_speed를 조절해 추종 품질을 비교해 보세요.</p>
+    <canvas id="ipCv" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>look-ahead 기본 Lfc <span class="val" id="lfV">1.5</span><input type="range" id="lf" min="0.5" max="4.0" step="0.1" value="1.5"></label>
+      <label>속도 게인 Kp <span class="val" id="kpsV">1.2</span><input type="range" id="kps" min="0.2" max="3.0" step="0.1" value="1.2"></label>
+      <label>순항 속도 [m/s] <span class="val" id="vcV">8</span><input type="range" id="vc" min="3" max="15" step="0.5" value="8"></label>
+      <button id="rstBtn" class="alt">리셋</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:6px">팁 — 좌클릭: 출발점 / 우클릭(또는 Shift+클릭): 목표점</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ipCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('lfV').textContent=(+$('lf').value).toFixed(1);$('kpsV').textContent=(+$('kps').value).toFixed(1);$('vcV').textContent=(+$('vc').value).toFixed(1);};
+    ['lf','kps','vc'].forEach(id=>$(id).oninput=upd);
+    const W=20,H=12;const sc=Math.min(c.width/W,c.height/H);
+    let start=[2,2],goal=[18,10];
+    const obs=[[8,5,1.6],[12,9,1.4],[14,4,1.2],[5,9,1.0]];
+    let path=null,car,speedPID,running=true;
+    function makeCar(){return{x:start[0],y:start[1],psi:0,v:0};}
+    function makePID(){return{Kp:1.2,Ki:0.4,Kd:0.05,I:0,e_p:null,umin:-3,umax:2,step(e,dt){this.I+=e*dt;const dedt=this.e_p===null?0:(e-this.e_p)/dt;this.e_p=e;let u=this.Kp*e+this.Ki*this.I+this.Kd*dedt;const us=Math.max(this.umin,Math.min(this.umax,u));if(us!==u)this.I-=e*dt;return us;}};}
+    function planPath(){
+      // simple A* on a coarse grid
+      const N=40,M=24;const gx=W/N,gy=H/M;
+      const blocked=(i,j)=>{const x_=i*gx+gx/2,y_=j*gy+gy/2;for(const o of obs){if(Math.hypot(x_-o[0],y_-o[1])<o[2]+0.4)return true;}return false;};
+      const si=Math.round(start[0]/gx),sj=Math.round(start[1]/gy);
+      const ti=Math.round(goal[0]/gx),tj=Math.round(goal[1]/gy);
+      const open=new Map(),closed=new Set(),parent=new Map(),g=new Map();
+      const k0=si+','+sj;g.set(k0,0);open.set(k0,{i:si,j:sj,f:Math.hypot(si-ti,sj-tj)});
+      let found=null;let it=0;
+      while(open.size>0&&it<5000){it++;let bk=null,bf=1e9;for(const[k,n]of open){if(n.f<bf){bf=n.f;bk=k;}}
+        const cur=open.get(bk);open.delete(bk);closed.add(bk);
+        if(cur.i===ti&&cur.j===tj){found=bk;break;}
+        for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){if(di===0&&dj===0)continue;
+          const ni=cur.i+di,nj=cur.j+dj;if(ni<0||ni>=N||nj<0||nj>=M)continue;if(blocked(ni,nj))continue;
+          const nk=ni+','+nj;if(closed.has(nk))continue;const cost=(di&&dj)?Math.SQRT2:1;
+          const ng=g.get(bk)+cost;if(!g.has(nk)||ng<g.get(nk)){g.set(nk,ng);parent.set(nk,bk);
+            open.set(nk,{i:ni,j:nj,f:ng+Math.hypot(ni-ti,nj-tj)});}}}
+      if(!found)return null;
+      const pts=[];let k=found;while(k){const[ii,jj]=k.split(',').map(Number);pts.push([ii*gx+gx/2,jj*gy+gy/2]);k=parent.get(k);}pts.reverse();
+      // simple shortcut
+      const free=(a,b)=>{for(let t=0;t<=1;t+=0.05){const px=a[0]+(b[0]-a[0])*t,py=a[1]+(b[1]-a[1])*t;for(const o of obs){if(Math.hypot(px-o[0],py-o[1])<o[2]+0.3)return false;}}return true;};
+      let cleaned=[pts[0]];let i=0;while(i<pts.length-1){let j=pts.length-1;while(j>i+1&&!free(pts[i],pts[j]))j--;cleaned.push(pts[j]);i=j;}
+      // densify
+      const dense=[];for(let i=0;i<cleaned.length-1;i++){const a=cleaned[i],b=cleaned[i+1];const d=Math.hypot(b[0]-a[0],b[1]-a[1]);const n=Math.max(1,Math.ceil(d/0.2));for(let k=0;k<n;k++){dense.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]);}}dense.push(cleaned[cleaned.length-1]);return dense;
+    }
+    function plan(){path=planPath();car=makeCar();speedPID=makePID();speedPID.Kp=+$('kps').value;}
+    plan();$('rstBtn').onclick=plan;
+    c.addEventListener('contextmenu',e=>{e.preventDefault();const r=c.getBoundingClientRect();goal=[(e.clientX-r.left)/sc,(c.height-(e.clientY-r.top))/sc];plan();});
+    c.addEventListener('click',e=>{const r=c.getBoundingClientRect();const px=(e.clientX-r.left)/sc,py=(c.height-(e.clientY-r.top))/sc;
+      if(e.shiftKey)goal=[px,py];else start=[px,py];plan();});
+    function nearestIdx(){if(!path)return 0;let bi=0,bd=1e9;path.forEach((p,i)=>{const d=Math.hypot(p[0]-car.x,p[1]-car.y);if(d<bd){bd=d;bi=i;}});return bi;}
+    function loop(){
+      if(path){
+        const Lfc=+$('lf').value,k=0.1;const Ld=k*car.v+Lfc;
+        let i=nearestIdx();let tg=path[path.length-1];for(let j=i;j<path.length;j++){if(Math.hypot(path[j][0]-car.x,path[j][1]-car.y)>=Ld){tg=path[j];break;}}
+        const alpha=Math.atan2(tg[1]-car.y,tg[0]-car.x)-car.psi;
+        const wa=Math.atan2(Math.sin(alpha),Math.cos(alpha));
+        const L=2.5;const delta=Math.atan2(2*L*Math.sin(wa),Ld);
+        const vRef=+$('vc').value;const a=speedPID.step(vRef-car.v,0.02);
+        const dt=0.02;car.x+=car.v*Math.cos(car.psi)*dt;car.y+=car.v*Math.sin(car.psi)*dt;
+        car.psi+=car.v/L*Math.tan(delta)*dt;car.v+=a*dt;car.v=Math.max(0,car.v);
+        if(Math.hypot(car.x-goal[0],car.y-goal[1])<0.5)car.v*=0.95;
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      if(path){x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+        path.forEach((p,i)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0]*sc,c.height-start[1]*sc,7,0,2*Math.PI);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,7,0,2*Math.PI);x.fill();
+      // car
+      x.save();x.translate(car.x*sc,c.height-car.y*sc);x.rotate(-car.psi);
+      x.fillStyle='#0b5fff';x.fillRect(-12,-6,24,12);x.fillStyle='#fff';x.fillRect(7,-5,4,10);x.restore();
+      x.fillStyle='#222';x.font='12px sans-serif';x.fillText('v = '+car.v.toFixed(2)+' m/s',12,18);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <h2>5. 인터랙티브: 동적 장애물 → 재계획</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 트리거 버튼으로 새 장애물 등장</h4>
+    <p>주행 중 새 장애물이 경로 위로 떨어지면 시스템은 즉시 A*로 재계획하고 새 경로를 따라갑니다. 이게 자율주행의 표준 패턴입니다.</p>
+    <canvas id="rpCv" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="addObsB">장애물 추가</button>
+      <button id="rstRpB" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rpCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const W=20,H=10;const sc=Math.min(c.width/W,c.height/H);
+    const start=[1,5],goal=[19,5];
+    let obs=[[10,4,1.0]];let path=null,car;
+    function planA(){
+      const N=40,M=20;const gx=W/N,gy=H/M;
+      const blocked=(i,j)=>{const x_=i*gx+gx/2,y_=j*gy+gy/2;for(const o of obs){if(Math.hypot(x_-o[0],y_-o[1])<o[2]+0.3)return true;}return false;};
+      const si=Math.round(start[0]/gx),sj=Math.round(start[1]/gy);
+      const ti=Math.round(goal[0]/gx),tj=Math.round(goal[1]/gy);
+      const open=new Map(),closed=new Set(),parent=new Map(),g=new Map();
+      const k0=si+','+sj;g.set(k0,0);open.set(k0,{i:si,j:sj,f:Math.hypot(si-ti,sj-tj)});
+      let found=null,it=0;
+      while(open.size>0&&it<5000){it++;let bk=null,bf=1e9;for(const[k,n]of open){if(n.f<bf){bf=n.f;bk=k;}}
+        const cur=open.get(bk);open.delete(bk);closed.add(bk);
+        if(cur.i===ti&&cur.j===tj){found=bk;break;}
+        for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){if(di===0&&dj===0)continue;
+          const ni=cur.i+di,nj=cur.j+dj;if(ni<0||ni>=N||nj<0||nj>=M)continue;if(blocked(ni,nj))continue;
+          const nk=ni+','+nj;if(closed.has(nk))continue;const cost=(di&&dj)?Math.SQRT2:1;
+          const ng=g.get(bk)+cost;if(!g.has(nk)||ng<g.get(nk)){g.set(nk,ng);parent.set(nk,bk);
+            open.set(nk,{i:ni,j:nj,f:ng+Math.hypot(ni-ti,nj-tj)});}}}
+      if(!found)return null;const pts=[];let k=found;while(k){const[ii,jj]=k.split(',').map(Number);pts.push([ii*gx+gx/2,jj*gy+gy/2]);k=parent.get(k);}pts.reverse();return pts;
+    }
+    function reset(){obs=[[10,4,1.0]];path=planA();car={x:start[0],y:start[1],psi:0,v:6};}
+    reset();$('rstRpB').onclick=reset;
+    $('addObsB').onclick=()=>{obs.push([car.x+5,car.y+(Math.random()-0.5)*3,0.9]);path=planA();};
+    function loop(){
+      if(path){
+        // find next target on path
+        let bi=0,bd=1e9;path.forEach((p,i)=>{const d=Math.hypot(p[0]-car.x,p[1]-car.y);if(d<bd){bd=d;bi=i;}});
+        let tg=path[Math.min(bi+8,path.length-1)];
+        const alpha=Math.atan2(tg[1]-car.y,tg[0]-car.x)-car.psi;
+        const wa=Math.atan2(Math.sin(alpha),Math.cos(alpha));
+        const delta=Math.atan2(2*2.5*Math.sin(wa),1.5);
+        const dt=0.02;car.x+=car.v*Math.cos(car.psi)*dt;car.y+=car.v*Math.sin(car.psi)*dt;
+        car.psi+=car.v/2.5*Math.tan(delta)*dt;
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      if(path){x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+        path.forEach((p,i)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0]*sc,c.height-start[1]*sc,6,0,2*Math.PI);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,6,0,2*Math.PI);x.fill();
+      x.save();x.translate(car.x*sc,c.height-car.y*sc);x.rotate(-car.psi);
+      x.fillStyle='#0b5fff';x.fillRect(-12,-6,24,12);x.fillStyle='#fff';x.fillRect(7,-5,4,10);x.restore();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>6. 로그 분석 — 추종 품질 평가</h2>
+
+  <p>시뮬 결과의 품질을 정량화하는 표준 지표입니다. 시뮬레이터를 짠 다음 반드시 이 셋을 찍어보세요.</p>
+
+  <table>
+    <thead><tr><th>지표</th><th>정의</th><th>목표값(예시)</th></tr></thead>
+    <tbody>
+      <tr><td>Cross-track error $e_y$</td><td>경로와의 수직 거리</td><td>RMSE &lt; 0.3 m</td></tr>
+      <tr><td>Heading error $e_\psi$</td><td>경로 접선과 헤딩 차</td><td>&lt; 5° 평균</td></tr>
+      <tr><td>최대 속도 오차</td><td>$|v - v_\text{ref}|$</td><td>&lt; 1 m/s</td></tr>
+      <tr><td>최소 장애물 거리</td><td>min over time</td><td>≥ Costmap 인플레이션 폭</td></tr>
+      <tr><td>입력 변화율</td><td>$|\dot\delta|$, $|\dot a|$</td><td>승차감 한도 안</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. 흔한 통합 버그와 해결</h2>
+
+  <table>
+    <thead><tr><th>증상</th><th>의심</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>차가 경로와 반대 방향으로 출발</td><td>각도 wrap 누락</td><td>$\psi \in [-\pi,\pi]$로 매 스텝 정규화</td></tr>
+      <tr><td>차가 경로 끝에서 가만히 못 멈춤</td><td>look-ahead가 경로 길이보다 큼</td><td>경로 끝에 도달하면 $L_d$를 줄이거나 PID 종료 모드</td></tr>
+      <tr><td>곡선에서 과속 → 슬립</td><td>속도 프로파일 미적용</td><td>$v_\text{limit} = \sqrt{a_y/\kappa}$ 기반 감속</td></tr>
+      <tr><td>장애물 관통</td><td>Costmap 미사용 / 인플레이션 부족</td><td>안전 마진 ≥ 차폭 절반</td></tr>
+      <tr><td>제어 입력이 톡톡 튐</td><td>지터 + Kd 너무 큼</td><td>저역 필터 또는 Rate limit</td></tr>
+      <tr><td>좌표계 혼동(World vs Body)</td><td>변환 누락</td><td>모듈 입력에 좌표계 명시 + 단위 테스트</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. 메인 루프 — 코드로 정리</h2>
+
+<pre><code class="language-python"># 1) 한 번만: 지도 → A* → smoothing → 속도 프로파일
+grid       = load_map()
+path_grid  = astar(grid, start_idx, goal_idx)
+path_xy    = grid_to_xy(path_grid, res=0.1)
+ref_x, ref_y = smooth(path_xy)         # Shortcut + Cubic spline
+kappa        = curvature(ref_x, ref_y)
+v_ref        = np.minimum(np.sqrt(2.5 / np.clip(np.abs(kappa), 1e-3, None)), 15.0)
+
+# 2) 50 Hz 루프
+car       = CarSim(x=2, y=2, psi=0, v=0)
+speed_pid = PID(1.2, 0.3, 0.05, u_min=-5, u_max=3)
+ref_path  = np.c_[ref_x, ref_y]
+log = []
+for t in np.arange(0, 60, 0.02):
+    state    = car.state
+    delta, i = pure_pursuit(state, ref_path, Lfc=2.0, k=0.1)
+    a        = speed_pid.step(v_ref[i] - state[3], dt=0.02)
+    car.step(a, delta, dt=0.02)
+    log.append((t, *state, v_ref[i], delta, a))
+    if np.linalg.norm(state[:2] - ref_path[-1]) < 1.0:
+        break
+
+# 3) 평가
+log = np.array(log)
+err_y  = compute_cross_track_error(log[:, 1:3], ref_path)
+print(f"RMSE_ey = {np.sqrt((err_y**2).mean()):.3f} m")</code></pre>
+
+  <h2>9. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>통합은 새 알고리즘이 아니라 <strong>인터페이스 설계</strong>의 문제. 데이터를 누가 누구에게 어떤 형식으로 주는지가 핵심.</li>
+      <li>경로계획은 <strong>1회</strong>, 추종 루프는 <strong>50 Hz</strong>. 주기 분리가 시스템 안정성의 출발.</li>
+      <li>곡률 기반 속도 프로파일이 안전·승차감의 핵심.</li>
+      <li>버그 1번 원인: <strong>좌표계·각도 wrap·단위</strong>. 단위 테스트로 막을 수 있다.</li>
+      <li>실차 가기 전 시뮬에서 RMSE·최소 거리·입력 변화율 세 지표는 반드시 통과시키자.</li>
+    </ul>
+  </div>
+
+  <h2>10. 프로젝트 가이드</h2>
+  <p>기말 프로젝트(W15)에서 이 통합 시뮬레이터를 확장하게 됩니다. 권장 단계는:</p>
+  <ol>
+    <li>본 페이지의 데모 코드를 그대로 NumPy로 옮겨 동작 확인.</li>
+    <li>맵·시작·목표를 다양화하고 RMSE 표를 작성.</li>
+    <li>동적 장애물 등장 → 재계획 시나리오 추가.</li>
+    <li>속도 프로파일에 신호 정지 같은 행동 계획을 추가(advanced).</li>
+    <li>Pure Pursuit 대신 W12 CBF 또는 W13 MPC로 교체해 비교(advanced).</li>
+  </ol>
+
+  <div class="prevnext">
+    <a href="10-pure-pursuit-stanley.html"><small>← 이전</small>W10. Pure Pursuit · Stanley · PN</a>
+    <a href="12-cbf-avoidance.html" class="next"><small>다음 →</small>W12. CBF 장애물 회피</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

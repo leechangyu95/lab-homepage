@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W4. 오일러 방법 & 시뮬레이션 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html" class="active">경로계획 &amp; 추종</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 4. 오일러 방법 &amp; 시뮬레이션</h1>
+  <p class="lead">"수식을 컴퓨터로 굴리는 법". 미분방정식이 종이 위에서 그치지 않고
+  실제로 자동차가 움직이는 시뮬레이터가 되려면, 시간을 잘게 끊어서 변화율을 계속 더하는
+  <em>수치 적분(numerical integration)</em>이 필요합니다. 오늘은 가장 단순한 오일러 방법부터
+  실무 표준 RK4까지, 그리고 우리 자전거 모델을 직접 굴리는 시뮬레이터를 만듭니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 시뮬레이션이 필요한가?</li>
+    <li>오일러 방법 — 한 줄 공식</li>
+    <li>$\Delta t$가 정확도에 미치는 영향</li>
+    <li>인터랙티브: 자전거 모델 시뮬레이터</li>
+    <li>오일러의 함정 — 누적 오차와 에너지 드리프트</li>
+    <li>RK4 — "걸음 전에 4번 정찰"</li>
+    <li>인터랙티브: 오일러 vs RK4 비교</li>
+    <li>실전 트릭 — 각도 wrap, clip, 제어 주기</li>
+    <li>핵심 정리 &amp; 치트시트</li>
+  </ol></div>
+
+  <h2>1. 왜 시뮬레이션이 필요한가?</h2>
+
+  <h3>속도계만 있는 차</h3>
+  <p>2·3주차에서 우리는 자전거 모델 수식을 얻었습니다.</p>
+  $$\dot{x} = v\cos\psi,\quad \dot{y} = v\sin\psi,\quad \dot{\psi} = \frac{v}{L}\tan\delta$$
+  <p>이 식이 알려주는 건 <strong>"지금 이 순간 얼마나 변하는지"</strong>(변화율)뿐입니다. 그런데 우리가
+  진짜 알고 싶은 건 <em>10초 후 차가 어디 있을까?</em>죠. 변화율을 시간에 따라 <strong>계속 누적</strong>해야
+  위치가 나옵니다.</p>
+
+  <div class="note">
+    <strong>비유 — 속도계만 보이는 차</strong> — 속도는 매 순간 알 수 있지만,
+    "지금까지 얼마나 갔는지"는 직접 계산해야 합니다. 1초마다 속도를 곱해서 더하면 위치 — 이게
+    바로 <strong>수치 적분</strong>이고, 자율주행 시뮬레이터의 심장입니다.
+  </div>
+
+  <h3>왜 시뮬이 필수인가?</h3>
+  <ul>
+    <li><strong>실차는 위험·비싸다</strong> — 알고리즘 버그를 시뮬에서 잡으면 99% 효율.</li>
+    <li><strong>제어기 튜닝</strong> — PID·LQR·MPC 게인을 시뮬에서 미리 맞춰 실차엔 거의 완성된 상태로 올림.</li>
+    <li><strong>알고리즘 비교</strong> — 같은 환경에 여러 Planner를 돌려 성능을 정량 비교.</li>
+  </ul>
+
+  <h2>2. 오일러 방법 — 한 줄 공식</h2>
+
+  <h3>핵심 아이디어</h3>
+  <p>"지금 방향(속도)으로 아주 짧은 시간 $\Delta t$ 동안 그냥 직진시키자."</p>
+
+  $$\boxed{\;x_{k+1} = x_k + \dot{x}_k \cdot \Delta t\;}$$
+
+  <table>
+    <thead><tr><th>기호</th><th>의미</th><th>예시 (자전거 모델)</th></tr></thead>
+    <tbody>
+      <tr><td>$x_k$</td><td>지금(k 스텝)의 상태</td><td>$(x, y, \psi)$ 현재 위치·헤딩</td></tr>
+      <tr><td>$\dot{x}_k$</td><td>지금의 변화율</td><td>$v\cos\psi,\;v\sin\psi,\;v\tan\delta/L$</td></tr>
+      <tr><td>$\Delta t$</td><td>한 걸음의 시간 폭</td><td>0.01 ~ 0.05 s 권장</td></tr>
+      <tr><td>$x_{k+1}$</td><td>$\Delta t$ 후의 상태</td><td>한 스텝 전진한 위치·헤딩</td></tr>
+    </tbody>
+  </table>
+
+  <h3>걸음마 비유</h3>
+  <p>오일러 방법은 "보폭이 $\Delta t$인 산책"입니다. 매 순간 (1) 지금 어디인지 보고 (2) 어디로 갈지(변화율) 정한 뒤
+  (3) 한 걸음만큼 직진합니다. 이걸 수천 번 반복하면 곡선 궤적이 만들어집니다.</p>
+
+  <div class="demo">
+    <h4>인터랙티브: 오일러 한 걸음씩 — 커피 식는 곡선</h4>
+    <p>뉴턴 냉각 법칙 $\dot{T} = -k(T - T_\text{room})$을 오일러로 풀어봅니다.
+    "한 걸음" 버튼을 누를 때마다 빨간 점이 한 스텝씩 전진합니다. $\Delta t$를 키워보면
+    같은 시간 동안 정답(검정 곡선)에서 점점 멀어지는 걸 볼 수 있어요.</p>
+    <canvas id="cool" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$\Delta t$ <span class="val" id="dtV">2.0</span><input type="range" id="dt" min="0.2" max="6" step="0.2" value="2.0"></label>
+      <label>냉각계수 k <span class="val" id="kV">0.05</span><input type="range" id="kCool" min="0.01" max="0.2" step="0.01" value="0.05"></label>
+      <button id="stepC">한 걸음</button>
+      <button id="autoC">자동 진행</button>
+      <button id="rstC" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cool'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    const Tmax=600, T0=90, Troom=20;
+    let T=T0, t=0, hist=[{t:0,T:T0}], auto=null;
+    const upd=()=>{$('dtV').textContent=(+$('dt').value).toFixed(1);
+      $('kV').textContent=(+$('kCool').value).toFixed(2);};
+    ['dt','kCool'].forEach(id=>$(id).oninput=upd);
+    function step(){
+      const dt=+$('dt').value, k=+$('kCool').value;
+      const dT=-k*(T-Troom);
+      T+=dT*dt; t+=dt;
+      hist.push({t,T});
+      if(t>Tmax){clearInterval(auto);auto=null;}
+      draw();
+    }
+    function reset(){T=T0;t=0;hist=[{t:0,T:T0}];if(auto){clearInterval(auto);auto=null;}draw();}
+    $('stepC').onclick=step;
+    $('autoC').onclick=()=>{if(auto){clearInterval(auto);auto=null;}else{auto=setInterval(step,80);}};
+    $('rstC').onclick=reset;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // axes
+      const px=t2x=>40+t2x/Tmax*(W-60), py=T2y=>H-30-(T2y-15)/85*(H-60);
+      x.strokeStyle='#ddd';x.beginPath();
+      x.moveTo(40,10);x.lineTo(40,H-30);x.lineTo(W-20,H-30);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('time [s]',W-60,H-12);x.fillText('T [°C]',6,20);
+      for(let tt=0;tt<=Tmax;tt+=120){x.fillText(tt,px(tt)-8,H-15);}
+      for(let TT=20;TT<=100;TT+=20){x.fillText(TT,8,py(TT)+4);}
+      // exact solution
+      x.strokeStyle='#222';x.lineWidth=1.5;x.setLineDash([4,3]);x.beginPath();
+      const k=+$('kCool').value;
+      for(let tt=0;tt<=Tmax;tt+=2){
+        const Te=Troom+(T0-Troom)*Math.exp(-k*tt);
+        const xx=px(tt),yy=py(Te);
+        if(tt==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();x.setLineDash([]);
+      // euler trace
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=px(h.t),yy=py(h.T);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
+      x.stroke();
+      // markers
+      x.fillStyle='#0b5fff';
+      hist.forEach(h=>{const xx=px(h.t),yy=py(h.T);x.beginPath();x.arc(xx,yy,3,0,7);x.fill();});
+      // current
+      x.fillStyle='#c62828';const cx0=px(t),cy0=py(T);
+      x.beginPath();x.arc(cx0,cy0,6,0,7);x.fill();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('정확해 (검정 점선)', W-160,30);
+      x.fillText('오일러 (파랑) — 스텝 '+(hist.length-1), W-160,46);
+      x.fillText('현재 T = '+T.toFixed(2)+'°C, t='+t.toFixed(1)+'s', W-220,62);
+    }
+    upd();draw();
+  })();
+  </script>
+
+  <h2>3. $\Delta t$가 정확도에 미치는 영향</h2>
+
+  <p>오일러는 한 걸음 안에서는 변화율이 일정하다고 <em>가정</em>합니다. 실제로는 매 순간 바뀌니까,
+  걸음이 클수록 곡선을 직선으로 잘라먹는 셈이 되어 오차가 누적됩니다.</p>
+
+  <table>
+    <thead><tr><th>$\Delta t$</th><th>10초 시뮬 스텝 수</th><th>정확도</th><th>속도</th></tr></thead>
+    <tbody>
+      <tr><td>1.0 s</td><td>10</td><td>매우 거침</td><td>매우 빠름</td></tr>
+      <tr><td>0.1 s</td><td>100</td><td>거침</td><td>빠름</td></tr>
+      <tr><td><strong>0.01 s</strong></td><td><strong>1,000</strong></td><td><strong>좋음 (자율주행 표준)</strong></td><td>적당</td></tr>
+      <tr><td>0.001 s</td><td>10,000</td><td>거의 완벽</td><td>느림</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>비유 — 카메라 셔터 속도</strong> — 빠르면 선명하지만 사진 용량이 폭증하고, 느리면 뭉개집니다.
+    실무 표준은 $\Delta t = 0.01 \sim 0.05$ s (100~20 Hz)입니다.
+  </div>
+
+  <h2>4. 인터랙티브: 자전거 모델 시뮬레이터</h2>
+
+  <div class="demo">
+    <h4>인터랙티브: 직진 후 회전 — $\Delta t$를 흔들어보세요</h4>
+    <p>$v=5$ m/s, 3초까지 직진 후 조향 각 $\delta$로 회전. 같은 명령에 $\Delta t$만 바꿔
+    그려보면, 큰 $\Delta t$일수록 이론상 원호(빨간 점선)에서 벗어나는 게 보입니다.</p>
+    <canvas id="bike" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>$\Delta t$ <span class="val" id="bdtV">0.05</span><input type="range" id="bdt" min="0.005" max="0.5" step="0.005" value="0.05"></label>
+      <label>조향 $\delta$ (°) <span class="val" id="bdelV">15</span><input type="range" id="bdel" min="5" max="35" step="1" value="15"></label>
+      <label>속도 v (m/s) <span class="val" id="bvV">5</span><input type="range" id="bv" min="1" max="12" step="0.5" value="5"></label>
+      <button id="brun">시뮬 실행</button>
+      <button id="brst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bike'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    const upd=()=>{
+      $('bdtV').textContent=(+$('bdt').value).toFixed(3);
+      $('bdelV').textContent=(+$('bdel').value).toFixed(0);
+      $('bvV').textContent=(+$('bv').value).toFixed(1);
+    };
+    ['bdt','bdel','bv'].forEach(id=>$(id).oninput=upd);
+    let traj=[];
+    function run(){
+      const dt=+$('bdt').value, delDeg=+$('bdel').value, v=+$('bv').value;
+      const L=2.9, T=12.0;
+      let xx=0,yy=0,psi=0;
+      traj=[{x:xx,y:yy}];
+      for(let t=0;t<T;t+=dt){
+        const delta = (t<3)?0:delDeg*Math.PI/180;
+        const dx=v*Math.cos(psi), dy=v*Math.sin(psi), dpsi=v/L*Math.tan(delta);
+        xx+=dx*dt; yy+=dy*dt; psi+=dpsi*dt;
+        traj.push({x:xx,y:yy});
+      }
+      draw();
+    }
+    function reset(){traj=[];draw();}
+    $('brun').onclick=run; $('brst').onclick=reset;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,sc=6;
+      // grid
+      x.strokeStyle='#eee';
+      for(let i=-50;i<=50;i+=5){
+        x.beginPath();x.moveTo(cx+i*sc,0);x.lineTo(cx+i*sc,H);x.stroke();
+        x.beginPath();x.moveTo(0,cy+i*sc);x.lineTo(W,cy+i*sc);x.stroke();
+      }
+      x.strokeStyle='#999';
+      x.beginPath();x.moveTo(cx,0);x.lineTo(cx,H);x.stroke();
+      x.beginPath();x.moveTo(0,cy);x.lineTo(W,cy);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('5 m',cx+5*sc-8,cy+12);x.fillText('x [m]',W-40,cy-4);x.fillText('y [m]',cx+4,12);
+      // ideal arc (after 3s straight, then circular with R=L/tan(delta))
+      const v=+$('bv').value, delDeg=+$('bdel').value, L=2.9;
+      const R=L/Math.tan(delDeg*Math.PI/180);
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=1.5;x.beginPath();
+      // straight portion 0..15m
+      x.moveTo(cx,cy);
+      const xS=v*3, yS=0;
+      x.lineTo(cx+xS*sc, cy-yS*sc);
+      // arc center at (xS, R)
+      const cxa=xS, cya=R;
+      for(let th=0;th<2*Math.PI;th+=0.05){
+        const px=cxa+R*Math.sin(th), py=cya-R*Math.cos(th);
+        x.lineTo(cx+px*sc, cy-py*sc);
+      }
+      x.stroke();x.setLineDash([]);
+      // simulated traj
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      traj.forEach((p,i)=>{const px=cx+p.x*sc, py=cy-p.y*sc;
+        if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});
+      x.stroke();
+      x.fillStyle='#0b5fff';
+      traj.forEach((p,i)=>{if(i%30!=0)return;
+        const px=cx+p.x*sc, py=cy-p.y*sc;x.beginPath();x.arc(px,py,3,0,7);x.fill();});
+      // info
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('이론 회전반경 R = L/tan(δ) = '+R.toFixed(2)+' m', 10, 18);
+      x.fillText('스텝 수 = '+(traj.length-1)+',  $\\Delta t$ = '+$('bdt').value+' s', 10, 36);
+      x.fillStyle='#c62828';x.fillText('빨강 점선: 이론', W-130, 18);
+      x.fillStyle='#0b5fff';x.fillText('파랑: 오일러 시뮬', W-130, 34);
+    }
+    upd();draw();
+  })();
+  </script>
+
+  <h3>한 함수 10줄 — 시뮬레이터의 심장</h3>
+<pre><code class="language-python">import numpy as np
+
+def step_euler(state, v, delta, dt=0.01, L=2.9):
+    x, y, psi = state
+    # 1) 변화율 계산 (자전거 모델)
+    dx   = v * np.cos(psi)
+    dy   = v * np.sin(psi)
+    dpsi = v / L * np.tan(delta)
+    # 2) 한 걸음 전진
+    return np.array([
+        x   + dx   * dt,
+        y   + dy   * dt,
+        psi + dpsi * dt
+    ])</code></pre>
+
+  <p>이 한 함수가 5~14주차의 모든 실습이 사용하는 시뮬레이터의 핵심입니다. 클래스로 감싸두면 더 편합니다.</p>
+
+<pre><code class="language-python">class CarSim:
+    def __init__(self, x=0, y=0, psi=0, v=0, L=2.9):
+        self.state = np.array([x, y, psi, v])
+        self.L = L
+
+    def step(self, accel, delta, dt=0.02):
+        x, y, psi, v = self.state
+        x   += v * np.cos(psi) * dt
+        y   += v * np.sin(psi) * dt
+        psi += v / self.L * np.tan(delta) * dt
+        v   += accel * dt
+        self.state = np.array([x, y, psi, v])
+        return self.state</code></pre>
+
+  <h2>5. 오일러의 함정 — 누적 오차와 에너지 드리프트</h2>
+
+  <p>오일러가 "현재 변화율"만 쓰기 때문에, 한 걸음 안에서 변화율이 바뀌는 시스템에서는
+  매 스텝 조금씩 틀리고 그게 <strong>계속 누적</strong>됩니다. 단진동(흔들리는 진자)에서 가장 잘 보입니다.</p>
+
+  <div class="demo">
+    <h4>인터랙티브: 진자(단진자)에서 에너지 드리프트</h4>
+    <p>이상적인 단진자 $\ddot\theta = -\omega^2 \sin\theta$는 마찰이 없으면 영원히 같은 진폭으로 흔들려야 합니다.
+    오일러로 풀면 매 사이클마다 진폭이 <strong>커지면서 발산</strong>합니다(에너지 증가). RK4로 바꾸면
+    수백 사이클을 돌려도 거의 일정합니다. 직접 비교해 보세요.</p>
+    <canvas id="pend" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$\Delta t$ <span class="val" id="pdtV">0.05</span><input type="range" id="pdt" min="0.005" max="0.15" step="0.005" value="0.05"></label>
+      <label>방법
+        <select id="pmeth">
+          <option value="euler">Explicit Euler</option>
+          <option value="rk4">RK4</option>
+          <option value="semi">Semi-implicit Euler</option>
+        </select>
+      </label>
+      <button id="prun">시작/정지</button>
+      <button id="prst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pend'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height, omega2=4.0;
+    let theta=1.0, omega=0.0, t=0, hist=[], running=false, raf=null;
+    const upd=()=>{$('pdtV').textContent=(+$('pdt').value).toFixed(3);};
+    $('pdt').oninput=upd;
+    function f(th,om){return [-omega2*Math.sin(th), om];}
+    function step(){
+      const dt=+$('pdt').value, m=$('pmeth').value;
+      if(m=='euler'){
+        const dth=omega, dom=-omega2*Math.sin(theta);
+        theta += dth*dt; omega += dom*dt;
+      }else if(m=='semi'){
+        omega += -omega2*Math.sin(theta)*dt;
+        theta += omega*dt;
+      }else{ // rk4
+        const k1th=omega,                k1om=-omega2*Math.sin(theta);
+        const k2th=omega+0.5*dt*k1om,    k2om=-omega2*Math.sin(theta+0.5*dt*k1th);
+        const k3th=omega+0.5*dt*k2om,    k3om=-omega2*Math.sin(theta+0.5*dt*k2th);
+        const k4th=omega+dt*k3om,        k4om=-omega2*Math.sin(theta+dt*k3th);
+        theta += dt/6*(k1th+2*k2th+2*k3th+k4th);
+        omega += dt/6*(k1om+2*k2om+2*k3om+k4om);
+      }
+      t+=dt;
+      const E = 0.5*omega*omega + omega2*(1-Math.cos(theta));
+      hist.push({t,theta,E});
+      if(hist.length>800)hist.shift();
+    }
+    function loop(){
+      if(running){step();}
+      draw();
+      raf=requestAnimationFrame(loop);
+    }
+    function reset(){theta=1.0;omega=0.0;t=0;hist=[];}
+    $('prun').onclick=()=>{running=!running;};
+    $('prst').onclick=reset;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // pendulum (left)
+      const px=140, py=120, L=80;
+      x.strokeStyle='#999';x.beginPath();x.moveTo(px-100,py);x.lineTo(px+100,py);x.stroke();
+      const bx=px+L*Math.sin(theta), by=py+L*Math.cos(theta);
+      x.strokeStyle='#333';x.lineWidth=2;x.beginPath();x.moveTo(px,py);x.lineTo(bx,by);x.stroke();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(bx,by,12,0,7);x.fill();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('진자',px-10,py-110);
+      x.fillText('θ = '+theta.toFixed(3)+' rad',10,H-20);
+      x.fillText('ω = '+omega.toFixed(3)+' rad/s',10,H-6);
+      // theta(t) on right
+      const ox=300, oy=20, w=320, h=140;
+      x.strokeStyle='#ccc';x.strokeRect(ox,oy,w,h);
+      x.fillStyle='#444';x.fillText('θ(t)', ox+5, oy+12);
+      const tmax=hist.length>0?Math.max(8,hist[hist.length-1].t):8;
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((p,i)=>{const xx=ox+(p.t/tmax)*w, yy=oy+h/2-p.theta*h/4;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
+      x.stroke();
+      // energy
+      const ox2=300, oy2=180, h2=130;
+      x.strokeStyle='#ccc';x.strokeRect(ox2,oy2,w,h2);
+      x.fillStyle='#444';x.fillText('총에너지 E(t) — 이상적으론 일정해야', ox2+5, oy2+12);
+      const Es=hist.map(p=>p.E);
+      const Emax=Es.length>0?Math.max(...Es,2):2, Emin=Es.length>0?Math.min(...Es,0):0;
+      x.strokeStyle='#c62828';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((p,i)=>{const xx=ox2+(p.t/tmax)*w,
+        yy=oy2+h2-(p.E-Emin)/(Emax-Emin+1e-6)*h2;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
+      x.stroke();
+      x.fillStyle='#666';x.fillText('E ≈ '+(hist.length>0?hist[hist.length-1].E.toFixed(3):'0'), ox2+w-80, oy2+12);
+    }
+    upd();draw();loop();
+  })();
+  </script>
+
+  <div class="warn">
+    <strong>관찰 포인트</strong> — Explicit Euler는 큰 $\Delta t$에서 진폭이 점점 커지면서 시스템이 발산합니다.
+    "에너지가 늘어나는 진자"는 물리적으로 불가능한데, 이게 바로 <strong>수치 불안정성</strong>입니다.
+    Semi-implicit Euler는 같은 1차 방법이지만 에너지를 거의 보존하고, RK4는 거의 완벽하게 일정합니다.
+  </div>
+
+  <h2>6. RK4 — "걸음 전에 4번 정찰"</h2>
+
+  <h3>아이디어</h3>
+  <p>오일러는 출발점에서 방향 1번 보고 한 걸음 갑니다. RK4는 한 걸음 전에 <strong>4지점에서 방향을 봐서</strong>
+  가중평균합니다.</p>
+
+  <ol>
+    <li>$k_1$: 시작점에서 변화율</li>
+    <li>$k_2$: 절반만 가본 지점($k_1$ 사용)에서 변화율</li>
+    <li>$k_3$: 다시 절반 지점($k_2$ 사용)에서 변화율</li>
+    <li>$k_4$: 끝 지점($k_3$ 사용)에서 변화율</li>
+    <li>4개 가중평균으로 진짜 한 걸음</li>
+  </ol>
+
+  $$
+  \begin{aligned}
+  k_1 &= f(x_k) \\
+  k_2 &= f\left(x_k + \tfrac{\Delta t}{2} k_1\right) \\
+  k_3 &= f\left(x_k + \tfrac{\Delta t}{2} k_2\right) \\
+  k_4 &= f(x_k + \Delta t\, k_3) \\
+  x_{k+1} &= x_k + \tfrac{\Delta t}{6}(k_1 + 2k_2 + 2k_3 + k_4)
+  \end{aligned}
+  $$
+
+  <table>
+    <thead><tr><th>방법</th><th>한 스텝 계산</th><th>오차 차수</th><th>같은 정확도에서 권장 $\Delta t$</th></tr></thead>
+    <tbody>
+      <tr><td>Explicit Euler</td><td>1번</td><td>$O(\Delta t)$</td><td>0.005 ~ 0.01 s</td></tr>
+      <tr><td>Midpoint (RK2)</td><td>2번</td><td>$O(\Delta t^2)$</td><td>0.02 s</td></tr>
+      <tr><td><strong>RK4</strong></td><td><strong>4번</strong></td><td>$O(\Delta t^4)$</td><td>0.05 ~ 0.1 s (실무 표준)</td></tr>
+      <tr><td>Implicit Euler</td><td>반복(뉴턴)</td><td>$O(\Delta t)$</td><td>큰 $\Delta t$에도 안정 (강체 시스템용)</td></tr>
+    </tbody>
+  </table>
+
+  <p>RK4는 한 스텝에 4번 계산하지만, 같은 정확도를 얻는 데 $\Delta t$를 훨씬 크게 잡을 수 있어서
+  <strong>오히려 빠를 때가 많습니다</strong>.</p>
+
+<pre><code class="language-python">def rk4_step(f, x, u, dt):
+    k1 = f(x,                u)
+    k2 = f(x + dt/2 * k1,    u)
+    k3 = f(x + dt/2 * k2,    u)
+    k4 = f(x + dt   * k3,    u)
+    return x + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+
+def bicycle(state, u, L=2.9):
+    x, y, psi = state
+    v, delta  = u
+    return np.array([
+        v*np.cos(psi),
+        v*np.sin(psi),
+        v/L*np.tan(delta)
+    ])
+
+# 사용
+state = rk4_step(bicycle, state, (v, delta), dt=0.05)</code></pre>
+
+  <h2>7. 인터랙티브: 오일러 vs RK4 — 원운동 누적 오차</h2>
+
+  <div class="demo">
+    <h4>인터랙티브: 같은 자전거가 원을 그릴 때 누가 정확한가</h4>
+    <p>일정 속도, 일정 조향각에서 자전거 모델은 이론상 완벽한 원을 그려야 합니다(반경 $R = L/\tan\delta$).
+    오일러는 큰 $\Delta t$에서 점점 바깥으로 나가는 <strong>나선</strong>이 되고, RK4는 거의 정확하게 원을 따릅니다.</p>
+    <canvas id="cmp" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>$\Delta t$ <span class="val" id="cdtV">0.10</span><input type="range" id="cdt" min="0.01" max="0.3" step="0.01" value="0.10"></label>
+      <label>조향 $\delta$ (°) <span class="val" id="cdelV">20</span><input type="range" id="cdel" min="5" max="40" step="1" value="20"></label>
+      <label>총 시간 (s) <span class="val" id="cTV">30</span><input type="range" id="cT" min="5" max="60" step="1" value="30"></label>
+      <button id="crun">시뮬</button>
+      <button id="crst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cmp'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    const upd=()=>{
+      $('cdtV').textContent=(+$('cdt').value).toFixed(2);
+      $('cdelV').textContent=(+$('cdel').value).toFixed(0);
+      $('cTV').textContent=(+$('cT').value).toFixed(0);
+    };
+    ['cdt','cdel','cT'].forEach(id=>$(id).oninput=upd);
+    let trajE=[], trajR=[];
+    function bike(s,v,d,L=2.9){return [v*Math.cos(s[2]), v*Math.sin(s[2]), v/L*Math.tan(d)];}
+    function eulerStep(s,v,d,dt){const k=bike(s,v,d);
+      return [s[0]+k[0]*dt, s[1]+k[1]*dt, s[2]+k[2]*dt];}
+    function rk4Step(s,v,d,dt){
+      const k1=bike(s,v,d);
+      const s2=[s[0]+dt/2*k1[0],s[1]+dt/2*k1[1],s[2]+dt/2*k1[2]];const k2=bike(s2,v,d);
+      const s3=[s[0]+dt/2*k2[0],s[1]+dt/2*k2[1],s[2]+dt/2*k2[2]];const k3=bike(s3,v,d);
+      const s4=[s[0]+dt*k3[0],s[1]+dt*k3[1],s[2]+dt*k3[2]];const k4=bike(s4,v,d);
+      return [s[0]+dt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]),
+              s[1]+dt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]),
+              s[2]+dt/6*(k1[2]+2*k2[2]+2*k3[2]+k4[2])];
+    }
+    function run(){
+      const dt=+$('cdt').value, delDeg=+$('cdel').value, T=+$('cT').value;
+      const v=5.0, delta=delDeg*Math.PI/180;
+      let sE=[0,0,0], sR=[0,0,0];
+      trajE=[{x:0,y:0}]; trajR=[{x:0,y:0}];
+      for(let t=0;t<T;t+=dt){
+        sE=eulerStep(sE,v,delta,dt);
+        sR=rk4Step(sR,v,delta,dt);
+        trajE.push({x:sE[0],y:sE[1]});
+        trajR.push({x:sR[0],y:sR[1]});
+      }
+      draw();
+    }
+    function reset(){trajE=[];trajR=[];draw();}
+    $('crun').onclick=run; $('crst').onclick=reset;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2+30;
+      const delDeg=+$('cdel').value, L=2.9;
+      const R=L/Math.tan(delDeg*Math.PI/180);
+      const sc = Math.min(W,H)*0.4 / Math.max(R*1.5, 1);
+      // ideal circle (center at (0,R))
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=1.5;x.beginPath();
+      for(let th=0;th<=2*Math.PI+0.01;th+=0.02){
+        const px=R*Math.sin(th), py=R-R*Math.cos(th);
+        const sx=cx+px*sc, sy=cy-py*sc;
+        if(th==0)x.moveTo(sx,sy);else x.lineTo(sx,sy);
+      }
+      x.stroke();x.setLineDash([]);
+      // axes
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(cx,0);x.lineTo(cx,H);x.stroke();
+      x.beginPath();x.moveTo(0,cy);x.lineTo(W,cy);x.stroke();
+      // euler
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      trajE.forEach((p,i)=>{const sx=cx+p.x*sc, sy=cy-p.y*sc;
+        if(i==0)x.moveTo(sx,sy);else x.lineTo(sx,sy);});
+      x.stroke();
+      // rk4
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      trajR.forEach((p,i)=>{const sx=cx+p.x*sc, sy=cy-p.y*sc;
+        if(i==0)x.moveTo(sx,sy);else x.lineTo(sx,sy);});
+      x.stroke();
+      // info
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('이론 반경 R = '+R.toFixed(2)+' m', 10, 20);
+      x.fillStyle='#c62828';x.fillText('빨강 점선: 이론 원', 10, 38);
+      x.fillStyle='#f57c00';x.fillText('주황: Euler', 10, 56);
+      x.fillStyle='#0b5fff';x.fillText('파랑: RK4', 10, 74);
+      // drift
+      if(trajE.length>1){
+        const eEnd=trajE[trajE.length-1], rEnd=trajR[trajR.length-1];
+        const dE=Math.hypot(eEnd.x-trajE[0].x, eEnd.y-trajE[0].y);
+        const dR=Math.hypot(rEnd.x-trajR[0].x, rEnd.y-trajR[0].y);
+        x.fillStyle='#444';
+        x.fillText('Euler 시작점-끝점 거리: '+dE.toFixed(2)+' m', W-260, H-30);
+        x.fillText('RK4   시작점-끝점 거리: '+dR.toFixed(2)+' m', W-260, H-12);
+      }
+    }
+    upd();draw();
+  })();
+  </script>
+
+  <div class="tip">
+    <strong>실험해 볼 것</strong> — $\Delta t = 0.3$ s로 키워보세요. Euler는 명백한 나선이 되고
+    RK4는 여전히 거의 원을 따라갑니다. 같은 정확도를 얻으려면 Euler는 $\Delta t$를 1/10로 줄여야 합니다.
+  </div>
+
+  <h2>8. 실전 트릭 — 각도 wrap, clip, 제어 주기</h2>
+
+  <h3>각도 wrapping</h3>
+  <p>$\psi$를 그대로 더하다 보면 $\pi$를 넘어 계속 증가합니다. 그러면 추후 $\psi_r - \psi$ 계산에서
+  엉뚱하게 큰 숫자가 나와요. 매 스텝 wrap을 적용하세요.</p>
+
+<pre><code class="language-python">def wrap(a):
+    return (a + np.pi) % (2 * np.pi) - np.pi
+
+psi = wrap(psi + dpsi * dt)   # 항상 [-π, π]</code></pre>
+
+  <h3>입력 clip</h3>
+  <p>가속·조향에 물리적 한계가 있는데 제어기가 이를 모르고 큰 값을 보내면 시뮬이 비현실적이 됩니다.</p>
+
+<pre><code class="language-python">accel = np.clip(accel, -3.0, 1.5)            # m/s²
+delta = np.clip(delta, -np.deg2rad(35), np.deg2rad(35))</code></pre>
+
+  <h3>제어 주기 vs 시뮬 주기</h3>
+  <p>실차에서 센서·제어는 보통 20~50 ms 주기로 도는데, 시뮬은 더 작은 $\Delta t$가 필요합니다.
+  "내부 시뮬은 작게, 제어는 그보다 느린 외부 루프" 패턴을 씁니다.</p>
+
+<pre><code class="language-python">for outer in range(N_ctrl):
+    accel, delta = controller(car.state)   # 50 ms마다 한 번
+    for _ in range(5):                     # 50 ms = 10 ms × 5
+        car.step(accel, delta, dt=0.01)</code></pre>
+
+  <h3>노이즈·지연 주입</h3>
+  <p>"시뮬에서는 잘 됐는데 실차에선 왜?"의 1순위 원인은 모델 오차·지연·노이즈입니다.
+  시뮬에 미리 넣어 두면 제어기가 강건해집니다.</p>
+
+<pre><code class="language-python">cmd_buf = [(0.0, 0.0)] * 3                # 60 ms 지연
+for t in np.arange(0, 10, 0.02):
+    cmd = controller(state)
+    cmd_buf.append(cmd)
+    accel, delta = cmd_buf.pop(0)         # 지연된 명령 사용
+    state = step_euler(state, accel, delta, dt=0.02)
+    state += np.random.randn(3) * [0.005, 0.005, 0.001]   # 측정 노이즈</code></pre>
+
+  <h2>9. 디버깅 꿀팁 5가지</h2>
+
+  <table>
+    <thead><tr><th>증상</th><th>범인</th><th>고치는 법</th></tr></thead>
+    <tbody>
+      <tr><td>이상한 나선 궤적</td><td>Euler 누적 오차</td><td>RK4로 교체 또는 $\Delta t$ 줄이기</td></tr>
+      <tr><td>NaN / inf 폭발</td><td>$\Delta t$가 너무 큼</td><td>$\Delta t$ 절반으로</td></tr>
+      <tr><td>각도 점프</td><td>wrap 빼먹음</td><td>매 스텝 <code>wrap()</code></td></tr>
+      <tr><td>속도가 음수로 발산</td><td>accel 한계 없음</td><td><code>np.clip</code> 추가</td></tr>
+      <tr><td>시뮬이 너무 느림</td><td>루프 안에서 plot</td><td>루프 밖에서 한 번만</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. 핵심 정리 &amp; 치트시트</h2>
+
+  <div class="tip">
+    <ul>
+      <li><strong>시뮬레이션</strong> = 미분방정식을 컴퓨터로 푸는 것 = 변화율을 시간 따라 누적.</li>
+      <li><strong>오일러</strong> 한 줄: $x_{k+1} = x_k + \dot x_k \Delta t$. 직관적이지만 누적 오차에 약함.</li>
+      <li><strong>$\Delta t$</strong> 표준: 자율주행 0.01 ~ 0.05 s. 작을수록 정확하지만 느림.</li>
+      <li><strong>RK4</strong> = "걸음 전에 4번 정찰". 같은 정확도에 큰 $\Delta t$ 사용 가능 → 실무 표준.</li>
+      <li><strong>실전 3트릭</strong>: 각도 wrap, 입력 clip, 시뮬/제어 주기 분리.</li>
+    </ul>
+  </div>
+
+  <h2>11. 손풀이 연습</h2>
+  <ol>
+    <li><strong>등속 운동</strong> $v=10$ m/s, $\Delta t=0.5$, 4 스텝 후 위치는?
+    스텝별로 0 → 5 → 10 → 15 → 20. <strong>답: 20 m</strong>.</li>
+    <li><strong>커피 냉각</strong> $T_0=80°$C, $T_\text{room}=20°$C, $k=0.1$, $\Delta t=1$ s, 3 스텝 후 $T_3$?
+      <ul>
+        <li>스텝 1: $\dot T = -0.1\times(80-20) = -6$ → $T_1 = 74$°C</li>
+        <li>스텝 2: $\dot T = -0.1\times(74-20) = -5.4$ → $T_2 = 68.6$°C</li>
+        <li>스텝 3: $\dot T = -0.1\times(68.6-20) = -4.86$ → $T_3 \approx 63.7$°C</li>
+      </ul>
+    </li>
+    <li><strong>$\Delta t$를 2배로 키우면</strong> Euler 오차는? — 약 2배 ($O(\Delta t)$). RK4는 16배 ($O(\Delta t^4)$).</li>
+  </ol>
+
+  <h2>12. 참고 문헌</h2>
+  <ul>
+    <li>Hairer &amp; Wanner, <em>Solving Ordinary Differential Equations</em> — ODE 수치해석 바이블 (심화).</li>
+    <li><em>Numerical Recipes</em> Ch. 16 — 실용 수치해석.</li>
+    <li><strong>PythonRobotics</strong> (MIT, A. Sakai) — 본 강의 <code>CarSim</code>의 원형. <a href="https://github.com/AtsushiSakai/PythonRobotics">github.com/AtsushiSakai/PythonRobotics</a></li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="03-vehicle-dynamics.html"><small>← 이전</small>W3. 차량 동역학 기초</a>
+    <a href="05-map-frenet.html" class="next"><small>다음 →</small>W5. Map 표현 &amp; Frenet</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

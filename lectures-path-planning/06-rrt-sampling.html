@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W6. RRT 샘플링 경로계획 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html" class="active">경로계획 &amp; 추종</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 6. RRT — 뿌리처럼 뻗어 길을 찾는 알고리즘</h1>
+  <p class="lead">격자 위를 한 칸씩 살피는 A*와 달리, <strong>RRT(Rapidly-exploring Random Tree)</strong>는
+  <em>"공간 한복판에 무작위로 점을 던지고 그쪽으로 한 걸음씩 가지를 뻗는"</em> 단순한 규칙으로 경로를 찾습니다.
+  좁은 통로·고차원 공간에서도 통하는 강력한 기법이라, 자율주행 주차·매니퓰레이터 경로계획의 표준 도구입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>경로계획의 두 세계 — 격자 vs 샘플링</li>
+    <li>RRT 5단계 알고리즘</li>
+    <li>인터랙티브: 트리가 자라는 모습 직접 보기</li>
+    <li>Goal Bias — "목표 쪽 자주 찍기"</li>
+    <li>인터랙티브: Goal Bias 효과 비교</li>
+    <li>RRT*: 점점 좋아지는 경로 (rewire)</li>
+    <li>인터랙티브: RRT vs RRT* 동시 비교</li>
+    <li>Shortcut · Hybrid A* · Reeds-Shepp 맛보기</li>
+    <li>핵심 정리 &amp; 자주 만나는 실수</li>
+  </ol></div>
+
+  <h2>1. 경로계획의 두 세계 — 격자 vs 샘플링</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>모르는 동네에서 친구 집을 찾아야 합니다. 두 가지 전략이 있어요.</p>
+  <ul>
+    <li><strong>격자 전략</strong>: 동네를 모눈종이처럼 격자로 자르고 한 칸씩 빠짐없이 살핍니다 — A*(W7)의 방식. 정확하지만 칸이 많아지면 느려집니다.</li>
+    <li><strong>샘플링 전략</strong>: 손전등을 든 채 어둠 속에서 사방으로 무작위로 빛을 쏘다가, 그쪽으로 한 걸음씩 다가가며 길을 잇습니다. 이게 RRT입니다.</li>
+  </ul>
+  <p>차원이 높아지거나 좁은 통로가 많아질수록 <strong>격자는 폭발적으로 느려지지만</strong>, 샘플링은 균등하게 공간을 메꿔 가며 빠르게 길을 찾아냅니다.</p>
+
+  <table>
+    <thead><tr><th>방식</th><th>대표</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>격자 탐색</td><td>BFS, Dijkstra, A* (W7)</td><td>최단 경로 보장</td><td>고차원·연속 공간에서 폭발</td></tr>
+      <tr><td>샘플링</td><td>PRM, RRT, RRT*</td><td>고차원·복잡 환경에 강함</td><td>최단이 아닐 수 있음 (RRT)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. RRT 5단계 알고리즘</h2>
+
+  <p>RRT는 단 5줄로 요약됩니다. 아래 5줄을 외우면 끝.</p>
+  <ol>
+    <li><strong>Sample</strong> — 공간 안에 점 $q_\text{rand}$를 무작위로 찍는다.</li>
+    <li><strong>Nearest</strong> — 트리 안에서 그 점에 가장 가까운 노드 $q_\text{near}$를 찾는다.</li>
+    <li><strong>Steer</strong> — $q_\text{near}$에서 $q_\text{rand}$ 방향으로 <em>작은 한 걸음</em>만 가서 $q_\text{new}$를 만든다.</li>
+    <li><strong>Collision Check</strong> — $q_\text{near} \to q_\text{new}$ 선분이 장애물을 통과하지 않는지 확인.</li>
+    <li><strong>Add</strong> — 통과면 트리에 추가, $q_\text{new}$가 목표 근처면 종료.</li>
+  </ol>
+
+  <div class="tip">
+    <strong>외우는 비결</strong> — "<strong>S</strong>ample → <strong>N</strong>earest → <strong>S</strong>teer → <strong>C</strong>heck → <strong>A</strong>dd". 한국어로는 "샘플 → 이웃 → 걸음 → 체크 → 추가".
+  </div>
+
+<pre><code class="language-python"># Ref: PythonRobotics/PathPlanning/RRT/rrt.py (MIT, A. Sakai) — 교육용 단순화
+import numpy as np
+
+class RRT:
+    def __init__(self, start, goal, obs, bounds, step=0.5, max_iter=2000):
+        self.start = np.array(start); self.goal = np.array(goal)
+        self.obs, self.bounds = obs, bounds
+        self.step, self.max_iter = step, max_iter
+        self.nodes = [self.start]; self.parents = [-1]
+
+    def sample(self):
+        lo, hi = self.bounds
+        return np.random.uniform(lo, hi, size=2)
+
+    def nearest(self, q):
+        return int(np.argmin(np.linalg.norm(np.array(self.nodes) - q, axis=1)))
+
+    def steer(self, q_from, q_to):
+        v = q_to - q_from; d = np.linalg.norm(v)
+        return q_to if d <= self.step else q_from + v/d * self.step
+
+    def plan(self):
+        for _ in range(self.max_iter):
+            q_rand = self.sample()
+            i_near = self.nearest(q_rand)
+            q_new  = self.steer(self.nodes[i_near], q_rand)
+            if not self.collision_free(self.nodes[i_near], q_new): continue
+            self.nodes.append(q_new); self.parents.append(i_near)
+            if np.linalg.norm(q_new - self.goal) < self.step:
+                return self.extract_path(len(self.nodes) - 1)
+        return None</code></pre>
+
+  <p>핵심은 <strong>10줄짜리 메인 루프</strong>입니다. 이걸 머릿속에 넣고 시작하세요.</p>
+
+  <h2>3. 인터랙티브: 트리가 자라는 모습</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: RRT 트리 성장</h4>
+    <p><strong>한 걸음씩</strong> 버튼을 눌러 알고리즘이 한 번 반복하는 모습을 직접 보세요.
+    노란 점은 이번 회 샘플 $q_\text{rand}$, 회색 선이 트리 가지, 파란 점이 목표 도달 시 추출된 경로입니다.</p>
+    <canvas id="rrtCv" width="640" height="420"></canvas>
+    <div class="controls">
+      <label>걸음 step <span class="val" id="stV">0.8</span><input type="range" id="st" min="0.3" max="2.0" step="0.1" value="0.8"></label>
+      <label>Goal bias % <span class="val" id="gbV">5</span><input type="range" id="gb" min="0" max="40" step="1" value="5"></label>
+      <button id="oneBtn">한 걸음</button>
+      <button id="autoBtn">자동 재생</button>
+      <button id="rstBtn" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rrtCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('stV').textContent=(+$('st').value).toFixed(1);$('gbV').textContent=(+$('gb').value).toFixed(0);};
+    ['st','gb'].forEach(id=>$(id).oninput=upd);
+    const W=20,H=13;const sc=c.width/W;
+    const start=[2,2],goal=[18,11];
+    const obs=[[8,7,1.6],[12,4,1.6],[14,10,1.4],[6,11,1.4],[10,2,1.0]];
+    let nodes,parents,path,lastSample,running=false;
+    function reset(){nodes=[start.slice()];parents=[-1];path=null;lastSample=null;draw();}
+    reset();$('rstBtn').onclick=reset;
+    function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+    function nearest(q){let bi=0,bd=1e9;nodes.forEach((p,i)=>{const d=dist(p,q);if(d<bd){bd=d;bi=i;}});return bi;}
+    function colFree(a,b){
+      for(const o of obs){const[cx,cy,r]=o;const ab=[b[0]-a[0],b[1]-a[1]];const ap=[cx-a[0],cy-a[1]];
+        const ab2=ab[0]*ab[0]+ab[1]*ab[1];const t=Math.max(0,Math.min(1,(ap[0]*ab[0]+ap[1]*ab[1])/(ab2+1e-9)));
+        const px=a[0]+t*ab[0],py=a[1]+t*ab[1];if(Math.hypot(px-cx,py-cy)<r)return false;}
+      if(b[0]<0||b[0]>W||b[1]<0||b[1]>H)return false;return true;
+    }
+    function step1(){
+      if(path)return;const step=+$('st').value,gb=(+$('gb').value)/100;
+      const q=Math.random()<gb?goal.slice():[Math.random()*W,Math.random()*H];
+      lastSample=q;const i=nearest(q);const a=nodes[i];const v=[q[0]-a[0],q[1]-a[1]];const d=Math.hypot(v[0],v[1]);
+      const nq=d<=step?q.slice():[a[0]+v[0]/d*step,a[1]+v[1]/d*step];
+      if(!colFree(a,nq)){draw();return;}
+      nodes.push(nq);parents.push(i);
+      if(dist(nq,goal)<step){let id=nodes.length-1;path=[];while(id>=0){path.push(nodes[id]);id=parents[id];}}
+      draw();
+    }
+    $('oneBtn').onclick=step1;
+    $('autoBtn').onclick=()=>{running=!running;$('autoBtn').textContent=running?'중지':'자동 재생';if(running)tick();};
+    function tick(){if(!running||path)return;for(let k=0;k<3;k++)step1();if(running)requestAnimationFrame(tick);}
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      x.strokeStyle='rgba(120,120,120,0.6)';x.lineWidth=1;
+      for(let i=1;i<nodes.length;i++){const a=nodes[parents[i]],b=nodes[i];
+        x.beginPath();x.moveTo(a[0]*sc,c.height-a[1]*sc);x.lineTo(b[0]*sc,c.height-b[1]*sc);x.stroke();}
+      x.fillStyle='#444';nodes.forEach(n=>{x.beginPath();x.arc(n[0]*sc,c.height-n[1]*sc,1.6,0,2*Math.PI);x.fill();});
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0]*sc,c.height-start[1]*sc,7,0,2*Math.PI);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,7,0,2*Math.PI);x.fill();
+      if(lastSample){x.fillStyle='#f5b400';x.beginPath();x.arc(lastSample[0]*sc,c.height-lastSample[1]*sc,4,0,2*Math.PI);x.fill();}
+      if(path){x.strokeStyle='#0b5fff';x.lineWidth=3;x.beginPath();
+        path.forEach((p,i)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle='#222';x.font='13px sans-serif';x.fillText('노드 '+nodes.length+(path?'  · 경로 발견 (길이 '+path.length+')':''),12,18);
+    }
+    upd();
+  })();
+  </script>
+
+  <h2>4. Goal Bias — "목표 쪽 자주 찍기"</h2>
+
+  <p>완전한 무작위 샘플은 아무 방향이나 균등하게 탐색하느라 목표에 도달이 늦습니다.
+  <strong>5~10% 확률로 $q_\text{rand}$ 자리에 목표점을 그대로 넣어주는 트릭</strong>이 거의 모든 RRT 구현의 표준입니다.</p>
+<pre><code class="language-python">def sample(self):
+    if np.random.rand() < 0.05:        # 5% goal bias
+        return self.goal
+    return np.random.uniform(*self.bounds, size=2)</code></pre>
+
+  <div class="warn">
+    <strong>50% 이상은 금물</strong> — 너무 높이면 목표 직선 방향으로만 시도하다가 장애물에 막혀 영영 못 갑니다.
+    경험적 스위트 스팟은 <strong>5–10%</strong>입니다.
+  </div>
+
+  <h2>5. 인터랙티브: Goal Bias 효과 비교</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Bias 0% / 5% / 30% 동시 실행</h4>
+    <p>같은 환경·같은 step에서 세 가지 Bias로 동시에 RRT를 돌린 결과입니다. 자동 재생으로 한 번에 보세요.</p>
+    <canvas id="biasCv" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="goBtn">3개 동시 실행</button>
+      <button id="rstBtn2" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('biasCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const W=20,H=10;const sc=c.width/3/W;const colW=c.width/3;
+    const start=[2,2],goal=[18,8];
+    const obs=[[10,5,1.4],[14,7,1.0],[7,8,1.0]];
+    const cfgs=[{b:0,col:'#c62828'},{b:0.05,col:'#0b5fff'},{b:0.30,col:'#f57c00'}];
+    let runs;
+    function reset(){runs=cfgs.map(cf=>({b:cf.b,col:cf.col,nodes:[start.slice()],parents:[-1],path:null,iter:0}));draw();}
+    reset();$('rstBtn2').onclick=reset;
+    function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+    function colFree(a,b){
+      for(const o of obs){const[cx,cy,r]=o;const ab=[b[0]-a[0],b[1]-a[1]];const ap=[cx-a[0],cy-a[1]];
+        const ab2=ab[0]*ab[0]+ab[1]*ab[1];const t=Math.max(0,Math.min(1,(ap[0]*ab[0]+ap[1]*ab[1])/(ab2+1e-9)));
+        const px=a[0]+t*ab[0],py=a[1]+t*ab[1];if(Math.hypot(px-cx,py-cy)<r)return false;}
+      if(b[0]<0||b[0]>W||b[1]<0||b[1]>H)return false;return true;
+    }
+    function step(r){
+      if(r.path||r.iter>2000)return;r.iter++;
+      const q=Math.random()<r.b?goal.slice():[Math.random()*W,Math.random()*H];
+      let bi=0,bd=1e9;r.nodes.forEach((p,i)=>{const d=dist(p,q);if(d<bd){bd=d;bi=i;}});
+      const a=r.nodes[bi];const v=[q[0]-a[0],q[1]-a[1]];const d=Math.hypot(v[0],v[1]);
+      const nq=d<=0.7?q.slice():[a[0]+v[0]/d*0.7,a[1]+v[1]/d*0.7];
+      if(!colFree(a,nq))return;
+      r.nodes.push(nq);r.parents.push(bi);
+      if(dist(nq,goal)<0.7){let id=r.nodes.length-1;r.path=[];while(id>=0){r.path.push(r.nodes[id]);id=r.parents[id];}}
+    }
+    let going=false;
+    $('goBtn').onclick=()=>{if(going)return;going=true;reset();const id=setInterval(()=>{
+      runs.forEach(r=>{for(let k=0;k<5;k++)step(r);});draw();
+      if(runs.every(r=>r.path||r.iter>2000)){clearInterval(id);going=false;}},30);};
+    function drawOne(r,ox,label){
+      x.strokeStyle='#ddd';x.strokeRect(ox,0,colW,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(ox+o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      x.strokeStyle='rgba(80,80,80,0.4)';x.lineWidth=0.7;
+      for(let i=1;i<r.nodes.length;i++){const a=r.nodes[r.parents[i]],b=r.nodes[i];
+        x.beginPath();x.moveTo(ox+a[0]*sc,c.height-a[1]*sc);x.lineTo(ox+b[0]*sc,c.height-b[1]*sc);x.stroke();}
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(ox+start[0]*sc,c.height-start[1]*sc,5,0,2*Math.PI);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(ox+goal[0]*sc,c.height-goal[1]*sc,5,0,2*Math.PI);x.fill();
+      if(r.path){x.strokeStyle=r.col;x.lineWidth=2.5;x.beginPath();
+        r.path.forEach((p,i)=>{const xx=ox+p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle=r.col;x.font='13px sans-serif';x.fillText(label,ox+8,18);
+      x.fillStyle='#444';x.font='12px sans-serif';x.fillText('노드 '+r.nodes.length+(r.path?' · 도달':''),ox+8,c.height-10);
+    }
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      drawOne(runs[0],0,'Bias 0%');
+      drawOne(runs[1],colW,'Bias 5%');
+      drawOne(runs[2],2*colW,'Bias 30%');
+    }
+  })();
+  </script>
+
+  <p><strong>관찰</strong>: Bias 0%는 트리가 사방으로 균등하게 퍼지지만 목표 도달이 느립니다.
+  Bias 5%면 같은 노드 수로도 더 빨리 도달합니다. Bias 30%는 운이 좋으면 가장 빠르지만 좁은 통로에서는 막히기 쉽습니다.</p>
+
+  <h2>6. RRT*: 점점 좋아지는 경로</h2>
+
+  <p>기본 RRT는 <strong>최초 발견된 경로</strong>에서 멈추는데, 이 경로는 보통 지그재그입니다. RRT*는 두 가지를 추가합니다:</p>
+  <ol>
+    <li><strong>Choose Parent</strong> — $q_\text{new}$ 주변 반경 안의 후보들 중 <em>가장 비용이 적은 부모</em>를 고름.</li>
+    <li><strong>Rewire</strong> — $q_\text{new}$를 트리에 넣은 뒤, 주변 노드들 중 "$q_\text{new}$를 부모로 두면 더 싸지는" 것들을 <em>재연결</em>.</li>
+  </ol>
+
+  <p>이 두 단계 덕분에 반복할수록 경로가 <strong>점근적으로 최적</strong>(asymptotically optimal)에 가까워집니다.</p>
+<pre><code class="language-python">def choose_parent(self, q_new, near_ids):
+    best_i, best_cost = None, np.inf
+    for i in near_ids:
+        if not self.collision_free(self.nodes[i], q_new): continue
+        c = self.cost[i] + np.linalg.norm(q_new - self.nodes[i])
+        if c < best_cost: best_i, best_cost = i, c
+    return best_i, best_cost
+
+def rewire(self, new_id, near_ids):
+    for i in near_ids:
+        c = self.cost[new_id] + np.linalg.norm(self.nodes[new_id] - self.nodes[i])
+        if c < self.cost[i] and self.collision_free(self.nodes[new_id], self.nodes[i]):
+            self.parents[i] = new_id
+            self.cost[i]    = c</code></pre>
+
+  <h2>7. 인터랙티브: RRT vs RRT* (시간이 지날수록 짧아지는 경로)</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 알고리즘 동시 비교</h4>
+    <p>왼쪽은 기본 RRT(최초 발견에서 멈춤), 오른쪽은 RRT*(계속 다듬음). 자동 재생으로 RRT*가 어떻게 점차 짧아지는지 보세요.</p>
+    <canvas id="rsCv" width="640" height="340"></canvas>
+    <div class="controls">
+      <button id="goBtn3">실행</button>
+      <button id="rstBtn3" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rsCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const W=20,H=11;const sc=(c.width/2)/W;const start=[2,2],goal=[18,9];
+    const obs=[[8,4,1.5],[13,7,1.4],[7,8,1.0],[15,3,1.0]];
+    let RRT,STAR,running=false;
+    function makeRun(isStar){return{star:isStar,nodes:[start.slice()],parents:[-1],cost:[0],path:null,best:1e9,iter:0};}
+    function reset(){RRT=makeRun(false);STAR=makeRun(true);draw();}
+    reset();$('rstBtn3').onclick=reset;
+    function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+    function colFree(a,b){
+      for(const o of obs){const[cx,cy,r]=o;const ab=[b[0]-a[0],b[1]-a[1]];const ap=[cx-a[0],cy-a[1]];
+        const ab2=ab[0]*ab[0]+ab[1]*ab[1];const t=Math.max(0,Math.min(1,(ap[0]*ab[0]+ap[1]*ab[1])/(ab2+1e-9)));
+        const px=a[0]+t*ab[0],py=a[1]+t*ab[1];if(Math.hypot(px-cx,py-cy)<r)return false;}
+      if(b[0]<0||b[0]>W||b[1]<0||b[1]>H)return false;return true;
+    }
+    function extract(r,id){const p=[];while(id>=0){p.push(r.nodes[id]);id=r.parents[id];}return p;}
+    function step(r){
+      if(r.iter>3000)return;r.iter++;
+      const q=Math.random()<0.05?goal.slice():[Math.random()*W,Math.random()*H];
+      let bi=0,bd=1e9;r.nodes.forEach((p,i)=>{const d=dist(p,q);if(d<bd){bd=d;bi=i;}});
+      const a=r.nodes[bi];const v=[q[0]-a[0],q[1]-a[1]];const d=Math.hypot(v[0],v[1]);
+      const nq=d<=0.6?q.slice():[a[0]+v[0]/d*0.6,a[1]+v[1]/d*0.6];
+      if(!colFree(a,nq))return;
+      let parent=bi,cst=r.cost[bi]+dist(a,nq);
+      if(r.star){const R=1.5;r.nodes.forEach((p,i)=>{if(dist(p,nq)<R&&colFree(p,nq)){const c=r.cost[i]+dist(p,nq);if(c<cst){cst=c;parent=i;}}});}
+      r.nodes.push(nq);r.parents.push(parent);r.cost.push(cst);const newId=r.nodes.length-1;
+      if(r.star){const R=1.5;r.nodes.forEach((p,i)=>{if(i===newId)return;if(dist(p,nq)<R&&colFree(nq,p)){const c=cst+dist(nq,p);if(c<r.cost[i]){r.parents[i]=newId;r.cost[i]=c;}}});}
+      if(dist(nq,goal)<0.6){const totalCost=cst+dist(nq,goal);
+        if(!r.path||totalCost<r.best){r.best=totalCost;r.path=extract(r,newId);}
+        if(!r.star)r.iter=99999;
+      }
+    }
+    $('goBtn3').onclick=()=>{if(running)return;running=true;reset();const id=setInterval(()=>{
+      for(let k=0;k<10;k++){step(RRT);step(STAR);}draw();
+      if(STAR.iter>3000){clearInterval(id);running=false;}},30);};
+    function drawOne(r,ox,label){
+      x.strokeStyle='#ddd';x.strokeRect(ox,0,c.width/2,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(ox+o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      x.strokeStyle='rgba(80,80,80,0.35)';x.lineWidth=0.7;
+      for(let i=1;i<r.nodes.length;i++){const a=r.nodes[r.parents[i]],b=r.nodes[i];
+        x.beginPath();x.moveTo(ox+a[0]*sc,c.height-a[1]*sc);x.lineTo(ox+b[0]*sc,c.height-b[1]*sc);x.stroke();}
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(ox+start[0]*sc,c.height-start[1]*sc,5,0,2*Math.PI);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(ox+goal[0]*sc,c.height-goal[1]*sc,5,0,2*Math.PI);x.fill();
+      if(r.path){x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+        r.path.forEach((p,i)=>{const xx=ox+p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle='#222';x.font='13px sans-serif';x.fillText(label,ox+8,18);
+      x.fillStyle='#444';x.font='12px sans-serif';x.fillText('노드 '+r.nodes.length+(r.path?' · 길이 '+r.best.toFixed(1):''),ox+8,c.height-10);
+    }
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      drawOne(RRT,0,'RRT (멈춤)');drawOne(STAR,c.width/2,'RRT* (계속 다듬음)');
+    }
+  })();
+  </script>
+
+  <h2>8. Shortcut · Hybrid A* · Reeds-Shepp</h2>
+
+  <h3>Shortcut — 거친 경로 다듬기</h3>
+  <p>경로 위 임의의 두 점이 직선으로 연결 가능하면 그 사이를 잘라냅니다. 빠르고 효과적이에요.</p>
+<pre><code class="language-python">def shortcut(path, obstacles, iters=200):
+    for _ in range(iters):
+        if len(path) <= 2: break
+        i = np.random.randint(0, len(path)-2)
+        j = np.random.randint(i+2, len(path))
+        if collision_free(path[i], path[j], obstacles):
+            path = path[:i+1] + path[j:]
+    return path</code></pre>
+
+  <h3>비홀로노믹 차량 — Hybrid A* / Reeds-Shepp</h3>
+  <p>자동차는 옆으로 미끄러질 수 없는(비홀로노믹) 시스템이라 RRT가 만든 지그재그를 그대로 못 탑니다. 두 가지 길이 있어요:</p>
+  <ul>
+    <li><strong>후처리</strong>: RRT 결과를 Shortcut + Cubic Spline으로 매끈하게.</li>
+    <li><strong>Hybrid A*</strong>: 격자 탐색의 이웃 확장을 <em>실제 차량 모션(조향각별 한 걸음)</em>으로 두는 기법. 주차 시나리오 표준.</li>
+    <li><strong>Reeds-Shepp 곡선</strong>: 전진+후진을 모두 허용하는 최단 경로 — 좁은 주차에서 필수.</li>
+  </ul>
+
+  <table>
+    <thead><tr><th>변종</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>RRT</td><td>기본형. 첫 발견에 멈춤.</td></tr>
+      <tr><td>RRT-Connect</td><td>시작·목표 양쪽에서 트리를 동시에 키움. 빠름.</td></tr>
+      <tr><td>RRT*</td><td>점근 최적. 시간이 곧 품질.</td></tr>
+      <tr><td>Informed RRT*</td><td>이미 찾은 경로보다 짧을 수 있는 영역(타원 안)만 샘플링. 2~5배 빠름.</td></tr>
+      <tr><td>Hybrid A*</td><td>차량 모션 반영. 주차·자율주행 표준.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li><strong>RRT 5단계</strong> = Sample → Nearest → Steer → Check → Add. 메인 루프 10줄.</li>
+      <li>Goal Bias 5–10%가 표준. 50% 이상은 지역해 빠짐.</li>
+      <li>RRT는 빠르지만 최적이 아님 → <strong>RRT*</strong>로 점근 최적, Informed RRT*로 가속.</li>
+      <li>차량용으로는 <strong>Shortcut + Spline</strong> 후처리가 필수. 주차는 Hybrid A* / Reeds-Shepp.</li>
+      <li>한 줄 비유: <strong>"어둠 속에서 손전등 비추며, 씨앗에서 가지 뻗기"</strong>.</li>
+    </ul>
+  </div>
+
+  <h3>흔한 실수 TOP 5</h3>
+  <table>
+    <thead><tr><th>#</th><th>증상</th><th>의심</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>장애물 관통</td><td>step이 너무 큼</td><td>step &lt; 장애물 최소 폭</td></tr>
+      <tr><td>2</td><td>너무 느림</td><td>step 너무 작음 / Bias = 0</td><td>step 0.3~1.0, Bias 5–10%</td></tr>
+      <tr><td>3</td><td>매번 다른 결과</td><td>랜덤 시드 미고정</td><td>디버깅 시 <code>np.random.seed(42)</code></td></tr>
+      <tr><td>4</td><td>경로 지그재그</td><td>Shortcut 안 함</td><td>후처리 + Spline</td></tr>
+      <tr><td>5</td><td>충돌 체크 오류</td><td>선분-원 거리 계산</td><td>단위 테스트 5개 필수</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. 더 깊이 공부하기</h2>
+  <ul>
+    <li>S. M. LaValle, <em>Planning Algorithms</em>, Ch.5 (무료 PDF: <a href="http://lavalle.pl/planning/" target="_blank">lavalle.pl/planning</a>).</li>
+    <li>Karaman &amp; Frazzoli, "Sampling-based Algorithms for Optimal Motion Planning", IJRR 2011 (RRT*).</li>
+    <li>PythonRobotics — <code>PathPlanning/RRT/rrt.py</code>, <code>PathPlanning/RRTStar/rrt_star.py</code>, <code>HybridAStar/</code>.</li>
+    <li>관련 강의: <a href="07-astar-graph.html">W7 A*</a>가 격자 탐색의 정석. RRT와는 정반대 접근.</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="05-map-frenet.html"><small>← 이전</small>W5. 지도 표현 &amp; Frenet</a>
+    <a href="07-astar-graph.html" class="next"><small>다음 →</small>W7. A* 그래프 탐색</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

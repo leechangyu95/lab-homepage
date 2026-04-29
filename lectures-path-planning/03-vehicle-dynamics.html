@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W3. 차량 동역학 기초 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html" class="active">경로계획 &amp; 추종</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 3. 차량 동역학 기초</h1>
+  <p class="lead">2주차의 Kinematic 모델은 "바퀴가 바라본 방향으로만 굴러간다"는 가정을 깔았습니다. 이 가정은 저속에선 충분하지만,
+  고속에서는 타이어가 <strong>옆으로 밀리는 슬립</strong>이 생기면서 무너집니다. 오늘은 그 슬립을 정면으로 다루는
+  <strong>Dynamic Bicycle Model</strong>과 차의 성격을 결정짓는 <strong>Understeer/Oversteer</strong> 개념을 만나봅니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 고속에서는 Kinematic이 안 통하는가?</li>
+    <li>타이어 슬립각과 횡력 — 직관 + 수식</li>
+    <li>인터랙티브: 슬립각 vs 횡력 곡선 (Pacejka 맛보기)</li>
+    <li>Dynamic Bicycle Model — 자유 물체도와 상태방정식</li>
+    <li>Understeer · Neutral · Oversteer</li>
+    <li>인터랙티브: 세 가지 차량 거동 동시 비교</li>
+    <li>인터랙티브: 속도별 정상 선회 반경</li>
+    <li>마찰원·ESC — 실차에서 더 신경 쓸 것들</li>
+    <li>핵심 정리</li>
+  </ol></div>
+
+  <h2>1. 왜 고속에서는 Kinematic이 안 통하는가?</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>골목길을 시속 5 km로 걸어가는 자전거를 떠올려 보세요. 핸들을 살짝 돌리면 그쪽으로 그대로 굴러갑니다 — 바퀴가 바라본 방향이 곧 가는 방향이에요.
+  이게 Kinematic 모델의 가정입니다.</p>
+  <p>이번엔 시속 100 km로 코너에 들어가는 오토바이를 떠올려 보세요. 같은 핸들 각도에서도 차체는 <em>옆으로 살짝 밀려</em> 나갑니다.
+  타이어가 보고 있는 방향과 실제 가는 방향 사이에 각도 차가 생기는 거예요. 이 각도가 바로 <strong>슬립각 $\alpha$</strong>이고,
+  슬립각이 만드는 옆 방향 힘이 차를 코너 안쪽으로 끌어당깁니다.</p>
+
+  <table>
+    <thead><tr><th>속도</th><th>거동</th><th>적합 모델</th><th>유효 범위</th></tr></thead>
+    <tbody>
+      <tr><td>저속 (≤ 30 km/h)</td><td>바퀴 방향 = 이동 방향</td><td>Kinematic Bicycle</td><td>주차·도심 저속</td></tr>
+      <tr><td>중속 (30 ~ 60 km/h)</td><td>약간의 슬립</td><td>둘 다 OK</td><td>일반 도시 주행</td></tr>
+      <tr><td>고속 (≥ 60 km/h)</td><td>슬립 무시 못 함</td><td>Dynamic Bicycle</td><td>고속도로·정밀 추종</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>왜 자율주행에 둘 다 필요한가?</strong> — Planning(경로 계획)에서는 미래 궤적의 대략적 모양만 알면 되니 가벼운 Kinematic으로 충분합니다.
+    반면 Control(추종 제어)이 고속에서 정확히 길을 따라가려면 횡력까지 다루는 Dynamic 모델이 필요합니다.
+    <strong>이 강의 후반부 LQR(W12)·MPC(W13)는 Dynamic 모델 위에서 설계</strong>됩니다.
+  </div>
+
+  <h2>2. 타이어 슬립각과 횡력</h2>
+
+  <h3>슬립각 $\alpha$ — "보는 방향"과 "가는 방향"의 차이</h3>
+  <p>타이어가 향한 방향을 화살표로, 실제 차가 그 점에서 가고 있는 속도 벡터를 또 다른 화살표로 그려 보세요.
+  두 화살표 사이의 각도가 슬립각입니다. <strong>슬립각이 0이면 옆 방향 힘이 0</strong>, 슬립각이 커질수록 타이어 고무가 옆으로 밀리며
+  도로면과 마찰해 <strong>횡력 $F_y$</strong>를 발생시킵니다.</p>
+
+  <p>아주 작은 슬립각 영역에서는 횡력이 슬립각에 거의 비례합니다 — 이게 <strong>선형 타이어 모델</strong>입니다.</p>
+  $$ F_y = C_\alpha\,\alpha $$
+  <p>여기서 $C_\alpha$는 <strong>코너링 강성(Cornering Stiffness)</strong> [N/rad]. 타이어 고무·공기압·노면이 결정하는 상수예요.</p>
+
+  <h3>전·후륜 슬립각 (작은 각도 근사)</h3>
+  $$ \alpha_f \approx \delta - \frac{v_y + l_f\dot\psi}{v_x}, \qquad \alpha_r \approx -\frac{v_y - l_r\dot\psi}{v_x} $$
+  <p>$v_x, v_y$는 차체 좌표계 속도, $\dot\psi$는 요레이트, $l_f/l_r$은 무게중심에서 앞/뒤 차축까지 거리입니다.
+  부호가 까다로워 보이지만 핵심은 단 하나 — <strong>"바퀴가 본 방향($\delta$ 또는 0) − 그 위치의 속도 방향"</strong>입니다.</p>
+
+  <div class="warn">
+    <strong>모델의 한계</strong> — 슬립각이 5°를 넘으면 타이어가 <em>포화</em>되어 더 이상 횡력이 비례해 커지지 않습니다.
+    이 영역의 거동을 그대로 다루는 게 <a href="https://en.wikipedia.org/wiki/Hans_B._Pacejka" target="_blank">Pacejka의 Magic Formula</a>이고,
+    슬립각을 5° 안쪽으로 가둬두는 게 추종 제어기의 암묵적 임무입니다.
+  </div>
+
+  <h2>3. 인터랙티브: 타이어 슬립각 vs 횡력</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Pacejka Magic Formula 맛보기</h4>
+    <p>슬립각 $\alpha$를 슬라이더로 흔들어 보세요. <span style="color:#0b5fff;font-weight:600">파란선</span>은 선형 근사 $F_y = C_\alpha\alpha$,
+    <span style="color:#c62828;font-weight:600">빨간선</span>은 Pacejka의 비선형 곡선입니다. 슬립각이 작을 때는 두 곡선이 거의 같지만, 5°를 넘어가면서 빨간선이 <strong>포화</strong>되는 게 보입니다.</p>
+    <canvas id="tireCv" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>슬립각 α [°] <span class="val" id="alV">3</span><input type="range" id="al" min="-15" max="15" step="0.2" value="3"></label>
+      <label>코너링 강성 Cα [kN/rad] <span class="val" id="caV">80</span><input type="range" id="ca" min="20" max="160" step="5" value="80"></label>
+      <label>마찰계수 μ <span class="val" id="muV">0.9</span><input type="range" id="mu" min="0.2" max="1.0" step="0.05" value="0.9"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tireCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('alV').textContent=(+$('al').value).toFixed(1);$('caV').textContent=(+$('ca').value).toFixed(0);$('muV').textContent=(+$('mu').value).toFixed(2);draw();};
+    ['al','ca','mu'].forEach(id=>$(id).oninput=upd);
+    function pacejka(alpha,Ca,mu){
+      const Fz=4500;const D=mu*Fz;const B=Ca*1000/(D);const C=1.3,E=-0.2;
+      const phi=(1-E)*(B*alpha)+E*Math.atan(B*alpha);
+      return D*Math.sin(C*Math.atan(phi));
+    }
+    function draw(){
+      const Ca=+$('ca').value,mu=+$('mu').value,al=+$('al').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h=c.height,pad=40;const xa=a=>pad+(a+15)/30*(w-2*pad);const ya=f=>h-pad-(f+5000)/10000*(h-2*pad);
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(pad,ya(0));x.lineTo(w-pad,ya(0));x.moveTo(xa(0),pad);x.lineTo(xa(0),h-pad);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('α [°]',w-pad+4,ya(0)+14);x.fillText('Fy [N]',xa(0)+6,pad-6);
+      for(let a=-15;a<=15;a+=5){x.fillText(a,xa(a)-6,ya(0)+18);}
+      for(let f=-4000;f<=4000;f+=2000){if(f!==0){x.fillText(f,xa(0)-40,ya(f)+4);}}
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let a=-15;a<=15;a+=0.2){const F=Ca*1000*a*Math.PI/180;const xx=xa(a),yy=ya(Math.max(-5000,Math.min(5000,F)));if(a==-15)x.moveTo(xx,yy);else x.lineTo(xx,yy);}x.stroke();
+      x.strokeStyle='#c62828';x.lineWidth=2.4;x.beginPath();
+      for(let a=-15;a<=15;a+=0.2){const F=pacejka(a*Math.PI/180,Ca,mu);const xx=xa(a),yy=ya(F);if(a==-15)x.moveTo(xx,yy);else x.lineTo(xx,yy);}x.stroke();
+      const Flin=Ca*1000*al*Math.PI/180,Fpac=pacejka(al*Math.PI/180,Ca,mu);
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(xa(al),ya(Math.max(-5000,Math.min(5000,Flin))),5,0,2*Math.PI);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(xa(al),ya(Fpac),5,0,2*Math.PI);x.fill();
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('선형 근사 Fy = '+(Flin/1000).toFixed(2)+' kN',pad+8,pad+18);
+      x.fillStyle='#c62828';x.fillText('Pacejka     Fy = '+(Fpac/1000).toFixed(2)+' kN',pad+8,pad+38);
+    }
+    upd();
+  })();
+  </script>
+
+  <p><strong>관찰 포인트</strong>:</p>
+  <ul>
+    <li>$|\alpha| \le 3°$ 정도에서는 두 곡선이 거의 겹쳐 — <strong>선형 모델로 충분</strong>한 영역.</li>
+    <li>$|\alpha| \ge 8°$ 부터 빨간선(Pacejka)이 평평해짐 — 타이어가 <strong>그릴 수 있는 횡력의 한계</strong>에 도달.</li>
+    <li>마찰계수 μ를 0.3 이하로 떨어뜨리면(빙판) 한계가 훨씬 빨리 옵니다 — 겨울철 주의 시그널.</li>
+  </ul>
+
+  <h2>4. Dynamic Bicycle Model</h2>
+
+  <h3>자유 물체도와 Newton 2법칙</h3>
+  <p>차를 질량 $m$, 요 관성 $I_z$의 강체 한 덩어리로 보고, 차체 좌표에서 횡방향과 회전 운동에만 집중합니다(평지 가정).</p>
+  $$ m(\dot v_y + v_x \dot\psi) = F_{yf} + F_{yr} \qquad I_z \ddot\psi = l_f F_{yf} - l_r F_{yr} $$
+  <p>여기에 선형 타이어 모델을 대입하고 작은 각도 근사를 쓰면 상태 $\mathbf{x}=[v_y,\dot\psi]^\top$, 입력 $\delta$의 선형 시스템이 됩니다.</p>
+  $$
+  \begin{bmatrix}\dot v_y \\ \ddot\psi\end{bmatrix} =
+  \begin{bmatrix}
+  -\dfrac{C_f+C_r}{m v_x} & -v_x - \dfrac{l_f C_f - l_r C_r}{m v_x}\\
+  -\dfrac{l_f C_f - l_r C_r}{I_z v_x} & -\dfrac{l_f^2 C_f + l_r^2 C_r}{I_z v_x}
+  \end{bmatrix}
+  \begin{bmatrix}v_y\\ \dot\psi\end{bmatrix} +
+  \begin{bmatrix}C_f/m \\ l_f C_f/I_z\end{bmatrix}\delta
+  $$
+
+  <div class="tip">
+    <strong>꼭 외워둘 한 가지</strong> — $A$ 행렬에 <strong>$v_x$가 분모로 들어갑니다</strong>. 즉 같은 차량이라도 속도가 바뀌면 동역학이 바뀐다는 뜻이에요.
+    실무에서는 속도 구간별로 LTI 모델을 만들어 <em>Gain Scheduling</em>으로 제어기를 바꿉니다. 이 행렬이 그대로 W12 LQR의 플랜트입니다.
+  </div>
+
+<pre><code class="language-python">import numpy as np
+
+m, Iz = 1500.0, 2500.0          # 질량, 요 관성
+lf, lr = 1.2, 1.6               # 무게중심에서 앞/뒤 차축
+Cf, Cr = 80_000.0, 80_000.0     # 코너링 강성 [N/rad]
+
+def AB(vx):
+    a11 = -(Cf + Cr) / (m*vx)
+    a12 = -vx - (lf*Cf - lr*Cr) / (m*vx)
+    a21 = -(lf*Cf - lr*Cr) / (Iz*vx)
+    a22 = -(lf**2*Cf + lr**2*Cr) / (Iz*vx)
+    A = np.array([[a11, a12], [a21, a22]])
+    B = np.array([[Cf/m], [lf*Cf/Iz]])
+    return A, B
+
+A, B = AB(vx=20.0)               # 72 km/h
+print('eig(A) =', np.linalg.eigvals(A))   # 좌반평면 → 안정</code></pre>
+
+  <h2>5. Understeer · Neutral · Oversteer</h2>
+
+  <p>같은 조향각을 줘도 속도가 빨라지면 차의 회전 반응이 달라집니다. 이를 한 숫자로 압축한 게 <strong>Understeer Gradient</strong>입니다.</p>
+  $$ K_{us} = \frac{l_r m g}{L\,C_f} - \frac{l_f m g}{L\,C_r} $$
+
+  <table>
+    <thead><tr><th>$K_{us}$</th><th>이름</th><th>거동</th><th>설계 의도</th></tr></thead>
+    <tbody>
+      <tr><td>$> 0$</td><td><strong>Understeer</strong></td><td>속도↑ 시 조향 더 많이 필요. 둔하지만 안전.</td><td>양산차 표준</td></tr>
+      <tr><td>$= 0$</td><td>Neutral</td><td>속도와 무관하게 같은 조향</td><td>이론 기준</td></tr>
+      <tr><td>$< 0$</td><td><strong>Oversteer</strong></td><td>같은 조향에 더 많이 돌아감. 예민, 위험.</td><td>레이스카(전문가용)</td></tr>
+    </tbody>
+  </table>
+
+  <p>정상 선회 조건($\dot v_y = \ddot\psi = 0$)에서 필요한 조향각은 다음과 같습니다.</p>
+  $$ \delta = \frac{L}{R} + K_{us}\frac{v_x^2}{g R} $$
+  <p>첫 항이 2주차의 Kinematic 조향, 둘째 항이 동역학적 보정입니다. <strong>Understeer 차량은 속도가 빨라질수록 조향을 더 줘야</strong> 같은 반경을 그릴 수 있어요.</p>
+
+  <h2>6. 인터랙티브: 세 가지 차량 거동 동시 비교</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 같은 조향, 다른 거동</h4>
+    <p>같은 시점에 같은 조향 스텝(0.08 rad ≈ 4.6°)이 들어옵니다.
+    <span style="color:#0b5fff;font-weight:600">파랑 — Understeer</span>(앞 타이어가 더 약함),
+    <span style="color:#2e7d32;font-weight:600">초록 — Neutral</span>,
+    <span style="color:#c62828;font-weight:600">빨강 — Oversteer</span>(뒷 타이어가 더 약함). 속도를 올려가며 차이를 보세요.</p>
+    <canvas id="threeCar" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>속도 vx [m/s] <span class="val" id="vxV">20</span><input type="range" id="vx" min="5" max="40" step="1" value="20"></label>
+      <label>조향각 δ [°] <span class="val" id="dlV">5</span><input type="range" id="dl" min="0" max="10" step="0.5" value="5"></label>
+      <button id="resetBtn">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('threeCar'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('vxV').textContent=(+$('vx').value).toFixed(0);$('dlV').textContent=(+$('dl').value).toFixed(1);};
+    ['vx','dl'].forEach(id=>$(id).oninput=upd);
+    const m=1500,Iz=2500,lf=1.2,lr=1.6,L=lf+lr;
+    const cars=[
+      {name:'Understeer',Cf:60000,Cr:90000,color:'#0b5fff'},
+      {name:'Neutral',   Cf:80000,Cr:80000,color:'#2e7d32'},
+      {name:'Oversteer', Cf:90000,Cr:60000,color:'#c62828'},
+    ];
+    let t=0;const dt=0.05;
+    function reset(){cars.forEach(cc=>{cc.x=0;cc.y=0;cc.psi=0;cc.vy=0;cc.r=0;cc.tr=[];});t=0;}
+    reset();$('resetBtn').onclick=reset;
+    function step(cc,vx,delta){
+      const a11=-(cc.Cf+cc.Cr)/(m*vx),a12=-vx-(lf*cc.Cf-lr*cc.Cr)/(m*vx);
+      const a21=-(lf*cc.Cf-lr*cc.Cr)/(Iz*vx),a22=-(lf*lf*cc.Cf+lr*lr*cc.Cr)/(Iz*vx);
+      const dvy=a11*cc.vy+a12*cc.r+(cc.Cf/m)*delta;
+      const dr =a21*cc.vy+a22*cc.r+(lf*cc.Cf/Iz)*delta;
+      cc.vy+=dvy*dt;cc.r+=dr*dt;
+      cc.x+=(vx*Math.cos(cc.psi)-cc.vy*Math.sin(cc.psi))*dt;
+      cc.y+=(vx*Math.sin(cc.psi)+cc.vy*Math.cos(cc.psi))*dt;
+      cc.psi+=cc.r*dt;cc.tr.push([cc.x,cc.y]);if(cc.tr.length>800)cc.tr.shift();
+    }
+    function loop(){
+      const vx=+$('vx').value,delta=(+$('dl').value)*Math.PI/180;
+      const useDelta=t>0.5?delta:0;
+      cars.forEach(cc=>step(cc,vx,useDelta));t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height/2,sc=2.2;
+      x.strokeStyle='#eee';for(let i=-200;i<=200;i+=20){x.beginPath();x.moveTo(cx+i,0);x.lineTo(cx+i,c.height);x.moveTo(0,cy+i);x.lineTo(c.width,cy+i);x.stroke();}
+      cars.forEach(cc=>{
+        x.strokeStyle=cc.color;x.lineWidth=2;x.beginPath();
+        cc.tr.forEach((p,i)=>{const xx=cx+p[0]*sc,yy=cy-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+        const last=cc.tr[cc.tr.length-1];if(last){x.fillStyle=cc.color;x.beginPath();x.arc(cx+last[0]*sc,cy-last[1]*sc,4,0,2*Math.PI);x.fill();}
+      });
+      x.fillStyle='#222';x.font='13px sans-serif';
+      cars.forEach((cc,i)=>{x.fillStyle=cc.color;x.fillText(cc.name+'  Cf='+cc.Cf/1000+'  Cr='+cc.Cr/1000,12,18+i*16);});
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('t='+t.toFixed(1)+'s · 0.5초 후 조향 인가',12,c.height-12);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>꼭 만져볼 시나리오</strong>:</p>
+  <ul>
+    <li><strong>vx = 5 m/s</strong> (저속): 세 곡선이 거의 겹칩니다 — 저속에선 거동 차이가 거의 없음.</li>
+    <li><strong>vx = 25 ~ 35 m/s</strong> (고속): 빨강(Oversteer)이 가장 작은 반경, 파랑(Understeer)이 가장 큰 반경을 그립니다.</li>
+    <li><strong>δ를 키우면</strong> Oversteer는 더 빨리 진동·발산 가까이 가고, Understeer는 점잖게 안정 — 양산차가 Understeer를 고집하는 이유입니다.</li>
+  </ul>
+
+  <h2>7. 인터랙티브: 속도별 정상 선회 반경</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 속도가 변하면 같은 조향에서도 반경이 달라진다</h4>
+    <p>$\delta$를 고정한 채 속도를 끌어올려 보세요. <strong>점선</strong>은 Kinematic 예측($R = L/\tan\delta$),
+    <strong>실선</strong>은 동역학으로 계산한 정상 선회 반경입니다. Understeer는 위로, Oversteer는 아래로 갈라집니다.</p>
+    <canvas id="radiusCv" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>조향각 δ [°] <span class="val" id="d2V">5</span><input type="range" id="d2" min="1" max="15" step="0.5" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('radiusCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('d2V').textContent=(+$('d2').value).toFixed(1);draw();};
+    $('d2').oninput=upd;
+    const m=1500,g=9.81,lf=1.2,lr=1.6,L=lf+lr;
+    function Kus(Cf,Cr){return lr*m*g/(L*Cf)-lf*m*g/(L*Cr);}
+    function R(vx,delta,K){const Rk=L/Math.tan(delta);return Rk*(1+K*vx*vx/(g*L));}
+    function draw(){
+      const delta=(+$('d2').value)*Math.PI/180;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h=c.height,pad=42;
+      const xa=v=>pad+v/40*(w-2*pad);const ya=r=>h-pad-Math.min(200,Math.max(0,r))/200*(h-2*pad);
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(pad,h-pad);x.lineTo(w-pad,h-pad);x.moveTo(pad,pad);x.lineTo(pad,h-pad);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('vx [m/s]',w-pad-50,h-pad+18);x.fillText('R [m]',6,pad+10);
+      for(let v=0;v<=40;v+=10){x.fillText(v,xa(v)-6,h-pad+18);}
+      for(let r=0;r<=200;r+=50){x.fillText(r,8,ya(r)+4);}
+      const Rk=L/Math.tan(delta);
+      x.strokeStyle='#888';x.setLineDash([5,5]);x.beginPath();x.moveTo(pad,ya(Rk));x.lineTo(w-pad,ya(Rk));x.stroke();x.setLineDash([]);
+      x.fillStyle='#666';x.fillText('Kinematic R='+Rk.toFixed(1),w-pad-160,ya(Rk)-4);
+      const series=[
+        {name:'Understeer',K:Kus(60000,90000),color:'#0b5fff'},
+        {name:'Neutral',   K:Kus(80000,80000),color:'#2e7d32'},
+        {name:'Oversteer', K:Kus(90000,60000),color:'#c62828'},
+      ];
+      series.forEach((s,i)=>{
+        x.strokeStyle=s.color;x.lineWidth=2;x.beginPath();
+        for(let v=2;v<=40;v+=0.5){const r=R(v,delta,s.K);const xx=xa(v),yy=ya(r);if(v==2)x.moveTo(xx,yy);else x.lineTo(xx,yy);}x.stroke();
+        x.fillStyle=s.color;x.fillText(s.name+'  Kus='+s.K.toFixed(3),pad+8,pad+14+i*16);
+      });
+    }
+    upd();
+  })();
+  </script>
+
+  <ul>
+    <li>Neutral은 속도와 무관하게 Kinematic 점선과 일치합니다.</li>
+    <li>Understeer는 속도가 빨라질수록 반경이 <strong>커집니다</strong> — "직진성이 강해진다"는 표현이 그래서 나옵니다.</li>
+    <li>Oversteer는 반대로 반경이 작아지다가 특정 속도(임계 속도 $v_{cr}$)에서 발산 — 도로 차량 설계 금지 영역.</li>
+  </ul>
+
+  <h2>8. 실차에서 더 신경 쓸 것들</h2>
+
+  <h3>마찰원 (Friction Circle)</h3>
+  <p>타이어가 낼 수 있는 종·횡 힘의 합벡터는 <strong>마찰원 안</strong>에 있어야 합니다.</p>
+  $$ \sqrt{F_x^2 + F_y^2} \le \mu\,F_z $$
+  <p>급가속 중에 횡력 여유가 줄고, 빙판($\mu \approx 0.1$)에서는 코너링 한계가 1/9로 떨어집니다.
+  <strong>"가속하면서 동시에 급조향 금지"</strong>가 직관적 의미예요.</p>
+
+  <h3>ABS · TCS · ESC</h3>
+  <table>
+    <thead><tr><th>시스템</th><th>제어 대상</th><th>언제</th></tr></thead>
+    <tbody>
+      <tr><td>ABS (Anti-lock Brake)</td><td>제동 슬립비</td><td>급제동</td></tr>
+      <tr><td>TCS (Traction Control)</td><td>구동 슬립비</td><td>급가속</td></tr>
+      <tr><td>ESC (Electronic Stability)</td><td>요레이트·슬립각</td><td>선회 불안정 시</td></tr>
+    </tbody>
+  </table>
+  <p>자율주행 제어기가 보낸 명령이 ESC에 의해 살짝 다듬어질 수 있으니 실차 실험 시 동작 조건을 확인해야 합니다.
+  이 강의는 <strong>ESC가 개입하지 않는 안전 영역 안</strong>에서 운전한다고 가정합니다.</p>
+
+  <h2>9. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li><strong>슬립각</strong> = 바퀴가 본 방향 − 실제 가는 방향. 작은 영역에서 $F_y \approx C_\alpha\alpha$.</li>
+      <li><strong>Dynamic Bicycle</strong>의 $A$ 행렬에 $v_x$가 들어가 속도별 동역학이 달라진다.</li>
+      <li><strong>Understeer Gradient</strong> $K_{us}$의 부호가 차의 성격(둔/예민)을 결정. 양산차는 $K_{us}>0$.</li>
+      <li>고속 추종에서는 Dynamic 모델이 필수 — W12 LQR · W13 MPC가 그 위에서 설계된다.</li>
+      <li>한 줄 결론: <strong>"고속에서는 슬립을 무시하지 말 것"</strong>.</li>
+    </ul>
+  </div>
+
+  <h2>10. 더 깊이 공부하기</h2>
+  <ul>
+    <li>R. Rajamani, <em>Vehicle Dynamics and Control</em>, 2nd ed. — 학부·대학원 표준 교재. Ch.2–3이 오늘 범위.</li>
+    <li>H. Pacejka, <em>Tire and Vehicle Dynamics</em> — 비선형 타이어 모델의 정석.</li>
+    <li>관련 강의: <a href="04-euler-simulation.html">W4 오일러 적분</a>은 오늘 모델을 시간 적분해 그림으로 만드는 도구입니다.
+    <a href="13-mpc-basics.html">W13 MPC</a>는 본 모델의 직접적 응용처입니다.</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="02-frames-kinematics.html"><small>← 이전</small>W2. 좌표계 &amp; 차량 기구학</a>
+    <a href="04-euler-simulation.html" class="next"><small>다음 →</small>W4. 오일러 적분 &amp; 시뮬레이션</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
