@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W12. 진동 입문 — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 12. 진동 입문</h1>
+  <p class="lead">한 학기 동안 배운 모든 것이 만나는 곳. 동역학에서 가장 자주 마주치는 운동의 패턴.</p>
+
+  <h2>1. 단순조화운동(SHM)</h2>
+  <p>복원력이 변위에 비례할 때 — $F = -kx$ — 운동방정식은 다음과 같습니다.</p>
+  $$ m\ddot x = -kx \quad\Rightarrow\quad \ddot x + \omega_n^2 x = 0, \quad \omega_n = \sqrt{k/m} $$
+  <p>이 식의 해는 사인 함수입니다.</p>
+  $$ x(t) = A\cos(\omega_n t + \phi) $$
+  <p>$A$는 진폭(초기 조건이 정함), $\omega_n$은 <strong>고유진동수</strong>(시스템의 성질만으로 정해짐). 주기는 $T = 2\pi/\omega_n = 2\pi\sqrt{m/k}$.</p>
+
+  <div class="tip"><strong>진동의 보편성</strong> — 안정한 평형점 근처라면 거의 모든 시스템이 SHM처럼 행동합니다(테일러 전개의 1차항이 복원력을 만들어주니까요). 그래서 이 식이 학부 시절 가장 자주 만나는 미분방정식입니다 — 진자, 스프링, RLC 회로(W7 기전공학), 분자 진동, 우주선 자세, 음파, 다리의 흔들림 모두.</div>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 질량-스프링 — k와 m이 주기를 어떻게 정하나</h4>
+    <p>질량과 스프링 상수를 슬라이더로 바꿔보세요. <strong>주기 $T = 2\pi\sqrt{m/k}$</strong> — $m$이 4배가 되면 주기가 2배(느림), $k$가 4배가 되면 주기가 절반(빠름). 시간 그래프와 위상 평면이 함께 보여집니다.</p>
+    <canvas id="smC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>질량 m (kg) <span class="val" id="smMV">1</span><input type="range" id="smM" min="0.2" max="5" step="0.1" value="1"></label>
+      <label>스프링 k (N/m) <span class="val" id="smKV">10</span><input type="range" id="smK" min="2" max="50" step="0.5" value="10"></label>
+      <label>초기 변위 x₀ <span class="val" id="smXV">1</span><input type="range" id="smX" min="0.2" max="2" step="0.05" value="1"></label>
+      <button id="smReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('smC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['smM','smK','smX'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let pos,vel,history=[];
+    function reset(){pos=+sl('smX').value;vel=0;history=[];}
+    sl('smReset').onclick=reset;
+    ks.forEach(k=>sl(k).addEventListener('change',reset));
+    reset();
+    function loop(){
+      const m=+sl('smM').value,k=+sl('smK').value;
+      const dt=0.025;
+      const a=-k/m*pos;
+      vel+=a*dt;pos+=vel*dt;
+      history.push({x:pos,v:vel});if(history.length>400)history.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // mass-spring at top
+      const cy=80,wallX=80,scale=60;
+      x.fillStyle='#888';x.fillRect(wallX-12,cy-30,12,60);
+      const massX=wallX+120+pos*scale;
+      // spring zigzag
+      x.strokeStyle='#444';x.lineWidth=2;x.beginPath();
+      const sx0=wallX,sxN=massX-22,N=14;
+      for(let i=0;i<=N;i++){
+        const t=i/N,px=sx0+(sxN-sx0)*t,py=cy+(i%2===0?-8:8);
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();
+      x.fillStyle='#0b5fff';x.fillRect(massX-22,cy-22,44,44);x.strokeStyle='#333';x.strokeRect(massX-22,cy-22,44,44);
+      x.fillStyle='#fff';x.font='bold 13px sans-serif';x.textAlign='center';x.fillText('m',massX,cy+5);
+      // equilibrium line
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.moveTo(wallX+120,cy-30);x.lineTo(wallX+120,cy+30);x.stroke();x.setLineDash([]);
+      // x(t) graph
+      const gT=160,gB=240,gL=20,gR=320;
+      x.strokeStyle='#d0d4d9';x.strokeRect(gL,gT,gR-gL,gB-gT);
+      x.fillStyle='#333';x.font='11px sans-serif';x.textAlign='left';x.fillText('x(t)',gL+4,gT+12);
+      const x0=+sl('smX').value;
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();
+      x.moveTo(gL,(gT+gB)/2);x.lineTo(gR,(gT+gB)/2);x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      history.forEach((h,i)=>{
+        const px=gL+(i/history.length)*(gR-gL);
+        const py=(gT+gB)/2-h.x/x0*((gB-gT)/2-4);
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+      });
+      x.stroke();
+      // phase plane (x, v)
+      const pL=360,pR=620,pT=160,pB=320;
+      x.strokeStyle='#d0d4d9';x.strokeRect(pL,pT,pR-pL,pB-pT);
+      x.fillStyle='#333';x.fillText('위상평면 (x, v)',pL+4,pT+12);
+      const pcx=(pL+pR)/2,pcy=(pT+pB)/2;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(pL,pcy);x.lineTo(pR,pcy);x.moveTo(pcx,pT);x.lineTo(pcx,pB);x.stroke();
+      x.strokeStyle='#c62828';x.lineWidth=1.5;x.beginPath();
+      const vMax=x0*Math.sqrt(k/m);
+      history.forEach((h,i)=>{
+        const px=pcx+h.x/x0*((pR-pL)/2-4);
+        const py=pcy-h.v/vMax*((pB-pT)/2-4);
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+      });
+      x.stroke();
+      // current point on phase plane
+      const px=pcx+pos/x0*((pR-pL)/2-4);
+      const py=pcy-vel/vMax*((pB-pT)/2-4);
+      x.fillStyle='#c62828';x.beginPath();x.arc(px,py,4,0,Math.PI*2);x.fill();
+      // info
+      const wn=Math.sqrt(k/m),T=2*Math.PI/wn;
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('ω_n = √(k/m) = '+wn.toFixed(2)+' rad/s',20,340);
+      x.fillText('주기 T = 2π/ω_n = '+T.toFixed(2)+' s,  진동수 f = '+(1/T).toFixed(2)+' Hz',20,358);
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('위상평면이 타원을 그리는 것은 에너지(½mv²+½kx²)가 보존된다는 시각적 증거',20,375);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>2. 단진자 — 작은 각도에서만 SHM</h2>
+  <p>길이 $L$의 단진자 운동방정식은 $\ddot\theta = -(g/L)\sin\theta$. 작은 $\theta$에서는 $\sin\theta \approx \theta$로 근사해 SHM이 되고 $\omega_n = \sqrt{g/L}$. 그러나 큰 진폭에서는 비선형이 강해져 주기가 진폭에 의존하기 시작합니다.</p>
+
+  <h2>3. 감쇠 진동 — 마찰이 들어오면</h2>
+  <p>운동에 비례하는 저항(점성 감쇠) $-c\dot x$가 추가되면 식이 다음과 같아집니다.</p>
+  $$ m\ddot x + c\dot x + k x = 0 \quad\Rightarrow\quad \ddot x + 2\zeta\omega_n \dot x + \omega_n^2 x = 0 $$
+  <p>$\zeta$는 <strong>감쇠비(damping ratio)</strong>, $c/(2\sqrt{mk})$. 이 한 무차원 수가 응답의 모양을 결정합니다.</p>
+  <ul>
+    <li><strong>$\zeta < 1$ 부족 감쇠</strong> — 진동하면서 진폭이 점점 줄어듦. 자동차 서스펜션, 종 소리.</li>
+    <li><strong>$\zeta = 1$ 임계 감쇠</strong> — 진동 없이 가장 빠르게 평형으로 복귀. 문 닫힘 장치의 이상적 튜닝.</li>
+    <li><strong>$\zeta > 1$ 과 감쇠</strong> — 천천히, 진동 없이 복귀. 점성이 큰 액체 속의 추.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 감쇠 비교 — 같은 시스템, 다른 감쇠</h4>
+    <p>같은 $\omega_n$을 가진 세 시스템에 같은 초기 조건. <strong>감쇠비 $\zeta$만</strong> 다릅니다. 부족·임계·과 감쇠가 어떻게 다르게 평형으로 돌아가는지 시간 응답으로 봅니다. 자동제어 1·2차 시스템에서 그대로 나오는 그림.</p>
+    <canvas id="dampC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>고유진동수 ω_n <span class="val" id="dpWV">3</span><input type="range" id="dpW" min="1" max="6" step="0.1" value="3"></label>
+      <button id="dpReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dampC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    sl('dpW').oninput=()=>sl('dpWV').textContent=sl('dpW').value;
+    let sys=[],t=0;
+    function reset(){
+      sys=[
+        {z:0.1,col:'#0b5fff',label:'ζ=0.1 (부족 감쇠)',x:1,v:0},
+        {z:1.0,col:'#2e7d32',label:'ζ=1.0 (임계 감쇠)',x:1,v:0},
+        {z:2.0,col:'#c62828',label:'ζ=2.0 (과 감쇠)',x:1,v:0}
+      ];
+      t=0;history=sys.map(()=>[]);
+    }
+    sl('dpReset').onclick=reset;
+    sl('dpW').addEventListener('input',reset);
+    let history;
+    reset();
+    function loop(){
+      const wn=+sl('dpW').value,dt=0.02;
+      sys.forEach((s,i)=>{
+        const a=-2*s.z*wn*s.v-wn*wn*s.x;
+        s.v+=a*dt;s.x+=s.v*dt;
+        history[i].push(s.x);if(history[i].length>500)history[i].shift();
+      });
+      t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const gL=20,gR=620,gT=40,gB=300;
+      x.strokeStyle='#d0d4d9';x.strokeRect(gL,gT,gR-gL,gB-gT);
+      // axes
+      const zeroY=(gT+gB)/2;
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.moveTo(gL,zeroY);x.lineTo(gR,zeroY);x.stroke();x.setLineDash([]);
+      sys.forEach((s,i)=>{
+        x.strokeStyle=s.col;x.lineWidth=1.8;x.beginPath();
+        history[i].forEach((xv,j)=>{
+          const px=gL+(j/history[0].length)*(gR-gL);
+          const py=zeroY-xv*((gB-gT)/2-8);
+          if(j===0)x.moveTo(px,py);else x.lineTo(px,py);
+        });
+        x.stroke();
+        // legend
+        x.fillStyle=s.col;x.fillRect(40+i*200,320,12,12);
+        x.fillStyle='#333';x.font='12px sans-serif';x.textAlign='left';x.fillText(s.label,58+i*200,330);
+      });
+      x.fillStyle='#444';x.font='12px Consolas,monospace';
+      x.fillText('ẍ + 2ζω_n ẋ + ω_n² x = 0,    ω_n = '+wn.toFixed(2)+' rad/s',20,30);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 흔한 오개념과 한 학기 정리</h2>
+  <ul>
+    <li><strong>"질량이 클수록 진자가 더 빨리 흔들린다"</strong> — 단진자에서 질량은 식에서 약분돼 사라집니다. 주기는 $L$과 $g$만으로 정해집니다.</li>
+    <li><strong>"감쇠가 크면 평형까지 빨리 간다"</strong> — 일정 수준 이상으로 감쇠를 키우면 오히려 느려집니다(과 감쇠). 가장 빠른 건 임계 감쇠 $\zeta=1$.</li>
+    <li><strong>SHM은 동역학을 한 학기 배운 사람이 보는 첫 "고전 명작"</strong> — 운동학(W2)에서 사인 함수를 만든 적분, F=ma(W6)에서 자유물체도, 에너지 보존(W7), 강체의 회전(W11)이 모두 한 식에서 만납니다.</li>
+  </ul>
+
+  <div class="tip"><strong>다음 학기로 가는 다리</strong> — 이 식 $\ddot x + 2\zeta\omega_n \dot x + \omega_n^2 x = 0$은 <a href="../control.html">자동제어</a>의 2차 시스템 단위계단 응답으로 다시 등장합니다. RLC 회로(<a href="../mech.html">기전공학기초 W7</a>)도 정확히 같은 형태의 미분방정식이에요. 같은 식이 기계·전기·제어 어디서나 나온다는 사실이 공학의 매력입니다.</div>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="11-rigid-kinetics.html">← W11</a> · <a href="../dynamics.html">강의 목록 (한 학기 끝!)</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

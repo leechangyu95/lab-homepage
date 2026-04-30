@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W9. 강체 평면 운동학(1) — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 9. 강체의 평면 운동학 — 병진과 고정축 회전</h1>
+  <p class="lead">이제 점이 아니라 "덩어리"를 다룹니다. 덩어리 위 모든 점이 같은 운동을 하는 두 가지 단순한 경우부터.</p>
+
+  <h2>1. 강체란?</h2>
+  <p>강체(rigid body)는 어떤 두 점 사이의 거리가 시간에 무관한 물체입니다. 변형이 없다는 가정이지만, 학부 동역학에서는 이 가정으로 충분히 정확한 답이 나옵니다.</p>
+  <p>강체의 평면 운동은 세 가지로 분류돼요.</p>
+  <ol>
+    <li><strong>병진 (translation)</strong> — 모든 점이 같은 속도, 같은 가속도. 회전 0. (이번 주)</li>
+    <li><strong>고정축 회전 (rotation about a fixed axis)</strong> — 한 축이 공간에 고정. (이번 주)</li>
+    <li><strong>일반 평면운동 (general plane motion)</strong> — 병진 + 회전. (W10)</li>
+  </ol>
+
+  <h2>2. 병진</h2>
+  <p>덩어리 전체가 평행이동만 하는 경우. 모든 점이 같은 $\mathbf{v}, \mathbf{a}$를 가지므로, 사실상 한 점의 운동학(W2–W4)이 전부입니다.</p>
+
+  <h2>3. 고정축 회전 — 각변위·각속도·각가속도</h2>
+  <p>한 축이 공간에 박혀 있고 강체가 그 축 둘레로 회전. 각변위 $\theta$, 각속도 $\omega = \dot\theta$, 각가속도 $\alpha = \dot\omega = \ddot\theta$.</p>
+  $$ \omega = \frac{d\theta}{dt}, \qquad \alpha = \frac{d\omega}{dt} = \frac{d^2\theta}{dt^2} $$
+  <p>등각가속도일 때 W2의 직선 등가속도 식과 똑같은 모양이 나옵니다.</p>
+  $$ \omega = \omega_0 + \alpha t, \quad \theta = \theta_0 + \omega_0 t + \tfrac{1}{2}\alpha t^2, \quad \omega^2 = \omega_0^2 + 2\alpha(\theta-\theta_0) $$
+
+  <h3>회전체 위 점의 속도와 가속도</h3>
+  <p>고정축에서 거리 $r$만큼 떨어진 점은 반지름 $r$인 원을 그립니다. 그래서 W4의 원운동 결과를 그대로 가져다 씁니다.</p>
+  $$ v = r\omega, \qquad a_t = r\alpha, \qquad a_n = r\omega^2 = \frac{v^2}{r} $$
+  <p>회전축에서 멀수록 빠르게 움직입니다(같은 $\omega$에). 화장실 변기 손잡이가 축 가까이에 있으면 힘이 작게 들지만 손잡이를 더 빨리 끝까지 돌려야 하고, 멀리 있으면 더 천천히 적은 힘으로 돌리는 것 — 같은 일을 다른 비율로 하는 거예요.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 회전체 위 점들의 속도</h4>
+    <p>원판이 일정 각가속도로 회전합니다. <strong>축에서 거리가 다른 세 점</strong>의 속도와 접선/법선 가속도를 화살표로 봅니다. 같은 $\omega$인데 바깥 점이 더 빠른 것을 직접 확인하세요.</p>
+    <canvas id="rotC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>각가속도 α (rad/s²) <span class="val" id="rtAV">0.5</span><input type="range" id="rtA" min="-2" max="2" step="0.1" value="0.5"></label>
+      <button id="rtReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rotC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    sl('rtA').oninput=()=>sl('rtAV').textContent=sl('rtA').value;
+    let th=0,w=0;
+    sl('rtReset').onclick=()=>{th=0;w=0;};
+    function loop(){
+      const a=+sl('rtA').value,dt=0.025;
+      w+=a*dt;
+      if(Math.abs(w)>3)w=Math.sign(w)*3;
+      th+=w*dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height/2+30;
+      // disk
+      x.fillStyle='#e8e8e8';x.beginPath();x.arc(cx,cy,160,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.lineWidth=1.5;x.stroke();
+      // line indicating angle
+      x.strokeStyle='#888';x.lineWidth=2;x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+160*Math.cos(th),cy-160*Math.sin(th));x.stroke();
+      // axis dot
+      x.fillStyle='#333';x.beginPath();x.arc(cx,cy,5,0,Math.PI*2);x.fill();
+      // three points at radii 50, 100, 150
+      const radii=[50,100,150];
+      const cols=['#0b5fff','#2e7d32','#c62828'];
+      radii.forEach((r,i)=>{
+        const px=cx+r*Math.cos(th),py=cy-r*Math.sin(th);
+        // velocity (tangent, perp to radius, in CCW direction)
+        const vx=-r*w*Math.sin(th),vy=-r*w*Math.cos(th);
+        const vScale=20;
+        x.strokeStyle=cols[i];x.lineWidth=2.5;
+        x.beginPath();x.moveTo(px,py);x.lineTo(px+vx*vScale*0.05,py+vy*vScale*0.05);x.stroke();
+        // tangential acc
+        const atx=-r*a*Math.sin(th),aty=-r*a*Math.cos(th);
+        x.strokeStyle=cols[i];x.setLineDash([3,3]);
+        x.beginPath();x.moveTo(px,py);x.lineTo(px+atx*30,py+aty*30);x.stroke();x.setLineDash([]);
+        // normal acc (toward center)
+        const an=r*w*w;
+        const ndx=(cx-px)/r,ndy=(cy-py)/r;
+        x.strokeStyle=cols[i]+'88';
+        x.beginPath();x.moveTo(px,py);x.lineTo(px+ndx*an*30,py+ndy*an*30);x.stroke();
+        x.fillStyle=cols[i];x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+        x.fillStyle=cols[i];x.font='11px sans-serif';x.fillText('r='+r,px+10,py-10);
+        x.fillText('v='+(r*w).toFixed(2),px+10,py+5);
+      });
+      // info
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('θ = '+(th*180/Math.PI%360).toFixed(0)+'°,  ω = '+w.toFixed(2)+' rad/s,  α = '+a.toFixed(2)+' rad/s²',20,25);
+      x.fillText('점의 v = r·ω,  a_t = r·α (실선),  a_n = r·ω² (점선, 중심 방향)',20,43);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 굴림 운동(rolling without slipping)</h2>
+  <p>바퀴가 미끄러지지 않고 굴러갈 때, 바퀴의 두 운동(병진+회전)이 한 식으로 묶입니다.</p>
+  $$ v_{\text{중심}} = r\,\omega, \qquad a_{\text{중심}} = r\,\alpha $$
+  <p>핵심: <strong>접촉점은 순간적으로 정지</strong>합니다. 미끄러지지 않는다는 게 그 뜻이에요. 이 사실은 W10의 순간중심 개념의 출발점이 됩니다.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 굴림 바퀴 — 점의 궤적은 사이클로이드</h4>
+    <p>바퀴가 일정 속도로 굴러갑니다. <strong>바퀴의 중심점은 직선</strong>으로 가지만, <strong>가장자리의 점은 사이클로이드(cycloid)</strong>를 그립니다. 가장자리 점이 지면에 닿는 순간 그 점의 속도가 0이라는 게 보입니다(접촉점 정지).</p>
+    <canvas id="rollC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>각속도 ω <span class="val" id="rlWV">2</span><input type="range" id="rlW" min="0.5" max="4" step="0.1" value="2"></label>
+      <label>점의 위치 (반지름 비율) <span class="val" id="rlPV">1.0</span><input type="range" id="rlP" min="0.2" max="1.5" step="0.05" value="1"></label>
+      <button id="rlReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rollC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['rlW','rlP'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let t=0,trail=[];
+    sl('rlReset').onclick=()=>{t=0;trail=[];};
+    function loop(){
+      const w=+sl('rlW').value,pr=+sl('rlP').value;
+      t+=0.025;
+      const r=40;
+      const cx=60+r*w*t*15,cy=240;
+      const px=cx-pr*r*Math.sin(w*t*5),py=cy-pr*r*Math.cos(w*t*5);
+      trail.push({x:px,y:py});if(trail.length>500)trail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // ground
+      x.fillStyle='#bcd6a8';x.fillRect(0,280,c.width,40);
+      x.strokeStyle='#666';x.beginPath();x.moveTo(0,280);x.lineTo(c.width,280);x.stroke();
+      if(cx>c.width-40){t=0;trail=[];}
+      // trail
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i===0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});
+      x.stroke();
+      // wheel
+      x.fillStyle='#e8e8e8';x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // spoke
+      x.strokeStyle='#888';x.lineWidth=2;x.beginPath();
+      x.moveTo(cx,cy);x.lineTo(cx-r*Math.sin(w*t*5),cy-r*Math.cos(w*t*5));x.stroke();
+      // contact point indicator
+      x.fillStyle='#c62828';x.beginPath();x.arc(cx,cy+r,4,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.font='10px sans-serif';x.textAlign='center';x.fillText('접촉점 v=0',cx,cy+r+18);
+      // tracked point
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(px,py,5,0,Math.PI*2);x.fill();
+      // velocity arrow at tracked point: v_center + omega x r_from_center
+      const vc=r*w*5;
+      const dxc=px-cx,dyc=py-cy;
+      // omega is into page (CW seen from front, since wheel rolls right with positive omega about screen-z out)
+      // velocity of point = (vc, 0) + ω × r where ω = (0,0,-w*5) for rolling right
+      const W2=-w*5;
+      const vxp=vc + (-W2)*dyc;
+      const vyp=W2*dxc;
+      x.strokeStyle='#0b5fff';x.lineWidth=2;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+vxp*1.5,py+vyp*1.5);x.stroke();
+      // info
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('중심 속도 v_c = r·ω,  접촉점 속도 = 0',20,30);
+      x.fillText('가장자리 점(p=1)의 trace = 사이클로이드',20,48);
+      x.fillText('p<1: 짧은 사이클로이드, p>1: 긴 사이클로이드(트로코이드)',20,66);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>5. 흔한 오개념</h2>
+  <ul>
+    <li><strong>"각속도는 위치마다 다르다"</strong> — 강체에서 각속도 $\omega$는 <em>물체 전체의 한 값</em>입니다. 점마다 다른 건 선속도 $v=r\omega$.</li>
+    <li><strong>"굴림에서 접촉점이 정지면 마찰력이 일을 안 한다"</strong> — 맞습니다(순수 굴림). 접촉점 변위가 0이라 일도 0. 마찰이 있어야 굴림이 가능하지만, 그 마찰은 일을 하지 않아 에너지 손실이 없습니다.</li>
+    <li><strong>"바퀴가 회전하니 중심도 회전한다"</strong> — 중심은 직진합니다. 회전의 축 자체가 중심이라, 중심점의 운동은 병진뿐.</li>
+  </ul>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="08-impulse-momentum.html">← W8</a> · <a href="../dynamics.html">강의 목록</a> · <a href="10-rigid-kinematics-2.html">W10 강체 평면 운동학(2) →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W11. 강체 평면 운동역학 — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 11. 강체의 평면 운동역학</h1>
+  <p class="lead">F=ma에 회전이 더해진다. 새로운 양 — 관성모멘트, 토크, 그리고 굴림.</p>
+
+  <h2>1. 강체에 대한 두 식</h2>
+  <p>강체의 운동은 두 식으로 묘사됩니다 — 질량중심의 직선운동(F=ma) + 질량중심 둘레의 회전운동.</p>
+  $$ \sum \mathbf{F} = m\,\mathbf{a}_G $$
+  $$ \sum M_G = I_G\,\alpha $$
+  <p>위 식은 W6의 $F=ma$와 같고, 아래 식이 새로 등장한 것입니다.</p>
+  <ul>
+    <li>$M_G$ — 질량중심 $G$ 둘레의 토크(모멘트)</li>
+    <li>$I_G$ — 질량중심에 대한 관성모멘트</li>
+    <li>$\alpha$ — 강체의 각가속도</li>
+  </ul>
+
+  <h2>2. 관성모멘트 — "회전하기 싫어하는 정도"</h2>
+  <p>질량 분포가 축에서 멀수록 관성모멘트가 커집니다. 거리의 <strong>제곱</strong>으로 들어간다는 게 핵심.</p>
+  $$ I = \int r^2 \,dm $$
+  <p>대표 형상의 결과(중심을 지나는 축):</p>
+  <table>
+    <thead><tr><th>형상</th><th>축</th><th>관성모멘트</th></tr></thead>
+    <tbody>
+      <tr><td>가는 막대 (길이 L, 질량 m)</td><td>중심, 막대에 수직</td><td>$\tfrac{1}{12}mL^2$</td></tr>
+      <tr><td>속이 찬 원판 (반지름 R)</td><td>중심, 면에 수직</td><td>$\tfrac{1}{2}mR^2$</td></tr>
+      <tr><td>속이 빈 원통 / 링</td><td>중심축</td><td>$mR^2$</td></tr>
+      <tr><td>속이 찬 구</td><td>중심</td><td>$\tfrac{2}{5}mR^2$</td></tr>
+      <tr><td>속이 빈 구 (얇은 껍질)</td><td>중심</td><td>$\tfrac{2}{3}mR^2$</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>평행축 정리</strong> — 중심이 아닌 다른 축에 대한 관성모멘트는 $I = I_G + m d^2$ ($d$는 두 축 사이 거리). 막대의 끝을 축으로 잡으면 $\tfrac{1}{12}mL^2 + m(L/2)^2 = \tfrac{1}{3}mL^2$.</div>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 같은 질량, 다른 형상 — 어느 게 더 빨리 굴러 내려가나</h4>
+    <p>경사면 꼭대기에서 동시에 출발하는 세 물체: <strong>속이 찬 원통, 속이 빈 원통(링), 속이 찬 구</strong>. 같은 반지름·같은 질량인데 누가 가장 빠를까요? <strong>관성모멘트가 작은 게 이깁니다</strong> — 회전에 쓸 에너지가 적게 들어 병진에 더 많이 남습니다.</p>
+    <canvas id="rollRaceC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>경사각 θ (°) <span class="val" id="rrAV">20</span><input type="range" id="rrA" min="5" max="35" step="1" value="20"></label>
+      <button id="rrStart">출발</button>
+      <button id="rrReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rollRaceC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    sl('rrA').oninput=()=>sl('rrAV').textContent=sl('rrA').value;
+    let t=0,running=false;
+    sl('rrStart').onclick=()=>{t=0;running=true;};
+    sl('rrReset').onclick=()=>{t=0;running=false;};
+    sl('rrA').addEventListener('input',()=>{t=0;running=false;});
+    function loop(){
+      const th=+sl('rrA').value*Math.PI/180,g=9.81;
+      // a_center = g sinθ / (1 + I/(mR²))
+      // sphere: I/(mR²) = 2/5 → factor = 1/(1+2/5) = 5/7
+      // solid cyl: 1/2 → 2/3
+      // hollow cyl: 1 → 1/2
+      const factors={sphere:5/7,solid:2/3,hollow:1/2};
+      const accs={sphere:g*Math.sin(th)*factors.sphere,solid:g*Math.sin(th)*factors.solid,hollow:g*Math.sin(th)*factors.hollow};
+      if(running)t+=0.025;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // slope
+      const x0=80,y0=80,L=480;
+      const ex=Math.cos(th),ey=Math.sin(th);
+      const tipx=x0+ex*L,tipy=y0+ey*L;
+      x.fillStyle='#d8c8a8';x.beginPath();x.moveTo(x0,y0);x.lineTo(tipx,tipy);x.lineTo(tipx,y0+ey*L);x.lineTo(20,y0+ey*L);x.closePath();x.fill();
+      x.strokeStyle='#333';x.lineWidth=1.5;x.beginPath();x.moveTo(x0,y0);x.lineTo(tipx,tipy);x.stroke();
+      // three rolling objects
+      const r=18;
+      const types=['sphere','solid','hollow'];
+      const cols=['#0b5fff','#2e7d32','#c62828'];
+      const labels=['속이 찬 구 (2/5 mR²)','속이 찬 원통 (1/2 mR²)','속이 빈 링 (mR²)'];
+      const offs=[0,40,80];
+      types.forEach((tp,i)=>{
+        const a=accs[tp];
+        const s=0.5*a*t*t*15;
+        const px=x0+ex*(offs[i]+s),py=y0+ey*(offs[i]+s)-r;
+        // perpendicular offset to slope so the ball sits on top
+        const npx=-ey,npy=ex;
+        const cx2=px+npx*r,cy2=py+npy*r-r;
+        // depending on type, draw differently
+        if(tp==='sphere'){
+          x.fillStyle=cols[i];x.beginPath();x.arc(cx2,cy2,r,0,Math.PI*2);x.fill();
+        } else if(tp==='solid'){
+          x.fillStyle=cols[i];x.beginPath();x.arc(cx2,cy2,r,0,Math.PI*2);x.fill();
+          x.fillStyle='#fff8';x.beginPath();x.arc(cx2,cy2,r*0.4,0,Math.PI*2);x.fill();
+        } else {
+          x.strokeStyle=cols[i];x.lineWidth=4;x.beginPath();x.arc(cx2,cy2,r,0,Math.PI*2);x.stroke();
+        }
+        x.strokeStyle='#333';x.lineWidth=1;x.beginPath();x.arc(cx2,cy2,r,0,Math.PI*2);x.stroke();
+        // spoke for rotation visualization
+        const phi=s/r;
+        x.strokeStyle='#333';x.lineWidth=1.5;
+        x.beginPath();x.moveTo(cx2,cy2);x.lineTo(cx2+r*Math.cos(phi-th),cy2-r*Math.sin(phi-th));x.stroke();
+      });
+      // legend
+      types.forEach((tp,i)=>{
+        x.fillStyle=cols[i];x.fillRect(20,300+i*20,12,12);
+        x.fillStyle='#333';x.font='12px sans-serif';x.textAlign='left';
+        x.fillText(labels[i]+'  →  a = '+accs[tp].toFixed(2)+' m/s²',38,310+i*20);
+      });
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('굴림 가속도 a = g sinθ / (1 + I/mR²) — I가 작을수록 빠르다',20,370);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>3. 굴림 운동의 에너지</h2>
+  <p>굴림 바퀴의 운동에너지는 병진 + 회전 두 부분의 합입니다.</p>
+  $$ T = \tfrac{1}{2} m v_G^2 + \tfrac{1}{2} I_G \omega^2 $$
+  <p>$v_G = R\omega$ (미끄러지지 않으므로) 관계를 넣으면 $T = \tfrac{1}{2}(m + I_G/R^2)v_G^2$로 정리되고, 이게 위 데모의 가속도 식 $a = g\sin\theta/(1 + I/mR^2)$의 출처입니다(에너지 보존으로 풀면 같은 결과).</p>
+
+  <h2>4. 진자봉 — 강체 회전의 가장 친숙한 예</h2>
+  <p>한 끝이 핀에 매달려 있는 막대(막대 진자, physical pendulum). 단진자(점 질량)와 다르게 막대의 길이 전체가 회전하므로 관성모멘트가 등장합니다.</p>
+  <p>중심에서 핀까지 거리 $d$, 핀에 대한 관성모멘트 $I_O = I_G + md^2$. 작은 진폭에서</p>
+  $$ I_O\,\ddot\theta = -mgd\,\sin\theta \approx -mgd\,\theta \quad\Rightarrow\quad \omega_n = \sqrt{\frac{mgd}{I_O}} $$
+  <p>점 질량 단진자의 $\omega_n = \sqrt{g/L}$가 강체로 일반화된 모습입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 막대 진자 vs 점 질량 진자 — 주기 비교</h4>
+    <p>같은 길이의 두 진자: 한 쪽은 끝이 무거운 단진자(점 질량 모델), 다른 쪽은 균일한 막대 진자. <strong>같은 길이인데 주기가 다릅니다</strong> — 막대 진자는 질량이 분산되어 있어 관성모멘트 식이 달라지고, 결과적으로 주기가 다릅니다.</p>
+    <canvas id="penC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>진자 길이 L (m) <span class="val" id="rkLV">1.5</span><input type="range" id="rkL" min="0.5" max="2.5" step="0.05" value="1.5"></label>
+      <label>초기 각 (°) <span class="val" id="rkAV">30</span><input type="range" id="rkA" min="5" max="60" step="1" value="30"></label>
+      <button id="rkReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('penC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['rkL','rkA'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let p1={th:0.5,w:0},p2={th:0.5,w:0};
+    function reset(){
+      const a0=+sl('rkA').value*Math.PI/180;
+      p1={th:a0,w:0};p2={th:a0,w:0};
+    }
+    sl('rkReset').onclick=reset;
+    ks.forEach(k=>sl(k).addEventListener('change',reset));
+    reset();
+    function loop(){
+      const L=+sl('rkL').value,g=9.81,dt=0.025;
+      // point pendulum: I = mL², d=L → ω_n² = g/L
+      // rod pendulum: I_O = (1/3)mL², d = L/2 → ω_n² = (mg(L/2))/((1/3)mL²) = 3g/(2L)
+      const w1sq=g/L,w2sq=3*g/(2*L);
+      // exact equations of motion
+      p1.w+=-w1sq*Math.sin(p1.th)*dt;p1.w*=0.999;p1.th+=p1.w*dt;
+      p2.w+=-w2sq*Math.sin(p2.th)*dt;p2.w*=0.999;p2.th+=p2.w*dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // pivot points
+      const px=160,px2=480,py=80;
+      // Pendulum 1: point mass at end
+      const Lpx=L*100;
+      const e1x=px+Lpx*Math.sin(p1.th),e1y=py+Lpx*Math.cos(p1.th);
+      x.strokeStyle='#444';x.lineWidth=1.5;x.beginPath();x.moveTo(px,py);x.lineTo(e1x,e1y);x.stroke();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(e1x,e1y,16,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      x.fillStyle='#333';x.beginPath();x.arc(px,py,4,0,Math.PI*2);x.fill();
+      // Pendulum 2: rod (uniform)
+      const e2x=px2+Lpx*Math.sin(p2.th),e2y=py+Lpx*Math.cos(p2.th);
+      x.strokeStyle='#c62828';x.lineWidth=8;x.beginPath();x.moveTo(px2,py);x.lineTo(e2x,e2y);x.stroke();
+      x.strokeStyle='#3a0c0c';x.lineWidth=1;x.stroke();
+      x.fillStyle='#333';x.beginPath();x.arc(px2,py,4,0,Math.PI*2);x.fill();
+      // labels
+      const T1=2*Math.PI/Math.sqrt(w1sq),T2=2*Math.PI/Math.sqrt(w2sq);
+      x.fillStyle='#0b5fff';x.font='bold 13px sans-serif';x.textAlign='center';
+      x.fillText('점 질량 단진자',px,40);
+      x.fillStyle='#0b5fff';x.font='12px Consolas,monospace';
+      x.fillText('ω_n² = g/L',px,c.height-50);
+      x.fillText('주기 T = 2π√(L/g) = '+T1.toFixed(2)+' s',px,c.height-30);
+      x.fillStyle='#c62828';x.font='bold 13px sans-serif';
+      x.fillText('균일 막대 진자',px2,40);
+      x.fillStyle='#c62828';x.font='12px Consolas,monospace';
+      x.fillText('ω_n² = 3g/(2L)',px2,c.height-50);
+      x.fillText('주기 T = 2π√(2L/3g) = '+T2.toFixed(2)+' s',px2,c.height-30);
+      x.fillStyle='#666';x.font='11px sans-serif';x.textAlign='center';
+      x.fillText('막대가 더 빠르다 — 같은 길이라도 질량이 안쪽으로 분포해 효과적으로 짧음',c.width/2,c.height-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>5. 흔한 오개념</h2>
+  <ul>
+    <li><strong>"같은 무게면 같은 빠르기로 굴러 내려간다"</strong> — 형상에 따라 다릅니다. 위 데모에서 본 것처럼 구가 가장 빠르고 링이 가장 느림. 질량은 식에서 약분돼 사라지지만 형상은 남습니다.</li>
+    <li><strong>"$\sum M_G = I_G \alpha$의 모멘트 중심은 어디든 된다"</strong> — 관성좌표계 기준일 때, 모멘트와 관성모멘트는 같은 점에 대해 적어야 합니다(보통 G 또는 고정점). 임의 점에 대해서는 추가 항이 붙습니다.</li>
+    <li><strong>"굴림이면 마찰이 일을 한다"</strong> — 미끄러지지 않는 굴림에서 마찰력은 작용하지만 접촉점이 정지(IC)이므로 일이 0입니다. 그래서 위 데모에서 에너지 손실 없이 가속만 결정됩니다.</li>
+  </ul>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="10-rigid-kinematics-2.html">← W10</a> · <a href="../dynamics.html">강의 목록</a> · <a href="12-vibration.html">W12 진동 입문 →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

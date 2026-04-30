@@ -18,12 +18,14 @@
     <a href="../index.html">로봇공학특론</a>
     <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
     <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
     <a href="../mechatronics.html">메카트로닉스</a>
     <a href="../control.html">자동제어</a>
-    <a href="../mpc.html">MPC</a>
+    <a href="../mpc.html">모델예측제어</a>
     <a href="../path-planning.html">경로계획 &amp; 추종</a>
     <a href="../calculus.html" class="active">미분적분학</a>
     <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
   </nav>
 </div></header>
 
@@ -149,7 +151,44 @@
   $$ RC \frac{dV_C}{dt} + V_C = V_s $$
   <p>시간상수 $\tau = RC$. $R = 1\,\text{k}\Omega, C = 1\,\mu\text{F}$ 이면 $\tau = 1$ ms — 1 ms 마다 정상상태에 더 가까이.</p>
 
-  <h2>6. 인터랙티브: 1차 시스템 응답</h2>
+  <h3>로지스틱 인구 모델 (비선형)</h3>
+  <p>지수 증가 $dy/dt = ky$ 는 영원한 폭발을 예측 — 비현실적. 환경 수용한계 $K$ 가 있다면:</p>
+  $$ \frac{dy}{dt} = ky\!\left(1 - \frac{y}{K}\right) $$
+  <p>$y \ll K$ 면 지수 증가, $y \to K$ 면 증가 둔화. 분리변수로 풀면:</p>
+  $$ y(t) = \frac{K}{1 + \bigl(\frac{K}{y_0} - 1\bigr) e^{-kt}} $$
+  <p>S자 모양 곡선 (sigmoid). 인구·전염병 확산·시장 점유율 모델의 표준. 머신러닝에서 시그모이드 함수가 같은 식이에요 (W4 지수·로그의 응용).</p>
+
+  <h2>7. 오일러 방법 — 수치적 풀이의 출발점</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>$dy/dt = f(t, y)$ 가 손으로 안 풀려도, 컴퓨터로 푸는 가장 단순한 방법이 있어요 — 작은 시간 간격마다 "지금 이 점에서의 기울기로 한 발짝 가기"를 반복.</p>
+
+  <h3>오일러 방법 (Forward Euler)</h3>
+  $$ y_{n+1} = y_n + h \cdot f(t_n, y_n) $$
+  <p>$h$ 는 시간 스텝. 현재 점의 기울기로 직선 한 발짝 → 다음 점에서 기울기 다시 → 또 한 발짝.</p>
+
+  <h3>예제 7.1 — $dy/dt = y$, $y(0) = 1$, $h = 0.1$</h3>
+  <p>실제 해 $y = e^t$. $t = 1$ 일 때 $y = e \approx 2.718$.</p>
+  <ul>
+    <li>$y_1 = 1 + 0.1 \cdot 1 = 1.1$</li>
+    <li>$y_2 = 1.1 + 0.1 \cdot 1.1 = 1.21$</li>
+    <li>...$y_{10} \approx 2.594$</li>
+  </ul>
+  <p>오차 약 4.6%. $h$ 를 절반으로 줄이면 오차도 약 절반 — 1차 정확도. 더 정밀한 룽게-쿠타(RK4) 같은 방법은 4차 정확도.</p>
+
+  <h3>왜 알아두나?</h3>
+  <p>모든 시뮬레이션·게임 물리 엔진·로봇 제어가 이 방법을 변형해 사용해요. W2 운동학 데모도 사실 forward Euler. 다음 학기 실습에서 본격적으로.</p>
+
+  <h2>8. 초기조건과 해의 유일성</h2>
+
+  <h3>왜 초기조건이 필요한가</h3>
+  <p>$y' = ky$ 의 일반해는 $y = C e^{kt}$ — 상수 $C$ 가 자유. 초기조건 $y(0) = y_0$ 가 주어져야 $C = y_0$ 로 고정되어 한 해가 결정됩니다.
+  1차 ODE는 보통 한 개의 자유상수, 그래서 한 개의 초기조건이 필요. $n$차 ODE는 $n$ 개의 자유상수, $n$ 개의 초기조건.</p>
+
+  <h3>존재·유일성 정리 (개략)</h3>
+  <p>$f(t, y)$ 와 $\partial f/\partial y$ 가 어떤 영역에서 연속이면, 그 영역의 점 $(t_0, y_0)$ 에 대해 $y(t_0) = y_0$ 인 해가 유일하게 존재. 학부 수준의 거의 모든 식에서 이 조건이 자동 성립.</p>
+
+  <h2>9. 인터랙티브: 1차 시스템 응답</h2>
 
   <div class="demo">
     <h4>🎮 시간상수 $\tau$ 슬라이더</h4>
@@ -228,7 +267,131 @@
   ② 임펄스 입력: 짧은 자극 후 지수적으로 0으로 감쇠.
   ③ 사인 입력: 같은 주기의 사인이 출력으로 나오지만 진폭이 작아지고 위상이 늦어짐 — 이게 자동제어의 주파수 응답 입문.</div>
 
-  <h2>7. 한 학기 정리 — 한 장 표</h2>
+  <h2>10. 인터랙티브: 방향장과 해 곡선</h2>
+
+  <p>$(t, y)$ 평면 위에 ODE의 방향장을 그리고, 클릭한 점에서 출발하는 해 곡선을 자동으로 그립니다 — 식을 풀지 않고도 해의 모양을 시각으로 확인.</p>
+
+  <div class="demo">
+    <h4>🎮 방향장 (Slope Field) — 풀지 않고 해 보기</h4>
+    <p>화살표는 그 점에서 ODE 가 알려주는 기울기. 캔버스를 클릭하면 그 점에서 출발하는 해 곡선 (오일러 적분) 이 그려집니다. 평형점·안정성도 한눈에.</p>
+    <canvas id="sf" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>ODE
+        <select id="sfFn">
+          <option value="decay" selected>dy/dt = −y (지수 감소)</option>
+          <option value="growth">dy/dt = y (지수 증가)</option>
+          <option value="logistic">dy/dt = y(1 − y) (로지스틱)</option>
+          <option value="forced">dy/dt = −y + sin(t)</option>
+          <option value="ty">dy/dt = t − y</option>
+        </select>
+      </label>
+      <span style="font-size:12px;color:#666">캔버스 클릭 → 그 점에서의 해 곡선</span>
+      <button id="sfClr" class="alt">곡선 지우기</button>
+    </div>
+    <p id="sfInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sf'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:30,b:40};
+    function fn(t,y){
+      const m=document.getElementById('sfFn').value;
+      if(m==='decay')return -y;
+      if(m==='growth')return y;
+      if(m==='logistic')return y*(1-y);
+      if(m==='forced')return -y+Math.sin(t);
+      return t-y;
+    }
+    function fnRange(){
+      const m=document.getElementById('sfFn').value;
+      if(m==='logistic')return{tR:[0,8],yR:[-0.3,1.5],desc:'평형점 y=0(불안정), y=1(안정)'};
+      if(m==='growth')return{tR:[0,4],yR:[-3,3],desc:'평형점 y=0(불안정) — 모든 해 발산'};
+      if(m==='forced')return{tR:[0,12],yR:[-2,2],desc:'주기 입력 → 정상상태에서 사인파로 응답'};
+      if(m==='ty')return{tR:[0,5],yR:[-2,5],desc:'점근선 y = t−1 로 모든 해 수렴'};
+      return{tR:[0,5],yR:[-2,2],desc:'평형점 y=0(안정) — 모든 해 0으로 수렴'};
+    }
+    let trails=[];
+    document.getElementById('sfClr').onclick=()=>{trails=[];loop();};
+    document.getElementById('sfFn').onchange=()=>{trails=[];loop();};
+    function pxT(v,tR){return M.l+(v-tR[0])/(tR[1]-tR[0])*(W-M.l-M.r);}
+    function pyY(v,yR){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function invT(px0,tR){return tR[0]+(px0-M.l)/(W-M.l-M.r)*(tR[1]-tR[0]);}
+    function invY(py0,yR){return yR[0]+(H-M.b-py0)/(H-M.t-M.b)*(yR[1]-yR[0]);}
+    c.onclick=e=>{
+      const {tR,yR}=fnRange();
+      const r=c.getBoundingClientRect();
+      const cx=(e.clientX-r.left)*c.width/r.width;
+      const cy=(e.clientY-r.top)*c.height/r.height;
+      const t0=invT(cx,tR),y0=invY(cy,yR);
+      // forward and backward Euler
+      const path=[{t:t0,y:y0}];
+      let t=t0,y=y0;const h=(tR[1]-tR[0])/300;
+      while(t<tR[1]&&y>yR[0]-2&&y<yR[1]+2){
+        const k=fn(t,y);y+=h*k;t+=h;
+        path.push({t,y});
+      }
+      // backward
+      t=t0;y=y0;
+      while(t>tR[0]&&y>yR[0]-2&&y<yR[1]+2){
+        const k=fn(t,y);y-=h*k;t-=h;
+        path.unshift({t,y});
+      }
+      trails.push(path);
+      loop();
+    };
+    function loop(){
+      const{tR,yR,desc}=fnRange();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(tR[0]);v<=tR[1];v++){x.beginPath();x.moveTo(pxT(v,tR),pyY(yR[0],yR));x.lineTo(pxT(v,tR),pyY(yR[1],yR));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(pxT(tR[0],tR),pyY(v,yR));x.lineTo(pxT(tR[1],tR),pyY(v,yR));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(pxT(tR[0],tR),pyY(0,yR));x.lineTo(pxT(tR[1],tR),pyY(0,yR));x.stroke();
+      // slope field
+      const NX=20,NY=12;
+      x.strokeStyle='#0b5fff';x.lineWidth=1.2;
+      for(let i=0;i<NX;i++){
+        for(let j=0;j<NY;j++){
+          const t=tR[0]+(i+0.5)/NX*(tR[1]-tR[0]);
+          const y=yR[0]+(j+0.5)/NY*(yR[1]-yR[0]);
+          const k=fn(t,y);
+          // unit vector with slope k
+          const len=12;
+          const ang=Math.atan2(k*(H-M.t-M.b)/(yR[1]-yR[0]),(W-M.l-M.r)/(tR[1]-tR[0]));
+          const dx=Math.cos(ang)*len,dy=Math.sin(ang)*len;
+          const cx=pxT(t,tR),cy=pyY(y,yR);
+          x.beginPath();x.moveTo(cx-dx/2,cy-dy/2);x.lineTo(cx+dx/2,cy+dy/2);x.stroke();
+        }
+      }
+      // trails
+      trails.forEach(path=>{
+        x.strokeStyle='#c62828';x.lineWidth=2.2;x.beginPath();
+        path.forEach((p,i)=>{i?x.lineTo(pxT(p.t,tR),pyY(p.y,yR)):x.moveTo(pxT(p.t,tR),pyY(p.y,yR));});x.stroke();
+        x.fillStyle='#c62828';
+        const start=path.find(p=>p.t>=path[0].t)||path[0];
+        x.beginPath();x.arc(pxT(start.t,tR),pyY(start.y,yR),4,0,Math.PI*2);x.fill();
+      });
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('t',pxT(tR[1],tR)-10,pyY(0,yR)+15);
+      x.fillText('y',M.l-15,M.t+8);
+      x.fillStyle='#0742b8';x.fillText('파란 화살표: 방향장 (각 점의 기울기)',M.l+10,M.t-12);
+      x.fillStyle='#c62828';x.fillText('빨간 곡선: 클릭한 초기조건의 해',M.l+250,M.t-12);
+      document.getElementById('sfInfo').textContent=desc;
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="tip"><strong>관찰 포인트</strong> —
+  ① $dy/dt = -y$: 모든 해가 $y = 0$ 으로 수렴 (안정 평형).
+  ② $dy/dt = y$: 모든 해가 $|y| \to \infty$ 로 발산 (불안정).
+  ③ <strong>로지스틱</strong>: $y = 0$ 위쪽 근처는 $y = 1$ 로 수렴(S자), 아래쪽은 발산. 두 평형점이 다른 안정성.
+  ④ $dy/dt = t - y$: 모든 해가 점근선 $y = t - 1$ 에 수렴.
+  ⑤ 사인 강제 입력: 정상상태에서 사인 응답 — 다음 학기 자동제어 주파수 응답의 출발점.</div>
+
+  <h2>11. 한 학기 정리 — 한 장 표</h2>
 
   <table>
     <thead><tr><th>주차</th><th>핵심 개념</th><th>대표 공식·도구</th></tr></thead>
@@ -251,7 +414,7 @@
     </tbody>
   </table>
 
-  <h2>8. 다음 학기로 가는 다리</h2>
+  <h2>12. 다음 학기로 가는 다리</h2>
 
   <p>이번 학기에 다진 미적분이 다음 학기·다음 강의에서 어떻게 살아나는지 미리 보세요.</p>
 
@@ -270,7 +433,7 @@
   앞으로 만날 모든 공학·과학 식이 결국 이 두 도구의 변형. 미적분을 잘 다룰 수 있다면 어떤 공학 분야든 식 자체가 두렵지 않게 됩니다.
   </div>
 
-  <h2>9. 더 깊이 공부하기</h2>
+  <h2>13. 더 깊이 공부하기</h2>
   <ul>
     <li>Stewart, Ch.9 (미분방정식 입문).</li>
     <li>Boyce·DiPrima, <em>Elementary Differential Equations</em> — 미분방정식 정통 입문서.</li>

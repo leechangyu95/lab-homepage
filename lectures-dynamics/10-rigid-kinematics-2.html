@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W10. 강체 평면 운동학(2) — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 10. 강체의 평면 운동학 — 일반 평면운동과 순간중심</h1>
+  <p class="lead">병진 + 회전이 동시에 일어날 때. 핵심 트릭: "지금 이 순간만큼은 어떤 점을 축으로 회전하는 걸까?"</p>
+
+  <h2>1. 상대 속도법 — 한 점을 기준으로 다른 점 보기</h2>
+  <p>강체의 두 점 $A$, $B$가 있을 때, $A$에서 본 $B$의 운동은 $A$를 중심으로 한 회전입니다(거리 일정).</p>
+  $$ \mathbf{v}_B = \mathbf{v}_A + \boldsymbol{\omega} \times \mathbf{r}_{B/A} $$
+  <p>여기서 $\boldsymbol{\omega}$는 강체 전체의 각속도(W9에서 본 그것). $\mathbf{r}_{B/A}$는 $A$에서 $B$로의 위치 벡터. 평면 운동에서는 $\boldsymbol{\omega}$가 종이면에 수직이므로 외적이 깔끔하게 떨어집니다.</p>
+  <div class="tip"><strong>비유</strong> — 회전하는 메리고라운드 위의 친구를 "지면 좌표계"에서 보지 말고, "내가 메리고라운드 중심에 있다고 가정"하면 친구는 단순히 원을 그립니다. 같은 원리예요.</div>
+
+  <h2>2. 순간중심(Instantaneous Center, IC)</h2>
+  <p>강체의 어떤 점이 그 순간 속도가 0이라면, 그 순간 강체는 마치 그 점을 축으로 회전하고 있는 것처럼 보입니다. 그 점을 <strong>순간중심</strong>이라 합니다.</p>
+  <p>IC만 찾으면 강체의 모든 점의 속도를 손쉽게 그릴 수 있어요. 점 $P$의 속도는 IC에서 $P$까지 거리에 $\omega$를 곱한 것, 방향은 $P$와 IC를 잇는 선에 수직.</p>
+
+  <h3>IC 찾는 두 방법</h3>
+  <ol>
+    <li><strong>두 점의 속도 방향을 알 때</strong>: 각 점에서 속도 방향에 수직선을 긋는다. 두 수직선의 교점이 IC.</li>
+    <li><strong>한 점이 정지일 때</strong>: 그 점이 IC. (예: 굴림 운동의 접촉점)</li>
+  </ol>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 사다리가 미끄러진다 — IC 찾기</h4>
+    <p>벽에 기댄 사다리의 위쪽이 벽을 따라 아래로, 아래쪽이 바닥을 따라 옆으로 미끄러집니다. 두 점의 속도 방향이 정해져 있으니 각 방향에 수직선을 그으면 두 선이 만나는 곳이 <strong>IC</strong>입니다(빨간 점). 사다리의 모든 점은 그 순간 IC를 중심으로 회전합니다.</p>
+    <canvas id="ladC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>각도 θ (°) <span class="val" id="ldAV">60</span><input type="range" id="ldA" min="10" max="80" step="1" value="60"></label>
+      <label>각속도 ω <span class="val" id="ldWV">0.4</span><input type="range" id="ldW" min="-1" max="1" step="0.05" value="0.4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ladC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['ldA','ldW'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const th=+sl('ldA').value*Math.PI/180,w=+sl('ldW').value;
+      const L=240;
+      const ox=120,oy=320;  // floor-wall corner
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // wall and floor
+      x.fillStyle='#888';x.fillRect(ox-12,40,12,oy-40);x.fillRect(ox,oy,c.width-ox,12);
+      // ladder endpoints
+      const A={x:ox,y:oy-L*Math.sin(th)};  // on wall
+      const B={x:ox+L*Math.cos(th),y:oy};  // on floor
+      // velocities: A moves down (vertical), B moves right (horizontal)
+      // v_A = -L cosθ ω (down=negative, but we'll show direction)
+      const vA={x:0,y:L*Math.cos(th)*w};  // y positive = down on canvas
+      const vB={x:L*Math.sin(th)*w,y:0};
+      // IC at intersection of perpendiculars to v_A and v_B
+      // perpendicular to v_A (which is vertical) is horizontal at A's height
+      // perpendicular to v_B (which is horizontal) is vertical at B's x
+      const IC={x:B.x,y:A.y};
+      // ladder
+      x.strokeStyle='#8b6f47';x.lineWidth=8;x.beginPath();x.moveTo(A.x,A.y);x.lineTo(B.x,B.y);x.stroke();
+      x.strokeStyle='#3a2a14';x.lineWidth=1;x.stroke();
+      // perpendiculars (dashed)
+      x.strokeStyle='#999';x.setLineDash([4,4]);
+      x.beginPath();x.moveTo(A.x,A.y);x.lineTo(IC.x,IC.y);x.stroke();
+      x.beginPath();x.moveTo(B.x,B.y);x.lineTo(IC.x,IC.y);x.stroke();
+      x.setLineDash([]);
+      // IC point
+      x.fillStyle='#c62828';x.beginPath();x.arc(IC.x,IC.y,7,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.font='bold 13px sans-serif';x.fillText('IC',IC.x+10,IC.y-6);
+      // velocity arrows
+      const sc=80;
+      function arrow(p,vec,col){
+        const px=p.x+vec.x*sc,py=p.y+vec.y*sc;
+        x.strokeStyle=col;x.lineWidth=2.5;
+        x.beginPath();x.moveTo(p.x,p.y);x.lineTo(px,py);
+        const a=Math.atan2(py-p.y,px-p.x);
+        x.lineTo(px-Math.cos(a)*8-Math.sin(a)*4,py-Math.sin(a)*8+Math.cos(a)*4);
+        x.moveTo(px,py);x.lineTo(px-Math.cos(a)*8+Math.sin(a)*4,py-Math.sin(a)*8-Math.cos(a)*4);
+        x.stroke();
+      }
+      arrow(A,vA,'#0b5fff');
+      arrow(B,vB,'#2e7d32');
+      // midpoint
+      const M={x:(A.x+B.x)/2,y:(A.y+B.y)/2};
+      // velocity of midpoint = ω × r from IC
+      const dx=M.x-IC.x,dy=M.y-IC.y;
+      const vM={x:-dy*w/L*L,y:dx*w/L*L};
+      arrow(M,{x:vM.x/L,y:vM.y/L},'#9e35b8');
+      // points
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(A.x,A.y,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(B.x,B.y,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#9e35b8';x.beginPath();x.arc(M.x,M.y,5,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('A (벽)',A.x-32,A.y+4);
+      x.fillStyle='#2e7d32';x.fillText('B (바닥)',B.x-22,B.y-10);
+      x.fillStyle='#9e35b8';x.fillText('M (중점)',M.x+8,M.y+4);
+      // info
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('두 점의 속도 방향에 수직선 → 만나는 점이 IC',20,25);
+      x.fillText('IC에서 멀수록 속도가 크다 (v = r_IC · ω)',20,43);
+      x.fillText('각도 θ가 0에 가까워질수록 IC가 사다리에서 멀어짐 → 각속도 같아도 속도 폭증',20,61);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>3. 굴림 바퀴의 IC</h2>
+  <p>W9에서 미끄러지지 않는 굴림은 접촉점이 순간 정지라고 했죠. 그러므로 굴림 바퀴의 <strong>IC는 접촉점</strong>입니다. 이걸 알면 바퀴 위 임의의 점의 속도가 즉시 보입니다 — 접촉점에서 그 점까지의 거리에 $\omega$를 곱한 것.</p>
+  <p>예: 바퀴 꼭대기 점은 접촉점에서 거리 $2r$이므로 속도 $2r\omega = 2v_c$. 바퀴 중심 속도의 두 배입니다.</p>
+
+  <h2>4. 4절 링크(four-bar linkage)</h2>
+  <p>네 개의 막대가 핀으로 연결된 메커니즘 — 입력 축이 회전하면 출력 축이 정해진 운동을 합니다. 자동차 와이퍼, 펀치 프레스, 재봉틀 모두 4절 링크의 변형입니다.</p>
+  <p>입력 막대(crank)는 고정축 회전, 출력 막대(rocker)도 고정축 회전, 가운데 연결 막대(coupler)는 일반 평면운동을 합니다. 이 coupler에 IC를 그릴 수 있어요.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 4절 링크 — coupler의 IC와 점 궤적</h4>
+    <p>입력 크랭크가 회전하면 4절 링크가 움직입니다. <strong>coupler 위의 한 점이 그리는 궤적</strong>(coupler curve)을 trace하고, 매 순간 coupler의 <strong>IC 위치</strong>를 빨간 점으로 보여줍니다. 점의 위치를 바꾸면 다양한 곡선이 나오는 것을 볼 수 있어요 — 자전거 페달, 와이퍼 등이 바로 이 곡선의 응용.</p>
+    <canvas id="fbarC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>크랭크 각속도 <span class="val" id="fbWV">1.5</span><input type="range" id="fbW" min="0.3" max="3" step="0.1" value="1.5"></label>
+      <label>coupler 위 점 위치 <span class="val" id="fbPV">0.5</span><input type="range" id="fbP" min="0" max="1" step="0.05" value="0.5"></label>
+      <label>coupler 위 점 수직 옵셋 <span class="val" id="fbHV">0.3</span><input type="range" id="fbH" min="-0.6" max="0.6" step="0.05" value="0.3"></label>
+      <button id="fbReset">trace 리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fbarC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['fbW','fbP','fbH'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let phi=0,trail=[];
+    sl('fbReset').onclick=()=>{trail=[];};
+    // four-bar geometry
+    // O1-O2: ground, O1 at left, O2 at right
+    const O1={x:200,y:280},O2={x:480,y:280};
+    const r1=80,r2=140,r3=120; // crank, coupler, rocker
+    function loop(){
+      const w=+sl('fbW').value,pp=+sl('fbP').value,ph=+sl('fbH').value;
+      phi+=w*0.025;
+      const A={x:O1.x+r1*Math.cos(phi),y:O1.y-r1*Math.sin(phi)};
+      // solve B such that |AB|=r2 and |O2-B|=r3
+      const dx=O2.x-A.x,dy=O2.y-A.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d>r2+r3||d<Math.abs(r2-r3)){requestAnimationFrame(loop);return;}
+      const a=(r2*r2-r3*r3+d*d)/(2*d);
+      const h=Math.sqrt(Math.max(0,r2*r2-a*a));
+      const mx=A.x+a*dx/d,my=A.y+a*dy/d;
+      const B={x:mx-h*dy/d,y:my+h*dx/d}; // pick one config
+      // tracked point on coupler
+      const P={x:A.x+pp*(B.x-A.x)+ph*(-(B.y-A.y)),
+               y:A.y+pp*(B.y-A.y)+ph*(B.x-A.x)};
+      trail.push({x:P.x,y:P.y});if(trail.length>800)trail.shift();
+      // IC of coupler: A moves perpendicular to O1-A, B perpendicular to O2-B
+      // IC = intersection of lines through A in direction O1-A, and through B in direction O2-B
+      function intersect(p1,d1,p2,d2){
+        const A1=d1.x,B1=-d2.x,C1=p2.x-p1.x;
+        const A2=d1.y,B2=-d2.y,C2=p2.y-p1.y;
+        const det=A1*B2-A2*B1;
+        if(Math.abs(det)<1e-6)return null;
+        const t=(C1*B2-C2*B1)/det;
+        return {x:p1.x+t*d1.x,y:p1.y+t*d1.y};
+      }
+      const IC=intersect(A,{x:A.x-O1.x,y:A.y-O1.y},B,{x:B.x-O2.x,y:B.y-O2.y});
+      // draw
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // ground
+      x.fillStyle='#888';x.fillRect(O1.x-30,O1.y+5,330,8);
+      // trail
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i===0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});
+      x.stroke();
+      // links
+      x.lineWidth=4;
+      x.strokeStyle='#2e7d32';x.beginPath();x.moveTo(O1.x,O1.y);x.lineTo(A.x,A.y);x.stroke();
+      x.strokeStyle='#444';x.beginPath();x.moveTo(A.x,A.y);x.lineTo(B.x,B.y);x.stroke();
+      x.strokeStyle='#9e35b8';x.beginPath();x.moveTo(O2.x,O2.y);x.lineTo(B.x,B.y);x.stroke();
+      // IC line dashed
+      if(IC){
+        x.strokeStyle='#999';x.setLineDash([3,3]);x.lineWidth=1;
+        x.beginPath();x.moveTo(O1.x,O1.y);x.lineTo(IC.x,IC.y);x.stroke();
+        x.beginPath();x.moveTo(O2.x,O2.y);x.lineTo(IC.x,IC.y);x.stroke();
+        x.setLineDash([]);
+        x.fillStyle='#c62828';x.beginPath();x.arc(IC.x,IC.y,6,0,Math.PI*2);x.fill();
+        x.fillStyle='#c62828';x.font='bold 12px sans-serif';x.fillText('IC',IC.x+8,IC.y-4);
+      }
+      // pivots
+      [O1,O2].forEach(p=>{x.fillStyle='#333';x.beginPath();x.arc(p.x,p.y,5,0,Math.PI*2);x.fill();});
+      [A,B].forEach(p=>{x.fillStyle='#fff';x.beginPath();x.arc(p.x,p.y,4,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();});
+      // tracked point
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(P.x,P.y,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('coupler 위 점 P (파랑)의 trace = coupler curve',20,25);
+      x.fillText('IC (빨강)는 두 회전 막대의 연장선이 만나는 점 — 위치가 매 순간 변함',20,43);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>5. 흔한 오개념</h2>
+  <ul>
+    <li><strong>"IC는 강체 위의 한 점이다"</strong> — 강체 안에 있을 수도, 밖에 있을 수도 있습니다. 사다리 데모에서 IC는 사다리에서 떨어진 곳에 있죠.</li>
+    <li><strong>"IC는 시간이 지나도 같은 점"</strong> — 매 순간 다른 점입니다. "순간"중심이라는 이름이 그래서 붙었어요.</li>
+    <li><strong>"IC가 있으면 그 점은 진짜로 정지해 있다"</strong> — 속도만 0이고, 가속도는 0이 아닐 수 있습니다. 그래서 운동학(속도 분석)에는 유용하지만 운동역학(가속도, 힘)에는 그대로 쓸 수 없어요.</li>
+  </ul>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="09-rigid-kinematics-1.html">← W9</a> · <a href="../dynamics.html">강의 목록</a> · <a href="11-rigid-kinetics.html">W11 강체 평면 운동역학 →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
