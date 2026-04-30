@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W7. 일과 에너지 — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 7. 일과 에너지</h1>
+  <p class="lead">F=ma의 또 다른 얼굴. 시간 대신 거리에 집중하면 세상이 달리 보입니다.</p>
+
+  <h2>1. 일-에너지 정리</h2>
+  <p>$\sum \mathbf{F} = m\mathbf{a}$의 양변에 $d\mathbf{r}$을 내적하고 한쪽 점에서 다른 점까지 적분하면 다음 식이 나옵니다.</p>
+  $$ U_{1\to 2} = \int_{\mathbf{r}_1}^{\mathbf{r}_2} \mathbf{F} \cdot d\mathbf{r} = \tfrac{1}{2}m v_2^2 - \tfrac{1}{2}m v_1^2 $$
+  <p>왼쪽이 <strong>일(work)</strong>, 오른쪽이 <strong>운동에너지의 변화</strong>입니다. 한 줄로: <em>"한 일만큼 운동에너지가 변한다."</em></p>
+  <p>이 식의 매력은 시간이 사라졌다는 점이에요. F=ma는 시간 함수의 미분방정식이지만, 일-에너지는 위치 사이의 대수 관계입니다 — "어떻게 갔는지"가 아니라 "어디서 출발해 어디로 가는지"만 보면 됩니다(보존력일 때).</p>
+
+  <h2>2. 보존력과 위치에너지</h2>
+  <p>경로에 무관하게 일이 정해지는 힘을 <strong>보존력</strong>이라 합니다. 중력, 스프링력이 대표적이에요. 이런 힘에는 위치에너지 $V$를 정의할 수 있습니다.</p>
+  $$ V_{\text{중력}} = mgh, \qquad V_{\text{스프링}} = \tfrac{1}{2}k x^2 $$
+  <p>보존력만 작용하면 <strong>역학적 에너지</strong> $E = T + V$가 보존됩니다.</p>
+  $$ \tfrac{1}{2}m v_1^2 + V_1 = \tfrac{1}{2}m v_2^2 + V_2 $$
+
+  <div class="tip"><strong>마찰은 비보존력</strong> — 마찰이 한 일은 항상 음수이고, 그만큼이 열로 빠져 역학적 에너지에서 사라집니다. 마찰이 있는 문제에서는 $E_1 = E_2 + \mu N \cdot d$ 식을 씁니다.</div>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 롤러코스터 — KE ↔ PE 막대그래프</h4>
+    <p>공이 곡선 트랙을 따라 굴러 내려갑니다. <strong>운동에너지(KE) · 위치에너지(PE) · 마찰로 손실된 에너지</strong>를 막대로 보여줍니다. 마찰이 0이면 KE+PE가 일정하게 유지되고, 마찰을 키우면 합이 점점 줄어드는 것을 볼 수 있습니다.</p>
+    <canvas id="rcC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>마찰계수 μ <span class="val" id="rcMV">0</span><input type="range" id="rcM" min="0" max="0.3" step="0.01" value="0"></label>
+      <label>초기 높이 (m) <span class="val" id="rcHV">3</span><input type="range" id="rcH" min="1" max="4" step="0.1" value="3"></label>
+      <button id="rcReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rcC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['rcM','rcH'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let s=0,v=0,Eloss=0;
+    sl('rcReset').onclick=()=>{s=0;v=0;Eloss=0;};
+    sl('rcH').addEventListener('input',()=>{s=0;v=0;Eloss=0;});
+    // track: y = h*0.5*(1+cos(πs/L)) approx; let's do segments — sin curve
+    const L=520,m=1,g=9.81;
+    function trackY(sx,h){
+      // sx in [0, L]; height from h to 0 to h*0.4 (small bump) to 0
+      const t=sx/L;
+      return h*(0.5+0.5*Math.cos(Math.PI*t*1.4))*Math.exp(-t*0.3);
+    }
+    function trackSlope(sx,h){
+      const e=1;
+      return (trackY(sx+e,h)-trackY(sx-e,h))/(2*e);
+    }
+    function loop(){
+      const mu=+sl('rcM').value,h0=+sl('rcH').value;
+      const dt=0.025;
+      const sl_=trackSlope(s,h0);
+      const sinTh=-sl_/Math.sqrt(1+sl_*sl_); // negative because going down means y decreasing as s increases
+      const cosTh=1/Math.sqrt(1+sl_*sl_);
+      const fric=mu*m*g*cosTh;
+      const a=g*sinTh-Math.sign(v)*fric;
+      v+=a*dt;
+      s+=v*dt*15;
+      if(s<0){s=0;v=0;}
+      if(s>L-1){v=0;}
+      const yPos=trackY(s,h0);
+      const T=0.5*m*v*v,V=m*g*yPos;
+      // loss is the integral; approximate
+      Eloss+=fric*Math.abs(v)*dt*15/40;  // arbitrary scale to fit
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // track
+      x.strokeStyle='#888';x.lineWidth=2;x.beginPath();
+      const yScale=60,yBase=300;
+      for(let sx=0;sx<=L;sx+=4){
+        const ty=trackY(sx,h0);
+        const px=60+sx,py=yBase-ty*yScale;
+        if(sx===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();
+      // ball
+      const bx=60+s,by=yBase-yPos*yScale-10;
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(bx,by,10,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // bars
+      const E0=m*g*h0;
+      const barX=20,barW=40,barTop=40,barBot=240;
+      function bar(idx,val,col,label){
+        const fx=barX+idx*60;
+        const h=Math.min(val/E0,1)*(barBot-barTop);
+        x.fillStyle='#eee';x.fillRect(fx,barTop,barW,barBot-barTop);
+        x.fillStyle=col;x.fillRect(fx,barBot-h,barW,h);
+        x.strokeStyle='#333';x.strokeRect(fx,barTop,barW,barBot-barTop);
+        x.fillStyle='#333';x.font='11px sans-serif';x.textAlign='center';x.fillText(label,fx+barW/2,barBot+15);
+        x.fillText(val.toFixed(1),fx+barW/2,barBot+30);
+      }
+      bar(0,T,'#0b5fff','KE');
+      bar(1,V,'#2e7d32','PE');
+      bar(2,Eloss,'#c62828','손실');
+      bar(3,T+V+Eloss,'#888','합계');
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('초기 에너지 E₀ = mgh = '+E0.toFixed(2)+' J',280,25);
+      x.fillText('합계가 E₀와 같다 ⇒ 에너지 보존',280,43);
+      x.fillText('μ > 0이면 합계가 점점 줄어듦 (마찰로 열 손실)',280,61);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>3. 스프링과 위치에너지</h2>
+  <p>훅의 법칙 $F = -kx$는 변위에 비례하는 복원력입니다. 한 일을 적분하면</p>
+  $$ V_{\text{스프링}}(x) = \tfrac{1}{2} k x^2 $$
+  <p>이 됩니다. 스프링이 완전히 자연 길이로 돌아가면 위치에너지는 0, 늘리거나 압축하면 양수.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 스프링 발사기 — 압축이 만드는 운동에너지</h4>
+    <p>스프링을 압축한 양에 따라 공이 얼마나 빠르게 튀어나가는지 봅니다. 에너지 보존: $\tfrac{1}{2}k x_0^2 = \tfrac{1}{2}m v^2$ (마찰이 없을 때). $k$나 $x_0$를 두 배로 하면 $v$가 어떻게 변하는지 직접 확인.</p>
+    <canvas id="sprC" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>스프링 상수 k (N/m) <span class="val" id="spKV">200</span><input type="range" id="spK" min="50" max="800" step="10" value="200"></label>
+      <label>압축량 x₀ (m) <span class="val" id="spXV">0.3</span><input type="range" id="spX" min="0.05" max="0.6" step="0.02" value="0.3"></label>
+      <label>질량 m (kg) <span class="val" id="spMV">0.5</span><input type="range" id="spM" min="0.1" max="2" step="0.05" value="0.5"></label>
+      <button id="spFire">발사</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sprC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['spK','spX','spM'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let phase='ready',pos=0,vel=0,sprX=0.3;
+    function fire(){
+      const k=+sl('spK').value,x0=+sl('spX').value,m=+sl('spM').value;
+      vel=Math.sqrt(k*x0*x0/m);
+      phase='launch';pos=0;sprX=x0;
+    }
+    sl('spFire').onclick=fire;
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const k=+sl('spK').value,x0=+sl('spX').value,m=+sl('spM').value;
+      const groundY=200;
+      x.fillStyle='#bcd6a8';x.fillRect(0,groundY,c.width,40);
+      // wall
+      x.fillStyle='#888';x.fillRect(40,groundY-60,8,60);
+      // spring
+      const sxStart=48;
+      const cur=phase==='ready'?sl('spX').value:(phase==='launch'?Math.max(0,sprX-pos*0.05):0);
+      const sxEnd=sxStart+(80-cur*100);
+      x.strokeStyle='#444';x.lineWidth=2;x.beginPath();
+      const N=12;for(let i=0;i<=N;i++){
+        const t=i/N;const px=sxStart+(sxEnd-sxStart)*t;
+        const py=groundY-30+(i%2===0?-6:6);
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();
+      // ball position
+      let ballX;
+      if(phase==='ready'){ballX=sxEnd+12;}
+      else {
+        pos+=vel*0.025*30;
+        ballX=sxEnd+12+pos;
+        if(ballX>c.width-20){phase='ready';pos=0;}
+      }
+      // ball
+      x.fillStyle='#c62828';x.beginPath();x.arc(ballX,groundY-30,12,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // info
+      const PE=0.5*k*x0*x0,KE=0.5*m*vel*vel;
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('스프링 위치에너지 ½kx₀² = '+PE.toFixed(2)+' J',20,30);
+      x.fillText('발사 후 운동에너지 ½mv² = '+(phase==='launch'?KE.toFixed(2):'0.00')+' J',20,48);
+      x.fillText('속도 v = √(k/m)·x₀ = '+(phase==='launch'?vel.toFixed(2):Math.sqrt(k/m)*x0+' (예측)').toString().slice(0,6)+' m/s',20,66);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('포인트: x₀를 두 배로 하면 v가 두 배, k를 네 배로 하면 v가 두 배.',20,90);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 일률(Power)</h2>
+  <p>일을 시간으로 미분한 것이 일률입니다 — 일을 얼마나 빨리 하는가.</p>
+  $$ P = \frac{dU}{dt} = \mathbf{F} \cdot \mathbf{v} $$
+  <p>1마력 ≈ 746 W. 평균적인 사람은 100 W 정도, 100 m 단거리 달리기 정상급 선수는 짧은 시간 동안 1500 W 가까이 냅니다. 1 kW 전기주전자는 분당 1500 J 정도의 일을 물 분자에게 합니다.</p>
+
+  <h2>5. 흔한 오개념</h2>
+  <ul>
+    <li><strong>"속도가 두 배면 운동에너지도 두 배"</strong> — 운동에너지는 $v^2$에 비례하므로 <em>네 배</em>입니다. 그래서 자동차 사고에서 속도가 조금만 빨라도 피해가 급증합니다.</li>
+    <li><strong>"수직항력은 항상 일을 한다"</strong> — 일을 안 합니다. 수직항력은 운동 방향에 수직이라 $\mathbf{F}\cdot d\mathbf{r} = 0$이에요.</li>
+    <li><strong>"마찰력은 일을 안 한다"</strong> — 합니다(보통 음수의 일). 운동 방향과 반대니까요.</li>
+  </ul>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="06-particle-kinetics.html">← W6</a> · <a href="../dynamics.html">강의 목록</a> · <a href="08-impulse-momentum.html">W8 충격량과 운동량 →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W5. 상대운동·종속운동 — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 5. 상대운동과 종속운동</h1>
+  <p class="lead">"누가 봤을 때의 운동인가?" 보는 사람이 움직이면 같은 사건이 완전히 다르게 보입니다.</p>
+
+  <h2>1. 상대 위치·속도·가속도</h2>
+  <p>관찰자 $A$, $B$가 각자의 위치를 가지고 있을 때, $A$가 본 $B$의 위치는 두 위치의 차이입니다.</p>
+  $$ \mathbf{r}_{B/A} = \mathbf{r}_B - \mathbf{r}_A $$
+  <p>시간 미분하면 속도와 가속도도 같은 형태로 나옵니다(둘 다 같은 관성 좌표계를 기준으로 본다는 가정).</p>
+  $$ \mathbf{v}_{B/A} = \mathbf{v}_B - \mathbf{v}_A, \qquad \mathbf{a}_{B/A} = \mathbf{a}_B - \mathbf{a}_A $$
+
+  <div class="tip"><strong>일상의 예</strong> — 시속 80 km로 가는 차에 앉아 시속 100 km로 가는 옆 차를 보면 그 차는 "20 km/h로 천천히 앞서가는" 것처럼 보입니다. 100 − 80 = 20. 같은 식입니다.</div>
+
+  <h2>2. 강 건너기 — 두 속도 벡터의 합성</h2>
+  <p>강물이 일정 속도로 흐르고, 배는 자기 좌표계에서 일정 속도로 노를 젓습니다. 강가에서 본 배의 속도는 두 벡터의 합이에요.</p>
+  $$ \mathbf{v}_{\text{배,강가}} = \mathbf{v}_{\text{배,물}} + \mathbf{v}_{\text{물,강가}} $$
+  <p>이게 학부생들이 자주 헷갈리는 부분 — "물에 대한 속도"와 "강가에 대한 속도"를 구분해야 합니다. 두 좌표계의 차이가 곧 강물의 흐름.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 두 차의 상대 속도</h4>
+    <p>두 차가 각자 다른 방향과 속도로 움직입니다. 차 A에 탄 사람이 본 차 B의 속도가 화살표로 그려집니다. <strong>두 차가 같은 속도, 같은 방향이면 서로 정지해 보입니다</strong>(상대 속도 = 0).</p>
+    <canvas id="relC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>차 A v_x <span class="val" id="rAxV">2</span><input type="range" id="rAx" min="-3" max="3" step="0.1" value="2"></label>
+      <label>차 A v_y <span class="val" id="rAyV">0</span><input type="range" id="rAy" min="-3" max="3" step="0.1" value="0"></label>
+      <label>차 B v_x <span class="val" id="rBxV">1</span><input type="range" id="rBx" min="-3" max="3" step="0.1" value="1"></label>
+      <label>차 B v_y <span class="val" id="rByV">1.5</span><input type="range" id="rBy" min="-3" max="3" step="0.1" value="1.5"></label>
+      <button id="rReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('relC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['rAx','rAy','rBx','rBy'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let A={x:200,y:200},B={x:400,y:120};
+    sl('rReset').onclick=()=>{A={x:200,y:200};B={x:400,y:120};};
+    function loop(){
+      const Ax=+sl('rAx').value,Ay=+sl('rAy').value,Bx=+sl('rBx').value,By=+sl('rBy').value;
+      A.x+=Ax;A.y-=Ay;B.x+=Bx;B.y-=By;
+      // wrap
+      [A,B].forEach(p=>{if(p.x<0)p.x+=c.width;if(p.x>c.width)p.x-=c.width;if(p.y<0)p.y+=c.height;if(p.y>c.height)p.y-=c.height;});
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // top: ground frame
+      x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='left';
+      x.fillText('지상 좌표계 (강가)',20,25);
+      function car(p,col,label,vx,vy){
+        x.fillStyle=col;x.fillRect(p.x-15,p.y-8,30,16);
+        x.strokeStyle='#333';x.strokeRect(p.x-15,p.y-8,30,16);
+        x.fillStyle='#333';x.beginPath();x.arc(p.x-9,p.y+8,3,0,Math.PI*2);x.arc(p.x+9,p.y+8,3,0,Math.PI*2);x.fill();
+        // velocity arrow
+        x.strokeStyle=col;x.lineWidth=2;x.beginPath();x.moveTo(p.x,p.y);x.lineTo(p.x+vx*15,p.y-vy*15);x.stroke();
+        x.fillStyle=col;x.font='12px sans-serif';x.fillText(label,p.x+vx*15+4,p.y-vy*15);
+      }
+      car(A,'#0b5fff','A',Ax,Ay);
+      car(B,'#c62828','B',Bx,By);
+      // info
+      const dx=Bx-Ax,dy=By-Ay;
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('지상에서: v_A = ('+Ax.toFixed(1)+', '+Ay.toFixed(1)+')',360,25);
+      x.fillText('             v_B = ('+Bx.toFixed(1)+', '+By.toFixed(1)+')',360,42);
+      x.fillText('A가 본 B: v_{B/A} = v_B − v_A = ('+dx.toFixed(1)+', '+dy.toFixed(1)+')',360,59);
+      // separator
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(0,160);x.lineTo(c.width,160);x.stroke();
+      // bottom: A's frame — show relative velocity vector at car A
+      x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='left';
+      x.fillText("차 A 좌표계: A는 정지, B는 v_{B/A}로 움직임",20,180);
+      const ax=320,ay=240;
+      // car A static
+      x.fillStyle='#0b5fff';x.fillRect(ax-15,ay-8,30,16);x.strokeStyle='#333';x.strokeRect(ax-15,ay-8,30,16);
+      x.fillStyle='#333';x.font='11px sans-serif';x.textAlign='center';x.fillText('A (정지)',ax,ay+24);
+      // relative velocity arrow scaled
+      x.strokeStyle='#c62828';x.lineWidth=2.5;
+      const sc=30;
+      x.beginPath();x.moveTo(ax,ay);x.lineTo(ax+dx*sc,ay-dy*sc);
+      const ang=Math.atan2(-dy,dx);
+      x.lineTo(ax+dx*sc-Math.cos(ang)*8-Math.sin(ang)*4,ay-dy*sc+Math.sin(ang)*8-Math.cos(ang)*4);
+      x.moveTo(ax+dx*sc,ay-dy*sc);
+      x.lineTo(ax+dx*sc-Math.cos(ang)*8+Math.sin(ang)*4,ay-dy*sc+Math.sin(ang)*8+Math.cos(ang)*4);
+      x.stroke();
+      x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('v_{B/A}',ax+dx*sc+8,ay-dy*sc);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>3. 종속운동 — 줄로 묶이면 위치가 구속된다</h2>
+  <p>도르래에 줄로 매단 두 짐. 줄의 길이는 변하지 않으니 두 짐의 위치는 한 식으로 묶입니다. 이 식을 시간 미분하면 속도 관계, 한 번 더 미분하면 가속도 관계가 나와요.</p>
+  <p>가장 단순한 경우: 한 도르래 양쪽에 매단 두 짐.</p>
+  $$ s_A + s_B = L \;\;\Rightarrow\;\; \dot s_A + \dot s_B = 0 \;\;\Rightarrow\;\; v_A = -v_B $$
+  <p>한쪽이 1 m 내려가면 반대쪽이 1 m 올라간다는 당연한 사실이 식으로 자동 도출됩니다.</p>
+  <p>움직이는 도르래가 있으면 길이 식이 더 복잡해지고, 한쪽 속도가 다른 쪽의 두 배가 되는 등의 비율이 자연스럽게 나옵니다.</p>
+  $$ \text{한 쪽 끝 고정 + 움직이는 도르래: } 2 s_{\text{블록}} + s_{\text{끝}} = L \;\;\Rightarrow\;\; v_{\text{끝}} = -2 v_{\text{블록}} $$
+
+  <div class="demo">
+    <h4>🎮 데모 2: 도르래 — 줄 끝을 당기면 짐은 얼마나 올라가나</h4>
+    <p>왼쪽은 단순 도르래(1:1 비율), 오른쪽은 움직이는 도르래(2:1 비율, 짐을 들기 더 쉬움). <strong>슬라이더로 줄 끝을 당겨</strong> 보세요. 같은 거리를 당겨도 짐이 올라가는 거리와 당겨야 하는 힘이 다릅니다.</p>
+    <canvas id="pulleyC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>줄 끝 당김 거리 <span class="val" id="puPV">0</span><input type="range" id="puP" min="0" max="100" step="1" value="0"></label>
+      <button id="puReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pulleyC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    sl('puP').oninput=()=>sl('puPV').textContent=sl('puP').value;
+    sl('puReset').onclick=()=>{sl('puP').value=0;sl('puPV').textContent='0';};
+    function pulley(cx,cy,r){
+      x.fillStyle='#ddd';x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fill();
+      x.strokeStyle='#333';x.lineWidth=1.5;x.stroke();
+      x.beginPath();x.arc(cx,cy,2,0,Math.PI*2);x.fillStyle='#333';x.fill();
+    }
+    function loop(){
+      const pull=+sl('puP').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#1a1a1a';x.font='bold 13px sans-serif';x.textAlign='center';
+      x.fillText('단순 도르래 (1:1)',160,30);
+      x.fillText('움직이는 도르래 (2:1)',480,30);
+      // ceiling
+      x.fillStyle='#888';x.fillRect(40,50,260,8);x.fillRect(360,50,240,8);
+      // ============ Simple pulley ============
+      // pulley at (160, 80)
+      pulley(160,80,16);
+      // hand pulls right rope down by `pull`
+      const handY1=180+pull;
+      const blockY1=180-pull;  // block goes up by same amount
+      // ropes
+      x.strokeStyle='#444';x.lineWidth=2;
+      x.beginPath();x.moveTo(144,80);x.lineTo(144,blockY1);x.stroke();
+      x.beginPath();x.moveTo(176,80);x.lineTo(176,handY1);x.stroke();
+      // arc on top
+      x.beginPath();x.arc(160,80,16,Math.PI,0);x.stroke();
+      // block left
+      x.fillStyle='#0b5fff';x.fillRect(144-25,blockY1,50,30);x.strokeStyle='#333';x.strokeRect(144-25,blockY1,50,30);
+      x.fillStyle='#fff';x.font='bold 12px sans-serif';x.textAlign='center';x.fillText('짐',144,blockY1+19);
+      // hand right
+      x.fillStyle='#f4d2a3';x.beginPath();x.arc(176,handY1+10,10,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // arrow showing relations
+      x.fillStyle='#444';x.font='11px Consolas,monospace';x.textAlign='left';
+      x.fillText('당김 거리: '+pull+' (단위)',60,330);
+      x.fillText('짐 올라간 거리: '+pull+' (1:1)',60,348);
+      // ============ Movable pulley ============
+      // top fixed pulley at (520, 80)
+      pulley(520,80,16);
+      // moving pulley starts at (440, 200) with block
+      // when rope end pulls up by `pull`, block goes up by pull/2
+      const blockY2=200-pull/2;
+      const handY2=80+(80+pull);  // hand pulls down rope from top right; we'll show hand below
+      pulley(440,blockY2-15,12);
+      // ropes:
+      // 1. left rope: ceiling (380, 58) -> moving pulley left side (428, blockY2-15)
+      x.strokeStyle='#444';x.lineWidth=2;
+      x.beginPath();x.moveTo(390,58);x.lineTo(390,blockY2-15);x.lineTo(428,blockY2-15);x.stroke();
+      // 2. right rope: moving pulley right (452, blockY2-15) -> top pulley left (504, 80) -> hand (536, handY2)
+      x.beginPath();x.moveTo(452,blockY2-15);x.lineTo(504,80);x.stroke();
+      x.beginPath();x.arc(520,80,16,Math.PI,0);x.stroke();
+      x.beginPath();x.moveTo(536,80);x.lineTo(536,80+pull+50);x.stroke();
+      // moving pulley arc
+      x.beginPath();x.arc(440,blockY2-15,12,0,Math.PI);x.stroke();
+      // block
+      x.fillStyle='#c62828';x.fillRect(415,blockY2,50,30);x.strokeStyle='#333';x.strokeRect(415,blockY2,50,30);
+      x.fillStyle='#fff';x.font='bold 12px sans-serif';x.textAlign='center';x.fillText('짐',440,blockY2+19);
+      // hand
+      x.fillStyle='#f4d2a3';x.beginPath();x.arc(536,80+pull+60,10,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      x.fillStyle='#444';x.font='11px Consolas,monospace';x.textAlign='left';
+      x.fillText('당김 거리: '+pull+' (단위)',360,330);
+      x.fillText('짐 올라간 거리: '+(pull/2).toFixed(1)+' (2:1)',360,348);
+      x.fillStyle='#666';x.font='11px sans-serif';x.textAlign='center';
+      x.fillText('힘은 절반, 거리는 두 배 — 일은 같다',480,366);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 흔한 오개념</h2>
+  <ul>
+    <li><strong>"한쪽이 v로 내려가면 반대쪽도 v로 올라간다 — 항상"</strong> — 도르래 구조에 따라 비율이 다릅니다. 줄 길이 식을 먼저 적고 미분하는 습관을 들이세요.</li>
+    <li><strong>"움직이는 도르래는 일을 절약해 준다"</strong> — 힘은 절반이지만 줄을 두 배로 당겨야 하므로 일은 같습니다(에너지 보존). W7 일-에너지에서 다시 만나는 주제.</li>
+    <li><strong>"상대 가속도가 0이면 두 물체는 같은 좌표계에서 정지"</strong> — 가속도만 같을 뿐, 상대 속도는 일정한 값으로 남을 수 있습니다(나란히 같은 속도로 움직이는 두 차).</li>
+  </ul>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="04-particle-curvilinear-nt.html">← W4</a> · <a href="../dynamics.html">강의 목록</a> · <a href="06-particle-kinetics.html">W6 입자 운동역학 →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

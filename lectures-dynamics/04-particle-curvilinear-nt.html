@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W4. 곡선 운동학(n-t, 극) — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 4. 곡선 운동학 — 접선·법선 좌표 & 극좌표</h1>
+  <p class="lead">곡선 위에서 움직일 때 가속도를 "앞으로 / 옆으로" 두 성분으로 자연스럽게 나누는 방법.</p>
+
+  <h2>1. 접선·법선 좌표 (n-t)</h2>
+  <p>입자가 그리는 곡선 위에 좌표축을 박아둡니다. <strong>접선 $\hat{\mathbf{e}}_t$</strong>는 진행 방향, <strong>법선 $\hat{\mathbf{e}}_n$</strong>은 곡선의 휘어지는 안쪽 방향. 속도는 항상 접선 방향이지만 가속도는 두 성분으로 나뉩니다.</p>
+  $$ \mathbf{v} = v\,\hat{\mathbf{e}}_t $$
+  $$ \mathbf{a} = \dot v\,\hat{\mathbf{e}}_t + \frac{v^2}{\rho}\,\hat{\mathbf{e}}_n $$
+  <ul>
+    <li><strong>접선 성분 $a_t = \dot v$</strong> — 빨라지거나 느려지는 정도. 접선 방향 힘이 일을 함.</li>
+    <li><strong>법선 성분 $a_n = v^2/\rho$</strong> — 방향이 휘는 정도. 항상 곡률중심을 향함. $\rho$는 곡률반경.</li>
+  </ul>
+  <div class="tip"><strong>차에 탄 사람 비유</strong> — 액셀을 밟거나 브레이크를 밟으면 몸이 앞뒤로 쏠립니다($a_t$). 핸들을 꺾으면 옆으로 쏠립니다($a_n$). 같은 속도라도 더 좁은 커브에서 옆으로 더 세게 쏠리죠 — $\rho$가 작으면 $v^2/\rho$가 커지기 때문입니다.</div>
+
+  <h2>2. 등속 원운동 — n-t의 가장 깔끔한 예</h2>
+  <p>속도 크기 $v$가 일정하면 $\dot v = 0$이므로 접선 가속도는 0이고, 가속도는 항상 법선(중심 방향)뿐입니다.</p>
+  $$ a_n = \frac{v^2}{r} = r\omega^2 $$
+  <p>이게 <strong>구심가속도</strong>입니다. "속도가 일정한데 왜 가속도가 있나?" — 속도의 <em>방향</em>이 계속 바뀌니까요. 속도가 벡터라는 점이 핵심.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 곡선 위 가속도 분해</h4>
+    <p>입자가 타원 트랙을 도는 모습입니다. <strong>속도(파랑) · 접선 가속도(초록) · 법선 가속도(빨강)</strong>를 화살표로 보여줍니다. 트랙의 곡률($\rho$)을 슬라이더로 바꿔보고, 속도를 바꾸면 어떻게 두 성분이 변하는지 확인하세요.</p>
+    <canvas id="ntC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>각속도 ω <span class="val" id="ntWV">1.5</span><input type="range" id="ntW" min="0.3" max="3" step="0.05" value="1.5"></label>
+      <label>접선 가속 (속도 변화) <span class="val" id="ntDV">0.4</span><input type="range" id="ntD" min="-1.5" max="1.5" step="0.05" value="0.4"></label>
+      <label>타원 종횡비 b/a <span class="val" id="ntRV">0.6</span><input type="range" id="ntR" min="0.3" max="1" step="0.02" value="0.6"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ntC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['ntW','ntD','ntR'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['ntW','ntD','ntR'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0,v=2;
+    function loop(){
+      const wBase=+sl('ntW').value,dvdt=+sl('ntD').value,ratio=+sl('ntR').value;
+      const dt=0.025;
+      v+=dvdt*dt;
+      if(v<0.5)v=0.5;if(v>5)v=5;
+      t+=wBase*dt*0.5;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height/2;
+      const A=180,B=A*ratio;
+      // ellipse
+      x.strokeStyle='#bbb';x.lineWidth=1.5;x.beginPath();x.ellipse(cx,cy,A,B,0,0,Math.PI*2);x.stroke();
+      // position
+      const px=cx+A*Math.cos(t),py=cy+B*Math.sin(t);
+      // tangent direction (derivative)
+      const tdx=-A*Math.sin(t),tdy=B*Math.cos(t);
+      const tnorm=Math.sqrt(tdx*tdx+tdy*tdy);
+      const ex=tdx/tnorm,ey=tdy/tnorm;
+      // normal (inward) — perpendicular to tangent, pointing toward center of curvature
+      // for ellipse, normal points generally toward center for inside
+      let nx=-ey,ny=ex;
+      // ensure points inward
+      if((px+nx-cx)*(px+nx-cx)/(A*A)+(py+ny-cy)*(py+ny-cy)/(B*B)>1){nx=-nx;ny=-ny;}
+      // radius of curvature for ellipse
+      const rho=Math.pow(A*A*Math.sin(t)**2+B*B*Math.cos(t)**2,1.5)/(A*B);
+      // velocity arrow
+      const vScale=20;
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+ex*v*vScale,py+ey*v*vScale);
+      x.lineTo(px+ex*v*vScale-ex*8-ey*4,py+ey*v*vScale-ey*8+ex*4);
+      x.moveTo(px+ex*v*vScale,py+ey*v*vScale);
+      x.lineTo(px+ex*v*vScale-ex*8+ey*4,py+ey*v*vScale-ey*8-ex*4);x.stroke();
+      // tangential acc arrow
+      const aScale=30;
+      x.strokeStyle='#2e7d32';x.lineWidth=2;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+ex*dvdt*aScale*2,py+ey*dvdt*aScale*2);x.stroke();
+      // normal acc
+      const an=v*v/rho*aScale*2;
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+nx*an,py+ny*an);x.stroke();
+      // particle
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px,py,6,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('v',px+ex*v*vScale+5,py+ey*v*vScale);
+      x.fillStyle='#2e7d32';x.fillText('a_t',px+ex*dvdt*aScale*2+5,py+ey*dvdt*aScale*2-3);
+      x.fillStyle='#c62828';x.fillText('a_n',px+nx*an+5,py+ny*an);
+      // info
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('|v| = '+v.toFixed(2),20,30);
+      x.fillText('a_t = dv/dt = '+dvdt.toFixed(2),20,48);
+      x.fillText('a_n = v²/ρ = '+(v*v/rho).toFixed(3),20,66);
+      x.fillText('곡률반경 ρ = '+rho.toFixed(1)+' (위치마다 변함)',20,84);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>3. 극좌표 (r, θ)</h2>
+  <p>중심이 있는 운동에서 가장 자연스러운 좌표계입니다. 위치를 거리 $r$과 각도 $\theta$로 표시.</p>
+  $$ \mathbf{v} = \dot r\,\hat{\mathbf{e}}_r + r\dot\theta\,\hat{\mathbf{e}}_\theta $$
+  $$ \mathbf{a} = (\ddot r - r\dot\theta^2)\,\hat{\mathbf{e}}_r + (r\ddot\theta + 2\dot r\dot\theta)\,\hat{\mathbf{e}}_\theta $$
+  <p>특히 $r$이 일정한 원운동에서는 $\dot r = \ddot r = 0$이 되어 $\mathbf{a} = -r\dot\theta^2\,\hat{\mathbf{e}}_r + r\ddot\theta\,\hat{\mathbf{e}}_\theta$로 간단해지고, n-t 좌표계의 결과와 일치합니다.</p>
+
+  <div class="tip"><strong>코리올리 항</strong> — 가속도의 $\hat{\mathbf{e}}_\theta$ 성분에 있는 $2\dot r\dot\theta$가 코리올리 가속도입니다. 회전하는 원판 위를 반지름 방향으로 걸으면 옆으로 휘는 듯한 효과가 보이는 이유 — 원판은 안쪽보다 바깥쪽이 더 빠르게 움직이니까요.</div>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 극좌표 trace — r과 θ를 직접 흔들어 보기</h4>
+    <p>$r(t)$와 $\theta(t)$를 슬라이더로 직접 만들고, 그 결과의 궤적을 봅니다. <strong>$r$ 일정 + $\theta$ 일정 증가</strong> → 원, <strong>$r$ 선형 증가 + $\theta$ 일정 증가</strong> → 아르키메데스 나선, <strong>$r = \cos(2\theta)$</strong> 같은 식 → 장미 곡선.</p>
+    <canvas id="polarC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>모드
+        <select id="polarMode">
+          <option value="circle">원: r=상수</option>
+          <option value="spiral" selected>나선: r∝t</option>
+          <option value="rose">장미: r=2cos(3θ)</option>
+          <option value="custom">사인 변동: r=2+sin(3θ)</option>
+        </select>
+      </label>
+      <label>각속도 dθ/dt <span class="val" id="poWV">1</span><input type="range" id="poW" min="0.2" max="3" step="0.05" value="1"></label>
+      <button id="poReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('polarC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>sl('poWV').textContent=sl('poW').value;
+    sl('poW').oninput=upd;upd();
+    let t=0,trail=[];
+    sl('poReset').onclick=()=>{t=0;trail=[];};
+    sl('polarMode').onchange=()=>{t=0;trail=[];};
+    function loop(){
+      const w=+sl('poW').value,mode=sl('polarMode').value;
+      t+=0.025*w;
+      let r,th=t;
+      if(mode==='circle')r=2;
+      else if(mode==='spiral')r=0.3*t;
+      else if(mode==='rose')r=2*Math.abs(Math.cos(3*th));
+      else r=2+Math.sin(3*th);
+      const cx=c.width/2,cy=c.height/2,scale=50;
+      const px=cx+r*Math.cos(th)*scale,py=cy-r*Math.sin(th)*scale;
+      trail.push({x:px,y:py});if(trail.length>800)trail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // axes
+      x.strokeStyle='#e0e0e0';x.beginPath();x.moveTo(0,cy);x.lineTo(c.width,cy);x.moveTo(cx,0);x.lineTo(cx,c.height);x.stroke();
+      // concentric circles
+      x.strokeStyle='#ececec';
+      for(let R=1;R<=4;R++){x.beginPath();x.arc(cx,cy,R*scale,0,Math.PI*2);x.stroke();}
+      // trail
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i===0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});
+      x.stroke();
+      // r vector
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();x.moveTo(cx,cy);x.lineTo(px,py);x.stroke();
+      // angle arc
+      x.strokeStyle='#2e7d32';x.beginPath();x.arc(cx,cy,30,0,-th,th>0);x.stroke();
+      // particle
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px,py,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('r = '+r.toFixed(2)+',  θ = '+(((th*180/Math.PI)%360).toFixed(0))+'°',20,30);
+      x.fillText('직각좌표: x = '+(r*Math.cos(th)).toFixed(2)+',  y = '+(r*Math.sin(th)).toFixed(2),20,48);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 어느 좌표계를 언제 쓰나</h2>
+  <table>
+    <thead><tr><th>좌표계</th><th>잘 맞는 상황</th><th>예</th></tr></thead>
+    <tbody>
+      <tr><td>직각 (x,y)</td><td>일정한 방향의 힘, 두 축이 독립</td><td>발사체, 직선 트랙</td></tr>
+      <tr><td>접선·법선 (n,t)</td><td>경로가 곡선이고 진행/휨을 분리하고 싶을 때</td><td>레이싱 트랙, 롤러코스터</td></tr>
+      <tr><td>극 (r,θ)</td><td>중심점이 있는 운동, 회전</td><td>행성 궤도, 회전 그네</td></tr>
+    </tbody>
+  </table>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="03-particle-curvilinear-xy.html">← W3</a> · <a href="../dynamics.html">강의 목록</a> · <a href="05-relative-dependent.html">W5 상대운동·종속운동 →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

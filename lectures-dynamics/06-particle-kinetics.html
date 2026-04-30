@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W6. 입자의 운동역학 — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 6. 입자의 운동역학 — F = ma</h1>
+  <p class="lead">이제 힘이 들어옵니다. 자유물체도를 그리고, 적절한 좌표계를 골라, F=ma를 성분별로 적습니다.</p>
+
+  <h2>1. 뉴턴 제2법칙 다시 보기</h2>
+  $$ \sum \mathbf{F} = m\,\mathbf{a} $$
+  <p>이 식의 진짜 의미는 "<strong>힘이 가속도를 만든다</strong>"입니다. 정역학(W1)에서 $\sum \mathbf{F} = 0$이었던 게, 합력이 0이 아닐 때 가속도가 비례해서 생기는 식으로 확장된 거예요.</p>
+  <p>한 학기 내내 같은 절차를 반복합니다.</p>
+  <ol>
+    <li><strong>자유물체도(FBD)</strong> — 분석할 물체를 분리하고 작용하는 모든 힘을 그립니다.</li>
+    <li><strong>좌표계 선택</strong> — 운동 방향에 맞춰 직각 / n-t / 극 중 하나.</li>
+    <li><strong>성분별 식</strong> — 각 축마다 $\sum F_i = m a_i$를 적습니다.</li>
+    <li><strong>구속조건 추가</strong> — 종속운동(W5)이 있으면 가속도 관계를 같이.</li>
+    <li><strong>풀이</strong> — 미지수 개수만큼 식이 있으면 풉니다.</li>
+  </ol>
+
+  <h2>2. 마찰: 정적 vs 운동</h2>
+  <p>접촉면에서 작용하는 마찰력은 두 가지입니다.</p>
+  <ul>
+    <li><strong>정적 마찰</strong>: 물체가 정지해 있을 때, 외력에 맞춰 자동 조절되며 최대 $\mu_s N$까지 견딤.</li>
+    <li><strong>운동 마찰</strong>: 물체가 미끄러지는 동안, 항상 $\mu_k N$ (보통 $\mu_k < \mu_s$).</li>
+  </ul>
+  <p>"미끄러지기 직전까지는 정적 마찰, 미끄러지기 시작하면 운동 마찰" — 이 전환을 놓치지 않는 게 핵심입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 경사면 위 블록 — 미끄러질까?</h4>
+    <p>경사각 $\theta$를 키워가면서 어느 각도에서 블록이 미끄러지기 시작하는지 보세요. <strong>임계각</strong>은 $\tan\theta = \mu_s$. 그 위로 올라가면 미끄러지기 시작하고, 운동 중에는 $\mu_k$가 적용됩니다. 자유물체도(중력·수직항력·마찰)가 함께 표시됩니다.</p>
+    <canvas id="slopeC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>경사각 θ (°) <span class="val" id="slAV">15</span><input type="range" id="slA" min="0" max="60" step="1" value="15"></label>
+      <label>정적 μ_s <span class="val" id="slMsV">0.4</span><input type="range" id="slMs" min="0" max="1" step="0.02" value="0.4"></label>
+      <label>운동 μ_k <span class="val" id="slMkV">0.25</span><input type="range" id="slMk" min="0" max="1" step="0.02" value="0.25"></label>
+      <button id="slReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('slopeC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['slA','slMs','slMk'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let s=0,v=0;  // distance along slope, velocity
+    sl('slReset').onclick=()=>{s=0;v=0;};
+    sl('slA').addEventListener('input',()=>{s=0;v=0;});
+    function loop(){
+      const th=+sl('slA').value*Math.PI/180,mus=+sl('slMs').value,muk=+sl('slMk').value;
+      const g=9.81,m=1;
+      // gravity components
+      const Fpar=m*g*Math.sin(th); // along slope (down)
+      const N=m*g*Math.cos(th);
+      const fmax=mus*N;
+      let a=0,fric=0,moving=Math.abs(v)>1e-3;
+      if(!moving){
+        if(Fpar<=fmax){a=0;fric=Fpar;}
+        else {a=(Fpar-muk*N)/m;fric=muk*N;}
+      } else {
+        const dir=v>0?1:-1;
+        fric=muk*N*dir;
+        a=(Fpar-fric)/m;
+      }
+      const dt=0.025;
+      v+=a*dt;
+      s+=v*dt*40;
+      if(s>200){s=200;v=0;}
+      if(s<0){s=0;v=Math.max(0,v);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // slope geometry: incline starts at (80, 320) with angle th, length ~400
+      const x0=80,y0=320,L=420;
+      const ex=Math.cos(th),ey=-Math.sin(th);
+      const tipx=x0+ex*L,tipy=y0+ey*L;
+      x.fillStyle='#d8c8a8';x.beginPath();x.moveTo(x0,y0);x.lineTo(tipx,tipy);x.lineTo(tipx,y0);x.closePath();x.fill();
+      x.strokeStyle='#333';x.lineWidth=1.5;x.stroke();
+      // angle arc
+      x.strokeStyle='#666';x.beginPath();x.arc(x0,y0,40,0,-th,true);x.stroke();
+      x.fillStyle='#333';x.font='12px sans-serif';x.fillText('θ='+(+sl('slA').value)+'°',x0+44,y0-6);
+      // block position along slope
+      const bx=x0+ex*(80+s),by=y0+ey*(80+s);
+      // FBD vectors
+      const sz=24;
+      // perpendicular outward to slope (up-left)
+      const nx=-ey,ny=-ex; // up from slope
+      // block (rotated rectangle)
+      x.save();
+      x.translate(bx,by);
+      x.rotate(-th);
+      x.fillStyle='#0b5fff';x.fillRect(-sz/2,-sz,sz,sz);
+      x.strokeStyle='#333';x.strokeRect(-sz/2,-sz,sz,sz);
+      x.restore();
+      // gravity (down)
+      const cx=bx,cy=by-12;
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      x.beginPath();x.moveTo(cx,cy);x.lineTo(cx,cy+50);x.lineTo(cx-4,cy+45);x.moveTo(cx,cy+50);x.lineTo(cx+4,cy+45);x.stroke();
+      x.fillStyle='#c62828';x.font='11px sans-serif';x.fillText('mg',cx+5,cy+45);
+      // normal (perpendicular outward)
+      const Nlen=N*4;
+      x.strokeStyle='#2e7d32';
+      x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+nx*Nlen,cy+ny*Nlen);
+      x.lineTo(cx+nx*Nlen-Math.cos(Math.atan2(ny,nx))*8-Math.sin(Math.atan2(ny,nx))*4,
+               cy+ny*Nlen-Math.sin(Math.atan2(ny,nx))*8+Math.cos(Math.atan2(ny,nx))*4);
+      x.moveTo(cx+nx*Nlen,cy+ny*Nlen);
+      x.lineTo(cx+nx*Nlen-Math.cos(Math.atan2(ny,nx))*8+Math.sin(Math.atan2(ny,nx))*4,
+               cy+ny*Nlen-Math.sin(Math.atan2(ny,nx))*8-Math.cos(Math.atan2(ny,nx))*4);
+      x.stroke();
+      x.fillStyle='#2e7d32';x.font='11px sans-serif';x.fillText('N',cx+nx*Nlen-2,cy+ny*Nlen-4);
+      // friction (along slope, against motion direction or opposing applied)
+      const fricLen=Math.abs(fric)*4;
+      const fdir=(v>0||(!moving&&Fpar>0))?-1:1; // friction opposes motion / tendency
+      x.strokeStyle='#e7a33a';
+      x.beginPath();x.moveTo(cx,cy);
+      const fex=fdir*ex,fey=fdir*ey;
+      x.lineTo(cx+fex*fricLen,cy+fey*fricLen);
+      x.stroke();
+      x.fillStyle='#e7a33a';x.fillText('f',cx+fex*fricLen+4,cy+fey*fricLen);
+      // info panel
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,80);
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      const tanCrit=Math.atan(mus)*180/Math.PI;
+      x.fillText('임계각 (μ_s = tanθ): '+tanCrit.toFixed(1)+'°',20,25);
+      x.fillText('현재 θ = '+(+sl('slA').value)+'°  →  '+(th*180/Math.PI>tanCrit?'미끄러짐':'정지 (정적 마찰이 잡고 있음)'),20,43);
+      x.fillText('mg sinθ = '+Fpar.toFixed(2)+',  μ_s N = '+fmax.toFixed(2)+',  a = '+a.toFixed(2)+' m/s²',20,61);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>3. 원운동에서의 F=ma — 구심력</h2>
+  <p>등속 원운동(W4)에서 가속도는 항상 중심을 향했죠. 그러므로 합력도 중심을 향해야 합니다.</p>
+  $$ \sum F_n = m\,\frac{v^2}{r} = m r \omega^2 $$
+  <p>이 "구심력"은 <em>새로운 종류의 힘이 아닙니다</em>. 줄의 장력일 수도, 마찰일 수도, 중력일 수도, 도로의 수직항력의 일부일 수도 있어요. 어떤 힘이 그 역할을 하는지 자유물체도로 찾는 게 핵심.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 줄에 매단 공의 원운동 — 끊어지는 한계</h4>
+    <p>공이 수평면에서 줄에 매달려 등속 원운동합니다. 줄의 장력이 구심력 역할을 합니다($T = mv^2/r$). 속도를 키우면 장력이 커지고, <strong>줄의 최대 장력을 넘으면 줄이 끊어지면서 공은 그 순간의 속도 방향(접선)으로 직진</strong>합니다.</p>
+    <canvas id="circC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>각속도 ω (rad/s) <span class="val" id="ccWV">2</span><input type="range" id="ccW" min="0.5" max="6" step="0.1" value="2"></label>
+      <label>반지름 r (m) <span class="val" id="ccRV">1.5</span><input type="range" id="ccR" min="0.5" max="2.5" step="0.1" value="1.5"></label>
+      <label>줄 최대 장력 T_max (N) <span class="val" id="ccTV">12</span><input type="range" id="ccT" min="3" max="40" step="0.5" value="12"></label>
+      <button id="ccReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('circC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['ccW','ccR','ccT'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let th=0,broken=false,fly={x:0,y:0,vx:0,vy:0};
+    sl('ccReset').onclick=()=>{broken=false;th=0;};
+    function loop(){
+      const w=+sl('ccW').value,r=+sl('ccR').value,Tmax=+sl('ccT').value,m=1;
+      const T=m*r*w*w;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height/2,scale=70;
+      // dashed circle (the path)
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.arc(cx,cy,r*scale,0,Math.PI*2);x.stroke();x.setLineDash([]);
+      // center peg
+      x.fillStyle='#333';x.beginPath();x.arc(cx,cy,5,0,Math.PI*2);x.fill();
+      let bx,by,vx,vy;
+      if(!broken){
+        th+=w*0.025;
+        bx=cx+r*scale*Math.cos(th);by=cy+r*scale*Math.sin(th);
+        vx=-r*w*Math.sin(th);vy=r*w*Math.cos(th);
+        if(T>Tmax){
+          broken=true;
+          fly={x:bx,y:by,vx:vx*scale,vy:vy*scale};
+        }
+        // string
+        x.strokeStyle='#444';x.lineWidth=2;x.beginPath();x.moveTo(cx,cy);x.lineTo(bx,by);x.stroke();
+        // tension arrow (toward center)
+        const Tlen=Math.min(T*8,80);
+        const tx=cx-bx,ty=cy-by;const tn=Math.sqrt(tx*tx+ty*ty);
+        x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();x.moveTo(bx,by);x.lineTo(bx+tx/tn*Tlen,by+ty/tn*Tlen);x.stroke();
+        x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('T = mv²/r',bx+tx/tn*Tlen+4,by+ty/tn*Tlen);
+        // velocity (tangent)
+        x.strokeStyle='#0b5fff';x.beginPath();x.moveTo(bx,by);x.lineTo(bx+vx*scale*0.3,by+vy*scale*0.3);x.stroke();
+        x.fillStyle='#0b5fff';x.fillText('v',bx+vx*scale*0.3+4,by+vy*scale*0.3);
+      } else {
+        // ball flies straight
+        fly.x+=fly.vx*0.025;fly.y+=fly.vy*0.025;
+        bx=fly.x;by=fly.y;
+        if(bx<0||bx>c.width||by<0||by>c.height){broken=false;}
+        // straight line shows initial trajectory
+        x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.setLineDash([2,4]);
+        x.beginPath();x.moveTo(fly.x,fly.y);x.lineTo(fly.x+fly.vx*5,fly.y+fly.vy*5);x.stroke();x.setLineDash([]);
+      }
+      // ball
+      x.fillStyle=broken?'#e7a33a':'#0b5fff';x.beginPath();x.arc(bx,by,12,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // info
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('m = 1 kg, ω = '+w.toFixed(2)+' rad/s, r = '+r.toFixed(2)+' m',20,25);
+      x.fillText('필요 구심력 T = m r ω² = '+T.toFixed(2)+' N   |   T_max = '+Tmax.toFixed(1)+' N',20,43);
+      if(broken){x.fillStyle='#c62828';x.fillText('줄이 끊어짐! 공은 끊긴 순간의 접선 방향으로 직진합니다.',20,61);}
+      else x.fillText('속도(파랑)는 접선 방향, 합력(빨강)은 중심 방향',20,61);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 흔한 오개념</h2>
+  <ul>
+    <li><strong>"원심력이 공을 바깥으로 밀어낸다"</strong> — 관성계에서는 원심력이 없습니다. 공에는 줄의 장력만 작용하고, 그 힘이 안쪽으로 당겨 곡선 운동을 만들어냅니다. "바깥으로 밀린다"는 느낌은 차에 탄 사람이 회전 좌표계에서 느끼는 가짜 힘일 뿐.</li>
+    <li><strong>"마찰력은 항상 $\mu N$"</strong> — 정지 상태에서는 외력에 맞춰 작아질 수 있습니다. 최대값이 $\mu_s N$일 뿐이에요.</li>
+    <li><strong>"질량이 큰 게 항상 더 빨리 미끄러진다"</strong> — 마찰력도 질량에 비례($\mu mg$)하므로, 미끄럼에 의한 가속도는 질량에 무관합니다($a = g(\sin\theta - \mu\cos\theta)$).</li>
+  </ul>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="05-relative-dependent.html">← W5</a> · <a href="../dynamics.html">강의 목록</a> · <a href="07-work-energy.html">W7 일과 에너지 →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
