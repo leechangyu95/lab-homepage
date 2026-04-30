@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W9. 부정적분·치환·부분적분 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html" class="active">미분적분학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../calculus.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 9. 부정적분·치환·부분적분</h1>
+  <p class="lead">미분의 역방향. 도함수가 주어졌을 때 본함수를 거꾸로 찾는 일. 표 적분이 끝이 아니라, 치환과 부분적분이라는 두 변신술이 있어야 진짜 적분 기술자가 됩니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>적분이란 — 미분의 역</li>
+    <li>기본 부정적분 표</li>
+    <li>치환적분 ($u$-치환)</li>
+    <li>부분적분 (LIATE)</li>
+    <li>삼각치환 입문</li>
+    <li>부분분수 분해 입문</li>
+    <li>인터랙티브: $u$-치환 시각화</li>
+    <li>흔한 오해와 핵심 정리</li>
+    <li>더 깊이 공부하기</li>
+  </ol></div>
+
+  <h2>1. 적분이란 — 미분의 역</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>미분이 "위치를 시간으로 나누어 속도로 바꾸는" 작업이라면, 적분은 "속도에 시간을 곱해 다시 위치로 모으는" 작업이에요. 도함수가 주어졌을 때 본 함수가 무엇이었는지 거꾸로 추적합니다.</p>
+
+  <h3>정의 — 부정적분</h3>
+  <p>$F'(x) = f(x)$ 인 함수 $F$ 를 $f$의 <strong>부정적분(antiderivative)</strong> 또는 원시함수라 합니다. 표기:</p>
+  $$ \int f(x)\, dx = F(x) + C $$
+  <p>$+ C$ 는 적분 상수. 도함수가 0인 함수는 상수 차이만큼 자유롭기 때문에 부정적분도 무한히 많고, 그 차이는 항상 상수예요 (W5 MVT의 결과).</p>
+
+  <h2>2. 기본 부정적분 표</h2>
+
+  <p>다음 12개를 외워 둡니다.</p>
+  $$ \int x^n\, dx = \frac{x^{n+1}}{n+1} + C \quad (n \ne -1), \qquad \int \frac{1}{x}\, dx = \ln|x| + C $$
+  $$ \int e^x\, dx = e^x + C, \qquad \int a^x\, dx = \frac{a^x}{\ln a} + C $$
+  $$ \int \sin x\, dx = -\cos x + C, \qquad \int \cos x\, dx = \sin x + C $$
+  $$ \int \sec^2 x\, dx = \tan x + C, \qquad \int \csc^2 x\, dx = -\cot x + C $$
+  $$ \int \frac{1}{\sqrt{1-x^2}}\, dx = \sin^{-1} x + C, \qquad \int \frac{1}{1+x^2}\, dx = \tan^{-1} x + C $$
+  $$ \int \sec x \tan x\, dx = \sec x + C, \qquad \int \csc x \cot x\, dx = -\csc x + C $$
+
+  <p>이 표는 미분 공식 표(W3·W4)의 거울상. 미분 공식이 머리에 있다면 적분 공식은 자동으로 따라옵니다.</p>
+
+  <h2>3. 치환적분 ($u$-치환)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>식 안에 "내가 알고 있는 적분 모양"이 숨어 있는데, 변수 이름만 바꾸면 그 모양이 드러난다 — 그게 $u$-치환의 정신이에요. 미분의 연쇄 법칙을 거꾸로 풀어내는 도구.</p>
+
+  <h3>공식</h3>
+  <p>$u = g(x)$ 로 두면 $du = g'(x) dx$. 그러면</p>
+  $$ \int f(g(x)) g'(x)\, dx = \int f(u)\, du $$
+
+  <h3>예제 3.1 — $\displaystyle \int x \cos(x^2)\, dx$</h3>
+  <p>$u = x^2$ → $du = 2x\, dx$ → $x\, dx = \tfrac{1}{2} du$.</p>
+  $$ \int x \cos(x^2)\, dx = \int \cos u \cdot \tfrac{1}{2}\, du = \tfrac{1}{2}\sin u + C = \tfrac{1}{2}\sin(x^2) + C $$
+  <p>검산: 답을 미분해 보면 $\tfrac{1}{2}\cos(x^2) \cdot 2x = x\cos(x^2)$ ✓.</p>
+
+  <h3>예제 3.2 — $\displaystyle \int \frac{2x}{x^2 + 1}\, dx$</h3>
+  <p>$u = x^2 + 1$ → $du = 2x\, dx$.</p>
+  $$ \int \frac{2x}{x^2+1}\, dx = \int \frac{1}{u}\, du = \ln|u| + C = \ln(x^2 + 1) + C $$
+
+  <h3>치환 패턴 알아보기</h3>
+  <p>안쪽 함수의 도함수가 식 어딘가에 곱해져 있다 → 치환 가능. 익숙해지려면 "$g(x)$와 $g'(x)$가 짝지어 보이는지"를 묻는 연습이 가장 좋습니다.</p>
+
+  <h2>4. 부분적분 (Integration by Parts)</h2>
+
+  <h3>유도 — 곱의 미분의 역</h3>
+  <p>$(uv)' = u' v + u v'$ 양변을 적분.</p>
+  $$ uv = \int u'v\, dx + \int u v'\, dx \;\Rightarrow\; \int u v'\, dx = uv - \int u' v\, dx $$
+  <p>흔히 $u$ 와 $dv$ 로 표기:</p>
+  $$ \int u\, dv = uv - \int v\, du $$
+
+  <h3>LIATE — $u$ 우선순위</h3>
+  <p>두 인수 중 어느 것을 $u$ 로 둘지 헷갈릴 때, 이 순서대로 위에 있는 쪽을 $u$:</p>
+  <ul>
+    <li><strong>L</strong>ogarithm — 로그 ($\ln x$)</li>
+    <li><strong>I</strong>nverse trig — 역삼각 ($\sin^{-1}, \tan^{-1}$)</li>
+    <li><strong>A</strong>lgebraic — 다항 ($x^n$)</li>
+    <li><strong>T</strong>rigonometric — 삼각 ($\sin x, \cos x$)</li>
+    <li><strong>E</strong>xponential — 지수 ($e^x$)</li>
+  </ul>
+  <p>왜? 위쪽일수록 미분하면 쉬워지고, 아래쪽일수록 적분이 쉬운 함수라서 — 식이 단순해지는 방향.</p>
+
+  <h3>예제 4.1 — $\displaystyle \int x e^x\, dx$</h3>
+  <p>LIATE: A(다항)이 E(지수) 위. $u = x$, $dv = e^x\, dx$.</p>
+  <p>$du = dx$, $v = e^x$.</p>
+  $$ \int x e^x\, dx = x e^x - \int e^x\, dx = x e^x - e^x + C = (x-1)e^x + C $$
+
+  <h3>예제 4.2 — $\displaystyle \int \ln x\, dx$</h3>
+  <p>$u = \ln x$, $dv = dx$. $du = dx/x$, $v = x$.</p>
+  $$ \int \ln x\, dx = x \ln x - \int x \cdot \tfrac{1}{x}\, dx = x \ln x - x + C $$
+
+  <h3>예제 4.3 — 두 번 부분적분</h3>
+  <p>$\displaystyle \int x^2 e^x\, dx$. $u = x^2$, $dv = e^x dx$ → $\int = x^2 e^x - \int 2x e^x\, dx$. 안쪽 적분도 부분적분 한 번 더.</p>
+  $$ = x^2 e^x - 2[(x-1)e^x] + C = (x^2 - 2x + 2) e^x + C $$
+
+  <h2>5. 삼각치환 입문</h2>
+
+  <p>$\sqrt{a^2 - x^2}$, $\sqrt{a^2 + x^2}$, $\sqrt{x^2 - a^2}$ 가 들어 있는 식은 다음 치환으로 풉니다.</p>
+  <ul>
+    <li>$\sqrt{a^2 - x^2}$: $x = a \sin\theta$ → $\sqrt{a^2 - a^2 \sin^2\theta} = a\cos\theta$.</li>
+    <li>$\sqrt{a^2 + x^2}$: $x = a \tan\theta$ → $\sqrt{a^2 + a^2\tan^2\theta} = a \sec\theta$.</li>
+    <li>$\sqrt{x^2 - a^2}$: $x = a \sec\theta$.</li>
+  </ul>
+
+  <h3>예제 5.1 — $\displaystyle \int \sqrt{1 - x^2}\, dx$</h3>
+  <p>$x = \sin\theta$, $dx = \cos\theta\, d\theta$, $\sqrt{1-x^2} = \cos\theta$.</p>
+  $$ \int \cos^2\theta\, d\theta = \int \frac{1 + \cos 2\theta}{2}\, d\theta = \frac{\theta}{2} + \frac{\sin 2\theta}{4} + C $$
+  <p>$\theta = \sin^{-1} x$ 로 되돌리고, $\sin 2\theta = 2\sin\theta\cos\theta = 2x\sqrt{1-x^2}$ 로 정리.</p>
+  $$ = \frac{1}{2}\sin^{-1} x + \frac{x\sqrt{1-x^2}}{2} + C $$
+  <p>이 적분은 단위 반원의 면적 공식과 직결됩니다 — $\int_{-1}^{1}\sqrt{1-x^2}\,dx = \pi/2$.</p>
+
+  <h2>6. 부분분수 분해 입문</h2>
+
+  <p>유리함수 $\frac{P(x)}{Q(x)}$ 의 적분은 부분분수로 분해해서 표 적분으로 환원합니다.</p>
+
+  <h3>예제 6.1 — $\displaystyle \int \frac{1}{x^2 - 1}\, dx$</h3>
+  <p>$\dfrac{1}{x^2 - 1} = \dfrac{1}{(x-1)(x+1)} = \dfrac{1/2}{x-1} - \dfrac{1/2}{x+1}$ (계수는 미정계수법으로).</p>
+  $$ \int \frac{1}{x^2-1}\, dx = \tfrac{1}{2}\ln|x-1| - \tfrac{1}{2}\ln|x+1| + C = \tfrac{1}{2}\ln\left|\tfrac{x-1}{x+1}\right| + C $$
+
+  <h2>7. 인터랙티브: $u$-치환 시각화</h2>
+
+  <p>1차원 변수 변환에서 면적이 어떻게 변하는지 시각적으로 보여 줍니다. $u = g(x)$ 변환은 $x$-축의 작은 구간 $dx$ 를 $u$-축의 작은 구간 $du = g'(x) dx$ 로 늘이거나 줄여요. 이게 다변수에서 자코비안 행렬식의 1차원 버전이에요.</p>
+
+  <div class="demo">
+    <h4>🎮 변수 변환과 면적의 비례</h4>
+    <p>변환 $u = g(x)$ 를 골라 보세요. 같은 폭의 작은 막대가 $x$-축에서 $u$-축으로 어떻게 늘이거나 줄어드는지가 보입니다. 이 늘림비율이 정확히 $g'(x)$.</p>
+    <canvas id="us" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>변환
+        <select id="usG">
+          <option value="sq" selected>u = x²</option>
+          <option value="cube">u = x³</option>
+          <option value="exp">u = eˣ</option>
+          <option value="log">u = ln x</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('us'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    function g(v){const m=document.getElementById('usG').value;if(m==='sq')return v*v;if(m==='cube')return v*v*v;if(m==='exp')return Math.exp(v);return Math.log(v);}
+    function gp(v){const m=document.getElementById('usG').value;if(m==='sq')return 2*v;if(m==='cube')return 3*v*v;if(m==='exp')return Math.exp(v);return 1/v;}
+    function loop(){
+      const m=document.getElementById('usG').value;
+      const xR=(m==='log')?[0.2,4]:(m==='exp'?[-2,2]:[0,3]);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // top axis: x
+      const Ax0=40,Ax1=W-40,Ay=80;
+      x.strokeStyle='#888';x.lineWidth=1.5;
+      x.beginPath();x.moveTo(Ax0,Ay);x.lineTo(Ax1,Ay);x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('x-축',Ax0-25,Ay+5);
+      // bottom axis: u
+      const Bx0=40,Bx1=W-40,By=240;
+      x.beginPath();x.moveTo(Bx0,By);x.lineTo(Bx1,By);x.stroke();
+      x.fillText('u-축',Bx0-25,By+5);
+      // x ticks and bars
+      const N=8;
+      const dx=(xR[1]-xR[0])/N;
+      // compute u range
+      const us=[];for(let i=0;i<=N;i++)us.push(g(xR[0]+i*dx));
+      const uMin=Math.min(...us),uMax=Math.max(...us);
+      function pxX(v){return Ax0+(v-xR[0])/(xR[1]-xR[0])*(Ax1-Ax0);}
+      function pxU(v){return Bx0+(v-uMin)/(uMax-uMin)*(Bx1-Bx0);}
+      for(let i=0;i<N;i++){
+        const x1=xR[0]+i*dx,x2=x1+dx;
+        const u1=g(x1),u2=g(x2);
+        const hue=(i*40)%360;
+        const col='hsl('+hue+',60%,55%)';
+        // x bar
+        x.fillStyle=col+'';
+        x.fillRect(pxX(x1),Ay-25,pxX(x2)-pxX(x1)-1,25);
+        x.fillStyle='#fff';x.font='10px sans-serif';
+        x.fillText(x1.toFixed(2),pxX(x1)+2,Ay-10);
+        // u bar
+        x.fillStyle=col;
+        const ux1=Math.min(pxU(u1),pxU(u2)),uw=Math.abs(pxU(u2)-pxU(u1));
+        x.fillRect(ux1,By-25,uw,25);
+        // connecting lines
+        x.strokeStyle=col;x.lineWidth=1;x.setLineDash([3,3]);
+        x.beginPath();x.moveTo(pxX(x1),Ay);x.lineTo(ux1,By-25);x.stroke();
+        x.beginPath();x.moveTo(pxX(x2),Ay);x.lineTo(ux1+uw,By-25);x.stroke();
+        x.setLineDash([]);
+      }
+      // hint text
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('같은 폭 dx 의 막대가 변환 후 g\'(x) 배만큼 늘어남.',Ax0,300);
+      x.fillStyle='#666';x.font='12px Consolas,monospace';
+      x.fillText('∫ f(g(x)) g\'(x) dx = ∫ f(u) du   ← 늘림 비율 g\' 가 적분에 자연히 등장',Ax0,318);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>8. 흔한 오해와 핵심 정리</h2>
+
+  <div class="note"><strong>흔한 오해 ① — "$\int dx/x = \ln x$"</strong> —
+  정확히는 $\int dx/x = \ln |x| + C$. 절댓값을 빼먹으면 음수 영역에서 정의가 깨집니다.</div>
+
+  <div class="note"><strong>흔한 오해 ② — "치환할 때 $dx$ 만 바꾸면 된다"</strong> —
+  $dx$ 를 $du/g'(x)$ 로 바꾸고, <em>피적분함수의 모든 $x$도 $u$로 표현해야</em> 합니다. 그렇게 안 되면 치환을 잘못 잡은 것.</div>
+
+  <div class="note"><strong>흔한 오해 ③ — "부분적분에서 $u, dv$ 의 선택은 아무거나 좋다"</strong> —
+  잘못 잡으면 식이 더 복잡해집니다. LIATE 우선순위를 따라 위에 있는 함수를 $u$로 두는 게 안전.</div>
+
+  <h3>이번 주의 핵심 한 문장</h3>
+  <div class="tip"><strong>"미분의 역을 풀려면 12개 표 적분 + 치환(연쇄 법칙의 역) + 부분적분(곱 법칙의 역). 이 셋이 학부 적분 기술의 90%."</strong></div>
+
+  <h2>9. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Stewart, Ch.5.5 (치환), Ch.7.1 (부분적분), Ch.7.2~7.4.</li>
+    <li>Thomas, Ch.5.5, Ch.8.1~8.4.</li>
+    <li>다음 주 예고: 부정적분이 아니라 <strong>정적분</strong>으로 — 면적·누적량의 정밀한 정의와 미적분학 기본정리.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="08-midterm-review.html"><small>← 이전</small>W8. 중간고사 정리</a>
+    <a href="10-definite-integral-ftc.html" class="next"><small>다음 →</small>W10. 정적분·기본정리</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

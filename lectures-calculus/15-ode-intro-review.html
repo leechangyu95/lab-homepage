@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W15. 1차 ODE + 종합 정리 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html" class="active">미분적분학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../calculus.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 15. 1차 ODE + 종합 정리</h1>
+  <p class="lead">한 학기 미적분의 자연스러운 종착지 — <strong>미분방정식</strong>. 도함수가 식 안에 들어 있는 방정식을 풀어 자연 현상(인구·온도·전기회로)을 모델링합니다.
+  마지막에 한 학기를 한 화면에 모아 정리하고, 다음 학기로 가는 다리를 놓습니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>미분방정식이란</li>
+    <li>분리변수형 ODE</li>
+    <li>1차 선형 ODE — 적분인자</li>
+    <li>1차 시스템의 지수 응답</li>
+    <li>응용 — 뉴턴 냉각·RC 회로</li>
+    <li>인터랙티브: 1차 시스템 응답</li>
+    <li>한 학기 정리 — 한 장 표</li>
+    <li>다음 학기로 가는 다리</li>
+    <li>더 깊이 공부하기</li>
+  </ol></div>
+
+  <h2>1. 미분방정식이란</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>"내가 매시간 키가 1 cm 자란다." 이건 키 $h(t)$ 에 대한 정보가 아니라 그 도함수 $dh/dt$ 에 대한 정보예요. 도함수가 주어진 식에서 본 함수를 거꾸로 찾아내는 게 미분방정식 풀이입니다.</p>
+
+  <h3>정의</h3>
+  <p>미지의 함수와 그 도함수가 등식 안에 들어 있는 방정식이 <strong>미분방정식(Differential Equation, DE)</strong>. 본 강의에서는 가장 단순한 1차(도함수 1번까지) 일변수 ODE만 다룹니다.</p>
+
+  <h3>예시</h3>
+  <ul>
+    <li>$\dfrac{dy}{dt} = ky$ — 인구·복리·방사성 붕괴.</li>
+    <li>$\dfrac{dy}{dt} = -ky + u$ — 1차 시스템 응답 (RC, 뉴턴 냉각).</li>
+    <li>$\dfrac{dy}{dt} = -y + \sin t$ — 외부 입력이 시간에 따라 변하는 경우.</li>
+  </ul>
+
+  <h2>2. 분리변수형 ODE</h2>
+
+  <h3>형태</h3>
+  $$ \frac{dy}{dt} = g(t) h(y) $$
+  <p>$y$ 항과 $t$ 항이 곱셈으로 분리되는 경우. 다음과 같이 풀이.</p>
+  $$ \frac{dy}{h(y)} = g(t)\, dt \;\Rightarrow\; \int \frac{dy}{h(y)} = \int g(t)\, dt $$
+
+  <h3>예제 2.1 — 지수 증감</h3>
+  <p>$\dfrac{dy}{dt} = ky$ ($k$ 는 상수).</p>
+  <p>$\dfrac{dy}{y} = k\, dt$ → 양변 적분: $\ln|y| = kt + C_1$ → $y = C e^{kt}$.</p>
+  <p>$k > 0$ 이면 지수 증가 (인구·복리), $k < 0$ 이면 지수 감소 (방사성 붕괴).</p>
+
+  <h3>예제 2.2 — 뉴턴 냉각 법칙</h3>
+  <p>"커피의 온도가 주변 온도와의 차이에 비례해 떨어진다." 식: $\dfrac{dT}{dt} = -k(T - T_\text{room})$.</p>
+  <p>$u = T - T_\text{room}$ 으로 치환: $du/dt = -ku$ → $u = u_0 e^{-kt}$. 따라서</p>
+  $$ T(t) = T_\text{room} + (T_0 - T_\text{room}) e^{-kt} $$
+
+  <h2>3. 1차 선형 ODE — 적분인자</h2>
+
+  <h3>형태</h3>
+  $$ \frac{dy}{dt} + p(t) y = q(t) $$
+  <p>$y$ 와 $y'$ 이 1차 선형으로 들어 있는 경우. 분리가 안 되면 적분인자(integrating factor) 트릭.</p>
+
+  <h3>적분인자 풀이</h3>
+  <p>$\mu(t) = e^{\int p(t)\, dt}$ 를 양변에 곱하면 좌변이 곱의 미분 모양으로 바뀝니다.</p>
+  $$ \frac{d}{dt}[\mu(t) y] = \mu(t) q(t) \;\Rightarrow\; \mu(t) y = \int \mu(t) q(t)\, dt + C $$
+
+  <h3>예제 3.1</h3>
+  <p>$\dfrac{dy}{dt} + 2y = 6$.</p>
+  <p>$\mu = e^{\int 2\, dt} = e^{2t}$. 양변에 곱: $\frac{d}{dt}[e^{2t} y] = 6 e^{2t}$.</p>
+  <p>$e^{2t} y = 3 e^{2t} + C$ → $y = 3 + C e^{-2t}$. 시간이 지나면 $y \to 3$ (정상상태).</p>
+
+  <h2>4. 1차 시스템의 지수 응답</h2>
+
+  <h3>표준형</h3>
+  $$ \tau \frac{dy}{dt} + y = K u(t) $$
+  <p>$\tau$ 는 <strong>시간상수(time constant)</strong>, $K$ 는 정적 이득. 이 식이 전기회로(RC, RL), 화학반응, 온도 응답 등 학부 공학 어디서나 나오는 표준 1차 시스템.</p>
+
+  <h3>계단 입력에 대한 응답</h3>
+  <p>$u(t) = u_0$ (상수, $t \ge 0$), $y(0) = 0$ 이라면:</p>
+  $$ y(t) = K u_0 \bigl(1 - e^{-t/\tau}\bigr) $$
+
+  <h3>시간상수의 의미</h3>
+  <ul>
+    <li>$t = \tau$: 정상상태의 약 63% 에 도달.</li>
+    <li>$t = 3\tau$: 약 95%.</li>
+    <li>$t = 5\tau$: 약 99% (실용적 "정착 시간").</li>
+  </ul>
+  <p>$\tau$ 가 작으면 빠른 응답, 크면 느린 응답. 회로·기계 시스템의 "민첩함"을 결정하는 한 숫자.</p>
+
+  <h2>5. 응용 — 뉴턴 냉각·RC 회로</h2>
+
+  <h3>뉴턴 냉각</h3>
+  <p>커피 한 잔을 끓는 물(100℃)에서 꺼내 21℃ 방에 둡니다. $\tau = 10$ 분이라 합시다.</p>
+  $$ T(t) = 21 + 79 e^{-t/10} $$
+  <p>10분 후 $T \approx 21 + 79 \cdot 0.368 \approx 50.1$℃, 30분 후 약 25℃ — 거의 방 온도.</p>
+
+  <h3>RC 회로</h3>
+  <p>저항 $R$ + 축전기 $C$ 를 직렬로 연결하고 전압원 $V_s$. 축전기 전압 $V_C$ 는:</p>
+  $$ RC \frac{dV_C}{dt} + V_C = V_s $$
+  <p>시간상수 $\tau = RC$. $R = 1\,\text{k}\Omega, C = 1\,\mu\text{F}$ 이면 $\tau = 1$ ms — 1 ms 마다 정상상태에 더 가까이.</p>
+
+  <h2>6. 인터랙티브: 1차 시스템 응답</h2>
+
+  <div class="demo">
+    <h4>🎮 시간상수 $\tau$ 슬라이더</h4>
+    <p>$\tau$ 를 움직여 보세요. 작은 $\tau$ → 빠른 응답, 큰 $\tau$ → 느린 응답. 입력 종류(계단·임펄스·사인)에 따라 응답 모양이 어떻게 바뀌는지 비교해 보세요.
+    이 한 시스템이 RC 회로·뉴턴 냉각·차량의 종방향 1차 모델 등 수많은 현상을 모두 설명합니다.</p>
+    <canvas id="fo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>시간상수 τ <span class="val" id="foTV">1.00</span><input type="range" id="foT" min="0.1" max="3" step="0.05" value="1"></label>
+      <label>입력
+        <select id="foU">
+          <option value="step" selected>계단</option>
+          <option value="impulse">임펄스 (짧은 펄스)</option>
+          <option value="sine">사인</option>
+          <option value="ramp">램프</option>
+        </select>
+      </label>
+      <button id="foRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fo'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    const Tmax=10,N=600;
+    const dt=Tmax/N;
+    function uAt(t){
+      const m=document.getElementById('foU').value;
+      if(m==='step')return t<1?0:1;
+      if(m==='impulse')return(t>=1&&t<1.2)?5:0;
+      if(m==='sine')return Math.sin(t*1.5);
+      return Math.min(t/3,1);
+    }
+    let auto=null;
+    document.getElementById('foRst').onclick=()=>{auto=null;};
+    function loop(){
+      const tau=+document.getElementById('foT').value;
+      document.getElementById('foTV').textContent=tau.toFixed(2);
+      // simulate: tau y' + y = u
+      let y=0;const ys=[],us=[],ts=[];
+      for(let i=0;i<=N;i++){
+        const t=i*dt;ts.push(t);
+        const u=uAt(t);us.push(u);ys.push(y);
+        // forward Euler
+        const dy=(u-y)/tau;
+        y+=dy*dt;
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const Lx0=M.l,Lx1=W-M.r;
+      const Ly0=M.t,Ly1=H-M.b;
+      x.strokeStyle='#ddd';x.strokeRect(Lx0,Ly0,Lx1-Lx0,Ly1-Ly0);
+      // axis
+      const vmax=Math.max(2,Math.max(...us.map(Math.abs))*1.2);
+      function px(t){return Lx0+t/Tmax*(Lx1-Lx0);}
+      function py(v){return(Ly0+Ly1)/2-v/vmax*((Ly1-Ly0)/2-12);}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(Lx0,(Ly0+Ly1)/2);x.lineTo(Lx1,(Ly0+Ly1)/2);x.stroke();
+      // input (gray)
+      x.strokeStyle='#999';x.lineWidth=1.5;x.setLineDash([4,3]);x.beginPath();
+      us.forEach((u,i)=>{i?x.lineTo(px(ts[i]),py(u)):x.moveTo(px(ts[i]),py(u));});x.stroke();x.setLineDash([]);
+      // output (blue)
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      ys.forEach((u,i)=>{i?x.lineTo(px(ts[i]),py(u)):x.moveTo(px(ts[i]),py(u));});x.stroke();
+      // legend
+      x.fillStyle='#666';x.fillRect(Lx0+10,Ly0+10,16,2);x.fillStyle='#222';x.font='12px sans-serif';x.fillText('입력 u(t)',Lx0+30,Ly0+15);
+      x.fillStyle='#0b5fff';x.fillRect(Lx0+90,Ly0+10,16,3);x.fillStyle='#222';x.fillText('출력 y(t)',Lx0+110,Ly0+15);
+      x.fillStyle='#0742b8';x.font='12px sans-serif';
+      x.fillText('τ y\' + y = u    ·    τ = '+tau.toFixed(2)+'    ·    63% 도달 시간 ≈ τ',Lx0+10,Ly1-8);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="tip"><strong>관찰 포인트</strong> —
+  ① 계단 입력에서 $\tau$ 가 작으면 빠르게 1에 도달, 크면 천천히 도달.
+  ② 임펄스 입력: 짧은 자극 후 지수적으로 0으로 감쇠.
+  ③ 사인 입력: 같은 주기의 사인이 출력으로 나오지만 진폭이 작아지고 위상이 늦어짐 — 이게 자동제어의 주파수 응답 입문.</div>
+
+  <h2>7. 한 학기 정리 — 한 장 표</h2>
+
+  <table>
+    <thead><tr><th>주차</th><th>핵심 개념</th><th>대표 공식·도구</th></tr></thead>
+    <tbody>
+      <tr><td>W1</td><td>함수·극한·연속</td><td>$\lim$, ε-δ, IVT</td></tr>
+      <tr><td>W2</td><td>미분의 정의</td><td>$f'(a) = \lim_{h\to 0}(f(a+h)-f(a))/h$</td></tr>
+      <tr><td>W3</td><td>미분 규칙</td><td>합·곱·몫·연쇄</td></tr>
+      <tr><td>W4</td><td>초월·음함수 미분</td><td>$(\sin)' = \cos$, $(e^x)' = e^x$, 음함수</td></tr>
+      <tr><td>W5</td><td>MVT·단조·볼록</td><td>$f' > 0$ 증가, $f'' > 0$ 볼록</td></tr>
+      <tr><td>W6</td><td>최적화·뉴턴법</td><td>임계점·끝점 비교, $x_{n+1} = x_n - f/f'$</td></tr>
+      <tr><td>W7</td><td>테일러 급수</td><td>$\sum f^{(k)}(a)(x-a)^k/k!$</td></tr>
+      <tr><td>W8</td><td>중간고사 정리</td><td>—</td></tr>
+      <tr><td>W9</td><td>적분 기법</td><td>치환·부분적분·삼각치환</td></tr>
+      <tr><td>W10</td><td>정적분·FTC</td><td>$\int_a^b f = F(b) - F(a)$</td></tr>
+      <tr><td>W11</td><td>적분 응용</td><td>면적·부피·곡선 길이</td></tr>
+      <tr><td>W12</td><td>매개변수·곡률</td><td>$\kappa = |f''|/(1+(f')^2)^{3/2}$</td></tr>
+      <tr><td>W13</td><td>다변수·그라디언트</td><td>$\nabla f$ = 최대 증가 방향</td></tr>
+      <tr><td>W14</td><td>헤시안·라그랑주</td><td>$D = \det H$, $\nabla f = \lambda \nabla g$</td></tr>
+      <tr><td>W15</td><td>1차 ODE</td><td>$\tau y' + y = u$, $y = K(1 - e^{-t/\tau})$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. 다음 학기로 가는 다리</h2>
+
+  <p>이번 학기에 다진 미적분이 다음 학기·다음 강의에서 어떻게 살아나는지 미리 보세요.</p>
+
+  <ul>
+    <li><strong>다변수 미적분 / 미분방정식</strong> — W13~W14의 그라디언트·헤시안이 정식 다변수 미적분으로, W15의 1차 ODE가 2차·연립으로 확장됩니다.</li>
+    <li><strong><a href="../mechatronics.html">메카트로닉스</a></strong> — W15의 1차 시스템 응답이 라플라스 변환·전달함수로 일반화되어 회로·기계 시스템 해석의 표준 언어가 됩니다.</li>
+    <li><strong><a href="../control.html">자동제어</a></strong> — W6 최적화와 W15 ODE가 PID·주파수 응답 설계의 출발점.</li>
+    <li><strong><a href="../dl.html">딥러닝 &amp; 머신러닝</a></strong> — W6 뉴턴법·W13 그라디언트가 경사하강법(SGD·Adam)으로 직결.</li>
+    <li><strong><a href="../path-planning.html">경로계획 &amp; 추종</a></strong> — W12 곡률이 차량 경로 설계의 핵심 양으로 등장.</li>
+    <li><strong>물리·공학 전반</strong> — 작은각 근사, 복리·붕괴, 전기회로 응답 — 매주 응용 코너에서 본 것들이 그대로 다시 나타납니다.</li>
+  </ul>
+
+  <div class="tip">
+  <strong>이번 학기 마지막 한 마디</strong> —
+  미적분의 두 핵심 도구 — <em>미분(변화율)</em> 과 <em>적분(누적)</em> — 그리고 둘이 정확히 서로의 역이라는 미적분학 기본정리. 이 한 줄이 한 학기의 결론입니다.
+  앞으로 만날 모든 공학·과학 식이 결국 이 두 도구의 변형. 미적분을 잘 다룰 수 있다면 어떤 공학 분야든 식 자체가 두렵지 않게 됩니다.
+  </div>
+
+  <h2>9. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Stewart, Ch.9 (미분방정식 입문).</li>
+    <li>Boyce·DiPrima, <em>Elementary Differential Equations</em> — 미분방정식 정통 입문서.</li>
+    <li>3Blue1Brown, <em>Differential Equations</em> 시리즈 — 시각적 직관.</li>
+    <li>다음 학기: <strong>다변수 미적분</strong> 또는 <strong>공학수학(미분방정식·라플라스 변환·푸리에)</strong> 으로.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="14-hessian-lagrange.html"><small>← 이전</small>W14. 헤시안·라그랑주</a>
+    <a href="../calculus.html" class="next"><small>강의 목록 →</small>미분적분학</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
