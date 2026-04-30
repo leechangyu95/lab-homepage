@@ -41,7 +41,11 @@
     <li>미적분학 기본정리 — Part 2</li>
     <li>적분 평균값 정리</li>
     <li>응용 — 속도 적분 → 위치</li>
+    <li>응용 — 일·에너지·확률·평균</li>
+    <li>이상적분 (Improper Integral)</li>
+    <li>수치적분 — Simpson 1/3 규칙</li>
     <li>인터랙티브: 리만합</li>
+    <li>인터랙티브: 속도 → 위치 (적분의 누적)</li>
     <li>흔한 오해와 핵심 정리</li>
     <li>더 깊이 공부하기</li>
   </ol></div>
@@ -132,7 +136,68 @@
   <p>속도 $v(t) = 3t^2 - 2t$ (m/s) 로 운동하는 물체의 $t = 0$부터 $t = 4$ 까지의 변위.</p>
   $$ \int_0^4 (3t^2 - 2t)\, dt = [t^3 - t^2]_0^4 = 64 - 16 = 48 \text{ m} $$
 
-  <h2>9. 인터랙티브: 리만합</h2>
+  <h2>9. 응용 — 일·에너지·확률·평균</h2>
+
+  <h3>일(work)과 에너지</h3>
+  <p>변위 $x$에 따라 변하는 힘 $F(x)$ 가 작용할 때 한 일:</p>
+  $$ W = \int_a^b F(x)\, dx $$
+  <p>예: 스프링의 변위 $x$ 에 비례하는 복원력 $F = kx$ 를 0에서 $L$ 까지 늘이는 데 드는 일은 $\int_0^L kx\,dx = \tfrac{1}{2}kL^2$. 고등학교에서 본 "스프링의 탄성에너지" 공식이 이 적분에서 나옵니다.</p>
+
+  <h3>중력에 대한 일 — 위치에너지</h3>
+  <p>지구 표면 가까운 곳에서 중력 $F = mg$ 는 상수, 일 $= \int_0^h mg\,dy = mgh$. 중력이 거리에 따라 달라지는 우주 영역에서는 $F = GMm/r^2$ 적분 필요.</p>
+
+  <h3>평균값 — 적분으로 정의</h3>
+  $$ \bar f = \frac{1}{b-a}\int_a^b f(x)\,dx $$
+  <p>$N$ 개 이산 데이터의 평균이 $\frac{1}{N}\sum f_i$ 이듯, 연속 함수의 평균은 적분의 평균. 적분 평균값 정리(섹션 7)가 이 평균이 어딘가의 함숫값과 정확히 같다는 보장.</p>
+
+  <h3>예제 9.1 — 사인 곡선의 RMS</h3>
+  <p>전기 신호의 실효값 (Root Mean Square) — 한 주기에서 제곱의 평균의 제곱근.</p>
+  $$ \mathrm{RMS} = \sqrt{\frac{1}{T}\int_0^T \sin^2(\omega t)\, dt} = \sqrt{\frac{1}{2}} = \frac{1}{\sqrt{2}} \approx 0.707 $$
+  <p>가정용 220 V 콘센트의 220은 RMS 값. 사인파의 진폭(peak)은 $220 \times \sqrt 2 \approx 311$ V.</p>
+
+  <h3>확률 — 확률밀도함수의 적분</h3>
+  <p>연속 확률변수 $X$ 가 $[a, b]$ 안에 떨어질 확률:</p>
+  $$ P(a \le X \le b) = \int_a^b f(x)\,dx $$
+  <p>여기서 $f$ 는 확률밀도함수(PDF). 정규분포·지수분포·균등분포의 모든 확률 계산이 적분이에요. 통계학·머신러닝의 기초.</p>
+
+  <h2>10. 이상적분 (Improper Integral)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>적분 구간이 무한히 길거나, 함수가 한 점에서 무한대로 발산하는 경우. 이 경우에도 면적이 유한할 수 있어요. 직관에 어긋나 보이지만, 가까이 갈수록 빠르게 0으로 수렴하면 적분이 수렴합니다.</p>
+
+  <h3>두 종류</h3>
+  <ul>
+    <li><strong>제1종 (구간 무한)</strong>: $\displaystyle \int_a^\infty f(x)\,dx = \lim_{R\to\infty}\int_a^R f(x)\,dx$.</li>
+    <li><strong>제2종 (피적분 함수 발산)</strong>: $\displaystyle \int_a^b f$ 에서 $f$가 $b$에서 발산. $\displaystyle \lim_{c\to b^-}\int_a^c f\,dx$.</li>
+  </ul>
+
+  <h3>예제 10.1 — $\int_1^\infty 1/x^2\, dx$</h3>
+  $$ \int_1^\infty \frac{1}{x^2}\,dx = \lim_{R\to\infty}\left[-\frac{1}{x}\right]_1^R = \lim_{R\to\infty}\left(-\frac{1}{R} + 1\right) = 1 $$
+  <p>구간이 무한히 긴데 면적은 1. 함수가 빠르게 0으로 가서 가능.</p>
+
+  <h3>예제 10.2 — $\int_1^\infty 1/x\, dx$</h3>
+  $$ = \lim_{R\to\infty}[\ln x]_1^R = \infty $$
+  <p>발산. $1/x$ 는 $1/x^2$ 보다 천천히 0으로 가서 면적이 무한대.</p>
+
+  <h3>p-적분 시험 (외울 결과)</h3>
+  $$ \int_1^\infty \frac{1}{x^p}\,dx \;=\; \begin{cases} \frac{1}{p-1} & p > 1 \\ \infty & p \le 1 \end{cases} $$
+
+  <h2>11. 수치적분 — Simpson 1/3 규칙</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>중점 리만합·사다리꼴이 1차·1차+ 정확도라면, 심슨 규칙은 <strong>2차 다항식</strong>으로 곡선을 흉내 내요. 같은 분할 수에서 정확도가 폭발적으로 늘어 (4차 정확도) 공학·과학 계산의 표준.</p>
+
+  <h3>심슨 1/3 규칙 (Simpson's 1/3 Rule)</h3>
+  <p>구간 $[a, b]$를 짝수 $N$ 등분, $h = (b-a)/N$:</p>
+  $$ \int_a^b f(x)\,dx \approx \tfrac{h}{3}\bigl[f(x_0) + 4(f(x_1) + f(x_3) + \cdots) + 2(f(x_2) + f(x_4) + \cdots) + f(x_N)\bigr] $$
+  <p>"끝점 1·홀수점 4·짝수점 2"의 가중 합. 외우는 노래: <em>"1 · 4 · 2 · 4 · 2 · ... · 4 · 1"</em>.</p>
+
+  <h3>예제 11.1 — $\int_0^1 e^{-x^2}\,dx$, $N = 4$</h3>
+  <p>$h = 0.25$. $f(0)=1, f(0.25)\approx0.9394, f(0.5)\approx0.7788, f(0.75)\approx0.5698, f(1)\approx0.3679$.</p>
+  $$ \approx \tfrac{0.25}{3}[1 + 4(0.9394 + 0.5698) + 2(0.7788) + 0.3679] \approx 0.7468 $$
+  <p>실제값 $\approx 0.7468$ ($\sqrt\pi \cdot \mathrm{erf}(1)/2$) — $N = 4$만으로 4자리 일치. 사다리꼴 같은 $N$이면 보통 2자리 정도라 큰 차이.</p>
+
+  <h2>12. 인터랙티브: 리만합</h2>
 
   <div class="demo">
     <h4>🎮 리만합이 정적분으로 수렴</h4>
@@ -223,7 +288,109 @@
   ② 중점·사다리꼴은 정확도가 훨씬 좋음. 같은 $N$에서 오차가 한 자릿수 작은 일이 흔합니다.
   ③ $N$을 두 배로 늘렸을 때 사다리꼴 오차는 약 $1/4$로 줄어듭니다 (오차 $O(1/N^2)$).</div>
 
-  <h2>10. 흔한 오해와 핵심 정리</h2>
+  <h2>13. 인터랙티브: 속도 → 위치 (적분의 누적)</h2>
+
+  <p>속도 곡선 $v(t)$ 를 고르고 시간을 끌어 보세요. 그 시점까지의 적분(=곡선 아래 면적)이 위치 그래프에 누적되어 그려집니다 — 정적분이 곧 누적량이라는 직관을 손으로 만져 보세요.</p>
+
+  <div class="demo">
+    <h4>🎮 속도 적분 → 위치 — FTC를 시각으로</h4>
+    <p>파란 곡선이 속도 $v(t)$, 채워진 영역이 그 시점까지의 적분 면적, 빨간 곡선이 위치 $s(t) = \int_0^t v$. 면적이 바로 위치라는 게 한눈에 보입니다.</p>
+    <canvas id="vp" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>속도 패턴
+        <select id="vpV">
+          <option value="const" selected>등속 v = 2</option>
+          <option value="lin">선형 가속 v = t</option>
+          <option value="sin">사인 v = 2 sin(t)</option>
+          <option value="brake">가속→감속</option>
+        </select>
+      </label>
+      <label>현재 시간 t <span class="val" id="vpTV">3.00</span><input type="range" id="vpT" min="0" max="6" step="0.05" value="3"></label>
+    </div>
+    <p id="vpInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vp'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:60,r:20,t:30,b:30};
+    const Tmax=6;
+    function v(t){
+      const m=document.getElementById('vpV').value;
+      if(m==='const')return 2;
+      if(m==='lin')return t;
+      if(m==='sin')return 2*Math.sin(t);
+      // brake: 0..2 accel, 2..4 const, 4..6 decel
+      if(t<2)return t;
+      if(t<4)return 2;
+      return 2-(t-4);
+    }
+    function loop(){
+      const tc=+document.getElementById('vpT').value;
+      document.getElementById('vpTV').textContent=tc.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // top panel: v(t)
+      const Tx0=M.l,Tx1=W-M.r,Ty0=M.t,Ty1=180;
+      x.strokeStyle='#ddd';x.strokeRect(Tx0,Ty0,Tx1-Tx0,Ty1-Ty0);
+      // bottom panel: s(t) = integral of v
+      const Bx0=M.l,Bx1=W-M.r,By0=200,By1=H-M.b;
+      x.strokeStyle='#ddd';x.strokeRect(Bx0,By0,Bx1-Bx0,By1-By0);
+      function pxT(t){return Tx0+t/Tmax*(Tx1-Tx0);}
+      function pxB(t){return Bx0+t/Tmax*(Bx1-Bx0);}
+      // y-scales
+      let vmax=0,smax=0,sval=0;
+      const N=300;const dt=Tmax/N;
+      const ss=[0];const vs=[];
+      for(let i=0;i<=N;i++){
+        const t=i*dt;const vv=v(t);vs.push(vv);
+        if(Math.abs(vv)>vmax)vmax=Math.abs(vv);
+      }
+      for(let i=1;i<=N;i++){
+        const t=i*dt;ss.push(ss[i-1]+v(t-dt/2)*dt);
+      }
+      smax=Math.max(...ss.map(Math.abs));
+      vmax=Math.max(vmax,1);smax=Math.max(smax,1);
+      function pyT(vv){return(Ty0+Ty1)/2 - vv/vmax*((Ty1-Ty0)/2-12);}
+      function pyB(ss){return(By0+By1)/2 - ss/smax*((By1-By0)/2-12);}
+      // axes
+      x.strokeStyle='#999';
+      x.beginPath();x.moveTo(Tx0,(Ty0+Ty1)/2);x.lineTo(Tx1,(Ty0+Ty1)/2);x.stroke();
+      x.beginPath();x.moveTo(Bx0,(By0+By1)/2);x.lineTo(Bx1,(By0+By1)/2);x.stroke();
+      // shade integral up to tc
+      x.fillStyle='rgba(11,95,255,0.25)';
+      x.beginPath();x.moveTo(Tx0,(Ty0+Ty1)/2);
+      for(let i=0;i<=N;i++){const t=i*dt;if(t>tc)break;x.lineTo(pxT(t),pyT(vs[i]));}
+      x.lineTo(pxT(tc),(Ty0+Ty1)/2);x.closePath();x.fill();
+      // velocity curve
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=N;i++){const t=i*dt;i?x.lineTo(pxT(t),pyT(vs[i])):x.moveTo(pxT(t),pyT(vs[i]));}
+      x.stroke();
+      // position curve
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=N;i++){const t=i*dt;i?x.lineTo(pxB(t),pyB(ss[i])):x.moveTo(pxB(t),pyB(ss[i]));}
+      x.stroke();
+      // current cursor on both panels
+      const idx=Math.min(N,Math.round(tc/dt));sval=ss[idx];
+      x.strokeStyle='rgba(0,0,0,0.4)';x.setLineDash([3,3]);
+      x.beginPath();x.moveTo(pxT(tc),Ty0);x.lineTo(pxT(tc),Ty1);x.stroke();
+      x.beginPath();x.moveTo(pxB(tc),By0);x.lineTo(pxB(tc),By1);x.stroke();
+      x.setLineDash([]);
+      x.fillStyle='#c62828';x.beginPath();x.arc(pxB(tc),pyB(sval),4,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('속도 v(t)',Tx0+10,Ty0+18);
+      x.fillText('위치 s(t) = ∫₀ᵗ v(τ) dτ',Bx0+10,By0+18);
+      x.fillStyle='#0742b8';x.font='12px Consolas,monospace';
+      x.fillText('v('+tc.toFixed(2)+') = '+v(tc).toFixed(3)+'    ·    s('+tc.toFixed(2)+') = '+sval.toFixed(3),Tx0+10,Ty1-8);
+      document.getElementById('vpInfo').textContent='속도 곡선 아래 색칠된 면적이 정확히 위치값. FTC Part 1: s\'(t) = v(t).';
+    }
+    loop();
+    document.getElementById('vpV').onchange=loop;
+    document.getElementById('vpT').oninput=loop;
+  })();
+  </script>
+
+  <h2>14. 흔한 오해와 핵심 정리</h2>
 
   <div class="note"><strong>흔한 오해 ① — "정적분 = 면적"</strong> —
   부분적으로만 맞아요. $f$가 음수인 구간에서는 정적분도 음수. 절댓값 면적을 구하려면 $\int |f|$ 를 따로 풀어야 합니다.</div>
@@ -237,7 +404,7 @@
   <h3>이번 주의 핵심 한 문장</h3>
   <div class="tip"><strong>"정적분은 잘게 쪼갠 합의 극한. 그러나 미적분학 기본정리 덕분에 매번 극한을 풀지 않고 부정적분 차로 끝낼 수 있다."</strong></div>
 
-  <h2>11. 더 깊이 공부하기</h2>
+  <h2>15. 더 깊이 공부하기</h2>
   <ul>
     <li>Stewart, Ch.5.1~5.4.</li>
     <li>Thomas, Ch.5.1~5.4.</li>

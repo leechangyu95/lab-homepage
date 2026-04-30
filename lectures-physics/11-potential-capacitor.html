@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W11. 전위와 축전기 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html" class="active">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../physics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 11. 전위와 축전기</h1>
+  <p class="lead">이번 주 한 줄 요약 — <strong>"전위는 전기장을 높이처럼 본 것. 축전기는 전기 에너지의 통."</strong></p>
+
+  <div class="toc"><h4>학습 목표</h4><ul>
+    <li>전위 $V$의 의미를 위치에너지 비유로 설명한다.</li>
+    <li>전기장과 전위 관계 ($\vec{E}=-\nabla V$)를 1D에서 적용한다.</li>
+    <li>등전위면을 그리고 전기장과 수직임을 안다.</li>
+    <li>평행판 축전기의 $C$, 저장 에너지를 계산한다.</li>
+  </ul></div>
+
+  <h2>도입 훅 — "9V 건전지 vs 220V 콘센트 vs 번개의 1억 V"</h2>
+  <p>9V 건전지에 손 대면 안 죽고, 220V 콘센트는 위험하고, 번개는 치명적. 그러나 번개는 0.0001초만 지속, 9V 건전지는 1년을 끼고 살아도 안 죽음. <strong>전압(전위차)은 1 C당 에너지</strong>고, 흐르는 양은 별개. 오늘 둘을 분리한다.</p>
+
+  <h2>1. 전위(전기 위치에너지)</h2>
+  <p>비유: 산의 높이. 중력 $U=mgh$에서 $h$가 ‘높이' = 위치에너지/질량. 전기는 $V$ = 위치에너지/전하.</p>
+  $$ V = \frac{U_{\text{electric}}}{q},\qquad V_{\text{point}} = k\frac{Q}{r} $$
+  <p>전위 자체에 $q$를 곱하면 진짜 에너지.</p>
+  <h3>전위차 (Voltage)</h3>
+  $$ \Delta V = V_B - V_A = \frac{W_{A\to B}}{q} $$
+  <h3>데모 1 — 등고선 vs 등전위</h3>
+  <p>산 그림과 등전위면 그림을 나란히. 등고선이 빽빽 = 경사 가파름 = 큰 힘. 등전위가 빽빽 = 전기장 강함.</p>
+
+  <h2>2. 전기장과 전위의 관계</h2>
+  $$ E_x = -\frac{dV}{dx},\qquad \vec{E} = -\nabla V $$
+  <p>전기장은 전위가 가장 빨리 떨어지는 방향. <strong>등전위면</strong>은 항상 전기장선과 수직.</p>
+  <h3>데모 2 — 등전위 측정</h3>
+  <p>전도성 종이 위 두 전극에 전압 → 전압계로 등전위 점 찾아 연결 → 등전위 곡선이 전기장선과 수직.</p>
+
+  <h2>3. 축전기 (Capacitor)</h2>
+  $$ C = \frac{Q}{V},\qquad C_{\text{평행판}} = \frac{\varepsilon_0 A}{d} $$
+  <p>면적 클수록, 거리 가까울수록 $C$ 큼. 단위 패럿(F) — 1 F는 어마어마하게 큼.</p>
+  $$ U = \tfrac{1}{2}CV^2 = \tfrac{1}{2}\frac{Q^2}{C} = \tfrac{1}{2}QV $$
+  <p>전압 2배 → 에너지 4배.</p>
+  <h3>데모 3 — 카메라 플래시</h3>
+  <p>일회용 카메라의 큰 캐패시터(80–300 μF, 330 V). 1.5 V 건전지로 천천히 충전 후 1 ms에 모든 에너지를 전구에 쏟음. <strong>천천히 모았다 한순간에 풀어주는</strong> 도구.</p>
+  <h3>데모 4 — 슈퍼커패시터 + LED</h3>
+  <p>1 F 슈퍼캡을 5 V로 충전 후 LED에 연결하면 수 초 동안 빛난다. 1 F가 얼마나 큰지 직관적.</p>
+  <h3>유전체</h3>
+  <p>판 사이 절연체 끼우면 $C$가 $\kappa$배 증가. 종이 ≈3, 물 ≈80. 실용 캐패시터의 비밀.</p>
+
+  <h2>4. 직렬·병렬</h2>
+  <table>
+    <thead><tr><th></th><th>저항</th><th>캐패시터</th></tr></thead>
+    <tbody>
+      <tr><td>직렬</td><td>합</td><td>역수 합</td></tr>
+      <tr><td>병렬</td><td>역수 합</td><td>합</td></tr>
+    </tbody>
+  </table>
+  <p>저항과 <strong>반대 모양</strong>임에 주의.</p>
+
+  <h2>흔한 오개념</h2>
+  <table>
+    <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
+    <tbody>
+      <tr><td>"전압이 흐른다"</td><td>전압은 차이. 흐르는 건 전류.</td></tr>
+      <tr><td>"축전기가 전류를 저장"</td><td>전하·에너지 저장</td></tr>
+      <tr><td>"전위는 절대값 의미"</td><td>기준점에 따라 달라짐. 차이만 의미</td></tr>
+      <tr><td>"축전기 안에 전류 흐름"</td><td>변화할 때만(변위 전류, 14주)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>강의실 예제</h2>
+  <div class="tip"><strong>예제 1.</strong> +5 μC에서 0.1 m 전위?<br>
+  $V = kQ/r \approx 4.5\times 10^5$ V.</div>
+  <div class="tip"><strong>예제 2.</strong> $A=0.01$ m², $d=1$ mm 평행판 $C$?<br>
+  $C = \varepsilon_0 A/d \approx 88.5$ pF.</div>
+  <div class="tip"><strong>예제 3.</strong> $C=100$ μF, $V=12$ V 저장 에너지?<br>
+  $U = \tfrac{1}{2}CV^2 = 7.2$ mJ.</div>
+
+  <h2>과제 10</h2>
+  <ol>
+    <li>(개념) 220V가 9V보다 위험한 이유 + 정전기 1만 V는 왜 안 죽이나? 전압과 전류를 분리해 설명.</li>
+    <li>(계산) Halliday 24·25장 4문제.</li>
+    <li>(시뮬) PhET <em>Capacitor Lab</em>: 면적·거리·유전체에 따른 $C$, $V$, $U$ 표. A4 한 장.</li>
+  </ol>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 전하가 움직이기 시작하면 — <strong>회로</strong>. 옴, 키르히호프, RC 시정수. 멀티미터로 직접 측정.</div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

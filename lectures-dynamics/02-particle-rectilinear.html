@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W2. 직선 운동학 — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 2. 입자의 직선 운동학</h1>
+  <p class="lead">위치, 속도, 가속도. 세 양 사이의 미분 관계를 그래프로 직접 흔들어 봅시다.</p>
+
+  <h2>1. 세 양과 미분 관계</h2>
+  <p>1차원에서 입자의 운동은 위치 $s(t)$ 하나로 완전히 결정됩니다. 속도와 가속도는 그 시간 미분일 뿐이에요.</p>
+  $$ v(t) = \frac{ds}{dt}, \qquad a(t) = \frac{dv}{dt} = \frac{d^2 s}{dt^2} $$
+  <p>역방향(적분)도 마찬가지로 자연스럽습니다.</p>
+  $$ v(t) = v_0 + \int_0^t a\,d\tau, \qquad s(t) = s_0 + \int_0^t v\,d\tau $$
+
+  <div class="tip"><strong>그래프로 외우기</strong> — $a$-$t$ 그래프 아래 면적은 속도 변화량 $\Delta v$, $v$-$t$ 그래프 아래 면적은 위치 변화량 $\Delta s$. 적분 = "그래프 아래 면적"임을 시각적으로 받아들이는 게 한 학기 내내 효자입니다.</div>
+
+  <h2>2. 등가속도 운동의 세 식</h2>
+  <p>$a$가 상수일 때 위 적분은 손으로 풀 수 있고, 이 세 식이 학부 문제의 80%를 차지합니다.</p>
+  $$ v = v_0 + a t $$
+  $$ s = s_0 + v_0 t + \tfrac{1}{2} a t^2 $$
+  $$ v^2 = v_0^2 + 2a(s - s_0) $$
+  <p>세 번째 식은 $t$가 빠져 있다는 게 포인트 — "시간을 모를 때" 쓰면 됩니다.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 1: a → v → s, 세 그래프가 어떻게 연결되나</h4>
+    <p>가속도 $a(t)$를 펄스로 줄 수 있습니다. <strong>'펄스 추가' 버튼을 눌러보세요.</strong> $a$의 면적이 $v$의 변화로, $v$의 면적이 $s$의 변화로 그대로 옮겨가는 것을 직접 확인할 수 있습니다.</p>
+    <canvas id="avsC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>펄스 가속도 (m/s²) <span class="val" id="avsAV">2</span><input type="range" id="avsA" min="-5" max="5" step="0.5" value="2"></label>
+      <label>펄스 시간 (s) <span class="val" id="avsTV">1</span><input type="range" id="avsT" min="0.2" max="3" step="0.1" value="1"></label>
+      <button id="avsAdd">펄스 추가</button>
+      <button id="avsReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('avsC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['avsA','avsT'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['avsA','avsT'].forEach(k=>sl(k).oninput=upd);upd();
+    const T=10,N=600,dt=T/N;
+    let aArr=new Array(N).fill(0),vArr=new Array(N).fill(0),sArr=new Array(N).fill(0);
+    let cursor=0;
+    function recompute(){
+      vArr[0]=0;sArr[0]=0;
+      for(let i=1;i<N;i++){vArr[i]=vArr[i-1]+aArr[i-1]*dt;sArr[i]=sArr[i-1]+vArr[i-1]*dt;}
+    }
+    sl('avsAdd').onclick=()=>{
+      const aVal=+sl('avsA').value,tDur=+sl('avsT').value;
+      const start=cursor,end=Math.min(N,cursor+Math.round(tDur/dt));
+      for(let i=start;i<end;i++)aArr[i]+=aVal;
+      cursor=end;
+      recompute();
+    };
+    sl('avsReset').onclick=()=>{aArr.fill(0);vArr.fill(0);sArr.fill(0);cursor=0;};
+    function panel(yTop,yH,arr,label,col,unit){
+      const minV=Math.min(0,...arr),maxV=Math.max(0,...arr,0.1);
+      const range=maxV-minV||1;
+      x.fillStyle='#fff';x.fillRect(40,yTop,580,yH);
+      x.strokeStyle='#d0d4d9';x.strokeRect(40,yTop,580,yH);
+      // zero line
+      const zy=yTop+yH-((0-minV)/range)*yH;
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.moveTo(40,zy);x.lineTo(620,zy);x.stroke();x.setLineDash([]);
+      // fill area
+      x.fillStyle=col+'30';x.beginPath();x.moveTo(40,zy);
+      for(let i=0;i<N;i++){const px=40+i/(N-1)*580;const py=yTop+yH-((arr[i]-minV)/range)*yH;x.lineTo(px,py);}
+      x.lineTo(620,zy);x.closePath();x.fill();
+      // line
+      x.strokeStyle=col;x.lineWidth=1.6;x.beginPath();
+      for(let i=0;i<N;i++){const px=40+i/(N-1)*580;const py=yTop+yH-((arr[i]-minV)/range)*yH;if(i===0)x.moveTo(px,py);else x.lineTo(px,py);}
+      x.stroke();
+      // cursor
+      const cx=40+cursor/(N-1)*580;
+      x.strokeStyle='#999';x.setLineDash([2,2]);x.beginPath();x.moveTo(cx,yTop);x.lineTo(cx,yTop+yH);x.stroke();x.setLineDash([]);
+      x.fillStyle='#333';x.font='bold 11px sans-serif';x.textAlign='left';
+      x.fillText(label+'  ['+unit+']',46,yTop+12);
+    }
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      panel(10,95,aArr,'a (가속도)','#c62828','m/s²');
+      panel(115,95,vArr,'v (속도)','#0b5fff','m/s');
+      panel(220,95,sArr,'s (위치)','#2e7d32','m');
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>3. 자유낙하: 등가속도의 가장 친숙한 예</h2>
+  <p>지표 근처에서 공기 저항을 무시하면 모든 물체는 같은 가속도 $g \approx 9.81$ m/s²로 떨어집니다. $a = -g$를 등가속도 식에 넣은 것일 뿐이에요.</p>
+  $$ y(t) = y_0 + v_0 t - \tfrac{1}{2} g t^2, \qquad v(t) = v_0 - g t $$
+
+  <div class="demo">
+    <h4>🎮 데모 2: 자유낙하 vs 등속 vs 가속</h4>
+    <p>세 공을 같은 시각에 출발시킵니다. 슬라이더로 초기 속도를 바꿔보고, $g$를 0으로 줄이면 어떻게 되는지(달 표면), $g$를 키우면 어떻게 되는지(목성) 확인해 보세요.</p>
+    <canvas id="fallC" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>중력 g (m/s²) <span class="val" id="flGV">9.81</span><input type="range" id="flG" min="0" max="25" step="0.5" value="9.81"></label>
+      <label>초기 속도 v₀ (m/s, 위 방향) <span class="val" id="flVV">8</span><input type="range" id="flV" min="-15" max="20" step="0.5" value="8"></label>
+      <button id="flReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fallC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['flG','flV'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['flG','flV'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0;
+    sl('flReset').onclick=()=>{t=0;};
+    function loop(){
+      const g=+sl('flG').value,v0=+sl('flV').value;
+      t+=0.025;if(t>4)t=0;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // ground
+      const ground=260;
+      x.fillStyle='#bcd6a8';x.fillRect(0,ground,c.width,40);
+      // labels and balls
+      const y0=ground-30;
+      // free fall (no initial v, falls)
+      const yA=y0 - (0 + 0 - 0.5*g*t*t)*8;
+      // free fall with v0
+      const yB=y0 - (0 + v0*t - 0.5*g*t*t)*8;
+      // constant velocity (no g)
+      const yC=y0 - v0*t*8;
+      function ball(cx,cy,col,label,subline){
+        const yClip=Math.min(cy,ground-12);
+        x.fillStyle=col;x.beginPath();x.arc(cx,yClip,12,0,Math.PI*2);x.fill();
+        x.strokeStyle='#333';x.stroke();
+        x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='center';
+        x.fillText(label,cx,30);
+        x.fillStyle='#666';x.font='11px sans-serif';x.fillText(subline,cx,46);
+      }
+      ball(140,yA,'#c62828','① 자유낙하 (v₀=0)','y = y₀ − ½gt²');
+      ball(320,yB,'#0b5fff','② v₀ 있는 낙하','y = y₀ + v₀t − ½gt²');
+      ball(500,yC,'#2e7d32','③ 등속 (g=0 가상)','y = y₀ + v₀t');
+      x.fillStyle='#444';x.font='11px Consolas,monospace';x.textAlign='center';
+      x.fillText('t = '+t.toFixed(2)+' s,   g = '+g.toFixed(2)+' m/s²,   v₀ = '+v0.toFixed(1)+' m/s',c.width/2,290);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 흔한 오개념</h2>
+  <ul>
+    <li><strong>"속도가 0이면 가속도도 0이다"</strong> — 틀림. 위로 던진 공이 최고점에서 $v=0$이지만 $a=-g$로 계속 가속하고 있습니다.</li>
+    <li><strong>"가속도가 일정하면 속도도 일정하다"</strong> — 틀림. 가속도는 속도의 변화율, 가속도가 0이 아닌 한 속도는 계속 변합니다.</li>
+    <li><strong>"$v^2 = v_0^2 + 2as$ 식의 부호"</strong> — 등가속도 가정이 깨진 구간에서는 쓸 수 없습니다. 마찰계수가 바뀌거나 추력이 끊기는 순간에는 구간을 나눠 풀어야 합니다.</li>
+  </ul>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="01-intro.html">← W1</a> · <a href="../dynamics.html">강의 목록</a> · <a href="03-particle-curvilinear-xy.html">W3 곡선 운동학(직각좌표) →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

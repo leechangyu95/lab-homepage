@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W6. 단진동 (SHM) — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html" class="active">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../physics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 6. 단진동 (SHM)</h1>
+  <p class="lead">이번 주 한 줄 요약 — <strong>"복원력이 변위에 비례하면, 그 운동은 사인 곡선이다."</strong></p>
+
+  <div class="toc"><h4>학습 목표</h4><ul>
+    <li>후크 법칙 $F=-kx$로부터 SHM 운동방정식을 유도하고 사인 해를 쓴다.</li>
+    <li>진폭·각진동수·주기·위상의 의미를 그래프로 설명한다.</li>
+    <li>SHM의 KE ↔ PE 교환을 정량적으로 다룬다.</li>
+    <li>감쇠·강제 진동·공명을 정성적으로 구분한다.</li>
+  </ul></div>
+
+  <h2>도입 훅 — "그네는 왜 같은 박자로 흔들리나?"</h2>
+  <p>강의실 진자(2 m 끈 + 추)를 살짝(10°) 놓아 주기 측정. 더 크게(30°) 놓아도 거의 같은 주기. 추 무거운 것으로 바꿔도 같음. <strong>주기는 끈 길이가 결정 — $T = 2\pi\sqrt{L/g}$</strong>. 갈릴레오가 16세에 성당 샹들리에를 보고 발견한 사실.</p>
+
+  <h2>1. 후크 법칙 → 사인 운동</h2>
+  $$ F = -kx,\qquad m\frac{d^2 x}{dt^2} = -kx $$
+  <p>"두 번 미분하면 자기 자신의 음수배"가 되는 함수가 답 → 사인·코사인.</p>
+  $$ x(t) = A\cos(\omega t + \phi),\qquad \omega = \sqrt{\frac{k}{m}} $$
+  <ul>
+    <li>$A$ = 진폭, $\omega$ = 각진동수, $\phi$ = 위상</li>
+    <li>주기: $T = \dfrac{2\pi}{\omega} = 2\pi\sqrt{\dfrac{m}{k}}$</li>
+  </ul>
+
+  <h2>2. 진자 (소진동 근사)</h2>
+  <p>$\theta$ 작으면 $\sin\theta\approx\theta$ → 운동방정식이 SHM 모양.</p>
+  $$ T = 2\pi\sqrt{\frac{L}{g}} $$
+  <h3>데모 1 — 길이 다른 진자 두 개</h3>
+  <p>같은 추, 다른 길이 → 주기 다름. 같은 길이, 다른 무게 → 같이 흔들림.</p>
+
+  <h2>3. SHM의 에너지</h2>
+  $$ E = \tfrac{1}{2}kx^2 + \tfrac{1}{2}mv^2 = \tfrac{1}{2}kA^2 $$
+  <ul>
+    <li>평형점($x=0$): $K$ 최대</li>
+    <li>양 끝($x=\pm A$): $U$ 최대, $K=0$</li>
+  </ul>
+  <h3>데모 2 — 스프링 + 추 + 모션 센서</h3>
+  <p>핸드폰 가속도계 앱(<a href="https://phyphox.org/">Phyphox</a>)으로 위치를 기록 → 깔끔한 사인 곡선. 학생들이 그래프에서 진폭·주기를 직접 읽는다.</p>
+
+  <h2>4. 감쇠 진동</h2>
+  $$ m\ddot{x} + b\dot{x} + kx = 0 $$
+  <ul>
+    <li><strong>약한 감쇠</strong>: 진폭이 지수적으로 줄며 진동</li>
+    <li><strong>임계 감쇠</strong>: 진동 없이 가장 빨리 멈춤 (자동차 충격흡수기 목표)</li>
+    <li><strong>강한 감쇠</strong>: 천천히 평형으로</li>
+  </ul>
+  <h3>데모 3 — 자동차 서스펜션 영상</h3>
+  <p>정상 vs 망가진 서스펜션. 망가진 차는 한참 흔들리고, 정상 차는 한 번 살짝 내려앉고 끝.</p>
+
+  <h2>5. 강제 진동과 공명 ★</h2>
+  <p>외력의 주파수 $\omega_d$가 시스템 고유 진동수 $\omega_0$에 가까워질수록 진폭 폭발적으로 증가.</p>
+  <h3>데모 4 — 두 소리굽쇠 공명</h3>
+  <p>같은 주파수의 굽쇠 두 개를 마주 두고 한쪽 침. 다른 쪽도 저절로 울림. 다른 주파수면 안 울림.</p>
+  <h3>데모 5 — Tacoma Narrows 다리 영상 ★</h3>
+  <p>1940년 다리 붕괴. 바람이 다리 고유 진동수 근처로 강제 진동을 만들어 진폭이 점점 커지다 무너짐.</p>
+  <h3>데모 6 — 와인잔 깨기</h3>
+  <p>오페라 가수가 와인잔 고유 주파수를 정확히 내면 잔이 깨진다 — 같은 원리.</p>
+
+  <h2>6. 보편성</h2>
+  <p>모든 안정 평형점 근처에서 작은 진동은 SHM이다. 임의 $U(x)$를 평형점에서 테일러 전개하면 이차 항이 지배 → 후크 법칙 모양.</p>
+  <div class="tip">분자 진동 → 음파 → 전자기파 → 양자역학까지 모두 SHM의 옷을 입고 등장.</div>
+
+  <h2>흔한 오개념</h2>
+  <table>
+    <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
+    <tbody>
+      <tr><td>"진폭 크면 주기도 길어진다"</td><td>작은 진동에서는 무관 (소진동 근사)</td></tr>
+      <tr><td>"무거운 추가 더 천천히 (진자)"</td><td>주기는 길이만. 무게 무관.</td></tr>
+      <tr><td>"공명은 외력 클 때만"</td><td>작은 외력이라도 주파수가 맞으면 폭발</td></tr>
+      <tr><td>"감쇠 클수록 빨리 멈춤"</td><td>임계 감쇠가 가장 빠름</td></tr>
+      <tr><td>"SHM은 스프링·진자에만"</td><td>임의 퍼텐셜의 평형점 근처는 모두 SHM</td></tr>
+    </tbody>
+  </table>
+
+  <h2>강의실 예제</h2>
+  <div class="tip"><strong>예제 1.</strong> $k=100$, $m=0.25$ kg. 주기?<br>
+  $T = 2\pi\sqrt{0.0025} \approx 0.314$ s.</div>
+  <div class="tip"><strong>예제 2.</strong> 1 m 진자의 주기?<br>
+  $T = 2\pi\sqrt{1/9.8} \approx 2.01$ s.</div>
+  <div class="tip"><strong>예제 3.</strong> $x(t) = 0.05\cos(10t)$ (m, s). 평형점 속도?<br>
+  $v = -0.5\sin(10t)$. 평형점에서 크기 0.5 m/s.</div>
+
+  <h2>과제 6</h2>
+  <ol>
+    <li>(개념) 군대 행진할 때 다리 위에서 발걸음을 맞추지 말라는 명령. 공명으로 설명.</li>
+    <li>(계산) Halliday 15장 4문제.</li>
+    <li>(실험) Phyphox 가속도계로 본인 진자(주머니+끈) 주기 측정. 길이 바꿔 $T\propto\sqrt{L}$ 확인. A4 한 장.</li>
+  </ol>
+
+  <div class="note"><strong>다음 주</strong> — 1–6주 전 범위 <strong>중간시험</strong>.</div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

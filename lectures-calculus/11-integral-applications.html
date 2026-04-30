@@ -39,7 +39,11 @@
     <li>회전체 부피 — 셸 방법 (Shell)</li>
     <li>곡선 길이 (Arc Length)</li>
     <li>회전 표면적</li>
+    <li>응용 — 무게중심 (Centroid)</li>
+    <li>응용 — 일반 단면 적분 (임의 단면 부피)</li>
+    <li>풀이 절차 — 어느 방법을 언제 쓰나</li>
     <li>인터랙티브: 회전체 단면 시각화</li>
+    <li>인터랙티브: 두 곡선 사이 면적</li>
     <li>흔한 오해와 핵심 정리</li>
     <li>더 깊이 공부하기</li>
   </ol></div>
@@ -116,7 +120,63 @@
   <h3>예제 6.1 — 구의 표면적</h3>
   <p>$y = \sqrt{r^2 - x^2}$ ($-r \le x \le r$) 를 $x$-축 둘레로 회전. 계산해 보면 정확히 $4\pi r^2$.</p>
 
-  <h2>7. 인터랙티브: 회전체 단면 시각화</h2>
+  <h2>7. 응용 — 무게중심 (Centroid)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>판자를 손가락 끝에 균형 잡으려면 어디에 받쳐야 할까? 그 균형점이 <strong>무게중심</strong>(centroid)이에요. 적분이 무게의 평균 위치를 정확히 알려 줍니다.</p>
+
+  <h3>1차원 (선형 밀도)</h3>
+  <p>밀도 $\rho(x)$ 를 가진 막대의 무게중심:</p>
+  $$ \bar x = \frac{\int_a^b x\rho(x)\,dx}{\int_a^b \rho(x)\,dx} $$
+  <p>위쪽이 1차 모멘트, 아래쪽이 총 질량.</p>
+
+  <h3>2차원 (균일 밀도, 평면 도형)</h3>
+  <p>$y = f(x)$ 와 $x$-축 사이의 영역 무게중심:</p>
+  $$ \bar x = \frac{\int_a^b x f(x)\,dx}{\int_a^b f(x)\,dx}, \qquad \bar y = \frac{\int_a^b \tfrac{1}{2}[f(x)]^2\,dx}{\int_a^b f(x)\,dx} $$
+
+  <h3>예제 7.1 — 반원의 무게중심</h3>
+  <p>$y = \sqrt{r^2 - x^2}$ ($-r \le x \le r$). 대칭이라 $\bar x = 0$. $\bar y$:</p>
+  <p>분자 $= \int_{-r}^{r} \tfrac{1}{2}(r^2 - x^2)\,dx = \tfrac{1}{2}\cdot\tfrac{4r^3}{3} = \tfrac{2r^3}{3}$. 분모 $= \pi r^2 / 2$.</p>
+  $$ \bar y = \frac{2r^3/3}{\pi r^2/2} = \frac{4r}{3\pi} \approx 0.424 r $$
+  <p>중심에서 위로 약 $0.42r$ 만큼 — 직관(반지름 절반)보다 약간 아래.</p>
+
+  <h3>파푸스의 정리 (보너스)</h3>
+  <p>회전체 부피 $V = 2\pi \bar y \cdot A$ ($A$ = 영역의 면적, $\bar y$ = 회전축으로부터 무게중심 거리). 일부 부피 문제를 무게중심 한 줄로 풀게 해 줍니다.</p>
+
+  <h2>8. 응용 — 일반 단면 적분 (임의 단면 부피)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>회전체가 아니어도, 단면이 어떻게 변하는지 알면 부피를 적분으로 구할 수 있어요. <strong>"단면 면적의 함수 $A(x)$ 를 적분하면 부피"</strong>가 일반 원리.</p>
+
+  $$ V = \int_a^b A(x)\,dx $$
+
+  <h3>예제 8.1 — 정사각형 단면을 가진 입체</h3>
+  <p>밑면이 $y = x^2$ 와 $y = 1$ 사이 영역, 그 위에 가로축에 수직한 정사각형 단면을 세움. 단면의 한 변 = $1 - x^2$.</p>
+  $$ V = \int_{-1}^{1} (1 - x^2)^2\,dx = \int_{-1}^{1}(1 - 2x^2 + x^4)\,dx = 2 - \tfrac{4}{3} + \tfrac{2}{5} = \tfrac{16}{15} $$
+
+  <h3>예제 8.2 — 반원 단면</h3>
+  <p>같은 밑면에 반원 단면 (지름 $= 1 - x^2$). 반원 면적 $= \tfrac{\pi}{8}(1 - x^2)^2$.</p>
+  $$ V = \tfrac{\pi}{8} \int_{-1}^{1}(1-x^2)^2\,dx = \tfrac{\pi}{8} \cdot \tfrac{16}{15} = \tfrac{2\pi}{15} $$
+
+  <h2>9. 풀이 절차 — 어느 방법을 언제 쓰나</h2>
+
+  <p>응용 적분 문제에서 식을 처음 세울 때 헷갈리지 않도록, 다음 결정 절차를 외워두세요.</p>
+
+  <ol>
+    <li><strong>회전체인가?</strong> 예 → 2번. 아니오 → 3번.</li>
+    <li><strong>회전축이 적분 변수와</strong>:
+      <ul>
+        <li>수직 (예: $y = f(x)$ 를 $x$-축 회전, $x$로 적분) → <strong>원반/와셔</strong>.</li>
+        <li>평행 (예: $y = f(x)$ 를 $y$-축 회전, $x$로 적분) → <strong>셸</strong>.</li>
+      </ul>
+    </li>
+    <li><strong>회전체가 아닌 입체</strong>이고 단면이 알려져 있다면 → <strong>일반 단면 적분</strong> $\int A(x)\,dx$.</li>
+    <li><strong>두 곡선 사이 면적</strong> → 위−아래 적분 (또는 오른쪽−왼쪽).</li>
+    <li><strong>곡선 길이</strong> → $\int \sqrt{1 + (f')^2}\,dx$.</li>
+    <li><strong>표면적 (회전곡면)</strong> → $\int 2\pi f(x) \sqrt{1 + (f')^2}\,dx$.</li>
+  </ol>
+
+  <h2>10. 인터랙티브: 회전체 단면 시각화</h2>
 
   <div class="demo">
     <h4>🎮 회전체와 단면</h4>
@@ -203,7 +263,114 @@
   })();
   </script>
 
-  <h2>8. 흔한 오해와 핵심 정리</h2>
+  <h2>11. 인터랙티브: 두 곡선 사이 면적</h2>
+
+  <p>두 곡선을 골라 보세요. 두 곡선 사이 영역이 자동으로 색칠되고, 적분 한계와 면적 값이 표시됩니다. 위·아래 곡선이 바뀌는 경우(=교점)에서 적분 한계가 어떻게 잘리는지 확인하세요.</p>
+
+  <div class="demo">
+    <h4>🎮 두 곡선 사이의 면적</h4>
+    <p>위쪽 곡선 - 아래쪽 곡선의 적분이 면적. 교점 양쪽에서 위·아래가 바뀌면 절댓값을 따로 처리해야 합니다.</p>
+    <canvas id="ar" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>곡선 쌍
+        <select id="arP">
+          <option value="parab" selected>y = x², y = 2x</option>
+          <option value="sin">y = sin x, y = cos x</option>
+          <option value="cubic">y = x³, y = x</option>
+          <option value="exp">y = eˣ, y = x+2</option>
+        </select>
+      </label>
+    </div>
+    <p id="arInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ar'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:30,b:30};
+    function setup(){
+      const m=document.getElementById('arP').value;
+      if(m==='parab')return{f:v=>v*v,g:v=>2*v,xR:[-0.5,2.5],yR:[-0.5,4.5],roots:[0,2],label:'y=x², y=2x'};
+      if(m==='sin')return{f:Math.sin,g:Math.cos,xR:[0,2*Math.PI],yR:[-1.3,1.3],roots:[Math.PI/4,Math.PI*5/4],label:'y=sin x, y=cos x'};
+      if(m==='cubic')return{f:v=>v*v*v,g:v=>v,xR:[-1.5,1.5],yR:[-2,2],roots:[-1,0,1],label:'y=x³, y=x'};
+      return{f:Math.exp,g:v=>v+2,xR:[-2,1.5],yR:[-0.5,5],roots:null,label:'y=eˣ, y=x+2'};
+    }
+    function findRoots(f,g,xR){
+      const roots=[];const N=200;
+      const dx=(xR[1]-xR[0])/N;
+      let prev=f(xR[0])-g(xR[0]);
+      for(let i=1;i<=N;i++){
+        const xv=xR[0]+i*dx;const cur=f(xv)-g(xv);
+        if(prev*cur<0){
+          // bisect
+          let lo=xv-dx,hi=xv;
+          for(let j=0;j<40;j++){const mid=(lo+hi)/2;if((f(lo)-g(lo))*(f(mid)-g(mid))<0)hi=mid;else lo=mid;}
+          roots.push((lo+hi)/2);
+        }
+        prev=cur;
+      }
+      return roots;
+    }
+    function loop(){
+      const S=setup();
+      const xR=S.xR,yR=S.yR;
+      const roots=S.roots||findRoots(S.f,S.g,xR);
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      // shade between curves where they exist (and within the consecutive root segments)
+      let totalArea=0;
+      const segments=[];
+      const allXs=[xR[0]].concat(roots.filter(r=>r>xR[0]&&r<xR[1])).concat([xR[1]]);
+      for(let i=0;i<allXs.length-1;i++){
+        const a=allXs[i],b=allXs[i+1];
+        // determine which is upper
+        const mid=(a+b)/2;const fmid=S.f(mid),gmid=S.g(mid);
+        const upper=fmid>gmid?S.f:S.g;
+        const lower=fmid>gmid?S.g:S.f;
+        // shade
+        x.fillStyle='rgba(11,95,255,0.18)';
+        x.beginPath();
+        const N=80;
+        for(let k=0;k<=N;k++){const xv=a+k*(b-a)/N;k?x.lineTo(px(xv),py(upper(xv))):x.moveTo(px(xv),py(upper(xv)));}
+        for(let k=N;k>=0;k--){const xv=a+k*(b-a)/N;x.lineTo(px(xv),py(lower(xv)));}
+        x.closePath();x.fill();
+        // numerical integration
+        let area=0;const dn=200;const dx=(b-a)/dn;
+        for(let k=0;k<dn;k++){const xv=a+(k+0.5)*dx;area+=Math.abs(S.f(xv)-S.g(xv))*dx;}
+        totalArea+=area;
+        segments.push({a:a.toFixed(2),b:b.toFixed(2),area:area.toFixed(3),upper:fmid>gmid?'f':'g'});
+      }
+      // draw curves
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();let first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){const yv=S.f(v);if(yv<yR[0]||yv>yR[1]){first=true;continue;}if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));}x.stroke();
+      x.strokeStyle='#1b5e20';x.lineWidth=2;x.beginPath();first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){const yv=S.g(v);if(yv<yR[0]||yv>yR[1]){first=true;continue;}if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));}x.stroke();
+      // intersection points
+      x.fillStyle='#0742b8';
+      roots.filter(r=>r>=xR[0]&&r<=xR[1]).forEach(r=>{x.beginPath();x.arc(px(r),py(S.f(r)),5,0,Math.PI*2);x.fill();});
+      // legend
+      x.fillStyle='#c62828';x.fillRect(M.l+10,M.t-22,16,3);x.fillStyle='#222';x.font='12px sans-serif';x.fillText('f(x)',M.l+30,M.t-18);
+      x.fillStyle='#1b5e20';x.fillRect(M.l+70,M.t-22,16,3);x.fillStyle='#222';x.fillText('g(x)',M.l+90,M.t-18);
+      // info
+      const segText=segments.map(s=>'['+s.a+','+s.b+']: '+s.area+' (위='+(s.upper==='f'?'f':'g')+')').join('   ·   ');
+      document.getElementById('arInfo').textContent='총 면적 ≈ '+totalArea.toFixed(3)+'    ·    구간별: '+segText;
+    }
+    loop();
+    document.getElementById('arP').onchange=loop;
+  })();
+  </script>
+
+  <div class="tip"><strong>관찰 포인트</strong> —
+  ① 사인·코사인 한 주기에서는 4구간으로 나뉘어 위·아래가 번갈아 바뀝니다.
+  ② $y = x^3$ 와 $y = x$ 는 $x = -1, 0, 1$에서 교차해 두 영역으로 나뉘고 각각 같은 면적 (대칭).
+  ③ $y = e^x$ 와 $y = x+2$ 는 두 점에서 교차해 그 사이가 항상 $e^x < x+2$ — 면적 약 1.45.</div>
+
+  <h2>12. 흔한 오해와 핵심 정리</h2>
 
   <div class="note"><strong>흔한 오해 ① — "두 곡선의 면적은 항상 위−아래"</strong> —
   맞지만 위·아래가 구간 안에서 바뀔 수 있어요. 그땐 적분 구간을 나누어 각 구간에서 절댓값을 취해야 합니다.</div>
@@ -217,7 +384,7 @@
   <h3>이번 주의 핵심 한 문장</h3>
   <div class="tip"><strong>"잘게 쪼갠 단면(직사각형·원반·셸·작은 호)을 적분하면 면적·부피·길이가 나온다. 모두 한 가지 발상의 다른 옷."</strong></div>
 
-  <h2>9. 더 깊이 공부하기</h2>
+  <h2>13. 더 깊이 공부하기</h2>
   <ul>
     <li>Stewart, Ch.6.1~6.4.</li>
     <li>Thomas, Ch.6.1~6.5.</li>

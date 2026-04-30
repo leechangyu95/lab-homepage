@@ -152,3 +152,59 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
 })();
+
+// Header nav → clickable dropdown. Wraps the existing <nav> at runtime so
+// no per-page HTML changes are needed as the course list grows.
+(function(){
+  function init(){
+    const wrap = document.querySelector('.site-header .wrap');
+    if(!wrap) return;
+    const nav = wrap.querySelector('nav');
+    if(!nav || nav.dataset.dropdownReady) return;
+
+    const active = nav.querySelector('a.active');
+    const label = active ? active.textContent.trim() : '강의 목록';
+
+    const shell = document.createElement('div');
+    shell.className = 'nav-shell';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'nav-toggle';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-haspopup', 'true');
+    const labelEl = document.createElement('span');
+    labelEl.className = 'nav-toggle-label';
+    labelEl.textContent = label;
+    const arrowEl = document.createElement('span');
+    arrowEl.className = 'nav-toggle-arrow';
+    arrowEl.setAttribute('aria-hidden', 'true');
+    arrowEl.textContent = '▾';
+    btn.appendChild(labelEl);
+    btn.appendChild(arrowEl);
+
+    nav.classList.add('nav-dropdown');
+    nav.dataset.dropdownReady = '1';
+    nav.parentNode.insertBefore(shell, nav);
+    shell.appendChild(btn);
+    shell.appendChild(nav);
+
+    function close(){
+      nav.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = nav.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', (e) => {
+      if(!shell.contains(e.target)) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape') close();
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();

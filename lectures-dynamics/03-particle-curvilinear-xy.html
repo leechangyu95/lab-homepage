@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W3. 곡선 운동학(직각좌표) — 동역학</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html" class="active">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 3. 곡선 운동학 (직각좌표)</h1>
+  <p class="lead">2D·3D 운동을 가장 단순하게 표현하는 방법: 두 축이 따로 움직인다고 보자.</p>
+
+  <h2>1. 벡터로서의 위치·속도·가속도</h2>
+  <p>곡선 운동에서도 미분 관계는 그대로지만, 이제 양들이 벡터입니다.</p>
+  $$ \mathbf{r}(t) = x(t)\,\hat{\mathbf{i}} + y(t)\,\hat{\mathbf{j}} $$
+  $$ \mathbf{v}(t) = \dot x\,\hat{\mathbf{i}} + \dot y\,\hat{\mathbf{j}}, \qquad \mathbf{a}(t) = \ddot x\,\hat{\mathbf{i}} + \ddot y\,\hat{\mathbf{j}} $$
+  <p>핵심 통찰: 직각좌표에서 <strong>두 축은 독립적으로 움직입니다</strong>. $x$ 방향에 영향을 주는 힘이 없으면 $x$ 운동은 등속, $y$ 방향만 중력이 작용하면 $y$만 등가속도입니다. 두 축의 운동을 따로 풀고 합치면 끝.</p>
+
+  <h2>2. 발사체 운동 — 등속 × 등가속도</h2>
+  <p>지표면 근처 발사체는 공기 저항을 무시하면 정확히 이 분리를 따릅니다.</p>
+  $$ x(t) = v_0\cos\theta_0 \cdot t $$
+  $$ y(t) = v_0\sin\theta_0 \cdot t - \tfrac{1}{2} g t^2 $$
+  <p>$x$ 방향은 등속, $y$ 방향은 등가속도 — W2의 두 식을 그대로 합친 것입니다. 시간 $t$를 소거하면 궤적이 포물선임이 드러납니다.</p>
+  $$ y = x\tan\theta_0 - \frac{g}{2 v_0^2 \cos^2\theta_0} x^2 $$
+
+  <div class="demo">
+    <h4>🎮 데모 1: 발사체 — 각도와 속도 흔들기</h4>
+    <p>발사 각도 $\theta_0$와 초속 $v_0$를 슬라이더로 바꿔보세요. 두 성분 $v_x, v_y$가 시간에 따라 어떻게 변하는지 화살표로, 궤적은 곡선으로 그립니다. <strong>$\theta_0 = 45°$가 최대 사거리를 주는 이유를 직접 확인해 보세요</strong>(중력이 일정하고 출발/착지 높이가 같을 때).</p>
+    <canvas id="projC" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>발사 각도 θ₀ (°) <span class="val" id="prAV">45</span><input type="range" id="prA" min="0" max="90" value="45"></label>
+      <label>초속 v₀ (m/s) <span class="val" id="prVV">25</span><input type="range" id="prV" min="5" max="40" step="0.5" value="25"></label>
+      <label>중력 g (m/s²) <span class="val" id="prGV">9.81</span><input type="range" id="prG" min="1" max="20" step="0.1" value="9.81"></label>
+      <button id="prRun">발사</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('projC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['prA','prV','prG'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['prA','prV','prG'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0;
+    sl('prRun').onclick=()=>{t=0;};
+    function loop(){
+      const a=+sl('prA').value*Math.PI/180,v0=+sl('prV').value,g=+sl('prG').value;
+      t+=0.025;
+      const tFlight=2*v0*Math.sin(a)/g;
+      if(t>tFlight+0.5)t=0;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ground=300,scale=4,x0=40;
+      x.fillStyle='#bcd6a8';x.fillRect(0,ground,c.width,40);
+      // grid
+      x.strokeStyle='#e8e8e8';
+      for(let i=0;i<=12;i++){x.beginPath();x.moveTo(x0+i*50,30);x.lineTo(x0+i*50,ground);x.stroke();}
+      // trajectory full
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();
+      for(let tt=0;tt<=tFlight;tt+=0.05){
+        const X=v0*Math.cos(a)*tt,Y=v0*Math.sin(a)*tt-0.5*g*tt*tt;
+        const px=x0+X*scale,py=ground-Y*scale;
+        if(tt===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();x.setLineDash([]);
+      // current trail
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let tt=0;tt<=Math.min(t,tFlight);tt+=0.03){
+        const X=v0*Math.cos(a)*tt,Y=v0*Math.sin(a)*tt-0.5*g*tt*tt;
+        const px=x0+X*scale,py=ground-Y*scale;
+        if(tt===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();
+      // current position
+      const tn=Math.min(t,tFlight);
+      const X=v0*Math.cos(a)*tn,Y=v0*Math.sin(a)*tn-0.5*g*tn*tn;
+      const px=x0+X*scale,py=ground-Y*scale;
+      // velocity components
+      const vx=v0*Math.cos(a),vy=v0*Math.sin(a)-g*tn;
+      // arrows
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();x.moveTo(px,py);x.lineTo(px+vx*2,py);
+      x.lineTo(px+vx*2-5,py-4);x.moveTo(px+vx*2,py);x.lineTo(px+vx*2-5,py+4);x.stroke();
+      x.fillStyle='#2e7d32';x.font='11px sans-serif';x.fillText('v_x',px+vx*2-12,py-6);
+      x.strokeStyle='#c62828';x.beginPath();x.moveTo(px,py);x.lineTo(px,py-vy*2);
+      x.lineTo(px-4,py-vy*2+5);x.moveTo(px,py-vy*2);x.lineTo(px+4,py-vy*2+5);x.stroke();
+      x.fillStyle='#c62828';x.fillText('v_y',px+5,py-vy*2+5);
+      // ball
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+      // info
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      const range=v0*v0*Math.sin(2*a)/g,hmax=Math.pow(v0*Math.sin(a),2)/(2*g);
+      x.fillText('사거리 R = v₀² sin(2θ)/g = '+range.toFixed(1)+' m',420,40);
+      x.fillText('최고점 H = (v₀ sinθ)²/(2g) = '+hmax.toFixed(1)+' m',420,58);
+      x.fillText('체공시간 T = '+tFlight.toFixed(2)+' s',420,76);
+      x.fillText('현재 v_x='+vx.toFixed(1)+', v_y='+vy.toFixed(1),420,94);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>3. 몽키 헌터 — 두 축 분리의 가장 멋진 결과</h2>
+  <p>고전적 사고 실험: 사냥꾼이 나뭇가지에 매달린 원숭이를 정확히 겨냥해 화살을 쏘는 순간, 원숭이가 가지를 놓고 떨어진다. 화살은 원숭이를 맞출까? — <strong>맞춥니다</strong>. 둘 다 같은 중력을 같은 시간 동안 받기 때문에 $y$ 방향으로 같은 만큼 떨어집니다.</p>
+  <p>이게 가능한 이유는 정확히 두 축의 독립성 — 화살의 $y$ 운동과 원숭이의 $y$ 운동이 같은 식 $y = y_0 - \tfrac{1}{2}gt^2$를 따르기 때문입니다(화살은 초속도가 있고 원숭이는 0이라는 차이는 있지만, 그 차이는 처음 겨냥 각도가 흡수합니다).</p>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 몽키 헌터</h4>
+    <p>화살은 원숭이가 가만히 있다고 가정하고 직선으로 겨냥합니다. <strong>발사 버튼을 누르는 순간 원숭이가 가지를 놓습니다</strong>. 중력이 0이면 화살은 원숭이가 있던 자리에 도달하고, 중력이 있으면 둘 다 똑같이 떨어져 결국 만납니다. 화살의 초속을 바꿔도 결과는 변하지 않습니다(화살이 더 느리면 만나는 위치가 더 낮을 뿐).</p>
+    <canvas id="monkC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>화살 초속 v₀ (m/s) <span class="val" id="mhVV">18</span><input type="range" id="mhV" min="6" max="35" step="0.5" value="18"></label>
+      <label>중력 g (m/s²) <span class="val" id="mhGV">9.81</span><input type="range" id="mhG" min="0" max="20" step="0.1" value="9.81"></label>
+      <button id="mhFire">발사</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('monkC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['mhV','mhG'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['mhV','mhG'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0,firing=false;
+    const hunter={x:60,y:280},monkey0={x:540,y:80};
+    sl('mhFire').onclick=()=>{t=0;firing=true;};
+    function loop(){
+      const v0=+sl('mhV').value,g=+sl('mhG').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // ground
+      x.fillStyle='#bcd6a8';x.fillRect(0,300,c.width,20);
+      // tree trunk
+      x.fillStyle='#8b6f47';x.fillRect(monkey0.x-5,monkey0.y,10,200);
+      // hunter
+      x.fillStyle='#444';x.fillRect(hunter.x-8,hunter.y-20,16,20);
+      x.beginPath();x.arc(hunter.x,hunter.y-30,8,0,Math.PI*2);x.fill();
+      // aim line (from hunter to monkey original)
+      const dx=monkey0.x-hunter.x,dy=monkey0.y-hunter.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const angle=Math.atan2(-dy,dx);
+      x.strokeStyle='#ddd';x.setLineDash([3,3]);x.beginPath();x.moveTo(hunter.x,hunter.y-25);x.lineTo(monkey0.x,monkey0.y);x.stroke();x.setLineDash([]);
+      let mx=monkey0.x,my=monkey0.y;
+      let ax=hunter.x,ay=hunter.y-25;
+      if(firing){
+        t+=0.02;
+        // arrow position (constant velocity along aim direction + gravity)
+        const tt=t;
+        ax=hunter.x+v0*Math.cos(angle)*tt*8;
+        ay=hunter.y-25-v0*Math.sin(angle)*tt*8+0.5*g*tt*tt*8;
+        // monkey free-falls
+        my=monkey0.y+0.5*g*tt*tt*8;
+        if(my>290||ax>c.width||tt>4){firing=false;t=0;}
+      }
+      // arrow
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      const al=14;
+      const ahx=ax-Math.cos(angle)*al,ahy=ay+Math.sin(angle)*al;
+      x.beginPath();x.moveTo(ahx,ahy);x.lineTo(ax,ay);x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(ax,ay,3,0,Math.PI*2);x.fill();
+      // monkey
+      x.fillStyle='#a0623c';x.beginPath();x.arc(mx,my,12,0,Math.PI*2);x.fill();
+      x.fillStyle='#fff';x.beginPath();x.arc(mx-4,my-3,2,0,Math.PI*2);x.arc(mx+4,my-3,2,0,Math.PI*2);x.fill();
+      // collision check
+      const d=Math.sqrt((ax-mx)**2+(ay-my)**2);
+      if(firing&&d<14){
+        x.fillStyle='#ffcb05';x.beginPath();x.arc(mx,my,28,0,Math.PI*2);x.fill();
+        x.fillStyle='#c62828';x.font='bold 14px sans-serif';x.textAlign='center';x.fillText('명중!',mx,my+5);
+      }
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('조준각 θ = '+(angle*180/Math.PI).toFixed(1)+'° (정확히 원숭이를 겨냥)',20,30);
+      x.fillText('두 물체 모두 ½gt²만큼 떨어짐 — y 방향 운동이 같음',20,48);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 흔한 오개념</h2>
+  <ul>
+    <li><strong>"수평으로 더 빨리 던지면 더 빨리 떨어진다"</strong> — 틀림. 수평 속도는 $y$ 방향 운동에 영향을 주지 않습니다. 절벽에서 공을 굴리든 던지든 떨어지는 데 걸리는 시간은 같습니다(공기 저항 제외).</li>
+    <li><strong>"최고점에서 가속도가 0"</strong> — 틀림. 속도의 $y$ 성분만 0일 뿐, 가속도는 여전히 $-g$입니다.</li>
+    <li><strong>"45°가 항상 최대 사거리"</strong> — 출발과 착지 높이가 같을 때만 그렇습니다. 절벽에서 던지면 45°보다 작은 각이 최적입니다.</li>
+  </ul>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="02-particle-rectilinear.html">← W2</a> · <a href="../dynamics.html">강의 목록</a> · <a href="04-particle-curvilinear-nt.html">W4 곡선 운동학(n-t, 극) →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

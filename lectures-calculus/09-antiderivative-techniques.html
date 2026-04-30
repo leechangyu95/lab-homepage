@@ -36,10 +36,14 @@
     <li>적분이란 — 미분의 역</li>
     <li>기본 부정적분 표</li>
     <li>치환적분 ($u$-치환)</li>
+    <li>치환 패턴 6가지</li>
     <li>부분적분 (LIATE)</li>
+    <li>부분적분 — 순환 트릭과 표 방식</li>
     <li>삼각치환 입문</li>
     <li>부분분수 분해 입문</li>
+    <li>적분이 닫힌 식으로 안 풀리는 함수들</li>
     <li>인터랙티브: $u$-치환 시각화</li>
+    <li>인터랙티브: 적분 기법 분류 퀴즈</li>
     <li>흔한 오해와 핵심 정리</li>
     <li>더 깊이 공부하기</li>
   </ol></div>
@@ -87,7 +91,32 @@
   <h3>치환 패턴 알아보기</h3>
   <p>안쪽 함수의 도함수가 식 어딘가에 곱해져 있다 → 치환 가능. 익숙해지려면 "$g(x)$와 $g'(x)$가 짝지어 보이는지"를 묻는 연습이 가장 좋습니다.</p>
 
-  <h2>4. 부분적분 (Integration by Parts)</h2>
+  <h2>4. 치환 패턴 6가지 — 빠른 매칭표</h2>
+
+  <p>학부 시험에서 자주 등장하는 치환 패턴을 정리. 식을 보자마자 어떤 치환을 시도할지 한 줄에 떠오르도록 연습하세요.</p>
+
+  <table>
+    <thead><tr><th>식 모양</th><th>치환</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>$\int f(g(x)) g'(x) dx$</td><td>$u = g(x)$</td><td>가장 기본 — 안 쪽 도함수가 보임</td></tr>
+      <tr><td>$\int x \cdot f(x^2) dx$</td><td>$u = x^2$, $du = 2x dx$</td><td>$x$가 따라옴 → $x^2$ 치환</td></tr>
+      <tr><td>$\int \frac{f'(x)}{f(x)} dx$</td><td>$u = f(x)$</td><td>$\ln|f|$ 답</td></tr>
+      <tr><td>$\int \sin^n x \cos x\,dx$</td><td>$u = \sin x$</td><td>한 인수가 도함수</td></tr>
+      <tr><td>$\int e^{f(x)} f'(x) dx$</td><td>$u = f(x)$</td><td>$e^u$ 표 적분</td></tr>
+      <tr><td>$\int (\ln x)^n / x \, dx$</td><td>$u = \ln x$</td><td>$1/x = (\ln x)'$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>예제 4.1 — 패턴 ③ (로그)</h3>
+  <p>$\displaystyle \int \frac{\cos x}{\sin x}\,dx$. 분자 $= (\sin x)'$, 분모 $= \sin x$ → $u = \sin x$.</p>
+  $$ = \ln|\sin x| + C $$
+  <p>모든 $\int \tan, \int \cot$ 적분이 이 패턴.</p>
+
+  <h3>예제 4.2 — 패턴 ⑥ (로그의 거듭제곱)</h3>
+  <p>$\displaystyle \int \frac{(\ln x)^2}{x}\,dx$. $u = \ln x$, $du = dx/x$.</p>
+  $$ = \int u^2\,du = \frac{u^3}{3} + C = \frac{(\ln x)^3}{3} + C $$
+
+  <h2>5. 부분적분 (Integration by Parts)</h2>
 
   <h3>유도 — 곱의 미분의 역</h3>
   <p>$(uv)' = u' v + u v'$ 양변을 적분.</p>
@@ -119,7 +148,34 @@
   <p>$\displaystyle \int x^2 e^x\, dx$. $u = x^2$, $dv = e^x dx$ → $\int = x^2 e^x - \int 2x e^x\, dx$. 안쪽 적분도 부분적분 한 번 더.</p>
   $$ = x^2 e^x - 2[(x-1)e^x] + C = (x^2 - 2x + 2) e^x + C $$
 
-  <h2>5. 삼각치환 입문</h2>
+  <h2>6. 부분적분 — 순환 트릭과 표 방식</h2>
+
+  <h3>순환(boomerang) 트릭</h3>
+  <p>두 번 부분적분 후 원래 적분이 다시 등장하면, 양변에서 같은 항을 모아 풀 수 있어요. 대표 예제:</p>
+
+  <h3>예제 6.1 — $\displaystyle I = \int e^x \cos x\, dx$</h3>
+  <p>$u = e^x, dv = \cos x\,dx$ → $du = e^x\,dx, v = \sin x$.</p>
+  $$ I = e^x \sin x - \int e^x \sin x\, dx $$
+  <p>오른쪽 적분도 한 번 더 부분적분 ($u = e^x, dv = \sin x\,dx$): $\int e^x \sin x\,dx = -e^x\cos x + I$. 대입:</p>
+  $$ I = e^x\sin x - (-e^x\cos x + I) = e^x(\sin x + \cos x) - I $$
+  $$ \Rightarrow\; 2I = e^x(\sin x + \cos x) \;\Rightarrow\; I = \tfrac{1}{2} e^x(\sin x + \cos x) + C $$
+  <p>두 번 만에 끝. 부분적분만으로 풀이가 무한히 늘어날 위험을 막는 트릭.</p>
+
+  <h3>표 방식 (Tabular Integration) — $x^n$ 곱하기 다른 함수</h3>
+  <p>$x^n$ 처럼 미분하면 결국 0이 되는 인수와 다른 인수의 곱은, 표를 그려 부호를 번갈아 곱하면 됩니다.</p>
+
+  <p>예: $\displaystyle \int x^3 e^{2x}\, dx$. 표:</p>
+  <pre><code>  미분 (D)        적분 (I)        부호
+   x^3            e^(2x)           +
+   3x^2           e^(2x)/2         −
+   6x             e^(2x)/4         +
+   6              e^(2x)/8         −
+   0              e^(2x)/16</code></pre>
+  <p>대각선으로 곱하고 부호 번갈아:</p>
+  $$ \int x^3 e^{2x}\,dx = \tfrac{1}{2}x^3 e^{2x} - \tfrac{3}{4}x^2 e^{2x} + \tfrac{6}{4} \cdot \tfrac{1}{2} x e^{2x} - \tfrac{6}{8} e^{2x} + C $$
+  <p>표를 그리는 게 부분적분을 4번 따로 적는 것보다 빠릅니다. 시험에서 시간을 절약하는 단골 기법.</p>
+
+  <h2>7. 삼각치환 입문</h2>
 
   <p>$\sqrt{a^2 - x^2}$, $\sqrt{a^2 + x^2}$, $\sqrt{x^2 - a^2}$ 가 들어 있는 식은 다음 치환으로 풉니다.</p>
   <ul>
@@ -135,15 +191,33 @@
   $$ = \frac{1}{2}\sin^{-1} x + \frac{x\sqrt{1-x^2}}{2} + C $$
   <p>이 적분은 단위 반원의 면적 공식과 직결됩니다 — $\int_{-1}^{1}\sqrt{1-x^2}\,dx = \pi/2$.</p>
 
-  <h2>6. 부분분수 분해 입문</h2>
+  <h2>8. 부분분수 분해 입문</h2>
 
   <p>유리함수 $\frac{P(x)}{Q(x)}$ 의 적분은 부분분수로 분해해서 표 적분으로 환원합니다.</p>
 
   <h3>예제 6.1 — $\displaystyle \int \frac{1}{x^2 - 1}\, dx$</h3>
   <p>$\dfrac{1}{x^2 - 1} = \dfrac{1}{(x-1)(x+1)} = \dfrac{1/2}{x-1} - \dfrac{1/2}{x+1}$ (계수는 미정계수법으로).</p>
-  $$ \int \frac{1}{x^2-1}\, dx = \tfrac{1}{2}\ln|x-1| - \tfrac{1}{2}\ln|x+1| + C = \tfrac{1}{2}\ln\left|\tfrac{x-1}{x+1}\right| + C $$
+  $$ \int \frac{1}{x^2-1}\, dx = \tfrac{1}{2}\ln|x-1| - \tfrac{1}{2}\ln|x+1| + C = \tfrac{1}{2}\ln\left|\tfrac{x-1}{x+1}\right | + C $$
 
-  <h2>7. 인터랙티브: $u$-치환 시각화</h2>
+  <h2>9. 적분이 닫힌 식으로 안 풀리는 함수들</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>모든 함수가 닫힌 식으로 적분되지는 않습니다. <strong>도함수는 항상 어떤 함수든 적을 수 있지만, 부정적분은 그렇지 않아요.</strong>
+  닫힌 식이 없을 때는 (1) 정의로 받아들이고 새 이름을 붙이거나 (2) 수치적분으로 푸는 게 보통.</p>
+
+  <h3>대표 예 — 닫힌 식 없는 적분</h3>
+  <ul>
+    <li>$\displaystyle \int e^{-x^2}\,dx$ — 닫힌 식 없음. <strong>오차함수</strong> $\mathrm{erf}(x) = \frac{2}{\sqrt{\pi}} \int_0^x e^{-t^2}dt$ 로 정의 (통계·신호처리의 기초).</li>
+    <li>$\displaystyle \int \frac{\sin x}{x}\,dx$ — 닫힌 식 없음. <strong>사인 적분 함수</strong> $\mathrm{Si}(x)$.</li>
+    <li>$\displaystyle \int \frac{1}{\ln x}\,dx$ — 로그 적분 $\mathrm{li}(x)$ (소수 분포 정리에 등장).</li>
+    <li>$\displaystyle \int e^{x^2}\,dx, \int \sin(x^2)\,dx$ (Fresnel) 등.</li>
+  </ul>
+
+  <h3>왜 알아 둬야 하나?</h3>
+  <p>시험에서 풀리지 않는 적분을 만나 시간을 낭비하지 않으려면 — "이건 닫힌 식이 없을 수도 있다"는 신호를 알아채는 감각이 중요. $e^{-x^2}, \sin(x^2), \cos(x^2)$ 같은 합성을 만나면 의심해 보세요.
+  실무에서는 W10에서 배울 정적분이 닫힌 식 없이도 수치적으로 정확히 계산되니까 큰 문제는 안 됩니다.</p>
+
+  <h2>10. 인터랙티브: $u$-치환 시각화</h2>
 
   <p>1차원 변수 변환에서 면적이 어떻게 변하는지 시각적으로 보여 줍니다. $u = g(x)$ 변환은 $x$-축의 작은 구간 $dx$ 를 $u$-축의 작은 구간 $du = g'(x) dx$ 로 늘이거나 줄여요. 이게 다변수에서 자코비안 행렬식의 1차원 버전이에요.</p>
 
@@ -221,7 +295,79 @@
   })();
   </script>
 
-  <h2>8. 흔한 오해와 핵심 정리</h2>
+  <h2>11. 인터랙티브: 적분 기법 분류 퀴즈</h2>
+
+  <p>적분 식을 보고 어떤 기법(치환·부분적분·삼각치환·부분분수)을 써야 하는지 한 줄에 떠올리는 연습. 8문제 중 답을 골라 즉시 정답을 확인합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 적분 기법 매칭 퀴즈</h4>
+    <p>각 적분에 가장 적합한 첫 기법을 선택. 정답 표기와 짧은 풀이 힌트가 함께 나옵니다.</p>
+    <div id="qzCont"></div>
+    <button id="qzNew" class="alt" style="margin-top:10px">새 문제 8개</button>
+    <p id="qzScore" style="margin-top:8px;font-weight:600"></p>
+  </div>
+  <script>
+  (function(){
+    const bank=[
+      {q:'∫ x cos(x²) dx', tech:'sub', hint:'u = x², du = 2x dx'},
+      {q:'∫ x eˣ dx', tech:'parts', hint:'u = x, dv = eˣ dx'},
+      {q:'∫ √(1−x²) dx', tech:'trig', hint:'x = sin θ'},
+      {q:'∫ 1/(x²−1) dx', tech:'partial', hint:'1/((x−1)(x+1)) 분해'},
+      {q:'∫ ln x dx', tech:'parts', hint:'u = ln x, dv = dx'},
+      {q:'∫ 2x/(x²+1) dx', tech:'sub', hint:'u = x²+1, 답은 ln'},
+      {q:'∫ x ln x dx', tech:'parts', hint:'u = ln x, dv = x dx (LIATE)'},
+      {q:'∫ 1/√(4−x²) dx', tech:'trig', hint:'x = 2 sin θ'},
+      {q:'∫ x³/(x²+1) dx', tech:'sub', hint:'장 분할 후 u = x²+1, 또는 다항식 나눗셈'},
+      {q:'∫ eˣ sin x dx', tech:'parts', hint:'두 번 부분적분 + 순환'},
+      {q:'∫ sin³ x cos x dx', tech:'sub', hint:'u = sin x'},
+      {q:'∫ (3x+5)/((x−1)(x+2)) dx', tech:'partial', hint:'A/(x−1) + B/(x+2)'},
+    ];
+    const labels={sub:'u-치환',parts:'부분적분',trig:'삼각치환',partial:'부분분수'};
+    let problems=[],answers=[];
+    function newQuiz(){
+      problems=bank.slice().sort(()=>Math.random()-0.5).slice(0,8);
+      answers=problems.map(()=>null);
+      render();
+    }
+    function render(){
+      const cont=document.getElementById('qzCont');cont.innerHTML='';
+      problems.forEach((p,i)=>{
+        const div=document.createElement('div');div.style.cssText='padding:10px;border-bottom:1px solid #eee';
+        const html=['<div style="font-family:Consolas,monospace;font-size:14px;margin-bottom:6px"><strong>Q'+(i+1)+'.</strong> '+p.q+'</div>',
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">'];
+        ['sub','parts','trig','partial'].forEach(k=>{
+          const sel=answers[i]===k;
+          let bg='#fff',color='#444',border='#bbb';
+          if(sel){
+            if(k===p.tech){bg='#c8e6c9';color='#1b5e20';border='#1b5e20';}
+            else{bg='#ffcdd2';color='#c62828';border='#c62828';}
+          }
+          html.push('<button data-i="'+i+'" data-k="'+k+'" style="padding:6px 10px;border:1px solid '+border+';background:'+bg+';color:'+color+';border-radius:4px;cursor:pointer;font-size:12px">'+labels[k]+'</button>');
+        });
+        html.push('</div>');
+        if(answers[i]!==null){
+          const correct=answers[i]===p.tech;
+          html.push('<div style="font-size:12px;color:'+(correct?'#1b5e20':'#c62828')+';margin-top:6px">'+(correct?'✓ 정답':'✗ 오답')+' · 정답: <strong>'+labels[p.tech]+'</strong> · 힌트: '+p.hint+'</div>');
+        }
+        div.innerHTML=html.join('');
+        cont.appendChild(div);
+      });
+      cont.querySelectorAll('button').forEach(btn=>{
+        btn.onclick=()=>{const i=+btn.dataset.i;answers[i]=btn.dataset.k;render();updateScore();};
+      });
+      updateScore();
+    }
+    function updateScore(){
+      const done=answers.filter(a=>a!==null).length;
+      const correct=answers.filter((a,i)=>a===problems[i].tech).length;
+      document.getElementById('qzScore').textContent='진행 '+done+'/'+problems.length+'  ·  정답 '+correct+'/'+done;
+    }
+    document.getElementById('qzNew').onclick=newQuiz;
+    newQuiz();
+  })();
+  </script>
+
+  <h2>12. 흔한 오해와 핵심 정리</h2>
 
   <div class="note"><strong>흔한 오해 ① — "$\int dx/x = \ln x$"</strong> —
   정확히는 $\int dx/x = \ln |x| + C$. 절댓값을 빼먹으면 음수 영역에서 정의가 깨집니다.</div>
@@ -235,7 +381,7 @@
   <h3>이번 주의 핵심 한 문장</h3>
   <div class="tip"><strong>"미분의 역을 풀려면 12개 표 적분 + 치환(연쇄 법칙의 역) + 부분적분(곱 법칙의 역). 이 셋이 학부 적분 기술의 90%."</strong></div>
 
-  <h2>9. 더 깊이 공부하기</h2>
+  <h2>13. 더 깊이 공부하기</h2>
   <ul>
     <li>Stewart, Ch.5.5 (치환), Ch.7.1 (부분적분), Ch.7.2~7.4.</li>
     <li>Thomas, Ch.5.5, Ch.8.1~8.4.</li>

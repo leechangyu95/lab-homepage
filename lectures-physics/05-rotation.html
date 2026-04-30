@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W5. 회전과 각운동량 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html" class="active">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../physics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 5. 회전과 각운동량</h1>
+  <p class="lead">이번 주 한 줄 요약 — <strong>"직선 운동의 모든 식에 '각도판'이 하나씩 더 있다."</strong></p>
+
+  <div class="toc"><h4>학습 목표</h4><ul>
+    <li>각변위·각속도·각가속도를 다룬다.</li>
+    <li>토크 $\tau = I\alpha$를 적용한다.</li>
+    <li>관성모멘트가 질량 분포에 의존함을 이해한다.</li>
+    <li>각운동량 보존을 사용해 회전의자·자이로 데모를 설명한다.</li>
+  </ul></div>
+
+  <h2>도입 훅 — "회전의자 + 아령"</h2>
+  <p>회전의자에 앉은 학생이 양손에 아령을 들고 팔을 활짝 펴고 회전시킴. 의자 도는 동안 아령을 가슴 쪽으로 당기게 하면 <strong>회전 속도가 갑자기 빨라진다</strong>. 다시 펴면 느려짐. 피겨 스케이터의 그것.</p>
+  <div class="tip">$L = I\omega$가 보존: 팔을 당겨 $I$가 줄면 $\omega$가 늘어난다.</div>
+
+  <h2>직선 ↔ 회전 대응표</h2>
+  <table>
+    <thead><tr><th>직선</th><th>회전</th></tr></thead>
+    <tbody>
+      <tr><td>위치 $x$</td><td>각변위 $\theta$</td></tr>
+      <tr><td>속도 $v$</td><td>각속도 $\omega$</td></tr>
+      <tr><td>가속도 $a$</td><td>각가속도 $\alpha$</td></tr>
+      <tr><td>질량 $m$</td><td>관성모멘트 $I$</td></tr>
+      <tr><td>힘 $F$</td><td>토크 $\tau$</td></tr>
+      <tr><td>$F=ma$</td><td>$\tau = I\alpha$</td></tr>
+      <tr><td>운동량 $p=mv$</td><td>각운동량 $L=I\omega$</td></tr>
+      <tr><td>$\tfrac{1}{2}mv^2$</td><td>$\tfrac{1}{2}I\omega^2$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>1. 각변위·각속도·각가속도</h2>
+  <p>$v = r\omega$, $a_t = r\alpha$, $a_c = r\omega^2$.</p>
+  <h3>데모 1 — 회전 책상 위 물체</h3>
+  <p>같은 $\omega$여도 가운데 물체와 가장자리 물체의 선속도가 다름($v=r\omega$).</p>
+
+  <h2>2. 토크 — 회전판의 힘</h2>
+  $$ \vec{\tau} = \vec{r}\times\vec{F},\qquad |\tau| = rF\sin\theta $$
+  <h3>데모 2 — 문 손잡이 위치</h3>
+  <p>손잡이를 잡고 vs 경첩 가까이 vs 문 면 평행으로 밀기. 같은 힘이라도 토크가 천차만별.</p>
+  <h3>데모 3 — 스패너 길이</h3>
+  <p>긴 스패너가 같은 힘으로 더 큰 토크 → 너트가 잘 풀린다.</p>
+
+  <h2>3. 관성모멘트</h2>
+  $$ I = \sum m_i r_i^2 = \int r^2\,dm $$
+  <p>질량이 회전축에서 멀리 분포할수록 $I$ 크다.</p>
+  <table>
+    <thead><tr><th>모양</th><th>$I$ (질량 $M$, 반경 $R$)</th></tr></thead>
+    <tbody>
+      <tr><td>얇은 원통(껍질)</td><td>$MR^2$</td></tr>
+      <tr><td>채워진 원판</td><td>$\tfrac{1}{2}MR^2$</td></tr>
+      <tr><td>채워진 구</td><td>$\tfrac{2}{5}MR^2$</td></tr>
+      <tr><td>막대(중심축)</td><td>$\tfrac{1}{12}ML^2$</td></tr>
+    </tbody>
+  </table>
+  <h3>데모 4 — 같은 무게, 다른 분포</h3>
+  <p>같은 질량의 두 막대(추가 끝/가운데). 같은 힘으로 회전시키면 끝에 추가 있는 쪽이 훨씬 안 돌아감.</p>
+  <h3>데모 5 — 캔 두 개 사면 굴리기 ★</h3>
+  <p>같은 크기 캔 중 액체(주스)와 고체(농축 수프)를 사면에서 굴리면 결과가 다르다. 굴림 운동에서 회전 KE를 어떻게 나눠 쓰는가의 차이.</p>
+
+  <h2>4. 회전운동방정식과 굴림</h2>
+  $$ \tau_{\text{net}} = I\alpha,\qquad K = \tfrac{1}{2}Mv_{\text{CM}}^2 + \tfrac{1}{2}I\omega^2 $$
+  <h3>데모 6 — 굴림 vs 미끄럼</h3>
+  <p>같은 사면에서 굴림 구슬은 회전 KE 때문에 직선 KE가 줄어 미끄러지는 매끈한 블록보다 천천히 도착.</p>
+
+  <h2>5. 각운동량과 보존</h2>
+  $$ \vec{L} = I\vec{\omega},\qquad I_1\omega_1 = I_2\omega_2 \text{ (외부 토크 0일 때)} $$
+  <h3>데모 7 — 회전의자 + 자전거 바퀴(자이로) ★</h3>
+  <p>회전의자에 앉은 학생에게 돌아가는 바퀴를 건넨다. 바퀴를 옆으로 90° 기울이면 의자가 갑자기 회전. 시스템 전체 $L$이 보존되도록 학생+의자가 반대로 돈다.</p>
+  <h3>데모 8 — 피겨 스케이터 영상</h3>
+  <p>팔 펴기·모으기에 따른 회전 속도 변화. 도입 데모와 같은 원리, 더 극적인 시각화.</p>
+
+  <h2>흔한 오개념</h2>
+  <table>
+    <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
+    <tbody>
+      <tr><td>"빠르게 돌수록 $L$이 크다"</td><td>$I$도 같이 봐야 함</td></tr>
+      <tr><td>"$I$ = 질량"</td><td>분포가 결정. 같은 질량도 모양에 따라 다름</td></tr>
+      <tr><td>"외부 힘 0이어야 $L$ 보존"</td><td>외부 <em>토크</em> 0이면 됨</td></tr>
+      <tr><td>"굴러가는 공 = 한 운동"</td><td>직선(CM) + 회전, 두 운동의 합</td></tr>
+    </tbody>
+  </table>
+
+  <h2>강의실 예제</h2>
+  <div class="tip"><strong>예제 1.</strong> $r=0.5$ m 원판에 5 N 접선력. 토크?<br>
+  $\tau = rF = 2.5$ N·m.</div>
+  <div class="tip"><strong>예제 2.</strong> $R=0.2$ m, $M=2$ kg 원판이 4 rad/s. 회전 KE?<br>
+  $I=0.04$ kg·m². $K=\tfrac{1}{2}I\omega^2 = 0.32$ J.</div>
+  <div class="tip"><strong>예제 3.</strong> $I_1=6$, $\omega_1=2$. 팔 모아 $I_2=2$가 되면?<br>
+  $\omega_2 = 6$ rad/s. <strong>3배.</strong></div>
+
+  <h2>과제 5</h2>
+  <ol>
+    <li>(개념) 자전거가 빨리 달릴 때 안 넘어지는 이유를 각운동량으로.</li>
+    <li>(계산) Halliday 10·11장 4문제.</li>
+    <li>(영상) 회전의자에서 팔 펴기·모으기 영상 + 회전 속도 측정. A4 한 장.</li>
+  </ol>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 왔다 갔다 반복하는 운동 — <strong>단진동(SHM)</strong>. 시계, 그네, 분자 진동, 음파, 전자기파 — 모두 같은 방정식.</div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
