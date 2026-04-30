@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W2. 미분의 정의 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html" class="active">미분적분학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../calculus.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 2. 미분의 정의</h1>
+  <p class="lead">"평균에서 순간으로." 두 점 사이의 평균변화율을 두 점이 한 점이 될 때까지 좁히면, 그 한 점에서의 <strong>순간변화율</strong>이 됩니다.
+  이 한 문장이 도함수의 정의이고, 한 학기 미분의 모든 출발점입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>미분이 묻는 질문 — 평균에서 순간으로</li>
+    <li>평균변화율 — 두 점의 기울기</li>
+    <li>도함수의 정의 (극한)</li>
+    <li>도함수 계산 — 정의로 직접</li>
+    <li>인터랙티브: 할선 → 접선 애니메이션</li>
+    <li>미분 가능성과 연속성</li>
+    <li>미분 불가능한 점들</li>
+    <li>좌·우 도함수</li>
+    <li>운동학 — 위치·속도·가속도</li>
+    <li>인터랙티브: 운동 시뮬레이터</li>
+    <li>표기법 — 라이프니츠·라그랑주·뉴턴</li>
+    <li>흔한 오해와 핵심 정리</li>
+    <li>더 깊이 공부하기</li>
+  </ol></div>
+
+  <h2>1. 미분이 묻는 질문 — 평균에서 순간으로</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>서울에서 부산까지 약 400 km를 4시간에 갔다면 <strong>평균 속력</strong>은 100 km/h. 그런데 운전 중 어느 순간에는 80 km/h, 어느 순간에는 120 km/h였을 거예요.
+  그 "어느 순간 한 점"의 속력을 묻는 게 <strong>순간 속력</strong>입니다. 미분은 이 두 개념의 차이를 수학적으로 메우는 도구예요.</p>
+
+  <p>일상에서 우리는 "지금 이 순간"의 속력을 자연스럽게 입에 올립니다. 그런데 사실 "한 순간"이라는 건 시간 폭이 0이라는 뜻이고, 그 사이 이동 거리도 0이에요.
+  $0/0$은 정의가 안 되니, 어떻게 "한 순간의 속력"을 정의할 수 있을까요? 답은 <strong>"점점 좁혀가며 어디로 향하는지를 보자"</strong> — 바로 W1에서 배운 극한입니다.</p>
+
+  <div class="tip"><strong>이번 주의 한 줄</strong> —
+  도함수는 <em>"평균변화율의 극한"</em>입니다. 두 점이 한 점에 가까워질 때 두 점을 잇는 직선의 기울기가 어디로 향하는가 — 그 향하는 값이 그 점에서의 <strong>접선의 기울기</strong>이자 <strong>순간변화율</strong>이자 <strong>도함수의 값</strong>입니다.</div>
+
+  <h2>2. 평균변화율 — 두 점의 기울기</h2>
+
+  <h3>정의</h3>
+  <p>함수 $f$가 구간 $[a, b]$에서 정의되어 있을 때, $a$에서 $b$까지의 <strong>평균변화율</strong>(average rate of change)은</p>
+  $$ \frac{f(b) - f(a)}{b - a} $$
+  <p>이 값은 그래프 위에서 두 점 $(a, f(a))$와 $(b, f(b))$를 잇는 <strong>할선(secant line)</strong>의 기울기와 정확히 같습니다.</p>
+
+  <h3>한 줄 비유로 다시</h3>
+  <p>등산하면서 시간에 따른 고도를 함수 $h(t)$로 적었다고 합시다. $t = 0$에서 출발해 $t = 2$시간 만에 정상에 도달했고 그 사이 고도가 100 m 올랐다면,
+  평균 상승률은 $\frac{100}{2} = 50$ m/h. 실제로는 처음 30분은 평지를 걸었고 그 다음 1시간은 가팔라서 80 m/h, 마지막 30분은 다시 완만했을 수 있어요.
+  평균변화율은 그 모든 변화를 "한 줄로 뭉친" 값입니다.</p>
+
+  <h3>표기법 — 증분 비</h3>
+  <p>입력의 변화를 $\Delta x = b - a$, 출력의 변화를 $\Delta y = f(b) - f(a)$로 쓰면, 평균변화율은 $\dfrac{\Delta y}{\Delta x}$.
+  이 표기는 다음 절 도함수의 정의에서 그대로 살아남습니다.</p>
+
+  <h2>3. 도함수의 정의 (극한)</h2>
+
+  <h3>핵심 정의</h3>
+  <p>함수 $f$의 점 $x = a$에서의 <strong>도함수(미분계수)</strong>는</p>
+  $$ f'(a) \;=\; \lim_{h \to 0} \frac{f(a + h) - f(a)}{h} $$
+  <p>존재하면 그 값을, 존재하지 않으면 "$f$가 $a$에서 미분 불가능하다"고 말합니다.
+  $f$가 정의역의 모든 점에서 미분 가능하면, 도함수 자체를 함수로 보아 $f'(x)$로 적습니다.</p>
+
+  <h3>각 부분의 의미</h3>
+  <ul>
+    <li><strong>$f(a + h) - f(a)$</strong> — 입력이 $a$에서 $a+h$로 바뀔 때의 출력의 변화 ($\Delta y$).</li>
+    <li><strong>$h$</strong> — 입력의 변화 ($\Delta x$).</li>
+    <li><strong>$\frac{f(a+h)-f(a)}{h}$</strong> — 두 점 $(a, f(a))$와 $(a+h, f(a+h))$를 잇는 할선의 기울기.</li>
+    <li><strong>$\lim_{h \to 0}$</strong> — 두 번째 점을 첫 번째 점에 무한히 가깝게 끌어당기기. 그 극한이 <em>접선의 기울기</em>.</li>
+  </ul>
+
+  <h3>등가 형태</h3>
+  <p>$x = a + h$로 두면 $h = x - a$이고 $h \to 0$은 $x \to a$와 같으므로, 다음과 같이 적어도 동치입니다.</p>
+  $$ f'(a) \;=\; \lim_{x \to a} \frac{f(x) - f(a)}{x - a} $$
+
+  <h2>4. 도함수 계산 — 정의로 직접</h2>
+
+  <h3>예제 4.1 — $f(x) = x^2$</h3>
+  $$ f'(a) = \lim_{h \to 0} \frac{(a+h)^2 - a^2}{h} = \lim_{h \to 0} \frac{2ah + h^2}{h} = \lim_{h \to 0}(2a + h) = 2a $$
+  <p>$h \to 0$일 때 $h$가 사라지고 남는 것이 $2a$. 그러므로 모든 $x$에서 $f'(x) = 2x$. W3에서 배울 거듭제곱 미분 공식 $(x^n)' = n x^{n-1}$의 $n=2$ 경우.</p>
+
+  <h3>예제 4.2 — $f(x) = \dfrac{1}{x}$ (단, $x \ne 0$)</h3>
+  $$ f'(a) = \lim_{h\to 0} \frac{\tfrac{1}{a+h} - \tfrac{1}{a}}{h} = \lim_{h\to 0} \frac{\tfrac{a - (a+h)}{a(a+h)}}{h} = \lim_{h\to 0} \frac{-h}{h \cdot a(a+h)} = -\frac{1}{a^2} $$
+  <p>그러므로 $f'(x) = -1/x^2$. 분모 정리 → 약분 → $h \to 0$ 대입 — 이 패턴이 정의 풀이의 표준 흐름입니다.</p>
+
+  <h3>예제 4.3 — $f(x) = \sqrt{x}$ (단, $x > 0$)</h3>
+  <p>$0/0$ 꼴을 풀려면 분자 유리화가 필요합니다.</p>
+  $$ f'(a) = \lim_{h \to 0}\frac{\sqrt{a+h} - \sqrt{a}}{h} \cdot \frac{\sqrt{a+h}+\sqrt{a}}{\sqrt{a+h}+\sqrt{a}}
+  = \lim_{h\to 0}\frac{(a+h) - a}{h(\sqrt{a+h}+\sqrt{a})} = \lim_{h\to 0}\frac{1}{\sqrt{a+h}+\sqrt{a}} = \frac{1}{2\sqrt{a}} $$
+  <p>유리화 후 $h$가 약분되어 사라지면 부정형이 풀립니다.</p>
+
+  <h2>5. 인터랙티브: 할선 → 접선 애니메이션</h2>
+
+  <p>아래 데모는 $f(x) = 0.3x^3 - 0.6x^2 + 1$ 입니다(미분하면 $f'(x) = 0.9x^2 - 1.2x$). 점 $a$를 슬라이더로 잡고, $h$ 슬라이더를 줄여 보세요.
+  주황 직선(할선)이 초록 직선(진짜 접선)에 수렴하는 모습이 보입니다. 화면 위에 두 기울기 값이 함께 표시되니, $h \to 0$일 때 두 값이 같아진다는 것을 직접 확인하세요.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 할선이 접선이 되는 순간</h4>
+    <p>$h$를 점점 0에 가깝게 줄이면 두 점이 한 점이 되고, 할선의 기울기 $\frac{f(a+h)-f(a)}{h}$가 접선의 기울기 $f'(a)$로 수렴합니다.
+    슬라이더를 움직이며 두 숫자가 일치해 가는 순간을 만져 보세요.</p>
+    <canvas id="sec" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>접점 a <span class="val" id="secAV">1.20</span><input type="range" id="secA" min="-0.8" max="2.4" step="0.02" value="1.2"></label>
+      <label>증분 h <span class="val" id="secHV">1.00</span><input type="range" id="secH" min="0.02" max="2" step="0.01" value="1"></label>
+      <button id="secAuto">자동/정지</button>
+      <button id="secRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sec'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const xR=[-1.2,3.2],yR=[-0.5,3.0];
+    const M={l:50,r:20,t:20,b:40};
+    function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+    function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function f(v){return 0.3*v*v*v - 0.6*v*v + 1;}
+    function fp(v){return 0.9*v*v - 1.2*v;}
+    let auto=false,t0=performance.now();
+    document.getElementById('secAuto').onclick=()=>{auto=!auto;t0=performance.now();};
+    document.getElementById('secRst').onclick=()=>{document.getElementById('secA').value=1.2;document.getElementById('secH').value=1;auto=false;};
+    function loop(){
+      if(auto){
+        const dt=(performance.now()-t0)/1000;
+        // h decays from 2 -> 0.02 over ~6s, then resets
+        const phase=(dt%6)/6;
+        const hv=2*Math.pow(0.01,phase);
+        document.getElementById('secH').value=hv.toFixed(3);
+      }
+      const a=+document.getElementById('secA').value;
+      const h=+document.getElementById('secH').value;
+      document.getElementById('secAV').textContent=a.toFixed(2);
+      document.getElementById('secHV').textContent=h.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.lineWidth=1.2;
+      x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // function curve
+      x.strokeStyle='#222';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=0.01){
+        const yv=f(v);
+        if(yv<yR[0]||yv>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // tangent line at a (true derivative — green dashed)
+      const m_tan=fp(a),y_a=f(a);
+      x.strokeStyle='#1b5e20';x.lineWidth=2;x.setLineDash([6,4]);
+      x.beginPath();
+      const tx0=xR[0],ty0=y_a+m_tan*(tx0-a);
+      const tx1=xR[1],ty1=y_a+m_tan*(tx1-a);
+      x.moveTo(px(tx0),py(ty0));x.lineTo(px(tx1),py(ty1));x.stroke();x.setLineDash([]);
+      // secant line through (a, f(a)) and (a+h, f(a+h)) — orange solid
+      const y_h=f(a+h);
+      const m_sec=(y_h - y_a)/h;
+      x.strokeStyle='#f57c00';x.lineWidth=2.5;
+      x.beginPath();
+      const sx0=xR[0],sy0=y_a+m_sec*(sx0-a);
+      const sx1=xR[1],sy1=y_a+m_sec*(sx1-a);
+      x.moveTo(px(sx0),py(sy0));x.lineTo(px(sx1),py(sy1));x.stroke();
+      // two points
+      x.fillStyle='#c62828';x.beginPath();x.arc(px(a),py(y_a),5,0,Math.PI*2);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(px(a+h),py(y_h),5,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('y = 0.3x³ − 0.6x² + 1',px(-0.9),py(2.6));
+      x.fillStyle='#1b5e20';
+      x.fillText("진짜 접선  f′(a) = "+m_tan.toFixed(3),px(-0.9),py(2.3));
+      x.fillStyle='#b35c00';
+      x.fillText("할선  (f(a+h)−f(a))/h = "+m_sec.toFixed(3),px(-0.9),py(2.05));
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText("|차이| = "+Math.abs(m_sec-m_tan).toFixed(4),px(-0.9),py(1.78));
+      requestAnimationFrame(()=>setTimeout(loop,30));
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="tip"><strong>관찰 포인트</strong> —
+  ① $h$가 큰 값(예: 1.5)이면 두 점이 멀리 떨어져 있어 할선이 접선과 많이 다릅니다.
+  ② $h$를 0.05 이하로 줄이면 할선과 접선이 화면 위에서 거의 겹쳐 보입니다.
+  ③ 자동 재생을 누르면 $h$가 부드럽게 줄어드는 동안 두 직선이 수렴하는 모습이 한눈에 보입니다.
+  </div>
+
+  <h2>6. 미분 가능성과 연속성</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>"미분 가능"은 그래프가 그 점에서 <strong>매끄럽다</strong>는 뜻이에요 — 모서리도, 첨점도, 점프도 없는 부드러운 곡선.
+  반면 "연속"은 그저 <strong>연필을 떼지 않고 그릴 수 있다</strong>는 약한 조건이고요. 매끄러우면 당연히 연결되어 있지만, 연결되어 있다고 해서 매끄러운 건 아닙니다.</p>
+
+  <h3>정리 — 미분 가능 ⇒ 연속</h3>
+  <p>$f$가 $x = a$에서 미분 가능하면 $f$는 그 점에서 연속입니다.</p>
+  <p><em>증명 스케치.</em> $f(x) - f(a) = \frac{f(x)-f(a)}{x-a} \cdot (x - a)$. 우변 첫 인수는 극한값 $f'(a)$로 수렴하고, 둘째 인수는 0으로 가므로 곱은 0.
+  따라서 $\lim_{x\to a} f(x) = f(a)$ ⇒ 연속.</p>
+
+  <h3>역은 거짓 — 가장 유명한 반례</h3>
+  <p>$f(x) = |x|$ 는 모든 $x$에서 연속이지만 $x = 0$에서 미분 불가능. 좌극한과 우극한의 도함수가 다르기 때문 (다음 절).</p>
+
+  <div class="note"><strong>흔한 오해</strong> —
+  "연속이면 미분 가능하다"고 자주 착각합니다. 학부 시험·문제풀이에서 이 한 칸 차이를 물어보는 문제가 정말 많아요.
+  "미분 가능 ⇒ 연속"이지만 "연속 ⇒ 미분 가능"은 <strong>거짓</strong>. 화살표 방향을 외워두세요.</div>
+
+  <h2>7. 미분 불가능한 점들</h2>
+
+  <p>그래프가 어떤 점에서 미분 불가능해지는 경우는 크게 셋입니다.</p>
+  <ul>
+    <li><strong>모서리(corner)</strong> — 좌·우 도함수가 모두 존재하지만 서로 다름. 예: $f(x) = |x|$의 $x = 0$.</li>
+    <li><strong>첨점(cusp)</strong> — 좌·우 도함수가 무한대로 발산하는데 부호가 반대. 예: $f(x) = x^{2/3}$의 $x = 0$.</li>
+    <li><strong>수직 접선(vertical tangent)</strong> — 도함수가 무한대지만 양쪽이 같은 방향. 예: $f(x) = x^{1/3}$의 $x = 0$.</li>
+  </ul>
+  <p>당연히 <strong>불연속</strong>인 점에서는 자동으로 미분 불가능 (앞 절의 정리에 의해).</p>
+
+  <h3>예제 7.1 — $f(x) = |x|$ 가 0에서 미분 불가능</h3>
+  $$ \lim_{h \to 0^+}\frac{|h|-|0|}{h} = \lim_{h\to 0^+}\frac{h}{h} = 1 $$
+  $$ \lim_{h \to 0^-}\frac{|h|-|0|}{h} = \lim_{h\to 0^-}\frac{-h}{h} = -1 $$
+  <p>좌·우 도함수가 $-1$과 $+1$로 서로 다르므로 $x = 0$에서 도함수의 극한이 존재하지 않습니다.</p>
+
+  <h2>8. 좌·우 도함수</h2>
+
+  <p>한쪽 방향에서만 정의한 도함수를 다음과 같이 적습니다.</p>
+  $$ f'_-(a) = \lim_{h \to 0^-}\frac{f(a+h)-f(a)}{h}, \qquad f'_+(a) = \lim_{h \to 0^+}\frac{f(a+h)-f(a)}{h} $$
+  <p>$f'(a)$가 존재한다는 것은 $f'_-(a) = f'_+(a)$인 경우입니다 (값이 같고 둘 다 유한해야 함).
+  닫힌 구간 $[a, b]$의 끝점에서는 자연스럽게 한쪽 도함수만 정의됩니다.</p>
+
+  <h2>9. 운동학 — 위치·속도·가속도</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>차의 위치, 속도, 가속도는 <strong>미분으로 한 단씩 내려가는 사다리</strong>입니다. 위치를 시간으로 미분하면 속도, 속도를 또 미분하면 가속도.
+  반대로 가속도를 적분하면 속도, 속도를 적분하면 위치 — 적분(W9~W10)은 이 사다리를 거꾸로 올라가는 일이고요.</p>
+
+  <h3>정의</h3>
+  <p>물체의 위치를 시간 $t$의 함수 $s(t)$로 나타내면:</p>
+  $$ v(t) = s'(t) = \frac{ds}{dt}, \qquad a(t) = v'(t) = \frac{dv}{dt} = \frac{d^2 s}{dt^2} $$
+  <ul>
+    <li><strong>속도</strong> $v$ — 위치의 시간에 대한 변화율. 부호가 방향(전진/후진)을 알려줍니다.</li>
+    <li><strong>속력</strong> $|v|$ — 속도의 크기.</li>
+    <li><strong>가속도</strong> $a$ — 속도의 변화율. 0이 아니라는 것은 속도가 변하고 있다는 뜻 (액셀·브레이크·곡선 주행).</li>
+  </ul>
+
+  <h3>예제 9.1 — 자유낙하</h3>
+  <p>중력가속도 $g$ 만큼 받는 자유낙하 물체의 높이 $s(t) = s_0 - \tfrac{1}{2} g t^2$ ($s_0$는 초기 높이).</p>
+  $$ v(t) = -g t, \qquad a(t) = -g $$
+  <p>속도는 시간에 비례해 빨라지고(부호는 아래 방향 음수), 가속도는 일정한 $-g$. 갈릴레오가 이 결과를 기울어진 빗면 실험으로 확인했죠.</p>
+
+  <h3>예제 9.2 — 단순조화운동(스프링·진자)</h3>
+  <p>$s(t) = A \cos(\omega t)$일 때, $v(t) = -A\omega\sin(\omega t)$, $a(t) = -A\omega^2 \cos(\omega t) = -\omega^2 s(t)$.
+  가속도가 위치에 비례하고 부호가 반대 — "스프링이 늘어날수록 다시 끌어당기는" 복원력의 수학적 모습입니다.</p>
+
+  <h2>10. 인터랙티브: 운동 시뮬레이터</h2>
+
+  <p>운동 패턴을 골라 보세요. 위에서부터 위치 $s(t)$, 속도 $v(t) = s'(t)$, 가속도 $a(t) = v'(t)$ 그래프가 동시에 흐릅니다. 시간 커서 ↘ 가 세 그래프를 동시에 가리키며, 그 순간의 값을 우측에 숫자로 표시합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 위치 → 속도 → 가속도</h4>
+    <p>위치를 미분해 속도가, 속도를 미분해 가속도가 만들어집니다. 세 그래프를 동시에 보면 이 사다리가 한눈에 들어와요.</p>
+    <canvas id="kin" width="640" height="420"></canvas>
+    <div class="controls">
+      <label>운동 패턴
+        <select id="kinMode">
+          <option value="fall" selected>자유낙하 ($-\tfrac{1}{2}gt^2$)</option>
+          <option value="osc">단순조화운동</option>
+          <option value="step">가속 → 등속 → 감속</option>
+        </select>
+      </label>
+      <button id="kinPause">일시정지/재생</button>
+      <button id="kinRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kin'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const Tmax=10;
+    let t=0,running=true;
+    document.getElementById('kinPause').onclick=()=>{running=!running;};
+    document.getElementById('kinRst').onclick=()=>{t=0;};
+    function pattern(tt){
+      const m=document.getElementById('kinMode').value;
+      if(m==='fall'){
+        const g=2;
+        return{s:5 - 0.5*g*tt*tt, v:-g*tt, a:-g};
+      }
+      if(m==='osc'){
+        const A=2,om=1.4;
+        return{s:A*Math.cos(om*tt), v:-A*om*Math.sin(om*tt), a:-A*om*om*Math.cos(om*tt)};
+      }
+      // step: piecewise constant accel
+      const a1=1.2,a2=0,a3=-1.2;
+      const t1=3,t2=6;
+      let s=0,v=0,a=0;
+      if(tt<=t1){a=a1;v=a*tt;s=0.5*a*tt*tt;}
+      else if(tt<=t2){a=a2;const v1=a1*t1,s1=0.5*a1*t1*t1;v=v1;s=s1+v1*(tt-t1);}
+      else{a=a3;const v1=a1*t1,s1=0.5*a1*t1*t1;const s2=s1+v1*(t2-t1);v=v1+a3*(tt-t2);s=s2+v1*(tt-t2)+0.5*a3*(tt-t2)*(tt-t2);}
+      return{s,v,a};
+    }
+    // sample whole curve once per draw to keep alignment
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // 3 panels
+      const panels=[
+        {label:'위치 s(t)',color:'#0b5fff',y0:20,y1:140,key:'s',yR:[-6,6]},
+        {label:'속도 v(t) = s′(t)',color:'#1b5e20',y0:150,y1:270,key:'v',yR:[-5,5]},
+        {label:'가속도 a(t) = v′(t)',color:'#c62828',y0:280,y1:400,key:'a',yR:[-3,3]},
+      ];
+      const Lx0=50,Lx1=W-90;
+      const N=400;
+      // sample
+      const samples=[];
+      for(let i=0;i<=N;i++){
+        const tt=i*Tmax/N;
+        samples.push(pattern(tt));
+      }
+      panels.forEach(p=>{
+        x.strokeStyle='#ddd';x.strokeRect(Lx0,p.y0,Lx1-Lx0,p.y1-p.y0);
+        x.fillStyle='#444';x.font='12px sans-serif';
+        x.fillText(p.label,Lx0+6,p.y0+14);
+        // axes
+        const yC=(p.y0+p.y1)/2;
+        x.strokeStyle='#bbb';x.beginPath();x.moveTo(Lx0,yC);x.lineTo(Lx1,yC);x.stroke();
+        // curve
+        x.strokeStyle=p.color;x.lineWidth=2;x.beginPath();
+        for(let i=0;i<=N;i++){
+          const tt=i*Tmax/N;
+          const xx=Lx0+tt/Tmax*(Lx1-Lx0);
+          const v=samples[i][p.key];
+          const yy=yC - v/p.yR[1]*((p.y1-p.y0)/2 - 14);
+          if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+        }
+        x.stroke();
+        // current cursor
+        const cx=Lx0+t/Tmax*(Lx1-Lx0);
+        const cv=pattern(t)[p.key];
+        const cy=yC - cv/p.yR[1]*((p.y1-p.y0)/2 - 14);
+        x.strokeStyle='rgba(0,0,0,0.4)';x.setLineDash([3,3]);
+        x.beginPath();x.moveTo(cx,p.y0);x.lineTo(cx,p.y1);x.stroke();x.setLineDash([]);
+        x.fillStyle=p.color;x.beginPath();x.arc(cx,cy,4,0,Math.PI*2);x.fill();
+        // numeric value on right
+        x.fillStyle='#222';x.font='13px Consolas,monospace';
+        x.fillText(p.key+' = '+cv.toFixed(2),Lx1+8,(p.y0+p.y1)/2+5);
+      });
+      // time label
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('t = '+t.toFixed(2)+' s',Lx0+6,H-6);
+    }
+    function loop(){
+      if(running){t+=1/30;if(t>Tmax)t=0;}
+      draw();
+      requestAnimationFrame(()=>setTimeout(loop,33));
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="tip"><strong>관찰 포인트</strong> —
+  자유낙하에서 가속도는 일정한 $-g$ 직선, 속도는 그 적분으로 직선 감소, 위치는 그 적분으로 포물선 모양. 두 번 적분하면 두 단계 매끄러워진다는 직관이 보입니다.
+  단순조화운동에서는 위치·속도·가속도가 모두 같은 주기의 사인/코사인이지만 위상이 90°씩 어긋나 있어요 — 이게 바로 미분이 위상을 90° 앞당긴다는 W4의 결과입니다.</div>
+
+  <h2>11. 표기법 — 라이프니츠·라그랑주·뉴턴</h2>
+
+  <p>같은 도함수를 적는 표기법이 셋 있습니다. 모두 알아 두세요 — 각 표기가 잘 어울리는 맥락이 다릅니다.</p>
+
+  <ul>
+    <li><strong>라그랑주 표기 $f'(x)$</strong> — 가장 짧고 깔끔. 함수 이름 뒤에 프라임. 두 번 미분은 $f''(x)$, $n$번 미분은 $f^{(n)}(x)$.</li>
+    <li><strong>라이프니츠 표기 $\dfrac{dy}{dx}$</strong> — "$y$가 $x$에 대해 변하는 비율"이라는 의미를 그대로 보여 줌. 연쇄 법칙과 치환적분에서 위·아래의 약분처럼 사용 가능 (정확히는 약분 아니지만 형식적으로 잘 맞음).
+        두 번 미분은 $\dfrac{d^2 y}{dx^2}$. 물리·공학에서 압도적으로 선호.</li>
+    <li><strong>뉴턴 표기 $\dot s, \ddot s$</strong> — 윗점 하나가 한 번 시간 미분. 운동학·동역학에서 시간 변수가 자명할 때 자주 사용. 위 운동 시뮬레이터의 $s, v, a$ 관계는 $v = \dot s$, $a = \ddot s$로 적습니다.</li>
+  </ul>
+
+  <h3>특정 점에서의 값</h3>
+  <p>$x = 3$에서의 도함수 값을 적을 때:</p>
+  $$ f'(3) = \left.\frac{dy}{dx}\right|_{x=3} = \frac{dy}{dx}\bigg|_{x=3} $$
+  <p>라이프니츠 표기는 "어떤 점에서의 값인지"를 첨자로 분명히 적어야 합니다 — 표기는 길지만 의미가 명확.</p>
+
+  <h2>12. 흔한 오해와 핵심 정리</h2>
+
+  <div class="note"><strong>흔한 오해 ① — "도함수는 함숫값이다"</strong> —
+  도함수는 <em>또 하나의 함수</em>입니다. $f'(x)$는 입력 $x$를 받아 그 점에서의 접선 기울기를 돌려주는 함수예요. 한 점에서의 값을 구하려면 그 점을 따로 대입해야 합니다.</div>
+
+  <div class="note"><strong>흔한 오해 ② — "$dx, dy$는 그냥 작은 수다"</strong> —
+  엄밀히는 미분(differential)이라는 별도 개념이지만, 학부 수준에서는 라이프니츠 표기 $dy/dx$를 "비율"로 다루는 직관이 거의 항상 통합니다.
+  단, $dy$ 와 $dx$ 를 따로 떼어서 식으로 다루는 건 (치환적분처럼) 정당화되는 맥락에서만 사용하세요.</div>
+
+  <div class="note"><strong>흔한 오해 ③ — "미분 가능하면 도함수는 연속이다"</strong> —
+  거짓. 도함수가 모든 점에서 정의돼도 도함수 자체는 불연속일 수 있습니다 (예: $f(x) = x^2 \sin(1/x)$, $f(0) = 0$).
+  학부 1학년 수준에서는 자주 등장하지 않지만, 알아 두면 시험에 함정 문제로 한 번씩 나옵니다.</div>
+
+  <h3>이번 주의 핵심 한 문장</h3>
+  <div class="tip">
+  <strong>"도함수는 두 점을 잇는 할선이 한 점이 될 때까지 좁힌 극한값이고, 이는 곧 그 점에서의 접선의 기울기이며 순간변화율이다.
+  미분 가능하면 자동으로 연속이지만 그 반대는 일반적으로 거짓이다."</strong>
+  </div>
+
+  <h2>13. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Stewart, <em>Calculus: Early Transcendentals</em>, Ch.2.7~2.8 (도함수의 정의·미분 가능성).</li>
+    <li>Thomas' Calculus, Ch.3.1~3.2.</li>
+    <li>3Blue1Brown, <em>Essence of Calculus</em> Ep.2 — "도함수는 무엇을 측정하는가" 시각적 정수.</li>
+    <li>MIT 18.01 OCW, Lecture 2~3 (Strang).</li>
+    <li>다음 주 예고: 정의로 매번 풀기는 번거롭습니다. <strong>합·곱·몫·연쇄 법칙</strong>으로 도함수를 자동으로 계산하는 기계를 만듭니다.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="01-functions-limits.html"><small>← 이전</small>W1. 함수·극한·연속</a>
+    <a href="03-differentiation-rules.html" class="next"><small>다음 →</small>W3. 미분 규칙</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

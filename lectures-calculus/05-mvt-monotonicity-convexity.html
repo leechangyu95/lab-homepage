@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W5. 평균값 정리·단조성·볼록성 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html" class="active">미분적분학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../calculus.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 5. 평균값 정리·단조성·볼록성</h1>
+  <p class="lead">도함수의 부호로 함수의 모양을 읽는 법. 1차 도함수가 증감을, 2차 도함수가 볼록성을 알려 줍니다. 이번 주는 그래프를 손으로 그리는 능력을 기릅니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>롤 정리</li>
+    <li>평균값 정리 (MVT)</li>
+    <li>1차 도함수 → 단조성</li>
+    <li>극값과 1·2계 판정법</li>
+    <li>2차 도함수 → 볼록성</li>
+    <li>변곡점</li>
+    <li>그래프 분석 종합 — 7단계 절차</li>
+    <li>인터랙티브: MVT 시각화</li>
+    <li>인터랙티브: 함수 모양 분석기</li>
+    <li>흔한 오해와 핵심 정리</li>
+    <li>더 깊이 공부하기</li>
+  </ol></div>
+
+  <h2>1. 롤 정리 (Rolle's Theorem)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>등산을 시작한 곳과 도착한 곳의 고도가 같다고 합시다. 그러면 도중에 반드시 <strong>한 번은 평지</strong>(지역적 정상 또는 분지)를 지났을 거예요. 그 평지에서 순간 기울기가 0 — 그게 롤 정리입니다.</p>
+
+  <h3>정리 진술</h3>
+  <p>$f$가 $[a, b]$에서 연속, $(a, b)$에서 미분 가능하고 $f(a) = f(b)$이면, $f'(c) = 0$인 $c \in (a, b)$가 적어도 하나 존재한다.</p>
+
+  <h2>2. 평균값 정리 (MVT, Mean Value Theorem)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>출발점부터 도착점까지의 평균 속력이 60 km/h였다면, 도중에 <strong>적어도 한 번은 정확히 60 km/h로 달린 순간</strong>이 존재합니다. 평균을 한 점에서 실제로 달성한 순간 — 그게 MVT.</p>
+
+  <h3>정리 진술</h3>
+  <p>$f$가 $[a, b]$에서 연속, $(a, b)$에서 미분 가능하면, 다음을 만족하는 $c \in (a, b)$가 적어도 하나 존재한다.</p>
+  $$ f'(c) = \frac{f(b) - f(a)}{b - a} $$
+  <p>그래프 위에서: 두 끝점을 잇는 할선과 <strong>평행한 접선</strong>이 도중에 반드시 한 번은 그어진다는 뜻.</p>
+
+  <h3>왜 강력한가?</h3>
+  <p>다음 두 결과가 MVT의 직접 따름.</p>
+  <ul>
+    <li><strong>$f' \equiv 0$이면 $f$는 상수.</strong> ("변하지 않는데 어떻게 다른 값?")</li>
+    <li><strong>$f'$이 두 함수에서 같으면 두 함수는 상수 차이.</strong> 적분의 정의와 직결되는 결과 (W9).</li>
+  </ul>
+
+  <h2>3. 1차 도함수 → 단조성</h2>
+
+  $$ f'(x) > 0 \;\text{on } I \Rightarrow f \text{ 증가}, \quad f'(x) < 0 \;\text{on } I \Rightarrow f \text{ 감소} $$
+
+  <h3>예제 3.1</h3>
+  <p>$f(x) = x^3 - 3x$의 단조 구간.</p>
+  <p>$f'(x) = 3x^2 - 3 = 3(x-1)(x+1)$. 부호:</p>
+  <ul>
+    <li>$x < -1$: $f' > 0$ → 증가</li>
+    <li>$-1 < x < 1$: $f' < 0$ → 감소</li>
+    <li>$x > 1$: $f' > 0$ → 증가</li>
+  </ul>
+  <p>그러므로 $x = -1$에서 극대, $x = 1$에서 극소.</p>
+
+  <h2>4. 극값과 1·2계 판정법</h2>
+
+  <h3>1계 판정법 (First Derivative Test)</h3>
+  <p>임계점 $c$ ($f'(c) = 0$ 또는 미분 불가능)에서:</p>
+  <ul>
+    <li>$f'$이 $c$ 직전에 양수, 직후에 음수 → <strong>극대</strong>.</li>
+    <li>$f'$이 $c$ 직전에 음수, 직후에 양수 → <strong>극소</strong>.</li>
+    <li>부호가 바뀌지 않음 → 극값 아님.</li>
+  </ul>
+
+  <h3>2계 판정법 (Second Derivative Test)</h3>
+  <p>$f'(c) = 0$이고 $f''(c) \ne 0$이면:</p>
+  <ul>
+    <li>$f''(c) > 0$ → <strong>극소</strong> (그릇 모양).</li>
+    <li>$f''(c) < 0$ → <strong>극대</strong> (역그릇 모양).</li>
+    <li>$f''(c) = 0$ → 판정 불가, 1계로 다시 봐야 함.</li>
+  </ul>
+
+  <h2>5. 2차 도함수 → 볼록성</h2>
+
+  <h3>정의</h3>
+  <p>구간 $I$에서 $f'' > 0$이면 <strong>볼록(convex, concave up)</strong>, $f'' < 0$이면 <strong>오목(concave down)</strong>이라 합니다.</p>
+  <ul>
+    <li>볼록 함수: 그릇 모양. 임의의 두 점을 잇는 할선이 곡선보다 <em>위</em>.</li>
+    <li>오목 함수: 역그릇 모양. 할선이 곡선보다 <em>아래</em>.</li>
+  </ul>
+
+  <h3>왜 중요한가?</h3>
+  <p>최적화에서 결정적입니다. 볼록 함수는 <strong>지역 최저점이 곧 전역 최저점</strong>이라 골치가 없어요. 오목/볼록이 섞여 있으면 가짜 극값에 속을 수 있습니다.</p>
+
+  <h3>예제 5.1 — AM-GM 부등식 ($\ln x$의 오목성에서)</h3>
+  <p>$\ln x$의 도함수 $1/x$, 2차 도함수 $-1/x^2 < 0$이므로 $\ln x$는 $x > 0$에서 오목.</p>
+  <p>오목 함수의 정의(할선이 곡선 아래)로부터 $\ln\!\bigl(\tfrac{a+b}{2}\bigr) \ge \tfrac{1}{2}(\ln a + \ln b) = \ln\sqrt{ab}$. 즉
+  $\dfrac{a+b}{2} \ge \sqrt{ab}$ — 산술-기하 평균 부등식이 한 줄에 떨어집니다.</p>
+
+  <h2>6. 변곡점 (Inflection Point)</h2>
+
+  <p>$f$가 그 점에서 연속이고, 그 점을 지나면서 $f''$의 부호가 바뀌면 그 점을 <strong>변곡점</strong>이라 합니다.</p>
+  <p>주의: $f''(c) = 0$이라고 무조건 변곡점이 되는 게 아닙니다. 부호가 바뀌어야 합니다 (예: $f(x) = x^4$의 $x = 0$은 $f''(0) = 0$이지만 변곡점 아님).</p>
+
+  <h2>7. 그래프 분석 종합 — 7단계 절차</h2>
+
+  <ol>
+    <li>정의역과 점근선.</li>
+    <li>대칭성 (우함수·기함수·주기) 검토.</li>
+    <li>$x$절편·$y$절편.</li>
+    <li>$f'$의 부호로 단조 구간.</li>
+    <li>임계점에서 1계 또는 2계 판정으로 극값 분류.</li>
+    <li>$f''$의 부호로 볼록 구간과 변곡점.</li>
+    <li>표를 그리고 그래프 스케치.</li>
+  </ol>
+
+  <h2>8. 인터랙티브: MVT 시각화</h2>
+
+  <div class="demo">
+    <h4>🎮 평균값 정리 — 평행 접선 찾기</h4>
+    <p>구간 $[a, b]$의 끝점을 슬라이더로 잡으면, 두 점을 잇는 할선과 평행한 접선의 위치(MVT의 $c$)가 자동으로 표시됩니다. 어떤 함수에서도 그런 $c$가 항상 존재함을 확인하세요.</p>
+    <canvas id="mvt" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>a <span class="val" id="mvAV">-1.50</span><input type="range" id="mvA" min="-2.5" max="0.5" step="0.05" value="-1.5"></label>
+      <label>b <span class="val" id="mvBV">2.00</span><input type="range" id="mvB" min="0.5" max="2.8" step="0.05" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mvt'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const xR=[-3,3],yR=[-3,5];
+    const M={l:50,r:20,t:20,b:30};
+    function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+    function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function f(v){return 0.5*v*v*v - v + 1;}
+    function fp(v){return 1.5*v*v - 1;}
+    function loop(){
+      const a=+document.getElementById('mvA').value;
+      const b=+document.getElementById('mvB').value;
+      document.getElementById('mvAV').textContent=a.toFixed(2);
+      document.getElementById('mvBV').textContent=b.toFixed(2);
+      const slope=(f(b)-f(a))/(b-a);
+      // find c: fp(c) = slope. Since fp(v)=1.5v^2-1, c=±sqrt((slope+1)/1.5)
+      const arg=(slope+1)/1.5;
+      let cs=[];
+      if(arg>=0){cs=[Math.sqrt(arg),-Math.sqrt(arg)].filter(v=>v>a&&v<b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // function
+      x.strokeStyle='#222';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=0.01){
+        const yv=f(v);if(yv<yR[0]||yv>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // secant a-b (red)
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      x.moveTo(px(a),py(f(a)));x.lineTo(px(b),py(f(b)));x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(px(a),py(f(a)),5,0,Math.PI*2);x.fill();
+      x.beginPath();x.arc(px(b),py(f(b)),5,0,Math.PI*2);x.fill();
+      // tangent at c (green dashed) — same slope as secant
+      x.strokeStyle='#1b5e20';x.lineWidth=2;x.setLineDash([6,4]);
+      cs.forEach(cv=>{
+        const fc=f(cv);
+        const x0=xR[0],y0=fc+slope*(x0-cv);
+        const x1=xR[1],y1=fc+slope*(x1-cv);
+        x.beginPath();x.moveTo(px(x0),py(y0));x.lineTo(px(x1),py(y1));x.stroke();
+        x.fillStyle='#1b5e20';x.beginPath();x.arc(px(cv),py(fc),5,0,Math.PI*2);x.fill();
+      });
+      x.setLineDash([]);
+      // labels
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('y = 0.5x³ − x + 1',M.l+10,M.t+18);
+      x.fillStyle='#c62828';
+      x.fillText('할선 기울기 = '+slope.toFixed(3),M.l+10,M.t+38);
+      x.fillStyle='#1b5e20';
+      const cstr=cs.map(v=>v.toFixed(3)).join(', ');
+      x.fillText('MVT 점 c ≈ '+(cstr||'(범위 밖)'),M.l+10,M.t+58);
+      requestAnimationFrame(()=>setTimeout(loop,40));
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>9. 인터랙티브: 함수 모양 분석기</h2>
+
+  <div class="demo">
+    <h4>🎮 자동 함수 분석 — 단조·극값·볼록·변곡점</h4>
+    <p>함수를 골라 보세요. $f$ 그래프 위에 단조 구간(빨강/파랑)과 볼록·오목 구간(연한 색칠), 극값과 변곡점이 자동으로 표시됩니다.</p>
+    <canvas id="anly" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="anlyFn">
+          <option value="cubic" selected>x³ − 3x</option>
+          <option value="quartic">x⁴ − 4x²</option>
+          <option value="bell">e^(-x²/2)</option>
+          <option value="rational">x/(1+x²)</option>
+        </select>
+      </label>
+    </div>
+    <p id="anlyInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('anly'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function fn(v){
+      const m=document.getElementById('anlyFn').value;
+      if(m==='cubic')return{f:v**3-3*v,d:3*v*v-3,d2:6*v,xR:[-3,3],yR:[-4,4]};
+      if(m==='quartic')return{f:v**4-4*v*v,d:4*v**3-8*v,d2:12*v*v-8,xR:[-3,3],yR:[-5,9]};
+      if(m==='bell'){const e=Math.exp(-v*v/2);return{f:e,d:-v*e,d2:(v*v-1)*e,xR:[-3,3],yR:[-0.2,1.2]};}
+      const D=1+v*v;return{f:v/D,d:(1-v*v)/(D*D),d2:2*v*(v*v-3)/(D*D*D),xR:[-4,4],yR:[-0.7,0.7]};
+    }
+    function loop(){
+      const ref=fn(0.01);
+      const xR=ref.xR,yR=ref.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // sample
+      const N=600;
+      const samples=[];
+      for(let i=0;i<=N;i++){
+        const v=xR[0]+i*(xR[1]-xR[0])/N;
+        samples.push({v,...fn(v)});
+      }
+      // background shade based on f''
+      for(let i=0;i<N;i++){
+        const a=samples[i],b=samples[i+1];
+        const sgn=a.d2>=0?1:-1;
+        x.fillStyle=sgn>0?'rgba(11,95,255,0.06)':'rgba(245,124,0,0.06)';
+        x.fillRect(px(a.v),py(yR[1]),px(b.v)-px(a.v),py(yR[0])-py(yR[1]));
+      }
+      // curve segmented by f' sign
+      for(let i=0;i<N;i++){
+        const a=samples[i],b=samples[i+1];
+        const sgn=a.d>=0?'#1b5e20':'#c62828';
+        x.strokeStyle=sgn;x.lineWidth=2.5;x.beginPath();
+        x.moveTo(px(a.v),py(a.f));x.lineTo(px(b.v),py(b.f));x.stroke();
+      }
+      // mark critical and inflection points
+      const ext=[],infl=[];
+      for(let i=1;i<N;i++){
+        if(samples[i-1].d*samples[i+1].d<0)ext.push(samples[i]);
+        if(samples[i-1].d2*samples[i+1].d2<0)infl.push(samples[i]);
+      }
+      ext.forEach(p=>{x.fillStyle='#c62828';x.beginPath();x.arc(px(p.v),py(p.f),5,0,Math.PI*2);x.fill();});
+      infl.forEach(p=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(px(p.v),py(p.f),5,0,Math.PI*2);x.fill();});
+      // legend
+      x.fillStyle='#1b5e20';x.fillRect(M.l+10,M.t+10,16,3);x.fillStyle='#222';x.font='12px sans-serif';x.fillText("f'>0 증가",M.l+30,M.t+15);
+      x.fillStyle='#c62828';x.fillRect(M.l+110,M.t+10,16,3);x.fillStyle='#222';x.fillText("f'<0 감소",M.l+130,M.t+15);
+      x.fillStyle='#c62828';x.beginPath();x.arc(M.l+220,M.t+13,4,0,Math.PI*2);x.fill();x.fillStyle='#222';x.fillText('극값',M.l+228,M.t+17);
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(M.l+260,M.t+13,4,0,Math.PI*2);x.fill();x.fillStyle='#222';x.fillText('변곡',M.l+268,M.t+17);
+      // info
+      const exStr=ext.map(p=>'('+p.v.toFixed(2)+', '+p.f.toFixed(2)+')').join('  ');
+      const inStr=infl.map(p=>'('+p.v.toFixed(2)+', '+p.f.toFixed(2)+')').join('  ');
+      document.getElementById('anlyInfo').textContent='극값: '+(exStr||'없음')+'    ·    변곡점: '+(inStr||'없음');
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>10. 흔한 오해와 핵심 정리</h2>
+
+  <div class="note"><strong>흔한 오해 ① — "$f'(c) = 0$이면 극값이다"</strong> —
+  거짓. $f(x) = x^3$의 $x = 0$은 $f'(0) = 0$이지만 극값 아님. 1계 판정으로 부호 변화가 있어야 극값.</div>
+
+  <div class="note"><strong>흔한 오해 ② — "$f''(c) = 0$이면 변곡점이다"</strong> —
+  거짓. $f(x) = x^4$의 $x = 0$은 $f''(0) = 0$이지만 변곡점 아님 (양쪽이 모두 볼록). $f''$의 <em>부호 변화</em>가 있어야 변곡점.</div>
+
+  <div class="note"><strong>흔한 오해 ③ — "MVT는 닫힌 구간 끝점에서도 성립한다"</strong> —
+  $c$는 <em>열린 구간</em> $(a, b)$ 안에 있어야 합니다. 끝점에서는 한쪽 도함수만 정의되니 MVT의 보장이 닿지 않아요.</div>
+
+  <h3>이번 주의 핵심 한 문장</h3>
+  <div class="tip"><strong>"$f'$의 부호로 증감을, $f''$의 부호로 볼록성을 읽는다. 임계점과 변곡점을 찾아 모양을 분류하면 어떤 함수의 그래프든 그릴 수 있다."</strong></div>
+
+  <h2>11. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Stewart, Ch.4.1~4.3.</li>
+    <li>Thomas, Ch.4.1~4.4.</li>
+    <li>다음 주 예고: 단조·볼록 분석을 무기로 <strong>최적화 문제</strong>를 풀고, 닫힌 식이 안 풀리는 경우 <strong>뉴턴법</strong>으로 수치 해를 구합니다.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="04-transcendental-implicit.html"><small>← 이전</small>W4. 초월·음함수</a>
+    <a href="06-optimization-newton.html" class="next"><small>다음 →</small>W6. 최적화·뉴턴법</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

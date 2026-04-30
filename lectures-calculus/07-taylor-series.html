@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W7. 테일러 급수 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html" class="active">미분적분학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../calculus.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 7. 테일러 급수</h1>
+  <p class="lead">"복잡한 함수도 다항식으로 흉내 낼 수 있다." 한 점에서의 도함수 정보만으로 함수의 모양을 무한히 정밀하게 근사하는 방법. 계산기·계산기·물리 응용의 숨은 일꾼입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 다항식 근사인가</li>
+    <li>1차 근사 (선형 근사)</li>
+    <li>2차 근사</li>
+    <li>$N$차 테일러 다항식</li>
+    <li>대표 매클로린 전개 4종</li>
+    <li>오차와 수렴 반경</li>
+    <li>응용 — 작은각 근사·복리·전기회로</li>
+    <li>인터랙티브: 테일러 차수 슬라이더</li>
+    <li>흔한 오해와 핵심 정리</li>
+    <li>더 깊이 공부하기</li>
+  </ol></div>
+
+  <h2>1. 왜 다항식 근사인가</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>계산기에 $\sin(0.7)$를 입력하면 즉시 $0.6442\dots$가 나옵니다. 계산기가 사인을 어떻게 계산할까요? 그냥 회로 안에 있는 게 아니에요.
+  사실 계산기는 사인을 다항식 $x - \frac{x^3}{6} + \frac{x^5}{120} - \cdots$ 으로 근사해 곱셈·덧셈만으로 풀어 줍니다.</p>
+
+  <p>다항식이 좋은 이유는 단 하나 — <strong>덧셈과 곱셈만으로 계산이 끝나기 때문</strong>입니다. 미분도, 적분도 거듭제곱 법칙으로 즉시. 그래서 어떤 복잡한 함수든 다항식으로 흉내 낼 수만 있다면 다루기가 폭발적으로 쉬워져요.</p>
+
+  <h2>2. 1차 근사 (선형 근사)</h2>
+
+  <p>점 $a$에서 $f$의 1차 근사:</p>
+  $$ f(x) \approx f(a) + f'(a)(x - a) $$
+  <p>이 식의 정체는 W2의 접선 방정식. 즉 <strong>접선이 곧 1차 테일러 근사</strong>입니다.</p>
+
+  <h3>예제 2.1 — $\sqrt{4.04}$</h3>
+  <p>$f(x) = \sqrt{x}$, $a = 4$ ($\sqrt{4} = 2$를 이미 알고 있음). $f'(x) = 1/(2\sqrt{x})$, $f'(4) = 1/4$.</p>
+  $$ \sqrt{4.04} \approx 2 + \tfrac{1}{4}(0.04) = 2.01 $$
+  <p>실제값 $2.0099751\dots$. 1차 근사로 소수점 4자리 정확. 작은 변화에 한해 매우 강력해요.</p>
+
+  <h2>3. 2차 근사</h2>
+
+  $$ f(x) \approx f(a) + f'(a)(x-a) + \frac{f''(a)}{2}(x-a)^2 $$
+
+  <p>1차에 곡률 정보가 추가되어, 직선에서 포물선으로 업그레이드. 더 멀리 가도 정확합니다.</p>
+
+  <h3>예제 3.1 — $\cos(0.1)$ 의 2차 근사</h3>
+  <p>$a = 0$, $\cos 0 = 1$, $\cos'(0) = -\sin 0 = 0$, $\cos''(0) = -\cos 0 = -1$.</p>
+  $$ \cos x \approx 1 + 0 \cdot x + \tfrac{-1}{2} x^2 = 1 - \tfrac{x^2}{2} $$
+  <p>$x = 0.1$ 대입: $1 - 0.005 = 0.995$. 실제값 $0.99500416\dots$. 2차 근사로 소수점 5자리.</p>
+
+  <h2>4. $N$차 테일러 다항식</h2>
+
+  $$ T_N(x) = \sum_{k=0}^{N} \frac{f^{(k)}(a)}{k!}(x - a)^k $$
+
+  <p>$a = 0$일 때 특별히 <strong>매클로린 전개</strong>라 부릅니다. 1·2차 근사가 $N$차로 일반화된 식.</p>
+
+  <h2>5. 대표 매클로린 전개 4종 — 외워 둘 것</h2>
+
+  $$ e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \cdots = \sum_{k=0}^{\infty} \frac{x^k}{k!} $$
+  $$ \sin x = x - \frac{x^3}{3!} + \frac{x^5}{5!} - \cdots = \sum_{k=0}^{\infty} \frac{(-1)^k x^{2k+1}}{(2k+1)!} $$
+  $$ \cos x = 1 - \frac{x^2}{2!} + \frac{x^4}{4!} - \cdots = \sum_{k=0}^{\infty} \frac{(-1)^k x^{2k}}{(2k)!} $$
+  $$ \frac{1}{1-x} = 1 + x + x^2 + x^3 + \cdots = \sum_{k=0}^{\infty} x^k, \quad |x| < 1 $$
+
+  <p>이 네 식을 외워 두면 학부 수준의 모든 테일러 문제는 변형·치환으로 풀립니다.</p>
+
+  <h3>예제 5.1 — 합성으로 새 전개 얻기</h3>
+  <p>$e^{-x^2}$ 의 매클로린 전개. $e^u$의 식에 $u = -x^2$ 대입.</p>
+  $$ e^{-x^2} = 1 - x^2 + \frac{x^4}{2!} - \frac{x^6}{3!} + \cdots $$
+  <p>각 항을 적분하면 정규분포의 누적분포(error function)도 급수로 적을 수 있어요 — 이게 통계·신호처리의 출발점.</p>
+
+  <h2>6. 오차와 수렴 반경</h2>
+
+  <h3>오차의 크기</h3>
+  <p>$f(x) - T_N(x) = R_N(x)$ 를 잉여항. 라그랑주 형식:</p>
+  $$ R_N(x) = \frac{f^{(N+1)}(c)}{(N+1)!}(x-a)^{N+1} \quad \text{for some } c \in (a, x) $$
+  <p>$|x - a|$가 작으면 잉여항이 빠르게 0으로 가요 ($(N+1)!$ 분모 때문).</p>
+
+  <h3>수렴 반경 (Radius of Convergence)</h3>
+  <p>매클로린 급수가 수렴하는 $x$ 범위. $e^x, \sin x, \cos x$는 모든 실수에서 수렴 (수렴 반경 $\infty$).
+  $1/(1-x)$는 $|x| < 1$에서만 수렴 (수렴 반경 1). 점 $a$에서 함수가 "특이점"에 가까울수록 수렴 반경이 작아요.</p>
+
+  <h2>7. 응용 — 작은각 근사·복리·전기회로</h2>
+
+  <h3>작은각 근사 — 진자의 운동방정식</h3>
+  <p>물리에서 가장 자주 쓰는 근사. $\theta$가 작으면 ($|\theta| \lesssim 0.3$ rad ≈ 17°):</p>
+  $$ \sin\theta \approx \theta, \qquad \cos\theta \approx 1 - \tfrac{\theta^2}{2} $$
+  <p>이 한 줄 덕분에 진자의 운동방정식 $\ddot\theta = -\frac{g}{\ell}\sin\theta$가 단순 조화 운동 $\ddot\theta = -\frac{g}{\ell}\theta$로 풀려, 주기 공식 $T = 2\pi\sqrt{\ell/g}$가 나옵니다.</p>
+
+  <h3>복리·인구 모델 — 지수 함수의 1·2차 근사</h3>
+  <p>$e^{rt} \approx 1 + rt + \frac{(rt)^2}{2}$. 이자율 $r$이 작고 시간 $t$가 짧으면 $1 + rt$ (단리 근사) 가 충분. 더 정밀하면 2차 항까지.</p>
+
+  <h3>전기회로 — 비선형 소자의 선형화</h3>
+  <p>다이오드의 전류-전압 관계 $I = I_0(e^{V/V_T} - 1)$ 같은 비선형 식을 동작점 $V_0$ 근처에서 1차 테일러로 근사:</p>
+  $$ I \approx I(V_0) + \frac{dI}{dV}\bigg|_{V_0}(V - V_0) $$
+  <p>이렇게 만들어진 "소신호 모델"이 회로 해석의 표준 도구. 학부 메카트로닉스의 트랜지스터 분석이 이 절차의 반복이에요.</p>
+
+  <h2>8. 인터랙티브: 테일러 차수 슬라이더</h2>
+
+  <div class="demo">
+    <h4>🎮 테일러 차수 ↑ — 다항식이 본함수에 수렴</h4>
+    <p>함수와 차수 $N$을 골라 보세요. $N$이 커질수록 다항식 근사가 본함수에 가까워지는 모습이 한 화면에 들어옵니다.
+    $1/(1-x)$ 같이 수렴 반경이 1인 함수에서는 $|x| < 1$ 영역에서만 수렴이 일어남을 확인하세요.</p>
+    <canvas id="ts" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="tsFn">
+          <option value="sin" selected>sin x</option>
+          <option value="cos">cos x</option>
+          <option value="exp">eˣ</option>
+          <option value="geom">1/(1−x)</option>
+          <option value="ln">ln(1+x)</option>
+        </select>
+      </label>
+      <label>차수 N <span class="val" id="tsNV">3</span><input type="range" id="tsN" min="1" max="20" value="3"></label>
+    </div>
+    <p id="tsInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ts'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function setup(){
+      const m=document.getElementById('tsFn').value;
+      if(m==='sin'){
+        return{f:Math.sin,coef:k=>{if(k%2===0)return 0;const sign=(((k-1)/2)%2===0)?1:-1;return sign/factorial(k);},xR:[-7,7],yR:[-1.6,1.6],roc:'∞'};
+      }
+      if(m==='cos'){
+        return{f:Math.cos,coef:k=>{if(k%2===1)return 0;const sign=((k/2)%2===0)?1:-1;return sign/factorial(k);},xR:[-7,7],yR:[-1.6,1.6],roc:'∞'};
+      }
+      if(m==='exp'){
+        return{f:Math.exp,coef:k=>1/factorial(k),xR:[-3,3],yR:[-1,8],roc:'∞'};
+      }
+      if(m==='geom'){
+        return{f:v=>1/(1-v),coef:k=>1,xR:[-1.5,1.5],yR:[-4,4],roc:'1'};
+      }
+      // ln(1+x)
+      return{f:v=>v>-1?Math.log(1+v):NaN,coef:k=>k===0?0:(((k-1)%2===0?1:-1)/k),xR:[-1.2,1.5],yR:[-3,1.5],roc:'1'};
+    }
+    function factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
+    function loop(){
+      const N=+document.getElementById('tsN').value;
+      document.getElementById('tsNV').textContent=N;
+      const S=setup();
+      const xR=S.xR,yR=S.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // function
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){
+        const yv=S.f(v);if(!isFinite(yv)||yv<yR[0]||yv>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // taylor
+      const coefs=[];for(let k=0;k<=N;k++)coefs.push(S.coef(k));
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.setLineDash([6,4]);x.beginPath();
+      first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){
+        let p=0,xpow=1;for(let k=0;k<=N;k++){p+=coefs[k]*xpow;xpow*=v;}
+        if(p<yR[0]||p>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(p));first=false;}else x.lineTo(px(v),py(p));
+      }
+      x.stroke();x.setLineDash([]);
+      // legend
+      x.fillStyle='#0b5fff';x.fillRect(M.l+10,M.t+10,16,3);x.fillStyle='#222';x.font='12px sans-serif';x.fillText('본함수 f(x)',M.l+30,M.t+15);
+      x.fillStyle='#f57c00';x.fillRect(M.l+120,M.t+10,16,3);x.fillStyle='#222';x.fillText('테일러 T'+N+'(x)',M.l+140,M.t+15);
+      // info: error at sample points
+      const samples=[xR[0]+0.3*(xR[1]-xR[0]),xR[0]+0.7*(xR[1]-xR[0]),xR[1]*0.95];
+      const errs=samples.map(v=>{
+        const fv=S.f(v);if(!isFinite(fv))return null;
+        let p=0,xpow=1;for(let k=0;k<=N;k++){p+=coefs[k]*xpow;xpow*=v;}
+        return{v,e:Math.abs(p-fv)};
+      }).filter(x=>x);
+      const info='수렴 반경: '+S.roc+'    ·    오차 |f − T'+N+'|  '+errs.map(o=>'@x='+o.v.toFixed(2)+': '+o.e.toExponential(2)).join('   ');
+      document.getElementById('tsInfo').textContent=info;
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="tip"><strong>관찰 포인트</strong> —
+  ① $\sin x, \cos x, e^x$는 차수를 올리면 어떤 $x$에서도 수렴.
+  ② $1/(1-x), \ln(1+x)$는 $|x| > 1$에서 차수를 아무리 올려도 발산 — 수렴 반경의 의미.
+  ③ 차수 $N$을 1, 2, 3, 5, 10으로 점차 올려가며 곡선이 본함수와 어디서 갈라지는지 손으로 확인하세요.</div>
+
+  <h2>9. 흔한 오해와 핵심 정리</h2>
+
+  <div class="note"><strong>흔한 오해 ① — "테일러 급수는 항상 수렴한다"</strong> —
+  거짓. 수렴 반경 안에서만 수렴합니다. $1/(1-x)$의 매클로린은 $|x| < 1$ 안에서만 의미 있어요.</div>
+
+  <div class="note"><strong>흔한 오해 ② — "수렴하면 본 함수와 같다"</strong> —
+  거짓. 수렴해도 다른 함수일 수 있습니다 (예: $f(x) = e^{-1/x^2}$의 매클로린은 모든 차수에서 0이지만 함수 자체는 0이 아님). 학부 수준에서는 잘 안 나오지만 알아 둘 사실.</div>
+
+  <div class="note"><strong>흔한 오해 ③ — "$\sin x \approx x$ 는 항상 통한다"</strong> —
+  $|x|$ 가 작을 때만. $x = \pi/2$ 면 $\sin x = 1$인데 $x \approx 1.57$로 정확하지 않아요. 작은각 근사는 라디안 기준 $|x| \lesssim 0.3$ 까지가 안전.</div>
+
+  <h3>이번 주의 핵심 한 문장</h3>
+  <div class="tip"><strong>"테일러 급수는 한 점의 도함수 정보로 함수 전체를 다항식으로 흉내 내는 도구. 차수가 올라갈수록 정밀해지지만, 수렴 반경 밖에서는 발산한다."</strong></div>
+
+  <h2>10. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Stewart, Ch.11.10~11.11.</li>
+    <li>Thomas, Ch.10.7~10.9.</li>
+    <li>3Blue1Brown, <em>Essence of Calculus</em> Ep.11 — 테일러 급수의 시각적 정수.</li>
+    <li>다음 주는 <strong>중간고사 정리</strong>. 1~7주차 핵심 공식·풀이 패턴·기출 유형을 정리합니다.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="06-optimization-newton.html"><small>← 이전</small>W6. 최적화·뉴턴법</a>
+    <a href="08-midterm-review.html" class="next"><small>다음 →</small>W8. 중간고사 정리</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

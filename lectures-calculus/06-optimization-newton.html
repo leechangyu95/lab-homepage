@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W6. 최적화 &amp; 뉴턴법 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html" class="active">미분적분학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../calculus.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 6. 최적화 &amp; 뉴턴법</h1>
+  <p class="lead">미분의 가장 실용적인 응용. 어떤 양을 가장 크게(또는 작게) 만드는 입력을 찾는 일이 <strong>최적화</strong>이고, 정확한 식을 손으로 풀 수 없을 때 <strong>뉴턴법</strong>이 빠르게 수치 답을 줍니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 최적화인가</li>
+    <li>닫힌 구간의 절대 최대·최소 — 후보 비교법</li>
+    <li>응용 최적화 — 모델링이 절반</li>
+    <li>대표 예제 — 둘레 일정 최대 면적</li>
+    <li>대표 예제 — 점에서 직선까지 최단거리</li>
+    <li>뉴턴법 — 근 찾기</li>
+    <li>뉴턴법 — 최적화에 사용</li>
+    <li>수렴·발산 — 시작점이 중요한 이유</li>
+    <li>인터랙티브: 1D 뉴턴법</li>
+    <li>흔한 오해와 핵심 정리</li>
+    <li>더 깊이 공부하기</li>
+  </ol></div>
+
+  <h2>1. 왜 최적화인가</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>"가장 효율적인 디자인", "가장 빠른 길", "가장 적은 비용". 일상의 모든 의사결정이 사실상 최적화 문제예요. 미분적분학은 이 문제들을 푸는 가장 강력한 도구를 제공합니다 —
+  <strong>"극값에서는 도함수가 0"</strong>이라는 한 줄 사실입니다.</p>
+
+  <p>이번 주의 두 핵심 도구:</p>
+  <ul>
+    <li><strong>해석적 풀이</strong> — $f'(x) = 0$을 손으로 풀고 1계/2계 판정으로 분류 (W5 활용).</li>
+    <li><strong>수치적 풀이</strong> — 손으로 $f' = 0$이 안 풀리면 뉴턴법으로 빠르게 근사.</li>
+  </ul>
+
+  <h2>2. 닫힌 구간의 절대 최대·최소 — 후보 비교법</h2>
+
+  <p>$f$가 닫힌 구간 $[a, b]$에서 연속이면 <strong>최대값과 최소값이 반드시 존재</strong>(극값 정리, EVT). 그 후보는 다음 셋뿐.</p>
+  <ol>
+    <li>구간 끝점 $a, b$.</li>
+    <li>$f'(c) = 0$인 임계점 $c \in (a, b)$.</li>
+    <li>$f$가 미분 불가능한 점 $c \in (a, b)$.</li>
+  </ol>
+  <p>이 모든 후보의 함숫값을 계산하고 가장 큰 것·작은 것을 고르면 끝.</p>
+
+  <h3>예제 2.1</h3>
+  <p>$f(x) = x^3 - 6x^2 + 9x + 1$ 의 $[0, 4]$ 최대·최소.</p>
+  <ol>
+    <li>$f'(x) = 3x^2 - 12x + 9 = 3(x-1)(x-3)$. 임계점 $x = 1, 3$.</li>
+    <li>후보값: $f(0) = 1$, $f(1) = 5$, $f(3) = 1$, $f(4) = 5$.</li>
+    <li>최대 5 (at $x = 1, 4$), 최소 1 (at $x = 0, 3$).</li>
+  </ol>
+
+  <h2>3. 응용 최적화 — 모델링이 절반</h2>
+
+  <p>실제 문제의 80%는 식 세우기. 다음 절차를 외우세요.</p>
+  <ol>
+    <li>최적화하려는 양을 변수로 (예: 면적·둘레·시간·비용).</li>
+    <li>그 양을 <strong>한 변수의 함수</strong>로 적기 (제약조건을 이용해 변수를 줄이기).</li>
+    <li>정의역 (물리적·기하학적 제약).</li>
+    <li>$f' = 0$ 풀어 임계점.</li>
+    <li>1계 또는 2계 판정으로 최대·최소 분류.</li>
+    <li>답을 원래 문제의 언어로 해석.</li>
+  </ol>
+
+  <h2>4. 대표 예제 — 둘레 일정·최대 면적</h2>
+
+  <p><em>"둘레가 100 m인 직사각형 중 면적이 가장 큰 것은?"</em></p>
+  <ol>
+    <li>가로 $x$, 세로 $y$라 하면 둘레 $2x + 2y = 100$ ⇒ $y = 50 - x$.</li>
+    <li>면적 $A(x) = xy = x(50 - x) = 50x - x^2$.</li>
+    <li>정의역: $0 < x < 50$ (면적이 양수여야).</li>
+    <li>$A'(x) = 50 - 2x = 0 \Rightarrow x = 25$.</li>
+    <li>$A''(x) = -2 < 0$ → 극대(2계 판정).</li>
+    <li>$x = y = 25$ — <strong>정사각형</strong>이 답. 면적 $625$ m².</li>
+  </ol>
+  <p>"고정된 둘레로 최대 면적 도형은 정사각형"이라는 직관이 식으로 확인됩니다 (더 일반화: 도형 모양도 자유라면 답은 원).</p>
+
+  <h2>5. 대표 예제 — 점에서 직선까지 최단거리</h2>
+
+  <p><em>"점 $(3, 0)$에서 곡선 $y = \sqrt{x}$ 위의 가장 가까운 점은?"</em></p>
+  <p>곡선 위의 점 $(t, \sqrt{t})$와 $(3, 0)$의 거리 제곱:</p>
+  $$ D(t) = (t - 3)^2 + t = t^2 - 5t + 9 $$
+  <p>(거리 자체보다 거리 제곱을 최소화하는 게 산수에 편하고 결과는 같음 — $\sqrt{}$가 단조 증가니까.)</p>
+  <p>$D'(t) = 2t - 5 = 0 \Rightarrow t = 5/2$. $D''(t) = 2 > 0$ ⇒ 최소. 가장 가까운 점은 $(5/2, \sqrt{5/2})$.</p>
+
+  <h2>6. 뉴턴법 — 근 찾기</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>$f(x) = 0$을 손으로 풀 수 없을 때 (예: $\cos x = x$). 그래도 어떤 점 $x_0$ 근처에 답이 있다는 걸 안다면, 그 점에서의 <strong>접선이 $x$축과 만나는 곳</strong>으로 한 발짝 내려가요.
+  새 점에서 또 접선을 그어 한 발짝 더. 보통 5~10번이면 소수점 10자리까지 답에 수렴합니다.</p>
+
+  <h3>유도</h3>
+  <p>점 $x_n$에서 접선: $y = f(x_n) + f'(x_n)(x - x_n)$. $y = 0$인 $x$ 를 풀면:</p>
+  $$ x_{n+1} = x_n - \frac{f(x_n)}{f'(x_n)} $$
+
+  <h3>예제 6.1 — $\sqrt{2}$ 의 수치 계산</h3>
+  <p>$f(x) = x^2 - 2$의 양수 근. 시작 $x_0 = 1$, 공식 $x_{n+1} = x_n - (x_n^2 - 2)/(2x_n) = (x_n + 2/x_n)/2$.</p>
+  <ul>
+    <li>$x_0 = 1$ → $x_1 = (1 + 2)/2 = 1.5$</li>
+    <li>$x_2 = (1.5 + 2/1.5)/2 \approx 1.4167$</li>
+    <li>$x_3 \approx 1.41421568\dots$</li>
+    <li>$x_4 \approx 1.41421356\dots$ (실제 $\sqrt{2} = 1.414213562\dots$)</li>
+  </ul>
+  <p>4번 만에 소수점 9자리. 이게 뉴턴법의 위력 — <strong>2차 수렴(quadratic convergence)</strong>이라 매번 정확도가 두 배씩 늘어납니다.</p>
+
+  <h2>7. 뉴턴법 — 최적화에 사용</h2>
+
+  <p>$f$의 극값을 찾는다는 건 $f'(x) = 0$을 푸는 것. 즉 뉴턴법을 $f'$에 적용:</p>
+  $$ x_{n+1} = x_n - \frac{f'(x_n)}{f''(x_n)} $$
+  <p>$f''$로 나눈다는 점이 핵심. 곡률(2계 도함수) 정보로 한 발짝의 크기를 결정해요. 이 식이 W14에서 다변수로 확장되면 헤시안 역행렬이 나오는 다변수 뉴턴법이 됩니다.</p>
+
+  <h2>8. 수렴·발산 — 시작점이 중요한 이유</h2>
+
+  <p>뉴턴법은 빠르지만 만능이 아닙니다. 다음 상황에서 발산하거나 다른 근으로 갑니다.</p>
+  <ul>
+    <li><strong>$f'(x_n) \approx 0$</strong> — 분모가 0에 가까워 다음 점이 멀리 튐.</li>
+    <li><strong>변곡점 근처에서 시작</strong> — 진동하거나 다른 근으로 빠짐.</li>
+    <li><strong>주기적 사이클</strong> — 두 점 사이를 오가며 수렴 안 함.</li>
+  </ul>
+  <p>실용적 처방: 시작점을 그래프로 미리 보고 정하기 / 발산하면 작은 step size로 ($\alpha \in (0, 1]$ 곱하기 → "damped Newton").</p>
+
+  <h2>9. 인터랙티브: 1D 뉴턴법</h2>
+
+  <div class="demo">
+    <h4>🎮 뉴턴법 한 발씩 — 곡선 위에서 접선이 x축으로 떨어지기</h4>
+    <p>함수와 시작점을 골라 한 발씩 진행해 보세요. 빨간 점이 새 추정값, 노란 선이 접선, 초록 점이 진짜 근. 발산하는 시작점도 시도해 보세요.</p>
+    <canvas id="nm" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="nmFn">
+          <option value="cosx" selected>cos x − x = 0</option>
+          <option value="cubic">x³ − 2x − 5 = 0</option>
+          <option value="poly">x³ − 6x² + 9x − 2 = 0</option>
+        </select>
+      </label>
+      <label>시작점 x₀ <span class="val" id="nmX0V">2.00</span><input type="range" id="nmX0" min="-3" max="5" step="0.05" value="2"></label>
+      <button id="nmStep">한 반복</button>
+      <button id="nmAuto">자동/정지</button>
+      <button id="nmRst" class="alt">리셋</button>
+    </div>
+    <p id="nmInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('nm'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function fn(){
+      const m=document.getElementById('nmFn').value;
+      if(m==='cosx')return{f:v=>Math.cos(v)-v,d:v=>-Math.sin(v)-1,xR:[-2,4],yR:[-3,3]};
+      if(m==='cubic')return{f:v=>v*v*v-2*v-5,d:v=>3*v*v-2,xR:[-2,3.5],yR:[-10,10]};
+      return{f:v=>v*v*v-6*v*v+9*v-2,d:v=>3*v*v-12*v+9,xR:[-1,5],yR:[-6,6]};
+    }
+    let trail=[];
+    function init(){trail=[+document.getElementById('nmX0').value];}
+    init();
+    document.getElementById('nmRst').onclick=init;
+    document.getElementById('nmX0').oninput=init;
+    document.getElementById('nmFn').onchange=init;
+    function step(){
+      const F=fn();const xn=trail[trail.length-1];
+      const fp=F.d(xn);
+      if(Math.abs(fp)<1e-9)return;
+      const next=xn - F.f(xn)/fp;
+      trail.push(next);
+      if(trail.length>20)trail.shift();
+    }
+    document.getElementById('nmStep').onclick=step;
+    let auto=false,t0=0;
+    document.getElementById('nmAuto').onclick=()=>{auto=!auto;t0=performance.now();};
+    function loop(){
+      if(auto){const t=performance.now();if(t-t0>500){step();t0=t;}}
+      const F=fn();const xR=F.xR,yR=F.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // function
+      x.strokeStyle='#222';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){
+        const yv=F.f(v);if(yv<yR[0]||yv>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // tangents (yellow) at all but last point
+      for(let i=0;i<trail.length-1;i++){
+        const xn=trail[i],fn1=F.f(xn),fp=F.d(xn);
+        const x0=xR[0],y0=fn1+fp*(x0-xn);
+        const x1=xR[1],y1=fn1+fp*(x1-xn);
+        x.strokeStyle='rgba(245,193,0,0.7)';x.lineWidth=1.3;x.setLineDash([4,3]);
+        x.beginPath();x.moveTo(px(x0),py(y0));x.lineTo(px(x1),py(y1));x.stroke();
+        x.setLineDash([]);
+        // vertical drop from xn to f(xn) and from intersection with x-axis to next point
+        x.strokeStyle='rgba(0,0,0,0.3)';
+        x.beginPath();x.moveTo(px(xn),py(0));x.lineTo(px(xn),py(fn1));x.stroke();
+      }
+      // trail
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      trail.forEach((v,i)=>{const yy=py(0);i?x.lineTo(px(v),yy):x.moveTo(px(v),yy);});x.stroke();
+      trail.forEach((v,i)=>{x.fillStyle=i===trail.length-1?'#c62828':'rgba(198,40,40,0.4)';x.beginPath();x.arc(px(v),py(0),i===trail.length-1?6:4,0,Math.PI*2);x.fill();});
+      // info
+      const last=trail[trail.length-1];
+      const fv=F.f(last);
+      document.getElementById('nmInfo').textContent='반복 '+(trail.length-1)+': x = '+last.toFixed(6)+', f(x) = '+fv.toFixed(6);
+      requestAnimationFrame(()=>setTimeout(loop,60));
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="tip"><strong>실험해 보기</strong> —
+  ① $\cos x = x$에서 시작점 2.0이면 빠르게 0.7390… 으로 수렴.
+  ② $x^3 - 6x^2 + 9x - 2 = 0$에서 시작점 1.5 근처면 가운데 근으로 수렴, 시작점 0.5면 다른 근으로 갑니다.
+  ③ 시작점을 -1로 두고 $\cos x - x$를 풀면 $\sin x + 1 = 0$이 분모를 0에 가깝게 만들어 발산하는 모습을 볼 수 있어요.</div>
+
+  <h2>10. 흔한 오해와 핵심 정리</h2>
+
+  <div class="note"><strong>흔한 오해 ① — "최대·최소는 임계점에만 있다"</strong> —
+  닫힌 구간에서는 끝점도 후보입니다. 끝점에서 답이 나오는 경우를 잊지 마세요.</div>
+
+  <div class="note"><strong>흔한 오해 ② — "뉴턴법은 항상 수렴한다"</strong> —
+  거짓. $f'$이 0에 가까운 점에서 발산하거나 사이클에 빠질 수 있어요. 좋은 시작점을 고르는 것이 알고리즘의 일부입니다.</div>
+
+  <div class="note"><strong>흔한 오해 ③ — "거리를 최소화할 때 항상 거리식을 그대로 미분한다"</strong> —
+  $\sqrt{\cdot}$가 단조 증가이므로 거리 제곱을 최소화하는 점이 거리도 최소화. 산수가 훨씬 편해집니다.</div>
+
+  <h3>이번 주의 핵심 한 문장</h3>
+  <div class="tip"><strong>"최적화는 식 세우기와 임계점·끝점 후보 비교. 손으로 안 풀리면 뉴턴법이 5~10번 만에 소수점 10자리 답을 준다."</strong></div>
+
+  <h2>11. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Stewart, Ch.4.7 (응용 최적화)·Ch.4.8 (뉴턴법).</li>
+    <li>Thomas, Ch.4.5~4.7.</li>
+    <li>다음 주 예고: "복잡한 함수도 다항식으로 흉내 낼 수 있다" — <strong>테일러 급수</strong>로 들어갑니다.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="05-mvt-monotonicity-convexity.html"><small>← 이전</small>W5. MVT·단조·볼록</a>
+    <a href="07-taylor-series.html" class="next"><small>다음 →</small>W7. 테일러 급수</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>
