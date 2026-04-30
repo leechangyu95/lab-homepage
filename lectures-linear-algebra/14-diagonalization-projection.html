@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 14. 대각화·정사영 (응용 맛보기) — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html" class="active">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../linear-algebra.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 14. 대각화·정사영 (응용 맛보기)</h1>
+  <p class="lead">$A=PDP^{-1}$ 로 거듭제곱·피보나치를 한 줄에. 정사영으로 최소제곱 회귀까지. 한 학기를 정리하는 응용 두 도구.</p>
+
+
+
+  <ul>
+    <li>담당 교수: 이찬규 (기계공학전공)</li>
+    <li>2026학년도 1학기</li>
+  </ul>
+
+
+  <h2>🔁 복습 — 한 학기 여정</h2>
+
+  <h3>우리가 거쳐온 길</h3>
+  <ul>
+    <li><strong>벡터</strong> : 화살표·내적·외적·직선·평면 (2~4강)</li>
+    <li><strong>행렬</strong> : 정의·곱셈·가우스소거·역행렬·행렬식 (5~7강)</li>
+    <li><strong>부분공간</strong> : 일차독립·기저·차원 (9~10강)</li>
+    <li><strong>선형변환</strong> : 행렬 = 변환·핵·치역 (11~12강)</li>
+    <li><strong>고유</strong> : 고윳값·고유벡터 (13강)</li>
+  </ul>
+
+  <h3>마지막 강의</h3>
+  <ul>
+    <li><strong>대각화</strong> : 고유벡터로 행렬을 가장 단순한 형태로 표현.</li>
+    <li><strong>정사영</strong> : 한 벡터를 다른 벡터에 "그림자"처럼 떨어뜨리기.</li>
+    <li>두 도구로 <strong>거듭제곱·최소제곱 회귀</strong> 같은 응용을 맛보기.</li>
+  </ul>
+
+
+  <h2>🎯 오늘의 학습 목표</h2>
+
+  <h3>🔹 <strong>대각화</strong> $A = PDP^{-1}$ 의 의미와 조건을 이해한다</h3>
+
+  <h3>🔸 대각화로 $A^k$ 같은 거듭제곱을 효율적으로 계산할 수 있다</h3>
+
+  <h3>🔸 한 벡터의 다른 벡터(또는 부분공간)에 대한 <strong>정사영</strong>을 구할 수 있다</h3>
+
+  <h3>🔸 정사영의 응용 — <strong>최소제곱</strong>(데이터에 가장 잘 맞는 직선) 을 직관적으로 이해한다</h3>
+
+  <h3>🔸 한 학기 핵심 내용을 정리하고 다음 단계로 갈 길을 안다</h3>
+
+
+  <h2>💎 대각화 — 핵심 아이디어</h2>
+
+  <h3>대각행렬은 매우 다루기 쉽다</h3>
+  <ul>
+    <li>곱셈, 거듭제곱, 역행렬 모두 단순 계산.</li>
+    <li>$D = \begin{pmatrix} 2 & 0 \\ 0 & 3 \end{pmatrix} \Rightarrow D^{10} = \begin{pmatrix} 2^{10} & 0 \\ 0 & 3^{10} \end{pmatrix}$.</li>
+  </ul>
+
+  <h3>일반 행렬도 대각행렬처럼 다루고 싶다</h3>
+  <ul>
+    <li>일반 $A$ 를 <strong>대각행렬과 동등하게</strong> 만드는 방법이 있다면?</li>
+    <li>→ "대각화 가능한" 행렬에 대해 다음이 성립:</li>
+  </ul>
+  <p>$$\boxed{\,A = PDP^{-1}\,}$$</p>
+  <ul>
+    <li>$D$ : 고윳값을 대각에 늘어놓은 대각행렬.</li>
+    <li>$P$ : 고유벡터들을 열로 나란히 놓은 행렬.</li>
+  </ul>
+
+<div class="tip">
+
+🌱 <b>한 줄 요약</b>: 대각화 = "<b>고유벡터 좌표계로 가서 보면, 그 행렬은 단순한 스케일링</b>" 이라는 사실의 수식화.
+
+</div>
+
+
+  <h2>💎 대각화 — 절차</h2>
+
+  <h3>절차</h3>
+  <ol>
+    <li>$A$ 의 고윳값 $\lambda_1, \ldots, \lambda_n$ 과 고유벡터 $\mathbf{v}_1, \ldots, \mathbf{v}_n$ 구하기.</li>
+    <li>$D$ = 고윳값을 대각에 (순서 주의).</li>
+    <li>$P$ = 같은 순서로 고유벡터를 열로.</li>
+    <li>$A = PDP^{-1}$.</li>
+  </ol>
+
+  <h3>대각화 가능 조건</h3>
+  <ul>
+    <li>$A$ 가 $n$ 개의 <strong>일차독립 고유벡터</strong>를 가져야 한다.</li>
+    <li>충분조건: 고윳값이 모두 다르면 항상 가능.</li>
+    <li>충분조건: 대칭행렬은 항상 대각화 가능 (특수 정리).</li>
+  </ul>
+
+  <h3>대각화 불가 예시</h3>
+  <ul>
+    <li>$A = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$ : 고윳값 $\lambda = 1$ (중복도 2) 인데 일차독립 고유벡터는 1개뿐 → 대각화 불가.</li>
+  </ul>
+
+
+  <h2>🧮 대각화 예제</h2>
+
+  <h3>예제</h3>
+  <p>$A = \begin{pmatrix} 4 & 1 \\ 2 & 3 \end{pmatrix}$ 를 대각화하시오. (지난 강의 예제 1)</p>
+
+  <h3>결과 활용</h3>
+  <ul>
+    <li>고윳값 $\lambda_1 = 5,\ \lambda_2 = 2$.</li>
+    <li>고유벡터 $\mathbf{v}_1 = \binom{1}{1},\ \mathbf{v}_2 = \binom{1}{-2}$.</li>
+  </ul>
+
+  <h3>행렬 구성</h3>
+  <p>$$P = \begin{pmatrix} 1 & 1 \\ 1 & -2 \end{pmatrix},\quad D = \begin{pmatrix} 5 & 0 \\ 0 & 2 \end{pmatrix}$$</p>
+
+  <h3>검산</h3>
+  <p>$P^{-1} = \dfrac{1}{-3}\begin{pmatrix} -2 & -1 \\ -1 & 1 \end{pmatrix} = \dfrac{1}{3}\begin{pmatrix} 2 & 1 \\ 1 & -1 \end{pmatrix}$</p>
+
+  <p>$PDP^{-1} = \begin{pmatrix} 1 & 1 \\ 1 & -2 \end{pmatrix}\begin{pmatrix} 5 & 0 \\ 0 & 2 \end{pmatrix}\dfrac{1}{3}\begin{pmatrix} 2 & 1 \\ 1 & -1 \end{pmatrix} = \begin{pmatrix} 4 & 1 \\ 2 & 3 \end{pmatrix} = A$ ✓</p>
+
+
+  <h2>🚀 대각화의 위력 — $A^k$ 빠르게</h2>
+
+  <h3>거듭제곱 공식</h3>
+  <p>$$A = PDP^{-1} \Rightarrow A^k = PD^k P^{-1}$$</p>
+
+  <p>(증명: $A^2 = (PDP^{-1})(PDP^{-1}) = PD\cdot I\cdot DP^{-1} = PD^2P^{-1}$, ...)</p>
+
+  <h3>계산 비교</h3>
+  <ul>
+    <li>직접 $A^{10}$ 계산: 행렬 곱 9번.</li>
+    <li>대각화 후: $D^{10}$ 은 대각 원소만 10제곱하면 끝 → 한 번 계산.</li>
+  </ul>
+
+  <h3>위 예제에 적용</h3>
+  <p>$D^{10} = \begin{pmatrix} 5^{10} & 0 \\ 0 & 2^{10} \end{pmatrix} = \begin{pmatrix} 9765625 & 0 \\ 0 & 1024 \end{pmatrix}$</p>
+
+  <p>→ $A^{10} = P D^{10} P^{-1}$ 한 번에 계산.</p>
+
+<div class="tip">"$A^{1000}$ 을 어떻게 계산?" 같은 질문이 대각화로 단번에 해결됩니다.</div>
+
+
+  <h2>📈 대각화의 응용 — 피보나치</h2>
+
+  <h3>피보나치 수열</h3>
+  <p>$F_0 = 0,\ F_1 = 1,\ F_n = F_{n-1} + F_{n-2}$.</p>
+
+  <h3>행렬 형태</h3>
+  <p>$$\binom{F_{n+1}}{F_n} = \begin{pmatrix} 1 & 1 \\ 1 & 0 \end{pmatrix}\binom{F_n}{F_{n-1}}$$</p>
+
+  <p>→ $\binom{F_{n+1}}{F_n} = A^n \binom{F_1}{F_0} = A^n\binom{1}{0}$</p>
+
+  <h3>행렬 $A$ 의 고윳값</h3>
+  <p>$\lambda^2 - \lambda - 1 = 0 \Rightarrow \lambda = \dfrac{1 \pm \sqrt 5}{2}$ (황금비!)</p>
+
+  <h3>결론 — 비네 공식</h3>
+  <p>대각화 후 정리하면:</p>
+  <p>$$F_n = \dfrac{1}{\sqrt 5}\left(\left(\dfrac{1+\sqrt 5}{2}\right)^n - \left(\dfrac{1-\sqrt 5}{2}\right)^n\right)$$</p>
+
+<div class="note">"피보나치 수의 일반항" 이라는 유명한 공식이 사실은 <b>$2\times 2$ 행렬의 대각화</b>입니다.</div>
+
+
+  <h2>🎯 정사영 — 한 벡터에 그림자 떨어뜨리기</h2>
+
+  <h3>직관</h3>
+  <ul>
+    <li>햇빛이 수직으로 비출 때, 벡터 $\mathbf{u}$ 가 벡터 $\mathbf{v}$ 위에 만드는 <strong>그림자</strong>.</li>
+    <li>이 그림자가 "$\mathbf{u}$ 의 $\mathbf{v}$ 방향 정사영(projection)".</li>
+  </ul>
+
+  <h3>공식</h3>
+  <p>$$\text{proj}_{\mathbf{v}}(\mathbf{u}) = \frac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}\mathbf{v}$$</p>
+
+<svg width="900" height="220" viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <line x1="60" y1="180" x2="500" y2="180" stroke="#bbb"/>
+  <line x1="100" y1="40" x2="100" y2="200" stroke="#bbb"/>
+  <line x1="100" y1="180" x2="380" y2="180" stroke="#1677ff" stroke-width="3"/>
+  <polygon points="380,180 368,176 368,184" fill="#1677ff"/>
+  <text x="240" y="200" font-size="14" fill="#1677ff" font-weight="bold">v</text>
+  <line x1="100" y1="180" x2="280" y2="60" stroke="#fa8c16" stroke-width="3"/>
+  <polygon points="280,60 269,64 273,73" fill="#fa8c16"/>
+  <text x="180" y="105" font-size="14" fill="#fa8c16" font-weight="bold">u</text>
+  <line x1="280" y1="60" x2="280" y2="180" stroke="#999" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <line x1="100" y1="180" x2="280" y2="180" stroke="#cf1322" stroke-width="4"/>
+  <text x="180" y="170" font-size="14" fill="#cf1322" font-weight="bold">proj_v(u)</text>
+  <text x="540" y="80" font-size="14" fill="#333">u 에서 v 위로 수직 내림</text>
+  <text x="540" y="110" font-size="14" fill="#cf1322">→ 빨간 선분이 정사영</text>
+  <text x="540" y="150" font-size="13" fill="#666">u − proj_v(u) 는</text>
+  <text x="540" y="170" font-size="13" fill="#666">v 와 항상 직교</text>
+</svg>
+
+
+  <h2>🎯 정사영 — 예제</h2>
+
+  <h3>예</h3>
+  <p>$\mathbf{u} = (3, 4),\ \mathbf{v} = (1, 0)$</p>
+
+  <p>$\mathbf{u}\cdot\mathbf{v} = 3,\ \mathbf{v}\cdot\mathbf{v} = 1$</p>
+  <p>$$\text{proj}_{\mathbf{v}}(\mathbf{u}) = \frac{3}{1}(1, 0) = (3, 0)$$</p>
+
+  <p>→ "$\mathbf{u}$ 의 $x$ 축 방향 성분".</p>
+
+  <h3>또 다른 예</h3>
+  <p>$\mathbf{u} = (3, 4),\ \mathbf{v} = (1, 1)$</p>
+
+  <p>$\mathbf{u}\cdot\mathbf{v} = 7,\ \mathbf{v}\cdot\mathbf{v} = 2$</p>
+  <p>$$\text{proj}_{\mathbf{v}}(\mathbf{u}) = \frac{7}{2}(1, 1) = (3.5, 3.5)$$</p>
+
+  <h3>직교분해</h3>
+  <p>$\mathbf{u} = \text{proj}_{\mathbf{v}}(\mathbf{u}) + \mathbf{u}_\perp$ — 평행 성분 + 직교 성분.</p>
+
+<div class="tip">정사영은 "$\mathbf{u}$ 가 $\mathbf{v}$ 방향으로 얼마만큼 나란한가" 를 정확히 측정합니다 — 한 줄 식으로.</div>
+
+
+  <h2>📊 응용 — 최소제곱 회귀 (직관)</h2>
+
+  <h3>시나리오</h3>
+  <ul>
+    <li>데이터 점 $(x_i, y_i)$ 들이 흩어져 있음.</li>
+    <li>가장 잘 맞는 직선 $y = ax + b$ 를 찾고 싶음.</li>
+  </ul>
+
+  <h3>행렬 형태</h3>
+  <p>$$
+\underbrace{\begin{pmatrix} x_1 & 1 \\ x_2 & 1 \\ \vdots & \vdots \\ x_n & 1 \end{pmatrix}}_{M}
+\begin{pmatrix} a \\ b \end{pmatrix}
+\approx
+\underbrace{\begin{pmatrix} y_1 \\ y_2 \\ \vdots \\ y_n \end{pmatrix}}_{\mathbf{y}}
+$$</p>
+
+  <h3>보통 정확한 해 $\binom{a}{b}$ 는 없음 (점들이 일직선 아님)</h3>
+  <ul>
+    <li>대신 "$\mathbf{y}$ 와 $M\binom{a}{b}$ 사이 거리를 최소화" 하는 답.</li>
+    <li>이 답은 정확히 <strong>$\mathbf{y}$ 의 $M$ 의 열공간으로의 정사영</strong>.</li>
+  </ul>
+
+  <h3>정상방정식 (Normal Equation)</h3>
+  <p>$$M^T M \binom{a}{b} = M^T \mathbf{y}$$</p>
+
+<div class="tip">통계의 "선형 회귀" = "<b>정사영을 행렬 식으로 풀기</b>". 인공지능의 가장 단순한 형태가 여기에 있습니다.</div>
+
+
+  <h2>📐 직교 기저와 그람-슈미트 (간략)</h2>
+
+  <h3>직교 기저의 좋은 점</h3>
+  <ul>
+    <li>기저가 서로 직교하면 좌표 계산이 매우 간단.</li>
+    <li>임의 $\mathbf{x}$ 의 좌표 = $\mathbf{x}\cdot\mathbf{b}_i / \|\mathbf{b}_i\|^2$ (정사영 한 줄).</li>
+  </ul>
+
+  <h3>그람–슈미트 (Gram–Schmidt) 절차</h3>
+  <ul>
+    <li>임의 기저 $\{\mathbf{v}_1, \mathbf{v}_2, \ldots\}$ 을 직교 기저로 변환:</li>
+  </ul>
+  <p>$$\mathbf{u}_1 = \mathbf{v}_1,\quad \mathbf{u}_2 = \mathbf{v}_2 - \text{proj}_{\mathbf{u}_1}(\mathbf{v}_2),\quad \ldots$$</p>
+  <ul>
+    <li>각 단계에서 이전 방향 성분을 빼는 것 (정사영 차감) — 직교 보장.</li>
+  </ul>
+
+  <h3>응용</h3>
+  <ul>
+    <li>신호 처리·QR 분해·푸리에 급수 등 다양한 영역의 기초.</li>
+  </ul>
+
+<div class="note">정사영 한 줄과 그람–슈미트 한 알고리즘이 데이터 분석·신호처리의 출발점입니다.</div>
+
+
+  <h2>🌟 한 학기 핵심 — 한 페이지 요약</h2>
+
+  <h3>도구</h3>
+  <ol>
+    <li><strong>벡터</strong> : 크기 + 방향, 내적·외적.</li>
+    <li><strong>행렬</strong> : 곱셈·소거·역행렬·행렬식.</li>
+    <li><strong>부분공간</strong> : 기저·차원·rank·nullity.</li>
+    <li><strong>선형변환</strong> : 행렬 = 변환, 표현행렬, 합성.</li>
+    <li><strong>고유</strong> : 변환의 본질 방향.</li>
+    <li><strong>대각화·정사영</strong> : 응용을 여는 두 열쇠.</li>
+  </ol>
+
+  <h3>한 줄 정리</h3>
+  <blockquote><p><strong>선형대수학 = "여러 양을 묶어서 다루는 언어 + 그것을 변환하는 도구 + 그 변환의 본질을 찾는 방법"</strong></p></blockquote>
+
+<div class="tip">이 도구들은 앞으로 듣게 될 거의 모든 공학·과학 강의의 <b>공통 언어</b>입니다.</div>
+
+
+  <h2>🚀 다음 단계 — "더 배우려면"</h2>
+
+  <h3>후속 과목 추천</h3>
+  <ul>
+    <li><strong>공업수학(미분방정식)</strong> : 선형 시스템의 시간적 변화. 고윳값이 직접 등장.</li>
+    <li><strong>신호 및 시스템</strong> : 푸리에 변환 = "주파수 기저로의 좌표 변환".</li>
+    <li><strong>자동제어</strong> : 상태공간 표현 = $\dot{\mathbf{x}} = A\mathbf{x}$. 13강 그대로 사용.</li>
+    <li><strong>데이터 분석/머신러닝</strong> : SVD, PCA — 대각화의 일반화.</li>
+    <li><strong>컴퓨터 그래픽스 / 게임 개발</strong> : 11강의 변환을 매일 사용.</li>
+  </ul>
+
+  <h3>자기 학습 자료</h3>
+  <ul>
+    <li>3Blue1Brown — "Essence of Linear Algebra" (재시청 권장)</li>
+    <li>Khan Academy / MIT OCW 18.06 (Gilbert Strang)</li>
+  </ul>
+
+
+  <h2>📝 정리 — 오늘의 핵심</h2>
+
+  <h3>1️⃣ 대각화</h3>
+  <ul>
+    <li>$A = PDP^{-1}$ — 고유벡터 좌표계에서 $A$ 는 단순 스케일링.</li>
+    <li>거듭제곱·동역학·피보나치 등에서 강력.</li>
+  </ul>
+
+  <h3>2️⃣ 정사영</h3>
+  <ul>
+    <li>$\text{proj}_{\mathbf{v}}(\mathbf{u}) = \dfrac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}\mathbf{v}$.</li>
+    <li>"벡터의 그림자"; 직교 분해의 도구.</li>
+  </ul>
+
+  <h3>3️⃣ 응용 한 발</h3>
+  <ul>
+    <li><strong>최소제곱 회귀</strong> = 정사영을 행렬 식으로.</li>
+    <li><strong>그람–슈미트</strong> = 직교 기저 만들기.</li>
+  </ul>
+
+<div class="tip">한 학기 동안 정말 수고 많으셨습니다. 다음 주는 기말고사입니다 — 핵심 개념 한 번씩 손으로 다시 풀어보세요.</div>
+
+
+  <h2>📚 연습문제</h2>
+
+  <h3>문제 1 (대각화)</h3>
+  <p>$A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$ 를 대각화하시오 (P, D 모두 명시).</p>
+
+  <h3>문제 2 ($A^k$ 계산)</h3>
+  <p>문제 1의 결과를 사용해 $A^5$ 을 계산하시오.</p>
+
+  <h3>문제 3 (정사영)</h3>
+  <p>$\mathbf{u} = (2, 3)$ 의 $\mathbf{v} = (1, 2)$ 위로의 정사영을 구하시오.</p>
+
+  <h3>문제 4 (직교분해)</h3>
+  <p>문제 3에서 $\mathbf{u} = \text{proj}_{\mathbf{v}}(\mathbf{u}) + \mathbf{u}_\perp$ 형태로 분해하고, $\mathbf{u}_\perp \cdot \mathbf{v} = 0$ 임을 확인하시오.</p>
+
+  <h3>문제 5 (개념)</h3>
+  <p>"고윳값이 모두 다른 행렬은 항상 대각화 가능" 을 직관적으로 설명하시오.</p>
+
+  <h3>문제 6 (응용)</h3>
+  <p>점 $(1, 1),\ (2, 2),\ (3, 2)$ 에 가장 잘 맞는 직선 $y = ax + b$ 의 $a, b$ 를 정상방정식으로 구하시오.</p>
+
+
+
+  <h2>📅 기말고사 안내</h2>
+
+  <h3>시험 정보</h3>
+  <ul>
+    <li>기말고사: 15주차 정규 강의 시간.</li>
+    <li>출제 범위: <strong>9~14주차</strong> 중심, 단 2~7주차 핵심 도구는 항상 사용됨.</li>
+    <li>출제 방식: 연습문제의 변형, 손계산 위주.</li>
+  </ul>
+
+  <h3>시험 준비 팁</h3>
+  <ol>
+    <li>9~14강의 <strong>연습문제</strong>를 손으로 다시 풀어볼 것.</li>
+    <li><strong>계산 절차</strong> (가우스 소거, 고유값/벡터 구하기, 대각화) 를 흐름으로 외울 것.</li>
+    <li><strong>개념 문제</strong> (부분공간 판정, 일차독립, 차원정리) 한 두 문제 출제.</li>
+    <li>시험 전 주: 8강 중간고사 풀이를 한 번 더 복습.</li>
+  </ol>
+
+<div class="warn">계산기·노트 반입 여부는 별도 공지 예정. 자세한 시험 일정은 LMS 공지를 확인하세요.</div>
+
+
+
+  <h3>한 학기 내내 함께해 주셔서 감사합니다.</h3>
+
+  <ul>
+    <li>이메일 : <strong>leeck@kongju.ac.kr</strong></li>
+    <li>사무실 : 1공학관 609호</li>
+  </ul>
+
+  <p><br></p>
+
+<div class="tip" style="text-align:center; font-size:1.2em;">
+한 학기 동안 정말 수고 많으셨습니다 🎓<br>
+선형대수학이 앞으로의 공부에 든든한 무기가 되기를 바랍니다.
+</div>
+
+
+  <div class="prevnext">
+    <a href="13-eigenvalue-eigenvector.html"><small>← 이전</small>Week 13. 고윳값·고유벡터</a>
+    <a class="next" href="15-final-review.html"><small>다음 →</small>Week 15. 기말고사 / 종합 정리</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

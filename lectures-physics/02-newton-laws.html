@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W2. 뉴턴 운동법칙 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html" class="active">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../physics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 2. 뉴턴 운동법칙</h1>
+  <p class="lead">이번 주 한 줄 요약 — <strong>"가속도가 생기려면 힘이 필요하고, 모든 힘에는 짝이 있다."</strong></p>
+
+  <div class="toc"><h4>학습 목표</h4><ul>
+    <li>자유물체도(FBD)를 그리고 각 힘을 좌표 성분으로 분해할 수 있다.</li>
+    <li>1·2·3법칙을 일상 사례에 적용해 설명할 수 있다.</li>
+    <li>마찰·수직항력·장력을 포함한 뉴턴 방정식을 세워 가속도를 구한다.</li>
+    <li>등속 원운동의 구심가속도 식을 유도한다.</li>
+  </ul></div>
+
+  <h2>도입 훅 — "식탁보 빼기 마술"</h2>
+  <p>식탁보 위에 컵을 놓고 식탁보를 <em>수평으로 빠르게</em> 잡아당기면 컵은 거의 그대로 있다. 식탁보가 컵 바닥과 닿는 시간이 매우 짧아 컵에 전해지는 충격(=힘×시간)이 작기 때문. 컵의 <strong>관성</strong>이 그대로 작동한 것.</p>
+  <div class="tip"><strong>오늘의 메시지</strong> — 외부 힘이 사라지면 물체는 현재의 운동 상태를 유지한다. 그게 1법칙.</div>
+
+  <h2>1. 1법칙 — 관성</h2>
+  <p>"외부 힘이 없으면, 정지한 물체는 계속 정지하고, 움직이는 물체는 같은 속도로 계속 움직인다."</p>
+  <p>흔한 오해: "움직이려면 힘이 <em>계속</em> 있어야 한다." 사실: "<em>속도를 바꾸려면</em>(=가속도를 만들려면) 힘이 필요하다."</p>
+  <h3>데모 1 — 버스 안 승객</h3>
+  <p>버스가 출발할 때 사람은 원래 정지 상태를 유지하려고 함 → 상대적으로 뒤로 쏠림. 멈출 때는 앞으로 가던 운동을 유지하려 함 → 앞으로 쏠림. 지난 주 과제 1번이 정확히 이것.</p>
+
+  <h2>2. 2법칙 — F = ma</h2>
+  $$ \vec{F}_{\text{net}} = m\vec{a} $$
+  <p>$\vec{F}_{\text{net}}$ = 모든 힘의 <strong>벡터 합</strong>. 합력만이 가속도를 결정.</p>
+  <h3>데모 2 — 풍선 카트</h3>
+  <p>빨대에 매단 풍선을 카트로 만들고 풍선을 불었다 놓으면 카트가 가속하며 굴러간다. 풍선 크기에 따라 추력이 다름.</p>
+  <h3>데모 3 — 자유물체도 그리기</h3>
+  <ol>
+    <li>책상 위 책 (중력 + 수직항력)</li>
+    <li>경사면 위 블록 (중력 분해)</li>
+    <li>천장에 매달린 공 (중력 + 장력)</li>
+    <li>책상을 미는 사람 (밀기 + 마찰)</li>
+  </ol>
+  <div class="tip">"자유물체도를 잘 그리면 문제의 90%가 끝난다." 학기 내내 반복할 표어.</div>
+
+  <h2>3. 3법칙 — 작용과 반작용</h2>
+  <p>"A가 B에게 힘을 주면, B도 A에게 같은 크기·반대 방향의 힘을 준다." 핵심: 두 힘은 <strong>서로 다른 물체</strong>에 작용 → 서로 상쇄되지 않는다.</p>
+  <h3>데모 4 — 회전의자 위 두 사람</h3>
+  <p>두 학생을 회전의자에 마주 앉혀두고 한 명이 다른 사람을 민다. 둘 다 반대 방향으로 멀어지며, 무거운 학생이 더 천천히 ($a = F/m$).</p>
+  <h3>데모 5 — 풍선 로켓</h3>
+  <p>풍선이 공기를 뒤로 밀면(작용), 공기가 풍선을 앞으로 민다(반작용). 로켓의 원리.</p>
+
+  <h2>4. 마찰·수직항력·장력</h2>
+  <ul>
+    <li><strong>정지마찰</strong> $f_s \le \mu_s N$: 외력에 따라 자동 조절.</li>
+    <li><strong>운동마찰</strong> $f_k = \mu_k N$: 보통 $\mu_k < \mu_s$.</li>
+  </ul>
+  <h3>데모 6 — 마찰계수 측정</h3>
+  <p>경사판 위 블록을 천천히 기울여, 미끄러지는 임계각 $\theta_c$에서:</p>
+  $$ \mu_s = \tan\theta_c $$
+  <p>학생 짝활동: 책·핸드폰 케이스·지우개의 정지마찰계수를 경사판으로 측정.</p>
+
+  <h2>5. 등속 원운동의 구심가속도</h2>
+  <p>속력이 일정해도 방향이 변하면 가속도가 있다 → 힘이 있다.</p>
+  $$ a_c = \frac{v^2}{r} = \omega^2 r $$
+  <p>방향은 항상 원의 중심.</p>
+  <h3>데모 7 — 실에 매단 공 돌리기</h3>
+  <p>머리 위로 빙빙 돌리다 실을 자르면 공은 <strong>접선 방향</strong>으로 날아간다(원심력 오개념 정정).</p>
+  <div class="tip"><strong>"원심력"의 정체</strong> — 관성계에서는 없음. 회전 좌표계에서 느껴지는 가상력일 뿐. 진짜 힘은 항상 안쪽(구심력).</div>
+
+  <h2>흔한 오개념</h2>
+  <table>
+    <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
+    <tbody>
+      <tr><td>"움직이려면 힘이 계속 있어야 한다"</td><td>속도를 바꾸는 데만 힘이 필요. 등속운동에는 불필요.</td></tr>
+      <tr><td>"질량 = 무게"</td><td>질량은 kg, 무게는 N(중력). 달에서 무게는 1/6, 질량은 그대로.</td></tr>
+      <tr><td>"작용과 반작용은 상쇄된다"</td><td>다른 <em>물체</em>에 작용하므로 상쇄 안 됨.</td></tr>
+      <tr><td>"원운동에는 원심력이 작용"</td><td>진짜 힘은 구심력. 원심력은 가상력.</td></tr>
+      <tr><td>"마찰은 항상 운동을 방해"</td><td>걷기·차 주행은 마찰 덕분.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>강의실 예제</h2>
+  <div class="tip"><strong>예제 1.</strong> 5 kg 블록을 수평면에서 20 N으로 민다. $\mu_k=0.2$. 가속도?<br>
+  $f_k = \mu_k mg = 9.8$ N. $a = (20-9.8)/5 = 2.04$ m/s².</div>
+  <div class="tip"><strong>예제 2.</strong> 30° 경사면 위 10 kg 블록(마찰 없음). 가속도?<br>
+  $a = g\sin 30° = 4.9$ m/s².</div>
+  <div class="tip"><strong>예제 3.</strong> 1 m 실에 매단 0.5 kg 공이 2 m/s 원운동. 장력?<br>
+  $T = mv^2/r = 2$ N.</div>
+
+  <h2>과제 2</h2>
+  <ol>
+    <li>(개념) 엘리베이터가 위로 가속할 때 체중계 눈금은? FBD와 함께 설명.</li>
+    <li>(계산) Halliday 5장 끝 4문제.</li>
+    <li>(실험) 다양한 표면에서 책의 정지마찰계수 측정 (경사판). 표로 정리. A4 한 장.</li>
+  </ol>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 같은 현상을 <strong>에너지</strong> 관점으로. "공이 떨어질 때 빨라지는 이유"를 위치에너지 ↔ 운동에너지로.</div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

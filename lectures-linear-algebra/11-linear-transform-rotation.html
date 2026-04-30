@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 11. 선형변환 (1) — 회전·반사·스케일 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html" class="active">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../linear-algebra.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 11. 선형변환 (1) — 회전·반사·스케일</h1>
+  <p class="lead">행렬을 "공간을 휘게 하는 함수" 로 보는 새 관점. 회전·반사·스케일·전단의 표현행렬과, 합성 = 곱셈이라는 핵심 사실.</p>
+
+
+
+  <ul>
+    <li>담당 교수: 이찬규 (기계공학전공)</li>
+    <li>2026학년도 1학기</li>
+  </ul>
+
+
+  <h2>🔁 복습</h2>
+
+  <h3>지금까지의 행렬 관점</h3>
+  <ul>
+    <li>행렬 = 숫자 배열, 또는 데이터 표.</li>
+    <li>$A\mathbf{x} = \mathbf{b}$ 를 풀어내는 도구.</li>
+  </ul>
+
+  <h3>오늘의 새 관점 — 행렬은 "변환"이다</h3>
+  <ul>
+    <li>행렬에 벡터를 곱한다 ($A\mathbf{x}$) = 그 벡터에 어떤 <strong>변환</strong>을 적용한 것.</li>
+    <li>회전, 반사, 스케일링, 전단(shear) 모두 <strong>단순한 행렬</strong> 한 개로 표현 가능.</li>
+  </ul>
+
+<div class="tip">행렬을 "<b>공간을 휘게 만드는 함수</b>" 로 보면, 컴퓨터 그래픽스·로봇·딥러닝의 모든 변환이 같은 언어로 이해됩니다.</div>
+
+
+  <h2>🎯 오늘의 학습 목표</h2>
+
+  <h3>🔹 <strong>선형변환</strong>의 정의(선형성 두 조건)를 안다</h3>
+
+  <h3>🔸 모든 선형변환 = <strong>행렬 곱셈</strong> 으로 표현됨을 이해한다</h3>
+
+  <h3>🔸 표준 변환 행렬을 외운다 — <strong>회전·반사·스케일·전단</strong></h3>
+
+  <h3>🔸 변환의 <strong>합성</strong> = <strong>행렬의 곱셈</strong> 임을 이해한다</h3>
+
+  <h3>🔸 변환을 그림으로 보고 결과를 예측할 수 있다</h3>
+
+
+  <h2>🔄 변환(transformation) 이란?</h2>
+
+  <h3>함수의 일반화</h3>
+  <ul>
+    <li>일변수 함수 $f: \mathbb{R} \to \mathbb{R}$, 예: $f(x) = 2x + 1$.</li>
+    <li>변환 $T: \mathbb{R}^n \to \mathbb{R}^m$ — <strong>벡터를 입력해서 벡터를 출력</strong>.</li>
+    <li>예: $T\binom{x}{y} = \binom{2x + y}{x - y}$</li>
+  </ul>
+
+  <h3>그림으로</h3>
+  <ul>
+    <li>입력: $\mathbb{R}^n$ 의 점.</li>
+    <li>출력: $\mathbb{R}^m$ 의 점.</li>
+    <li>변환 = "$n$ 차원의 점을 $m$ 차원의 점으로 보내는 규칙".</li>
+  </ul>
+
+<div class="note">변환은 그림에서 평면을 늘리거나 비틀거나 회전시키는 동작으로 시각화됩니다 — 다음 슬라이드에서 본격적으로.</div>
+
+
+  <h2>✨ 선형변환 — 정의</h2>
+
+  <h3>정의</h3>
+  <p>변환 $T: \mathbb{R}^n \to \mathbb{R}^m$ 이 <strong>선형(linear)</strong> 이라는 것은:</p>
+
+  <ol>
+    <li><strong>덧셈 보존</strong>: $T(\mathbf{u} + \mathbf{v}) = T(\mathbf{u}) + T(\mathbf{v})$</li>
+    <li><strong>스칼라곱 보존</strong>: $T(c\mathbf{u}) = c\,T(\mathbf{u})$</li>
+  </ol>
+
+  <h3>한 줄로</h3>
+  <p><strong>일차결합을 보존</strong>한다. $T(c_1\mathbf{u} + c_2\mathbf{v}) = c_1 T(\mathbf{u}) + c_2 T(\mathbf{v})$.</p>
+
+  <h3>직관</h3>
+  <ul>
+    <li>"더하고 변환하기" = "변환하고 더하기" — <strong>순서를 바꿔도 같은 결과</strong>.</li>
+    <li>격자(grid)가 변환 후에도 <strong>평행한 선들</strong>로 남고, <strong>원점은 원점에 머묾</strong>.</li>
+  </ul>
+
+
+  <h2>🌟 핵심 정리 — "모든 선형변환 = 행렬"</h2>
+
+  <h3>정리</h3>
+  <p>모든 선형변환 $T: \mathbb{R}^n \to \mathbb{R}^m$ 은 어떤 $m \times n$ 행렬 $A$ 에 의해</p>
+  <p>$$T(\mathbf{x}) = A\mathbf{x}$$</p>
+  <p>로 유일하게 표현된다.</p>
+
+  <h3>표현행렬 만드는 법</h3>
+  <p>$A$ 의 <strong>$j$ 번째 열</strong> = $T(\mathbf{e}_j)$ — "표준기저가 어디로 가는지".</p>
+
+  <p>$$A = \bigl[\,T(\mathbf{e}_1)\ \;T(\mathbf{e}_2)\ \;\cdots\ \;T(\mathbf{e}_n)\,\bigr]$$</p>
+
+<div class="tip">
+
+🌱 <b>핵심 통찰</b>: 변환을 결정하려면 "<b>표준기저가 어디로 가는지</b>" 만 알면 끝. 다른 모든 점은 일차결합(=선형성)으로 자동 결정.
+
+</div>
+
+
+  <h2>🌟 표현행렬 — 작은 예제</h2>
+
+  <h3>예</h3>
+  <p>$T\binom{x}{y} = \binom{2x + y}{x - y}$ 의 표현행렬?</p>
+
+  <h3>풀이</h3>
+  <ul>
+    <li>$T\binom{1}{0} = \binom{2}{1}$ → 1열</li>
+    <li>$T\binom{0}{1} = \binom{1}{-1}$ → 2열</li>
+  </ul>
+
+  <p>$$A = \begin{pmatrix} 2 & 1 \\ 1 & -1 \end{pmatrix}$$</p>
+
+  <p>검산: $A\binom{x}{y} = \binom{2x + y}{x - y}$ ✓</p>
+
+
+  <h2>📐 표준 변환 (1) — 스케일링</h2>
+
+  <h3>균일 스케일링 (배율 $c$)</h3>
+  <p>$$S_c = \begin{pmatrix} c & 0 \\ 0 & c \end{pmatrix}$$</p>
+  <ul>
+    <li>$c > 1$: 확대. $0 < c < 1$: 축소. $c < 0$: 점대칭 + 스케일.</li>
+  </ul>
+
+  <h3>축별 스케일링</h3>
+  <p>$$S_{a,b} = \begin{pmatrix} a & 0 \\ 0 & b \end{pmatrix}$$</p>
+  <ul>
+    <li>$x$ 방향 $a$ 배, $y$ 방향 $b$ 배.</li>
+  </ul>
+
+<svg width="900" height="200" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <polygon points="100,160 200,160 200,60 100,60" fill="#1677ff" fill-opacity="0.2" stroke="#1677ff" stroke-width="2"/>
+  <text x="150" y="115" font-size="14" fill="#1677ff" text-anchor="middle">원본</text>
+  <text x="240" y="115" font-size="20">→</text>
+  <polygon points="290,180 490,180 490,30 290,30" fill="#fa8c16" fill-opacity="0.2" stroke="#fa8c16" stroke-width="2"/>
+  <text x="390" y="115" font-size="14" fill="#fa8c16" text-anchor="middle">균일 1.5배</text>
+  <text x="540" y="115" font-size="20">또는</text>
+  <polygon points="600,160 800,160 800,80 600,80" fill="#52c41a" fill-opacity="0.2" stroke="#52c41a" stroke-width="2"/>
+  <text x="700" y="125" font-size="14" fill="#52c41a" text-anchor="middle">x:2배 / y:0.8배</text>
+</svg>
+
+
+  <h2>📐 표준 변환 (2) — 회전</h2>
+
+  <h3>$\theta$ 만큼 반시계 회전 (2D)</h3>
+  <p>$$R_\theta = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}$$</p>
+
+  <h3>흔히 쓰는 각도</h3>
+  <ul>
+    <li>$\theta = 90°$: $R = \begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$</li>
+    <li>$\theta = 180°$: $R = \begin{pmatrix} -1 & 0 \\ 0 & -1 \end{pmatrix}$</li>
+    <li>$\theta = 45°$: $R = \tfrac{1}{\sqrt 2}\begin{pmatrix} 1 & -1 \\ 1 & 1 \end{pmatrix}$</li>
+  </ul>
+
+  <h3>어디서 왔나?</h3>
+  <ul>
+    <li>$\mathbf{e}_1 = (1,0) \to (\cos\theta, \sin\theta)$ → 1열.</li>
+    <li>$\mathbf{e}_2 = (0,1) \to (-\sin\theta, \cos\theta)$ → 2열.</li>
+  </ul>
+
+<div class="tip">"표준기저가 회전 후 어디로 가는지" 만 그려보면 회전 행렬을 자기가 직접 도출할 수 있습니다.</div>
+
+
+  <h2>📐 표준 변환 (3) — 반사</h2>
+
+  <h3>$x$ 축 대칭</h3>
+  <p>$$F_x = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}$$ → $(x, y) \to (x, -y)$
+
+### $y$ 축 대칭
+$$F_y = \begin{pmatrix} -1 & 0 \\ 0 & 1 \end{pmatrix}$$ → $(x, y) \to (-x, y)$
+
+### $y = x$ 대칭
+$$F_{y=x} = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}$$ → $(x, y) \to (y, x)$
+
+### 원점 대칭 (= 180° 회전)
+$$F_O = \begin{pmatrix} -1 & 0 \\ 0 & -1 \end{pmatrix}$$</p>
+
+<div class="note">반사 행렬의 행렬식은 항상 <b>−1</b>. 회전은 +1. → 7강에서 본 "$\det$ 부호 = 방향 보존 여부" 가 여기서 다시 등장.</div>
+
+
+  <h2>📐 표준 변환 (4) — 전단(Shear)</h2>
+
+  <h3>$x$ 방향 전단 ($k$ 만큼)</h3>
+  <p>$$H_x = \begin{pmatrix} 1 & k \\ 0 & 1 \end{pmatrix}$$ → $(x, y) \to (x + ky,\,y)$
+
+### 그림
+- 사각형이 평행사변형으로 "기울어짐".
+- 책장의 책을 옆으로 밀어 기울인 모양.
+
+<svg width="900" height="200" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <polygon points="100,160 200,160 200,60 100,60" fill="#1677ff" fill-opacity="0.2" stroke="#1677ff" stroke-width="2"/>
+  <text x="150" y="115" font-size="14" fill="#1677ff" text-anchor="middle">원본 (사각형)</text>
+  <text x="240" y="115" font-size="20">→</text>
+  <polygon points="290,160 390,160 440,60 340,60" fill="#fa8c16" fill-opacity="0.2" stroke="#fa8c16" stroke-width="2"/>
+  <text x="365" y="115" font-size="14" fill="#fa8c16" text-anchor="middle">전단 (평행사변형)</text>
+  <text x="500" y="80" font-size="14" fill="#666">y 좌표가 클수록</text>
+  <text x="500" y="100" font-size="14" fill="#666">x 가 더 많이 밀린다</text>
+  <text x="500" y="135" font-size="14" fill="#666">→ 책장 기울이기 효과</text>
+</svg>
+
+### $y$ 방향 전단
+$$H_y = \begin{pmatrix} 1 & 0 \\ k & 1 \end{pmatrix}$$</p>
+
+
+  <h2>🔄 변환의 합성 = 행렬 곱셈</h2>
+
+  <h3>핵심 사실</h3>
+  <p>두 선형변환을 차례로 적용 = 행렬을 곱하기.</p>
+
+  <p>$$\mathbf{x} \xrightarrow{B} B\mathbf{x} \xrightarrow{A} A(B\mathbf{x}) = (AB)\mathbf{x}$$</p>
+
+  <h3>합성 순서 — 오른쪽이 먼저!</h3>
+  <ul>
+    <li>$AB\mathbf{x}$ 는 "$B$ 를 먼저, 그 다음 $A$".</li>
+    <li>글 쓰는 순서와 적용 순서가 <strong>반대</strong>.</li>
+  </ul>
+
+  <h3>예 — "회전 후 스케일"</h3>
+  <ul>
+    <li>먼저 90° 회전: $R = \begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$</li>
+    <li>다음 2배 스케일: $S = \begin{pmatrix} 2 & 0 \\ 0 & 2 \end{pmatrix}$</li>
+    <li>합성: $SR = \begin{pmatrix} 0 & -2 \\ 2 & 0 \end{pmatrix}$ — "한 줄"로 표현.</li>
+  </ul>
+
+<div class="warn">$AB \neq BA$ 가 다시 등장! "회전 후 반사" 와 "반사 후 회전" 은 결과가 다릅니다.</div>
+
+
+  <h2>🔄 합성 예제 — 순서가 다른 결과</h2>
+
+  <h3>시나리오</h3>
+  <ul>
+    <li>$A$ = 90° 반시계 회전, $B$ = $x$ 축 반사.</li>
+    <li>$\mathbf{v} = (1, 0)$ 에 적용.</li>
+  </ul>
+
+  <h3>$AB\mathbf{v}$ — "반사 후 회전"</h3>
+  <ol>
+    <li>$B\mathbf{v} = (1, 0)$ → ($x$ 축 반사이므로 $(1,0)$ 은 변하지 않음. 다른 점에서 차이가 나타남).</li>
+    <li>$A(B\mathbf{v}) = A(1, 0) = (0, 1)$.</li>
+  </ol>
+
+  <h3>$BA\mathbf{v}$ — "회전 후 반사"</h3>
+  <ol>
+    <li>$A\mathbf{v} = (0, 1)$.</li>
+    <li>$B(0, 1) = (0, -1)$.</li>
+  </ol>
+
+  <p>→ 결과가 다름!</p>
+
+<div class="tip">로봇·VR 에서 "관절을 어느 순서로 움직이는가" 가 다른 결과를 만드는 이유가 바로 이것 — <b>변환의 비교환성</b>.</div>
+
+
+  <h2>🌍 응용 — 컴퓨터 그래픽스의 모든 것</h2>
+
+  <h3>캐릭터 변환 파이프라인</h3>
+  <p>$$\mathbf{x}_{\text{화면}} = P \cdot V \cdot M \cdot \mathbf{x}_{\text{모델}}$$</p>
+
+  <table>
+    <thead><tr><th>행렬</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td>$M$ (Model)</td><td>캐릭터의 위치/회전/스케일</td></tr>
+      <tr><td>$V$ (View)</td><td>카메라 위치/방향</td></tr>
+      <tr><td>$P$ (Projection)</td><td>3D를 2D 화면으로 투영</td></tr>
+    </tbody>
+  </table>
+
+  <h3>한 프레임당</h3>
+  <ul>
+    <li>모든 정점에 위 행렬을 곱함 (수천~수십만 정점).</li>
+    <li>GPU 가 행렬 곱셈을 병렬로 매우 빠르게 실행.</li>
+  </ul>
+
+<div class="note">모든 게임 엔진(Unity, Unreal)이 내부적으로 끊임없이 하는 일 = <b>행렬 곱셈</b>. 11강의 내용이 그 출발점입니다.</div>
+
+
+  <h2>🌍 응용 — 로봇팔의 자세</h2>
+
+  <h3>관절 변환</h3>
+  <ul>
+    <li>어깨 회전 $R_1$ → 팔꿈치 회전 $R_2$ → 손목 회전 $R_3$.</li>
+    <li>손끝 위치 = $R_1 R_2 R_3 \mathbf{x}_{\text{초기}}$.</li>
+  </ul>
+
+  <h3>순서가 중요!</h3>
+  <ul>
+    <li>"어깨 30° 돌리고 팔꿈치 60° 굽힘" ≠ "팔꿈치 60° 굽히고 어깨 30° 돌림".</li>
+    <li>행렬 곱이 비가환이라는 점이 그대로 물리적 의미를 가짐.</li>
+  </ul>
+
+  <h3>3D 회전</h3>
+  <ul>
+    <li>3D에서는 $R_x(\theta_x)$, $R_y(\theta_y)$, $R_z(\theta_z)$ 세 종류 회전 행렬이 있음.</li>
+    <li>이들을 곱한 순서가 곧 자세를 표현하는 방식.</li>
+  </ul>
+
+<div class="tip">"<b>오일러 각</b>" 이라는 개념 = 3D 회전을 세 회전 행렬의 곱으로 표현하는 방식. 비행기·드론의 자세 표현이 모두 이걸 씁니다.</div>
+
+
+  <h2>🧮 종합 예제</h2>
+
+  <h3>문제</h3>
+  <p>점 $(2, 1)$ 에 다음을 차례로 적용한 결과는?</p>
+  <ol>
+    <li>90° 반시계 회전</li>
+    <li>$y$ 축 반사</li>
+  </ol>
+
+  <h3>풀이 1 — 한 단계씩</h3>
+  <ul>
+    <li>회전 후: $(0, -1) \cdot 2 + (-(-1), 0) \cdot 1 = (-1, 2)$</li>
+    <li>또는 $R\binom{2}{1} = \binom{0\cdot 2 - 1\cdot 1}{1\cdot 2 + 0\cdot 1} = \binom{-1}{2}$</li>
+    <li>반사 후: $F_y\binom{-1}{2} = \binom{1}{2}$</li>
+  </ul>
+
+  <h3>풀이 2 — 합성 행렬로</h3>
+  <p>$F_y \cdot R = \begin{pmatrix} -1 & 0 \\ 0 & 1 \end{pmatrix}\begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix} = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}$</p>
+
+  <p>$\Rightarrow F_y R \binom{2}{1} = \binom{1}{2}$ ✓</p>
+
+  <p>→ 결과: $(1, 2)$.</p>
+
+
+  <h2>📝 정리 — 오늘의 핵심</h2>
+
+  <h3>1️⃣ 선형변환</h3>
+  <ul>
+    <li>$T(\mathbf{u}+\mathbf{v}) = T(\mathbf{u})+T(\mathbf{v}),\ T(c\mathbf{u}) = cT(\mathbf{u})$.</li>
+  </ul>
+
+  <h3>2️⃣ 행렬 = 선형변환</h3>
+  <ul>
+    <li>$T(\mathbf{x}) = A\mathbf{x}$.</li>
+    <li>$A$ 의 열 = 표준기저가 변환된 위치.</li>
+  </ul>
+
+  <h3>3️⃣ 표준 변환 행렬 (외울 것)</h3>
+  <ul>
+    <li>회전 $R_\theta$, 스케일 $S$, 반사 $F$, 전단 $H$.</li>
+  </ul>
+
+  <h3>4️⃣ 합성 = 곱셈</h3>
+  <ul>
+    <li>오른쪽부터 적용. <strong>비가환</strong>.</li>
+  </ul>
+
+<div class="tip">다음 강의에서는 변환을 "<b>어디로 보내는가</b>"(치역) 와 "<b>어떤 점이 0으로 가는가</b>"(핵) 의 관점으로 더 깊이 들여다봅니다.</div>
+
+
+  <h2>📚 연습문제</h2>
+
+  <h3>문제 1 (선형성 판정)</h3>
+  <p>다음이 선형변환인지 판정하시오.</p>
+  <ol>
+    <li>$T(x, y) = (2x, x + y)$</li>
+    <li>$T(x, y) = (x + 1, y)$</li>
+    <li>$T(x, y) = (x^2, y)$</li>
+  </ol>
+
+  <h3>문제 2 (표현행렬)</h3>
+  <p>$T(x, y, z) = (x + 2y, 3y - z)$ 의 표현행렬을 구하시오.</p>
+
+  <h3>문제 3 (회전)</h3>
+  <p>점 $(3, 4)$ 를 원점 기준 30° 반시계 회전한 결과를 구하시오. (필요하면 $\sin, \cos$ 값 표기 그대로 두기)</p>
+
+  <h3>문제 4 (합성)</h3>
+  <p>"45° 회전" 과 "$x$ 축 반사" 의 합성 행렬 두 가지 ($AR,\ RA$ 형태) 를 구하고 비교하시오.</p>
+
+  <h3>문제 5 (응용)</h3>
+  <p>$2 \times 2$ 변환 행렬 $A = \begin{pmatrix} 2 & 0 \\ 0 & 3 \end{pmatrix}$ 가 단위 정사각형을 어떤 도형으로 보내는지 그리시오.</p>
+
+
+
+
+  <h3>오늘 배운 내용에 대해 궁금한 점이 있으면 언제든지 질문해 주세요.</h3>
+
+  <ul>
+    <li>이메일 : <strong>leeck@kongju.ac.kr</strong></li>
+    <li>사무실 : 1공학관 609호</li>
+  </ul>
+
+  <p><br></p>
+
+<div class="tip" style="text-align:center; font-size:1.1em;">
+다음 강의: 선형변환 (2) — 핵, 치역, 계수 🎯
+</div>
+
+
+  <div class="prevnext">
+    <a href="10-basis-dimension.html"><small>← 이전</small>Week 10. 기저·차원</a>
+    <a class="next" href="12-kernel-range-rank.html"><small>다음 →</small>Week 12. 선형변환 (2) — 핵·치역·계수</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

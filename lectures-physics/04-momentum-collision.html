@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W4. 운동량과 충돌 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html" class="active">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../physics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 4. 운동량과 충돌</h1>
+  <p class="lead">이번 주 한 줄 요약 — <strong>"충돌이 일어나도 전체 운동량은 절대 사라지지 않는다."</strong></p>
+
+  <div class="toc"><h4>학습 목표</h4><ul>
+    <li>운동량 $\vec{p}=m\vec{v}$의 의미를 에너지와 비교해 설명한다.</li>
+    <li>충격량-운동량 정리로 짧은 충돌 문제를 푼다.</li>
+    <li>외력 0인 계의 운동량 보존을 적용한다.</li>
+    <li>탄성·완전비탄성 충돌을 구분해 풀이한다.</li>
+    <li>질량중심으로 복잡한 계를 단순화한다.</li>
+  </ul></div>
+
+  <h2>도입 훅 — "뉴턴의 요람"</h2>
+  <p>뉴턴 요람의 한쪽 끝 공 1개를 들었다 놓으면 반대쪽 1개만 같은 높이로 튀어나온다. 2개를 들면 2개. <em>왜 가운데는 가만히 있고, 1개에서 2개가 절반 속도로 나오는 일은 없을까?</em></p>
+  <div class="tip">답: 운동량 보존만으론 다양한 결과가 가능. 그러나 <strong>운동에너지 보존도 동시에</strong> 만족하는 해는 "1개가 같은 속도로"뿐. 이 두 보존법칙이 함께 일하는 게 오늘의 주제.</div>
+
+  <h2>1. 운동량</h2>
+  $$ \vec{p} = m\vec{v} $$
+  <p>벡터다. 에너지($\tfrac{1}{2}mv^2$, 스칼라)와 다른 정보를 담는다 — 방향이 있다.</p>
+
+  <h2>2. 뉴턴 2법칙의 진짜 모양</h2>
+  $$ \vec{F}_{\text{net}} = \frac{d\vec{p}}{dt} $$
+  <p>질량 일정하면 $F=ma$. 질량 변하는 경우(로켓)에는 이 형태가 더 일반적.</p>
+
+  <h2>3. 충격량</h2>
+  $$ \vec{J} = \int\vec{F}\,dt = \Delta\vec{p} $$
+  <h3>데모 1 — 달걀 받기 ★</h3>
+  <p>달걀(또는 물풍선)을 학생에게 던진다. 빳빳이 받기 → 깨짐. 손을 뒤로 빼며 부드럽게 → 안 깨짐. 같은 $\Delta p$여도 $\Delta t$ 늘리면 $F$가 줄어든다 — 에어백·헬멧·낙법의 원리.</p>
+  <h3>데모 2 — 자동차 에어백 영상</h3>
+  <p>충돌 슬로우모션. 정지 시간 10배 → 힘 1/10.</p>
+
+  <h2>4. 운동량 보존</h2>
+  <p>외력 0이면 계의 총 운동량 일정. 두 물체가 주고받는 힘은 3법칙으로 상쇄.</p>
+  $$ \sum m_i\vec{v}_i\Big|_{\text{before}} = \sum m_i\vec{v}_i\Big|_{\text{after}} $$
+  <h3>데모 3 — 풍선 로켓 (운동량 버전)</h3>
+  <p>풍선이 공기를 뒤로 보내면(음의 운동량) 풍선은 앞으로 같은 크기 운동량을 얻음. 합 = 0.</p>
+  <h3>데모 4 — 두 학생, 한 카트</h3>
+  <p>회전의자 위 두 학생이 서로 밀면 반대 방향으로 같은 운동량 크기로 멀어짐. 무거운 학생이 더 천천히.</p>
+
+  <h2>5. 충돌의 종류</h2>
+  <table>
+    <thead><tr><th>종류</th><th>운동량</th><th>운동에너지</th><th>예</th></tr></thead>
+    <tbody>
+      <tr><td>완전탄성</td><td>보존</td><td>보존</td><td>당구공, 분자</td></tr>
+      <tr><td>비탄성</td><td>보존</td><td>감소</td><td>일반 충돌</td></tr>
+      <tr><td>완전비탄성</td><td>보존</td><td>최대 감소</td><td>붙어서 같이 감</td></tr>
+    </tbody>
+  </table>
+  <h3>데모 5 — 에어트랙 충돌</h3>
+  <p>두 카트가 튕기는 경우(탄성) vs 벨크로로 붙어가는 경우(완전비탄성). 운동량 합은 두 경우 모두 동일.</p>
+  <h3>데모 6 — 공 두 개 떨어뜨리기 ★</h3>
+  <p>농구공 위에 테니스공 살짝 올려 함께 떨어뜨림. 바닥 튕긴 직후 작은 공이 자기 떨어진 높이의 약 9배까지 솟구침. 1D 탄성 충돌의 가장 극적인 예.</p>
+
+  <p>1D 탄성 충돌:</p>
+  $$ v_1' = \frac{m_1-m_2}{m_1+m_2}v_1 + \frac{2m_2}{m_1+m_2}v_2 $$
+  <ul>
+    <li>$m_1=m_2$: 속도 교환 (당구)</li>
+    <li>$m_2 \gg m_1$: $v_1'\approx -v_1$ (벽에 튕김)</li>
+    <li>$m_2 \ll m_1$: $v_2'\approx 2v_1$ (탁구공이 야구공에 맞으면 2배)</li>
+  </ul>
+
+  <h2>6. 질량중심 (CM)</h2>
+  $$ \vec{r}_{\text{CM}} = \frac{\sum m_i\vec{r}_i}{\sum m_i} $$
+  <p>외력 합 0이면 CM은 등속 직선 운동.</p>
+  <h3>데모 7 — 회전하는 망치</h3>
+  <p>망치(머리에 추, 자루는 가벼움)를 회전시키며 던진다. 자루 끝과 머리는 복잡한 궤적이지만 <strong>CM은 깨끗한 포물선</strong>. Tracker로 확인.</p>
+
+  <h2>흔한 오개념</h2>
+  <table>
+    <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
+    <tbody>
+      <tr><td>"큰 운동량 = 큰 에너지"</td><td>$K = p^2/(2m)$. $m$ 다르면 다름.</td></tr>
+      <tr><td>"충돌하면 에너지가 사라진다"</td><td>운동에너지는 줄지만 열·소리·변형으로 변환.</td></tr>
+      <tr><td>"붙어버린 충돌은 운동량도 사라짐"</td><td>운동량 보존. 에너지만 최대 감소.</td></tr>
+      <tr><td>"요람에서 1개 → 2개 절반 속도도 가능"</td><td>에너지 보존이 동시에 안 됨.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>강의실 예제</h2>
+  <div class="tip"><strong>예제 1.</strong> 50 g 골프공이 30 m/s로 벽에 튕김. 충격량?<br>
+  $\Delta p = m(v_f - v_i) = 0.05(-30-30) = -3$ kg·m/s. 크기 3 N·s.</div>
+  <div class="tip"><strong>예제 2.</strong> 1000 kg 차(20 m/s) + 정지한 1500 kg 차 → 같이 움직이면?<br>
+  $1000\cdot20 = 2500v \Rightarrow v=8$ m/s.</div>
+  <div class="tip"><strong>예제 3.</strong> 같은 질량 당구공 A(5 m/s)가 정지한 B를 정통 탄성충돌. 결과?<br>
+  같은 질량 1D 탄성 → 속도 교환. A 정지, B 5 m/s.</div>
+
+  <h2>과제 4</h2>
+  <ol>
+    <li>(개념) 헬멧이 머리를 보호하는 원리를 충격량-운동량으로 설명.</li>
+    <li>(계산) Halliday 9장 4문제.</li>
+    <li>(시뮬) PhET <em>Collision Lab</em>로 1D·2D 탄성·비탄성 운동량/에너지 표 작성. A4 한 장.</li>
+  </ol>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 점입자에서 회전하는 강체로 확장. 식의 모양은 그대로 가져온다(직선 ↔ 회전 대응).</div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

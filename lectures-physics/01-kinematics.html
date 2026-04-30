@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W1. 수학 도구와 운동학 — Study Page</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">MPC</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html" class="active">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../physics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 1. 수학 도구와 운동학</h1>
+  <p class="lead">이번 주 한 줄 요약 — <strong>"위치를 시간으로 한 번 미분하면 속도, 두 번이면 가속도. 그게 전부다."</strong></p>
+
+  <div class="toc"><h4>학습 목표</h4><ul>
+    <li>벡터를 화살표로 시각화하고 더하기·빼기·분해할 수 있다.</li>
+    <li>속도와 가속도가 위치의 1·2차 미분임을 그래프와 식 양쪽으로 설명할 수 있다.</li>
+    <li>등가속도 운동의 세 식을 외우지 않고 미분·적분으로 유도해서 쓸 수 있다.</li>
+    <li>발사체 운동을 "수평 등속 + 수직 등가속도"로 분해할 수 있다.</li>
+  </ul></div>
+
+  <h2>도입 훅 — "0.2초 만에 지폐를 잡을 수 있을까?"</h2>
+  <p><strong>준비물:</strong> 만 원권 지폐 한 장(또는 30 cm 자).</p>
+  <ol>
+    <li>학생 두 명을 앞으로 부른다. A가 지폐 윗부분을 잡고 수직으로 늘어뜨림. B는 지폐 <em>중앙</em>에 손가락을 벌려 대고 대기.</li>
+    <li>A가 예고 없이 지폐를 놓는다. B는 잡으려 시도. <strong>거의 못 잡는다.</strong></li>
+  </ol>
+  <p>사람의 평균 반응시간 ≈ 0.2 s. 지폐가 그 시간 동안 떨어진 거리:</p>
+  $$ h = \tfrac{1}{2} g t^2 = \tfrac{1}{2}(9.8)(0.2)^2 \approx 0.196 \text{ m} = 19.6 \text{ cm} $$
+  <p>지폐 길이(약 15 cm)보다 더 떨어졌다. → <strong>물리적으로 못 잡는 게 정상.</strong></p>
+  <div class="tip"><strong>오늘의 메시지</strong> — 두 가지 도구(벡터 + 미분)만 있으면 일상의 1초도 정량적으로 다룰 수 있다.</div>
+
+  <h2>1. 벡터 — "방향이 있는 숫자"</h2>
+  <h3>쉬운 설명</h3>
+  <p><strong>스칼라</strong>는 크기만(예: "5분 걸린다"). <strong>벡터</strong>는 크기 + 방향(예: "북쪽으로 5 km").
+  GPS의 <em>"300 m 직진"</em>은 벡터, <em>"300 m 이동했다"</em>는 스칼라(거리).</p>
+
+  <h3>데모 1 — 무빙워크 위 걷기</h3>
+  <p>공항 무빙워크 영상. 같은 방향으로 걸으면 빠르고, 반대로 걸으면 거의 제자리. 일상에서 매일 일어나는 벡터 합·차.</p>
+
+  <h3>데모 2 — 칠판 위 화살표 합성</h3>
+  <p>두꺼운 화살표 두 개로 칠판에서 직접 합성. <strong>꼬리에 머리 붙이기</strong>(tip-to-tail)가 평행사변형보다 직관적.</p>
+
+  <h3>핵심 도구</h3>
+  <ul>
+    <li>좌표 분해: $\vec{A} = A_x\hat{x} + A_y\hat{y}$</li>
+    <li>크기: $|\vec{A}| = \sqrt{A_x^2 + A_y^2}$</li>
+    <li>합: $(A_x+B_x,\, A_y+B_y)$ — 좌표끼리 더하면 끝.</li>
+  </ul>
+  <div class="tip">외울 것 0개. 화살표만 그릴 줄 알면 된다.</div>
+
+  <h2>2. 미분 = "얼마나 빨리 변하는가"</h2>
+  <h3>쉬운 설명</h3>
+  <ul>
+    <li>위치 $x(t)$ : "지금 어디?"</li>
+    <li>속도 $v = \dfrac{dx}{dt}$ : "그 위치가 얼마나 빠르게 변하나?"</li>
+    <li>가속도 $a = \dfrac{dv}{dt} = \dfrac{d^2 x}{dt^2}$ : "그 빠름 자체가 얼마나 빠르게 변하나?"</li>
+  </ul>
+  <p>비유: 자동차 계기판. 거리계 = 위치, 속도계 바늘 값 = 속도, 그 바늘이 <em>움직이는 빠르기</em> = 가속도.</p>
+
+  <h3>데모 3 — 0–100 km/h 가속 영상</h3>
+  <p>유튜브 자동차 가속 영상을 정지하면서 시간별 속도를 칠판에 점 찍기. 그래프 <strong>기울기 = 가속도</strong>. 출발 직후 기울기가 가장 큼.</p>
+  $$ v(t) = \frac{dx}{dt}, \qquad a(t) = \frac{dv}{dt} = \frac{d^2 x}{dt^2} $$
+  <div class="tip">미분은 그래프의 <strong>기울기</strong>. 적분은 <strong>면적</strong>. 그 이상의 마법은 없다.</div>
+
+  <h2>3. 등가속도 운동</h2>
+  $$ v = v_0 + a t $$
+  $$ x = x_0 + v_0 t + \tfrac{1}{2} a t^2 $$
+  $$ v^2 = v_0^2 + 2a(x - x_0) $$
+  <p>유도(외우지 마세요): 첫째 식은 $a$ 상수의 시간 적분, 둘째는 $v$를 또 적분, 셋째는 첫·둘째에서 $t$를 소거.</p>
+
+  <h3>데모 4 — 깃털과 망치, 진공에서 떨어뜨리기</h3>
+  <p>NASA Apollo 15 데이비드 스콧이 달 표면에서 망치와 깃털을 동시에 떨어뜨린 영상. 둘이 동시에 착지. 대안: BBC <em>Human Universe</em>의 NASA 진공 챔버. <strong>공기저항만 없으면 g는 모두에게 같다.</strong></p>
+
+  <h3>데모 5 — 지폐 자유낙하 정량화</h3>
+  <p>도입의 지폐 데모를 짝지어 시도. 잡힌 위치로 본인 반응시간 측정:</p>
+  $$ t = \sqrt{\frac{2h}{g}} $$
+  <p>7 cm에서 잡으면 약 0.12 s, 12 cm에서 잡으면 약 0.16 s.</p>
+
+  <h2>4. 발사체 운동 — "두 운동의 덧셈"</h2>
+  <p><strong>핵심 아이디어:</strong> 수평운동과 수직운동은 서로를 모른다. 수평은 등속, 수직은 등가속도(중력만).</p>
+
+  <h3>데모 6 — 몽키 헌터 ★</h3>
+  <p>천장 자석에 인형 매달기 + 발사대 조준 + 발사 순간 자석 끊김 → 인형이 자유낙하. <strong>그런데도 명중한다.</strong>
+  발사체와 인형 모두 같은 $g$로 떨어지므로 둘의 상대 위치가 변하지 않는다. 수평·수직 독립 + 중력 평등의 가장 강력한 시각적 증명.</p>
+
+  <h3>데모 7 — Tracker로 농구공 분석</h3>
+  <p>학생이 친구가 농구공 던지는 모습을 30 fps 촬영 → <a href="https://physlets.org/tracker/">Tracker</a>로 좌표 추출. $x$-$t$는 직선, $y$-$t$는 포물선. $y$의 2차 미분 ≈ 9.8 m/s². <strong>다음 주까지 본인 핸드폰으로 직접</strong>이 첫 과제.</p>
+
+  $$ x(t) = v_0\cos\theta \cdot t,\qquad y(t) = v_0\sin\theta \cdot t - \tfrac{1}{2} g t^2 $$
+  <p>사거리 (같은 높이): $R = \dfrac{v_0^2\sin 2\theta}{g}$. $\theta=45°$에서 최대.</p>
+
+  <h2>흔한 오개념</h2>
+  <table>
+    <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
+    <tbody>
+      <tr><td>"무거운 것이 빨리 떨어진다"</td><td>공기저항 없으면 같다 (Apollo 영상)</td></tr>
+      <tr><td>"물체는 가속도 방향으로 움직인다"</td><td>가속도는 <em>속도가 변하는</em> 방향. 위로 던진 공도 가속도는 아래.</td></tr>
+      <tr><td>"포물선 꼭대기에서 속도는 0"</td><td>수직 속도만 0. 수평 속도는 그대로.</td></tr>
+      <tr><td>"원운동은 가속도 0"</td><td>방향이 변하므로 가속도가 있다 (다음 주).</td></tr>
+    </tbody>
+  </table>
+
+  <h2>강의실 예제</h2>
+  <div class="tip"><strong>예제 1.</strong> 25 m 다리에서 돌을 가만히 놓았다. 수면 도달 시간은?<br>
+  $h = \tfrac{1}{2}gt^2 \Rightarrow t = \sqrt{2h/g} = \sqrt{50/9.8} \approx 2.26$ s.</div>
+  <div class="tip"><strong>예제 2.</strong> $30°$로 $v_0=20$ m/s 발사. 사거리?<br>
+  $R = \dfrac{v_0^2\sin 60°}{g} \approx 35.3$ m.</div>
+  <div class="tip"><strong>예제 3.</strong> 자동차가 20 m/s에서 5 s만에 정지. 멈출 때까지 거리?<br>
+  $a=-4$ m/s². $x = v_0 t + \tfrac{1}{2}at^2 = 100-50 = 50$ m. (또는 $v^2 = v_0^2+2ax$로도 동일)</div>
+
+  <h2>과제 1</h2>
+  <ol>
+    <li>(개념) 버스가 갑자기 출발할 때 승객은 왜 뒤로 쏠리는가? 가속도 개념으로 5문장 이내 설명.</li>
+    <li>(계산) Halliday 2장 끝 자유낙하·발사체 4문제.</li>
+    <li>(실험) 본인 핸드폰으로 던지는 영상(30 fps) → Tracker 분석 → 가속도 추정 vs 9.8 비교. A4 한 장.</li>
+  </ol>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 오늘은 <em>어떻게 움직이는가</em>(운동학). 다음 주는 <strong>왜 움직이는가</strong> — 뉴턴의 운동법칙.</div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

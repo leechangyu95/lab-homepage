@@ -23,6 +23,7 @@
     <a href="../mpc.html">MPC</a>
     <a href="../path-planning.html">경로계획 &amp; 추종</a>
     <a href="../calculus.html" class="active">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
   </nav>
 </div></header>
 
@@ -37,10 +38,14 @@
     <li>응용 최적화 — 모델링이 절반</li>
     <li>대표 예제 — 둘레 일정 최대 면적</li>
     <li>대표 예제 — 점에서 직선까지 최단거리</li>
+    <li>응용 최적화 더 풀어보기 — 5가지 패턴</li>
     <li>뉴턴법 — 근 찾기</li>
+    <li>뉴턴법의 수렴 속도 — 왜 빠른가</li>
     <li>뉴턴법 — 최적화에 사용</li>
     <li>수렴·발산 — 시작점이 중요한 이유</li>
+    <li>이분법(Bisection) — 안전한 대안</li>
     <li>인터랙티브: 1D 뉴턴법</li>
+    <li>인터랙티브: 뉴턴법 vs 이분법 수렴 비교</li>
     <li>흔한 오해와 핵심 정리</li>
     <li>더 깊이 공부하기</li>
   </ol></div>
@@ -108,7 +113,38 @@
   <p>(거리 자체보다 거리 제곱을 최소화하는 게 산수에 편하고 결과는 같음 — $\sqrt{}$가 단조 증가니까.)</p>
   <p>$D'(t) = 2t - 5 = 0 \Rightarrow t = 5/2$. $D''(t) = 2 > 0$ ⇒ 최소. 가장 가까운 점은 $(5/2, \sqrt{5/2})$.</p>
 
-  <h2>6. 뉴턴법 — 근 찾기</h2>
+  <h2>6. 응용 최적화 더 풀어보기 — 5가지 패턴</h2>
+
+  <p>학부 최적화 문제는 거의 다음 5가지 틀에서 변형. 각 패턴마다 한 번씩 풀어 두면 시험에서 새 문제도 즉시 풀립니다.</p>
+
+  <h3>패턴 ① — 면적·부피 최대화 (재료 일정)</h3>
+  <p><em>"한 변이 벽인 직사각형 마당. 울타리 30 m로 둘러싸는 마당의 최대 면적은?"</em></p>
+  <p>벽과 평행한 변 $x$, 수직한 변 $y$. 울타리 길이 $x + 2y = 30$ ⇒ $x = 30 - 2y$. 면적 $A = xy = y(30 - 2y) = 30y - 2y^2$.</p>
+  <p>$A'(y) = 30 - 4y = 0$ ⇒ $y = 7.5$, $x = 15$, $A_\max = 112.5$ m². 벽이 있을 때는 정사각형이 아니라 <strong>가로 = 2 × 세로</strong>가 최적.</p>
+
+  <h3>패턴 ② — 부피·표면적 최소화 (재료 절약)</h3>
+  <p><em>"부피 1L (=1000 cm³) 인 뚜껑 없는 정사각 밑면 상자. 재료가 가장 적게 드는 치수는?"</em></p>
+  <p>밑면 한 변 $x$, 높이 $h$. 부피 $x^2 h = 1000$ ⇒ $h = 1000/x^2$.</p>
+  <p>표면적(뚜껑 없음) $S = x^2 + 4xh = x^2 + 4000/x$. $S'(x) = 2x - 4000/x^2 = 0$ ⇒ $x^3 = 2000$ ⇒ $x = \sqrt[3]{2000} \approx 12.6$ cm.</p>
+  <p>$h = 1000/x^2 \approx 6.3$ cm. <strong>밑변 = 2 × 높이</strong>가 답.</p>
+
+  <h3>패턴 ③ — 거리·시간 최단 (스넬의 법칙 맛보기)</h3>
+  <p><em>"해변 A점에서 바닷속 B점까지 가는 인명구조원. 모래에서는 5 m/s, 물에서는 1 m/s 로 헤엄. 어디에서 물에 뛰어들어야 가장 빨리 도착?"</em></p>
+  <p>해변에서 진입점까지 거리를 $x$로 두고 총 시간 $T(x) = (\text{모래 거리})/5 + (\text{물 거리})/1$ 을 최소화.
+  $T'(x) = 0$ 풀면 <strong>스넬의 법칙</strong> $\frac{\sin\theta_1}{v_1} = \frac{\sin\theta_2}{v_2}$ 이 자연스럽게 나옵니다 — 빛이 굴절하는 이유와 같은 수학.</p>
+
+  <h3>패턴 ④ — 비용·이윤 최적화 (경제학)</h3>
+  <p><em>"한 단위당 단가 $p$일 때 수요 $D(p) = 100 - 2p$. 단위당 생산비 10. 이윤이 최대가 되는 가격은?"</em></p>
+  <p>이윤 $\Pi(p) = (p - 10) \cdot D(p) = (p - 10)(100 - 2p) = -2p^2 + 120p - 1000$.
+  $\Pi'(p) = -4p + 120 = 0$ ⇒ $p = 30$. 이윤 $\Pi(30) = -1800 + 3600 - 1000 = 800$. 수요 $D(30) = 40$ 단위.</p>
+
+  <h3>패턴 ⑤ — 구간 안에 끼는 최대·최소 (면적·체적)</h3>
+  <p><em>"반지름 1인 반원 안에 가장 큰 직사각형을 그리려면?"</em></p>
+  <p>밑변에 직사각형 한 변, 위쪽 두 모서리는 반원 위. 한 모서리를 $(x, y)$, $y = \sqrt{1 - x^2}$.
+  면적 $A(x) = 2x \cdot y = 2x\sqrt{1 - x^2}$.</p>
+  <p>$A^2 = 4x^2(1 - x^2)$ 가 더 다루기 쉬움. $u = x^2$로 두면 $A^2 = 4u(1-u)$ ⇒ $u = 1/2$ ⇒ $x = 1/\sqrt{2}$, $y = 1/\sqrt{2}$. $A_\max = 1$.</p>
+
+  <h2>7. 뉴턴법 — 근 찾기</h2>
 
   <h3>한 줄 비유부터</h3>
   <p>$f(x) = 0$을 손으로 풀 수 없을 때 (예: $\cos x = x$). 그래도 어떤 점 $x_0$ 근처에 답이 있다는 걸 안다면, 그 점에서의 <strong>접선이 $x$축과 만나는 곳</strong>으로 한 발짝 내려가요.
@@ -128,7 +164,30 @@
   </ul>
   <p>4번 만에 소수점 9자리. 이게 뉴턴법의 위력 — <strong>2차 수렴(quadratic convergence)</strong>이라 매번 정확도가 두 배씩 늘어납니다.</p>
 
-  <h2>7. 뉴턴법 — 최적화에 사용</h2>
+  <h2>8. 뉴턴법의 수렴 속도 — 왜 빠른가</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>오차가 $0.1 → 0.01 → 0.001 → \dots$ 처럼 한 자리씩 줄어드는 게 <strong>1차(선형) 수렴</strong>. 그런데 뉴턴법은
+  $0.1 → 0.01 → 0.0001 → 0.00000001 → \dots$ 처럼 <strong>자릿수가 두 배씩</strong> 폭발적으로 늘어요.
+  10번이 아니라 5–6번이면 소수점 15자리에 도달하는 이유.</p>
+
+  <h3>2차 수렴의 의미</h3>
+  <p>오차 $e_n = x_n - x^*$ 라 하면, 단순 근(simple root) 근방에서 뉴턴법은 다음을 만족합니다.</p>
+  $$ |e_{n+1}| \;\le\; C \cdot e_n^2 $$
+  <p>$e_n$이 충분히 작으면 다음 오차가 그 제곱의 상수배 — "두 자리가 네 자리, 네 자리가 여덟 자리"로 폭발적으로 정밀해져요.</p>
+
+  <h3>수치로 확인 — $\sqrt{2}$ 의 수렴</h3>
+  <p>위 예제의 오차를 손으로 적어 보면:</p>
+  <ul>
+    <li>$|e_0| = |1 - \sqrt{2}| \approx 0.414$</li>
+    <li>$|e_1| = |1.5 - \sqrt{2}| \approx 0.086$</li>
+    <li>$|e_2| \approx 0.0025$ &nbsp; (≈ $0.086^2 / 2$)</li>
+    <li>$|e_3| \approx 2.1\!\times\!10^{-6}$ &nbsp; (≈ $0.0025^2 / 3$)</li>
+    <li>$|e_4| \approx 1.6\!\times\!10^{-12}$</li>
+  </ul>
+  <p>매 반복마다 자릿수가 정확히 두 배. 이게 일반 1차 수렴(이분법, 경사하강법)과의 결정적 차이입니다.</p>
+
+  <h2>9. 뉴턴법 — 최적화에 사용</h2>
 
   <p>$f$의 극값을 찾는다는 건 $f'(x) = 0$을 푸는 것. 즉 뉴턴법을 $f'$에 적용:</p>
   $$ x_{n+1} = x_n - \frac{f'(x_n)}{f''(x_n)} $$
@@ -144,7 +203,36 @@
   </ul>
   <p>실용적 처방: 시작점을 그래프로 미리 보고 정하기 / 발산하면 작은 step size로 ($\alpha \in (0, 1]$ 곱하기 → "damped Newton").</p>
 
-  <h2>9. 인터랙티브: 1D 뉴턴법</h2>
+  <h2>11. 이분법(Bisection) — 안전한 대안</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>책 사이에서 "47쪽"을 찾을 때 자연스럽게 가운데를 펼쳐 보고, 47쪽이 그보다 앞이면 앞쪽 절반을, 뒤면 뒤쪽 절반을 다시 가운데로 가르는 식. 이게 바로 <strong>이분법</strong>이에요. 느리지만 절대 실패하지 않습니다.</p>
+
+  <h3>알고리즘</h3>
+  <ol>
+    <li>$f(a) < 0 < f(b)$ 인 구간 $[a, b]$ 를 찾는다 (IVT로 근 존재 보장).</li>
+    <li>중점 $c = (a+b)/2$. $f(c)$ 의 부호를 본다.</li>
+    <li>$f(a) f(c) < 0$ 이면 새 구간 $[a, c]$, 아니면 $[c, b]$.</li>
+    <li>구간 폭이 충분히 작아질 때까지 반복.</li>
+  </ol>
+
+  <h3>수렴 속도</h3>
+  <p>매 반복마다 구간 폭이 정확히 절반. <strong>1차 수렴 (오차가 매번 0.5배)</strong>. 30번 반복이면 $2^{30} \approx 10^9$ 분의 1로 줄어듦 — 30번 뉴턴법이면 거의 컴퓨터의 정밀도 한계를 넘는 데 비하면 느려요.</p>
+
+  <h3>장단점 비교</h3>
+  <table>
+    <thead><tr><th></th><th>이분법</th><th>뉴턴법</th></tr></thead>
+    <tbody>
+      <tr><td>수렴 속도</td><td>1차 (선형)</td><td>2차 (제곱)</td></tr>
+      <tr><td>안정성</td><td>항상 수렴 ✓</td><td>발산 가능</td></tr>
+      <tr><td>요구 정보</td><td>$f$ 만</td><td>$f, f'$ 둘 다</td></tr>
+      <tr><td>초기 정보</td><td>부호 다른 두 점</td><td>한 시작점 (좋아야 함)</td></tr>
+      <tr><td>실무 권장</td><td>안정성 우선·간단</td><td>속도 우선·매끄러운 함수</td></tr>
+    </tbody>
+  </table>
+  <p>실무 솔버는 두 방법을 결합한 <strong>Brent 방법</strong>(이분법 + 역2차 보간) — 안정성과 속도를 모두 챙기는 표준 알고리즘.</p>
+
+  <h2>12. 인터랙티브: 1D 뉴턴법</h2>
 
   <div class="demo">
     <h4>🎮 뉴턴법 한 발씩 — 곡선 위에서 접선이 x축으로 떨어지기</h4>
@@ -243,7 +331,94 @@
   ② $x^3 - 6x^2 + 9x - 2 = 0$에서 시작점 1.5 근처면 가운데 근으로 수렴, 시작점 0.5면 다른 근으로 갑니다.
   ③ 시작점을 -1로 두고 $\cos x - x$를 풀면 $\sin x + 1 = 0$이 분모를 0에 가깝게 만들어 발산하는 모습을 볼 수 있어요.</div>
 
-  <h2>10. 흔한 오해와 핵심 정리</h2>
+  <h2>13. 인터랙티브: 뉴턴법 vs 이분법 수렴 비교</h2>
+
+  <p>같은 함수의 같은 근을 두 방법으로 동시에 풀어, 매 반복마다 오차가 어떻게 줄어드는지 로그 스케일로 비교합니다. 뉴턴법(파랑)이 자릿수가 폭발적으로 늘어나는 반면, 이분법(주황)은 일정 비율로 줄어드는 것이 한눈에 보입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 수렴 속도 비교 — 2차 수렴 vs 1차 수렴</h4>
+    <p>$y$축이 로그 스케일(오차의 $\log_{10}$). 뉴턴법은 직선이 아니라 가속하며 떨어지고, 이분법은 일정한 기울기 직선. 30번 반복까지 시뮬레이션.</p>
+    <canvas id="cvg" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="cvgFn">
+          <option value="sqrt2" selected>x² − 2 = 0  (근 = √2)</option>
+          <option value="cosx">cos x − x = 0</option>
+          <option value="cubic">x³ − x − 1 = 0</option>
+        </select>
+      </label>
+    </div>
+    <p id="cvgInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cvg'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:60,r:20,t:30,b:40};
+    function setup(){
+      const m=document.getElementById('cvgFn').value;
+      if(m==='sqrt2')return{f:v=>v*v-2,d:v=>2*v,a:1,b:2,start:1.0,exact:Math.SQRT2};
+      if(m==='cosx')return{f:v=>Math.cos(v)-v,d:v=>-Math.sin(v)-1,a:0,b:1.5,start:1.5,exact:0.7390851332151607};
+      return{f:v=>v*v*v-v-1,d:v=>3*v*v-1,a:1,b:2,start:1.5,exact:1.3247179572447460};
+    }
+    function loop(){
+      const S=setup();
+      const N=30;
+      // Newton trace
+      let xn=S.start;const newton=[Math.abs(xn-S.exact)];
+      for(let i=0;i<N;i++){
+        const fp=S.d(xn);if(Math.abs(fp)<1e-15)break;
+        xn=xn-S.f(xn)/fp;newton.push(Math.max(Math.abs(xn-S.exact),1e-17));
+      }
+      // Bisection trace
+      let a=S.a,b=S.b;const bisec=[Math.max(Math.abs((a+b)/2-S.exact),1e-17)];
+      for(let i=0;i<N;i++){
+        const c0=(a+b)/2;
+        if(S.f(a)*S.f(c0)<0)b=c0;else a=c0;
+        bisec.push(Math.max(Math.abs((a+b)/2-S.exact),1e-17));
+      }
+      // plot log10(error) vs iteration
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const Lx0=M.l,Lx1=W-M.r,Ly0=M.t,Ly1=H-M.b;
+      x.strokeStyle='#ddd';x.strokeRect(Lx0,Ly0,Lx1-Lx0,Ly1-Ly0);
+      function px(i){return Lx0+i/N*(Lx1-Lx0);}
+      function py(e){return Ly0 + (Math.log10(Math.max(e,1e-17))+17)/17 *(Ly1-Ly0)*-1 + (Ly1-Ly0);}
+      // gridlines + ylabels (log decades)
+      x.strokeStyle='#eee';x.fillStyle='#666';x.font='11px sans-serif';
+      for(let p=0;p>=-16;p-=2){
+        const yy=Ly0 + (p+17)/17 *(Ly1-Ly0)*-1 + (Ly1-Ly0);
+        x.beginPath();x.moveTo(Lx0,yy);x.lineTo(Lx1,yy);x.stroke();
+        x.fillText('10^'+p,8,yy+4);
+      }
+      for(let i=0;i<=N;i+=5){
+        const xx=px(i);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(xx,Ly0);x.lineTo(xx,Ly1);x.stroke();
+        x.fillStyle='#666';x.fillText(i,xx-3,Ly1+14);
+      }
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('|오차|  (로그 스케일)',8,Ly0-8);
+      x.fillText('반복 →',Lx1-30,Ly1+30);
+      // newton (blue)
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      newton.forEach((e,i)=>{i?x.lineTo(px(i),py(e)):x.moveTo(px(i),py(e));});x.stroke();
+      newton.forEach((e,i)=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(px(i),py(e),2.5,0,Math.PI*2);x.fill();});
+      // bisection (orange)
+      x.strokeStyle='#f57c00';x.lineWidth=2.5;x.beginPath();
+      bisec.forEach((e,i)=>{i?x.lineTo(px(i),py(e)):x.moveTo(px(i),py(e));});x.stroke();
+      bisec.forEach((e,i)=>{x.fillStyle='#f57c00';x.beginPath();x.arc(px(i),py(e),2.5,0,Math.PI*2);x.fill();});
+      // legend
+      x.fillStyle='#0b5fff';x.fillRect(Lx1-160,Ly0+8,16,3);x.fillStyle='#222';x.fillText('뉴턴법 (2차 수렴)',Lx1-140,Ly0+13);
+      x.fillStyle='#f57c00';x.fillRect(Lx1-160,Ly0+24,16,3);x.fillStyle='#222';x.fillText('이분법 (1차 수렴)',Lx1-140,Ly0+29);
+      // info
+      const lastN=newton[newton.length-1],lastB=bisec[bisec.length-1];
+      document.getElementById('cvgInfo').textContent='30번 후 오차:   뉴턴법 ≈ '+lastN.toExponential(2)+'   ·   이분법 ≈ '+lastB.toExponential(2)+'   (이분법은 30번 만에 약 10⁻⁹ 정밀도)';
+    }
+    loop();
+    document.getElementById('cvgFn').onchange=loop;
+  })();
+  </script>
+
+  <h2>14. 흔한 오해와 핵심 정리</h2>
 
   <div class="note"><strong>흔한 오해 ① — "최대·최소는 임계점에만 있다"</strong> —
   닫힌 구간에서는 끝점도 후보입니다. 끝점에서 답이 나오는 경우를 잊지 마세요.</div>
@@ -257,7 +432,7 @@
   <h3>이번 주의 핵심 한 문장</h3>
   <div class="tip"><strong>"최적화는 식 세우기와 임계점·끝점 후보 비교. 손으로 안 풀리면 뉴턴법이 5~10번 만에 소수점 10자리 답을 준다."</strong></div>
 
-  <h2>11. 더 깊이 공부하기</h2>
+  <h2>15. 더 깊이 공부하기</h2>
   <ul>
     <li>Stewart, Ch.4.7 (응용 최적화)·Ch.4.8 (뉴턴법).</li>
     <li>Thomas, Ch.4.5~4.7.</li>

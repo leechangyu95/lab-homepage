@@ -23,6 +23,7 @@
     <a href="../mpc.html">MPC</a>
     <a href="../path-planning.html">경로계획 &amp; 추종</a>
     <a href="../calculus.html" class="active">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
   </nav>
 </div></header>
 
@@ -38,8 +39,13 @@
     <li>$N$차 테일러 다항식</li>
     <li>대표 매클로린 전개 4종</li>
     <li>오차와 수렴 반경</li>
+    <li>오차 한계 잡기 — 라그랑주 잉여항 활용</li>
+    <li>$a$ 점에서의 테일러 — 왜 점을 옮기나</li>
+    <li>합성·미분·적분으로 새 전개 만들기</li>
     <li>응용 — 작은각 근사·복리·전기회로</li>
+    <li>응용 — 한계 풀이($0/0$ 부정형)에 테일러 사용</li>
     <li>인터랙티브: 테일러 차수 슬라이더</li>
+    <li>인터랙티브: 오차 곡선 시각화</li>
     <li>흔한 오해와 핵심 정리</li>
     <li>더 깊이 공부하기</li>
   </ol></div>
@@ -105,7 +111,54 @@
   <p>매클로린 급수가 수렴하는 $x$ 범위. $e^x, \sin x, \cos x$는 모든 실수에서 수렴 (수렴 반경 $\infty$).
   $1/(1-x)$는 $|x| < 1$에서만 수렴 (수렴 반경 1). 점 $a$에서 함수가 "특이점"에 가까울수록 수렴 반경이 작아요.</p>
 
-  <h2>7. 응용 — 작은각 근사·복리·전기회로</h2>
+  <h2>7. 오차 한계 잡기 — 라그랑주 잉여항 활용</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>"이 근사가 얼마나 정확한가?"를 시험에서 정량적으로 답해야 할 때가 있어요. 라그랑주 잉여항이 그 답을 줍니다 — $|f^{(N+1)}|$ 의 최대값을 구간에서 안다면 오차의 상한을 한 줄로 적을 수 있습니다.</p>
+
+  <h3>실용 공식</h3>
+  $$ |f(x) - T_N(x)| \le \frac{M_{N+1}}{(N+1)!} |x - a|^{N+1} $$
+  <p>여기서 $M_{N+1} = \max_{c \in [a,x]} |f^{(N+1)}(c)|$.</p>
+
+  <h3>예제 7.1 — $\sin(0.2)$ 의 3차 매클로린 오차</h3>
+  <p>$\sin x \approx x - x^3/6$. 4차 도함수는 $\sin x$ (절댓값 ≤ 1).</p>
+  $$ |\text{오차}| \le \frac{1}{4!} (0.2)^4 = \frac{0.0016}{24} \approx 6.67 \times 10^{-5} $$
+  <p>실제 오차는 $|\sin 0.2 - 0.2 + 0.008/6| \approx 1.3 \times 10^{-5}$. 한계가 실제보다 5배 정도 크지만, "최악도 이 정도"라는 보장이 핵심.</p>
+
+  <h3>실용 팁 — 필요한 차수 결정</h3>
+  <p>"오차 $10^{-6}$ 이하로 $\sin x$를 $|x| \le 1$ 에서 근사하려면 몇 차 까지?" 한계 식 $1/(N+1)! \le 10^{-6}$ 풀면 $N+1 \ge 10$ → 9차까지면 충분.
+  공학에서 이런 한계 분석으로 룩업 테이블·다항식 차수를 결정합니다.</p>
+
+  <h2>8. $a$ 점에서의 테일러 — 왜 점을 옮기나</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>매클로린은 $x = 0$ 근처에서만 정확. $x$가 0에서 멀면 차수를 아무리 올려도 더 정밀해지기 어렵거나, 수렴 자체가 안 됩니다. 그땐 <strong>전개 중심을 가까운 점 $a$로 옮기면</strong> 같은 차수에서 훨씬 정밀해져요.</p>
+
+  <h3>예제 8.1 — $\ln(1.5)$ 의 근사</h3>
+  <p>매클로린 $\ln(1+x)$의 $x = 0.5$에서:</p>
+  $$ \ln 1.5 \approx 0.5 - 0.125 + 0.0417 - 0.0156 + \cdots $$
+  <p>천천히 수렴 (5차에서도 오차 $\sim 10^{-2}$). 그러나 $a = 1$ 중심으로 $\ln x$ 를 전개하면 $\ln x = (x-1) - (x-1)^2/2 + \dots$ 이고, $x = 1.5$ 대입은 $|x-a| = 0.5$ 로 같아서 마찬가지.
+  대신 $a = 1.5$ 이미 알려진 값(예: $\ln 1$)이 있는 가까운 정수 격자 점을 선택해서 그 근방에서 전개하면 효과적.</p>
+
+  <p>실제로 계산기 내부는 $\sin, \cos$ 같은 함수에 대해 작은 부분 영역마다 전개 중심을 바꿔가며 다항식을 갈아 끼우는 방식 (range reduction).</p>
+
+  <h2>9. 합성·미분·적분으로 새 전개 만들기</h2>
+
+  <p>대표 4종을 외운 다음, 다음 세 트릭으로 거의 모든 합리적 함수의 전개를 손에 넣을 수 있어요.</p>
+
+  <h3>① 합성 — 변수 치환</h3>
+  <p>$\sin(2x) = 2x - (2x)^3/6 + (2x)^5/120 - \cdots$ — $\sin u$의 식에 $u = 2x$ 대입. $e^{x^2}$ 도 $e^u$의 식에 $u = x^2$.</p>
+
+  <h3>② 항별 미분</h3>
+  <p>수렴 반경 안에서는 급수를 항마다 미분해도 됩니다. $\sin x$의 미분이 $\cos x$임을 급수로 직접 확인:</p>
+  $$ (\sin x)' = (x - x^3/6 + x^5/120 - \cdots)' = 1 - x^2/2 + x^4/24 - \cdots = \cos x $$
+
+  <h3>③ 항별 적분</h3>
+  <p>$\arctan x$ 의 매클로린 — 어렵게 생각 말고, $1/(1+t^2) = 1 - t^2 + t^4 - \cdots$ 를 $0$ 부터 $x$ 까지 적분.</p>
+  $$ \arctan x = x - \frac{x^3}{3} + \frac{x^5}{5} - \cdots $$
+  <p>$x = 1$ 대입하면 $\arctan 1 = \pi/4 = 1 - 1/3 + 1/5 - \cdots$ — 라이프니츠의 $\pi$ 급수.</p>
+
+  <h2>10. 응용 — 작은각 근사·복리·전기회로</h2>
 
   <h3>작은각 근사 — 진자의 운동방정식</h3>
   <p>물리에서 가장 자주 쓰는 근사. $\theta$가 작으면 ($|\theta| \lesssim 0.3$ rad ≈ 17°):</p>
@@ -120,7 +173,21 @@
   $$ I \approx I(V_0) + \frac{dI}{dV}\bigg|_{V_0}(V - V_0) $$
   <p>이렇게 만들어진 "소신호 모델"이 회로 해석의 표준 도구. 학부 메카트로닉스의 트랜지스터 분석이 이 절차의 반복이에요.</p>
 
-  <h2>8. 인터랙티브: 테일러 차수 슬라이더</h2>
+  <h2>11. 응용 — 한계 풀이($0/0$ 부정형)에 테일러 사용</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>$0/0$ 꼴 극한을 "인수분해·유리화·로피탈" 없이도 풀 수 있어요. <strong>분자·분모를 모두 매클로린으로 펼치고 같은 차수 항을 비교</strong>하면 답이 즉시 떨어집니다.</p>
+
+  <h3>예제 11.1 — $\displaystyle \lim_{x\to 0}\frac{\sin x - x}{x^3}$</h3>
+  <p>$\sin x = x - x^3/6 + x^5/120 - \cdots$.</p>
+  $$ \frac{\sin x - x}{x^3} = \frac{-x^3/6 + x^5/120 - \cdots}{x^3} = -\frac{1}{6} + \frac{x^2}{120} - \cdots \to -\frac{1}{6} $$
+
+  <h3>예제 11.2 — $\displaystyle \lim_{x\to 0}\frac{e^x - 1 - x}{x^2}$</h3>
+  <p>$e^x = 1 + x + x^2/2 + x^3/6 + \cdots$ → 분자 $= x^2/2 + x^3/6 + \cdots$.</p>
+  $$ \lim_{x\to 0}\frac{x^2/2 + x^3/6 + \cdots}{x^2} = \frac{1}{2} $$
+  <p>로피탈 두 번 쓰면 같은 답. 테일러는 한 번에 끝.</p>
+
+  <h2>12. 인터랙티브: 테일러 차수 슬라이더</h2>
 
   <div class="demo">
     <h4>🎮 테일러 차수 ↑ — 다항식이 본함수에 수렴</h4>
@@ -218,7 +285,92 @@
   ② $1/(1-x), \ln(1+x)$는 $|x| > 1$에서 차수를 아무리 올려도 발산 — 수렴 반경의 의미.
   ③ 차수 $N$을 1, 2, 3, 5, 10으로 점차 올려가며 곡선이 본함수와 어디서 갈라지는지 손으로 확인하세요.</div>
 
-  <h2>9. 흔한 오해와 핵심 정리</h2>
+  <h2>13. 인터랙티브: 오차 곡선 시각화</h2>
+
+  <p>차수 $N$ 별로 오차 $|f(x) - T_N(x)|$ 가 $|x|$ 에 따라 어떻게 폭발하는지 로그 스케일로 봅니다. 차수가 한 단계 늘 때마다 오차가 어떻게 줄어드는지 정량적으로 느껴 보세요.</p>
+
+  <div class="demo">
+    <h4>🎮 오차 곡선 — 차수 ↑ 면 얼마나 작아지나</h4>
+    <p>$y$축이 로그 스케일. 작은 $|x|$ 에서는 차수가 큰 효과 — 차수 4와 10의 오차가 10⁵배 차이도 흔합니다. $|x|$ 가 수렴 반경 1 근처로 가면 어떤 차수도 빠르게 발산.</p>
+    <canvas id="te" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="teFn">
+          <option value="sin" selected>sin x</option>
+          <option value="exp">eˣ</option>
+          <option value="ln">ln(1+x)</option>
+        </select>
+      </label>
+    </div>
+    <p id="teInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('te'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:60,r:20,t:30,b:40};
+    function fact(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
+    function setup(){
+      const m=document.getElementById('teFn').value;
+      if(m==='sin'){
+        return{
+          f:Math.sin,xMax:6,
+          T:(N,xv)=>{let s=0;for(let k=0;k<=N;k++){if(k%2===0)continue;const sign=(((k-1)/2)%2===0)?1:-1;s+=sign*Math.pow(xv,k)/fact(k);}return s;}
+        };
+      }
+      if(m==='exp'){
+        return{
+          f:Math.exp,xMax:4,
+          T:(N,xv)=>{let s=0;for(let k=0;k<=N;k++)s+=Math.pow(xv,k)/fact(k);return s;}
+        };
+      }
+      return{
+        f:v=>Math.log(1+v),xMax:1.5,
+        T:(N,xv)=>{let s=0;for(let k=1;k<=N;k++){const sign=((k-1)%2===0)?1:-1;s+=sign*Math.pow(xv,k)/k;}return s;}
+      };
+    }
+    function loop(){
+      const S=setup();
+      const Lx0=M.l,Lx1=W-M.r,Ly0=M.t,Ly1=H-M.b;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#ddd';x.strokeRect(Lx0,Ly0,Lx1-Lx0,Ly1-Ly0);
+      function px(v){return Lx0+v/S.xMax*(Lx1-Lx0);}
+      function py(e){const lo=-15,hi=2;const lg=Math.log10(Math.max(e,Math.pow(10,lo)));return Ly1 - (lg-lo)/(hi-lo)*(Ly1-Ly0);}
+      // grid
+      x.strokeStyle='#eee';
+      for(let p=2;p>=-15;p-=2){
+        const yy=py(Math.pow(10,p));
+        x.beginPath();x.moveTo(Lx0,yy);x.lineTo(Lx1,yy);x.stroke();
+        x.fillStyle='#666';x.font='11px sans-serif';x.fillText('10^'+p,8,yy+4);
+      }
+      for(let i=0;i<=Math.ceil(S.xMax);i++){
+        const xx=px(i);x.strokeStyle='#eee';x.beginPath();x.moveTo(xx,Ly0);x.lineTo(xx,Ly1);x.stroke();
+        x.fillStyle='#666';x.fillText('|x|='+i,xx-15,Ly1+14);
+      }
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('|f − T_N|  (로그 스케일)',8,Ly0-8);
+      // curves for several N
+      const Ns=[2,4,6,10];
+      const colors=['#c62828','#f57c00','#1b5e20','#0b5fff'];
+      Ns.forEach((N,idx)=>{
+        x.strokeStyle=colors[idx];x.lineWidth=2;x.beginPath();
+        let first=true;
+        for(let v=0.01;v<=S.xMax;v+=S.xMax/300){
+          const e=Math.abs(S.f(v)-S.T(N,v));
+          if(!isFinite(e))continue;
+          if(first){x.moveTo(px(v),py(e));first=false;}else x.lineTo(px(v),py(e));
+        }
+        x.stroke();
+        x.fillStyle=colors[idx];x.fillRect(Lx0+10,Ly0+8+idx*16,16,3);x.fillStyle='#222';x.fillText('N='+N,Lx0+30,Ly0+13+idx*16);
+      });
+      document.getElementById('teInfo').textContent='차수가 한 단계 ↑ 면 작은 |x|에서 오차가 ~|x|배 더 작아집니다 (테일러 잉여항의 (N+1)! 분모 효과).';
+    }
+    loop();
+    document.getElementById('teFn').onchange=loop;
+  })();
+  </script>
+
+  <h2>14. 흔한 오해와 핵심 정리</h2>
 
   <div class="note"><strong>흔한 오해 ① — "테일러 급수는 항상 수렴한다"</strong> —
   거짓. 수렴 반경 안에서만 수렴합니다. $1/(1-x)$의 매클로린은 $|x| < 1$ 안에서만 의미 있어요.</div>
@@ -232,7 +384,7 @@
   <h3>이번 주의 핵심 한 문장</h3>
   <div class="tip"><strong>"테일러 급수는 한 점의 도함수 정보로 함수 전체를 다항식으로 흉내 내는 도구. 차수가 올라갈수록 정밀해지지만, 수렴 반경 밖에서는 발산한다."</strong></div>
 
-  <h2>10. 더 깊이 공부하기</h2>
+  <h2>15. 더 깊이 공부하기</h2>
   <ul>
     <li>Stewart, Ch.11.10~11.11.</li>
     <li>Thomas, Ch.10.7~10.9.</li>
