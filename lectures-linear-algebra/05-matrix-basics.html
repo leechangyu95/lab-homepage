@@ -268,7 +268,95 @@ $$</p>
 
 <div class="note">"<b>1행 × 2열 → 1행 2열 위치</b>" 처럼, 출발 위치(행·열)가 곧 결과 위치임. 패턴만 잡으면 차원이 커져도 똑같이 적용됩니다.</div>
 
+  <div class="demo">
+    <h4>🎮 인터랙티브: 행렬 곱셈을 한 칸씩 채워보기</h4>
+    <p>아래 결과 행렬 $C$ 의 빨간 칸을 클릭하세요. 그 칸을 채우는 데 쓰는
+       $A$ 의 <strong>행</strong>과 $B$ 의 <strong>열</strong>이 색칠되고,
+       <strong>"행 · 열" = 내적</strong> 계산이 단계별로 보입니다.
+       숫자도 슬라이더로 바꿔보세요 — 손계산이 어떻게 나오는지가 실시간으로 보입니다.</p>
+    <canvas id="mmDemo" width="780" height="320"></canvas>
+    <div class="controls">
+      <label>a₁₁ <span class="val" id="a11V">1</span><input type="range" id="a11" min="-5" max="5" step="1" value="1"></label>
+      <label>a₁₂ <span class="val" id="a12V">2</span><input type="range" id="a12" min="-5" max="5" step="1" value="2"></label>
+      <label>a₂₁ <span class="val" id="a21V">3</span><input type="range" id="a21" min="-5" max="5" step="1" value="3"></label>
+      <label>a₂₂ <span class="val" id="a22V">4</span><input type="range" id="a22" min="-5" max="5" step="1" value="4"></label>
+      <label>b₁₁ <span class="val" id="b11V">5</span><input type="range" id="b11" min="-5" max="5" step="1" value="5"></label>
+      <label>b₁₂ <span class="val" id="b12V">6</span><input type="range" id="b12" min="-5" max="5" step="1" value="6"></label>
+      <label>b₂₁ <span class="val" id="b21V">7</span><input type="range" id="b21" min="-5" max="5" step="1" value="7"></label>
+      <label>b₂₂ <span class="val" id="b22V">8</span><input type="range" id="b22" min="-5" max="5" step="1" value="8"></label>
+    </div>
+    <p id="mmExplain" style="margin-top:10px;font-family:Consolas,monospace;font-size:14px;color:#0b5fff"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mmDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pick={i:0,j:0};
+    const ids=['a11','a12','a21','a22','b11','b12','b21','b22'];
+    function getA(){return [[+document.getElementById('a11').value,+document.getElementById('a12').value],
+                           [+document.getElementById('a21').value,+document.getElementById('a22').value]];}
+    function getB(){return [[+document.getElementById('b11').value,+document.getElementById('b12').value],
+                           [+document.getElementById('b21').value,+document.getElementById('b22').value]];}
+    function mul(A,B){const C=[[0,0],[0,0]];for(let i=0;i<2;i++)for(let j=0;j<2;j++)C[i][j]=A[i][0]*B[0][j]+A[i][1]*B[1][j];return C;}
+    const cellW=70,cellH=70,gap=80;
+    const Ax=40,Bx=Ax+2*cellW+gap,Cx=Bx+2*cellW+gap,Ty=80;
+    function drawMat(x,y,M,name,hiRow,hiCol,clickRows,clickCols){
+      ctx.strokeStyle='#333';ctx.lineWidth=2;
+      ctx.strokeRect(x,y,2*cellW,2*cellH);
+      ctx.font='13px sans-serif';ctx.fillStyle='#666';ctx.fillText(name,x,y-8);
+      for(let i=0;i<2;i++)for(let j=0;j<2;j++){
+        const cx=x+j*cellW,cy=y+i*cellH;
+        let fill='#fff';
+        if(hiRow!==undefined&&i===hiRow)fill='rgba(22,119,255,0.18)';
+        if(hiCol!==undefined&&j===hiCol)fill='rgba(250,140,22,0.18)';
+        if(hiRow!==undefined&&i===hiRow&&hiCol!==undefined&&j===hiCol)fill='rgba(207,19,34,0.30)';
+        ctx.fillStyle=fill;ctx.fillRect(cx,cy,cellW,cellH);
+        ctx.strokeStyle='#ccc';ctx.strokeRect(cx,cy,cellW,cellH);
+        ctx.fillStyle='#222';ctx.font='18px sans-serif';ctx.textAlign='center';
+        ctx.fillText(M[i][j],cx+cellW/2,cy+cellH/2+6);
+      }
+      ctx.textAlign='left';
+    }
+    function draw(){
+      ids.forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const A=getA(),B=getB(),C=mul(A,B);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      drawMat(Ax,Ty,A,'A (2×2)',pick.i,undefined);
+      drawMat(Bx,Ty,B,'B (2×2)',undefined,pick.j);
+      drawMat(Cx,Ty,C,'C = AB',pick.i,pick.j);
+      ctx.fillStyle='#333';ctx.font='28px sans-serif';
+      ctx.fillText('×',Ax+2*cellW+25,Ty+cellH+8);
+      ctx.fillText('=',Bx+2*cellW+25,Ty+cellH+8);
+      ctx.font='13px sans-serif';ctx.fillStyle='#0b5fff';
+      ctx.fillText('파란색: A의 i행',Ax,Ty+2*cellH+30);
+      ctx.fillStyle='#fa8c16';ctx.fillText('주황: B의 j열',Bx,Ty+2*cellH+30);
+      ctx.fillStyle='#cf1322';ctx.fillText('빨강: 결과 위치 c_ij (클릭)',Cx,Ty+2*cellH+30);
+      const i=pick.i,j=pick.j;
+      const expl=document.getElementById('mmExplain');
+      expl.innerHTML=`c<sub>${i+1}${j+1}</sub> = (A의 ${i+1}행) · (B의 ${j+1}열)
+        = ${A[i][0]}·${B[0][j]} + ${A[i][1]}·${B[1][j]}
+        = ${A[i][0]*B[0][j]} + ${A[i][1]*B[1][j]}
+        = <b>${C[i][j]}</b>`;
+    }
+    c.addEventListener('click',e=>{
+      const r=c.getBoundingClientRect();
+      const x=(e.clientX-r.left)*(c.width/r.width);
+      const y=(e.clientY-r.top)*(c.height/r.height);
+      if(x>=Cx&&x<Cx+2*cellW&&y>=Ty&&y<Ty+2*cellH){
+        pick={i:Math.floor((y-Ty)/cellH),j:Math.floor((x-Cx)/cellW)};draw();
+      }
+    });
+    ids.forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
 
+  <h3>🌱 왜 "행 × 열" 인가? — 한 줄 직관</h3>
+  <p>행렬 곱셈을 처음 보면 "왜 같은 자리끼리 곱하지 않고 굳이 행과 열을 내적하지?" 하는 의문이 듭니다.
+     이유는 11주차 <strong>선형변환</strong>에서 분명해지지만, 지금 단계에서 잡아둘 직관은 이렇습니다 —
+     $A$ 의 한 행 $(a_{i1}, a_{i2}, \ldots)$ 은 "출력의 $i$ 번째 성분을 만드는 레시피",
+     $B$ 의 한 열 $(b_{1j}, b_{2j}, \ldots)$ 은 "입력의 $j$ 번째 묶음" 입니다.
+     이 둘을 내적하면 = "그 레시피로 그 입력을 처리한 결과 한 칸"이 나옵니다.</p>
 
   <h2>✖️ 행렬 곱셈 — 작은 예제</h2>
 

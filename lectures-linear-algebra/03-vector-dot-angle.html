@@ -190,7 +190,88 @@ $$</p>
 
 <div class="tip">두 정의는 <b>완전히 동치</b>. 그래서 내적은 "<b>좌표 계산</b>" 과 "<b>각도·길이</b>" 라는 서로 다른 두 세계를 연결하는 다리 역할을 합니다.</div>
 
-
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 정의가 정말 같은지 직접 확인</h4>
+    <p>두 화살표를 마우스로 끌어서 움직여 보세요. 좌측 그림 위쪽의
+       <strong>좌표식 $a_1b_1+a_2b_2$</strong> 값과 아래쪽의
+       <strong>기하식 $\|\mathbf{a}\|\|\mathbf{b}\|\cos\theta$</strong> 값이 항상 같다는 걸
+       눈으로 확인할 수 있습니다. 또한 각도가 90°에 가까워지면 두 값이 어떻게 0으로 수렴하는지도 보입니다.</p>
+    <canvas id="dotDemo" width="780" height="360"></canvas>
+    <p style="margin-top:8px;color:#666;font-size:13px">파랑·주황 화살표의 끝점을 마우스로 끌어 보세요.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dotDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=200,oy=200,scale=30;
+    let A={x:5,y:1},B={x:2,y:3};
+    let dragging=null;
+    function px(p){return [ox+p.x*scale,oy-p.y*scale];}
+    function getMouse(e){const r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)};}
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#eee';
+      for(let i=-7;i<=7;i++){ctx.beginPath();ctx.moveTo(ox+i*scale,20);ctx.lineTo(ox+i*scale,H-20);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(20,oy+i*scale);ctx.lineTo(2*ox-20,oy+i*scale);ctx.stroke();}
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(2*ox-20,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,20);ctx.lineTo(ox,H-20);ctx.stroke();
+      function arrow(p,col){const [x,y]=px(p);
+        ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x,y);ctx.stroke();
+        const ang=Math.atan2(y-oy,x-ox);
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-12*Math.cos(ang-0.4),y-12*Math.sin(ang-0.4));
+        ctx.lineTo(x-12*Math.cos(ang+0.4),y-12*Math.sin(ang+0.4));ctx.closePath();ctx.fillStyle=col;ctx.fill();
+        ctx.fillStyle='#fff';ctx.strokeStyle=col;ctx.beginPath();ctx.arc(x,y,5,0,2*Math.PI);ctx.fill();ctx.stroke();}
+      arrow(A,'#1677ff');arrow(B,'#fa8c16');
+      const [ax,ay]=px(A),[bx,by]=px(B);
+      ctx.fillStyle='#1677ff';ctx.font='bold 16px sans-serif';ctx.fillText('a',ax+10,ay-5);
+      ctx.fillStyle='#fa8c16';ctx.fillText('b',bx+10,by-5);
+      const dot=A.x*B.x+A.y*B.y;
+      const na=Math.sqrt(A.x*A.x+A.y*A.y),nb=Math.sqrt(B.x*B.x+B.y*B.y);
+      const cosT=dot/(na*nb);const theta=Math.acos(Math.max(-1,Math.min(1,cosT)));
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      const px2=420;
+      ctx.fillStyle='#0b5fff';ctx.font='bold 15px sans-serif';
+      ctx.fillText('① 좌표식', px2, 50);
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      ctx.fillText(`a·b = ${A.x.toFixed(1)}·${B.x.toFixed(1)} + ${A.y.toFixed(1)}·${B.y.toFixed(1)}`, px2, 75);
+      ctx.fillText(`     = ${(A.x*B.x).toFixed(2)} + ${(A.y*B.y).toFixed(2)}`, px2, 95);
+      ctx.fillStyle='#0b5fff';ctx.font='bold 16px Consolas,monospace';
+      ctx.fillText(`     = ${dot.toFixed(3)}`, px2, 118);
+      ctx.fillStyle='#fa8c16';ctx.font='bold 15px sans-serif';
+      ctx.fillText('② 기하식', px2, 165);
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      ctx.fillText(`‖a‖ = ${na.toFixed(3)},  ‖b‖ = ${nb.toFixed(3)}`, px2, 190);
+      ctx.fillText(`θ = ${(theta*180/Math.PI).toFixed(1)}°,  cos θ = ${cosT.toFixed(3)}`, px2, 210);
+      ctx.fillText(`‖a‖‖b‖ cos θ = ${na.toFixed(2)} × ${nb.toFixed(2)} × ${cosT.toFixed(2)}`, px2, 232);
+      ctx.fillStyle='#fa8c16';ctx.font='bold 16px Consolas,monospace';
+      ctx.fillText(`             = ${(na*nb*cosT).toFixed(3)}`, px2, 254);
+      ctx.fillStyle=Math.abs(dot)<0.5?'#cf1322':(dot>0?'#2e7d32':'#7b1fa2');
+      ctx.font='bold 14px sans-serif';
+      let verdict;
+      if(Math.abs(dot)<0.3) verdict='≈ 0  →  거의 직교 (90°)';
+      else if(dot>0) verdict='> 0  →  같은 방향 쪽 (예각)';
+      else verdict='< 0  →  반대 방향 쪽 (둔각)';
+      ctx.fillText('판정: a·b ' + verdict, px2, 295);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('두 값이 항상 정확히 같음 → 두 정의는 동치', px2, 325);
+    }
+    c.addEventListener('mousedown',e=>{
+      const m=getMouse(e);
+      const [ax,ay]=px(A),[bx,by]=px(B);
+      if((m.x-ax)**2+(m.y-ay)**2<400) dragging='A';
+      else if((m.x-bx)**2+(m.y-by)**2<400) dragging='B';
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!dragging) return;
+      const m=getMouse(e);
+      const nv={x:(m.x-ox)/scale,y:(oy-m.y)/scale};
+      if(dragging==='A') A=nv; else B=nv;draw();
+    });
+    window.addEventListener('mouseup',()=>dragging=null);
+    draw();
+  })();
+  </script>
 
   <h2>📐 내적으로 각도 구하기</h2>
 
@@ -289,19 +370,28 @@ $$</p>
   <h3>식</h3>
   <p>$$|\mathbf{a}\cdot\mathbf{b}| \le \|\mathbf{a}\|\,\|\mathbf{b}\|$$</p>
 
-  <h3>왜 성립하나</h3>
+  <h3>🌱 한 줄 직관 — "내적은 길이의 곱이 한계다"</h3>
+  <p>두 화살표가 <strong>완전히 같은 방향</strong>일 때 내적값이 가장 커집니다.
+     이때 $\cos\theta = 1$ 이므로 내적은 정확히 $\|\mathbf{a}\|\|\mathbf{b}\|$.
+     방향이 어긋날수록 코사인이 작아져서 내적값도 줄어듭니다.
+     즉 <strong>"길이의 곱"</strong>이 내적이 가질 수 있는 <strong>최댓값의 한계</strong>입니다.
+     위 인터랙티브에서 두 벡터를 평행하게 만들어 보면 좌표식 값이 정확히 두 길이의 곱이 됩니다.</p>
+
+  <h3>왜 성립하나 (정식 증명)</h3>
   <ul>
     <li>$\mathbf{a}\cdot\mathbf{b} = \|\mathbf{a}\|\|\mathbf{b}\|\cos\theta$ 에서 $|\cos\theta| \le 1$ 이므로 자명.</li>
-    <li>등호는 두 벡터가 <strong>평행</strong>(같은 방향 또는 반대 방향)일 때만 성립.</li>
+    <li>등호 $|\mathbf{a}\cdot\mathbf{b}| = \|\mathbf{a}\|\|\mathbf{b}\|$ 는 두 벡터가 <strong>평행</strong>(같은 방향 또는 반대 방향)일 때만 성립.</li>
   </ul>
 
   <h3>의미</h3>
   <ul>
     <li>내적값은 절대 두 길이의 곱을 넘을 수 없다.</li>
     <li>"두 벡터 사이 코사인은 ±1을 넘을 수 없다"의 다른 표현.</li>
+    <li><strong>유사도 측정</strong>에서 코사인 유사도 $\dfrac{\mathbf{a}\cdot\mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}$ 가 항상 [−1, +1]에 머무는 보장이 바로 이 부등식.</li>
   </ul>
 
-<div class="tip">이 부등식은 단순해 보이지만, 통계의 <b>상관계수</b>가 항상 [−1, +1] 범위에 있는 이유의 출발점입니다.</div>
+<div class="tip">이 부등식은 단순해 보이지만, 통계의 <b>상관계수</b>가 항상 [−1, +1] 범위에 있는 이유의 출발점이고,
+   딥러닝 임베딩의 <b>코사인 유사도</b>가 의미를 가지는 근거이기도 합니다.</div>
 
 
 

@@ -108,6 +108,21 @@ $$</p>
     <li>전체에 $\dfrac{1}{ad - bc}$ 곱하기</li>
   </ol>
 
+  <h3>🌱 왜 이 공식이 맞나? — 직접 곱해서 확인</h3>
+  <p>외운 공식이 진짜로 $AA^{-1}=I$ 를 만들어내는지 한 번 손으로 곱해 봅시다.</p>
+  <p>$$
+  A \cdot \frac{1}{ad-bc}\begin{pmatrix} d & -b \\ -c & a \end{pmatrix}
+  = \frac{1}{ad-bc}\begin{pmatrix} a & b \\ c & d \end{pmatrix}\begin{pmatrix} d & -b \\ -c & a \end{pmatrix}
+  $$</p>
+  <p>각 칸을 행 × 열 내적으로 계산하면:</p>
+  <p>$$
+  = \frac{1}{ad-bc}\begin{pmatrix} ad-bc & -ab+ba \\ cd-dc & -cb+da \end{pmatrix}
+  = \frac{1}{ad-bc}\begin{pmatrix} ad-bc & 0 \\ 0 & ad-bc \end{pmatrix}
+  = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix} = I
+  $$</p>
+  <p>$\dfrac{1}{ad-bc}$ 가 필요한 이유가 보입니다 — 대각선 칸이 정확히 $ad-bc$ 가 되어 그 값으로 나눠야 1이 됩니다.
+     또 $ad-bc=0$ 이면 나눌 수 없으므로 <strong>역행렬이 없음 (특이행렬)</strong> 이라는 사실도 동시에 증명됩니다.</p>
+
   <h3>예</h3>
   <p>$$A = \begin{pmatrix} 2 & 1 \\ 5 & 3 \end{pmatrix},\ \det A = 6 - 5 = 1$$</p>
   <p>$$A^{-1} = \frac{1}{1}\begin{pmatrix} 3 & -1 \\ -5 & 2 \end{pmatrix} = \begin{pmatrix} 3 & -1 \\ -5 & 2 \end{pmatrix}$$</p>
@@ -297,6 +312,44 @@ $$</p>
   <p>열벡터 세 개가 만드는 <strong>평행육면체의 (부호 있는) 부피</strong> = $|\det A|$.</p>
 
 <div class="tip">"$\det A = 0$" → 면적/부피가 0 → 두 벡터가 평행, 또는 세 벡터가 한 평면에 → <b>차원이 줄어든다</b>는 의미.</div>
+
+  <h3>🌱 왜 $\det A = 0$ 이면 역행렬이 없을까? — 직관</h3>
+  <p>행렬 $A$ 가 평면(2D 입력 공간)을 어떻게 변환하는지 생각해 봅시다.
+     $A$ 의 두 열벡터가 만드는 평행사변형의 면적이 $|\det A|$ 입니다.</p>
+  <ul>
+    <li>$\det A \neq 0$ : 평면 → 평면 (면적이 보존되거나 배율로 변함). 모든 점이 <strong>구별</strong>되어 도착하므로,
+        도착점에서 출발점으로 되돌리는 함수($A^{-1}$)가 존재.</li>
+    <li>$\det A = 0$ : 평면 → 직선/점 으로 <strong>찌그러짐</strong>. 여러 출발점이 같은 도착점이 되어
+        <em>되돌리려 해도 어느 출발점이 진짜인지 알 수 없음</em> → 역행렬 정의 불가능.</li>
+  </ul>
+
+<svg width="700" height="220" viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <!-- left: full rank -->
+  <text x="100" y="30" font-size="13" font-weight="bold" fill="#2e7d32" text-anchor="middle">det ≠ 0  (가역)</text>
+  <polygon points="40,170 130,170 170,80 80,80" fill="#2e7d32" fill-opacity="0.18" stroke="#2e7d32" stroke-width="1.5"/>
+  <text x="100" y="135" font-size="12" fill="#2e7d32" text-anchor="middle">면적 &gt; 0</text>
+  <text x="100" y="200" font-size="11" fill="#666" text-anchor="middle">평면 → 평면</text>
+
+  <!-- middle arrow -->
+  <text x="260" y="115" font-size="22" fill="#666">vs</text>
+
+  <!-- right: singular (vectors parallel) -->
+  <text x="430" y="30" font-size="13" font-weight="bold" fill="#cf1322" text-anchor="middle">det = 0  (특이)</text>
+  <line x1="350" y1="170" x2="510" y2="80" stroke="#cf1322" stroke-width="3"/>
+  <text x="430" y="135" font-size="12" fill="#cf1322" text-anchor="middle">면적 = 0 (직선)</text>
+  <text x="430" y="200" font-size="11" fill="#666" text-anchor="middle">평면 → 직선 (정보 손실)</text>
+
+  <!-- right text -->
+  <text x="560" y="80" font-size="13" fill="#333" font-weight="bold">왜 역행렬 없을까?</text>
+  <text x="560" y="105" font-size="12" fill="#666">평면의 모든 점이</text>
+  <text x="560" y="122" font-size="12" fill="#666">한 직선에 몰리니까,</text>
+  <text x="560" y="145" font-size="12" fill="#666">"이 직선 위 점이</text>
+  <text x="560" y="162" font-size="12" fill="#666">평면의 어디서 왔지?"</text>
+  <text x="560" y="183" font-size="12" fill="#cf1322" font-weight="bold">→ 답이 무한 개</text>
+</svg>
+
+  <p>정리: <strong>$\det A = 0 \iff A$ 가 차원을 줄임 $\iff$ 정보 손실 $\iff$ 역행렬 없음</strong>. 이 동치 사슬은
+     7주차 끝의 6가지 동치 관계의 핵심이고, 12주차 <em>핵·치역·계수</em>에서 다시 만납니다.</p>
 
 
   <h2>📐 행렬식의 기하적 의미 (2) — 부호의 의미</h2>
