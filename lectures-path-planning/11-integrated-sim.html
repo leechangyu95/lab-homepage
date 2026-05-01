@@ -327,7 +327,99 @@ print(f"RMSE_ey = {np.sqrt((err_y**2).mean()):.3f} m")</code></pre>
     </ul>
   </div>
 
-  <h2>10. 프로젝트 가이드</h2>
+  <h2>10. Rolling Horizon — 재계획 주기 설계</h2>
+
+  <p>왜 재계획 주기를 분리할까? 하나의 루프로 다 짜면 다음 문제가 생깁니다.</p>
+  <ul>
+    <li>A*는 100 ms ~ 1 s 걸리는데, 추종 루프(50 Hz = 20 ms)에 끼우면 차가 멈춤.</li>
+    <li>제어는 빠른 반응이 중요, 계획은 느려도 OK.</li>
+    <li>두 주기가 다르면 <strong>비동기 처리</strong> 필요.</li>
+  </ul>
+
+  <h3>표준 패턴 — 이중 주기 시스템</h3>
+  <pre><code class="language-python">replan_interval = 1.0          # 1초마다 재계획
+last_replan_t = 0
+ref_path = initial_plan()
+
+for t in np.arange(0, 60, 0.02):
+    # 비동기 재계획 (조건부)
+    if t - last_replan_t > replan_interval:
+        if obstacles_changed() or near_path_end():
+            ref_path = astar_replan(grid, car.state, goal)
+            last_replan_t = t
+
+    # 빠른 추종 루프 (매 20 ms)
+    delta = pure_pursuit(car.state, ref_path)
+    a = speed_pid.step(v_ref - car.v, 0.02)
+    car.step(a, delta, dt=0.02)
+</code></pre>
+
+  <h3>실차 — 멀티 스레드 / 멀티 노드</h3>
+  <p>실제 자율주행 시스템 (Apollo, Autoware) 에서는:</p>
+  <ul>
+    <li><strong>Planning 노드</strong>: 10 Hz (100 ms 주기) 로 지속 재계획</li>
+    <li><strong>Control 노드</strong>: 50~100 Hz (10~20 ms) 추종</li>
+    <li><strong>State estimator</strong>: 100~200 Hz, 차량 위치 추정</li>
+    <li>ROS/DDS를 통한 메시지 통신</li>
+  </ul>
+
+  <h2>11. 시나리오 비교 — 빈 공간 vs 건물 vs 미로</h2>
+
+  <p>같은 시뮬레이터, 다른 환경에서의 성능 비교를 해 보면 시스템 한계가 드러납니다.</p>
+  <table>
+    <thead><tr><th>시나리오</th><th>RMSE $e_y$</th><th>최대 $e_y$</th><th>최대 속도</th><th>시간</th><th>주의점</th></tr></thead>
+    <tbody>
+      <tr><td>빈 공간 400×400 m</td><td>0.05 m</td><td>0.15 m</td><td>15 m/s</td><td>28 s</td><td>거의 직선, 쉬움</td></tr>
+      <tr><td>건물 2개 우회</td><td>0.12 m</td><td>0.35 m</td><td>13 m/s</td><td>45 s</td><td>S자에서 약간 미스</td></tr>
+      <tr><td>미로 (좁은 통로)</td><td>0.20 m</td><td>0.50 m</td><td>8 m/s</td><td>82 s</td><td>$L_d$ 작게, 속도 낮춰야</td></tr>
+      <tr><td>동적 장애물</td><td>0.30 m</td><td>1.0 m</td><td>10 m/s</td><td>50 s</td><td>재계획 필수, CBF 도움</td></tr>
+    </tbody>
+  </table>
+
+  <p>난이도가 올라갈수록 <strong>RMSE 증가, 속도 감소, 시간 증가</strong>가 자연스러운 패턴입니다.</p>
+
+  <h2>12. 디버깅 사례 — 실제 학생 프로젝트에서 자주 본 버그</h2>
+
+  <h3>사례 1: "차가 시작하자마자 회전한다"</h3>
+  <p><strong>증상</strong>: 시뮬 시작과 동시에 차가 빙글빙글 회전. 정상 주행 X.</p>
+  <p><strong>원인</strong>: Pure Pursuit이 처음에 가장 가까운 점을 찾는데, 차량 뒤쪽 점이 선택됨 → 후진 방향으로 조향.</p>
+  <p><strong>해결</strong>: <code>i = max(i, last_i)</code> 로 인덱스가 항상 증가하도록 강제. 또는 차량 진행 방향 점만 후보로.</p>
+
+  <h3>사례 2: "곡선에서 안쪽으로 컷한다"</h3>
+  <p><strong>증상</strong>: 곡선 진입 시 차가 곡선 안쪽으로 미리 들어감 → 장애물 충돌.</p>
+  <p><strong>원인</strong>: $L_d$ 가 너무 김. Look-ahead 점이 곡선 끝쪽에 위치 → 차가 직선으로 그쪽으로 향함.</p>
+  <p><strong>해결</strong>: 속도 적응형 $L_d = kv + L_{fc}$ 사용 + 곡선 진입 시 $L_d$ 추가 감소.</p>
+
+  <h3>사례 3: "PID가 안 멈춘다"</h3>
+  <p><strong>증상</strong>: 목표 도달 후에도 차가 진동하며 멈추지 않음.</p>
+  <p><strong>원인</strong>: 적분 항이 누적되어 정상상태에서도 0이 안 됨.</p>
+  <p><strong>해결</strong>: 도착 감지 시 PID 리셋, 또는 종료 모드 (브레이크 강제 적용).</p>
+
+  <h3>사례 4: "재계획 후 차가 큰 점프"</h3>
+  <p><strong>증상</strong>: A* 재계획 시 새 경로가 차량 위치와 멀리 떨어진 곳에서 시작.</p>
+  <p><strong>원인</strong>: 재계획 시 차량 현재 위치가 아닌 격자 셀 중심을 시작점으로 사용.</p>
+  <p><strong>해결</strong>: 재계획 시 차량 현재 위치를 그대로 시작점에 추가, 또는 첫 점을 차량 위치로 보정.</p>
+
+  <h2>13. 평가 자동화 — CI/CD 스타일 시뮬</h2>
+
+  <p>실무에서는 시뮬을 매일 밤 자동 실행하고 결과를 모니터링합니다. 학생 프로젝트에도 비슷하게 구성 가능:</p>
+
+  <pre><code class="language-python">scenarios = ['empty', 'buildings', 'maze', 'dynamic']
+results = []
+for scn in scenarios:
+    grid, start, goal, obs = load_scenario(scn)
+    log = run_simulation(grid, start, goal, obs)
+    metrics = compute_metrics(log)
+    results.append((scn, metrics))
+    assert metrics['min_obs_dist'] > 0.5, f"{scn}: 충돌 위험!"
+    assert metrics['rmse'] < 0.5, f"{scn}: 추종 부정확"
+
+print(pd.DataFrame(results))
+</code></pre>
+
+  <p>변경사항이 있을 때마다 이 스크립트를 돌려서 <strong>회귀(regression)</strong>를 잡습니다. "이전엔 잘 되던 게 왜 안 되지?"의 답을 자동으로 찾아줍니다.</p>
+
+  <h2>14. 프로젝트 가이드</h2>
   <p>기말 프로젝트(W15)에서 이 통합 시뮬레이터를 확장하게 됩니다. 권장 단계는:</p>
   <ol>
     <li>본 페이지의 데모 코드를 그대로 NumPy로 옮겨 동작 확인.</li>
@@ -336,6 +428,50 @@ print(f"RMSE_ey = {np.sqrt((err_y**2).mean()):.3f} m")</code></pre>
     <li>속도 프로파일에 신호 정지 같은 행동 계획을 추가(advanced).</li>
     <li>Pure Pursuit 대신 W12 CBF 또는 W13 MPC로 교체해 비교(advanced).</li>
   </ol>
+
+  <h3>발표 자료 준비 (2분 영상)</h3>
+  <p>대학생 자율주행 경진대회나 종합설계 발표에 활용 가능한 표준 형식:</p>
+  <ol>
+    <li><strong>15초</strong>: 시나리오 소개 — 무엇을 풀고자 하는가</li>
+    <li><strong>15초</strong>: 시스템 블록도 — 어떤 모듈이 있는가</li>
+    <li><strong>45초</strong>: 시뮬레이션 데모 영상 (속도 1배속)</li>
+    <li><strong>30초</strong>: 성능 지표 (RMSE 표, 학습 곡선)</li>
+    <li><strong>15초</strong>: 한계점과 개선 방향</li>
+  </ol>
+
+  <h2>15. 실습 제출 체크리스트</h2>
+
+  <div class="tip">
+    <strong>최소 요구사항 (Pass)</strong>
+    <ul>
+      <li>Empty + 1개 장애물 시나리오 완주</li>
+      <li>RMSE $e_y$ &lt; 0.5 m</li>
+      <li>제출물: 코드 (py 또는 ipynb) + 주행 영상 (mp4 / gif)</li>
+    </ul>
+  </div>
+
+  <div class="tip">
+    <strong>우수 등급 (A+)</strong>
+    <ul>
+      <li>3개 이상 시나리오 (빈공간 / 건물 / 미로 / 동적) 모두 완주</li>
+      <li>RMSE 표 + 6종 골든 플롯 (XY궤적, $e_y$, $v$, $\delta$, $a$, 곡률-속도)</li>
+      <li>최소 한 개 이상 응용 (CBF 또는 동적 장애물 재계획)</li>
+      <li>발표 영상 2분 + 1page 설명서</li>
+    </ul>
+  </div>
+
+  <h2>16. 한 페이지 요약 카드</h2>
+  <div class="tip">
+    <ul>
+      <li><strong>한 줄</strong>: "10개 레고 블록을 한 인터페이스로" — 알고리즘 X, 통합 O</li>
+      <li><strong>핵심 분리</strong>: 계획(1Hz) vs 제어(50Hz) — 주기 다르게</li>
+      <li><strong>속도 프로파일</strong>: $v_\max(s) = \sqrt{a_y/\kappa}$ — 곡선 자동 감속</li>
+      <li><strong>표준 흐름</strong>: Grid → A* → Spline → Speed → PP + PID → Car</li>
+      <li><strong>버그 패턴</strong>: 좌표·각도 wrap·인덱스 역주행이 80%</li>
+      <li><strong>평가</strong>: RMSE, Max e_y, 최소 거리 — 3대 지표</li>
+      <li><strong>다음</strong>: W12 CBF 로 안전 강화, W13 MPC 로 추종 강화</li>
+    </ul>
+  </div>
 
   <div class="prevnext">
     <a href="10-pure-pursuit-stanley.html"><small>← 이전</small>W10. Pure Pursuit · Stanley · PN</a>

@@ -334,6 +334,92 @@
 
   <p>둘은 경쟁이 아니라 <strong>역할 분담</strong>입니다. 안쪽 추종 루프는 PID·MPC가, 차선 변경/양보 같은 의사결정은 RL이, 안전 보장은 CBF가 — 이게 2026년 현대 자율주행의 표준 구조입니다.</p>
 
+  <h2>9b. 자율주행 RL 의 진짜 장벽</h2>
+
+  <h3>1. 시뮬→실차 갭 (Sim-to-Real Gap)</h3>
+  <p>시뮬에서 완벽한 정책이 실차에서 무력해지는 이유:</p>
+  <ul>
+    <li>시뮬의 타이어·공기저항 모델 단순 → 실차는 비선형 강함</li>
+    <li>센서 노이즈, 지연(latency), 통신 지터 → 시뮬에선 부재</li>
+    <li>도로 마찰, 풍향, 비/눈 → 도메인 시프트</li>
+  </ul>
+  <p>대응: <strong>Domain Randomization</strong>. 시뮬 학습 시 파라미터를 무작위로 흔들어 정책이 다양한 환경에 robust하게.</p>
+
+  <h3>2. 보상 해킹 (Reward Hacking)</h3>
+  <p>RL 에이전트는 "<em>보상을 최대화</em>"만 합니다. "<em>안전하게 잘 운전</em>"이 아닙니다. 예시:</p>
+  <ul>
+    <li>"빨리 도착하면 +" → 신호 무시, 과속 학습</li>
+    <li>"차선 유지하면 +" → 출발 자체를 안 함 (안전한 정지)</li>
+    <li>"가속도 작게 -" → 후진하며 천천히 도착</li>
+  </ul>
+  <p>대응: 다중 목표 보상 설계 + 인간 피드백 (RLHF).</p>
+
+  <h3>3. 검증 불가능성</h3>
+  <p>"이 정책이 어떤 상황에서도 안전한가?" 를 수학적으로 증명할 수 없음. 100만 km 시뮬해도 "그 다음 1 km" 가 안전하다는 보장 X.</p>
+  <p>대응: <strong>Shielded RL</strong> — 학습된 정책 출력에 CBF 같은 안전 필터를 강제로 통과시킴.</p>
+
+  <h2>9c. Imitation Learning — 전문가를 모방하라</h2>
+
+  <p>순수 RL의 학습 시간(수백만 에피소드)을 단축하는 방법: <strong>전문가 행동을 직접 학습</strong>.</p>
+
+  <h3>Behavioral Cloning (BC)</h3>
+  <p>전문가 (사람 운전자) 의 (state, action) 쌍을 모아 지도학습:</p>
+  $$ \min_\theta \sum_i \|\pi_\theta(s_i) - a_i^\text{expert}\|^2 $$
+  <ul>
+    <li>장점: 빠른 학습, 안전 (전문가 데이터)</li>
+    <li>단점: <strong>분포 시프트</strong> — 전문가가 가본 적 없는 상태에서 무력 (compounding error)</li>
+  </ul>
+
+  <h3>DAgger (Dataset Aggregation)</h3>
+  <p>BC로 학습 → 시뮬 돌림 → 학습 정책이 실수한 곳에서 전문가 데이터 추가 수집 → 재학습. 분포 시프트 점진 해결.</p>
+
+  <h3>RL + IL 조합</h3>
+  <p>현실적 패턴: <strong>IL로 초기 정책 학습 + RL로 미세조정</strong>. Wayve, Waymo 모두 이 형태로 자율주행 정책을 학습.</p>
+
+  <h2>9d. 안전 RL — 최신 동향</h2>
+
+  <table>
+    <thead><tr><th>접근</th><th>아이디어</th><th>강점</th></tr></thead>
+    <tbody>
+      <tr><td>Shielded RL</td><td>RL 출력 → CBF 필터 → 차량</td><td>증명 가능한 안전</td></tr>
+      <tr><td>Constrained RL</td><td>제약 만족 학습 (CMDP)</td><td>안전을 직접 최적화</td></tr>
+      <tr><td>Curriculum Learning</td><td>쉬운 환경 → 점차 어려운</td><td>안정적 학습</td></tr>
+      <tr><td>Risk-aware RL</td><td>분산·VaR 등 위험 측정</td><td>최악의 경우 고려</td></tr>
+      <tr><td>Model-based RL</td><td>세계 모델 학습 후 시뮬</td><td>샘플 효율 ↑</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9e. 손풀이 — RL 개념 점검</h2>
+
+  <h3>Q1. 보상 설계</h3>
+  <p>"교차로에서 왼쪽 회전" 행동을 학습시키려 한다. 다음 중 가장 좋은 보상은?</p>
+  <ol type="a">
+    <li>왼쪽으로 갔으면 +1, 그 외 0</li>
+    <li>매 스텝 -0.1, 회전 완료 시 +10, 사고 시 -100</li>
+    <li>회전 중 부드럽게 가면 +1</li>
+    <li>모든 행동 +0.01</li>
+  </ol>
+  <details>
+    <summary>풀이</summary>
+    <p>(b). (a)는 너무 sparse, (c)는 모호, (d)는 신호 부족.<br>
+    (b)는 ① 빠르게 (매스텝 페널티) ② 목표 (도달 보너스) ③ 안전 (사고 페널티) 모두 포함 → 균형 잡힌 설계.</p>
+  </details>
+
+  <h3>Q2. 탐험 vs 활용</h3>
+  <p>$\varepsilon$-greedy에서 $\varepsilon$=0.05로 너무 작게 시작하면?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>탐험 부족 → 처음 발견한 평범한 정책에 갇힘 (지역 최적). 더 좋은 경로가 있어도 못 찾음.<br>
+    권장: $\varepsilon$=0.3~0.5에서 시작 → 점차 0.01까지 감소 (annealing).</p>
+  </details>
+
+  <h3>Q3. Q-Learning 한 스텝</h3>
+  <p>$Q(s,a) = 5$, 실제 받은 $r=2$, 다음 상태 최대 Q $= 4$, $\alpha=0.1$, $\gamma=0.9$. 업데이트 후 $Q(s,a)$는?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>$Q \leftarrow 5 + 0.1 \times (2 + 0.9 \times 4 - 5) = 5 + 0.1 \times 0.6 = 5.06$.</p>
+  </details>
+
   <h2>10. 핵심 정리</h2>
   <div class="tip">
     <ul>
@@ -344,6 +430,61 @@
       <li>자율주행에서는 Deep RL을 단독으로 쓰기보다 <strong>고전 제어 + 안전 필터 + RL 의사결정</strong> 형태로 결합.</li>
     </ul>
   </div>
+
+  <h2>10b. 흔한 실수 5가지</h2>
+
+  <table>
+    <thead><tr><th>#</th><th>실수</th><th>증상</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>$\gamma = 1.0$</td><td>발산 (무한 누적 보상)</td><td>0.9 ~ 0.99 권장</td></tr>
+      <tr><td>2</td><td>$\varepsilon$ 너무 작게 시작</td><td>지역 최적 갇힘</td><td>초기 0.3~0.5, 점차 감소</td></tr>
+      <tr><td>3</td><td>실차에서 직접 학습</td><td>사고 위험</td><td>시뮬 → Sim-to-Real</td></tr>
+      <tr><td>4</td><td>보상 해킹 미인지</td><td>이상한 행동 학습</td><td>다중 목표 + 인간 피드백</td></tr>
+      <tr><td>5</td><td>일반화 테스트 X</td><td>새 환경에서 무력</td><td>다양한 시나리오로 평가</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10c. 실무 자율주행 RL 사례</h2>
+
+  <h3>Wayve (영국)</h3>
+  <p>"<em>End-to-End Learning</em>" — 카메라 → 조향·속도 직접 예측. RL + IL 조합. 런던 도심 시범 운행 중.</p>
+
+  <h3>Waymo</h3>
+  <p>주로 모방 학습 (전문가 운전자 데이터) 기반. RL은 합류·차선변경 같은 의사결정 보조에 사용.</p>
+
+  <h3>Tesla FSD</h3>
+  <p>대량 데이터 기반 신경망 + 일부 RL. 안전 검증은 전통 방식 유지.</p>
+
+  <h3>국내 (포티투닷, 42dot)</h3>
+  <p>RL 기반 행동 결정 + MPC 추종. 양자 결합으로 안전성 확보.</p>
+
+  <h2>10d. 학습 모니터링 — 무엇을 봐야 하나</h2>
+
+  <table>
+    <thead><tr><th>지표</th><th>의미</th><th>이상 신호</th></tr></thead>
+    <tbody>
+      <tr><td>Episode Reward (이동평균)</td><td>학습 진척</td><td>오래 정체 또는 급락</td></tr>
+      <tr><td>Episode Length</td><td>에피소드 시간</td><td>너무 짧음 = 빨리 실패</td></tr>
+      <tr><td>Success Rate</td><td>목표 도달 비율</td><td>학습 종료 기준</td></tr>
+      <tr><td>Exploration Rate ($\varepsilon$)</td><td>탐험 비율</td><td>너무 빨리 0 되면 X</td></tr>
+      <tr><td>Loss (Q-network)</td><td>학습 안정성</td><td>발산 또는 진동</td></tr>
+      <tr><td>Q-value 평균</td><td>가치 함수 적정성</td><td>비현실적으로 큼/작음</td></tr>
+    </tbody>
+  </table>
+
+  <p>도구: TensorBoard (PyTorch), Weights &amp; Biases (외부 SaaS). 학생 프로젝트 수준에선 matplotlib로도 충분.</p>
+
+  <h2>10e. RL 의 미래 — 2025+ 트렌드</h2>
+
+  <ul>
+    <li><strong>Foundation Model + RL</strong>: GPT 같은 대형 모델이 상황 이해, RL이 행동 결정</li>
+    <li><strong>World Model</strong>: 환경 모델을 학습 후 내부 시뮬로 빠른 학습 (Dreamer 시리즈)</li>
+    <li><strong>Multi-agent RL</strong>: 여러 차량이 협력 — 합류·교차로 협상</li>
+    <li><strong>Diffusion Policy</strong>: 확산 모델 기반 정책 (행동 생성)</li>
+    <li><strong>Offline RL</strong>: 실차 로그 만 가지고 학습 (시뮬 불필요)</li>
+  </ul>
+
+  <p>이 모든 것이 "<em>안전 제약 (CBF) + 강건성 + 인간 피드백</em>" 위에서 발전 중. 2030년쯤엔 자율주행 표준 스택이 될 가능성.</p>
 
   <h2>11. 더 깊이 공부하기</h2>
   <ul>

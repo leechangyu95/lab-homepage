@@ -34,14 +34,30 @@
   <h1 class="page-title">Lecture 7. 피드백 제어 (PID)</h1>
   <p class="lead">오차를 보고 입력을 조정하는, 가장 널리 쓰이는 제어 방법. PID부터 차량 경로 추종(Pure Pursuit, Stanley)까지.</p>
 
+  <div class="note">
+    <strong>📋 한눈에</strong> — 이 강의가 끝나면 다음을 할 수 있어야 합니다.
+    <ul style="margin:6px 0 0 0">
+      <li>P·I·D 세 항이 각각 무엇을 보정하는지 손가락질하며 설명</li>
+      <li>오버슈트, 정착시간 같은 과도응답 지표 읽기</li>
+      <li>곡선 경로를 따라가는 Pure Pursuit이 단일 점 PID와 어떻게 다른지 비교</li>
+    </ul>
+    <strong>선수지식</strong> — <a href="02-dynamics.html">L2</a>의 동역학(특히 자전거 모델), 미분과 적분의 의미. <a href="03-state-space.html">L3</a>의 안정성(고유값) 개념.<br>
+    <strong>이전 강의 복습</strong> — L6에서 경로(점들의 배열)를 받았다고 가정합니다. 이제 그 경로를 따라가도록 모터 명령을 만들어야 합니다.
+  </div>
+
   <div class="toc"><h4>목차</h4><ol>
     <li>개루프 vs 폐루프</li>
     <li>PID 제어기 — 각 항의 역할</li>
-    <li>과도응답 지표와 튜닝 규칙</li>
+    <li>과도응답 지표와 튜닝 규칙 + Z-N 수치 예제</li>
+    <li>실전 함정: 와인드업, 미분 킥, 캐스케이드, 피드포워드</li>
+    <li>디지털 PID — 임베디드 구현</li>
+    <li>PID의 한계 — 언제 부족한가</li>
+    <li>주파수 응답의 한 줄 직관</li>
     <li>인터랙티브: PID 질량-스프링 · 드론 2D 위치 제어</li>
-    <li>차량 경로 추종: Pure Pursuit</li>
-    <li>차량 경로 추종: Stanley</li>
-    <li>코드 · 더 깊이 공부하기</li>
+    <li>차량 경로 추종: Pure Pursuit · Stanley</li>
+    <li>다음 강의 미리보기</li>
+    <li>더 깊이 공부하기</li>
+    <li>코드 예제</li>
   </ol></div>
 
   <h2>1. 개루프 vs 폐루프</h2>
@@ -252,6 +268,131 @@
   </table>
   <p>여기서 $K_i = K_p / T_i$, $K_d = K_p \cdot T_d$. 위 PID 행을 정리하면 $K_p = 0.6 K_u$, $K_i = 1.2 K_u / T_u$, $K_d = 0.075\,K_u\,T_u$가 됩니다. 요즘은 이 값을 <em>초기값</em>으로만 쓰고, 시뮬레이션·현장에서 손으로 다듬거나 최적화로 바로 조율합니다. Z-N은 약 25% 오버슈트를 의도적으로 허용하는 공격적 튜닝이라, 더 매끈한 응답이 필요하면 게인을 더 줄여야 합니다.</p>
 
+  <h3>Z-N 한계이득법 — 숫자로 직접 풀어보기</h3>
+  <div class="tip">
+    <strong>예제.</strong> 실험 결과: $K_p=8$일 때 일정 진폭으로 진동, 한 주기가 3.6초였다. PID 게인은?
+    <br><br>
+    임계값: $K_u = 8$, $T_u = 3.6$ s. PID 표 적용:
+    <ul style="margin:6px 0">
+      <li>$K_p = 0.6 \cdot 8 = \mathbf{4.8}$</li>
+      <li>$T_i = T_u/2 = 1.8$ s, $K_i = K_p / T_i = 4.8 / 1.8 \approx \mathbf{2.67}$</li>
+      <li>$T_d = T_u/8 = 0.45$ s, $K_d = K_p \cdot T_d = 4.8 \cdot 0.45 = \mathbf{2.16}$</li>
+    </ul>
+    이 값을 출발점으로 시뮬레이션·실험에서 미세 조정합니다. 위쪽 인터랙티브 데모에 같은 값이 "Z-N PID" 프리셋에 들어 있으니 직접 응답을 확인해 보세요.
+  </div>
+
+  <h3>다른 튜닝 방법 — Z-N 외에도</h3>
+  <table>
+    <thead><tr><th>방법</th><th>특징</th><th>언제 쓰나</th></tr></thead>
+    <tbody>
+      <tr><td>Ziegler-Nichols</td><td>임계 진동 측정. ~25% 오버슈트</td><td>모델 모르는 실험실 출발점</td></tr>
+      <tr><td>Cohen-Coon</td><td>1차 시상수+지연($K, \tau, \theta$) 측정</td><td>화학 공정처럼 시간지연 큰 시스템</td></tr>
+      <tr><td>IMC (Internal Model Control)</td><td>원하는 폐루프 시상수 $\lambda$로 직접 합성</td><td>모델이 비교적 정확할 때, 매끈한 응답</td></tr>
+      <tr><td>릴레이 자동튜닝 (Åström-Hägglund)</td><td>릴레이 진동 실험으로 자동 식별</td><td>산업 PLC에 내장된 표준</td></tr>
+      <tr><td>최적화 기반</td><td>손실 최소화로 게인 검색</td><td>시뮬레이터가 있을 때, 다목적</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. 실전 함정과 해결책</h2>
+
+  <h3>4.1 적분 와인드업 (integral wind-up)과 안티 와인드업</h3>
+  <p>모터·밸브 같은 액추에이터는 최대 출력이 정해져 있습니다. 명령이 그 한계를 넘으면 실제로는 잘려서 들어가는데, PID는 그 사실을 모르고 적분기를 계속 쌓아요. 결국 거대한 적분 항이 쌓여, 오차가 0이 되더라도 한참 동안 출력이 포화 상태로 머무는 끔찍한 오버슈트를 만듭니다.</p>
+  <p>가장 단순하고 효과적인 해결책은 <strong>back-calculation 안티 와인드업</strong>입니다.</p>
+  <pre><code>u_raw = Kp*e + Ki*I + Kd*de
+u_cmd = clip(u_raw, u_min, u_max)
+I += (e + (u_cmd - u_raw) / Kt) * dt   # 포화량을 적분기에서 빼냄</code></pre>
+  <p>여기서 $K_t \approx \sqrt{K_p / K_d}$가 보통의 기본값입니다. 포화가 일어나는 동안에는 적분기가 자동으로 멈추는 효과를 내요.</p>
+
+  <h3>4.2 Derivative kick (미분 킥)</h3>
+  <p>운영 중에 사용자가 setpoint $r$을 갑자기 1 m → 5 m로 바꾸면 오차가 0 → 4 m로 점프합니다. 그 미분이 무한대가 되어 거대한 입력 펄스가 모터로 갑니다. 액추에이터가 깜짝 놀라죠.</p>
+  <p>해결책 — D항을 <em>오차 $e$의 미분</em> 대신 <em>측정값 $y$의 미분</em>으로 바꿉니다. 같은 효과(진동 댐핑)를 내면서 setpoint 점프에 반응하지 않아요.</p>
+  $$ u = K_p (r - y) + K_i \int (r - y)\, d\tau \;-\; K_d \, \dot y $$
+
+  <h3>4.3 미분 잡음 — 저역통과 필터</h3>
+  <p>실제 측정값 $y$는 잡음을 포함하므로 미분이 크게 흔들립니다. 보통은 D항에 1차 저역통과 필터를 끼웁니다.</p>
+  $$ D(s) = \frac{K_d \, s}{1 + s\, T_d/N}, \quad N \in [5, 20] $$
+  <p>$N$이 클수록 필터 차단이 약하고(이상적 미분에 가까움), 작을수록 잡음에는 강하지만 응답이 무뎌집니다. 산업 표준은 $N = 10$ 부근.</p>
+
+  <h3>4.4 Bumpless transfer (모드 전환 시 충격 방지)</h3>
+  <p>수동 운전 → 자동 PID로 전환할 때, 적분기 초기값을 0으로 두면 출력이 갑자기 점프해서 액추에이터에 충격을 줍니다. 전환 직전 적분기를 "현재 수동 출력값"으로 초기화하면 출력이 부드럽게 이어져요.</p>
+
+  <h3>4.5 캐스케이드(cascade) 제어 — 두 PID를 직렬로</h3>
+  <p>드론에서 "위치 → 자세 → 모터" 같은 다단 제어가 표준입니다. 외부 루프(느림)는 자세 명령을 만들고, 내부 루프(빠름)가 그 자세를 추종해요.</p>
+  <figure>
+    <svg viewBox="0 0 720 140" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arc" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#666"/></marker></defs>
+      <g font-family="sans-serif" font-size="11">
+        <text x="80" y="40" text-anchor="middle" fill="#333">목표 위치</text>
+        <path d="M40,55 L120,55" stroke="#666" stroke-width="2" marker-end="url(#arc)"/>
+        <rect x="125" y="35" width="120" height="40" rx="6" fill="#e3f2fd" stroke="#0d47a1"/>
+        <text x="185" y="60" text-anchor="middle" font-weight="bold" fill="#0d47a1">외부 PID (위치)</text>
+        <path d="M250,55 L320,55" stroke="#666" stroke-width="2" marker-end="url(#arc)"/>
+        <text x="285" y="48" text-anchor="middle" fill="#666" font-size="10">목표 자세</text>
+        <rect x="325" y="35" width="120" height="40" rx="6" fill="#fff3e0" stroke="#e65100"/>
+        <text x="385" y="60" text-anchor="middle" font-weight="bold" fill="#e65100">내부 PID (자세)</text>
+        <path d="M450,55 L520,55" stroke="#666" stroke-width="2" marker-end="url(#arc)"/>
+        <text x="485" y="48" text-anchor="middle" fill="#666" font-size="10">모터 명령</text>
+        <rect x="525" y="35" width="120" height="40" rx="6" fill="#e8f5e9" stroke="#1b5e20"/>
+        <text x="585" y="60" text-anchor="middle" font-weight="bold" fill="#1b5e20">드론 동역학</text>
+        <path d="M585,75 Q585,110 380,110 Q185,110 185,75" stroke="#999" stroke-width="1.5" stroke-dasharray="4,4" fill="none" marker-end="url(#arc)"/>
+        <text x="385" y="125" text-anchor="middle" fill="#777" font-size="10">측정 피드백</text>
+      </g>
+    </svg>
+    <figcaption>그림. 캐스케이드 제어. 외부 루프는 100 Hz, 내부 루프는 1000 Hz로 도는 식으로 시간 스케일이 분리됩니다.</figcaption>
+  </figure>
+  <p>두 루프를 동시에 한 PID로 풀려고 하면 게인 튜닝이 지옥이지만, 캐스케이드로 분리하면 각 루프를 따로 튜닝할 수 있어 훨씬 쉬워집니다. <strong>내부 루프는 외부 루프보다 4~10배 빨라야</strong> 안정성이 보장됩니다.</p>
+
+  <h3>4.6 Feedforward (앞먹임) — PID의 짝꿍</h3>
+  <p>PID는 "오차가 생긴 뒤에" 반응하는 사후 대응입니다. 그런데 외란이나 목표 변화를 미리 안다면 그걸 직접 입력에 더해 주면 더 빠르고 매끈한 응답이 됩니다.</p>
+  $$ u = u_{\text{ff}}(r) + u_{\text{PID}}(r - y) $$
+  <p>예: 자율주행에서 곡률 정보가 있으면 $u_{\text{ff}} = m v^2 / r$만큼의 횡력을 미리 줘서 PID는 "보정"만 담당하면 됩니다. 학부생도 자주 잊는 강력한 트릭이에요.</p>
+
+  <h2>5. 디지털 PID — 실제 마이크로컨트롤러에 올리기</h2>
+
+  <h3>연속에서 이산으로</h3>
+  <p>실제 PID는 마이크로컨트롤러(STM32, Arduino 등)에서 일정 주기 $\Delta t$로 도는 코드입니다. 연속 PID 식을 그대로는 못 쓰니 차분 형태로 바꿉니다.</p>
+  $$ u_k = K_p e_k + K_i \, \Delta t \sum_{j=0}^{k} e_j + K_d \frac{e_k - e_{k-1}}{\Delta t} $$
+  <p>이걸 그대로 쓰면 적분 합이 매번 다 더해져서 비효율적이니, 보통은 누적 변수 하나만 들고 다닙니다.</p>
+  <pre><code># 디지털 PID — 임베디드 친화적 형태
+def step(self, r, y, dt):
+    e = r - y
+    self.I += e * dt
+    D = (e - self.prev_e) / dt
+    u = self.Kp*e + self.Ki*self.I + self.Kd*D
+    # 안티 와인드업
+    u_clip = max(self.u_min, min(self.u_max, u))
+    self.I += (u_clip - u) / self.Kt
+    self.prev_e = e
+    return u_clip</code></pre>
+
+  <h3>샘플 시간 $\Delta t$ 고르기</h3>
+  <ul>
+    <li><strong>플랜트 시상수의 1/10 ~ 1/30</strong>이 보통의 기본값. 자동차 차선 유지면 $\Delta t = 10$ ms, 화학 플랜트면 $\Delta t = 1$ s.</li>
+    <li>$\Delta t$를 너무 크게 잡으면 미분 항의 잡음 민감도가 올라갑니다.</li>
+    <li>$\Delta t$를 너무 작게 잡으면 CPU 시간이 낭비되고 부동소수점 오차가 누적될 수 있어요.</li>
+  </ul>
+
+  <h2>6. PID의 한계 — 언제 PID로는 안 되나?</h2>
+  <p>PID는 단순한 단입력·단출력(SISO) 시스템에 좋지만 다음 상황에서는 부족합니다.</p>
+  <ul>
+    <li><strong>다입력·다출력(MIMO) + 강한 결합</strong> — 드론 자세 3축처럼 채널끼리 상호작용이 크면 채널별 PID는 발산할 수 있어요. 해결: LQR, MPC.</li>
+    <li><strong>제약(constraint)이 본질적</strong> — 모터 한계, 도로 경계, 충돌 회피 같은 제약을 PID 식 안에 자연스럽게 넣을 수 없습니다. 해결: MPC(L11).</li>
+    <li><strong>큰 시간 지연</strong> — 입력이 출력에 1초 후에 반영되는 화학 플랜트 같은 경우. 해결: Smith Predictor, MPC.</li>
+    <li><strong>비선형성이 크고 운영점이 자주 변함</strong> — 게인 스케줄링, 학습 기반 제어, MPC.</li>
+  </ul>
+  <p>이런 한계를 깨려고 등장한 것이 L11 MPC입니다. PID는 여전히 "내부 루프의 가장 빠른 단계"로 살아남아요.</p>
+
+  <h2>7. 주파수 응답의 한 줄 직관 (보너스)</h2>
+  <p>"자동제어" 강의를 따로 들으면 보드 선도(Bode plot), 위상여유(phase margin), 게인여유(gain margin) 같은 도구가 나옵니다. 이 강의에서는 깊이 들어가지 않지만 한 줄 직관만 챙겨가세요.</p>
+  <ul>
+    <li><strong>위상여유 30°~60°가 안전 구간</strong>. 60° 이상이면 매끈하고 느림, 30° 미만이면 진동 위험.</li>
+    <li><strong>대역폭(bandwidth)</strong>이 클수록 빠른 응답, 그러나 잡음에도 민감해짐.</li>
+    <li>$K_p$↑ 대역폭↑ 위상여유↓ — 즉 빠르게 만들면 진동 위험이 커짐. PID 튜닝의 본질적 트레이드오프.</li>
+  </ul>
+  <div class="tip">
+    더 깊이 알고 싶다면 상단 메뉴의 <a href="../control.html">자동제어</a> 강의에서 "보드 선도"와 "안정도 여유"를 찾아보세요. 라플라스 변환부터 차근차근 설명되어 있습니다.
+  </div>
+
   <div class="demo">
     <h4>🎮 인터랙티브: 과도응답 지표 + 튜닝 프리셋</h4>
     <p>플랜트 $G(s) = 1/(s+1)^3$를 PID로 제어합니다. 응답 곡선에 4가지 지표가 자동으로 측정·표시되고, 프리셋 버튼으로 Z-N 변종과 한계이득 상태를 즉시 비교할 수 있습니다. 이 플랜트의 이론값은 $K_u = 8$, $T_u \approx 3.628$ s (Routh-Hurwitz로 직접 풀어 구한 결과).</p>
@@ -420,7 +561,7 @@
   })();
   </script>
 
-  <h2>4. 인터랙티브: PID 튜닝</h2>
+  <h2>8. 인터랙티브: PID 튜닝</h2>
 
   <h3>한 줄 비유부터</h3>
   <p>PID 튜닝은 자동차 좌석 조정과 비슷합니다. 책에서 "정답 좌석 위치"를 외워서 한 방에 맞추는 사람은 거의 없죠. 일단 대충 앉아본 뒤(Z-N 같은 초기값), 페달을 한번 밟아보고("이 시스템에 스텝 입력을 줬더니 어떻게 반응하지?"), 등받이를 살짝 더 세우거나("$K_p$를 줄이고") 좌석을 조금 앞으로 당기며("$K_d$를 늘리며") 조금씩 다듬어 갑니다. 이 데모는 그 과정을 1초마다 직접 볼 수 있게 만든 거예요.</p>
@@ -600,7 +741,7 @@
     <li>캔버스를 빠르게 여러 번 클릭하면 새 목표마다 추력이 포화되며 드론이 비행하는 모습이 보입니다.</li>
   </ul>
 
-  <h2>7. 코드 예제 & 더 깊이 공부하기</h2>
+  <h2>12. 코드 예제</h2>
   <pre><code>class PID:
     def __init__(self, kp, ki, kd, dt):
         self.kp, self.ki, self.kd, self.dt = kp, ki, kd, dt
@@ -617,7 +758,7 @@
 pid = PID(kp=5, ki=1, kd=2, dt=0.02)
 u = pid.step(ref=1.0, y=current_y)</code></pre>
 
-  <h2>5. 실전: 차량 경로 추종 제어</h2>
+  <h2>9. 실전: 차량 경로 추종 제어</h2>
 
   <h3>한 줄 비유부터</h3>
   <p>운전 학원에서 처음 차선 따라가는 연습을 떠올려 보세요. 초보 시절엔 두 가지 방식이 섞여 있었을 거예요. (1) "저기 멀찍이 보이는 도로 끝점을 향해 차를 몰자"는 식 — 이게 <strong>Pure Pursuit</strong>의 발상입니다. (2) "지금 차선 중앙에서 얼마나 벗어나 있고, 차가 차선과 얼마나 비뚤어졌는지 봐서 즉시 핸들로 보정하자" — 이게 <strong>Stanley</strong>의 발상이에요. 둘 다 사람이 자연스레 쓰는 전략이고, 자율주행 코드도 똑같습니다.</p>
@@ -750,7 +891,15 @@ u = pid.step(ref=1.0, y=current_y)</code></pre>
 
   <p><strong>비교</strong>: Pure Pursuit은 부드럽지만 코너에서 안쪽으로 깎입니다(컷팅). Stanley는 횡오차에 직접 반응해 더 정확하지만 잡음에 민감합니다. 둘 다 PythonRobotics에 50줄 이내의 짧은 파이썬 코드로 구현돼 있습니다.</p>
 
-  <h2>6. 더 깊이 공부하기</h2>
+  <h2>10. 다음 강의 미리보기</h2>
+  <p>지금까지 다룬 PID·Pure Pursuit·Stanley는 "경로를 잘 따라가는 것"이 목표였습니다.
+  하지만 자율 시스템은 한 가지 더 어려운 요구가 있습니다 — <strong>"절대 부딪히지 않을 것."</strong></p>
+  <p><strong><a href="08-guidance-cbf.html">L8. 유도 & 제어 장벽 함수(CBF)</a></strong>에서는
+  ① 선박·항공기에서 표준인 시야각 추종(LOS) 유도 알고리즘과,
+  ② 어떤 제어기가 만들어 낸 입력이라도 충돌 가능성이 있으면 "안전하게" 잘라 주는 CBF 안전 필터를 배웁니다.
+  CBF는 PID 위에든 MPC 위에든 얹어 쓸 수 있는 추가 안전 장치예요.</p>
+
+  <h2>11. 더 깊이 공부하기</h2>
   <ul>
     <li>Åström & Murray, <em>Feedback Systems: An Introduction for Scientists and Engineers</em> (2판, 2021) — <a href="https://fbsbook.org/">온라인 공개</a>. 1~3장이 이 강의의 고급판입니다.</li>
     <li>Franklin, Powell, Emami-Naeini, <em>Feedback Control of Dynamic Systems</em> — 고전적인 학부 교과서.</li>

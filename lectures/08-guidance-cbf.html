@@ -34,6 +34,17 @@
   <h1 class="page-title">Lecture 8. 유도 & 제어 장벽 함수 (CBF)</h1>
   <p class="lead">"어디로 갈지" 결정하는 유도(guidance)와 "절대 부딪히지 않는" 안전 필터.</p>
 
+  <div class="note">
+    <strong>📋 한눈에</strong> — 이 강의가 끝나면 다음을 할 수 있어야 합니다.
+    <ul style="margin:6px 0 0 0">
+      <li>경로 계획·유도·제어 3계층의 역할 차이를 자기 말로 설명</li>
+      <li>Pure Pursuit, Stanley, LOS의 핵심 아이디어를 한 줄씩 말하기</li>
+      <li>"명목 제어기 + CBF 안전 필터" 구조가 왜 안전을 보장하는지 그리기</li>
+    </ul>
+    <strong>선수지식</strong> — <a href="07-feedback-control.html">L7</a>의 PID·Pure Pursuit 직관, 미분(특히 합성함수의 미분), 부등식 제약. CBF는 약간 어려우니 식이 막히면 §6은 건너뛰고 §8 데모만 만져 봐도 핵심은 잡힙니다.<br>
+    <strong>이전 강의 복습</strong> — L6에서 받은 경로점 배열을 L7의 PID 한 점만으로는 매끄럽게 따라가기 어려웠습니다. 그 빈 공간을 채우는 게 오늘의 유도 알고리즘.
+  </div>
+
   <div class="toc"><h4>목차</h4><ol>
     <li>유도(Guidance)란?</li>
     <li>Pure Pursuit — 강아지 산책 비유</li>
@@ -935,7 +946,15 @@ for t in range(T):
     x = plant.step(x, u_safe)</code></pre>
   <p>실시간 제어에서는 매 스텝 새 OSQP 객체를 만들지 말고 위처럼 <code>update()</code>로 행렬값만 갱신하세요. 같은 sparsity 패턴이면 KKT 분해가 재사용돼 보통 0.1ms 안쪽으로 풀립니다.</p>
 
-  <h2>6. 더 깊이 공부하기</h2>
+  <h2>6. 다음 강의 미리보기</h2>
+  <p>여기까지 오면 자율주행 파이프라인의 ① 측위(L4·L5) → ② 계획(L6) → ③ 유도(L8) → ④ 제어(L7)가 일단 완성됐습니다.
+  하지만 한 가지 큰 가정이 깔려 있어요 — <strong>"로봇의 동역학 모델이 정확히 알려져 있다"</strong>.</p>
+  <p>실제 로봇은 부품이 닳고, 마찰계수가 환경에 따라 달라지고, 모델에 안 들어간 효과가 늘 끼어듭니다. 이 "모르는 부분"을 데이터로 메우는 방법이 머신러닝입니다.</p>
+  <p><strong><a href="09-regression.html">L9. 선형 회귀</a></strong>에서는 데이터 점에 직선을 맞추는 가장 단순한 머신러닝을 배우고,
+  <strong><a href="10-ann.html">L10. 인공 신경망</a></strong>에서 그걸 비선형으로 확장합니다.
+  이렇게 학습된 모델은 L11 MPC의 "예측 모델" 자리에 그대로 끼워 넣을 수 있어, 모델 기반 제어와 데이터 기반 제어가 만나는 다리가 됩니다.</p>
+
+  <h2>7. 더 깊이 공부하기</h2>
   <ul>
     <li>Ames, Xu, Grizzle, Tabuada, "Control Barrier Function based Quadratic Programs for Safety Critical Systems", IEEE TAC 2017 — CBF의 표준 정식화.</li>
     <li>Ames et al., "Control Barrier Functions: Theory and Applications", ECC 2019 — <a href="https://arxiv.org/abs/1903.11199">튜토리얼 논문</a>.</li>

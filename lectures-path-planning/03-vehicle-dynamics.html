@@ -343,6 +343,108 @@ print('eig(A) =', np.linalg.eigvals(A))   # 좌반평면 → 안정</code></pre>
   <p>자율주행 제어기가 보낸 명령이 ESC에 의해 살짝 다듬어질 수 있으니 실차 실험 시 동작 조건을 확인해야 합니다.
   이 강의는 <strong>ESC가 개입하지 않는 안전 영역 안</strong>에서 운전한다고 가정합니다.</p>
 
+  <h2>8b. Kinematic vs Dynamic — 언제 어느 것?</h2>
+
+  <table>
+    <thead><tr><th>측면</th><th>Kinematic (W2)</th><th>Dynamic (오늘)</th></tr></thead>
+    <tbody>
+      <tr><td>상태 변수</td><td>3개 ($x, y, \psi$)</td><td>5~6개 (+ $v_y, \dot\psi$)</td></tr>
+      <tr><td>타이어 슬립</td><td>무시</td><td>선형 $F_y = C_\alpha \alpha$</td></tr>
+      <tr><td>속도 의존성</td><td>거의 없음</td><td>강함 ($v_x$ 분모/분자)</td></tr>
+      <tr><td>유효 영역</td><td>$\le$ 30 km/h</td><td>40 ~ 120 km/h</td></tr>
+      <tr><td>설계 복잡도</td><td>★</td><td>★★★</td></tr>
+      <tr><td>Planning 적합</td><td>✅</td><td>드묾</td></tr>
+      <tr><td>고속 제어</td><td>약함</td><td>✅</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>실무 판단 가이드</strong>:</p>
+  <ul>
+    <li>저속 (≤ 30 km/h) + 완만한 조향 → Kinematic으로 충분</li>
+    <li>고속 (≥ 60 km/h) 또는 급조향 → Dynamic 필요</li>
+    <li>Planning 단계 → 거의 항상 Kinematic (단순함이 미덕)</li>
+    <li>Control 단계 (Pure Pursuit/Stanley) → Kinematic 가정 OK</li>
+    <li>Control 단계 (LQR/MPC 횡추종) → Dynamic 권장</li>
+  </ul>
+
+  <h2>8c. 모델 파라미터는 어떻게 알아내나?</h2>
+
+  <h3>실차 실험 방법</h3>
+  <ol>
+    <li><strong>휠베이스 $L$</strong>: 줄자로 측정 (앞뒤 차축 거리)</li>
+    <li><strong>질량 $m$</strong>: 저울로 측정 (도장에 표기됨)</li>
+    <li><strong>요 관성 $I_z$</strong>: 정지 상태에서 차체 회전 진동 시험 (실험실 필요)</li>
+    <li><strong>코너링 강성 $C_\alpha$</strong>: 정상 선회 실험 + 슬립각 추정 (GPS+IMU)</li>
+    <li><strong>타이어 매개변수</strong>: 제조사 데이터시트 또는 Pacejka 식별</li>
+  </ol>
+
+  <h3>대안 — 시스템 식별 (System Identification)</h3>
+  <p>차량을 다양한 입력 (조향 sweep, step) 으로 운전하며 응답 데이터 수집 → 모델 파라미터 추정.</p>
+  <ul>
+    <li>최소제곱(LS) 추정</li>
+    <li>확장칼만필터(EKF) 기반 온라인 식별</li>
+    <li>최근에는 신경망 기반 식별도 활발</li>
+  </ul>
+
+  <h3>전형값 (이 강의에서 사용)</h3>
+  <table>
+    <tbody>
+      <tr><td>$m$</td><td>1500 kg</td><td>중형 세단</td></tr>
+      <tr><td>$I_z$</td><td>2500 kg·m²</td><td>요 관성</td></tr>
+      <tr><td>$L$</td><td>2.7~2.9 m</td><td>휠베이스</td></tr>
+      <tr><td>$l_f, l_r$</td><td>1.2, 1.6 m</td><td>앞:뒤 = 4:6 (전방 무게 큼)</td></tr>
+      <tr><td>$C_{\alpha f}, C_{\alpha r}$</td><td>60~100 kN/rad</td><td>차종에 따라 다름</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8d. 손풀이 — 동역학 직관 점검</h2>
+
+  <h3>Q1. Understeer Gradient 계산</h3>
+  <p>$m=1500, l_f=1.2, l_r=1.6, L=2.8, C_{\alpha f}=70$ kN/rad, $C_{\alpha r}=90$ kN/rad. $K_{us}$ 부호와 거동은?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>$K_{us} = \frac{1.6 \times 1500 \times 9.81}{2.8 \times 70000} - \frac{1.2 \times 1500 \times 9.81}{2.8 \times 90000}$</p>
+    <p>$= \frac{23544}{196000} - \frac{17658}{252000}$</p>
+    <p>$= 0.120 - 0.070 = +0.050$ → <strong>Understeer (양수, 안전)</strong></p>
+  </details>
+
+  <h3>Q2. 임계 속도</h3>
+  <p>위 차량의 특성 속도 (yaw rate gain 최대 속도) $v_{ch}$ 는?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>$v_{ch} = \sqrt{gL/K_{us}} = \sqrt{9.81 \times 2.8 / 0.050} = \sqrt{549.4} \approx 23.4$ m/s ≈ 84 km/h</p>
+    <p>이 속도에서 차량이 가장 민감하게 응답. 그 이상에선 둔감해짐 (안전).</p>
+  </details>
+
+  <h3>Q3. 슬립각 계산</h3>
+  <p>$v_x = 20, v_y = 0.5, \dot\psi = 0.1, l_f = 1.2, \delta = 0.05$. 전륜 슬립각 $\alpha_f$ 는?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>$\alpha_f \approx \delta - (v_y + l_f \dot\psi)/v_x = 0.05 - (0.5 + 1.2 \times 0.1)/20$</p>
+    <p>$= 0.05 - 0.62/20 = 0.05 - 0.031 = 0.019$ rad ≈ 1.1°</p>
+    <p>매우 작은 슬립각 → 선형 영역에서 안정.</p>
+  </details>
+
+  <h2>8e. 실무 사례 — 양산차 거동 설계</h2>
+
+  <h3>왜 양산차는 Understeer 만들까?</h3>
+  <ul>
+    <li><strong>안전</strong>: 사고 시 직진성이 강해 사람이 회피 가능</li>
+    <li><strong>예측성</strong>: 일반 운전자가 다루기 쉬움</li>
+    <li><strong>법규</strong>: 많은 나라에서 양산차 동역학 규제 (ESC 의무)</li>
+  </ul>
+
+  <h3>경주차는 다르다</h3>
+  <ul>
+    <li>F1, 슈퍼카: <strong>Neutral 또는 약한 Oversteer</strong> 추구</li>
+    <li>이유: 빠른 코너링 (회전 반경 작게)</li>
+    <li>전제: 숙련된 운전자, 안전 장비, 통제 환경</li>
+    <li>도로용 차량은 <strong>절대 Oversteer 설계 X</strong></li>
+  </ul>
+
+  <h3>4WD 토크 벡터링 — 동역학 능동 변경</h3>
+  <p>최신 EV (전기차) 에선 좌우 바퀴 모터 출력을 다르게 해 요레이트를 직접 제어. Understeer 차량을 일시적으로 Oversteer 처럼 빠르게 회전 가능. 자율주행에선 더 정밀한 횡 제어로 활용.</p>
+
   <h2>9. 핵심 정리</h2>
   <div class="tip">
     <ul>
@@ -353,6 +455,34 @@ print('eig(A) =', np.linalg.eigvals(A))   # 좌반평면 → 안정</code></pre>
       <li>한 줄 결론: <strong>"고속에서는 슬립을 무시하지 말 것"</strong>.</li>
     </ul>
   </div>
+
+  <h2>9b. 흔한 실수 5가지</h2>
+
+  <table>
+    <thead><tr><th>#</th><th>실수</th><th>증상</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>$v_x$가 분모 → 저속에서 발산</td><td>0 으로 나눔</td><td>$v_x \ge 0.5$ m/s clip</td></tr>
+      <tr><td>2</td><td>$C_\alpha$ 단위 (N/rad 맞는지)</td><td>큰 수가 나와야 정상 (수만)</td><td>단위 표기, 데이터시트 참조</td></tr>
+      <tr><td>3</td><td>슬립각 너무 큼 → 선형 모델 깨짐</td><td>실제 거동과 큰 괴리</td><td>$|\alpha| < 5°$ 영역에서만 사용</td></tr>
+      <tr><td>4</td><td>Understeer/Oversteer 부호 반대로 외움</td><td>안전·위험 혼동</td><td>"U=둔함+안전" 암기</td></tr>
+      <tr><td>5</td><td>타이어 모델 없이 고속 시뮬</td><td>비현실적 결과</td><td>고속이면 반드시 Dynamic 모델</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9c. 1학년에게 — 이번 주 살아남는 법</h2>
+
+  <div class="warn">
+    <strong>솔직히 이번 주는 어렵습니다.</strong> 행렬, 미분방정식, 다양한 약자가 한꺼번에 나옵니다. 중간고사에서 동역학은 보통 비중이 작거나 개념 위주.
+  </div>
+
+  <h3>1학년 생존 전략</h3>
+  <ol>
+    <li><strong>3개만 외운다</strong>: ① 슬립각 → 횡력 ($F_y = C_\alpha\alpha$), ② Understeer = 안전, ③ 고속에서 Kinematic 부족</li>
+    <li><strong>수식 외우려 하지 말기</strong>: 행렬은 모양만 보고, 구조 (A, B의 의미) 만 잡기</li>
+    <li><strong>비유 위주로</strong>: "자전거(저속) vs 오토바이(고속)" 로 시작</li>
+    <li><strong>인터랙티브 만지기</strong>: 위 데모에서 속도/조향 슬라이더로 거동 변화 직접 보기</li>
+    <li><strong>막히면 4·5주차로 넘어가기</strong>: 동역학을 완벽 이해 못 해도 후반부 진행 가능</li>
+  </ol>
 
   <h2>10. 더 깊이 공부하기</h2>
   <ul>

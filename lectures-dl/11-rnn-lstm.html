@@ -393,7 +393,37 @@
   })();
   </script>
 
-  <h2>6. 시계열 예측 데모</h2>
+  <h2>6. 양방향 RNN — 미래도 같이 보자</h2>
+  <p>지금까지 본 RNN은 모두 <em>왼쪽에서 오른쪽으로</em> 한 방향으로 흐릅니다. 그런데 자연어를 생각해 보면 한 단어의 의미를 정하는 단서가 <em>뒤에</em> 있는 경우도 많습니다.</p>
+  <p>예: "그는 은행에 갔다." vs "그는 강 옆 은행에 앉아 있었다." 단어 "은행"의 뜻(금융기관 vs 강가)을 결정하려면 <em>뒤에 나오는 단어</em>를 봐야 합니다. 단방향 RNN으로 "은행"을 처리할 때는 아직 그 정보가 도착하지 않았습니다.</p>
+
+  <h3>6.1 BiRNN — 두 방향 결합</h3>
+  <p>해법은 단순합니다 — <strong>두 개의 RNN을 반대 방향으로 동시에 돌리고, 두 결과를 합칩니다</strong>. 정방향 RNN $\overrightarrow{h}_t$는 $x_1, \dots, x_t$를 본 요약, 역방향 RNN $\overleftarrow{h}_t$는 $x_t, \dots, x_T$를 본 요약. 시점 $t$의 최종 표현은 둘을 결합한 것:</p>
+  $$ h_t = [\overrightarrow{h}_t \,;\, \overleftarrow{h}_t] $$
+  <p>대괄호는 단순 이어붙이기(concatenation). 결합 후 $h_t$는 "양쪽 모든 문맥"을 동시에 봅니다. 파라미터는 단방향 대비 정확히 2배.</p>
+  <p>BiLSTM은 자연어 처리의 표준 구성품이었습니다 — 2018년 ELMo, 2018년 BERT 이전 모델까지 기계 번역, 명명 개체 인식(NER), 품사 태깅 같은 태스크의 성능 SOTA가 거의 모두 BiLSTM 기반이었습니다. <a href="13-transformer-llm.html">Transformer</a> 등장 이후엔 자리를 내줬지만, 짧은 시퀀스나 임베디드 환경에서는 여전히 강력한 베이스라인입니다.</p>
+
+  <h3>6.2 BiRNN을 쓸 수 없는 경우</h3>
+  <p>"양방향이 좋다"가 항상 통하는 건 아닙니다. <strong>실시간 처리</strong>가 필요한 경우 — 음성 인식 라이브 스트리밍, 챗봇 응답, 자율주행 센서 처리 — 에는 미래 입력을 기다릴 수 없습니다. 또 <strong>언어 모델(다음 단어 예측)</strong>의 경우, 정답이 미래에 있는데 그걸 모델에 주면 의미가 없으니 단방향만 쓸 수 있습니다. 이 때문에 GPT 같은 생성형 모델은 단방향, BERT 같은 이해형 모델은 양방향이라는 갈림길이 생깁니다(W13에서 더).</p>
+
+  <h2>7. 시퀀스 문제의 4가지 패턴</h2>
+  <p>RNN의 응용을 구조로 분류해보면 네 가지 패턴이 나옵니다. 입력과 출력의 길이 관계가 기준입니다.</p>
+
+  <table>
+    <thead><tr><th>패턴</th><th>예시</th><th>구조</th></tr></thead>
+    <tbody>
+      <tr><td><strong>One-to-One</strong> (1→1)</td><td>이미지 분류 (RNN 거의 안 씀)</td><td>$x \to y$ — 사실 일반 MLP/CNN</td></tr>
+      <tr><td><strong>One-to-Many</strong> (1→N)</td><td>이미지 캡셔닝, 음악 생성</td><td>한 입력으로 시작해 시퀀스 생성</td></tr>
+      <tr><td><strong>Many-to-One</strong> (N→1)</td><td>감성 분류, 문서 분류</td><td>시퀀스 전체 보고 라벨 하나</td></tr>
+      <tr><td><strong>Many-to-Many (동기)</strong></td><td>품사 태깅, 명명 개체 인식</td><td>입력 단어마다 출력 라벨 하나, 길이 동일</td></tr>
+      <tr><td><strong>Many-to-Many (비동기)</strong></td><td>기계 번역, 챗봇</td><td>인코더-디코더 (W12에서!)</td></tr>
+    </tbody>
+  </table>
+  <p>구조에 따라 손실함수와 학습 방식이 달라집니다. Many-to-One은 마지막 시점 출력만 쓰니 손실도 마지막 한 번만, Many-to-Many 동기형은 모든 시점에서 손실을 합산합니다. 비동기형(번역)은 다음 주차의 주제이며, 우리는 거기서 처음으로 인코더-디코더와 어텐션을 만나게 됩니다.</p>
+
+  <div class="tip"><strong>실전 팁.</strong> 새 시퀀스 문제를 받으면 먼저 "이게 4가지 패턴 중 어디에 속하는지"를 먼저 정하세요. 패턴이 정해지면 적절한 PyTorch 모듈(<code>nn.LSTM</code>의 <code>bidirectional=True</code> 옵션, 출력 인덱싱 방식 등)이 자동으로 결정됩니다.</div>
+
+  <h2>8. 시계열 예측 데모</h2>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 사인파 예측</h4>
@@ -428,7 +458,7 @@
   })();
   </script>
 
-  <h2>7. 코드 예제 (PyTorch)</h2>
+  <h2>9. 코드 예제 (PyTorch)</h2>
   <pre><code>import torch.nn as nn
 
 class LSTMNet(nn.Module):
@@ -439,6 +469,27 @@ class LSTMNet(nn.Module):
     def forward(self, x):
         out, (h, c) = self.lstm(x)
         return self.fc(out[:, -1, :])</code></pre>
+
+  <h2>✅ 오늘의 핵심 4가지</h2>
+  <div class="tip">
+    <ol style="margin:6px 0">
+      <li><strong>RNN = "은닉 상태를 다음 시점으로 넘기는 신경망".</strong> 가변 길이 시퀀스를 같은 가중치 행렬로 처리. 기억은 $h_t$에.</li>
+      <li><strong>장기 의존성 문제</strong> — BPTT의 야코비 곱이 시간에 따라 지수 감쇠/폭발해, vanilla RNN은 5~10단계 이상의 과거를 기억 못함.</li>
+      <li><strong>LSTM의 비밀은 셀 상태 + 세 게이트(망각/입력/출력).</strong> 셀 상태를 따라가는 "정보의 고속도로"가 기울기를 살려 백 단계 너머도 기억 가능.</li>
+      <li><strong>GRU는 LSTM의 단순화 버전.</strong> 게이트가 둘뿐. 파라미터 적고 빠르며, 성능은 대부분 비슷.</li>
+    </ol>
+  </div>
+
+  <h2>🤔 자가 점검</h2>
+  <ol>
+    <li>왜 같은 문장에 MLP 대신 RNN을 쓰나요? (두 가지 이유)</li>
+    <li>$|W_h|=0.9$일 때 30스텝 거슬러 올라가면 기울기는 대략 얼마가 되나요?</li>
+    <li>LSTM의 망각 게이트가 0에 가까우면 어떤 일이 생기나요? 1에 가까우면?</li>
+    <li>GRU와 LSTM 중 어느 쪽을 먼저 시도해야 할까요? 왜?</li>
+  </ol>
+
+  <h2>👀 다음 주 미리보기 — W12 RNN 심화 (Seq2Seq, Attention)</h2>
+  <p>오늘 우리는 단일 RNN으로 시퀀스를 처리하는 법을 배웠습니다. 다음 주에는 — <em>입력도 시퀀스, 출력도 시퀀스</em>인 번역기 같은 문제를 푸는 <strong>인코더-디코더 구조</strong>와, 모든 LLM의 어머니인 <strong>어텐션(attention)</strong> 메커니즘을 만납니다.</p>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>

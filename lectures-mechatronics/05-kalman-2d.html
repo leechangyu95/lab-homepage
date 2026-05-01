@@ -34,6 +34,17 @@
   <h1 class="page-title">Week 5. 칼만 필터 (2D) — 위치+속도 동시 추정</h1>
   <p class="lead">상태가 둘 이상이면 1D 분산이 공분산 행렬로 진화합니다. 그리고 비선형 시스템을 위한 EKF/UKF.</p>
 
+  <div class="note">
+    <strong>📖 행렬이 처음이면 — 두려워 마세요</strong> — 이번 주는 행렬·벡터 표기가 등장하지만, 핵심은 <strong>"여러 변수를 한 묶음으로 다룬다"</strong>가 전부입니다.
+    <ul style="margin:8px 0 0 20px">
+      <li>1D에서는 위치 한 개만 추정했다면, 2D에서는 <em>위치와 속도를 동시에</em> 추정.</li>
+      <li>분산 $\sigma^2$ 한 개 → <strong>공분산 행렬 $P$</strong>(2×2 표) 한 개로 진화. 표 안에는 각 변수의 퍼진 정도와 변수 사이 상관관계가 들어 있어요.</li>
+      <li>식 모양이 1D와 똑같습니다 — 스칼라가 행렬로 바뀌었을 뿐. 1D를 잘 이해했으면 2D는 표기만 바꿔 받아들이면 됩니다.</li>
+      <li><strong>5장 EKF·UKF·파티클 필터는 고급 주제</strong>로 처음에는 이름과 한 줄 차이만 알고 넘어가세요. 자세한 유도는 로봇공학특론에서.</li>
+    </ul>
+    <em>행렬 곱셈을 모르면?</em> 선형대수학 트랙 W2~W3을 먼저 보고 오면 좋고, 시간이 없다면 "행렬 곱은 여러 식을 한 줄로 묶은 것"이라는 직관만 가지고 데모를 만지세요.
+  </div>
+
   <div class="toc"><h4>목차</h4><ol>
     <li>다차원 상태 — 벡터와 행렬로</li>
     <li>공분산 행렬과 타원</li>
@@ -45,21 +56,73 @@
   <h2>1. 다차원 상태로의 확장</h2>
   <p>1D에서는 상태 $x$가 스칼라였지만, 실제 시스템은 위치만이 아니라 속도·자세·각속도 등 여러 변수를 동시에 가집니다. 이를 <strong>상태 벡터</strong>로 묶어 다룹니다.</p>
   $$ \mathbf{x} = \begin{bmatrix} p \\ v \end{bmatrix}, \quad \text{(예: 1D 위치 + 속도)} $$
+  <p><strong>왜 묶나?</strong> — 두 변수를 따로 추정하면 둘이 서로에게 주는 정보를 놓칩니다. 예를 들어 자동차가 등속도로 간다면, 위치를 측정해 보면 속도까지 추정할 수 있어요(아래 4절). 묶어 다뤄야 이런 정보가 자연스럽게 흘러갑니다.</p>
   <p>분산 $\sigma^2$는 <strong>공분산 행렬 $P$</strong>로 일반화됩니다.</p>
   $$ P = \begin{bmatrix} \sigma_p^2 & \sigma_{pv} \\ \sigma_{pv} & \sigma_v^2 \end{bmatrix} $$
   <ul>
-    <li>대각 항: 각 변수의 분산</li>
-    <li>비대각 항: 두 변수의 상관관계 (위치와 속도가 서로 어떻게 묶이는가)</li>
+    <li>대각 항: 각 변수의 분산 — "위치 자체는 얼마나 흐릿한가", "속도 자체는 얼마나 흐릿한가"</li>
+    <li>비대각 항 $\sigma_{pv}$: 두 변수의 상관관계 — "위치와 속도가 얼마나 함께 움직이는가"
+      <ul>
+        <li>$\sigma_{pv} > 0$: 위치가 큰 곳에선 속도도 클 가능성</li>
+        <li>$\sigma_{pv} = 0$: 두 변수 독립</li>
+        <li>$\sigma_{pv} < 0$: 위치가 클 때 속도는 작은 경향</li>
+      </ul>
+    </li>
   </ul>
 
   <h2>2. 공분산 행렬의 시각화 — 타원</h2>
   <p>2D 가우시안의 등고선은 <strong>타원</strong>이고, 공분산 행렬이 그 타원의 모양을 결정합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(80,110)">
+        <line x1="-60" y1="0" x2="60" y2="0" stroke="#888"/>
+        <line x1="0" y1="-60" x2="0" y2="60" stroke="#888"/>
+        <ellipse cx="0" cy="0" rx="50" ry="25" fill="rgba(11,95,255,0.15)" stroke="#0742b8" stroke-width="2"/>
+        <text x="0" y="80" text-anchor="middle" font-size="12" fill="#0742b8">대각 σₓᵧ=0</text>
+        <text x="0" y="95" text-anchor="middle" font-size="11" fill="#666">독립 (축 정렬)</text>
+      </g>
+      <g transform="translate(230,110)">
+        <line x1="-60" y1="0" x2="60" y2="0" stroke="#888"/>
+        <line x1="0" y1="-60" x2="0" y2="60" stroke="#888"/>
+        <ellipse cx="0" cy="0" rx="50" ry="25" fill="rgba(11,95,255,0.15)" stroke="#0742b8" stroke-width="2" transform="rotate(-30)"/>
+        <text x="0" y="80" text-anchor="middle" font-size="12" fill="#0742b8">σₓᵧ &gt; 0</text>
+        <text x="0" y="95" text-anchor="middle" font-size="11" fill="#666">x↑→y↑ (양의 상관)</text>
+      </g>
+      <g transform="translate(380,110)">
+        <line x1="-60" y1="0" x2="60" y2="0" stroke="#888"/>
+        <line x1="0" y1="-60" x2="0" y2="60" stroke="#888"/>
+        <ellipse cx="0" cy="0" rx="50" ry="25" fill="rgba(198,40,40,0.15)" stroke="#c62828" stroke-width="2" transform="rotate(30)"/>
+        <text x="0" y="80" text-anchor="middle" font-size="12" fill="#c62828">σₓᵧ &lt; 0</text>
+        <text x="0" y="95" text-anchor="middle" font-size="11" fill="#666">x↑→y↓ (음의 상관)</text>
+      </g>
+      <g transform="translate(530,110)">
+        <line x1="-60" y1="0" x2="60" y2="0" stroke="#888"/>
+        <line x1="0" y1="-60" x2="0" y2="60" stroke="#888"/>
+        <circle cx="0" cy="0" r="35" fill="rgba(46,125,50,0.15)" stroke="#2e7d32" stroke-width="2"/>
+        <text x="0" y="80" text-anchor="middle" font-size="12" fill="#2e7d32">σ²ₓ = σ²ᵧ</text>
+        <text x="0" y="95" text-anchor="middle" font-size="11" fill="#666">원형 (등방)</text>
+      </g>
+      <text x="300" y="20" text-anchor="middle" font-size="13" font-weight="bold" fill="#222">공분산 행렬 → 타원 모양 (1σ 등고선)</text>
+    </svg>
+    <figcaption>그림 1. 공분산 행렬의 4가지 대표 모양. 비대각 항의 부호와 크기가 타원의 기울기·방향을 결정합니다.</figcaption>
+  </figure>
+
   <ul>
     <li><strong>대각 행렬</strong> ($\sigma_{pv} = 0$): 축 정렬된 타원. $p$, $v$가 독립.</li>
     <li><strong>양의 비대각</strong>: 우상향 기울어진 타원. $p$↑이면 $v$↑ 경향.</li>
     <li><strong>음의 비대각</strong>: 좌상향 기울어진 타원. 반대 상관관계.</li>
   </ul>
-  <p>타원의 주축은 <strong>고유벡터(eigenvector)</strong>, 길이는 <strong>고유값(eigenvalue)</strong>의 제곱근에 비례. 즉 공분산의 PCA가 곧 불확실성의 주방향을 알려줍니다.</p>
+
+  <h3>2.1 1σ·2σ·3σ 신뢰 영역</h3>
+  <p>2D 가우시안에서 1σ 타원 안에 점이 들어올 확률은 약 <strong>39%</strong>(1D는 68%였지만, 2D는 두 축 모두 안에 들어와야 해서 더 작음). 2σ는 약 86%, 3σ는 약 99%. 칼만 필터의 출력을 시각화할 때 보통 2σ 또는 3σ 타원을 그려 "이 영역 안에 진짜가 있을 가능성이 높다"고 표시합니다.</p>
+
+  <p>타원의 주축은 <strong>고유벡터(eigenvector)</strong>, 길이는 <strong>고유값(eigenvalue)</strong>의 제곱근에 비례. 즉 공분산의 PCA가 곧 불확실성의 주방향을 알려줍니다. 이 개념은 W12 딥러닝의 PCA·차원 축소에서 다시 등장해요.</p>
+
+  <h3>2.2 마할라노비스 거리 — "불확실성을 고려한 거리"</h3>
+  <p>두 점 사이의 거리는 보통 유클리드 거리 $\sqrt{(x_1-x_2)^2 + (y_1-y_2)^2}$로 잽니다. 그러나 분포의 모양이 타원이면 이 거리는 부정확해요. <strong>마할라노비스 거리</strong>는 공분산을 고려한 거리:</p>
+  $$ d_M(\mathbf{x}, \boldsymbol{\mu}) = \sqrt{(\mathbf{x}-\boldsymbol{\mu})^\top P^{-1}(\mathbf{x}-\boldsymbol{\mu})} $$
+  <p>같은 유클리드 거리라도 <em>타원의 짧은 축 방향</em>으로 떨어진 점이 더 "이상해" 보입니다(불확실성이 작은 방향이라). 칼만 필터에서 outlier 측정을 걸러내는 <em>혁신 게이팅</em>(보통 $d_M < 3$인 측정만 받음)이 이 거리로 판단합니다.</p>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 공분산 행렬 → 타원</h4>
@@ -247,13 +310,27 @@ for z in measurements:
     P = (np.eye(2) - K @ H) @ P
 </code></pre>
 
-  <h2>5. 비선형 시스템 — EKF와 UKF</h2>
+  <h2>5. 비선형 시스템 — EKF와 UKF <small style="color:var(--muted);font-weight:normal">(고급, 처음엔 이름만)</small></h2>
+
+  <div class="tip">
+    <strong>1학년 안내</strong> — 이 절은 "이런 게 있구나" 정도로 읽고 넘어가도 좋습니다. 표준 칼만은 직선·가우시안 가정 위에서 동작하는데, 실제 시스템은 그렇지 않을 때가 많아요. 그래서 <strong>EKF</strong>·<strong>UKF</strong>·<strong>파티클 필터</strong> 같은 변형이 등장합니다. 이름과 "각자 무엇을 보강했는지" 한 줄만 가지고 가면 충분합니다. 깊은 유도는 로봇공학특론 L5에서.
+  </div>
+
   <p>표준 칼만 필터는 시스템이 <strong>선형</strong>이고 잡음이 <strong>가우시안</strong>일 때만 최적입니다. 그러나 실제 로봇 동역학은 비선형입니다 — 자전거 모델·각도 회전·삼각함수 등.</p>
 
   <h3>5.1 EKF (Extended Kalman Filter)</h3>
   <p>비선형 함수 $f(\mathbf{x})$, $h(\mathbf{x})$를 동작점 근처에서 <strong>선형 근사(자코비언)</strong>로 바꿔 표준 칼만 필터를 적용.</p>
   $$ F_k = \frac{\partial f}{\partial \mathbf{x}}\bigg|_{\hat{\mathbf{x}}_{k-1}}, \quad H_k = \frac{\partial h}{\partial \mathbf{x}}\bigg|_{\hat{\mathbf{x}}_k^-} $$
   <p>장점: 구현이 직관적, 빠름. 단점: 강한 비선형에서 발산 가능, 자코비언 계산 필요.</p>
+
+  <h4>EKF 미니 예제 — 자전거 모델 차량</h4>
+  <p>자율주행에서 가장 흔한 모델인 자전거 모델(bicycle model). 상태 $\mathbf{x} = [x, y, \theta]^\top$(평면 좌표 + 헤딩각), 입력 $u = [v, \delta]^\top$(속도, 조향각), 차축 거리 $L$:</p>
+  $$ \dot{x} = v\cos\theta, \quad \dot{y} = v\sin\theta, \quad \dot{\theta} = \frac{v}{L}\tan\delta $$
+  <p>$\sin, \cos, \tan$가 들어 있어 비선형. $\theta$로 편미분한 자코비언:</p>
+  $$ F = \frac{\partial f}{\partial \mathbf{x}} = \begin{bmatrix} 1 & 0 & -v\sin\theta\,\Delta t \\ 0 & 1 & v\cos\theta\,\Delta t \\ 0 & 0 & 1 \end{bmatrix} $$
+  <p>매 스텝마다 현재 추정값 $\hat\theta$를 대입해 $F$를 새로 계산하고, 이 $F$로 $P^- = FPF^\top + Q$를 진행합니다. 이 한 줄이 EKF의 핵심 일.</p>
+
+  <p><strong>왜 EKF가 발산할 수 있나</strong> — 1차 테일러 근사라 동작점에서 멀어지면 큰 오차. 갑작스런 90° 회전, 강한 가속 등에서 자코비언 근사가 실제 동역학과 크게 어긋나면서 추정이 무너집니다. 이때 UKF나 파티클 필터가 더 강건.</p>
 
   <h3>5.2 UKF (Unscented Kalman Filter)</h3>
   <p>자코비언 대신 <strong>시그마 점(sigma points)</strong>이라는 대표 표본을 비선형 함수에 통과시켜 통계를 추정. 자코비언 없이도 더 정확하고 강건한 경우가 많아 SLAM·드론 자세 등에 자주 쓰입니다.</p>
@@ -262,7 +339,36 @@ for z in measurements:
   <h3>5.3 파티클 필터(Particle Filter)</h3>
   <p>가우시안 가정 자체를 버리고 수많은 표본 입자로 분포를 표현. 가장 일반적이지만 계산량이 많아 저차원·고비선형에 주로 사용. 로봇 위치 추정(Monte Carlo Localization)이 대표 예.</p>
 
-  <h2>6. 핵심 한눈 요약</h2>
+  <h2>6. 혁신(Innovation) — 측정과 예측의 불일치</h2>
+  <p>2D 칼만 갱신식의 마지막 줄을 다시 보세요.</p>
+  $$ \hat{\mathbf{x}}_k = \hat{\mathbf{x}}_k^- + K_k\,\underbrace{(\mathbf{z}_k - H\hat{\mathbf{x}}_k^-)}_{\mathbf{y}_k\ =\ \text{혁신}} $$
+  <p>$\mathbf{y}_k = \mathbf{z}_k - H\hat{\mathbf{x}}_k^-$는 <strong>혁신(innovation) 또는 잔차(residual)</strong>라 부릅니다 — "측정이 예측보다 얼마나 새로운 정보를 주는가". 이 한 벡터에서 두 가지 중요한 정보가 나옵니다.</p>
+
+  <h3>6.1 혁신의 통계로 모델·잡음 검증</h3>
+  <p>모델과 잡음 가정이 맞다면 혁신은 평균 0, 공분산 $S = HPH^\top + R$인 가우시안이어야 합니다(이론적으로). 실측 혁신이 이 통계를 따르는지 검사하면 모델·튜닝의 건강 상태를 알 수 있어요.</p>
+  <ul>
+    <li>혁신 평균이 0이 아님 → 모델에 편향 있음(예: 실제 등가속인데 등속으로 모델링).</li>
+    <li>혁신 분산이 $S$보다 큼 → $R$ 또는 $Q$를 키워야 함.</li>
+    <li>혁신이 서로 상관됨(autocorrelated) → 모델이 무언가 놓치고 있음.</li>
+  </ul>
+  <p>실무에서 칼만 필터 디버그의 첫 단계가 보통 <strong>혁신 시퀀스를 찍어보는 것</strong>입니다.</p>
+
+  <h3>6.2 혁신 게이팅 — Outlier 막기</h3>
+  <p>도시 협곡의 GPS 다중경로처럼 가끔 큰 오류가 들어오면, 표준 칼만은 그 측정을 그대로 받아들여 추정이 튑니다. 이를 막으려고:</p>
+  $$ d_M^2 = \mathbf{y}_k^\top S^{-1} \mathbf{y}_k > \chi^2_{\text{thresh}} \implies \text{이 측정 무시} $$
+  <p>마할라노비스 거리(2.2절)의 제곱이 임계값($\chi^2$ 분포로 결정, 보통 9~16)을 넘으면 그 측정을 버리고 예측만 사용. 자율주행 항법의 표준 기법.</p>
+
+  <h2>7. 응용 — SLAM 미리보기</h2>
+  <p>로봇이 모르는 환경에서 <em>지도를 만들면서 동시에 자기 위치를 추정</em>하는 문제를 <strong>SLAM(Simultaneous Localization and Mapping)</strong>이라 합니다. EKF·UKF·파티클 필터의 가장 유명한 응용처.</p>
+  <ul>
+    <li><strong>상태 벡터</strong>: 로봇 위치 + 보이는 모든 랜드마크 위치를 한꺼번에 추정 (수백 차원!).</li>
+    <li><strong>EKF-SLAM</strong>: 상태 벡터가 커질수록 $O(N^2)$ 연산으로 무거워짐. 1990년대 표준.</li>
+    <li><strong>FastSLAM(파티클 필터)</strong>: 로봇 위치는 파티클로, 랜드마크는 각각 작은 EKF로. 2002년 Stanford.</li>
+    <li><strong>Graph-SLAM</strong>: 현대 표준. 모든 측정·움직임을 그래프 최적화로 한 번에 해결(이번 학기 범위 밖).</li>
+  </ul>
+  <p>로봇청소기·자율주행차·AR 헤드셋이 모두 이 기술 위에서 동작합니다.</p>
+
+  <h2>8. 핵심 한눈 요약</h2>
   <table>
     <thead><tr><th>필터</th><th>가정</th><th>장점</th><th>단점</th></tr></thead>
     <tbody>
@@ -273,7 +379,7 @@ for z in measurements:
     </tbody>
   </table>
 
-  <h2>7. 더 깊이 보기</h2>
+  <h2>9. 더 깊이 보기</h2>
   <ul>
     <li><a href="../lectures/05-kalman-2d.html">로봇공학특론 L5</a> — 2D 칼만 필터의 인터랙티브 시각화, 공분산 타원 직접 그려보기, EKF/UKF 비교.</li>
     <li><a href="../lectures/03-state-space.html">로봇공학특론 L3</a> — $F$, $H$ 행렬이 어디서 왔나(상태공간 모델).</li>

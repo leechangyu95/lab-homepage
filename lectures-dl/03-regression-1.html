@@ -44,6 +44,7 @@
   </ol></div>
 
   <h2>1. 회귀 문제 — "연속된 숫자 맞히기"</h2>
+  <p>지난 두 주에서 우리는 <a href="01-ai-intro.html">W1</a>에서 분류기 KNN을 만났고, <a href="02-data-handling.html">W2</a>에서 데이터를 다듬는 법을 배웠습니다. 이제 처음으로 — <strong>"학습"이라는 게 도대체 뭔지</strong> 손으로 만져봅니다. 그 무대가 가장 단순한 모델, 선형회귀입니다.</p>
   <p>입력 $x$로 연속된 출력 $y$를 예측하는 것을 <strong>회귀(regression)</strong>라고 합니다. 농어 길이로 무게 맞히기, 광고비로 매출 예측하기, 집 면적으로 가격 예측하기, 공부 시간으로 시험 점수 예측하기 — 모두 회귀입니다. 출력이 "범주"(고양이/개)가 아니라 "숫자"(23.7 kg, 345만 원)라는 점이 <a href="05-classification.html">분류(W5)</a>와 다릅니다.</p>
   <p>"회귀(regression)"라는 말은 19세기 통계학자 Francis Galton에서 왔습니다. 키가 큰 부모의 자식이 부모보다 작아 평균으로 <em>되돌아가는(regress)</em> 현상을 연구하면서 회귀 직선을 만들었기 때문입니다. 오늘날의 머신러닝도 이 관찰에서 직접 이어집니다.</p>
   <p>가장 단순한 가정은 $y$가 $x$에 <strong>선형</strong>으로 의존한다는 것입니다. 한 줄로:</p>
@@ -65,16 +66,15 @@
   $$ J(w, b) = \frac{1}{N} \sum_{i=1}^{N} (wx_i + b - y_i)^2 $$
   <p>이 $J$를 <strong>비용 함수(cost function)</strong> 또는 <strong>손실 함수(loss function)</strong>라 부릅니다. $J$가 작을수록 직선이 데이터에 가깝다는 뜻. 학습이란 "$J(w, b)$를 최소화하는 $(w, b)$를 찾는 최적화 문제"로 정의됩니다. 머신러닝의 모든 훈련 과정은 결국 이 한 문장입니다.</p>
 
-  <h3>2.1 최대우도 추정(MLE)에서 MSE가 나오는 이유</h3>
-  <p>왜 하필 제곱일까? 통계적으로 아름다운 설명이 있습니다. 데이터 생성 모델이 "진짜 직선 $y = wx + b$에 가우시안 잡음 $\varepsilon \sim \mathcal{N}(0, \sigma^2)$이 얹힌 것"이라고 가정합시다:</p>
-  $$ y_i = wx_i + b + \varepsilon_i, \quad \varepsilon_i \sim \mathcal{N}(0, \sigma^2) $$
-  <p>그러면 주어진 $(w, b)$ 하에서 데이터 $y_i$가 관측될 확률(우도, likelihood)은:</p>
-  $$ p(y_i \mid x_i, w, b) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\!\left(-\frac{(y_i - wx_i - b)^2}{2\sigma^2}\right) $$
-  <p>모든 데이터가 독립이라면 전체 우도는 곱:</p>
-  $$ \mathcal{L}(w, b) = \prod_{i=1}^N p(y_i \mid x_i, w, b) $$
-  <p>로그를 씌우면 곱이 합이 되고, 상수 항을 무시하면:</p>
-  $$ \log \mathcal{L}(w, b) = -\frac{1}{2\sigma^2} \sum_i (y_i - wx_i - b)^2 + \text{const} $$
-  <p>즉 <strong>로그우도를 최대화하는 것은 제곱오차 합을 최소화하는 것과 정확히 같습니다</strong>. MSE 최소화는 "가우시안 잡음 가정 하의 최대우도 추정"과 동치입니다. 이 관점은 나중에 <a href="04-regression-2.html">W4 로지스틱 회귀</a>에서 Bernoulli 가정으로부터 <em>교차 엔트로피</em>가 나오는 방식과 정확히 같은 논리 구조를 가집니다.</p>
+  <details style="margin:14px 0;padding:12px 16px;background:#f6f8fa;border-radius:8px">
+    <summary style="cursor:pointer;font-weight:600">📐 (선택·고급) 왜 하필 "제곱"일까? — 최대우도 추정(MLE) 관점</summary>
+    <p style="margin-top:10px"><em>이 부분은 확률론을 들어본 학생용 보너스입니다. 처음 보는 사람은 §2.2로 바로 넘어가도 됩니다.</em></p>
+    <p>데이터 생성 모델이 "진짜 직선 $y = wx + b$에 가우시안 잡음 $\varepsilon \sim \mathcal{N}(0, \sigma^2)$이 얹힌 것"이라고 가정해봅시다. 그러면 주어진 $(w, b)$ 하에서 $y_i$가 관측될 확률(우도)은 정규분포 종모양 곡선이 됩니다.</p>
+    $$ p(y_i \mid x_i, w, b) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\!\left(-\frac{(y_i - wx_i - b)^2}{2\sigma^2}\right) $$
+    <p>모든 데이터가 독립이라면 전체 우도는 곱이고, 로그를 씌우면 합이 되어 상수를 무시하면:</p>
+    $$ \log \mathcal{L}(w, b) = -\frac{1}{2\sigma^2} \sum_i (y_i - wx_i - b)^2 + \text{const} $$
+    <p>즉 <strong>로그우도를 최대화하는 것 = 제곱오차 합을 최소화하는 것</strong>입니다. MSE는 "가우시안 잡음 가정 하의 최대우도 추정"과 동치입니다. 같은 논리 구조가 <a href="04-regression-2.html">W4 로지스틱 회귀</a>에서 베르누이 가정으로부터 <em>교차 엔트로피</em>를 끌어낼 때 다시 등장합니다.</p>
+  </details>
 
   <h3>2.2 작은 예시 — 손으로 계산해보기</h3>
   <p>데이터가 $(x, y) = (1, 2), (2, 3), (3, 5)$ 세 개라고 합시다. 직선 $\hat y = x$ ($w=1, b=0$)에 대해:</p>
@@ -248,6 +248,9 @@
   <p>$\alpha$는 <strong>학습률(learning rate)</strong>로 한 걸음의 보폭을 정합니다. 너무 크면 골짜기를 뛰어넘어 반대쪽 산으로 튕겨나가고(발산), 너무 작으면 하루 종일 걸어도 바닥에 도달하지 못합니다(느린 수렴). 실전에서는 $10^{-4}$에서 $10^{-1}$ 사이에서 시작해 조정합니다.</p>
 
   <h3>3.1 편미분 유도 — 연쇄법칙으로 한 줄씩</h3>
+  <div class="note">
+    <strong>편미분이 뭐였더라?</strong> $J(w,b)$는 입력이 두 개($w$, $b$)인 함수입니다. <em>편미분 $\partial J/\partial w$</em>는 "$b$는 고정해 둔 채 $w$만 살짝 바꿨을 때 $J$가 얼마나 변하나"를 잰 것입니다. 1변수 미분처럼 다루되, 다른 변수는 상수처럼 취급하면 끝입니다. 1학년 미적분의 일반 미분과 똑같다고 보면 됩니다.
+  </div>
   <p>비용 함수의 편미분을 직접 계산해봅시다. 한 샘플의 제곱 오차 $e_i^2 = (wx_i + b - y_i)^2$에 대해:</p>
   $$ \frac{\partial e_i^2}{\partial w} = 2(wx_i + b - y_i) \cdot \frac{\partial (wx_i + b - y_i)}{\partial w} = 2(wx_i + b - y_i) \cdot x_i $$
   <p>연쇄법칙 한 번으로 끝납니다. 모든 샘플에 대해 합하고 $N$으로 나누면:</p>
@@ -572,6 +575,27 @@ print(lr.coef_, lr.intercept_)
 # 경사하강법
 sgd = SGDRegressor(learning_rate='constant', eta0=0.001, max_iter=1000)
 sgd.fit(X, y)</code></pre>
+
+  <h2>✅ 오늘의 핵심 4가지</h2>
+  <div class="tip">
+    <ol style="margin:6px 0">
+      <li><strong>"학습"의 정의</strong> — 비용함수 $J(w,b)$를 최소화하는 $(w,b)$를 찾는 것. 이 한 문장이 머신러닝 모든 모델의 공통 뼈대입니다.</li>
+      <li><strong>비용함수 = MSE.</strong> $J = \tfrac{1}{N}\sum(\hat y_i - y_i)^2$. 작을수록 잘 맞춘다는 뜻.</li>
+      <li><strong>경사하강법</strong> — 안개 낀 산에서 발 밑 경사로 내려가는 등산. $w \leftarrow w - \alpha\, \partial J/\partial w$. 학습률 $\alpha$가 보폭.</li>
+      <li><strong>학습률은 $10^{-2}$ 근처에서 시작.</strong> 발산하면 ÷10, 너무 느리면 ×3.</li>
+    </ol>
+  </div>
+
+  <h2>🤔 자가 점검 — 다음 주 가기 전에</h2>
+  <ol>
+    <li>"파라미터"와 "하이퍼파라미터"의 차이를 한 문장으로 설명할 수 있나요?</li>
+    <li>왜 오차의 절댓값 대신 제곱을 더할까요? 이유 두 개 이상 댈 수 있나요?</li>
+    <li>학습률을 너무 크게 하면 손실 곡선은 어떤 모양이 될까요? 너무 작으면?</li>
+    <li>1차원 선형회귀는 정규방정식으로 한 방에 풀 수 있는데, 왜 딥러닝에서는 그게 안 될까요?</li>
+  </ol>
+
+  <h2>👀 다음 주 미리보기 — W4 로지스틱 회귀</h2>
+  <p>오늘 우리는 <em>"숫자"</em>를 예측하는 선형회귀를 배웠습니다. 다음 주에는 살짝 비틀어 — 직선의 출력을 0~1 사이 확률로 짜내는 <strong>시그모이드 함수</strong>를 끼워, "<em>분류</em> 문제를 푸는 회귀 모델"을 만듭니다. 거기서 또 다른 손실함수(교차 엔트로피)가 자연스레 등장합니다. 오늘의 MSE/경사하강이 그대로 살아남으니 안심하고 따라오세요.</p>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>

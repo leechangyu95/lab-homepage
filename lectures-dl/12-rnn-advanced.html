@@ -68,6 +68,16 @@
   <h3>2.1 Seq2Seq의 의의</h3>
   <p>Seq2Seq가 혁명적이었던 이유는 "모든 것을 End-to-End로 학습"할 수 있었기 때문입니다. 그 이전의 기계 번역은 여러 단계(토큰화→구문 분석→단어 정렬→구 번역→재정렬)로 나뉘어 각 단계가 독립적으로 튜닝되었는데, Seq2Seq는 이 모두를 하나의 네트워크로 대체했습니다. 성능도 곧바로 당시 최고 기법을 따라잡았고, 이것이 2016년 Google Translate의 GNMT 시스템으로 실제 서비스에 적용되어 하룻밤 사이 번역 품질이 급상승한 사건("the Google Translate revolution")의 배경입니다.</p>
 
+  <h3>2.2 Teacher Forcing — 학습과 추론의 어긋남</h3>
+  <p>Seq2Seq를 직접 학습시켜 보면 의외의 문제를 만납니다. 추론(inference) 시 디코더는 자기가 방금 만든 단어를 다음 입력으로 씁니다. 첫 단어를 잘못 만들면 그 잘못이 두 번째 입력으로 들어가 — 오류가 눈덩이처럼 굴러갑니다. 학습 초반엔 디코더가 무의미한 단어만 뱉으니, 그걸 입력으로 다시 받아 또 무의미한 단어를 뱉고… 영원히 학습이 안 됩니다.</p>
+  <p>해결책이 <strong>Teacher Forcing</strong>입니다. 학습 시에는 디코더의 이전 출력을 무시하고 <em>정답 시퀀스의 이전 단어</em>를 다음 입력으로 강제로 넣어줍니다. 마치 시험을 매 문제마다 친절한 선생님이 정답 힌트를 제공하며 가르치는 것과 비슷합니다. 학습은 빠르고 안정적입니다.</p>
+  <p>그런데 이 좋은 학습법이 <strong>새로운 함정</strong>을 만듭니다 — 학습 때는 항상 "정답"을 입력으로 받았는데, 추론 때는 "자기 출력"을 받게 됩니다. 둘 사이의 분포가 다르면 모델이 한 번 실수하는 순간 학습 때 본 적 없는 입력 분포로 들어가 헷갈립니다. 이를 <em>exposure bias</em>라고 부릅니다.</p>
+  <ul>
+    <li><strong>Scheduled sampling</strong> (Bengio 2015) — 학습 후반으로 갈수록 정답 대신 모델 자기 출력을 섞어서 입력으로 쓰는 비율을 늘림.</li>
+    <li><strong>Professor Forcing</strong> (2016) — 학습 분포와 추론 분포를 GAN처럼 일치시키는 정규화.</li>
+  </ul>
+  <p>실무에서는 단순한 teacher forcing이 압도적으로 많이 쓰이지만, "왜 학습 정확도는 높은데 실제 생성은 어색한가"라는 의문이 들 때 이 개념을 떠올리면 됩니다.</p>
+
   <div class="demo">
     <h4>🎮 인터랙티브: 인코더-디코더 흐름</h4>
     <p>한국어 4단어가 인코더로 들어가 컨텍스트가 되고, 디코더가 영어 4단어를 만들어내는 과정을 시각화합니다. 슬라이더로 시점을 옮겨보세요.</p>
@@ -218,6 +228,20 @@
   </ul>
   <p>그리고 결정적으로, 2017년 Google의 "Attention Is All You Need" 논문이 "어텐션만 있으면 RNN 자체가 필요 없다"는 주장으로 <strong>Transformer</strong>를 제안했고, 이후 모든 LLM의 기반이 됩니다. 어텐션은 단순한 개선을 넘어 신경망 설계 패러다임 자체를 바꿨습니다.</p>
 
+  <h3>4.3 Q·K·V로 일반화 — Transformer로 가는 다리</h3>
+  <p>Bahdanau의 어텐션 식 $\alpha_{t,i} \propto \exp(\text{score}(s_t, h_i))$를 한 번 더 추상화해 봅시다. 점수는 결국 두 벡터의 비교입니다 — 한쪽은 "지금 뭘 찾는지"(디코더 상태 $s_t$), 다른 쪽은 "각 위치가 뭘 가지고 있는지"(인코더 출력 $h_i$). 그리고 우리가 가져오는 것은 그 위치의 실제 정보(역시 $h_i$).</p>
+  <p>이 세 역할에 각각 이름을 붙여봅시다 — <strong>Query, Key, Value</strong>:</p>
+  <ul>
+    <li><strong>Query (Q)</strong> = $s_t$ — 디코더가 "이번에 찾는 것"</li>
+    <li><strong>Key (K)</strong> = $h_i$ — 각 인코더 위치가 "자기를 광고하는 라벨"</li>
+    <li><strong>Value (V)</strong> = $h_i$ — 가져오게 될 "실제 정보"</li>
+  </ul>
+  <p>Bahdanau에서는 K와 V가 같은 인코더 출력이지만, 일반화하면 셋을 따로 학습된 행렬로 분리할 수 있습니다 — $Q = W^Q s, K = W^K h, V = W^V h$. 이렇게 하면 "비교용 표현(Key)"과 "전달용 표현(Value)"을 다르게 학습할 수 있어 표현력이 더 풍부해집니다.</p>
+  <p>식으로 정리하면:</p>
+  $$ \text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{Q K^\top}{\sqrt{d_k}}\right) V $$
+  <p>이 식은 <a href="13-transformer-llm.html">W13 Transformer</a>의 핵심 식과 정확히 같습니다. 즉 Transformer의 self-attention은 "Q·K·V를 모두 같은 시퀀스에서 만들어 자기 자신에게 어텐션"하는 변형이고, 우리가 본 어텐션은 "Q는 디코더, K·V는 인코더"인 cross-attention입니다. 다음 주의 모든 마법은 결국 이 식 한 줄의 응용입니다.</p>
+  <div class="note"><strong>한 줄 정리.</strong> Bahdanau attention(2014) → Q·K·V 분리(2017 Transformer) → ChatGPT(2022). 식은 거의 그대로이고, 단지 "어디에 어텐션을 적용하는가"만 바뀌어 왔습니다.</div>
+
   <div class="demo">
     <h4>🎮 인터랙티브: 어텐션 가중치 히트맵</h4>
     <p>한→영 번역의 가상 어텐션 행렬입니다. 행은 출력 단어, 열은 입력 단어. 진할수록 큰 가중치입니다. 슬라이더로 패턴을 바꿔보세요.</p>
@@ -324,6 +348,22 @@
   <h2>5. 빔 서치(Beam Search)</h2>
   <p>디코딩 시 매 시점 가장 확률 높은 단어 하나만 고르는 그리디 디코딩은 근시안적입니다. <strong>빔 서치</strong>는 상위 $k$개 후보를 동시에 유지하며 전체적으로 점수가 높은 시퀀스를 찾습니다. $k=1$이면 그리디, $k$가 크면 더 좋은 결과지만 느립니다.</p>
 
+  <h3>5.1 그리디가 왜 함정인가 — 작은 예</h3>
+  <p>구체적으로 그리디가 어떻게 망가지는지 봅시다. 모델이 다음 단어 확률을 다음과 같이 예측한다고 상상합니다:</p>
+  <ul>
+    <li>1단계: "I" (0.6), "We" (0.4)</li>
+    <li>2단계 ("I" 뒤): "saw" (0.5), "ate" (0.5)</li>
+    <li>2단계 ("We" 뒤): "went" (0.9), "came" (0.1)</li>
+  </ul>
+  <p>그리디는 1단계에서 "I"(0.6)를 골라 갇힙니다. 2단계에서 어떤 선택을 해도 전체 확률은 $0.6 \times 0.5 = 0.3$. 반면 "We → went" 경로는 $0.4 \times 0.9 = 0.36$으로 더 높습니다. 빔 폭 2의 빔서치는 두 후보를 모두 들고 가다 결국 "We went"를 답으로 냅니다 — 첫 단어를 잠시 양보해 전체 점수를 얻은 셈입니다.</p>
+
+  <h3>5.2 빔서치의 함정 — 길이 편향과 length penalty</h3>
+  <p>빔서치도 만능은 아닙니다. 큰 함정이 하나 있습니다 — <strong>짧은 문장이 항상 이깁니다</strong>. 이유는 단순합니다. 시퀀스 확률은 모든 단어 확률의 곱이라 단어 수가 많을수록 작아집니다 ($0.9^{10} \approx 0.35$, $0.9^{20} \approx 0.12$). 그래서 빔 폭을 키우면 디코더가 문장을 빨리 끝내려 하고, "I went."처럼 너무 짧은 답을 내놓습니다.</p>
+  <p>해법은 점수에 길이 보정 페널티를 더하는 것입니다. 가장 흔한 방식은 길이 정규화(length normalization):</p>
+  $$ \text{score}(\mathbf y) = \frac{1}{T^\alpha} \log P(\mathbf y \mid \mathbf x) $$
+  <p>$\alpha \in [0.6, 1.0]$ 정도가 표준. $\alpha=1$이면 단순 평균, $\alpha=0.6$이면 짧은 문장에 약간 더 페널티. Google GNMT 시스템은 $\alpha=0.6$ + 적용 범위 보정(coverage penalty)을 함께 썼습니다.</p>
+  <p>이 작은 디테일이 실제 번역 품질에 미치는 영향이 의외로 큽니다. 빔서치를 쓸 때 결과가 어색하게 짧다면 십중팔구 length penalty 문제입니다.</p>
+
   <div class="demo">
     <h4>🎮 인터랙티브: 빔 서치 트리</h4>
     <p>각 시점에서 빔 폭만큼의 후보가 살아남는 모습을 봅니다. 빔 폭이 커질수록 트리가 넓어집니다.</p>
@@ -363,7 +403,20 @@
   })();
   </script>
 
-  <h2>6. 코드 예제 (PyTorch 개념)</h2>
+  <h2>6. 평가 — 번역이 "잘된" 건 어떻게 판단하나</h2>
+  <p>분류라면 정확도라는 명료한 지표가 있지만, 번역은 어렵습니다. "나는 학교에 갔다"의 영어 번역으로 "I went to school", "I went to the school", "I attended school", "I have gone to school" 모두 자연스럽습니다. 어느 게 정답일까요? 답: <em>전부 정답이고 부분점수도 있어야 합니다</em>.</p>
+
+  <h3>6.1 BLEU — 기계 번역의 표준 지표</h3>
+  <p>2002년 IBM의 Papineni 등이 제안한 <strong>BLEU(Bilingual Evaluation Understudy)</strong>가 20여 년간 표준입니다. 핵심 아이디어 두 가지:</p>
+  <ul>
+    <li><strong>n-gram precision</strong> — 모델 출력의 1·2·3·4단어 묶음(n-gram)이 정답에 얼마나 등장하는가. 4까지 평균.</li>
+    <li><strong>brevity penalty</strong> — 짧게 답하면 정밀도가 무조건 올라가니, 너무 짧은 출력에 벌점.</li>
+  </ul>
+  <p>예시: 모델 출력 "I went to school", 정답 "I went to the school". 1-gram 4개 중 4개가 정답에 포함 → 1.0. 2-gram 3개 중 2개 ("I went", "went to") 포함 → 0.67. 점수가 부분 일치를 자연스럽게 반영합니다.</p>
+  <p>BLEU는 0~1 범위(또는 0~100). 사람 번역도 보통 30~50대 BLEU를 받으므로 절대값보다 <em>같은 모델끼리의 상대 비교</em>에 의미가 있습니다. 한계도 분명합니다 — 단어 일치만 보니 의미는 같지만 표현이 다른 번역(paraphrase)에 박합니다. 그래서 최근에는 의미 임베딩 기반의 <em>BERTScore, COMET</em> 같은 지표가 함께 쓰입니다.</p>
+  <div class="tip"><strong>실무 팁.</strong> 새 번역 모델을 만들었을 때 베이스라인 대비 BLEU 1점이 의미 있는 개선입니다. 단, 반드시 같은 테스트셋·같은 토크나이저로 비교해야 합니다 — 다른 환경끼리 BLEU를 비교하는 것은 거의 의미가 없습니다.</p></div>
+
+  <h2>7. 코드 예제 (PyTorch 개념)</h2>
   <pre><code>import torch.nn as nn
 
 class Encoder(nn.Module):
@@ -384,6 +437,27 @@ class Attention(nn.Module):
         alpha = torch.softmax(scores.squeeze(-1), dim=1)
         ctx = (alpha.unsqueeze(-1) * enc_outs).sum(1)
         return ctx, alpha</code></pre>
+
+  <h2>✅ 오늘의 핵심 4가지</h2>
+  <div class="tip">
+    <ol style="margin:6px 0">
+      <li><strong>Seq2Seq = 인코더 RNN + 디코더 RNN.</strong> 입력 시퀀스를 의미 벡터로 압축한 뒤, 그 벡터로부터 출력 시퀀스를 한 단어씩 생성. 번역기의 표준 구조.</li>
+      <li><strong>고정 컨텍스트 벡터의 한계</strong> — 긴 문장은 정보가 한 벡터에 다 안 들어감. 20단어 넘으면 성능이 급락.</li>
+      <li><strong>어텐션</strong> — 디코더가 매 시점마다 인코더의 어떤 위치를 "볼지"를 가중치로 학습. 거리 무관·해석 가능. 모든 LLM의 어머니.</li>
+      <li><strong>빔 서치</strong> — 매 시점 1등 단어만 고르는 greedy decoding은 함정에 빠지기 쉬움. 상위 $k$개 후보를 동시에 추적해 더 나은 문장 생성.</li>
+    </ol>
+  </div>
+
+  <h2>🤔 자가 점검</h2>
+  <ol>
+    <li>왜 인코더-디코더는 두 개의 RNN을 따로 쓰나요? 하나로는 안 되나요?</li>
+    <li>고정 컨텍스트 벡터의 한계를 어텐션이 어떻게 해결하는지 한 문장으로 설명할 수 있나요?</li>
+    <li>어텐션의 Q, K, V는 각각 어떤 역할을 하나요?</li>
+    <li>빔 서치의 빔 크기를 너무 키우면 어떤 단점이 생기나요?</li>
+  </ol>
+
+  <h2>👀 다음 주 미리보기 — W13 Transformer & LLM</h2>
+  <p>오늘 우리는 RNN+Attention이라는 구조를 봤습니다. 다음 주(마지막!) — 그 RNN조차 버리고 <strong>어텐션만으로</strong> 만든 새로운 신경망 <em>Transformer</em>를 만납니다. 그 위에서 BERT·GPT·ChatGPT가 어떻게 자랐는지, 그리고 우리 미래는 어디로 가는지 끝까지 따라갑니다.</p>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>

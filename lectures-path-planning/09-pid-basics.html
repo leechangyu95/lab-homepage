@@ -332,6 +332,95 @@ for t in np.arange(0, 9, dt):
   <p>오르막에서 P만 쓰면 영원히 못 따라잡지만, $K_i$가 시간이 지날수록 부족분을 메꿔줍니다.
   자율주행에서는 <strong>속도 제어는 PI(또는 PID), 조향 제어는 Pure Pursuit/Stanley(다음 주)</strong>가 표준 조합입니다.</p>
 
+  <h2>8b. ACC — Adaptive Cruise Control</h2>
+
+  <p>실제 양산 차량의 ACC 기능은 <strong>두 개의 PID</strong>가 상황에 따라 전환하는 구조입니다.</p>
+
+  <h3>두 가지 모드</h3>
+  <ul>
+    <li><strong>Cruise 모드</strong>: 앞차 없거나 멀 때. 목표 속도 PID.</li>
+    <li><strong>Following 모드</strong>: 앞차 가까울 때. 안전거리 PID.</li>
+  </ul>
+
+  <h3>안전거리 모델 — Time Headway</h3>
+  $$ d_\text{safe}(v) = d_0 + \tau\,v $$
+  <ul>
+    <li>$d_0$: 정지 시 최소 간격 (5 m 정도)</li>
+    <li>$\tau$: 시간 간격 (1.5 ~ 2 초, 운전자 반응 시간 + 마진)</li>
+  </ul>
+  <p>$v=20$ m/s 에서 $d_\text{safe} = 5 + 2\times 20 = 45$ m 정도. 충분히 멀어 보이지만 고속에선 1초 만에 좁혀질 수 있어요.</p>
+
+  <pre><code class="language-python">def acc_step(v, v_ref, d_front, dt):
+    if d_front - d_safe(v) > margin:        # 앞차 멀면 Cruise
+        a = pid_speed.step(v_ref - v, dt)
+    else:                                     # 가까우면 거리 유지
+        a = pid_dist.step(d_front - d_safe(v), dt)
+    return np.clip(a, -5, 3)                 # 가속도 한계
+</code></pre>
+
+  <h2>8c. PID 의 친척들 — 한 장 비교</h2>
+
+  <table>
+    <thead><tr><th>변종</th><th>특징</th><th>언제 쓰나</th></tr></thead>
+    <tbody>
+      <tr><td><strong>PI</strong> (D 없음)</td><td>노이즈에 강함</td><td>속도 제어, 일반 산업 (가장 흔함)</td></tr>
+      <tr><td><strong>PD</strong> (I 없음)</td><td>정상상태 오차 허용 시</td><td>로봇 관절 제어</td></tr>
+      <tr><td><strong>PID</strong></td><td>3축 모두 사용</td><td>온도·압력 등 정밀 추종</td></tr>
+      <tr><td><strong>PID + Feedforward</strong></td><td>모델로 미리 대응 + 잔차 제거</td><td>현대 자율주행 실무 표준</td></tr>
+      <tr><td><strong>Cascade PID</strong></td><td>외부 루프(위치) + 내부 루프(속도)</td><td>드론 자세 제어</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Feedforward + PID 패턴</h3>
+  <pre><code class="language-python">def feedforward_pid(v_ref, slope, e, dt):
+    # 모델 기반 미리 대응
+    u_ff = a_required(v_ref, slope)        # 중력 보상 등
+    # PID로 잔차 제거
+    u_fb = pid.step(e, dt)
+    return u_ff + u_fb
+</code></pre>
+  <p>오르막을 알면 PID가 0부터 시작하지 않아도 됨 → 응답 더 빠르고 부드러움.</p>
+
+  <h2>8d. 손풀이 연습 — PID 직관 익히기</h2>
+
+  <h3>Q1. P 만의 정상 오차 계산</h3>
+  <p>$K_p = 2$, 외란(중력) $-3$, 시스템 $\dot v = a + d$ ($d$=외란). P 제어 단독으로 도달하는 정상 속도 오차는?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>정상상태에서 $\dot v = 0$이므로 $a + d = 0 \Rightarrow a = 3$. P 제어: $a = K_p \cdot e = 2 e \Rightarrow e = 1.5$.</p>
+    <p>즉, 목표보다 1.5 m/s 부족한 상태로 균형. <strong>I 추가 시 0으로 수렴</strong>.</p>
+  </details>
+
+  <h3>Q2. Anti-windup이 없을 때</h3>
+  <p>가속 한계 +3 m/s², 큰 오차로 PID 출력이 +5를 요청. 시간 지나면서 적분기는 어떻게 되나?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>출력은 +3에서 포화(saturate)되지만 적분기 $I = \int e\,dt$는 계속 누적 → <strong>I가 폭주</strong>.
+    오차가 작아진 후에도 I가 너무 커서 한참 동안 +3 명령 지속 → <strong>큰 오버슈트</strong>.</p>
+    <p>해결: 포화 시 적분 갱신 중단 (clamp) 또는 역방향 보정 (back-calc).</p>
+  </details>
+
+  <h3>Q3. dt가 너무 클 때</h3>
+  <p>제어 주기 $\Delta t = 0.5$ s, $K_d = 1$ 으로 미분 제어. 잡음 0.1 m/s 가 한 스텝에 들어오면 D 출력은?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>$\dot e \approx 0.1/0.5 = 0.2$ → $u_D = 1 \times 0.2 = 0.2$ m/s². 작은 잡음이 큰 미분 명령으로 증폭.</p>
+    <p>해결: ① $\Delta t$ 줄이기, ② D에 LPF 추가, ③ D 자체를 빼기 (PI만).</p>
+  </details>
+
+  <h2>8e. 흔한 실수 5가지</h2>
+
+  <table>
+    <thead><tr><th>#</th><th>실수</th><th>증상</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>오차 부호 뒤집힘</td><td>발산 (반대로 액션)</td><td>$e = r - y$ 일관, 단위 테스트</td></tr>
+      <tr><td>2</td><td>Anti-windup 누락</td><td>포화 후 큰 오버슈트</td><td>clamp 또는 back-calc</td></tr>
+      <tr><td>3</td><td>D만으로 노이즈 잡으려 함</td><td>오히려 잡음 증폭</td><td>D + LPF 같이 쓰기</td></tr>
+      <tr><td>4</td><td>$\Delta t$ 불일치</td><td>적분·미분 부정확</td><td>제어 루프 dt 고정</td></tr>
+      <tr><td>5</td><td>I 초기값 0이 아님</td><td>시작 튐</td><td>리셋 함수 호출</td></tr>
+    </tbody>
+  </table>
+
   <h2>9. 핵심 정리</h2>
   <div class="tip">
     <ul>
@@ -342,6 +431,43 @@ for t in np.arange(0, 9, dt):
       <li>자율주행에서 PID는 <strong>속도 제어</strong>의 기본기. 조향 추종은 다음 주 PP/Stanley.</li>
     </ul>
   </div>
+
+  <h2>9b. PID 의 한계 — 다음 단계로 가는 이유</h2>
+
+  <h3>PID 가 못 하는 5가지</h3>
+  <table>
+    <thead><tr><th>한계</th><th>왜 문제인가</th><th>대안</th></tr></thead>
+    <tbody>
+      <tr><td>제약 조건 직접 반영 X</td><td>가속 한계, 차선 폭 등을 비용함수로만 간접 다룸</td><td><a href="13-mpc-basics.html">W13 MPC</a> — 부등식 제약 자연스럽게</td></tr>
+      <tr><td>다입출력(MIMO) 어려움</td><td>여러 PID 묶으면 게인 결합 폭증</td><td>LQR, MPC</td></tr>
+      <tr><td>예측 불가</td><td>곡선 진입 등 미래 정보 활용 X</td><td>MPC (예측 + 최적화)</td></tr>
+      <tr><td>비선형 강하면 튜닝 난감</td><td>속도별 게인 다르게 (Gain Scheduling) 필요</td><td>NMPC, RL</td></tr>
+      <tr><td>안전 보장 X</td><td>충돌 가능성 직접 막지 못함</td><td><a href="12-cbf-avoidance.html">W12 CBF</a></td></tr>
+    </tbody>
+  </table>
+
+  <p>그래서 PID는 "<em>제어의 기본기</em>" 이지 "<em>최선</em>" 이 아닙니다. 후반부 강의는 PID가 못하는 영역을 점차 다룹니다.</p>
+
+  <h3>실무 패턴 — PID 와 친구들</h3>
+  <pre><code>속도 (종방향)   ├ PID (대부분 충분)
+                ├ MPC + PID (고급)
+
+조향 (횡방향)   ├ Pure Pursuit / Stanley   ← 다음 주
+                ├ LQR (선형 동역학 가정)
+                ├ MPC (제약 + 예측)         ← W13
+                └ + CBF (안전)              ← W12
+</code></pre>
+
+  <h2>9c. PID 의 인터뷰 단골 질문</h2>
+
+  <p><strong>Q. PID 의 각 항을 한 줄로 설명해 보세요.</strong><br>
+  <em>P</em>는 현재 오차에 비례 — 즉시 대응. <em>I</em>는 누적 오차 제거 — 정상상태 오차 0. <em>D</em>는 오차 변화율에 반응 — 오버슈트 억제.</p>
+
+  <p><strong>Q. 적분 와인드업이 뭔가요? 어떻게 막죠?</strong><br>
+  액추에이터가 포화 상태인데도 적분기가 계속 누적되는 현상. 포화 후 큰 오버슈트 야기. 해결: clamp(포화 시 갱신 중단), back-calculation(역으로 보정), conditional integration(오차 큰 영역만 적분).</p>
+
+  <p><strong>Q. PID 만으로 자율주행 조향을 하면 안 되나요?</strong><br>
+  가능은 하지만 권장 X. 차량 기구학(휠베이스, 비홀로노믹 제약)이 PID 입력에 반영되지 않아 곡선에서 큰 오차. Pure Pursuit/Stanley가 기구학 내장이라 더 안정.</p>
 
   <h2>10. 더 깊이 공부하기</h2>
   <ul>

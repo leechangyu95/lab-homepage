@@ -34,6 +34,17 @@
   <h1 class="page-title">Lecture 10. 인공 신경망 (ANN)</h1>
   <p class="lead">선형 회귀를 여러 층으로 쌓아 비선형 함수를 학습합니다.</p>
 
+  <div class="note">
+    <strong>📋 한눈에</strong> — 이 강의가 끝나면 다음을 할 수 있어야 합니다.
+    <ul style="margin:6px 0 0 0">
+      <li>퍼셉트론(가중합 + 활성화)을 손으로 그리기</li>
+      <li>"왜 활성화 함수가 비선형이어야 하는가" 한 문장으로 답하기</li>
+      <li>경사 하강·역전파의 큰 그림 — "오차를 출력에서 입력 쪽으로 흘려보낸다" — 설명</li>
+    </ul>
+    <strong>선수지식</strong> — <a href="09-regression.html">L9</a>의 선형 회귀와 손실 함수, 합성함수의 미분(연쇄 법칙). 미적분이 약하면 <a href="../calculus.html">미분적분학</a> 강의 잠깐 펼쳐 두세요.<br>
+    <strong>이전 강의 복습</strong> — L9의 $\hat y = wx + b$를 두 번 쌓고 사이에 비선형 함수를 끼우면 그게 바로 신경망입니다.
+  </div>
+
   <div class="toc"><h4>목차</h4><ol>
     <li>왜 신경망인가?</li>
     <li>퍼셉트론 (뉴런 한 개)</li>
@@ -407,6 +418,26 @@ y_hat = a</code></pre>
     <strong>왜 굳이 역방향인가?</strong> 만약 그라디언트를 정방향(입력→출력)으로 계산하면 각 가중치마다 전체 그래프를 한 번씩 훑어야 해서 비용이 $O(WN)$($W$=가중치 수, $N$=뉴런 수)로 폭발합니다. 역방향으로 한 번 훑으면 모든 가중치의 그라디언트를 $O(W)$에 얻을 수 있어요. 1986년 Rumelhart·Hinton·Williams의 결정적 통찰입니다.
   </div>
 
+  <h3>가장 작은 신경망에서 손으로 따라가는 역전파</h3>
+  <p>식만 보면 어려우니, 입력 1개 · 은닉 1개 · 출력 1개짜리 미니 신경망에서 한 번 풀어 봅시다.
+  뉴런 한 개씩이라 행렬 없이 곱셈·덧셈만으로 끝납니다.</p>
+  <ul>
+    <li><strong>모델</strong>: $z_1 = w_1 x + b_1$, $a_1 = \sigma(z_1)$, $\hat y = w_2 a_1 + b_2$ (출력은 그냥 선형, 활성화 없음).</li>
+    <li><strong>샘플</strong>: $x = 1.0$, 정답 $y^* = 1.0$. 초기 가중치 $w_1 = 0.5,\ b_1 = 0,\ w_2 = 0.5,\ b_2 = 0$, 활성화는 ReLU.</li>
+    <li><strong>손실</strong>: $\mathcal L = \tfrac12 (\hat y - y^*)^2$.</li>
+  </ul>
+  <p><strong>① 순전파.</strong> $z_1 = 0.5 \cdot 1 + 0 = 0.5$, $a_1 = \mathrm{ReLU}(0.5) = 0.5$, $\hat y = 0.5 \cdot 0.5 + 0 = 0.25$. 오차는 $\hat y - y^* = -0.75$, $\mathcal L = 0.281$.</p>
+  <p><strong>② 출력층 그라디언트.</strong> 손실의 $\hat y$에 대한 미분이 곧 출력 오차 신호 $\delta_2 = \hat y - y^* = -0.75$.
+  여기서 $\partial \mathcal L / \partial w_2 = \delta_2 \cdot a_1 = -0.75 \cdot 0.5 = -0.375$, $\partial \mathcal L / \partial b_2 = \delta_2 = -0.75$.</p>
+  <p><strong>③ 은닉층으로 거꾸로.</strong> 다음 층 가중치를 통해 오차가 흘러옵니다: $\delta_1 = w_2 \cdot \delta_2 \cdot \sigma'(z_1) = 0.5 \cdot (-0.75) \cdot 1 = -0.375$ (ReLU의 도함수는 $z_1>0$이므로 1).
+  그래서 $\partial \mathcal L / \partial w_1 = \delta_1 \cdot x = -0.375 \cdot 1 = -0.375$, $\partial \mathcal L / \partial b_1 = \delta_1 = -0.375$.</p>
+  <p><strong>④ 한 발 내려가기.</strong> 학습률 $\eta = 1.0$로 업데이트:
+  $w_2 \gets 0.5 - 1.0 \cdot (-0.375) = 0.875$, 마찬가지로 $w_1 \gets 0.875$.
+  다시 순전파해 보면 $\hat y = 0.766$, $\mathcal L = 0.0274$로 손실이 약 1/10로 줄었습니다 — 이게 한 스텝의 역전파입니다.</p>
+  <div class="tip">
+    <strong>핵심 한 줄</strong> — 역전파는 거창해 보이지만, "각 층마다 (앞 층의 활성화 × 뒤에서 온 오차)를 곱해 그라디언트를 만든다"는 같은 패턴을 반복하는 일이에요. 위 예제를 손으로 두 번만 풀어 보면 식의 모든 모양이 자연스러워집니다.
+  </div>
+
   <h3>미니배치 SGD</h3>
   <p>전체 데이터 $N$개의 손실을 매번 계산하면 너무 느립니다. 보통은 작은 묶음(미니배치, 보통 32–256개)을 무작위로 뽑아 그 묶음에서 추정한 그라디언트로 업데이트합니다 — 이를 <strong>미니배치 확률적 경사 하강법(mini-batch SGD)</strong>이라 부릅니다.</p>
   <ul>
@@ -693,7 +724,17 @@ print("loss:", loss.item())</code></pre>
     <li><code>opt.step()</code> — 그라디언트를 사용해 파라미터 업데이트.</li>
   </ul>
 
-  <h2>11. 더 깊이 공부하기</h2>
+  <h2>11. 다음 강의 미리보기</h2>
+  <p>L9·L10에서 데이터로부터 함수를 학습하는 도구를 갖췄으니, 이제 다시 제어 이야기로 돌아갑니다.
+  L7의 PID는 <em>"지금 오차"</em>만 보고 명령을 만들었습니다. 하지만 운전을 잘하려면 <em>코너 100 m 앞</em>에서 미리 감속해야 하죠.
+  미래를 예측해 한 번에 최적의 행동을 푸는 게 다음 주제예요.</p>
+  <p><strong><a href="11-mpc.html">L11. 모델 예측 제어 (MPC)</a></strong>에서는
+  ① L2·L3에서 만든 동역학 모델로 앞으로 $N$ 스텝을 시뮬레이션하고,
+  ② 그 미래에서 비용(목표 추종 오차 + 입력 크기)이 가장 작아지는 입력 시퀀스를 최적화로 풀고,
+  ③ 그중 첫 입력만 실행한 뒤 다시 측정값을 받아 처음부터 반복합니다.
+  <em>L9·L10의 학습된 모델을 동역학 자리에 끼워 넣으면</em> 데이터 기반 MPC가 되고, 이는 L12에서 다룹니다.</p>
+
+  <h2>12. 더 깊이 공부하기</h2>
   <ul>
     <li>Goodfellow, Bengio, Courville, <em>Deep Learning</em>, MIT Press 2016 — <a href="https://www.deeplearningbook.org/">온라인 공개</a>. 6장 MLP, 8장 최적화가 이 강의의 심화판.</li>
     <li>Nielsen, <em>Neural Networks and Deep Learning</em> — <a href="http://neuralnetworksanddeeplearning.com/">무료 온라인 교과서</a>. 역전파를 손으로 유도하는 가장 친절한 자료.</li>

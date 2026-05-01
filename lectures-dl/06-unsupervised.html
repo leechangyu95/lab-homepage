@@ -43,7 +43,7 @@
   </ol></div>
 
   <h2>1. 라벨 없는 세상 — 비지도학습의 존재 이유</h2>
-  <p>현실에서 <em>라벨이 달린 데이터</em>는 비싸고 드뭅니다. 의료 영상에 종양 위치를 표시하고, 이미지에 경계 상자를 치고, 텍스트에 감정을 박는 일은 모두 사람 손이 필요합니다. 대규모 라벨링 프로젝트(ImageNet은 수년간 수만 명이 참여)는 수백만 달러 수준의 비용이 들고, 의료·법률처럼 전문가가 필요한 분야는 더 비쌉니다.</p>
+  <p>지난 다섯 주 동안 우리가 본 모델(KNN, 회귀, 로지스틱, SVM, 결정트리)은 모두 <em>"입력 + 정답 라벨"</em>의 짝을 보고 배우는 <strong>지도학습</strong>이었습니다. 하지만 현실에서 <em>라벨이 달린 데이터</em>는 비싸고 드뭅니다. 의료 영상에 종양 위치를 표시하고, 이미지에 경계 상자를 치고, 텍스트에 감정을 박는 일은 모두 사람 손이 필요합니다. 대규모 라벨링 프로젝트(ImageNet은 수년간 수만 명이 참여)는 수백만 달러 수준의 비용이 들고, 의료·법률처럼 전문가가 필요한 분야는 더 비쌉니다.</p>
   <p>반면 <em>라벨이 없는 데이터</em>는 거의 무한합니다 — 인터넷 그 자체, 수십억 장의 웹 이미지, 수조 개의 텍스트 토큰, 매일 쌓이는 센서 로그. 이 엄청난 양의 자원을 라벨 없이 학습에 쓸 수 있다면 얼마나 좋을까요? 그 질문에 답하는 것이 바로 <strong>비지도학습(unsupervised learning)</strong>입니다.</p>
   <p>비지도학습의 목표는 세 가지 정도로 요약할 수 있습니다:</p>
   <ul>
@@ -432,16 +432,19 @@
   <p>100차원 데이터를 어떻게 시각화할까요? 모니터는 2D입니다. <strong>주성분 분석(Principal Component Analysis, PCA)</strong>은 칼 피어슨이 1901년에 제안한 고전적 기법으로, "분산이 가장 큰 방향"을 찾아 그 방향으로 데이터를 투영해 차원을 줄입니다. 정보를 가장 많이 보존하면서 차원을 낮추는 최적의 선형 방법입니다.</p>
   <p>왜 분산이 큰 방향이 "가장 중요"한가? 데이터가 얼마나 퍼져 있는지가 곧 "이 방향이 담고 있는 정보량"이기 때문입니다. 어떤 방향으로 모든 점이 거의 같은 값이라면(분산 0) 그 방향은 무시해도 됩니다. 반대로 점들이 넓게 퍼진 방향에는 많은 변별력이 들어 있습니다.</p>
 
-  <h3>4.1 공분산 행렬과 고유분해</h3>
-  <p>수학적으로 PCA는 데이터 행렬 $\mathbf X$ (중심 정렬된 $N \times d$)에서 공분산 행렬을 계산하는 것부터 시작합니다:</p>
-  $$ \mathbf\Sigma = \frac{1}{N-1}\mathbf X^\top \mathbf X $$
-  <p>$\mathbf\Sigma$는 $d \times d$ 대칭 양정치 행렬로, 각 $(i, j)$ 원소가 특징 $i$와 $j$의 공분산입니다. 대각 원소는 각 특징의 분산.</p>
-  <p>이 행렬을 고유분해(eigendecomposition)하면:</p>
-  $$ \mathbf\Sigma \mathbf v_i = \lambda_i \mathbf v_i, \quad i = 1, \dots, d $$
-  <p>고유벡터 $\mathbf v_i$가 곧 <strong>주성분(principal component)</strong>이고, 대응하는 고윳값 $\lambda_i$가 그 방향의 분산입니다. 고윳값을 큰 순서로 정렬하면 $\lambda_1 \ge \lambda_2 \ge \dots \ge \lambda_d$, 첫 번째 고유벡터 $\mathbf v_1$이 "분산이 가장 큰 방향" = 첫 번째 주성분이 됩니다.</p>
-  <p>데이터를 $k$차원으로 줄이려면 상위 $k$개 고유벡터로 만든 $d \times k$ 행렬 $\mathbf V_k$를 이용해:</p>
-  $$ \mathbf Z = \mathbf X \mathbf V_k $$
-  <p>각 샘플이 $k$차원 벡터가 되고, 원래의 분산 중 $\sum_{i=1}^k \lambda_i / \sum_{i=1}^d \lambda_i$만큼 보존됩니다. 이 비율을 <strong>설명 분산 비율(explained variance ratio)</strong>이라 부릅니다. 실전에서 "95%의 분산을 유지하는 최소 $k$"를 고르는 방식이 자주 쓰입니다.</p>
+  <h3>4.1 PCA 한 줄 요약 — "분산이 가장 큰 방향 찾기"</h3>
+  <p>PCA의 핵심을 한 문장으로 정리하면 — <strong>"데이터가 가장 넓게 퍼진 방향을 1번 축으로, 그 다음으로 넓게 퍼진 방향(첫 축과 직각)을 2번 축으로 …"</strong> 이렇게 새 축을 골라 데이터를 다시 표현하는 것. 그 중 위에서 몇 개만 남기면 차원 축소가 되고, "가장 정보가 많은" 방향을 보존합니다.</p>
+  <p>일반적인 $d$차원 데이터에서는 모든 각도를 일일이 회전시켜 볼 수 없으니, <em>고유분해(eigendecomposition)</em>라는 선형대수 도구로 한 번에 답을 구합니다. 고윳값이 곧 그 방향의 분산이고, 고윳값을 큰 순서로 정렬한 처음 $k$개의 고유벡터가 우리의 새 축이 됩니다. 이 비율 $\sum_{i=1}^k \lambda_i / \sum_{i=1}^d \lambda_i$을 <strong>설명 분산 비율(explained variance ratio)</strong>이라 부르며, 실전에서 "95%를 유지하는 최소 $k$"를 자주 사용합니다.</p>
+
+  <details style="margin:14px 0;padding:12px 16px;background:#f6f8fa;border-radius:8px">
+    <summary style="cursor:pointer;font-weight:600">📐 (선택·고급) 공분산 행렬과 고유분해 — 수학 표기 한 번 보기</summary>
+    <p style="margin-top:10px"><em>이 부분은 선형대수의 행렬·고유벡터를 들어본 학생용입니다. 처음 보는 사람은 "PCA = 분산이 큰 방향 찾기"라는 직관만 가져가도 됩니다.</em></p>
+    <p>중심 정렬된 데이터 행렬 $\mathbf X$ ($N \times d$)에서 공분산 행렬을 계산:</p>
+    $$ \mathbf\Sigma = \frac{1}{N-1}\mathbf X^\top \mathbf X $$
+    <p>$\mathbf\Sigma$는 $d \times d$ 대칭 양정치 행렬, 대각 원소가 각 특징의 분산. 이 행렬을 고유분해하면:</p>
+    $$ \mathbf\Sigma \mathbf v_i = \lambda_i \mathbf v_i, \quad i = 1, \dots, d $$
+    <p>고유벡터 $\mathbf v_i$가 주성분 방향, 고윳값 $\lambda_i$가 그 방향의 분산. $k$차원으로 줄이려면 상위 $k$개 고유벡터로 만든 $\mathbf V_k$로 $\mathbf Z = \mathbf X \mathbf V_k$를 계산.</p>
+  </details>
 
   <h3>4.2 PCA의 기하학적 의미</h3>
   <p>PCA를 기하학적으로 보면 "데이터를 가장 잘 근사하는 저차원 평면(또는 초평면)을 찾는 것"입니다. 2D에서 PCA 1차원 투영은 "점들을 가장 가까이 지나는 직선"과 같고, 이는 사실 최소제곱법과도 관련이 있지만 <em>수평/수직 잔차가 아니라 직각 잔차</em>를 최소화합니다 (total least squares). 그래서 PCA는 <em>축의 선택에 독립적</em>입니다.</p>
@@ -634,6 +637,26 @@ print(db.labels_)   # -1은 잡음
 pca = PCA(n_components=2).fit(X_high)
 X_low = pca.transform(X_high)
 print(pca.explained_variance_ratio_)</code></pre>
+
+  <h2>✅ 오늘의 핵심 3가지</h2>
+  <div class="tip">
+    <ol style="margin:6px 0">
+      <li><strong>K-means: 중심 → 할당 → 중심 갱신 반복.</strong> 단순하고 빠르지만 K를 미리 정해야 하고 원형 군집을 가정. 엘보우/실루엣으로 K 선택.</li>
+      <li><strong>DBSCAN: 밀도 기반 군집화.</strong> 클러스터 수를 모르고, 모양이 길쭉하거나 반달이어도 OK. 잡음을 자동으로 분리. eps와 min_samples만 정해주면 됨.</li>
+      <li><strong>PCA: 분산이 가장 큰 방향으로 새 축 잡기.</strong> 차원 축소 + 시각화 + 잡음 제거에 만능. 단, 사용 전 표준화 필수.</li>
+    </ol>
+  </div>
+
+  <h2>🤔 자가 점검</h2>
+  <ol>
+    <li>지도학습과 비지도학습의 차이를 한 문장으로 설명할 수 있나요?</li>
+    <li>K-means가 반달 모양 클러스터를 못 찾는 이유는?</li>
+    <li>DBSCAN의 eps를 너무 작게 잡으면 어떤 일이 생길까요? 너무 크게 하면?</li>
+    <li>10000차원 데이터를 PCA로 2차원에 내릴 때, 정보 손실을 줄이려면 어떻게 해야 하나요?</li>
+  </ol>
+
+  <h2>👀 다음 주 미리보기 — W7 인공신경망</h2>
+  <p>지금까지 우리는 <strong>고전 머신러닝의 도구상자</strong>를 한 바퀴 둘러봤습니다. 다음 주부터는 드디어 — <em>딥러닝의 시작</em>입니다. 1958년 로젠블랫의 퍼셉트론이 어떻게 한 번 죽었다가, 다층 구조와 활성함수로 부활했는지, 그리고 그 작은 변화가 어떻게 세상을 바꿨는지 봅니다.</p>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>

@@ -38,14 +38,21 @@
 
   <div class="toc"><h4>목차</h4><ol>
     <li>왜 안전 보장이 어려운가? — 개 목줄 비유</li>
+    <li>지난 주차 회고 — 우리가 가진 안전 도구들</li>
     <li>Safe Set과 안전 함수 $h(x)$</li>
     <li>CBF 핵심 부등식 $\dot h \ge -\alpha h$</li>
+    <li>수식 한 줄을 풀어 읽는 법 (1학년 친화)</li>
     <li>인터랙티브: 1D — 벽 앞에 자동 정지</li>
+    <li>1D 손풀이 — 한 스텝씩 따라가기</li>
     <li>인터랙티브: 2D — 장애물 우회 (CBF on/off 비교)</li>
     <li>인터랙티브: α 게인 효과 (보수적 vs 공격적)</li>
     <li>QP-CBF 안전 필터 — 기존 제어기에 끼우기</li>
+    <li>다중 장애물·Soft 제약·HO-CBF</li>
+    <li>다른 안전 기법과의 비교 (Costmap, Potential Field, MPC)</li>
+    <li>실무 사례 — AEB · 차선유지 · 로보틱스</li>
     <li>한계와 실무 팁</li>
-    <li>핵심 정리</li>
+    <li>흔한 실수 5가지 &amp; FAQ</li>
+    <li>핵심 정리 &amp; 다음 주 연결</li>
   </ol></div>
 
   <h2>1. 왜 안전 보장이 어려운가?</h2>
@@ -59,7 +66,32 @@
   </ul>
   <p>CBF는 정확히 이 "목줄"을 수학적 부등식으로 쓴 것입니다. 평소엔 컨트롤러를 그대로 두고, 위험할 때만 살짝 수정해요.</p>
 
-  <h2>2. Safe Set과 안전 함수 $h(x)$</h2>
+  <h3>왜 "최소한만 수정"이 중요할까?</h3>
+  <p>안전한 행동을 강제하는 가장 단순한 방법은 "장애물 가까우면 무조건 정지"입니다. 하지만 이러면 차가 너무 자주 멈춰서 <strong>도착을 못 합니다</strong>.
+  CBF의 묘미는 "<em>안전을 깨지 않는 한도 내에서</em>" 원하는 명령을 최대한 살려준다는 점입니다.
+  수학적으로는 "원본 명령 $u_\text{des}$ 와의 거리를 최소화하는 안전 명령 $u^*$" 를 찾는 최적화 문제로 표현됩니다(7장 참조).</p>
+
+  <h2>2. 지난 주차 회고 — 우리가 가진 안전 도구들</h2>
+
+  <p>11주차까지 우리가 만든 시스템은 다음 같은 안전 메커니즘을 갖고 있었습니다.</p>
+  <table>
+    <thead><tr><th>주차</th><th>도구</th><th>다루는 위험</th><th>한계</th></tr></thead>
+    <tbody>
+      <tr><td>5</td><td>Costmap</td><td>장애물 근처 = 비용 ↑</td><td>0/1 이분법은 아니지만 <em>회피 강제력</em>은 없음</td></tr>
+      <tr><td>7</td><td>A* + Costmap</td><td>정적 장애물 사전 회피</td><td>경로 생성 시점에 장애물이 고정돼야 함</td></tr>
+      <tr><td>10</td><td>Pure Pursuit / Stanley</td><td>주어진 경로 추종</td><td>경로에서 벗어나는 새 장애물엔 무방비</td></tr>
+      <tr><td>11</td><td>Speed profile</td><td>곡선에서 자동 감속</td><td>장애물과는 무관</td></tr>
+    </tbody>
+  </table>
+
+  <p>오늘 배우는 CBF는 이 위에 <strong>"실시간으로, 명령 단계에서, 수학적으로"</strong> 안전을 강제합니다. 즉:</p>
+  <ul>
+    <li>경로 생성 후가 아니라 <strong>매 제어 사이클</strong>에서 동작.</li>
+    <li>장애물이 갑자기 등장해도 <strong>같은 사이클</strong>에서 반응.</li>
+    <li>"증명 가능한 안전(provably safe)" — 부등식 만족만 확인하면 충돌이 수학적으로 불가능.</li>
+  </ul>
+
+  <h2>3. Safe Set과 안전 함수 $h(x)$</h2>
 
   <p>먼저 "안전한 상태들의 집합"을 함수 한 줄로 표현합니다.</p>
   <ul>
@@ -70,7 +102,21 @@
   $$ h(x, y) = (x - x_o)^2 + (y - y_o)^2 - R^2 $$
   <p>차량 위치가 장애물 밖에 있으면 $h > 0$, 충돌 직전엔 $h = 0$, 안에 있으면 $h < 0$입니다. <strong>"$h$를 0 이상으로 영원히 유지"</strong>하는 게 우리의 목표예요.</p>
 
-  <h2>3. CBF 핵심 부등식</h2>
+  <h3>$h(x)$ 설계 예시 모음</h3>
+  <table>
+    <thead><tr><th>상황</th><th>안전 함수 $h(x)$</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>원형 장애물</td><td>$(x-x_o)^2 + (y-y_o)^2 - R^2$</td><td>장애물 밖이면 양수</td></tr>
+      <tr><td>벽 앞 정지</td><td>$x_\text{wall} - x$</td><td>벽까지 남은 거리</td></tr>
+      <tr><td>차선 이탈</td><td>$(W/2)^2 - d^2$</td><td>차선 안이면 양수 ($d$=Frenet 횡오차)</td></tr>
+      <tr><td>속도 한계</td><td>$v_\max - v$</td><td>속도 한계 미만이면 양수</td></tr>
+      <tr><td>앞차 거리</td><td>$\Delta s - (d_0 + \tau v)$</td><td>안전거리 이상이면 양수 (TTC 기반)</td></tr>
+    </tbody>
+  </table>
+
+  <p>설계 자유도가 높습니다. 한 시스템에 <strong>여러 $h_i$ 동시</strong> 부과도 가능 (다중 제약).</p>
+
+  <h2>4. CBF 핵심 부등식</h2>
 
   <p>$h(x)$를 "0 이상"으로 유지하는 가장 간단한 충분조건은 다음과 같습니다.</p>
   $$ \dot h(x, u) \ge -\alpha\,h(x), \qquad \alpha > 0 $$
@@ -86,7 +132,34 @@
   $$ L_f h(x) + L_g h(x)\,u \ge -\alpha\,h(x) $$
   <p>여기서 $L_f h = \nabla h \cdot f$, $L_g h = \nabla h \cdot g$입니다. 이 부등식을 만족하는 $u$만 허용하면 안전이 보장됩니다.</p>
 
-  <h2>4. 인터랙티브: 1D — 벽 앞에 자동 정지</h2>
+  <h2>5. 수식 한 줄을 풀어 읽는 법 (1학년 친화)</h2>
+
+  <div class="tip">
+    <strong>겁먹지 말기</strong> — $L_f h, L_g h$ 같은 기호는 "Lie 미분"이라 부르지만, 하는 일은 그냥 <strong>편미분 곱하기</strong>입니다.
+    이 강의는 <em>의미만</em> 잡고 가요. 자세한 표기는 <em>비선형 제어</em> 과목에서.
+  </div>
+
+  <h3>한 줄씩 번역</h3>
+  <table>
+    <thead><tr><th>기호</th><th>실제 계산</th><th>"무슨 일을 하는가"</th></tr></thead>
+    <tbody>
+      <tr><td>$\nabla h$</td><td>$h$의 편미분 벡터 $[\partial h/\partial x_1, \partial h/\partial x_2, \ldots]$</td><td>"$h$가 가장 빨리 커지는 방향"</td></tr>
+      <tr><td>$L_f h = \nabla h \cdot f$</td><td>위 벡터와 $f$의 점곱</td><td>"제어 안 줘도 자연스럽게 $h$가 변하는 속도"</td></tr>
+      <tr><td>$L_g h \cdot u$</td><td>벡터 점곱 후 $u$ 곱</td><td>"제어 $u$가 $h$에 미치는 영향"</td></tr>
+      <tr><td>$\dot h$</td><td>$L_f h + L_g h \cdot u$</td><td>"실제로 $h$가 변하는 속도"</td></tr>
+    </tbody>
+  </table>
+
+  <h3>부등식 $\dot h + \alpha h \ge 0$ 의 직관</h3>
+  <p>좌변을 한 단어로 부르면 "<strong>여유 줄어드는 속도 + 여유의 α배</strong>". 이게 0 이상이어야 한다는 건:</p>
+  <ul>
+    <li>여유가 많을 땐(=$h$ 큼) 좀 줄어도 OK ($\alpha h$가 큰 양수라서)</li>
+    <li>여유가 거의 없을 땐(=$h \to 0$) 더 이상 못 줄게 됨 ($\dot h \ge 0$)</li>
+    <li>이미 위험 영역에 있을 땐(=$h<0$) 빠져나오는 방향만 허용 ($\dot h \ge -\alpha h > 0$)</li>
+  </ul>
+  <p>그래서 한 번 안전한 상태로 들어오면 <strong>절대 빠져나갈 수 없는</strong> 게 보장됩니다 (Nagumo 정리).</p>
+
+  <h2>6. 인터랙티브: 1D — 벽 앞에 자동 정지</h2>
 
   <div class="demo">
     <h4>🎮 인터랙티브: $h(x) = x_\text{wall} - x$</h4>
@@ -132,7 +205,28 @@
 
   <p>α가 작으면 멀리서부터 부드럽게 감속, 크면 벽 근처까지 풀가속하다 급제동. 어느 쪽도 절대 벽을 통과하지 않습니다 — 그게 CBF의 보장입니다.</p>
 
-  <h2>5. 인터랙티브: 2D — 장애물 우회 (CBF on/off 비교)</h2>
+  <h2>7. 1D 손풀이 — 한 스텝씩 따라가기</h2>
+
+  <p>α=1, 벽 $x_\text{wall}=10$, 초기 $x=0$, 희망속도 $v_\text{des}=5$, $\Delta t = 1$로 설정합시다. 손으로 5 스텝만 굴려봅니다.</p>
+
+  <table>
+    <thead><tr><th>스텝 $k$</th><th>$x_k$</th><th>$h = 10 - x_k$</th><th>$v_\max = \alpha h$</th><th>적용 $v$</th><th>$x_{k+1}$</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>0.00</td><td>10.0</td><td>10.0</td><td>min(5, 10) = 5</td><td>5.00</td></tr>
+      <tr><td>1</td><td>5.00</td><td>5.0</td><td>5.0</td><td>min(5, 5) = 5</td><td>10.00</td></tr>
+      <tr><td>2</td><td>10.00</td><td>0.0</td><td>0.0</td><td>min(5, 0) = 0</td><td>10.00</td></tr>
+      <tr><td>3</td><td>10.00</td><td>0.0</td><td>0.0</td><td>0</td><td>10.00</td></tr>
+    </tbody>
+  </table>
+
+  <p>흥미로운 점: $\Delta t=1$이라는 큰 시간 간격에서는 정확히 벽에 닿아 멈춥니다. 하지만 $\Delta t$가 작아질수록 (예: 0.05) <strong>벽 직전</strong>에서 부드럽게 멈춰요.
+  연속시간 한계에선 절대 닿지 않습니다(이론적 보장).</p>
+
+  <div class="warn">
+    <strong>이산화 함정</strong> — CBF는 본래 연속 시간 이론입니다. 컴퓨터에서 이산 시간으로 구현할 땐 $\Delta t$가 너무 크면 한 스텝에 안전 영역을 통과해 버릴 수 있습니다. 일반적으로 $\Delta t \le 0.05$를 권장.
+  </div>
+
+  <h2>8. 인터랙티브: 2D — 장애물 우회 (CBF on/off 비교)</h2>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 같은 목표, CBF 켰을 때 vs 껐을 때</h4>
@@ -182,7 +276,7 @@
   })();
   </script>
 
-  <h2>6. 인터랙티브: α 게인 효과</h2>
+  <h2>9. 인터랙티브: α 게인 효과</h2>
 
   <div class="demo">
     <h4>🎮 인터랙티브: α를 작게/크게 설정해 보세요</h4>
@@ -222,7 +316,7 @@
 
   <p>α=0.5는 멀리서부터 부드럽게 곡선을 그리며 우회, α=5.0은 장애물 바로 앞까지 직진하다 급격히 회피. 후자는 짧지만 승차감이 나쁘고 동역학 제약을 위반할 위험이 있습니다.</p>
 
-  <h2>7. QP-CBF 안전 필터 — 기존 제어기에 끼우기</h2>
+  <h2>10. QP-CBF 안전 필터 — 기존 제어기에 끼우기</h2>
 
   <p>실제 시스템에서는 기본 컨트롤러(Pure Pursuit, MPC, …)가 만든 명령 $u_\text{des}$를 그대로 쓰지 않고, 가장 가까운 안전 명령으로 살짝 수정합니다. 이게 QP-CBF 안전 필터입니다.</p>
   $$ u^* = \arg\min_{u}\;\|u - u_\text{des}\|^2 \quad \text{s.t.}\quad L_f h + L_g h\,u \ge -\alpha h $$
@@ -255,7 +349,58 @@ for t in np.arange(0, 12, 0.05):
   <h3>Pure Pursuit과의 결합</h3>
   <p>실차에서는 입력이 (조향, 가속)이고 시스템이 비홀로노믹 차량입니다. 위 1차 적분기 예제의 아이디어는 그대로지만, $\nabla h$의 그래디언트를 차량 동역학으로 한 번 더 유도해야 해요. <a href="https://github.com/HybridRobotics/CBF" target="_blank">cvxpy</a>로 손쉽게 풀 수 있습니다.</p>
 
-  <h2>8. 한계와 실무 팁</h2>
+  <h2>11. 다중 장애물·Soft 제약·HO-CBF</h2>
+
+  <h3>다중 장애물 — 제약 N개</h3>
+  <p>장애물이 K개 있으면 단순히 부등식을 K개 추가합니다.</p>
+  $$ u^* = \arg\min_{u}\;\|u - u_\text{des}\|^2 \quad \text{s.t.}\quad L_f h_i + L_g h_i\,u \ge -\alpha h_i,\ \ i = 1,\ldots,K $$
+  <p>QP solver(예: <code>cvxpy</code>, <code>OSQP</code>)가 이를 1ms 내외로 풉니다. 단, 제약이 너무 많거나 서로 모순될 땐 <strong>infeasible</strong>(해 없음)이 발생할 수 있어요.</p>
+
+  <h3>Soft 제약 — 해를 항상 보장</h3>
+  <p>실차에서는 "해 없음"이 가장 위험합니다. 해법은 <strong>슬랙 변수 $s$</strong> 도입.</p>
+  $$ \min_{u, s\ge 0}\;\|u - u_\text{des}\|^2 + M\,s^2 \quad \text{s.t.}\quad L_f h_i + L_g h_i\,u \ge -\alpha h_i - s $$
+  <ul>
+    <li>$M$ 큼 → 슬랙 사용을 매우 싫어함 → 가능한 한 hard에 가까움</li>
+    <li>$M$ 작음 → 위반 더 허용</li>
+  </ul>
+  <p>이렇게 두면 어떤 상황에서도 해는 나오고, 위반량 $s$는 모니터링 지표로 활용합니다.</p>
+
+  <h3>HO-CBF — 차량처럼 가속도까지 있는 시스템</h3>
+  <p>1차 적분기 $\dot x = u$ 는 너무 단순합니다. 실제 차량은 <strong>2차 시스템</strong> ($\ddot x = u$, 즉 가속도 입력). 이런 경우 단순 CBF로는 부족합니다 — 한 번 미분된 $\dot h$ 가 입력 $u$ 에 직접 의존하지 않거든요.</p>
+  <p>해결책: <strong>Higher-Order CBF (HO-CBF)</strong>. $h$를 두 번 미분해 $\ddot h$ 가 $u$에 의존하도록 만듭니다.</p>
+  $$ \ddot h + \alpha_1 \dot h + \alpha_0 h \ge 0 $$
+  <p>이 식은 마치 2차 LTI 시스템처럼 생겼고, $\alpha_0, \alpha_1$ 을 잘 고르면 안전 영역으로 부드럽게 수렴합니다.</p>
+
+  <h2>12. 다른 안전 기법과의 비교</h2>
+
+  <table>
+    <thead><tr><th>기법</th><th>안전 보장</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>Costmap (5주차)</td><td>약함 (비용만 부과)</td><td>구현 간단, 직관적</td><td>강제력 X, A* 단계에서만 작동</td></tr>
+      <tr><td>Potential Field</td><td>약함</td><td>실시간, 부드러운 회피</td><td>지역 최소(local min) 함정</td></tr>
+      <tr><td>Reachability 분석</td><td>강함 (정밀)</td><td>전 영역 보장</td><td>계산 매우 무거움 (HJB PDE)</td></tr>
+      <tr><td><strong>CBF</strong></td><td><strong>강함 (수학적 증명)</strong></td><td>실시간, 모듈식, 다양한 컨트롤러와 결합</td><td>모델 필요, 지역적, 튜닝 필요</td></tr>
+      <tr><td>MPC (13주차)</td><td>제약식으로 가능</td><td>예측 + 최적화</td><td>계산 무거움, 모델 필요</td></tr>
+      <tr><td>안전 RL (14주차)</td><td>학습 기반, 보장 어려움</td><td>복잡 환경에 유연</td><td>훈련 데이터 필요, 검증 어려움</td></tr>
+    </tbody>
+  </table>
+
+  <p>현실에서는 <strong>여러 기법을 계층적으로</strong> 결합합니다 — A*가 큰 그림, MPC가 제어, CBF가 마지막 안전망.</p>
+
+  <h2>13. 실무 사례 — AEB · 차선유지 · 로보틱스</h2>
+
+  <h3>AEB (Autonomous Emergency Braking)</h3>
+  <p>대부분 신차에 탑재된 ADAS 기능. 앞차 거리 $\Delta s$ 에 대한 CBF-유사 조건:</p>
+  $$ h(\Delta s, v) = \Delta s - (d_0 + \tau v) \ge 0 $$
+  <p>"안전거리 미만으로 줄어들지 않도록" 가속 제한. 일반 운전 중에는 운전자 명령 그대로, 위험할 때만 자동 제동.</p>
+
+  <h3>LKAS (Lane Keeping Assist System)</h3>
+  <p>차선 이탈을 막는 안전 함수: $h(d) = (W/2)^2 - d^2$. 일반 주행 중엔 운전자가 자유, 차선 가까이 가면 자동 조향 토크 추가. 정확히 CBF의 "최소 수정" 철학과 같습니다.</p>
+
+  <h3>로보틱스 — 협동 로봇</h3>
+  <p>공장의 협동 로봇(Cobot)은 사람과 가까이 작업합니다. 각 관절·끝점에 대해 사람과의 거리를 $h$로 두고, "최소한만 수정"되는 CBF 안전 필터가 표준 솔루션이 되어 가는 추세.</p>
+
+  <h2>14. 한계와 실무 팁</h2>
 
   <table>
     <thead><tr><th>이슈</th><th>설명</th><th>대처</th></tr></thead>
@@ -273,7 +418,83 @@ for t in np.arange(0, 12, 0.05):
     그래서 실무에서는 <strong>전역 경로 계획(A*) + Pure Pursuit/MPC + CBF 안전 필터</strong> 형태의 계층 구조가 표준입니다.
   </div>
 
-  <h2>9. 핵심 정리</h2>
+  <h2>13b. CBF vs Potential Field — 닮은 듯 다른 두 방법</h2>
+
+  <p>CBF는 종종 Potential Field(PF)와 비교됩니다. 둘 다 "장애물 회피"가 목적이고, 장애물 근처에서 반응이 강해진다는 공통점이 있어요. 하지만 본질이 다릅니다.</p>
+
+  <h3>Potential Field — "보이지 않는 자석"</h3>
+  <p>장애물에서 멀어지는 방향으로 <strong>가짜 힘</strong>을 만들고, 차량은 그 힘에 따라 움직입니다.</p>
+  $$ \mathbf{F}_\text{rep} = k_\text{rep} \frac{\mathbf{r} - \mathbf{r}_o}{\|\mathbf{r} - \mathbf{r}_o\|^3}, \qquad u = -\nabla U(x) $$
+  <ul>
+    <li>장점: 직관적, 경로 부드러움</li>
+    <li>단점: <strong>지역 최소(local min)</strong> — U자 장애물 안에서 갇힘. 안전 보장 X.</li>
+  </ul>
+
+  <h3>CBF — "넘지 말아야 할 선"</h3>
+  <p>제어 입력에 부등식 제약을 부과. 부드러운 힘이 아니라 <strong>경계 강제</strong>.</p>
+  <ul>
+    <li>장점: <strong>수학적 안전 보장</strong>, 기존 컨트롤러와 자유 결합</li>
+    <li>단점: 모델 필요, 자체적으로 목표 도달 안 함 (별도 컨트롤러 필요)</li>
+  </ul>
+
+  <h3>한 줄 정리</h3>
+  <ul>
+    <li>"부드럽게 회피" → Potential Field</li>
+    <li>"절대 안 부딪히게" → CBF</li>
+    <li>둘 다 → "PF 형태의 비용 + CBF 안전 제약" 결합 (실무 표준)</li>
+  </ul>
+
+  <h2>14. 동적 장애물 — 시간 변하는 $h(x, t)$</h2>
+
+  <p>지금까지의 $h$는 "정적 장애물"이었습니다. 보행자나 다른 차량이 <em>움직이는</em> 경우엔 어떻게 할까요?</p>
+
+  <h3>방법 1 — 장애물 속도 측정 후 안전 함수에 포함</h3>
+  <p>장애물 위치 $(x_o(t), y_o(t))$가 시간에 따라 변하면 안전 함수도 시간 의존:</p>
+  $$ h(x, y, t) = (x - x_o(t))^2 + (y - y_o(t))^2 - R^2 $$
+  $$ \dot h = 2(x - x_o)(\dot x - \dot x_o) + 2(y - y_o)(\dot y - \dot y_o) $$
+  <p>이때 $\dot x_o$ (장애물 속도) 가 추가 항으로 들어갑니다. 인지(perception)에서 추정한 속도를 그대로 사용하면 됩니다.</p>
+
+  <h3>방법 2 — 보수적 마진 추가</h3>
+  <p>장애물 속도가 불확실하면 안전 마진 $r_\text{margin}$ 을 추가:</p>
+  $$ h(x, y) = (x - x_o)^2 + (y - y_o)^2 - (R + r_\text{margin})^2 $$
+  <p>$r_\text{margin}$ 은 "장애물이 가장 빠르게 움직일 때 한 제어 사이클 사이에 이동할 수 있는 거리". 일반적으로 0.5 ~ 2 m.</p>
+
+  <h3>방법 3 — TTC 기반 (Time-to-Collision)</h3>
+  <p>"몇 초 후 충돌하나"를 직접 안전 척도로:</p>
+  $$ h_\text{TTC}(x, v_\text{rel}) = \tau_\text{min} - \frac{|x_o - x|}{|v_\text{rel}|} $$
+  <p>$\tau_\text{min}$ = 운전자 반응 시간 + 마진 (보통 2~3초). 자동차 산업 표준 ADAS 안전 지표.</p>
+
+  <h2>15. 흔한 실수 5가지 &amp; FAQ</h2>
+
+  <table>
+    <thead><tr><th>#</th><th>실수</th><th>증상</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>$h$ 부호 반대</td><td>안전이라고 판정한 곳이 충돌 영역</td><td>"$h \ge 0 = $안전" 정의 일관 — 테스트 케이스 3개로 검증</td></tr>
+      <tr><td>2</td><td>$\alpha$ 너무 작음</td><td>차가 너무 느림, 항상 멀리서부터 회피</td><td>$\alpha = 1.0$에서 시작, 환경에 맞게 ↑</td></tr>
+      <tr><td>3</td><td>$\alpha$ 너무 큼</td><td>장애물 직전 급제동, 승차감 ↓</td><td>가속도 한계까지 고려해 보수적으로 설정</td></tr>
+      <tr><td>4</td><td>$\Delta t$ 너무 큼</td><td>한 스텝에 안전 영역 통과 (이산화 함정)</td><td>$\Delta t \le 0.05$ 권장, 또는 안전 마진 추가</td></tr>
+      <tr><td>5</td><td>다중 장애물 hard 제약</td><td>infeasible 발생, 시스템 멈춤</td><td>Soft CBF (slack 변수) 사용</td></tr>
+    </tbody>
+  </table>
+
+  <h3>FAQ</h3>
+  <p><strong>Q1. CBF가 있으면 충돌이 0%인가요?</strong><br>
+  이론적으론 그렇습니다 — 단, 다음 가정이 모두 만족할 때: ① 시스템 모델이 정확, ② 외란 없음, ③ 시간 이산화 충분히 작음.
+  실차는 이 가정들이 깨질 수 있어 안전 마진을 더 둡니다.</p>
+
+  <p><strong>Q2. CBF로 차선 변경 같은 복잡한 행동도 할 수 있나요?</strong><br>
+  CBF는 "<em>안전 유지</em>" 도구입니다. "차선 변경"은 <em>경로 생성</em> 단계의 결정 — 별개 모듈 (예: Frenet planner) 이 담당합니다. CBF는 그 위에서 "안전하게만 따라가도록" 강제.</p>
+
+  <p><strong>Q3. PID와 CBF, 어느 쪽이 더 좋나요?</strong><br>
+  비교 대상이 아닙니다. PID는 "추종 도구", CBF는 "안전 필터". 대부분 시스템에서 PID + CBF 형태로 함께 씁니다.</p>
+
+  <p><strong>Q4. 학부생이 직접 시도해 볼 수 있나요?</strong><br>
+  네! 1D 예제(이 페이지의 인터랙티브)는 <code>Python</code> 10줄이면 충분합니다. 2D 예제도 <code>cvxpy</code> 라이브러리만 깔면 30줄 정도. 시간 두고 하나씩 해보면 큰 자산이 됩니다.</p>
+
+  <p><strong>Q5. 학부 1학년인데 어디까지 이해해야 하나요?</strong><br>
+  ① "$h \ge 0 =$ 안전" 정의, ② "$\dot h + \alpha h \ge 0$" 조건, ③ "QP-CBF는 안전 필터" 컨셉 — 이 셋만 잡으면 시험·인터뷰에서 충분합니다. 나머지는 대학원이나 실무에서!</p>
+
+  <h2>16. 핵심 정리 &amp; 다음 주 연결</h2>
   <div class="tip">
     <ul>
       <li>$h(x) \ge 0$ = 안전, $\dot h \ge -\alpha h$ = 안전 집합 이탈 금지.</li>
@@ -285,12 +506,111 @@ for t in np.arange(0, 12, 0.05):
     </ul>
   </div>
 
-  <h2>10. 더 깊이 공부하기</h2>
+  <h3>다음 주(W13 MPC)와의 연결</h3>
+  <p>13주차 MPC는 "예측 + 최적화" 제어입니다. CBF의 부등식은 <strong>MPC의 제약식으로 자연스럽게 들어갑니다</strong>:</p>
+  <ul>
+    <li>MPC 단독: 비용함수에 "장애물 거리 페널티" 추가 → 부드러운 회피, 그러나 안전 보장 X</li>
+    <li>MPC-CBF: 매 예측 스텝마다 $\dot h_k + \alpha h_k \ge 0$ 부등식 → <strong>예측 + 안전</strong></li>
+  </ul>
+  <p>이 조합이 2024-2026년 자율주행 연구의 가장 뜨거운 주제 중 하나입니다.</p>
+
+  <h3>한 페이지 미니 코드 — Pure Pursuit + CBF</h3>
+<pre><code class="language-python">import numpy as np
+
+def pure_pursuit(state, ref_path, Lfc=2.0, k=0.1, WB=2.9):
+    x, y, yaw, v = state
+    Ld = k * v + Lfc
+    # ... look-ahead 점 찾기 (10주차 코드)
+    return delta_des
+
+def cbf_steering_filter(delta_des, state, obstacles, alpha=1.5):
+    """ Pure Pursuit가 만든 조향 명령을 CBF로 안전 필터 통과. """
+    x, y, yaw, v = state
+    delta = delta_des
+    for (cx, cy, R) in obstacles:
+        dx, dy = x - cx, y - cy
+        h = dx*dx + dy*dy - R*R
+        # 단순화: ∇h · v 형태로 (자세한 차량 모델은 강의 너머)
+        h_dot = 2 * (dx * v * np.cos(yaw) + dy * v * np.sin(yaw))
+        if h_dot + alpha * h < 0:
+            # 조향 보정 (간단 휴리스틱)
+            delta = delta + 0.05 * np.sign(dx*np.sin(yaw) - dy*np.cos(yaw))
+    return np.clip(delta, -np.deg2rad(30), np.deg2rad(30))
+
+# 메인 루프
+for t in range(1000):
+    delta_des = pure_pursuit(state, ref_path)
+    delta_safe = cbf_steering_filter(delta_des, state, obstacles)
+    state = car.step(accel=1.0, delta=delta_safe, dt=0.05)
+</code></pre>
+
+  <h3>실습 가이드 — 3단계 도전</h3>
+  <ol>
+    <li><strong>Easy</strong>: 1D 인터랙티브를 Python 노트북에 옮겨 그려보기. α 값 5종 곡선 비교.</li>
+    <li><strong>Medium</strong>: 2D 단일 장애물 회피. <code>cvxpy</code>로 QP 풀어보기. 충돌 0% 확인.</li>
+    <li><strong>Hard</strong>: 11주차 통합 시뮬에 CBF 추가. 동적 장애물(이동하는 차량) 시나리오에서 충돌 횟수 비교.</li>
+  </ol>
+
+  <h2>17. 더 깊이 공부하기</h2>
   <ul>
     <li>A. Ames et al., "Control Barrier Functions: Theory and Applications", ECC 2019 — 표준 튜토리얼.</li>
     <li><a href="https://github.com/HybridRobotics/CBF" target="_blank">HybridRobotics/CBF</a> — 자율주행 CBF 예제 모음(MATLAB/Python).</li>
     <li>관련 강의: <a href="13-mpc-basics.html">W13 MPC</a>는 CBF와 짝꿍으로 자주 쓰입니다(MPC-CBF). <a href="../mpc.html">MPC 특강</a>의 W12 응용에서 더 깊게 다룹니다.</li>
+    <li>P. Wieland &amp; F. Allgöwer, "Constructive Safety Using Control Barrier Functions" (NMPC 2007) — CBF 초기 논문.</li>
+    <li>HOCBF tutorial: W. Xiao &amp; C. Belta, "Control Barrier Functions for Systems with High Relative Degree" (CDC 2019).</li>
+    <li>오픈소스: <a href="https://github.com/HybridRobotics/CBF" target="_blank">HybridRobotics/CBF</a> (Caltech Ames 그룹), Python · MATLAB 예제 포함.</li>
+    <li>강의 영상: Aaron Ames의 IROS 2020 튜토리얼 — 1시간 분량으로 본 강의 내용 + 더 많은 시연 포함.</li>
   </ul>
+
+  <h3>한 줄 인터뷰 대비</h3>
+  <p>"<em>CBF가 뭐예요?</em>" → "안전 집합을 함수 $h(x) \ge 0$으로 정의하고, $\dot h + \alpha h \ge 0$ 부등식을 입력 $u$에 부과해 안전을 수학적으로 보장하는 기법입니다. 기존 컨트롤러 위에 안전 필터로 얹어 쓰는 게 표준 패턴입니다."</p>
+
+  <h2>18. 손풀이 연습 — 시험 대비</h2>
+
+  <h3>Q1. 안전 함수 설계</h3>
+  <p>차선 중앙에서 좌우 각 1.75 m 가 안전 영역, 차량 좌우 횡오차 $d$ ∈ [-1.75, 1.75] 일 때:</p>
+  <ul>
+    <li>(a) 안전 함수 $h(d)$ 를 한 줄로 써라.</li>
+    <li>(b) $\alpha = 2.0$ 일 때 $d = 1.5$ m 에서 허용 최대 횡속도 $\dot d$ 는?</li>
+  </ul>
+  <details>
+    <summary>풀이 보기</summary>
+    <p>(a) $h(d) = (1.75)^2 - d^2 = 3.0625 - d^2$. ($d=0$이면 $h$ 최대, 경계에서 $h=0$, 바깥이면 음수)</p>
+    <p>(b) $\dot h = -2 d \cdot \dot d$. CBF 조건 $\dot h + \alpha h \ge 0$:</p>
+    <p>$-2(1.5) \dot d + 2.0 (3.0625 - 2.25) \ge 0$</p>
+    <p>$-3 \dot d + 1.625 \ge 0$ → $\dot d \le 0.542$ m/s.</p>
+    <p>오른쪽 경계로 가까이 갈수록 허용 횡속도 자동 감소.</p>
+  </details>
+
+  <h3>Q2. α 선택 — 차량 동역학 한계 고려</h3>
+  <p>차량 최대 가속 $a_\max = 4$ m/s²이고, 벽까지 거리 $h(x) = x_w - x = 8$ m, 현재 속도 $v = 10$ m/s. 안전한 정지를 위한 최소 $\alpha$ 는?</p>
+  <details>
+    <summary>풀이 보기</summary>
+    <p>물리적 정지 거리: $d_\text{stop} = v^2 / (2 a_\max) = 100/8 = 12.5$ m.</p>
+    <p>현재 8 m 남았는데 12.5 m 필요 → <strong>$a_\max=4$로는 부족</strong>. CBF α 무관, 시스템 자체가 안전 보장 불가.</p>
+    <p>교훈: CBF는 시스템 능력 안에서만 안전 보장. $\alpha$만 키운다고 해결되지 않음.</p>
+  </details>
+
+  <h3>Q3. 다중 장애물에서 infeasible 판단</h3>
+  <p>장애물 2개가 너무 가까이 있어 사이로 못 지나가는 경우, QP-CBF의 결과는?</p>
+  <details>
+    <summary>풀이 보기</summary>
+    <p>두 부등식이 동시에 만족 불가 → <strong>infeasible</strong>. Hard 제약이면 solver가 에러 반환.</p>
+    <p>해결: ① Soft CBF (slack 변수), ② "더 급한 것만 hard로" 휴리스틱, ③ 상위 Planner가 다른 경로 선택하도록 신호.</p>
+  </details>
+
+  <h2>19. 한 페이지 요약 카드</h2>
+  <div class="tip">
+    <ul>
+      <li><strong>CBF 한 줄</strong>: 평소엔 그대로, 위험할 때만 최소 수정 → 수학적 안전 보장</li>
+      <li><strong>핵심 부등식</strong>: $\dot h + \alpha h \ge 0$, 단 $h(x) \ge 0$ = 안전 집합</li>
+      <li><strong>구현</strong>: QP 한 번 풀기 (cvxpy/OSQP, 수 ms)</li>
+      <li><strong>α 튜닝</strong>: 작 = 보수적, 큼 = 공격적, 시작값 1.0</li>
+      <li><strong>실무 패턴</strong>: A* (전역) + PP/MPC (추종) + CBF (안전 필터)</li>
+      <li><strong>한계</strong>: 모델 필요, 지역적, infeasible 가능 → Soft 제약</li>
+      <li><strong>가까운 친척</strong>: AEB, LKAS, 협동 로봇 안전 — 모두 같은 철학</li>
+    </ul>
+  </div>
 
   <div class="prevnext">
     <a href="11-integrated-sim.html"><small>← 이전</small>W11. 통합 시뮬레이션</a>

@@ -34,6 +34,37 @@
   <h1 class="page-title">Lecture 12. MPC 고급 주제</h1>
   <p class="lead">SAIL 연구실의 핵심 연구 주제. 안정성·재귀 실현가능성에서 확률적·경제적·학습 기반 MPC까지.</p>
 
+  <div class="note">
+    <strong>📋 한눈에 — 그리고 솔직한 안내</strong> — 이 강의는 다른 강의들과 성격이 다릅니다.
+    <em>"전부를 다 익히는 강의"가 아니라, "내 문제에 어떤 MPC를 골라야 하는지의 지도"</em>예요.
+    <ul style="margin:6px 0 0 0">
+      <li>학부 1학년이 한 번에 다 이해하기엔 어렵습니다 — 처음 회독에서는 §0·§4·§16(MPC+CBF)의 큰 그림만 잡으세요.</li>
+      <li>각 변종(Robust/Stochastic/RTI/MPPI...)은 "어떤 어려움을 풀려는 것인지"만 알아도 80%입니다.</li>
+      <li>실제 구현은 SAIL 연구실 합류 후 또는 대학원 진학 시 선택해 깊이 들어가면 됩니다.</li>
+    </ul>
+    <strong>선수지식</strong> — <a href="11-mpc.html">L11</a>의 MPC 기본기, <a href="03-state-space.html">L3</a>의 상태공간·안정성, <a href="10-ann.html">L10</a>의 학습 개념(학습 기반 MPC 부분).<br>
+    <strong>이전 강의 복습</strong> — L11의 nominal MPC는 모델·외란이 완벽하다고 가정했습니다. 현실은 그렇지 않으므로, 그 가정을 하나씩 풀어가는 게 오늘의 주제예요.
+  </div>
+
+  <div class="tip">
+    <strong>🗺 어떤 MPC를 골라야 하나? — 한눈 결정 가이드</strong>
+    <table style="margin-top:8px">
+      <thead><tr><th>내 상황</th><th>적합한 MPC 변종</th><th>해당 절</th></tr></thead>
+      <tbody>
+        <tr><td>모델이 선형, 외란 작음, 계산 자원 충분</td><td><strong>Nominal MPC</strong> (L11)</td><td>§0</td></tr>
+        <tr><td>모델이 강한 비선형 (드론·해상로봇)</td><td><strong>NMPC + SQP/IP</strong></td><td>§4·§5</td></tr>
+        <tr><td>외란이 있지만 <em>경계값</em>만 알 때</td><td><strong>Tube MPC / Robust MPC</strong></td><td>§6·§8</td></tr>
+        <tr><td>외란을 <em>확률 분포</em>로 알 때</td><td><strong>Stochastic / Scenario MPC</strong></td><td>§6·§7</td></tr>
+        <tr><td>1 ms 안에 풀어야 (드론 자세 등)</td><td><strong>Explicit MPC / RTI</strong></td><td>§10·§11</td></tr>
+        <tr><td>모델을 데이터로 채우고 싶을 때</td><td><strong>Learning-based MPC / Koopman</strong></td><td>§12·§14</td></tr>
+        <tr><td>비용 식이 비매끄럽거나 미분 불가</td><td><strong>MPPI</strong> (샘플링 기반)</td><td>§15</td></tr>
+        <tr><td>안전(충돌 회피)이 절대 조건</td><td><strong>MPC + CBF</strong></td><td>§16</td></tr>
+        <tr><td>여러 로봇이 협력</td><td><strong>Distributed MPC</strong></td><td>§13</td></tr>
+      </tbody>
+    </table>
+    이 표 하나만 머리에 남겨도 L12는 충분합니다. 각 행의 절은 그 변종의 "왜·어떻게"를 푸는 곳이에요.
+  </div>
+
   <div class="toc"><h4>목차</h4><ol>
     <li>L11 복습과 L12에서 다룰 것</li>
     <li>안정성과 재귀 실현가능성 — 왜 MPC가 "그냥" 수렴하지 않는가</li>
@@ -676,6 +707,15 @@
   </ul>
 
   <div class="tip">여기까지 소화했다면 자율 이동 로봇의 제어·추정·계획 파이프라인을 처음부터 끝까지 직접 구현할 수 있습니다. 다음으로는 SAIL 연구실의 실제 코드(Python/CasADi)와 논문을 읽어보세요.</div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>🎓 한 학기 강의 마무리</strong><br>
+    L1에서 "감지 → 생각 → 행동" 3요소로 시작한 여정이 L12에서는 "안전을 보장하면서 학습된 모델로 미래를 예측하는 분산 제어"까지 왔습니다.
+    처음 한 번에 다 이해되지 않는 게 정상이에요. <strong>L1·L2·L3·L7·L11</strong> 다섯 개만 자기 말로 설명할 수 있어도 학부 1학년 단계에서 충분합니다.
+    나머지는 필요할 때 다시 펼쳐 읽으면 됩니다.
+    <br><br>
+    <strong>다음 단계 추천</strong> — ① <a href="../path-planning.html">경로계획·추종</a> 강의에서 더 다양한 알고리즘을 보고, ② <a href="../mpc.html">모델예측제어</a> 강의로 MPC를 한 번 더 정리, ③ PythonRobotics 코드를 직접 돌려 보세요.
+  </div>
 
   <h2>📖 더 읽어볼 자료</h2>
   <ul>

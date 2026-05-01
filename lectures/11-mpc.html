@@ -34,6 +34,17 @@
   <h1 class="page-title">Lecture 11. 모델 예측 제어 (MPC)</h1>
   <p class="lead">미래를 시뮬레이션해 보고, 가장 좋은 행동을 골라 실행한다. 현대 제어공학의 표준 언어이자, SAIL 연구실의 핵심 연구 주제.</p>
 
+  <div class="note">
+    <strong>📋 한눈에</strong> — 이 강의가 끝나면 다음을 할 수 있어야 합니다.
+    <ul style="margin:6px 0 0 0">
+      <li>"체스 비유"로 MPC 한 사이클을 자기 말로 설명</li>
+      <li>$N$개 미래 입력을 풀어놓고 첫 번째만 쓰는 이유 설명 (수신지평선 = 피드백)</li>
+      <li>PID로 못 다루는데 MPC로 다룰 수 있는 문제 한 가지 예시 들기</li>
+    </ul>
+    <strong>선수지식</strong> — <a href="02-dynamics.html">L2</a>의 동역학 모델, <a href="03-state-space.html">L3</a>의 이산 상태공간, <a href="07-feedback-control.html">L7</a>의 PID·피드백 개념. 최적화는 "비용을 최소화하는 변수 찾기"라는 직관만 있으면 OK.<br>
+    <strong>이전 강의 복습</strong> — L7 PID는 "지금의 오차"만 보고 반응. MPC는 "미래"를 미리 시뮬레이션해 선제 대응합니다. 사실상 PID + 미래 예측 = MPC.
+  </div>
+
   <div class="toc"><h4>목차</h4><ol>
     <li>왜 MPC인가 — 최적화 기반 제어</li>
     <li>고전 제어 vs MPC</li>
@@ -968,15 +979,91 @@ u0 = sol.value(U[0,0])           # 첫 명령만 실제로 적용</code></pre>
   </table>
   <p>SAIL 연구실이 직접 다루는 범위는 주로 <strong>sub-second ~ 초 단위</strong>입니다 — 자율수상선(ASV), 자율 차량, 멀티 로봇 시스템에서 안전 보장이 필요한 MPC.</p>
 
-  <h2>13. 더 깊이 공부하기</h2>
+  <h2>13. 통합 예제 — L2~L11이 한 자리에서 만나는 곳</h2>
+  <p>이 강의가 마지막 핵심 강의이니, 자율 차량 한 대가 도로를 달리는 한 사이클(0.05초)을 추적하면서
+  지금까지 배운 모든 강의가 어디에 들어가는지 한 번 정리해 봅시다.</p>
+  <figure>
+    <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="iar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#666"/></marker></defs>
+      <g font-family="sans-serif" font-size="11">
+        <text x="380" y="20" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">자율 차량 1 사이클 (≈ 0.05초)</text>
+
+        <rect x="20"  y="50" width="140" height="60" rx="6" fill="#e3f2fd" stroke="#0d47a1"/>
+        <text x="90" y="73" text-anchor="middle" font-weight="bold" fill="#0d47a1">측위 (L4·L5)</text>
+        <text x="90" y="92" text-anchor="middle" fill="#555">GPS+IMU → x,y,θ,v</text>
+
+        <rect x="190" y="50" width="140" height="60" rx="6" fill="#fff3e0" stroke="#e65100"/>
+        <text x="260" y="73" text-anchor="middle" font-weight="bold" fill="#e65100">계획 (L6)</text>
+        <text x="260" y="92" text-anchor="middle" fill="#555">A* → 웨이포인트 N개</text>
+
+        <rect x="360" y="50" width="140" height="60" rx="6" fill="#e8f5e9" stroke="#1b5e20"/>
+        <text x="430" y="73" text-anchor="middle" font-weight="bold" fill="#1b5e20">유도 (L8)</text>
+        <text x="430" y="92" text-anchor="middle" fill="#555">LOS → 목표 헤딩·속도</text>
+
+        <rect x="530" y="50" width="200" height="60" rx="6" fill="#ffebee" stroke="#b71c1c"/>
+        <text x="630" y="73" text-anchor="middle" font-weight="bold" fill="#b71c1c">제어 (L7 PID 또는 L11 MPC)</text>
+        <text x="630" y="92" text-anchor="middle" fill="#555">→ 조향 δ, 가속 a</text>
+
+        <path d="M160,80 L188,80" stroke="#666" stroke-width="2" marker-end="url(#iar)"/>
+        <path d="M330,80 L358,80" stroke="#666" stroke-width="2" marker-end="url(#iar)"/>
+        <path d="M500,80 L528,80" stroke="#666" stroke-width="2" marker-end="url(#iar)"/>
+
+        <rect x="280" y="155" width="200" height="50" rx="6" fill="#fce4ec" stroke="#880e4f"/>
+        <text x="380" y="178" text-anchor="middle" font-weight="bold" fill="#880e4f">차량 동역학 (L2·L3)</text>
+        <text x="380" y="195" text-anchor="middle" fill="#555">자전거 모델, 1 스텝 진행</text>
+
+        <path d="M630,110 Q630,160 480,180" stroke="#666" stroke-width="2" fill="none" marker-end="url(#iar)"/>
+        <path d="M280,180 Q90,180 90,110" stroke="#999" stroke-width="1.5" stroke-dasharray="4,4" fill="none" marker-end="url(#iar)"/>
+        <text x="380" y="220" text-anchor="middle" fill="#777" font-size="10">→ 다음 0.05초 후 다시 측위부터</text>
+
+        <rect x="40"  y="240" width="220" height="60" rx="6" fill="#f3e5f5" stroke="#4a148c"/>
+        <text x="150" y="263" text-anchor="middle" font-weight="bold" fill="#4a148c">학습 모델 (L9·L10)</text>
+        <text x="150" y="280" text-anchor="middle" fill="#555">데이터로 동역학 보정</text>
+        <text x="150" y="293" text-anchor="middle" fill="#777" font-size="10">→ 동역학 박스에 합쳐 쓰임</text>
+        <path d="M260,270 Q300,270 320,210" stroke="#999" stroke-width="1.5" stroke-dasharray="4,4" fill="none" marker-end="url(#iar)"/>
+
+        <rect x="500" y="240" width="220" height="60" rx="6" fill="#fff8e1" stroke="#bf6900"/>
+        <text x="610" y="263" text-anchor="middle" font-weight="bold" fill="#bf6900">안전 필터 (L8 CBF) / 고급 MPC (L12)</text>
+        <text x="610" y="280" text-anchor="middle" fill="#555">제어 출력에 한 층 더 얹어</text>
+        <text x="610" y="293" text-anchor="middle" fill="#777" font-size="10">충돌 회피·강건성 보장</text>
+        <path d="M610,240 Q610,160 660,110" stroke="#999" stroke-width="1.5" stroke-dasharray="4,4" fill="none" marker-end="url(#iar)"/>
+      </g>
+    </svg>
+    <figcaption>그림. 한 사이클 안에 들어가는 모든 블록과 해당 강의 매핑.</figcaption>
+  </figure>
+  <p>같은 차량을 두고도 ⑤번 박스에 들어가는 알고리즘에 따라 거동이 다릅니다.</p>
+  <ul>
+    <li><strong>L7 PID</strong> — 단순·빠름. 속도가 느리고 곡률이 작은 경로면 충분.</li>
+    <li><strong>L7 Pure Pursuit/Stanley</strong> — 곡선 추종에 최적화된 변형. 코너에서 PID보다 부드러움.</li>
+    <li><strong>L11 MPC</strong> — 입력 한계·도로 경계·앞차 거리 같은 제약을 한꺼번에 다루며, 코너 100m 앞에서 미리 감속 가능.</li>
+    <li><strong>L11 MPC + L8 CBF</strong> — MPC가 만든 입력에 안전 필터를 한 번 더 통과시켜 충돌 가능성을 0으로 보장.</li>
+  </ul>
+  <div class="tip">
+    <strong>이 그림이 시험에 나온다면</strong> — 각 박스의 입출력만 짚어 줄 수 있으면 됩니다.
+    "측위 박스의 출력은? → 상태 벡터 $\mathbf x$. 계획 박스의 출력은? → 웨이포인트 배열. 유도 박스의 출력은? → 목표 헤딩과 속도. 제어 박스의 출력은? → 모터·조향 명령."
+    이 네 줄이 자율 시스템 시험의 단골 답안입니다.
+  </div>
+
+  <h2>14. 다음 강의 미리보기</h2>
+  <p>지금까지의 MPC는 "모델이 정확하다", "외란이 없거나 작다"는 가정 위에 서 있었습니다(이걸 보통 <em>nominal MPC</em>라 부릅니다).
+  현실의 로봇은 모델 오차, 잡음, 변하는 환경을 동시에 마주합니다.</p>
+  <p><strong><a href="12-advanced-mpc.html">L12. MPC 고급 주제</a></strong>에서는
+  ① 안정성·재귀 실현가능성의 이론적 보장,
+  ② 모델 불확실성을 다루는 Tube/Robust MPC,
+  ③ 외란이 확률적인 Stochastic MPC,
+  ④ 학습 기반 MPC와 MPPI,
+  ⑤ MPC + CBF 결합으로 안전을 보장하는 방법을 둘러봅니다.
+  L12는 "전체를 다 익혀야 하는 강의"가 아니라 "내가 풀려는 문제에 어떤 MPC 변종이 맞는지 고를 수 있는 지도" 역할입니다.</p>
+
+  <h2>15. 더 깊이 공부하기</h2>
 
   <h3>학부생 추천 학습 순서</h3>
   <p>이번 강의 내용이 처음에는 양이 많아 보이지만, 다음 순서로 한 권씩 따라가면 어렵지 않습니다.</p>
   <ol>
-    <li><strong>먼저</strong> — L7(LQR)과 L8(상태 추정)을 한 번 더 복습. MPC는 "제약이 있는 LQR + 추정된 상태"로 이해됩니다.</li>
+    <li><strong>먼저</strong> — <a href="07-feedback-control.html">L7</a>(PID·Pure Pursuit)과 <a href="04-kalman-1d.html">L4</a>·<a href="05-kalman-2d.html">L5</a>(상태 추정)를 한 번 더 복습. MPC는 "제약이 있는 LQR + 추정된 상태"로 이해됩니다.</li>
     <li><strong>실습부터</strong> — 아래 PythonRobotics MPC 차량 추종 코드를 직접 돌려보고, 호라이즌·가중치를 바꿔가며 거동을 관찰. 100줄짜리 CasADi 코드라 부담 없음.</li>
     <li><strong>이론은 그 다음</strong> — Rawlings/Mayne/Diehl 1–2장(안정성·재귀적 실현 가능성). 식보다 그림과 직관 위주로 읽기.</li>
-    <li><strong>고급 주제(L12)</strong> — robust MPC, stochastic MPC, control barrier function 결합 등.</li>
+    <li><strong>고급 주제(<a href="12-advanced-mpc.html">L12</a>)</strong> — robust MPC, stochastic MPC, control barrier function 결합 등.</li>
   </ol>
 
   <ul>

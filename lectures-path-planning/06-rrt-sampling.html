@@ -410,6 +410,91 @@ def rewire(self, new_id, near_ids):
     </tbody>
   </table>
 
+  <h2>9b. RRT vs A* — 한 장 비교 (W7 미리보기)</h2>
+
+  <table>
+    <thead><tr><th>측면</th><th>RRT (오늘)</th><th>A* (다음 주)</th></tr></thead>
+    <tbody>
+      <tr><td>공간 표현</td><td>연속 (continuous)</td><td>격자 (discrete)</td></tr>
+      <tr><td>탐색 방식</td><td>랜덤 샘플링</td><td>결정적 (deterministic)</td></tr>
+      <tr><td>최적성</td><td>RRT*만 점근 최적</td><td>Admissible h면 보장</td></tr>
+      <tr><td>고차원 환경</td><td>강함</td><td>차원 폭증 (curse of dim.)</td></tr>
+      <tr><td>좁은 통로</td><td>잘 못 찾음</td><td>잘 찾음</td></tr>
+      <tr><td>매번 같은 결과</td><td>랜덤이라 다름 (seed 고정 시 동일)</td><td>항상 같음</td></tr>
+      <tr><td>구현 복잡도</td><td>중간</td><td>쉬움</td></tr>
+      <tr><td>대표 응용</td><td>로봇팔, 주차 (Hybrid A*)</td><td>도로 주행, 게임 AI</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9c. 손풀이 — RRT 직관 점검</h2>
+
+  <h3>Q1. step 크기 영향</h3>
+  <p>step = 0.5 m, 시작-목표 직선 거리 10 m, 장애물 없음. 평균 노드 수는?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>이론적으로 20 노드면 직선으로 도달 가능. 하지만 랜덤 샘플은 균등 분포 → 매 스텝 효율적 진행 보장 X.</p>
+    <p>Goal bias 5%면 평균 ~50 노드, 0%면 ~200 노드 가량.</p>
+  </details>
+
+  <h3>Q2. RRT* 의 Choose Parent</h3>
+  <p>새 노드 $q_\text{new}$ 주변 반경 $R=2$ 내에 노드 3개. 비용 $g_1=5, g_2=4, g_3=6$, 거리 $d_1=1, d_2=1.5, d_3=0.8$. 어느 노드가 부모?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>총 비용 비교:</p>
+    <ul>
+      <li>$q_1$ 통해: $5 + 1 = 6$</li>
+      <li>$q_2$ 통해: $4 + 1.5 = 5.5$ ← 최소</li>
+      <li>$q_3$ 통해: $6 + 0.8 = 6.8$</li>
+    </ul>
+    <p>답: $q_2$ 가 부모. 가장 가까운 게 아니라 <strong>총 비용이 최소</strong>인 노드.</p>
+  </details>
+
+  <h3>Q3. Goal bias 영향</h3>
+  <p>Bias = 0% vs 100% 의 극단을 비교하라.</p>
+  <details>
+    <summary>풀이</summary>
+    <ul>
+      <li><strong>0%</strong>: 완전 균일 샘플 → 매우 느린 수렴, 트리가 모든 방향 균등하게 자람</li>
+      <li><strong>100%</strong>: 항상 목표를 샘플 → 직선 방향만 시도. 장애물 있으면 무한 반복 (실패)</li>
+      <li><strong>5~10%</strong> (권장): 충분한 탐색 + 약간의 목표 편향. 균형</li>
+    </ul>
+  </details>
+
+  <h2>9d. PRM (Probabilistic Roadmap) — RRT의 사촌</h2>
+
+  <p>RRT가 "단일 쿼리(start→goal 한 번)" 라면, PRM은 "<strong>다중 쿼리</strong>" 알고리즘입니다.</p>
+
+  <h3>2단계 구성</h3>
+  <ol>
+    <li><strong>Roadmap 구축 (오프라인)</strong>: 공간에 N개 점 무작위로 찍고, 충돌 없는 점끼리 가까운 이웃 K개와 연결 → 그래프 완성</li>
+    <li><strong>Query (온라인)</strong>: start, goal 추가 후 Dijkstra/A* 로 그래프 탐색</li>
+  </ol>
+
+  <h3>RRT 와의 차이</h3>
+  <table>
+    <thead><tr><th>측면</th><th>RRT</th><th>PRM</th></tr></thead>
+    <tbody>
+      <tr><td>쿼리</td><td>1회</td><td>여러 번 (재사용)</td></tr>
+      <tr><td>구조</td><td>트리</td><td>그래프</td></tr>
+      <tr><td>오프라인 시간</td><td>없음</td><td>김</td></tr>
+      <tr><td>적합 분야</td><td>한 번 가는 경로</td><td>같은 환경 반복 사용</td></tr>
+      <tr><td>대표 응용</td><td>자율주행</td><td>로봇팔, 게임 NPC</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9e. 1학년에게 — 이번 주 핵심만</h2>
+
+  <div class="tip">
+    <strong>이것만 외워도 70점</strong>
+    <ol>
+      <li>RRT 5단계: <strong>S-N-S-C-A</strong> (Sample, Nearest, Steer, Check, Add)</li>
+      <li>Goal bias: <strong>5~10%</strong> 권장</li>
+      <li>RRT* 추가 두 가지: Choose Parent + Rewire</li>
+      <li>비유: "어둠 속 손전등으로 사방 비추며 씨앗 키우기"</li>
+      <li>차량 적용 시: Shortcut + Spline 후처리 필수</li>
+    </ol>
+  </div>
+
   <h2>10. 더 깊이 공부하기</h2>
   <ul>
     <li>S. M. LaValle, <em>Planning Algorithms</em>, Ch.5 (무료 PDF: <a href="http://lavalle.pl/planning/" target="_blank">lavalle.pl/planning</a>).</li>
