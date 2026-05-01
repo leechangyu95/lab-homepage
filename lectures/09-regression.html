@@ -830,7 +830,116 @@
   })();
   </script>
 
-  <h2>8. 코드 예제 (Python)</h2>
+  <h2>8. 경사하강법 — 한 스텝을 손으로 풀어보기</h2>
+  <p>식만 보면 어려우니, 가장 작은 예제에서 직접 따라가 봅시다. 데이터 점이 단 두 개밖에 없는 회귀 문제예요.</p>
+  <ul>
+    <li><strong>데이터</strong>: $(x_1, y_1) = (1, 2)$, $(x_2, y_2) = (2, 3)$.</li>
+    <li><strong>모델</strong>: $\hat y = \beta_0 + \beta_1 x$. 초기 추정 $\beta_0 = 0,\ \beta_1 = 0$.</li>
+    <li><strong>학습률</strong>: $\eta = 0.1$.</li>
+  </ul>
+  <p><strong>① 손실 계산.</strong> 잔차 $r_i = \hat y_i - y_i$ 가 $r_1 = 0 - 2 = -2$, $r_2 = 0 - 3 = -3$. 손실 $L = \tfrac1n \sum r_i^2 = (4+9)/2 = 6.5$.</p>
+  <p><strong>② 그라디언트 계산.</strong> 분자가 $\tfrac{2}{n}$이라서:</p>
+  <ul>
+    <li>$\partial L / \partial \beta_0 = \tfrac{2}{n} \sum r_i = (- 2 + (-3)) = -5$ (n=2이므로 곱이 1)</li>
+    <li>$\partial L / \partial \beta_1 = \tfrac{2}{n} \sum r_i x_i = (-2 \cdot 1 + (-3) \cdot 2) = -8$</li>
+  </ul>
+  <p><strong>③ 한 발 내려가기.</strong> $\beta_0 \gets 0 - 0.1 \cdot (-5) = 0.5$, $\beta_1 \gets 0 - 0.1 \cdot (-8) = 0.8$.</p>
+  <p><strong>④ 다음 스텝 손실.</strong> $\hat y_1 = 0.5 + 0.8 \cdot 1 = 1.3$, $\hat y_2 = 0.5 + 0.8 \cdot 2 = 2.1$. $r_1 = -0.7,\ r_2 = -0.9$. $L = (0.49 + 0.81)/2 = 0.65$. <strong>한 스텝에 손실이 6.5 → 0.65로 1/10이 됐어요.</strong></p>
+  <p>이걸 수십~수천 번 반복하면 정답 $\beta_0 = 1, \beta_1 = 1$로 수렴합니다(이 데이터의 정확한 해). 신경망이든 GPT든 본질은 같은 절차를 반복하는 일이에요.</p>
+
+  <h2>9. Lasso (L1 정규화) — 변수 선택까지 동시에</h2>
+  <p>Ridge(L2 정규화)는 모든 계수를 작게 만들지만 0으로는 잘 안 보내요. 그런데 입력 변수가 100개인데 그중 10개만 진짜로 의미가 있는 상황이라면, "어느 10개인가?"를 자동으로 골라주는 도구가 있으면 좋겠죠. 그게 <strong>Lasso(Least Absolute Shrinkage and Selection Operator)</strong>입니다.</p>
+  $$ L_{\text{Lasso}}(\boldsymbol\beta) = \tfrac{1}{n} \|y - X\boldsymbol\beta\|^2 + \lambda \sum_{j=1}^{p} |\beta_j| $$
+  <p>차이는 단 한 글자 — Ridge는 $\beta_j^2$, Lasso는 $|\beta_j|$. 그런데 이 한 글자 차이가 결과에서 큰 차이를 만듭니다.</p>
+  <table>
+    <thead><tr><th>항목</th><th>Ridge (L2)</th><th>Lasso (L1)</th></tr></thead>
+    <tbody>
+      <tr><td>벌점 항</td><td>$\sum \beta_j^2$</td><td>$\sum |\beta_j|$</td></tr>
+      <tr><td>계수의 운명</td><td>모두 작게 (잘 0으로 안 됨)</td><td>일부는 정확히 0 (변수 선택)</td></tr>
+      <tr><td>닫힌 해</td><td>있음 ($X^\top X + \lambda I$)$^{-1}\ldots$</td><td>없음 — 좌표하강법 등 반복법</td></tr>
+      <tr><td>언제 쓰나</td><td>상관 높은 다수 변수, 부드러운 정규화</td><td>"진짜 중요한 변수 몇 개만" 찾고 싶을 때</td></tr>
+      <tr><td>실생활 비유</td><td>모든 친구에게 조금씩 빌리기</td><td>핵심 친구 몇 명에게만 빌리기</td></tr>
+    </tbody>
+  </table>
+  <p>두 정규화를 합친 ElasticNet도 있어요 — $\lambda_1 \sum |\beta_j| + \lambda_2 \sum \beta_j^2$. scikit-learn의 <code>Lasso</code>·<code>ElasticNet</code> 클래스가 표준 구현입니다.</p>
+  <div class="tip">
+    <strong>왜 L1만 0을 만드는가?</strong> — 기하학적으로 L1 벌점의 등고선은 마름모(◇), L2는 원(○)입니다. 손실 등고선이 마름모와 만나는 지점은 보통 마름모의 모서리(축 위) — 즉 한 좌표가 0인 점이에요. 그래서 자동 변수 선택이 일어납니다.
+  </div>
+
+  <h2>10. Bias-Variance Tradeoff — "왜 모델은 단순할수록 좋을 때가 있나"</h2>
+  <p>같은 진짜 함수에서 데이터 100개를 뽑아 모델을 훈련시키는 일을 1000번 반복했다고 해봅시다. 매번 다른 모델이 만들어지죠. 이 1000개의 모델로 어느 새 입력 $x_0$에서의 예측을 평가하면, 예측이 어떻게 분포할까요?</p>
+  <ul>
+    <li><strong>편향(Bias)</strong> — 1000개 모델 예측의 <em>평균</em>이 진짜 답에서 얼마나 벗어나는가. 모델이 너무 단순하면(예: 직선만) 곡선을 못 잡아내서 편향이 커요.</li>
+    <li><strong>분산(Variance)</strong> — 1000개 모델 예측이 <em>서로 얼마나 흩어지는가</em>. 모델이 너무 복잡하면(예: 100차 다항) 데이터 잡음에까지 휘둘려 분산이 커요.</li>
+    <li><strong>잡음(Irreducible noise)</strong> — 데이터에 본질적으로 섞인 잡음. 어떤 모델로도 못 줄임.</li>
+  </ul>
+  <p>회귀의 기대 평균제곱오차는 다음과 같이 분해됩니다.</p>
+  $$ \mathbb E[(y - \hat f(x))^2] = \underbrace{(\mathbb E[\hat f] - f)^2}_{\text{Bias}^2} + \underbrace{\mathrm{Var}(\hat f)}_{\text{Variance}} + \underbrace{\sigma^2}_{\text{noise}} $$
+  <figure>
+    <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+      <g font-family="sans-serif" font-size="11">
+        <text x="360" y="20" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">모델 복잡도 vs 오차 (Bias-Variance)</text>
+        <line x1="60" y1="180" x2="660" y2="180" stroke="#333" stroke-width="1.5"/>
+        <line x1="60" y1="40" x2="60" y2="180" stroke="#333" stroke-width="1.5"/>
+        <text x="360" y="200" text-anchor="middle" fill="#555">모델 복잡도 (다항 차수, 신경망 파라미터 수)</text>
+        <text x="20" y="110" text-anchor="middle" fill="#555" transform="rotate(-90 20 110)">오차</text>
+        <path d="M80,60 Q200,80 360,140 Q500,170 640,178" stroke="#0d47a1" stroke-width="2" fill="none"/>
+        <text x="120" y="55" fill="#0d47a1">Bias² (편향)</text>
+        <path d="M80,178 Q220,170 360,140 Q500,80 640,55" stroke="#c62828" stroke-width="2" fill="none"/>
+        <text x="560" y="50" fill="#c62828">Variance (분산)</text>
+        <path d="M80,80 Q220,110 360,120 Q500,130 640,80" stroke="#1b5e20" stroke-width="3" fill="none"/>
+        <text x="380" y="100" fill="#1b5e20" font-weight="bold">Total = Bias² + Var + σ²</text>
+        <line x1="360" y1="40" x2="360" y2="180" stroke="#888" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="360" y="35" text-anchor="middle" fill="#555" font-size="10">최적 복잡도</text>
+        <text x="120" y="170" fill="#888" font-size="10">단순 모델</text>
+        <text x="560" y="170" fill="#888" font-size="10">복잡 모델</text>
+        <text x="200" y="195" fill="#555" font-size="10">underfit</text>
+        <text x="510" y="195" fill="#555" font-size="10">overfit</text>
+      </g>
+    </svg>
+    <figcaption>그림. 모델 복잡도가 커질수록 편향은 줄고 분산은 늘어, U자 모양의 총 오차 곡선이 생깁니다. 골짜기가 최적 복잡도.</figcaption>
+  </figure>
+  <p>이 관점에서 다시 보면, Ridge·Lasso의 정규화 파라미터 $\lambda$를 키우는 일은 "모델을 더 단순하게 — 분산을 줄이고 편향은 살짝 늘림"입니다. 교차검증으로 $\lambda$를 고르는 게 표준이에요.</p>
+
+  <h2>11. 통계적 관점 — 최소제곱 = 최대우도</h2>
+  <p>지금까지의 최소제곱법은 "잔차 제곱을 최소화하자"는 손가락 약속처럼 보였습니다. 그런데 사실 이 선택에는 깊은 통계적 이유가 있어요.</p>
+  <p><strong>가정</strong> — 진짜 모델이 $y = \beta_0 + \beta_1 x + \varepsilon$이고, 잡음 $\varepsilon$이 평균 0, 분산 $\sigma^2$인 정규분포를 따른다고 합시다. 그러면 데이터를 관측할 확률(우도, likelihood)은:</p>
+  $$ p(y_i | x_i, \boldsymbol\beta) = \frac{1}{\sqrt{2\pi}\sigma} \exp\!\left(-\frac{(y_i - \beta_0 - \beta_1 x_i)^2}{2\sigma^2}\right) $$
+  <p>로그를 취해 모든 데이터에 대해 합하면:</p>
+  $$ \log \mathcal L = -\frac{1}{2\sigma^2}\sum_i (y_i - \hat y_i)^2 + \text{const} $$
+  <p>이 우도를 <strong>최대화</strong>하는 $\boldsymbol\beta$는 곧 잔차 제곱합 $\sum (y_i - \hat y_i)^2$을 <strong>최소화</strong>하는 $\boldsymbol\beta$와 같습니다. 즉:</p>
+  <div class="tip">
+    <strong>최소제곱법(MSE) = 가우시안 잡음 가정 아래의 최대우도(MLE)</strong>. 우리가 무심코 골랐던 손실 함수가 실은 통계적으로 가장 자연스러운 선택이었던 거예요.
+  </div>
+  <p>이 시각이 강력한 이유는 다른 잡음 분포에서 다른 손실이 자동으로 따라온다는 것입니다.</p>
+  <ul>
+    <li><strong>가우시안 잡음</strong> → MSE (제곱 손실)</li>
+    <li><strong>라플라스 잡음 (이상치 많음)</strong> → MAE (절댓값 손실)</li>
+    <li><strong>이항 잡음 (분류 문제)</strong> → Cross-entropy 손실</li>
+  </ul>
+  <p>그리고 베이즈 정리로 $\boldsymbol\beta$에 사전 분포(prior)를 두면 정규화도 자연스럽게 따라옵니다.</p>
+  <ul>
+    <li>$\boldsymbol\beta$에 가우시안 사전 → <strong>Ridge 정규화</strong></li>
+    <li>$\boldsymbol\beta$에 라플라스 사전 → <strong>Lasso 정규화</strong></li>
+  </ul>
+  <p>"왜 하필 그 손실?", "왜 하필 그 정규화?"라는 모든 질문이 통계적 관점에서 자연스럽게 답을 얻습니다.</p>
+
+  <h2>12. 회귀의 다양한 변형 — 빠른 둘러보기</h2>
+  <table>
+    <thead><tr><th>방법</th><th>특징</th><th>전형적 용도</th></tr></thead>
+    <tbody>
+      <tr><td>OLS (최소제곱)</td><td>표준 선형회귀</td><td>가장 기본</td></tr>
+      <tr><td>Ridge / Lasso / ElasticNet</td><td>정규화 추가</td><td>변수 많고 데이터 적을 때</td></tr>
+      <tr><td>Logistic 회귀</td><td>출력에 시그모이드, 분류 문제</td><td>스팸/스팸 아님 같은 이진 분류</td></tr>
+      <tr><td>Polynomial 회귀</td><td>$x, x^2, x^3, \dots$ 추가</td><td>비선형 추세</td></tr>
+      <tr><td>Kernel 회귀 (RBF, etc.)</td><td>비선형 특징을 무한 차원으로</td><td>SVM의 사촌</td></tr>
+      <tr><td>Gaussian Process Regression</td><td>예측에 불확실성까지 동봉</td><td>로봇 모델 학습, 베이즈 최적화</td></tr>
+      <tr><td>Robust 회귀 (Huber, RANSAC)</td><td>이상치에 강건</td><td>센서 데이터, 컴퓨터 비전</td></tr>
+    </tbody>
+  </table>
+  <p>이 강의는 OLS·Ridge·Lasso만 다루지만, 대학원에서는 GPR이 로봇 모델링에 많이 쓰입니다. 출력에 신뢰구간이 자동으로 붙는 게 매력이에요.</p>
+
+  <h2>13. 코드 예제 (Python)</h2>
   <pre><code>import numpy as np
 import matplotlib.pyplot as plt
 
@@ -847,9 +956,15 @@ X = np.column_stack([np.ones_like(x), x])
 beta2 = np.linalg.inv(X.T @ X) @ X.T @ y
 print(beta2)
 
+# scikit-learn — Ridge / Lasso 한 줄씩
+from sklearn.linear_model import Ridge, Lasso
+ridge = Ridge(alpha=0.5).fit(X, y)
+lasso = Lasso(alpha=0.5).fit(X, y)
+print("Ridge:", ridge.coef_, "Lasso:", lasso.coef_)
+
 plt.scatter(x, y); plt.plot(x, np.polyval(beta, x)); plt.show()</code></pre>
 
-  <h2>9. 다음 강의 미리보기</h2>
+  <h2>14. 다음 강의 미리보기</h2>
   <p>선형 회귀 $\hat y = \beta_0 + \beta_1 x$는 입력에 가중치를 곱해 더하는 <strong>한 층</strong>짜리 모델이에요.
   하지만 현실 데이터(예: "사진 속 동물이 고양이인가?")는 직선으로 못 가르는 경우가 훨씬 많습니다.</p>
   <p><strong><a href="10-ann.html">L10. 인공 신경망</a></strong>에서는

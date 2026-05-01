@@ -405,6 +405,57 @@
 
 <div class="tip">고윳값 계산 후 trace/det 로 즉시 검산 가능 — 시험에서 부호 실수 잡는 빠른 방법.</div>
 
+  <h2>🌱 왜 합 = trace, 곱 = det 인가?</h2>
+
+  <h3>$2\times 2$ 의 경우 — 직접 보기</h3>
+  <p>$A = \begin{pmatrix}a & b \\ c & d\end{pmatrix}$ 의 특성다항식:</p>
+  <p>$$\det(A - \lambda I) = (a-\lambda)(d-\lambda) - bc = \lambda^2 - (a+d)\lambda + (ad - bc)$$</p>
+  <p>이 다항식의 두 근 $\lambda_1, \lambda_2$ 에 대해 비에타(Vieta) 공식:</p>
+  <ul>
+    <li>$\lambda_1 + \lambda_2$ = $\lambda$ 의 일차 계수의 부호 반대 = $a + d$ = $\text{tr}(A)$.</li>
+    <li>$\lambda_1 \cdot \lambda_2$ = 상수항 = $ad - bc$ = $\det A$.</li>
+  </ul>
+
+  <h3>$n\times n$ 으로 일반화</h3>
+  <p>특성다항식 $p(\lambda) = (-1)^n\lambda^n + c_{n-1}\lambda^{n-1} + \cdots + c_0$ 에서:</p>
+  <ul>
+    <li>$\lambda^{n-1}$ 의 계수에서 → $\lambda_i$ 들의 합 = $\text{tr}(A)$ (대각합).</li>
+    <li>상수항 ($\lambda = 0$ 대입) → $\det(A) = \lambda_1 \lambda_2 \cdots \lambda_n$.</li>
+  </ul>
+
+<div class="note">"trace = 대각의 합", "det = 모든 고유값의 곱" 두 사실은 시험에서 자주 함께 등장합니다 — 외울 만합니다.</div>
+
+
+  <h2>🧮 예제 — $3 \times 3$ 일반 행렬</h2>
+
+  <h3>문제</h3>
+  <p>$A = \begin{pmatrix} 2 & 0 & 1 \\ 0 & 3 & 0 \\ 1 & 0 & 2 \end{pmatrix}$ 의 고윳값과 고유벡터를 구하시오.</p>
+
+  <h3>Step 1 — 특성다항식</h3>
+  <p>$$\det(A - \lambda I) = \det\begin{pmatrix} 2-\lambda & 0 & 1 \\ 0 & 3-\lambda & 0 \\ 1 & 0 & 2-\lambda \end{pmatrix}$$</p>
+  <p>2행이 0 외에 $3-\lambda$ 만 있으므로 그 행으로 여인수 전개:</p>
+  <p>$$= (3-\lambda)\cdot \det\begin{pmatrix} 2-\lambda & 1 \\ 1 & 2-\lambda \end{pmatrix} = (3-\lambda)\bigl((2-\lambda)^2 - 1\bigr)$$</p>
+  <p>$(2-\lambda)^2 - 1 = (2-\lambda-1)(2-\lambda+1) = (1-\lambda)(3-\lambda)$.</p>
+  <p>$$\det(A - \lambda I) = (3-\lambda)(1-\lambda)(3-\lambda) = (3-\lambda)^2(1-\lambda)$$</p>
+  <p>고윳값: $\lambda_1 = 3$ (중복도 2), $\lambda_2 = 1$.</p>
+
+  <h3>Step 2 — 고유벡터</h3>
+  <p><strong>$\lambda = 1$</strong>: $(A - I)\mathbf{v} = \mathbf{0}$.</p>
+  <p>$\begin{pmatrix} 1 & 0 & 1 \\ 0 & 2 & 0 \\ 1 & 0 & 1 \end{pmatrix}\mathbf{v} = \mathbf{0}$ → $x_1 + x_3 = 0,\ x_2 = 0$. 기저: $(1, 0, -1)$.</p>
+
+  <p><strong>$\lambda = 3$</strong>: $(A - 3I)\mathbf{v} = \mathbf{0}$.</p>
+  <p>$\begin{pmatrix} -1 & 0 & 1 \\ 0 & 0 & 0 \\ 1 & 0 & -1 \end{pmatrix}\mathbf{v} = \mathbf{0}$ → $x_1 = x_3$, $x_2$ 자유. 기저 2개: $(1, 0, 1),\ (0, 1, 0)$.</p>
+
+  <h3>Step 3 — 검산</h3>
+  <ul>
+    <li>합: $3 + 3 + 1 = 7$. $\text{tr}(A) = 2 + 3 + 2 = 7$ ✓</li>
+    <li>곱: $3 \cdot 3 \cdot 1 = 9$. $\det A$ = ? 계산해 봅시다: 중간 행 전개 → $3 \cdot (4-1) = 9$ ✓</li>
+  </ul>
+
+  <h3>관찰 — 대각화 가능?</h3>
+  <p>$\lambda = 3$ 에 대해 일차독립 고유벡터가 2개($\mathbf{v}_2, \mathbf{v}_3$), $\lambda = 1$ 에 대해 1개. 합 3개 = 차원 → <strong>대각화 가능</strong>.
+     일반적으로 중복도가 있어도 충분히 많은 일차독립 고유벡터가 있으면 OK.</p>
+
 
   <h2>🌍 응용 (1) — 변환의 "본질적 축"</h2>
 
@@ -509,6 +560,20 @@
 
   <h3>문제 6 ($A^k$)</h3>
   <p>$A$ 의 고윳값이 $\lambda = 2$ 라면 $A^{10}$ 의 고윳값 중 하나는 무엇인지 답하시오.</p>
+
+  <h3>문제 7 (대칭행렬)</h3>
+  <p>$A = \begin{pmatrix} 4 & 2 \\ 2 & 1 \end{pmatrix}$ 의 고윳값과 고유벡터를 구하고, 두 고유벡터가 서로 직교함을 확인하시오 (대칭행렬의 성질).</p>
+
+  <h3>문제 8 (응용 — 회전)</h3>
+  <p>3D 회전 행렬 $R_z(\theta) = \begin{pmatrix} \cos\theta & -\sin\theta & 0 \\ \sin\theta & \cos\theta & 0 \\ 0 & 0 & 1 \end{pmatrix}$ 의 실수 고윳값을
+     찾고 그 고유벡터가 회전축임을 확인하시오.</p>
+
+  <h3>문제 9 (검산)</h3>
+  <p>$A$ 의 trace = 6, det = 5 일 때 두 고윳값을 (이차방정식을 풀어) 구하시오.</p>
+
+  <h3>문제 10 (응용 — 마르코프)</h3>
+  <p>전이 행렬 $M = \begin{pmatrix} 0.7 & 0.4 \\ 0.3 & 0.6 \end{pmatrix}$ 의 고윳값이 $1, 0.3$ 임을 보이고,
+     $\lambda = 1$ 에 대응하는 고유벡터(정상 분포)를 구하시오.</p>
 
 
 
