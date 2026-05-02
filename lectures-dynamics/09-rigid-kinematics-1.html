@@ -316,6 +316,120 @@
   <h2>7-2. 응용 — 디스크/CD 회전</h2>
   <p>CD 플레이어는 일정한 선속도(CLV, constant linear velocity)로 데이터를 읽기 위해, 안쪽 트랙(짧은 반지름)에서는 빠르게, 바깥 트랙(긴 반지름)에서는 느리게 회전. 200 rpm(안쪽)에서 500 rpm(바깥)까지 변화. 하드디스크는 반대로 정속(CAV)을 쓰지만 데이터 밀도가 다름.</p>
 
+  <h2>7-3. 인터랙티브 — 굴림 운동 시각화</h2>
+
+  <div class="demo">
+    <h4>🎮 바퀴의 굴림 운동 — 임의 점의 자취 (cycloid)</h4>
+    <p>바퀴가 굴러갈 때 가장자리의 한 점이 그리는 자취 (cycloid 곡선) 와, 중심에서 거리 $r$ 의 점들이 그리는 다른 자취들.</p>
+    <canvas id="d9RollDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>회전 각 (도) <span class="val" id="d9thV">90</span><input type="range" id="d9th" min="0" max="720" step="5" value="90"></label>
+      <label>점 위치 비율 r/R <span class="val" id="d9rV">1.0</span><input type="range" id="d9r" min="0" max="1.5" step="0.1" value="1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d9RollDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const thMax=+document.getElementById('d9th').value*Math.PI/180;
+      const rRatio=+document.getElementById('d9r').value;
+      ['d9th','d9r'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const R=40,oy=H-50;
+      ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(W-20,oy);ctx.stroke();
+      // trace
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let t=0;t<=thMax;t+=0.05){
+        const cx=40+R*t,cy=oy-R;
+        const px=cx-R*rRatio*Math.sin(t),py=cy+R*rRatio*Math.cos(t);
+        if(t===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // current wheel
+      const cx=40+R*thMax,cy=oy-R;
+      ctx.strokeStyle='#cf1322';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx,cy,R,0,2*Math.PI);ctx.stroke();
+      // current point
+      const px=cx-R*rRatio*Math.sin(thMax),py=cy+R*rRatio*Math.cos(thMax);
+      ctx.fillStyle='#cf1322';
+      ctx.beginPath();ctx.arc(px,py,5,0,2*Math.PI);ctx.fill();
+      ctx.strokeStyle='#cf1322';
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();
+      // labels
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      let label='접촉점 (cycloid)';
+      if(rRatio<0.99) label='바퀴 안 (curtate cycloid)';
+      else if(rRatio>1.01) label='바퀴 밖 (prolate cycloid)';
+      ctx.fillText('자취: '+label,30,30);
+      ctx.fillText('각도 = '+(thMax*180/Math.PI).toFixed(0)+'°, 진행 거리 = '+(R*thMax).toFixed(1)+' (= R·θ, 굴림조건)',30,50);
+    }
+    ['d9th','d9r'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+
+  <h2>7-4. 응용 — 자전거의 기어비</h2>
+
+  <h3>자전거 기어 시스템</h3>
+  <p>자전거 페달 기어 (앞) 와 뒤 카세트 기어 (뒤). 기어비 $r = T_{\text{front}}/T_{\text{rear}}$ ($T$ = 잇수).</p>
+  <ul>
+    <li>페달 1 회전마다 뒷바퀴 $r$ 회전.</li>
+    <li>같은 페달 케이던스에서 큰 $r$ → 빠른 속도, 작은 $r$ → 가파른 언덕 등반.</li>
+    <li>일반 자전거: 앞 50T / 뒤 14~28T → $r = 1.8 \sim 3.6$.</li>
+    <li>페달 케이던스 80 rpm, $r = 3.0$, 휠 둘레 2.1 m → 속도 = $80 \times 3.0 \times 2.1 / 60 \approx 8.4$ m/s ≈ 30 km/h.</li>
+  </ul>
+
+
+  <h2>7-5. 응용 — 자동차 변속기</h2>
+
+  <h3>변속비의 의미</h3>
+  <p>1 단 변속비 ~3.5, 5 단 ~1.0, 6 단 ~0.7. 엔진 회전수 (RPM) 와 휠 회전수의 관계.</p>
+  <ul>
+    <li>1 단 (가속·언덕): 휠 회전수 << 엔진 회전수, 토크 ↑.</li>
+    <li>고단 (고속): 휠 회전수 ≈ 엔진 회전수, 효율 ↑.</li>
+    <li>오버드라이브: 휠 회전수 > 엔진 회전수 (연비 최우선).</li>
+  </ul>
+
+  <h3>속도 계산</h3>
+  <p>엔진 RPM = 3,000, 변속비 = 3.5, 차동기어비 = 4.0, 타이어 반지름 0.32 m:</p>
+  <ul>
+    <li>휠 RPM = $3,000 / (3.5 \times 4.0) = 214$ rpm.</li>
+    <li>휠 각속도 = $214 \times 2\pi/60 \approx 22.4$ rad/s.</li>
+    <li>차량 속도 = $22.4 \times 0.32 = 7.17$ m/s ≈ 26 km/h.</li>
+  </ul>
+
+
+  <h2>7-6. 응용 — 산업로봇 6 자유도</h2>
+
+  <h3>관절별 회전</h3>
+  <p>일반적인 산업로봇 (예: KUKA, ABB) 은 6 개의 회전 관절. 각 관절은 한 축 주위로 회전.</p>
+  <ul>
+    <li>관절 1 (베이스): 수직축 회전 — 로봇 전체 방향.</li>
+    <li>관절 2 (어깨): 수평축 회전 — 어깨 위·아래.</li>
+    <li>관절 3 (팔꿈치): 수평축 회전 — 팔꿈치 굽힘.</li>
+    <li>관절 4-5-6 (손목): 3 축 회전 — 도구 자세.</li>
+  </ul>
+
+  <h3>끝점 (end-effector) 위치 계산</h3>
+  <p>각 관절의 회전 행렬을 차례로 곱해 (forward kinematics) 끝점 위치 + 자세 결정. 회전 운동학의 핵심 응용.</p>
+
+
+  <h2>7-7. 손계산 추가 예제</h2>
+
+  <h3>예제 1: 굴림에서 임의 점의 속도</h3>
+  <p>반지름 $R = 0.5$ m 바퀴가 중심 속도 4 m/s 로 굴림. 바퀴 위 (가장 위 점) 와 바퀴 옆 (앞) 의 속도?</p>
+  <ul>
+    <li>가장 위: $v = 2 v_c = 8$ m/s.</li>
+    <li>가장 앞: $v_x = v_c = 4$ m/s, $v_y = R\omega = 4$ m/s. 합 = $4\sqrt{2} \approx 5.66$ m/s, 위로 45°.</li>
+  </ul>
+
+  <h3>예제 2: 변각 운동 (각가속도)</h3>
+  <p>회전판이 정지에서 5 초에 1200 rpm 까지 일정 각가속도로 가속. 각가속도와 그 동안 회전한 횟수.</p>
+  <p>풀이: $\omega_f = 1200 \times 2\pi/60 = 40\pi$ rad/s. $\alpha = 40\pi/5 = 8\pi$ rad/s². 회전각 = $\tfrac{1}{2}\alpha t^2 = 100\pi$ rad = 50 회전.</p>
+
+
   <h2>8. 흔한 오개념</h2>
   <ul>
     <li><strong>"각속도는 위치마다 다르다"</strong> — 강체에서 각속도 $\omega$는 <em>물체 전체의 한 값</em>입니다. 점마다 다른 건 선속도 $v=r\omega$.</li>

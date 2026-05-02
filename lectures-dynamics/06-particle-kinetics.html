@@ -383,6 +383,108 @@
     <li><strong>등산화-바위</strong>: $\mu \approx 0.7$ — 비브람 솔이 만든 효과. 안전 한계 결정.</li>
   </ul>
 
+  <h2>8-C. 인터랙티브 — 경사면 + 마찰</h2>
+
+  <div class="demo">
+    <h4>🎮 경사각과 마찰계수의 관계</h4>
+    <p>경사각 $\theta$ 와 마찰계수 $\mu$ 를 바꾸면서 물체가 미끄러지는지, 가속도는 얼마인지 확인.
+       임계각 $\theta_c = \arctan(\mu_s)$ 를 직접 발견해 보세요.</p>
+    <canvas id="d6InclineDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>경사각 θ (°) <span class="val" id="d6thV">30</span><input type="range" id="d6th" min="0" max="60" step="1" value="30"></label>
+      <label>마찰계수 μ <span class="val" id="d6muV">0.3</span><input type="range" id="d6mu" min="0" max="1" step="0.05" value="0.3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d6InclineDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const th=+document.getElementById('d6th').value*Math.PI/180;
+      const mu=+document.getElementById('d6mu').value;
+      ['d6th','d6mu'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=80,oy=H-50,len=400;
+      const x2=ox+len*Math.cos(th),y2=oy-len*Math.sin(th);
+      ctx.fillStyle='#9c27b033';
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x2,y2);ctx.lineTo(x2,oy);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#9c27b0';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x2,y2);ctx.stroke();
+      // block at midpoint
+      const mx=ox+len*0.5*Math.cos(th),my=oy-len*0.5*Math.sin(th);
+      const bs=30;
+      ctx.fillStyle='#0b5fff';
+      ctx.save();ctx.translate(mx,my);ctx.rotate(-th);
+      ctx.fillRect(-bs/2,-bs,bs,bs);
+      ctx.restore();
+      // physics
+      const g=9.81,driving=g*Math.sin(th),friction_max=mu*g*Math.cos(th);
+      let a,status,col;
+      if(driving<=friction_max){a=0;status='정지 ✓ (정적 마찰이 충분)';col='#2e7d32';}
+      else{a=driving-friction_max;status=`미끄러짐 → 가속도 a = g(sin θ − μ cos θ) = ${a.toFixed(2)} m/s²`;col='#cf1322';}
+      ctx.fillStyle='#222';ctx.font='13px Consolas,monospace';
+      ctx.fillText(`구동력 (성분): mg sin θ = ${driving.toFixed(2)}m N/kg`,30,30);
+      ctx.fillText(`최대 마찰력: μ N = μ mg cos θ = ${friction_max.toFixed(2)}m N/kg`,30,50);
+      ctx.fillStyle=col;ctx.font='bold 14px sans-serif';
+      ctx.fillText(status,30,75);
+      const thC=Math.atan(mu)*180/Math.PI;
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`임계각 θ_c = arctan(μ) = ${thC.toFixed(1)}°`,30,98);
+    }
+    ['d6th','d6mu'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+
+  <h2>8-D. 응용 — 자동차 제동 거리</h2>
+
+  <h3>제동 시 차량의 운동방정식</h3>
+  <p>마찰계수 $\mu$ 의 도로에서 속도 $v_0$ 으로 달리던 차량이 급제동 (잠긴 바퀴, 미끄러짐) 할 때:</p>
+  <ul>
+    <li>마찰력 = $\mu m g$ (모든 무게를 위에서 누르므로 $N = mg$).</li>
+    <li>감속도 = $\mu g$.</li>
+    <li>제동 거리 = $\dfrac{v_0^2}{2\mu g}$ (등가속도 운동 공식).</li>
+  </ul>
+
+  <h3>수치 비교</h3>
+  <table>
+    <thead><tr><th>도로 상태</th><th>μ</th><th>50 km/h 제동거리</th><th>100 km/h 제동거리</th></tr></thead>
+    <tbody>
+      <tr><td>건조 아스팔트</td><td>0.7</td><td>14 m</td><td>56 m</td></tr>
+      <tr><td>젖은 아스팔트</td><td>0.4</td><td>25 m</td><td>98 m</td></tr>
+      <tr><td>눈길</td><td>0.2</td><td>49 m</td><td>197 m</td></tr>
+      <tr><td>빙판</td><td>0.1</td><td>98 m</td><td>394 m</td></tr>
+    </tbody>
+  </table>
+
+  <p>속도가 2 배면 거리가 4 배 (제곱 비례). 빙판에서 100 km/h 는 거의 4 m 비공간 (1 차선 폭) 4 배 = 거의 400 m 가야 멈춤.</p>
+
+
+  <h2>8-E. 응용 — 항공기 이착륙 한계</h2>
+
+  <h3>이륙 거리</h3>
+  <p>항공기가 이륙 속도 $v_{TO}$ 에 도달하려면 활주로에서 가속해야 함. 추력 $T$, 항력 $D$, 마찰 $\mu mg$ 라면:</p>
+  $$ a = (T - D - \mu m g)/m \approx T/m - \mu g \quad (\text{초기에는 } D \approx 0) $$
+  <p>이륙 거리 = $\dfrac{v_{TO}^2}{2a}$. 작은 비행기 ~500 m, 대형 여객기 ~3 km.</p>
+
+  <h3>활주로 길이 설계</h3>
+  <p>김포공항 활주로 3,600 m, 인천공항 4,000 m. 이는 항공기 종류·기상·고도를 고려한 안전 마진.</p>
+
+
+  <h2>8-F. 손계산 추가 예제 — 마찰과 가속도</h2>
+
+  <h3>예제 1: 두 블록의 시스템</h3>
+  <p>매끄러운 수평면 위에 두 블록 (질량 $m_1 = 5$ kg, $m_2 = 3$ kg) 이 줄로 연결. $m_2$ 에 끈을 통해 수평으로 50 N 을 당김.
+     두 블록의 가속도와 줄에 걸리는 장력은?</p>
+  <p>풀이: 시스템 전체로 보면 $a = 50/(5+3) = 6.25$ m/s². 줄의 장력은 $m_1$ 에만 작용하므로 $T = m_1 a = 31.25$ N.</p>
+
+  <h3>예제 2: 마찰 있는 두 블록</h3>
+  <p>위 시스템에서 두 블록 모두 $\mu = 0.2$ 의 마찰을 받는다면?</p>
+  <p>풀이: 마찰력 = $0.2 \times 8 \times 9.81 = 15.7$ N. 정미 구동력 = $50 - 15.7 = 34.3$ N.
+     $a = 34.3/8 = 4.29$ m/s². 장력은 $m_1$ 의 마찰 + 가속력 = $0.2 \times 5 \times 9.81 + 5 \times 4.29 = 9.81 + 21.45 = 31.26$ N.</p>
+
+
   <h2>9. 흔한 오개념</h2>
   <ul>
     <li><strong>"원심력이 공을 바깥으로 밀어낸다"</strong> — 관성계에서는 원심력이 없습니다. 공에는 줄의 장력만 작용하고, 그 힘이 안쪽으로 당겨 곡선 운동을 만들어냅니다. "바깥으로 밀린다"는 느낌은 차에 탄 사람이 회전 좌표계에서 느끼는 가짜 힘일 뿐.</li>

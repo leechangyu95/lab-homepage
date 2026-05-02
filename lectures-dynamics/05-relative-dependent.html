@@ -448,6 +448,97 @@
   </ul>
   <p>실제 케이블에서는 늘어남(elongation)·질량(현수선 sag)·내부 마찰 등이 있어 더 복잡. 학부에서는 이상화로 충분.</p>
 
+  <h2>7-3. 인터랙티브 — 두 자동차의 상대속도</h2>
+
+  <div class="demo">
+    <h4>🎮 두 자동차의 상대속도 시각화</h4>
+    <p>차 A 와 차 B 의 속도 (방향 포함) 를 슬라이더로 바꾸면서 상대속도 $\mathbf{v}_{B/A}$ 를 시각화합니다.</p>
+    <canvas id="d5RelDemo" width="600" height="320"></canvas>
+    <div class="controls">
+      <label>v_A x (m/s) <span class="val" id="d5vAxV">20</span><input type="range" id="d5vAx" min="-30" max="30" step="1" value="20"></label>
+      <label>v_A y (m/s) <span class="val" id="d5vAyV">0</span><input type="range" id="d5vAy" min="-30" max="30" step="1" value="0"></label>
+      <label>v_B x (m/s) <span class="val" id="d5vBxV">15</span><input type="range" id="d5vBx" min="-30" max="30" step="1" value="15"></label>
+      <label>v_B y (m/s) <span class="val" id="d5vByV">10</span><input type="range" id="d5vBy" min="-30" max="30" step="1" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d5RelDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=W/2,oy=H/2,scale=4;
+    function arrow(p0,p,col,lw){
+      ctx.strokeStyle=col;ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p.x,p.y);ctx.stroke();
+      const ang=Math.atan2(p.y-p0.y,p.x-p0.x);
+      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(p.x,p.y);
+      ctx.lineTo(p.x-12*Math.cos(ang-0.4),p.y-12*Math.sin(ang-0.4));
+      ctx.lineTo(p.x-12*Math.cos(ang+0.4),p.y-12*Math.sin(ang+0.4));ctx.closePath();ctx.fill();
+    }
+    function draw(){
+      const vAx=+document.getElementById('d5vAx').value,vAy=+document.getElementById('d5vAy').value;
+      const vBx=+document.getElementById('d5vBx').value,vBy=+document.getElementById('d5vBy').value;
+      ['d5vAx','d5vAy','d5vBx','d5vBy'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(W-20,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,20);ctx.lineTo(ox,H-20);ctx.stroke();
+      arrow({x:ox,y:oy},{x:ox+vAx*scale,y:oy-vAy*scale},'#1677ff',3);
+      arrow({x:ox,y:oy},{x:ox+vBx*scale,y:oy-vBy*scale},'#fa8c16',3);
+      const rx=vBx-vAx,ry=vBy-vAy;
+      arrow({x:ox+vAx*scale,y:oy-vAy*scale},{x:ox+vBx*scale,y:oy-vBy*scale},'#cf1322',2.5);
+      ctx.fillStyle='#1677ff';ctx.font='bold 14px sans-serif';ctx.fillText(`v_A = (${vAx}, ${vAy})`,30,30);
+      ctx.fillStyle='#fa8c16';ctx.fillText(`v_B = (${vBx}, ${vBy})`,30,50);
+      ctx.fillStyle='#cf1322';ctx.fillText(`v_{B/A} = v_B − v_A = (${rx}, ${ry}), 크기 ${Math.hypot(rx,ry).toFixed(2)} m/s`,30,70);
+    }
+    ['d5vAx','d5vAy','d5vBx','d5vBy'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+
+  <h2>7-4. 응용 — 강물 도하 문제</h2>
+
+  <h3>고전 예제</h3>
+  <p>폭 100 m 강. 강물 속도 1.5 m/s 동쪽. 배의 정수 속도 2.0 m/s. 다음 두 시나리오:</p>
+
+  <h3>시나리오 A — 가장 빠르게 건너기</h3>
+  <p>배를 강물에 수직 (북쪽) 으로 항해. 시간 = 100 / 2.0 = 50 s. 도착점 = 출발점에서 동쪽으로 1.5 × 50 = 75 m 떠내려감.</p>
+
+  <h3>시나리오 B — 정면 (마주보는 강기슭) 도착</h3>
+  <p>강물이 동쪽으로 미는 만큼 서쪽 성분으로 항해해야 함. 배 속도의 동서 성분 = $-1.5$ m/s 가 되어야.
+     $\sin\theta = 1.5/2.0 = 0.75$, $\theta = 48.6°$ (북서 방향).
+     이때 북쪽 성분 = $\cos 48.6° \times 2.0 = 1.32$ m/s. 시간 = 100/1.32 ≈ 75.5 s. 더 오래 걸림.</p>
+
+
+  <h2>7-5. 응용 — 항공기 풍속 보정</h2>
+
+  <h3>북쪽으로 비행하려는 비행기</h3>
+  <p>대기 속도 (TAS) 200 km/h, 측풍 50 km/h 동쪽. 지면 기준으로 정북 비행하려면?</p>
+  <p>풍속 보정: 비행기 머리 (heading) 를 서쪽으로 기울임. $\sin\alpha = 50/200 = 0.25 \Rightarrow \alpha = 14.5°$.
+     실제 지면 속도 (groundspeed): $200\cos 14.5° = 193.6$ km/h.</p>
+
+
+  <h2>7-6. 응용 — 자율주행 차량 간 상대속도</h2>
+
+  <h3>인접 차로 자동차의 위협 평가</h3>
+  <p>주행 중 인접 차로 차량의 상대속도가 작을수록 안전. 큰 상대속도는:</p>
+  <ul>
+    <li>옆 차가 빠른 속도로 추월하려 함 → 차로 변경 자제.</li>
+    <li>옆 차가 너무 느림 → 추돌 주의.</li>
+  </ul>
+  <p>자율주행 시스템은 매 100 ms 마다 모든 주변 차량의 상대속도 벡터를 계산하여 위험도 점수화.</p>
+
+
+  <h2>7-7. 손계산 추가 예제</h2>
+
+  <h3>예제 — 두 기차의 만남</h3>
+  <p>기차 A: 동쪽으로 60 km/h. 기차 B: 서쪽으로 80 km/h. 두 기차가 100 km 떨어져 마주 본다. 만나는 시간?</p>
+  <p>풀이: 상대속도 = $60 + 80 = 140$ km/h. 시간 = $100/140 = 0.714$ h ≈ 43 분.</p>
+
+  <h3>예제 — 도르래 시스템</h3>
+  <p>고정 도르래 한 개와 움직이는 도르래 한 개. 자유단을 1 m 잡아당기면 매달린 추는 얼마나 올라가는가?</p>
+  <p>풀이: 두 줄에 나뉜 시스템 → 자유단 1 m 당기면 추는 0.5 m 올라감. 줄 길이 보존 식: $s_{\text{free}} + 2 s_{\text{load}} = L$.</p>
+
+
   <h2>8. 흔한 오개념</h2>
   <ul>
     <li><strong>"한쪽이 v로 내려가면 반대쪽도 v로 올라간다 — 항상"</strong> — 도르래 구조에 따라 비율이 다릅니다. 줄 길이 식을 먼저 적고 미분하는 습관을 들이세요.</li>
