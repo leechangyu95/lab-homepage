@@ -59,10 +59,48 @@
     </tbody>
   </table>
 
+  <h2>1.5 회로 해석 절차 — 한 페이지 가이드</h2>
+  <p>복잡한 회로를 보면 어디서부터 시작할지 막막합니다. 이 페이지를 시험 직전에 다시 보세요.</p>
+
+  <h3>1.5.1 1단계 — 단순화 가능한 부분 모두 묶기</h3>
+  <p>직병렬 합성으로 줄일 수 있는 부분은 끝까지 줄여 놓습니다. 이게 끝나도 안 풀리면 다음 단계로.</p>
+
+  <h3>1.5.2 2단계 — 노드와 메쉬 수 헤아리기</h3>
+  <p>비기준 노드 수 N, 독립 메쉬 수 M을 셉니다. N과 M 중 작은 쪽이 더 적은 미지수 → 그 쪽을 선택.</p>
+
+  <h3>1.5.3 3단계 — 식 작성</h3>
+  <p>각 노드(또는 메쉬)에 KCL(또는 KVL) 식을 쓴다. 옴의 법칙으로 모든 가지 전류를 노드 전압의 차로 표현.</p>
+
+  <h3>1.5.4 4단계 — 연립 풀이</h3>
+  <p>2개 미지수까지는 손으로, 3개 이상이면 행렬·계산기 사용. 풀이 후 검산: 노드 KCL ✓, 루프 KVL ✓, 부호 확인.</p>
+
   <h2>2. KCL — 키르히호프 전류법칙</h2>
   <p>"한 노드에 들어오는 전류의 합 = 나가는 전류의 합". 곧 한 노드에서 모든 전류의 대수 합은 0입니다.</p>
   $$ \boxed{\sum_{\text{node}} I = 0} $$
   <p>물리적 근거는 <strong>전하 보존 법칙</strong>입니다. 노드는 전하를 저장하지 않으니, 시간당 들어온 만큼 시간당 나가야 합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg">
+      <!-- center node -->
+      <circle cx="300" cy="115" r="8" fill="#1b5e20"/>
+      <text x="300" y="100" text-anchor="middle" font-size="13" fill="#1b5e20" font-weight="bold">노드 A</text>
+      <!-- I1 incoming from left -->
+      <line x1="100" y1="115" x2="290" y2="115" stroke="#0742b8" stroke-width="2.5"/>
+      <polygon points="195,107 215,115 195,123" fill="#0742b8"/>
+      <text x="155" y="100" text-anchor="middle" font-size="13" fill="#0742b8" font-weight="bold">I₁ (들어옴)</text>
+      <!-- I2 outgoing to right -->
+      <line x1="310" y1="115" x2="500" y2="115" stroke="#c1121f" stroke-width="2.5"/>
+      <polygon points="430,107 450,115 430,123" fill="#c1121f"/>
+      <text x="430" y="100" text-anchor="middle" font-size="13" fill="#c1121f" font-weight="bold">I₂ (나감)</text>
+      <!-- I3 outgoing down -->
+      <line x1="300" y1="123" x2="300" y2="200" stroke="#c1121f" stroke-width="2.5"/>
+      <polygon points="292,180 300,200 308,180" fill="#c1121f"/>
+      <text x="335" y="180" text-anchor="middle" font-size="13" fill="#c1121f" font-weight="bold">I₃ (나감)</text>
+      <!-- KCL equation -->
+      <text x="300" y="225" text-anchor="middle" font-size="14" fill="#333" font-weight="bold">KCL: I₁ = I₂ + I₃</text>
+    </svg>
+    <figcaption>그림 1. KCL은 "노드에 전하가 쌓이지 않는다"의 회로 버전. 들어온 만큼 나간다.</figcaption>
+  </figure>
 
   <h3>2.1 노드 해석법(Nodal Analysis) 절차</h3>
   <ol>
@@ -169,6 +207,25 @@
   })();
   </script>
 
+  <h2>2.5 노드 해석 — 추가 예제</h2>
+
+  <h3>2.5.1 예제 — 전류원이 포함된 회로</h3>
+  <p>$I_s = 2\,\text{mA}$ 전류원이 노드 A로 들어오고, A에서 $R_1 = 1\,\text{k}\Omega$로 GND, A에서 $R_2 = 2\,\text{k}\Omega$로 노드 B, B에서 $R_3 = 4\,\text{k}\Omega$로 GND.</p>
+  <ul>
+    <li>노드 A KCL: $2\,\text{mA} = V_A/1\text{k} + (V_A - V_B)/2\text{k}$</li>
+    <li>노드 B KCL: $(V_A - V_B)/2\text{k} = V_B/4\text{k}$ → $V_A = 1.5 V_B$</li>
+    <li>대입: $2 = 1.5 V_B / 1 + (0.5 V_B)/2 = 1.5 V_B + 0.25 V_B = 1.75 V_B$</li>
+    <li>$V_B \approx 1.143\,\text{V}$, $V_A \approx 1.714\,\text{V}$.</li>
+  </ul>
+  <p>전류원의 값은 그 노드 KCL식에 직접 들어가서 식이 깔끔합니다 — 이래서 전류원이 있으면 KCL이 더 자연스럽다고 했던 것.</p>
+
+  <h3>2.5.2 노드 해석의 흔한 실수</h3>
+  <ul>
+    <li>접지(0V 기준)를 안 정함 → 모든 노드 전압이 미정.</li>
+    <li>전류 부호 일관성 없이 식 세움 → 검산 실패.</li>
+    <li>같은 노드를 두 번 셈 → 식이 무한 루프.</li>
+  </ul>
+
   <h2>3. KVL — 키르히호프 전압법칙</h2>
   <p>"하나의 폐루프(loop)를 한 바퀴 돌면서 전위 변화를 모두 더하면 0". 곧 인가전압 = 강하전압의 합.</p>
   $$ \boxed{\sum_{\text{loop}} V = 0} $$
@@ -205,6 +262,51 @@
   <div class="tip">
     <strong>KCL이 편한 회로 vs KVL이 편한 회로</strong> — 노드가 적으면 KCL이, 메쉬가 적으면 KVL이 빠릅니다. 전류원이 있으면 KCL이 자연스럽고(전류원이 한 노드에서 직접 식에 들어감), 전압원이 많으면 KVL이 자연스럽습니다. 같은 회로에서 두 방법은 반드시 같은 답을 줍니다.
   </div>
+
+  <h3>3.4 KVL 시각화 — 폐회로의 등산 비유</h3>
+  <figure>
+    <svg viewBox="0 0 640 240" xmlns="http://www.w3.org/2000/svg">
+      <!-- mountain shape -->
+      <polyline points="60,210 160,80 280,140 380,60 500,160 580,210" fill="none" stroke="#666" stroke-width="2"/>
+      <line x1="60" y1="210" x2="580" y2="210" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <!-- Source: +V going up -->
+      <text x="160" y="60" text-anchor="middle" font-size="13" fill="#0742b8" font-weight="bold">+V (전원, 올라감)</text>
+      <line x1="100" y1="170" x2="155" y2="100" stroke="#0742b8" stroke-width="2" marker-end="url(#arrowB)"/>
+      <!-- Drops -->
+      <text x="280" y="135" text-anchor="start" font-size="12" fill="#c1121f">−V₁ (저항 강하)</text>
+      <line x1="220" y1="100" x2="270" y2="135" stroke="#c1121f" stroke-width="2" marker-end="url(#arrowR)"/>
+      <text x="380" y="50" text-anchor="middle" font-size="12" fill="#0742b8">+V₂ 또는 더 올라가지 않음</text>
+      <line x1="430" y1="100" x2="490" y2="155" stroke="#c1121f" stroke-width="2" marker-end="url(#arrowR)"/>
+      <text x="560" y="155" font-size="12" fill="#c1121f">−V₂ (강하)</text>
+      <!-- Start/End markers -->
+      <circle cx="60" cy="210" r="6" fill="#1b5e20"/>
+      <text x="60" y="230" text-anchor="middle" font-size="12" fill="#1b5e20" font-weight="bold">출발</text>
+      <circle cx="580" cy="210" r="6" fill="#1b5e20"/>
+      <text x="580" y="230" text-anchor="middle" font-size="12" fill="#1b5e20" font-weight="bold">도착 (=출발)</text>
+      <defs>
+        <marker id="arrowB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#0742b8"/></marker>
+        <marker id="arrowR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#c1121f"/></marker>
+      </defs>
+    </svg>
+    <figcaption>그림 2. KVL은 등산의 보존법. 한 바퀴 돌고 출발점으로 돌아오면 높이(전위)는 그대로 — 즉 올라간 만큼 내려와야 한다.</figcaption>
+  </figure>
+
+  <h2>3.5 메쉬 해석 — 추가 예제</h2>
+
+  <h3>3.5.1 3 메쉬 회로</h3>
+  <p>3개 메쉬가 서로 저항을 공유하는 회로는 3개 미지수 연립.</p>
+  $$ \begin{bmatrix} R_{11} & -R_{12} & -R_{13} \\ -R_{12} & R_{22} & -R_{23} \\ -R_{13} & -R_{23} & R_{33} \end{bmatrix} \begin{bmatrix} I_A \\ I_B \\ I_C \end{bmatrix} = \begin{bmatrix} V_A \\ V_B \\ V_C \end{bmatrix} $$
+  <p>대각선 = 메쉬에 포함된 모든 저항 합, 비대각선 = 두 메쉬가 공유하는 저항(음수). 패턴만 알면 행렬을 바로 쓸 수 있습니다.</p>
+
+  <h3>3.5.2 행렬 풀이 — Cramer's Rule 또는 Gauss 소거</h3>
+  <p>2x2 → 직접 대입. 3x3 → Cramer's rule (행렬식)이 손풀이에 편리. 4x4 이상 → 컴퓨터 (Octave, Python).</p>
+
+  <h3>3.5.3 메쉬 해석의 흔한 실수</h3>
+  <ul>
+    <li>공유 저항 부호 잘못 — 두 메쉬 전류 차에서 부호 통일 필요.</li>
+    <li>전류원이 메쉬 사이에 있으면 supermesh 사용.</li>
+    <li>전압원 극성 — KVL 도는 방향과 일치 여부 확인.</li>
+  </ul>
 
   <h2>4. 중첩의 원리(Superposition)</h2>
   <p>여러 전원이 동시에 작용하는 <strong>선형 회로</strong>에서, 어떤 소자에 걸리는 전압·전류는 <strong>전원 하나만 살리고 나머지를 끈 회로 여러 개</strong>의 결과를 대수적으로 합한 것과 같습니다.</p>
@@ -330,6 +432,44 @@
   })();
   </script>
 
+  <h2>4.5 어느 방법을 언제 쓸까 — 결정 가이드</h2>
+  <p>같은 회로라도 어느 도구를 쓰느냐에 따라 풀이 시간이 5배 차이 납니다. 회로 모양을 보고 빠르게 판단하는 표.</p>
+  <table>
+    <thead><tr><th>회로의 특징</th><th>추천 도구</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>접점(노드)이 적음 (3개 이하)</td><td><strong>KCL</strong></td><td>미지수가 노드 전압 1~2개로 깔끔</td></tr>
+      <tr><td>폐회로(루프)가 적음 (2개 이하)</td><td><strong>KVL</strong></td><td>미지수가 루프 전류 1~2개로 깔끔</td></tr>
+      <tr><td>전류원이 포함</td><td><strong>KCL</strong></td><td>전류원 값이 노드식에 그대로 들어감</td></tr>
+      <tr><td>전압원만 여러 개</td><td>KVL 또는 <strong>중첩</strong></td><td>루프 식이 깔끔 / 전원 분리해서 분석</td></tr>
+      <tr><td>한 전원의 영향만 보고 싶음</td><td><strong>중첩</strong></td><td>그 전원만 살리면 즉시 답</td></tr>
+      <tr><td>부하만 자주 바뀜</td><td>(다음 주) 등가회로</td><td>$V_\mathrm{Th}, R_\mathrm{Th}$ 한 번 구해두면 재사용</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.5.1 빠른 판단 순서</h3>
+  <ol>
+    <li>직병렬로 줄일 수 있나? → 가능하면 <strong>가장 먼저 줄이기</strong>.</li>
+    <li>노드 수 vs 메쉬 수 비교 → 적은 쪽 선택.</li>
+    <li>전원이 둘 이상이고 회로가 복잡 → 중첩 시도.</li>
+  </ol>
+
+  <h2>4.5 중첩 — 단계별 풀이 예제 한 번 더</h2>
+
+  <h3>4.5.1 문제</h3>
+  <p>10V 전원과 2A 전류원이 모두 있는 회로에서 $R = 3\,\Omega$ 저항에 흐르는 전류 $I_R$을 중첩으로 구하라. (회로: 10V → 1Ω → 노드 A → 3Ω → GND, 노드 A → 2A 전류원으로 GND).</p>
+
+  <h3>4.5.2 케이스 1: 10V만 작용 (전류원 개방)</h3>
+  <p>전류원을 개방하면 단순한 직렬 회로 (10V, 1Ω, 3Ω 직렬).</p>
+  $$ I_R^{(1)} = \frac{10}{1+3} = 2.5\,\text{A} $$
+
+  <h3>4.5.3 케이스 2: 2A만 작용 (전압원 단락)</h3>
+  <p>전압원을 단락하면 1Ω과 3Ω이 노드 A에서 병렬, 전류원이 노드 A로 2A 주입.</p>
+  $$ \text{전류 분배:}\; I_R^{(2)} = -2 \cdot \frac{1}{1+3} = -0.5\,\text{A} $$
+  <p>(부호는 케이스 1과 같은 방향 기준. 음수 = 반대 방향).</p>
+
+  <h3>4.5.4 합산</h3>
+  $$ I_R = I_R^{(1)} + I_R^{(2)} = 2.5 - 0.5 = 2.0\,\text{A} $$
+
   <h2>5. 이상적 전원 vs 실제 전원</h2>
   <p>중첩의 원리에서 "전원 끄기"가 깨끗하려면 전원이 이상적이어야 합니다.</p>
   <table>
@@ -341,6 +481,18 @@
   </table>
   <p>건전지가 닳으면 출력 전압이 부하 전류에 따라 떨어지는 것은 내부저항 $r_s$가 점점 커지기 때문입니다. 부하 저항 $R_L$이 $r_s$보다 충분히 크면 이상적 전압원으로 근사할 수 있어요.</p>
 
+  <h2>5.5 실전 모델 — 배터리 내부저항 측정법</h2>
+  <p>실제 배터리는 내부저항 $r_s$를 가집니다. 멀티미터로 두 가지 측정만 하면 $r_s$를 역산할 수 있습니다.</p>
+  <ol>
+    <li>무부하 전압 $V_{\text{OC}}$ (Open Circuit Voltage) 측정.</li>
+    <li>알려진 부하 $R_L$을 연결한 상태의 전압 $V_L$ 측정.</li>
+    <li>$r_s = R_L \cdot (V_{\text{OC}} - V_L)/V_L$.</li>
+  </ol>
+  <p>예) AA 알카라인 새 배터리: $V_{\text{OC}} = 1.55\,\text{V}$, $R_L = 1\,\Omega$ 연결 시 $V_L = 1.40\,\text{V}$ → $r_s \approx 0.107\,\Omega$. 충방전을 거듭한 헌 배터리는 $r_s$가 1Ω 이상으로 커져 부하 전류가 늘면 출력 전압이 급락합니다.</p>
+
+  <h2>5.6 비선형 소자가 있을 때 — 중첩 못 쓰는 이유</h2>
+  <p>중첩은 <strong>선형 소자</strong>에만 성립. $V$–$I$가 직선이 아닌 다이오드(W9), 트랜지스터(W10) 등이 포함된 회로에는 직접 적용 불가. 단, 동작점 근처에서 선형 근사하면 적용 가능 — W11의 op-amp 소신호 분석에서 사용.</p>
+
   <h2>6. 핵심 비교 — 한눈에</h2>
   <table>
     <thead><tr><th>방법</th><th>식의 미지수</th><th>잘 맞는 회로</th></tr></thead>
@@ -350,6 +502,28 @@
       <tr><td>중첩의 원리</td><td>케이스별 결과</td><td>전원 하나의 영향을 따로 보고 싶을 때</td></tr>
     </tbody>
   </table>
+
+  <h2>6.5 응용 사례 — KCL/KVL이 살아 있는 곳</h2>
+
+  <h3>6.5.1 가정용 분전반의 KCL</h3>
+  <p>한 가정에 들어오는 메인 전류 $I_T$는 각 가전제품 회로(거실 조명, 주방 콘센트, 에어컨 등)로 분기됩니다. 분기점에서 $I_T = I_{\text{거실}} + I_{\text{주방}} + I_{\text{에어컨}} + \cdots$ — 정확히 KCL.</p>
+
+  <h3>6.5.2 자동차 12V 시스템의 KVL</h3>
+  <p>자동차 시동 모터에 12V를 인가했을 때 배선 저항·연결 단자 저항·모터 코일 저항 합이 12V를 모두 분배해 사용합니다. 만약 단자가 부식돼 저항이 커지면 — 모터 양단 전압이 줄어 시동이 약해짐. 이 모든 게 KVL 한 줄로 진단 가능.</p>
+
+  <h3>6.5.3 OPAMP 회로의 중첩 원리</h3>
+  <p>오디오 믹서는 여러 마이크의 신호를 합쳐 하나로 만듭니다. OPAMP 가산 회로에서 각 입력의 영향을 따로 분석할 때 정확히 중첩의 원리를 사용합니다 (W11에서 다시 등장).</p>
+
+  <h3>6.5.4 노이즈 분석 — 신호 vs 잡음</h3>
+  <p>회로에 들어오는 입력은 보통 "신호 + 잡음" 두 가지가 더해진 형태. 중첩의 원리로 신호만 있을 때의 출력과 잡음만 있을 때의 출력을 따로 구해 SNR(Signal-to-Noise Ratio)을 분석합니다.</p>
+
+  <h2>6.6 자기점검 — KCL/KVL이 맞나 확인</h2>
+  <ol>
+    <li>한 노드에 5A가 들어오고 3A가 나간다. 다른 한 가지로 나가는 전류는? 정답: 2A.</li>
+    <li>폐회로에서 인가전압 24V, 두 저항 강하 8V·12V. 셋째 저항 강하는? 정답: 4V (KVL).</li>
+    <li>전류원 끄기 = ___ , 전압원 끄기 = ___. 정답: 개방·단락.</li>
+    <li>전압원이 4개인 회로를 푸는 가장 자연스러운 방법은? 정답: 메쉬(KVL) 또는 중첩.</li>
+  </ol>
 
   <h2>7. 연습</h2>
   <ol>
