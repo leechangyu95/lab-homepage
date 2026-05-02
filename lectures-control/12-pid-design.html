@@ -314,12 +314,686 @@
     </ol>
   </div>
 
-  <h2>8. 핵심 정리</h2>
+  <h2>8. PID 각 항의 직관과 트레이드오프 깊이 보기</h2>
+
+  <p>표 한 줄 설명만으로는 P·I·D의 진짜 성격이 보이지 않습니다. 각 항을 "센서로 느끼는 시간"의 관점에서 다시 봅시다.</p>
+
+  <h3>8.1 P 항 — 현재의 거울</h3>
+  <p>비례 항 $K_p e$는 <em>지금 이 순간</em>의 오차에만 반응합니다. 사람으로 치면 "지금 차선이 얼마나 어긋나 있나?"만 보고 핸들을 돌리는 것. $K_p$가 작으면 핸들을 살짝만 돌려서 차가 천천히 돌아오고, 크면 핸들을 확 돌려서 빠르게 복귀하지만 차가 반대로 튀어 나가 다시 어긋납니다(진동).</p>
+
+  <ul>
+    <li><strong>물리적 의미</strong>: $K_p$는 "스프링 강성"과 같습니다. 오차가 만드는 복원력의 강도.</li>
+    <li><strong>한계</strong>: 시스템 1형(type 0)에서는 정상오차가 $1/(1+K_p G(0))$로 항상 잔류. $K_p$를 무한히 키우려 해도 위상여유가 무너지면서 시스템이 발진.</li>
+    <li><strong>모터에서의 효과</strong>: 위치 PID에서 $K_p$를 키우면 모터가 목표 각도에 더 빠르게 도달하지만, 기어 백래시·관성에 의한 진동이 함께 커짐. 산업용 BLDC는 보통 $K_p$를 안정 한계의 30~50%에 둡니다.</li>
+  </ul>
+
+  <h3>8.2 I 항 — 과거의 누적</h3>
+  <p>적분 항 $K_i \int e\,d\tau$는 "지금까지 쌓인 빚"을 처리합니다. 일정한 외란이 들어와 P 항이 그 외란을 이기지 못하더라도, 시간이 흐르면 적분 값이 자라 결국 외란을 압도하는 명령을 만들어냅니다.</p>
+
+  <ul>
+    <li><strong>왜 정상오차가 0이 되는가?</strong> 만약 정상상태에서 $e_{ss} \neq 0$이라면 적분기는 계속 자랄 수밖에 없고, 그러면 시스템은 정상상태가 아닙니다. 모순. 따라서 안정한 닫힌계에서 적분기가 있으면 정상오차는 반드시 0.</li>
+    <li><strong>대가</strong>: 적분기는 위상을 90° 늦춥니다. 이 위상 지연이 위상여유를 까먹어 시스템 안정성을 위협. 그래서 $K_i$는 진동을 부르는 항.</li>
+    <li><strong>드론 호버링</strong>: 배터리 무게가 비행 중에 줄어들면(소비 가속) 추력 평형점이 미세하게 변합니다. I 항이 이 드리프트를 자동으로 보정해 고도가 안정적으로 유지됨.</li>
+  </ul>
+
+  <h3>8.3 D 항 — 미래의 예측</h3>
+  <p>미분 항 $K_d \dot{e}$는 "오차가 줄어드는 방향으로 가고 있나, 늘어나는 방향인가?"를 봅니다. 줄어드는 중이면 D 항은 부호가 반대라 제동, 늘어나는 중이면 더 강한 명령을 보탬. 이게 곧 <em>예측에 의한 댐핑</em>.</p>
+
+  <ul>
+    <li><strong>비유</strong>: 차선 복귀 중 핸들을 미리 풀어주는 운전자의 본능. 너무 늦게 풀면 반대 차선으로 튐.</li>
+    <li><strong>치명적 단점</strong>: 측정 잡음 $n(t) = A\sin(\omega_n t)$의 미분은 $A\omega_n\cos(\omega_n t)$. 잡음 주파수 $\omega_n$이 클수록 미분이 그 배율만큼 커집니다. 1 kHz 잡음은 1000배 증폭.</li>
+    <li><strong>휴머노이드 관절</strong>: 보스턴 다이내믹스 Atlas의 관절 PD 게인은 D 항 비중이 매우 큽니다(거의 모든 토크가 PD에서 나옴) — 빠른 반사로 균형 유지. 단, 자이로·인코더가 $\Delta t = 1$ms 이상으로 빠르게 깨끗하게 측정돼야 가능.</li>
+  </ul>
+
+  <h3>8.4 트레이드오프 한 장 요약</h3>
+  <table>
+    <thead><tr><th>지표</th><th>$K_p \uparrow$</th><th>$K_i \uparrow$</th><th>$K_d \uparrow$</th></tr></thead>
+    <tbody>
+      <tr><td>상승시간 $t_r$</td><td>↓ (빨라짐)</td><td>약간 ↓</td><td>약간 ↑</td></tr>
+      <tr><td>오버슈트 $M_p$</td><td>↑</td><td>↑</td><td>↓</td></tr>
+      <tr><td>정착시간 $t_s$</td><td>약간 ↓</td><td>↑</td><td>↓ (잡음 없을 때)</td></tr>
+      <tr><td>정상오차 $e_{ss}$</td><td>↓</td><td>0으로 (1형 시스템)</td><td>변화 없음</td></tr>
+      <tr><td>잡음 민감도</td><td>약간 ↑</td><td>변화 없음</td><td>크게 ↑↑</td></tr>
+      <tr><td>안정성</td><td>↓</td><td>↓ (위상 지연)</td><td>↑ (위상 앞섬)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. 손계산 예제 모음</h2>
+
+  <h3>예제 1. 1차 시스템 PI 설계 (시정수 ¼ 단축)</h3>
+  <p>플랜트 $G(s) = 2/(5s+1)$ — DC 게인 2, 시정수 5초. PI 제어로 닫힌 시스템 시정수 $\tau_{cl} = 1.25$ s, 정상오차 0을 만들어보자.</p>
+
+  <ol>
+    <li><strong>설계 목표</strong>: 닫힌계 1차 응답 $T(s) = 1/(\tau_{cl} s + 1)$.</li>
+    <li><strong>적분기로 시상수 $T_i = 5$로 잡으면</strong> $C(s) = K_p (1 + 1/(T_i s)) = K_p (T_i s + 1)/(T_i s)$. 이러면 $C(s) G(s) = 2K_p / (T_i s)$.</li>
+    <li><strong>닫힌계</strong>: $T(s) = 2K_p / (T_i s + 2K_p) = 1/((T_i/(2K_p)) s + 1)$. 따라서 $\tau_{cl} = T_i/(2K_p)$.</li>
+    <li><strong>해</strong>: $\tau_{cl} = 1.25$ ⇒ $K_p = T_i/(2 \cdot 1.25) = 5/2.5 = 2$, $K_i = K_p / T_i = 0.4$.</li>
+  </ol>
+  <p>이 "영점-극점 상쇄" 기법(IMC-PID의 기본 아이디어)은 모터 속도 제어, 온도 제어 등 1차 시스템에서 자주 쓰입니다.</p>
+
+  <h3>예제 2. ZN 임계 진동법 — 손으로 풀기</h3>
+  <p>플랜트 $G(s) = 1/[s(s+2)(s+5)]$. P 제어 $C(s) = K_p$일 때 임계 게인과 진동 주기를 구하자.</p>
+  <ol>
+    <li>특성방정식: $s(s+2)(s+5) + K_p = s^3 + 7s^2 + 10s + K_p = 0$.</li>
+    <li>Routh 표 작성:
+      <table>
+        <tbody>
+        <tr><td>$s^3$</td><td>1</td><td>10</td></tr>
+        <tr><td>$s^2$</td><td>7</td><td>$K_p$</td></tr>
+        <tr><td>$s^1$</td><td>$(70 - K_p)/7$</td><td>0</td></tr>
+        <tr><td>$s^0$</td><td>$K_p$</td><td></td></tr>
+        </tbody>
+      </table>
+    </li>
+    <li>임계 조건: $s^1$ 행이 0 ⇒ $K_u = 70$.</li>
+    <li>이때 $s^2$ 보조방정식: $7s^2 + 70 = 0$ ⇒ $s = \pm j\sqrt{10}$. 진동 주파수 $\omega_u = \sqrt{10} \approx 3.16$, 주기 $T_u = 2\pi/\omega_u \approx 1.99$ s.</li>
+    <li>ZN-PID: $K_p = 0.6 K_u = 42$, $T_i = T_u/2 = 0.99$, $T_d = T_u/8 = 0.25$. 따라서 $K_i = 42/0.99 \approx 42.4$, $K_d = 42 \cdot 0.25 = 10.5$.</li>
+  </ol>
+
+  <h3>예제 3. 모터 속도 PI — 게인 선택</h3>
+  <p>소형 BLDC 모터의 속도 → 토크 응답이 1차 시스템 $G(s) = 0.8/(0.05 s + 1)$로 모델링됨(전기 시정수 50 ms, DC 게인 0.8 rad/s per V).</p>
+  <ol>
+    <li>닫힌계 시정수 목표 = 10 ms (모터의 5배 빠름).</li>
+    <li>예제 1과 같은 방식으로: $T_i = 0.05$, $K_p \cdot G_{dc} = T_i / \tau_{cl} = 0.05/0.01 = 5$. ⇒ $K_p = 5/0.8 = 6.25$.</li>
+    <li>$K_i = K_p / T_i = 6.25/0.05 = 125$.</li>
+  </ol>
+  <p>실제로는 측정 인코더의 양자화 잡음, 인덕턴스의 영향까지 고려해 $K_p$를 절반쯤 깎아 시작합니다.</p>
+
+  <h3>예제 4. 드론 자세 캐스케이드 — 외부 P + 내부 PI</h3>
+  <p>회전 관성 $J = 0.01$ kg·m², 모터 RPM 시정수 50 ms. 자세각 → 각속도 → 토크 캐스케이드.</p>
+  <ol>
+    <li><strong>내부 각속도 PI</strong>: 1차 시스템처럼 모델링 ($I$ 들어가니 적분기 1개). $K_p^{(\omega)} = 0.5$, $K_i^{(\omega)} = 5$. 닫힌계 대역폭 ≈ 50 Hz.</li>
+    <li><strong>외부 자세 P</strong>: 내부 루프가 빠르므로 단순 P. 외부 대역폭은 내부의 1/5 ≈ 10 Hz가 안정 표준. ⇒ $K_p^{(\theta)} = 2\pi \cdot 10 \approx 60$ rad/s.</li>
+    <li>전체 응답: 자세각 명령에 약 0.1 s 만에 도달, 잔류 오차 0.</li>
+  </ol>
+
+  <h3>예제 5. 안티 와인드업 게인 $K_t$ 선택</h3>
+  <p>back-calculation 방식의 추적 게인 $K_t$의 표준 권장식:</p>
+  $$ K_t = \sqrt{K_i / K_p} \quad \text{또는} \quad K_t = K_i / K_p $$
+  <p>예: $K_p = 2$, $K_i = 0.5$ ⇒ $K_t = 0.25$ (전자) 또는 $K_t = 0.5$ (후자). 실무에서는 후자가 응답이 더 빠르고 단순하지만, 잡음에 민감해질 수 있어 시스템 특성에 맞춰 0.25~1 범위에서 조정.</p>
+
+  <h2>10. 흔한 함정 6가지</h2>
+
+  <details class="warn" style="margin:8px 0">
+    <summary><strong>함정 1. 적분 와인드업으로 큰 오버슈트</strong></summary>
+    <p>액추에이터가 포화되면 적분기는 의미 없는 값으로 자랍니다. 회복 시점에 대량의 명령이 잔류해 시스템이 반대 방향으로 크게 휘어짐. 해결: 조건부 적분 또는 back-calculation (3절 참조).</p>
+  </details>
+
+  <details class="warn" style="margin:8px 0">
+    <summary><strong>함정 2. 미분 잡음 증폭</strong></summary>
+    <p>측정 잡음의 미분이 곧 PID 출력의 일부가 되어 액추에이터를 윙윙 떨게 만듭니다. 모터 코일이 가청 주파수에서 진동하는 "PWM 휘파람" 소리의 원인. 해결: 미분 필터 $\tau_d = K_d/(N K_p)$, $N = 10$.</p>
+  </details>
+
+  <details class="warn" style="margin:8px 0">
+    <summary><strong>함정 3. Setpoint 도함수 킥(Derivative Kick)</strong></summary>
+    <p>setpoint $r$이 계단 모양으로 바뀌면 $\dot{e}$는 임펄스가 됩니다. PID 출력이 한 순간 거대해져 액추에이터가 충격을 받음. 해결: D-on-measurement($-K_d \dot y$) 또는 setpoint 램프(slew rate limit).</p>
+  </details>
+
+  <details class="warn" style="margin:8px 0">
+    <summary><strong>함정 4. 샘플링이 너무 느림</strong></summary>
+    <p>$\Delta t$가 시스템 시정수의 1/10보다 크면 이산화 오차로 안정성이 무너집니다. 모터 1 kHz, 드론 자세 500 Hz, 공정 10 Hz가 전형적인 권장값. ZOH(영차 홀드)에 의한 위상 지연 $-\omega \Delta t/2$도 잊지 말 것.</p>
+  </details>
+
+  <details class="warn" style="margin:8px 0">
+    <summary><strong>함정 5. 게인 스케줄 없음 (작동점 의존)</strong></summary>
+    <p>로봇 팔이 수평일 때와 수직일 때 필요한 토크가 다릅니다. 한 게인으로 모든 자세를 커버하면 한쪽에서 둔하고 한쪽에서 진동. 해결: 자세에 따라 게인을 표로 보간하는 게인 스케줄링, 또는 중력 보상 피드포워드(W13).</p>
+  </details>
+
+  <details class="warn" style="margin:8px 0">
+    <summary><strong>함정 6. ZN 추천값을 그대로 적용</strong></summary>
+    <p>ZN의 1/4 감쇠비는 오버슈트 50% 수준. 정밀이 중요한 모터·로봇에는 너무 거칠. 해결: ZN을 출발점으로 $K_p$를 0.5배로 줄이고 응답 보면서 미세조정, 또는 Tyreus-Luyben 표 사용($K_p = K_u/3.2$, $T_i = 2.2 T_u$).</p>
+  </details>
+
+  <h2>11. 인터랙티브 ② — 안티 와인드업 효과 비교</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 와인드업 ON/OFF</h4>
+    <p>2차 시스템에 큰 setpoint 변화를 줍니다. 액추에이터 한계 $u \in [-1.5, 1.5]$. 와인드업 보호 없이는 적분기가 과도하게 누적되어 큰 오버슈트가 발생합니다.</p>
+    <canvas id="c12aw" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="c12awKpV">3.0</span><input type="range" id="c12awKp" min="0.5" max="10" step="0.1" value="3.0"></label>
+      <label>Ki <span class="val" id="c12awKiV">2.0</span><input type="range" id="c12awKi" min="0" max="8" step="0.1" value="2.0"></label>
+      <label>액추에이터 한계 <span class="val" id="c12awSatV">1.5</span><input type="range" id="c12awSat" min="0.3" max="5" step="0.1" value="1.5"></label>
+      <label><input type="checkbox" id="c12awOn" checked> 안티 와인드업 ON</label>
+      <button id="c12awRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c12aw'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c12awKpV').textContent=(+$('c12awKp').value).toFixed(1);$('c12awKiV').textContent=(+$('c12awKi').value).toFixed(2);$('c12awSatV').textContent=(+$('c12awSat').value).toFixed(2);};
+    ['c12awKp','c12awKi','c12awSat'].forEach(id=>$(id).oninput=upd);
+    let runHist=[];
+    function loop(){
+      const Kp=+$('c12awKp').value, Ki=+$('c12awKi').value, sat=+$('c12awSat').value;
+      const aw=$('c12awOn').checked;
+      const dt=0.02, N=500;
+      let y=0,yd=0,iE=0;
+      const hist=[], iHist=[];
+      for(let k=0;k<N;k++){
+        const r = k<50?0:1.0;
+        const e = r - y;
+        const u_pre = Kp*e + Ki*iE;
+        const u = Math.max(-sat, Math.min(sat, u_pre));
+        if(aw){ if(u===u_pre) iE += e*dt; }
+        else { iE += e*dt; }
+        const ydd = u - 0.5*yd - 0.7*y;
+        yd += ydd*dt; y += yd*dt;
+        hist.push(y); iHist.push(iE);
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40, oy=240, w=560, h=180;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,oy-h*0.4);x.lineTo(ox+w,oy-h*0.4);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='11px sans-serif';x.fillText('1.0 (목표)',ox+w-60,oy-h*0.4-3);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-Math.max(-1,Math.min(2.5,v))*h*0.4;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      x.strokeStyle='#9c27b0';x.lineWidth=1.5;x.setLineDash([4,2]);x.beginPath();
+      iHist.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-Math.max(-1,Math.min(3,v*0.3))*h*0.4;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();x.setLineDash([]);
+      const Mp = Math.max(0,(Math.max(...hist)-1)*100);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('파랑 = 출력 y,  보라(점선) = 적분 누적값 ×0.3',ox,oy+18);
+      x.fillText('오버슈트 ≈ '+Mp.toFixed(1)+'%   적분 최댓값 = '+Math.max(...iHist).toFixed(2),ox,oy+34);
+      x.fillStyle=aw?'#2e7d32':'#c62828';x.font='13px sans-serif';
+      x.fillText(aw?'안티 와인드업 ON':'안티 와인드업 OFF (적분기 폭주)',ox,oy+52);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰 포인트</strong>:</p>
+  <ul>
+    <li>한계를 0.5처럼 작게 설정하면 와인드업 효과가 매우 두드러짐 — OFF 시 보라색 적분 누적값이 한참 자라다가 회복할 때 큰 오버슈트.</li>
+    <li>ON으로 켜면 적분이 포화 동안 정지 → 회복 즉시 안정.</li>
+    <li>한계를 5로 키우면 둘 사이 차이가 거의 없음 (포화 자체가 안 일어남).</li>
+  </ul>
+
+  <h2>12. 응용 사례 — 실제 산업 PID</h2>
+
+  <h3>12.1 자동차 ESC (Electronic Stability Control)</h3>
+  <p>요(yaw)각 PID로 운전자가 의도한 회전 속도와 실제 차량 회전 속도의 차이를 측정, 네 바퀴에 차등 제동을 가해 보정. 안티 와인드업 + 게인 스케줄링(속도·노면 마찰 추정)이 표준. 1995년 Mercedes S-Class 도입 후 거의 모든 신차의 의무 장착.</p>
+
+  <h3>12.2 산업 로봇 — ABB·KUKA·FANUC</h3>
+  <p>각 관절에 캐스케이드 PID(W13에서 다룸) + 중력·관성·코리올리 보상 피드포워드. 페이로드 무게가 바뀌면 게인을 자동으로 재계산하는 적응 모드. 정밀 ±0.05 mm 수준.</p>
+
+  <h3>12.3 DJI 드론 — Mavic·Phantom</h3>
+  <p>자세 PID는 캐스케이드(외부 각도 P + 내부 각속도 PID), 위치는 또 한 단의 외부 PID. 보통 4~5단 캐스케이드. 게인은 비행 모드(스포츠/일반/트라이포드)에 따라 실시간 스케줄. 적분 와인드업은 GPS 신호 끊김에서 흔히 발생하므로 fallback 모드에서 적분기 리셋.</p>
+
+  <h3>12.4 휴머노이드 — 보스턴 다이내믹스 Atlas</h3>
+  <p>유압 액추에이터 + 매우 큰 D 게인 + 모델 기반 피드포워드. PID 한 줄로는 못 가지만, 각 관절 토크 명령은 여전히 PD 형태로 들어가고, 그 위에 전신 동역학 보상이 더해지는 구조. PID는 "마지막 안전망".</p>
+
+  <h3>12.5 발전소 보일러 온도 제어</h3>
+  <p>비교적 느린 시스템(수 분 시정수). PI(또는 PI + dead-time 보상) 한 줄로 충분. ZN 계단응답법이 그대로 통하는 영역. 95% 이상의 보일러가 PID.</p>
+
+  <h2>13. 연습문제</h2>
+
+  <ol>
+    <li><strong>임계 게인 계산</strong>: $G(s) = 1/(s(s+1)(s+3))$의 임계 게인 $K_u$와 진동 주파수 $\omega_u$를 Routh 판별로 구하라. ZN-PID 추천값 $K_p, T_i, T_d$를 계산하라.</li>
+    <li><strong>1차 시스템 PI 튜닝</strong>: $G(s) = 3/(2s+1)$. 닫힌계 시정수 0.5 s, 정상오차 0이 되도록 $K_p, K_i$를 결정하라.</li>
+    <li><strong>계단응답 두 점법</strong>: 어떤 시스템에 단위 스텝을 가했더니 $t_{28\%} = 0.8$ s, $t_{63\%} = 2.0$ s, 정상값 1.5에 도달했다. 1차 + 시간지연 모델 $K, T, L$을 추정하고, ZN 계단응답법으로 PID 게인을 구하라.</li>
+    <li><strong>안티 와인드업 시뮬레이션</strong>: 위 인터랙티브 데모에서 액추에이터 한계를 0.6으로 설정. 와인드업 OFF/ON에서 오버슈트와 정착시간 차이를 관찰해 정성적으로 비교하라.</li>
+    <li><strong>미분 필터 설계</strong>: $K_p = 4$, $K_d = 0.8$, 잡음 차단 비율 $N = 10$일 때 미분 필터 시정수 $\tau_d$를 구하라. 이 필터를 이산화한 차분식을 적어라.</li>
+    <li><strong>D-on-measurement vs D-on-error</strong>: setpoint가 0에서 1로 계단으로 바뀔 때, 두 방식이 만들어내는 첫 샘플의 출력 $u_0$을 비교하라 ($K_p=2, K_d=0.1, \Delta t = 0.01$).</li>
+    <li><strong>ZN 보정</strong>: 예제 2에서 구한 ZN-PID 게인을 그대로 적용하면 오버슈트가 50% 정도 예상된다. Tyreus-Luyben 공식($K_p = K_u/3.2$, $T_i = 2.2 T_u$, D 없음)으로 다시 구하고 두 값을 비교하라.</li>
+    <li><strong>샘플링 주기 영향</strong>: 모터 속도 PI에서 $\Delta t$를 1 ms → 10 ms로 늘리면 ZOH 위상 지연이 어떻게 바뀌는가? 위상여유에 미치는 영향을 정성적으로 설명하라.</li>
+    <li><strong>적분 시간 vs 적분 게인</strong>: 어떤 책은 PID를 $C(s) = K_p(1 + 1/(T_i s) + T_d s)$로 표현하고, 어떤 책은 $C(s) = K_p + K_i/s + K_d s$로 표현한다. 두 표기 사이 환산식을 적고, $K_p=5, T_i=2, T_d=0.3$을 후자 표기로 변환하라.</li>
+    <li><strong>게인 스케줄링 설계</strong>: 로봇 팔이 0~90° 사이를 움직인다. 0°(수평)와 90°(수직)에서 필요한 토크가 다르다. 두 작동점에서 각각 ZN으로 게인을 구한 뒤, 사이 각도에 대해 선형보간으로 게인 스케줄을 설계하는 방법을 서술하라.</li>
+  </ol>
+
+  <h2>14. 더 깊은 PID 변형 — 산업에서 실제 쓰는 변형들</h2>
+
+  <h3>14.1 PI-D 구조 (D-on-measurement)</h3>
+  <p>표준 PID에서 D만 측정값에 적용하는 구조:</p>
+  $$ u(t) = K_p e(t) + K_i \int e\,d\tau - K_d \dot y(t) $$
+  <p>setpoint 계단 변화 시 도함수 킥이 사라집니다. 대부분의 산업 컨트롤러(Honeywell, Yokogawa, Siemens)의 기본 구조.</p>
+
+  <h3>14.2 I-PD 구조 (PI도 측정값에)</h3>
+  <p>P, D 모두를 측정값에 적용:</p>
+  $$ u(t) = -K_p y(t) + K_i \int e\,d\tau - K_d \dot y(t) $$
+  <p>오버슈트가 가장 작은 응답이지만, 응답속도(상승시간)는 약간 느림. 큰 setpoint 점프가 잦은 공정 제어에서 유용.</p>
+
+  <h3>14.3 Two-Degree-of-Freedom (2-DOF) PID</h3>
+  <p>setpoint 응답과 외란 응답을 별도로 튜닝하는 구조:</p>
+  $$ u(t) = K_p (\beta r - y) + K_i \int (r - y)\,d\tau + K_d (\gamma \dot r - \dot y) $$
+  <p>$\beta, \gamma \in [0, 1]$이 setpoint 가중치. $\beta = \gamma = 0$이면 I-PD, $\beta = \gamma = 1$이면 표준 PID. ABB·Honeywell 컨트롤러에서 표준.</p>
+
+  <h3>14.4 IMC-PID (Internal Model Control)</h3>
+  <p>플랜트 모델 $G_p$가 있을 때:</p>
+  $$ C_{IMC}(s) = \frac{Q(s)}{1 - Q(s) G_p(s)}, \quad Q(s) = \frac{1}{G_p(s)} \cdot F(s) $$
+  <p>$F(s) = 1/(\lambda s + 1)^n$은 강건성 필터. $\lambda$가 유일한 튜닝 파라미터(폐루프 응답 속도). 1차+지연 모델에서 표준 PID로 환원됨.</p>
+
+  <h3>14.5 게인 스케줄 PID</h3>
+  <p>작동점에 따라 게인 표를 보간:</p>
+  $$ K_p(\theta) = K_p^{(1)} + \alpha (K_p^{(2)} - K_p^{(1)}), \quad \alpha = (\theta - \theta_1)/(\theta_2 - \theta_1) $$
+  <p>로봇 팔, 항공기 자동조종(고도·속도별), 공정 제어(생산량별)에서 표준.</p>
+
+  <h2>15. 디지털 PID 구현 디테일</h2>
+
+  <h3>15.1 후방 차분 vs Tustin 이산화</h3>
+  <table>
+    <thead><tr><th>방법</th><th>$s$ 치환</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>후방 차분 (Backward Euler)</td><td>$s = (z-1)/(z\Delta t)$</td><td>구현 간단, 안정성 보존, 정확도 1차</td></tr>
+      <tr><td>Tustin (Bilinear, 사다리꼴)</td><td>$s = (2/\Delta t)(z-1)/(z+1)$</td><td>주파수 워핑, 정확도 2차, 안정성 보존</td></tr>
+      <tr><td>전방 차분 (Forward Euler)</td><td>$s = (z-1)/\Delta t$</td><td>구현 간단, 안정성 깨질 수 있음 (사용 비권장)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>15.2 점진적(Velocity) 형태 PID</h3>
+  <p>위치 형태(Position form): $u_k = K_p e_k + K_i \sum e_j \Delta t + K_d (e_k - e_{k-1})/\Delta t$.</p>
+  <p>속도 형태(Velocity form): $\Delta u_k = u_k - u_{k-1}$만 계산:</p>
+  $$ \Delta u_k = K_p (e_k - e_{k-1}) + K_i e_k \Delta t + K_d \frac{e_k - 2 e_{k-1} + e_{k-2}}{\Delta t} $$
+  <p>장점: 적분 와인드업이 자연스럽게 처리됨(누적 변수 자체를 관리하지 않음), MAN/AUTO 전환이 매끄러움(bumpless transfer). 산업 분산 제어 시스템(DCS)의 기본 구조.</p>
+
+  <h3>15.3 양자화·고정소수점 구현</h3>
+  <p>16-bit MCU에서 $K_i \int e\,d\tau$를 32-bit 누적 변수로 처리하지 않으면 작은 오차가 누적되며 오버플로우. 표준 처리: 적분 변수만 long(32-bit)으로 두고 출력은 short.</p>
+
+  <h2>16. 대안 튜닝 공식 모음</h2>
+
+  <table>
+    <thead><tr><th>방법</th><th>$K_p$</th><th>$T_i$</th><th>$T_d$</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>ZN (1942) PID</td><td>$0.6 K_u$</td><td>$T_u/2$</td><td>$T_u/8$</td><td>고전, 오버슈트 큼</td></tr>
+      <tr><td>Tyreus-Luyben (1992)</td><td>$K_u/3.2$</td><td>$2.2 T_u$</td><td>—</td><td>PI만, 보수적·강건</td></tr>
+      <tr><td>Pessen Integral Rule</td><td>$0.7 K_u$</td><td>$T_u/2.5$</td><td>$3 T_u/20$</td><td>적분 응답 우수</td></tr>
+      <tr><td>Some Overshoot</td><td>$K_u/3$</td><td>$T_u/2$</td><td>$T_u/3$</td><td>오버슈트 ~20%</td></tr>
+      <tr><td>No Overshoot</td><td>$K_u/5$</td><td>$T_u/2$</td><td>$T_u/3$</td><td>오버슈트 0</td></tr>
+      <tr><td>AMIGO (Åström-Hägglund 2004)</td><td>모델 기반 함수</td><td>모델 기반 함수</td><td>모델 기반 함수</td><td>현대 표준, 강건성 보장</td></tr>
+    </tbody>
+  </table>
+
+  <p>실무 권장 흐름: 시스템 식별 → IMC 또는 AMIGO로 출발 → 응답 보면서 미세조정. 계측이 어려운 환경에서만 ZN.</p>
+
+  <h2>17. 인터랙티브 ③ — 미분 필터 효과</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 잡음 + 미분 필터</h4>
+    <p>측정 잡음이 있는 시스템에서 미분 항이 어떻게 증폭되는지, 미분 필터로 어떻게 완화되는지 보여줍니다.</p>
+    <canvas id="c12df" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kd <span class="val" id="c12dfKdV">1.0</span><input type="range" id="c12dfKd" min="0" max="3" step="0.05" value="1.0"></label>
+      <label>잡음 강도 <span class="val" id="c12dfNV">0.05</span><input type="range" id="c12dfN" min="0" max="0.2" step="0.005" value="0.05"></label>
+      <label>필터 N <span class="val" id="c12dfFV">10</span><input type="range" id="c12dfF" min="1" max="50" step="1" value="10"></label>
+      <label><input type="checkbox" id="c12dfOn" checked> 필터 ON</label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c12df'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c12dfKdV').textContent=(+$('c12dfKd').value).toFixed(2);$('c12dfNV').textContent=(+$('c12dfN').value).toFixed(3);$('c12dfFV').textContent=$('c12dfF').value;};
+    ['c12dfKd','c12dfN','c12dfF'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const Kd=+$('c12dfKd').value, sigN=+$('c12dfN').value, N=+$('c12dfF').value;
+      const Kp=2;
+      const flt=$('c12dfOn').checked;
+      const dt=0.01, M=600;
+      let y=0,yd=0,prevE=0,fD=0;
+      const histY=[], histU=[];
+      for(let k=0;k<M;k++){
+        const r = 1.0;
+        const noise = (Math.random()-0.5)*2*sigN;
+        const ym = y + noise;
+        const e = r - ym;
+        let dE = (e - prevE)/dt;
+        if(flt){
+          const tau_d = Kd/(N*Kp);
+          fD += dt/(tau_d+dt) * (dE - fD);
+          dE = fD;
+        }
+        prevE = e;
+        const u = Kp*e + Kd*dE;
+        const uc = Math.max(-5,Math.min(5,u));
+        const ydd = uc - 0.4*yd - y;
+        yd += ydd*dt; y += yd*dt;
+        histY.push(y); histU.push(uc);
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40;
+      // y plot top
+      const oy1=140, w=560, h1=110;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy1);x.lineTo(ox+w,oy1);x.moveTo(ox,oy1-h1);x.lineTo(ox,oy1);x.stroke();
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      histY.forEach((v,i)=>{const xx=ox+i*w/M, yy=oy1-Math.max(-1,Math.min(2,v))*h1*0.5;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';x.fillText('출력 y',ox,15);
+      // u plot bottom
+      const oy2=290, h2=110;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy2);x.lineTo(ox+w,oy2);x.moveTo(ox,oy2-h2);x.lineTo(ox,oy2);x.stroke();
+      x.strokeStyle='#c62828';x.lineWidth=1.5;x.beginPath();
+      histU.forEach((v,i)=>{const xx=ox+i*w/M, yy=oy2-h2/2 - v*h2/8;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      x.fillStyle='#444';x.fillText('제어 입력 u (잡음에 의한 떨림 정도 확인)',ox,oy2-h2-5);
+      x.fillStyle=flt?'#2e7d32':'#c62828';
+      x.fillText(flt?'미분 필터 ON (N='+N+')':'미분 필터 OFF',ox,oy2+18);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰</strong>: 필터 OFF + Kd 큼 + 잡음 큼 → 제어 입력이 거칠게 떨림. 필터 ON → 부드러워지지만 N이 너무 크면 미분 효과 자체가 약해짐.</p>
+
+  <h2>18. PID 블록도 — 표준 구조와 실무 변형 모음</h2>
+
+  <h3>18.1 표준(Parallel) 형태</h3>
+  <figure>
+    <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arP" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <text x="20" y="100">r →</text>
+      <circle cx="80" cy="95" r="14" fill="#fff" stroke="#333"/><text x="80" y="100" text-anchor="middle">−</text>
+      <text x="100" y="92" font-size="11" fill="#666">e</text>
+      <line x1="120" y1="95" x2="170" y2="95" stroke="#333"/>
+      <line x1="170" y1="95" x2="170" y2="40" stroke="#333"/>
+      <line x1="170" y1="95" x2="170" y2="150" stroke="#333"/>
+      <rect x="190" y="20" width="80" height="40" fill="#eef3ff" stroke="#0b5fff"/><text x="230" y="44" text-anchor="middle" font-size="13">Kp</text>
+      <rect x="190" y="75" width="80" height="40" fill="#e8f5e9" stroke="#2e7d32"/><text x="230" y="99" text-anchor="middle" font-size="13">Ki / s</text>
+      <rect x="190" y="130" width="80" height="40" fill="#fff3e0" stroke="#f57c00"/><text x="230" y="154" text-anchor="middle" font-size="13">Kd s</text>
+      <line x1="170" y1="40" x2="190" y2="40" stroke="#333" marker-end="url(#arP)"/>
+      <line x1="170" y1="95" x2="190" y2="95" stroke="#333" marker-end="url(#arP)"/>
+      <line x1="170" y1="150" x2="190" y2="150" stroke="#333" marker-end="url(#arP)"/>
+      <line x1="270" y1="40" x2="350" y2="40" stroke="#333"/>
+      <line x1="270" y1="95" x2="350" y2="95" stroke="#333"/>
+      <line x1="270" y1="150" x2="350" y2="150" stroke="#333"/>
+      <line x1="350" y1="40" x2="350" y2="150" stroke="#333"/>
+      <circle cx="350" cy="95" r="14" fill="#fff" stroke="#333"/><text x="350" y="100" text-anchor="middle">+</text>
+      <line x1="364" y1="95" x2="420" y2="95" stroke="#333" marker-end="url(#arP)"/>
+      <rect x="430" y="75" width="100" height="40" fill="#fce4ec" stroke="#c62828"/><text x="480" y="98" text-anchor="middle" font-size="12">Plant G(s)</text>
+      <line x1="540" y1="95" x2="610" y2="95" stroke="#333" marker-end="url(#arP)"/>
+      <text x="615" y="100">y</text>
+      <line x1="610" y1="95" x2="610" y2="160" stroke="#888"/>
+      <line x1="610" y1="160" x2="80" y2="160" stroke="#888"/>
+      <line x1="80" y1="160" x2="80" y2="109" stroke="#888" marker-end="url(#arP)"/>
+    </svg>
+    <figcaption>그림 2. 표준 병렬 PID 구조 — 세 항이 독립적으로 합산되어 출력.</figcaption>
+  </figure>
+
+  <h3>18.2 ISA(Series, Cascade) 형태</h3>
+  <p>$C(s) = K_p (1 + 1/(T_i s))(1 + T_d s/(1 + T_d s/N))$</p>
+  <p>실제 산업 컨트롤러(Honeywell, Yokogawa)의 표준. 영점이 실수가 되어 응답이 깨끗하고 튜닝이 직관적.</p>
+
+  <h3>18.3 PI + Lead 보상기로 등가</h3>
+  <p>PID = PI + Lead. PI는 저주파 정확도, Lead는 고주파 안정성. 이 분해가 보드 선도 설계 시 직관적.</p>
+
+  <h2>19. PID와 다른 제어 기법의 관계</h2>
+
+  <table>
+    <thead><tr><th>기법</th><th>PID와의 관계</th><th>적용 영역</th></tr></thead>
+    <tbody>
+      <tr><td>LQR</td><td>2차 시스템 + Q,R 가중 → 최적 PD가 자동 도출</td><td>다입출력, 상태 피드백 가능</td></tr>
+      <tr><td>Lead-Lag</td><td>주파수 영역 PID. Lag = PI 근사, Lead = PD 근사</td><td>SISO, 보드 선도 설계</td></tr>
+      <tr><td>Sliding Mode</td><td>비연속 PID. 강건성 매우 뛰어남</td><td>비선형, 외란 강한 시스템</td></tr>
+      <tr><td>MPC</td><td>예측 + 제약 + 최적화 = PID의 일반화</td><td>MIMO, 제약, 예측 필요</td></tr>
+      <tr><td>Adaptive (MRAC)</td><td>PID 게인이 시간에 따라 변함</td><td>모델 변동 큰 시스템</td></tr>
+      <tr><td>Reinforcement Learning</td><td>학습 기반. PID로 안전망</td><td>모델 없음, 시뮬레이션 가능</td></tr>
+    </tbody>
+  </table>
+
+  <p>"95% PID" 문구의 의미: 산업 컨트롤러 95%가 PID이긴 하지만, 5% (정밀 제조, 자율주행, 로봇 팔, 항공 등)가 시장 가치의 절반 이상. PID는 출발점, MPC·LQR이 도착점.</p>
+
+  <h2>20. 시스템 식별 — PID 설계의 출발</h2>
+
+  <h3>20.1 1차 + 시간지연 모델 (FOPDT)</h3>
+  $$ G(s) = \frac{K e^{-Ls}}{Ts + 1} $$
+  <p>모터, 밸브, 보일러 대부분이 이 형태로 모델링 가능. 단위 스텝 응답에서 $K, L, T$를 두 점법으로 추정 가능.</p>
+
+  <h3>20.2 2차 시스템 추정</h3>
+  $$ G(s) = \frac{K \omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2} $$
+  <p>오버슈트 $M_p$에서 $\zeta$ 추정, 첨두 시간 $t_p$에서 $\omega_n$ 추정.</p>
+
+  <h3>20.3 주파수 응답 식별</h3>
+  <p>Sine sweep으로 보드 선도 직접 측정. 산업 분석기(Vector Signal Analyzer)나 MATLAB의 frd 객체.</p>
+
+  <h3>20.4 폐루프 식별 (Relay Feedback)</h3>
+  <p>릴레이를 단 닫힌계가 자동으로 임계 진동에 들어가 $K_u, T_u$를 추정. Åström-Hägglund 1984. 산업 오토튜닝의 표준.</p>
+
+  <h2>21. 디지털 PID — C 코드 한 페이지</h2>
+
+  <pre><code class="language-c">typedef struct {
+    float Kp, Ki, Kd;
+    float dt;
+    float u_min, u_max;
+    float iE;        // 적분 누적
+    float prev_y;    // D-on-measurement용
+    float fD;        // 미분 필터 상태
+    float Nfilt;     // 필터 차단 비율
+} PID_t;
+
+void PID_init(PID_t* p, float Kp, float Ki, float Kd, float dt) {
+    p->Kp = Kp; p->Ki = Ki; p->Kd = Kd; p->dt = dt;
+    p->u_min = -1.0f; p->u_max = 1.0f;
+    p->iE = 0; p->prev_y = 0; p->fD = 0;
+    p->Nfilt = 10.0f;
+}
+
+float PID_step(PID_t* p, float ref, float y) {
+    float e = ref - y;
+    /* 미분 (D-on-measurement + 필터) */
+    float dy = (y - p->prev_y) / p->dt;
+    float tau_d = (p->Kp != 0) ? p->Kd / (p->Nfilt * p->Kp) : 0;
+    if (tau_d > 0)
+        p->fD += p->dt / (tau_d + p->dt) * (dy - p->fD);
+    else
+        p->fD = dy;
+    /* 출력 미포화 계산 */
+    float u_pre = p->Kp * e + p->Ki * p->iE - p->Kd * p->fD;
+    /* 포화 */
+    float u = u_pre;
+    if (u > p->u_max) u = p->u_max;
+    if (u < p->u_min) u = p->u_min;
+    /* 조건부 적분 */
+    if (u_pre == u)
+        p->iE += e * p->dt;
+    p->prev_y = y;
+    return u;
+}</code></pre>
+
+  <p>이 30줄짜리 코드가 STM32, Arduino, Raspberry Pi에서 1 ms 주기로 동작하면 산업 컨트롤러와 동일한 품질의 PID.</p>
+
+  <h2>22. PID 튜닝 워크플로우 — 한 페이지 요약</h2>
+
+  <ol>
+    <li><strong>안전 확인</strong>: 액추에이터 한계, 비상 정지, 시스템 보호.</li>
+    <li><strong>모델 식별</strong>: 스텝 응답, 또는 전기·기계 시정수 측정.</li>
+    <li><strong>샘플링 결정</strong>: 시정수의 1/10 ~ 1/20.</li>
+    <li><strong>출발 게인</strong>: IMC, ZN, AMIGO 중 선택.</li>
+    <li><strong>안티 와인드업, 미분 필터, D-on-measurement 적용</strong>.</li>
+    <li><strong>실측 응답 확인</strong>: 오버슈트, 정착시간, 잡음, 정상오차.</li>
+    <li><strong>미세조정</strong>: 한 번에 한 항만(Kp → Ki → Kd 순).</li>
+    <li><strong>강건성 검증</strong>: 모델 변동, 외란 추가, 게인 변동에 대한 응답.</li>
+    <li><strong>문서화</strong>: 게인·필터·한계값 모두 기록 — 6개월 뒤 자신을 위해.</li>
+  </ol>
+
+  <h2>23. 부록 A — 라플라스 변환과 PID</h2>
+
+  <h3>23.1 시간 영역 ↔ s 영역</h3>
+  <table>
+    <thead><tr><th>시간 영역</th><th>$s$ 영역</th></tr></thead>
+    <tbody>
+      <tr><td>$f(t)$</td><td>$F(s) = \int_0^\infty f(t)e^{-st}\,dt$</td></tr>
+      <tr><td>$\dot f(t)$</td><td>$sF(s) - f(0)$</td></tr>
+      <tr><td>$\int f\,d\tau$</td><td>$F(s)/s$</td></tr>
+      <tr><td>$f(t-T)$</td><td>$e^{-Ts}F(s)$</td></tr>
+      <tr><td>$\delta(t)$</td><td>1</td></tr>
+      <tr><td>$1(t)$</td><td>$1/s$</td></tr>
+      <tr><td>$e^{-at}$</td><td>$1/(s+a)$</td></tr>
+      <tr><td>$\sin\omega t$</td><td>$\omega/(s^2+\omega^2)$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>23.2 PID의 라플라스 표현</h3>
+  $$ U(s) = \left( K_p + \frac{K_i}{s} + K_d s \right) E(s) $$
+  <p>실수 미분 항은 부적절(improper) — 분모 차수가 분자보다 작음. 실용을 위해 $K_d s/(1 + s\tau_d)$로 적절(proper)하게 변환.</p>
+
+  <h3>23.3 닫힌계 전달함수 유도</h3>
+  $$ \frac{Y(s)}{R(s)} = \frac{C(s)G(s)}{1 + C(s)G(s)} $$
+  <p>특성방정식 $1 + C(s)G(s) = 0$의 근이 모두 좌반평면에 있으면 안정.</p>
+
+  <h2>24. 부록 B — 주파수 영역에서 본 PID</h2>
+
+  <h3>24.1 P 항</h3>
+  <p>$|C(j\omega)| = K_p$ (모든 주파수에서 같은 이득), 위상 0°.</p>
+
+  <h3>24.2 I 항</h3>
+  <p>$|C(j\omega)| = K_i/\omega$ (저주파에서 이득 ↑, 고주파에서 ↓), 위상 -90°.</p>
+
+  <h3>24.3 D 항</h3>
+  <p>$|C(j\omega)| = K_d \omega$ (고주파에서 이득 ↑), 위상 +90°.</p>
+
+  <h3>24.4 PID 통합 보드</h3>
+  <p>저주파 — I 항 우세, 고주파 — D 항 우세, 중간 주파수 — P 항 우세. 교차 주파수 부근에서 PD 효과로 위상여유 확보.</p>
+
+  <h2>25. 부록 C — 표준 응답 지표 정의</h2>
+
+  <ul>
+    <li><strong>상승시간 $t_r$</strong>: 출력이 정상값의 10% → 90%에 도달하는 시간.</li>
+    <li><strong>최대 오버슈트 $M_p$</strong>: $(y_{max} - y_\infty)/y_\infty \times 100\%$.</li>
+    <li><strong>첨두 시간 $t_p$</strong>: 출력이 최댓값에 도달하는 시간.</li>
+    <li><strong>정착 시간 $t_s$</strong>: 출력이 정상값 ±2%(또는 ±5%) 안에 머무는 첫 시간.</li>
+    <li><strong>정상오차 $e_{ss}$</strong>: 시간이 무한히 흐른 뒤의 추적 오차.</li>
+    <li><strong>대역폭 $\omega_{BW}$</strong>: 닫힌계 이득이 $-3$ dB까지 떨어지는 주파수.</li>
+    <li><strong>위상여유 $PM$</strong>: 이득 1에서 위상이 $-180°$까지의 거리.</li>
+    <li><strong>이득여유 $GM$</strong>: 위상 $-180°$에서 이득이 1까지의 거리.</li>
+  </ul>
+
+  <h2>26. 부록 D — 자주 묻는 질문</h2>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q1. PID 게인 단위는?</strong></summary>
+    <p>$K_p$는 무차원이 아니라 [입력 단위/출력 단위]를 가집니다. 예: 전압 입력, 위치 출력 → V/m. 단위가 명시되지 않은 게인 값은 비교하기 어렵습니다.</p>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q2. 적분 항이 정상오차를 0으로 만든다는데, 항상 그런가?</strong></summary>
+    <p>외란이 일정한 경우(상수)에 한해 0. 시간에 따라 변하는 외란(예: 주파수 1Hz 사인)에는 잔여 오차가 남습니다. 시간 가변 외란은 더 높은 차수의 적분(double integrator)이 필요.</p>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q3. PID와 PD의 차이는?</strong></summary>
+    <p>I 항이 있느냐(PID) 없느냐(PD). 정상오차가 허용되거나 시스템 자체가 적분기를 포함하면 PD로 충분. 위치 제어에서는 플랜트 자체가 적분기($\theta = \int \omega$)이므로 PD로도 정상오차 0 가능.</p>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q4. 미분 항이 잡음에 약한데 꼭 필요한가?</strong></summary>
+    <p>플랜트가 빠른 댐핑이 필요하면 필수. 보통 PI로 시작하고, 진동이 문제가 되면 D 추가. 잡음 환경에서는 D + 필터 또는 D-on-measurement.</p>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q5. ZN으로 튜닝한 게인이 너무 거칠다. 항상 그런가?</strong></summary>
+    <p>네, ZN은 1942년의 보수적 화학공정용. 정밀이 필요하면 IMC, AMIGO 등으로 갈아타는 게 표준. 또는 ZN 후 $K_p$를 절반으로.</p>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q6. PID로는 진정 안 되는 시스템이 있나?</strong></summary>
+    <p>시간 지연이 시정수보다 큰 시스템(예: 화학 반응기), 비최소위상(NMP) 시스템에서 큰 입력 한계, 강하게 결합된 MIMO. 이들은 MPC, IMC + 보상기, 또는 dead-time 보상기(Smith Predictor)가 필요.</p>
+  </details>
+
+  <h2>27. 부록 E — Smith Predictor와 시간 지연 시스템</h2>
+
+  <p>PID 단독으로는 큰 시간 지연 시스템(예: 화학 반응기, 종이 압연기)에서 한계. <strong>Smith Predictor</strong>는 모델 예측을 결합:</p>
+  <figure>
+    <svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arSm" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <text x="20" y="100">r →</text>
+      <circle cx="80" cy="95" r="14" fill="#fff" stroke="#333"/><text x="80" y="100" text-anchor="middle">−</text>
+      <rect x="120" y="75" width="80" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="160" y="98" text-anchor="middle" font-size="12">PID</text>
+      <line x1="200" y1="95" x2="240" y2="95" stroke="#333"/>
+      <rect x="240" y="75" width="100" height="40" fill="#fce4ec" stroke="#c62828"/>
+      <text x="290" y="98" text-anchor="middle" font-size="12">$G_p e^{-Ls}$</text>
+      <line x1="340" y1="95" x2="500" y2="95" stroke="#333"/>
+      <text x="510" y="100">y</text>
+      <!-- Predictor branch -->
+      <line x1="220" y1="95" x2="220" y2="160" stroke="#888"/>
+      <line x1="220" y1="160" x2="270" y2="160" stroke="#888"/>
+      <rect x="270" y="140" width="80" height="40" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="310" y="163" text-anchor="middle" font-size="11">$\hat G_p (1 - e^{-\hat L s})$</text>
+      <line x1="350" y1="160" x2="500" y2="160" stroke="#888"/>
+      <line x1="500" y1="160" x2="500" y2="120" stroke="#888"/>
+      <line x1="500" y1="120" x2="105" y2="120" stroke="#888"/>
+      <line x1="80" y1="120" x2="80" y2="109" stroke="#888" marker-end="url(#arSm)"/>
+      <text x="120" y="200" font-size="11" fill="#666">Smith Predictor: 지연 없는 모델 응답을 PID에 미리 보내 보상</text>
+    </svg>
+    <figcaption>그림 3. Smith Predictor 구조 — PID가 "지연 없는 가상 응답"을 보고 결정.</figcaption>
+  </figure>
+
+  <p>모델 정확도가 핵심. 모델 오차가 크면 안정성이 무너짐. 이 한계를 극복하기 위해 IMC, MPC가 발전.</p>
+
+  <h2>28. 부록 F — 한국·해외 PID 표준 문서</h2>
+
+  <ul>
+    <li><strong>ISA-5.4 (Instrument Loop Diagrams)</strong> — 미국 표준 계측·제어 도면 표기.</li>
+    <li><strong>IEC 61131-3 (PLC Programming)</strong> — PID 함수 블록 표준.</li>
+    <li><strong>ISA-95 / IEC 62264</strong> — 산업 통합 자동화.</li>
+    <li><strong>한국 KS C IEC 61131</strong> — 국내 PLC 표준.</li>
+    <li><strong>NASA Technical Memorandum 102203</strong> — PID 튜닝 가이드.</li>
+    <li><strong>Åström-Hägglund "PID Controllers" (1995)</strong> — 학계 표준 교과서.</li>
+  </ul>
+
+  <h2>29. 부록 G — 추천 시뮬레이션 코드 패턴</h2>
+
+  <pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+
+class PIDController:
+    def __init__(self, Kp, Ki, Kd, dt, u_min=-10, u_max=10, N=10):
+        self.Kp, self.Ki, self.Kd = Kp, Ki, Kd
+        self.dt, self.u_min, self.u_max = dt, u_min, u_max
+        self.N = N
+        self.iE, self.fD, self.prev_y = 0.0, 0.0, 0.0
+
+    def step(self, ref, y):
+        e = ref - y
+        # D-on-measurement + filter
+        dy = (y - self.prev_y) / self.dt
+        tau_d = self.Kd / (self.N * self.Kp + 1e-9)
+        self.fD += self.dt / (tau_d + self.dt) * (dy - self.fD)
+        # output
+        u_pre = self.Kp*e + self.Ki*self.iE - self.Kd*self.fD
+        u = np.clip(u_pre, self.u_min, self.u_max)
+        # conditional integration
+        if u_pre == u:
+            self.iE += e * self.dt
+        self.prev_y = y
+        return u
+
+# 시뮬레이션 예시
+dt, T = 0.01, 10
+N = int(T/dt)
+pid = PIDController(Kp=2.0, Ki=0.5, Kd=0.5, dt=dt)
+y, yd = 0.0, 0.0
+hist = []
+for k in range(N):
+    r = 1.0 if k > 50 else 0.0
+    u = pid.step(r, y)
+    ydd = u - 0.4*yd - y
+    yd += ydd*dt; y += yd*dt
+    hist.append(y)
+plt.plot(np.arange(N)*dt, hist); plt.grid(); plt.show()</code></pre>
+
+  <h2>30. 부록 H — 실험 데이터 수집 팁</h2>
+
+  <ul>
+    <li>샘플링 주기를 일정하게(jitter ↓). 권장: 하드웨어 타이머 인터럽트.</li>
+    <li>데이터 로깅은 RAM에 우선, 후에 외부로 전송. 실시간 출력은 응답을 흔듦.</li>
+    <li>Setpoint 변화는 step + ramp 두 종류 모두 시험.</li>
+    <li>외란 응답: 모터에 brake 또는 가벼운 충격 가해 회복 시간 측정.</li>
+    <li>잡음 측정: 정지 상태에서 1분 이상 기록 후 표준편차 계산.</li>
+    <li>Bode plot 직접 측정: 정현파 입력 + LPF 후 진폭/위상 측정.</li>
+  </ul>
+
+  <h2>31. 핵심 정리</h2>
   <div class="tip">
     <ul>
       <li>P = 현재, I = 누적, D = 변화율. 직관 기반 만능 도구.</li>
       <li>Ziegler-Nichols로 출발점, 응답 보면서 줄여간다.</li>
       <li>안티 와인드업·미분 필터·D-on-measurement는 실무에서 빠질 수 없는 3종 세트.</li>
+      <li>예제 1·3 같은 영점-극점 상쇄 IMC 기법은 1차 시스템에서 직관적이고 강력.</li>
+      <li>흔한 함정 6가지(와인드업·미분 잡음·도함수 킥·샘플링·게인 스케줄·ZN 거칠기)는 실무에서 반복 출현.</li>
       <li>PID의 한계: 다입출력·제약이 본격적으로 들어오면 MPC로 — <a href="../lectures/11-mpc.html">로봇공학특론 L11</a>.</li>
     </ul>
   </div>

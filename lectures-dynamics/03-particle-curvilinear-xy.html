@@ -34,6 +34,14 @@
   <h1 class="page-title">Week 3. 곡선 운동학 (직각좌표)</h1>
   <p class="lead">2D·3D 운동을 가장 단순하게 표현하는 방법: 두 축이 따로 움직인다고 보자.</p>
 
+  <h2>0. 학습 목표</h2>
+  <ul>
+    <li>위치·속도·가속도를 벡터로 다루고 성분으로 분해할 수 있다.</li>
+    <li>발사체 운동을 두 축의 독립 운동으로 풀어 사거리·최고점·체공시간을 구한다.</li>
+    <li>출발/착지 높이가 다른 발사체(절벽, 농구 슛)도 풀 수 있다.</li>
+    <li>두 축의 독립성을 직관적으로 설명할 수 있다(몽키 헌터, 떨어뜨림 vs 던짐).</li>
+  </ul>
+
   <h2>1. 벡터로서의 위치·속도·가속도</h2>
   <p>곡선 운동에서도 미분 관계는 그대로지만, 이제 양들이 벡터입니다.</p>
   $$ \mathbf{r}(t) = x(t)\,\hat{\mathbf{i}} + y(t)\,\hat{\mathbf{j}} $$
@@ -46,6 +54,32 @@
   $$ y(t) = v_0\sin\theta_0 \cdot t - \tfrac{1}{2} g t^2 $$
   <p>$x$ 방향은 등속, $y$ 방향은 등가속도 — W2의 두 식을 그대로 합친 것입니다. 시간 $t$를 소거하면 궤적이 포물선임이 드러납니다.</p>
   $$ y = x\tan\theta_0 - \frac{g}{2 v_0^2 \cos^2\theta_0} x^2 $$
+
+  <h3>사거리·최고점·체공시간을 손으로 도출</h3>
+  <p>데모에 나오는 세 공식이 어디서 왔는지 한 번만 따라가 봅시다(<u>출발/착지 높이가 같다고 가정</u>).</p>
+  <div class="note">
+    <strong>① 체공시간 $T$ — 다시 땅에 닿을 때 $y = 0$</strong>
+    $$ y(t) = v_0 \sin\theta_0 \cdot t - \tfrac{1}{2}g t^2 = t\left(v_0 \sin\theta_0 - \tfrac{1}{2}g t\right) = 0 $$
+    $t=0$(출발 순간) 또는 $t = \dfrac{2 v_0 \sin\theta_0}{g}$. 두 번째가 우리가 원하는 답.
+    <br><br>
+    <strong>② 최고점 높이 $H$ — 최고점에서 $v_y = 0$</strong>
+    $$ v_y(t) = v_0 \sin\theta_0 - g t = 0 \;\Rightarrow\; t_H = \frac{v_0 \sin\theta_0}{g} = \frac{T}{2} $$
+    이 시각의 $y$ 값을 넣으면
+    $$ H = v_0 \sin\theta_0 \cdot \frac{v_0 \sin\theta_0}{g} - \tfrac{1}{2}g\left(\frac{v_0\sin\theta_0}{g}\right)^2 = \frac{(v_0\sin\theta_0)^2}{2g} $$
+    <br>
+    <strong>③ 사거리 $R$ — 체공시간 동안 $x$가 진행한 거리</strong>
+    $$ R = v_0\cos\theta_0 \cdot T = v_0\cos\theta_0 \cdot \frac{2v_0\sin\theta_0}{g} = \frac{v_0^2 \sin(2\theta_0)}{g} $$
+    삼각함수 두 배 공식 $2\sin\theta\cos\theta = \sin 2\theta$를 사용. <strong>$\sin 2\theta$가 최대가 되는 각이 $2\theta = 90°$, 즉 $\theta_0 = 45°$</strong> — 데모에서 본 것과 정확히 일치.
+  </div>
+
+  <div class="note">
+    <strong>예제</strong> — 야구공을 $v_0 = 30$ m/s, $\theta_0 = 35°$로 던졌다. 사거리·최고점·체공시간은? ($g = 9.8$ m/s²)
+    <ul style="margin:6px 0 0 0">
+      <li>$T = 2(30)\sin 35°/9.8 \approx 2(30)(0.574)/9.8 \approx 3.51$ s</li>
+      <li>$H = (30 \times 0.574)^2/(2 \times 9.8) \approx 296.4/19.6 \approx 15.1$ m</li>
+      <li>$R = 30^2 \sin 70°/9.8 \approx 900(0.940)/9.8 \approx 86.3$ m</li>
+    </ul>
+  </div>
 
   <div class="demo">
     <h4>🎮 데모 1: 발사체 — 각도와 속도 흔들기</h4>
@@ -195,7 +229,155 @@
   })();
   </script>
 
-  <h2>4. 흔한 오개념</h2>
+  <h2>3-1. 사거리 곡선 R(θ) — 그래프로 직관</h2>
+  <p>$R(\theta_0) = v_0^2 \sin(2\theta_0)/g$ 함수의 모양을 머리속에 그려둡시다.</p>
+  <svg viewBox="0 0 640 280" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:6px">
+    <text x="20" y="22" font-size="13" font-weight="bold" fill="#0b5fff">발사각 θ₀ vs 사거리 R (출발/착지 같은 높이)</text>
+    <line x1="60" y1="240" x2="600" y2="240" stroke="#888" stroke-width="1.5"/>
+    <line x1="60" y1="60" x2="60" y2="245" stroke="#888" stroke-width="1.5"/>
+    <text x="595" y="258" font-size="11" fill="#555">θ₀ (°)</text>
+    <text x="40" y="60" font-size="11" fill="#555">R</text>
+    <!-- ticks -->
+    <line x1="120" y1="240" x2="120" y2="245" stroke="#888"/>
+    <text x="120" y="258" text-anchor="middle" font-size="10">15</text>
+    <line x1="180" y1="240" x2="180" y2="245" stroke="#888"/>
+    <text x="180" y="258" text-anchor="middle" font-size="10">30</text>
+    <line x1="240" y1="240" x2="240" y2="245" stroke="#888"/>
+    <text x="240" y="258" text-anchor="middle" font-size="10">45</text>
+    <line x1="300" y1="240" x2="300" y2="245" stroke="#888"/>
+    <text x="300" y="258" text-anchor="middle" font-size="10">60</text>
+    <line x1="360" y1="240" x2="360" y2="245" stroke="#888"/>
+    <text x="360" y="258" text-anchor="middle" font-size="10">75</text>
+    <line x1="420" y1="240" x2="420" y2="245" stroke="#888"/>
+    <text x="420" y="258" text-anchor="middle" font-size="10">90</text>
+    <!-- sin(2θ) curve scaled, peak at 45° = 240 -->
+    <path d="M 60 240 Q 240 30 420 240" fill="none" stroke="#0b5fff" stroke-width="2"/>
+    <!-- 45° peak marker -->
+    <line x1="240" y1="60" x2="240" y2="240" stroke="#999" stroke-dasharray="3,3"/>
+    <circle cx="240" cy="60" r="5" fill="#c62828"/>
+    <text x="248" y="55" font-size="11" fill="#c62828" font-weight="bold">최대 (θ=45°)</text>
+    <!-- complementary angles example -->
+    <line x1="180" y1="240" x2="180" y2="98" stroke="#2e7d32" stroke-dasharray="2,3"/>
+    <line x1="300" y1="240" x2="300" y2="98" stroke="#2e7d32" stroke-dasharray="2,3"/>
+    <line x1="180" y1="98" x2="300" y2="98" stroke="#2e7d32" stroke-width="1"/>
+    <text x="240" y="92" text-anchor="middle" font-size="10" fill="#2e7d32">30°와 60° 같은 사거리</text>
+    <text x="450" y="120" font-size="11" fill="#444">대칭 곡선 R(θ) = R(90°-θ)</text>
+  </svg>
+  <p>곡선이 45°에서 최대, 30°와 60°가 같은 값. 0°(수평 발사)와 90°(수직 발사)는 사거리 0이라는 극단도 식이 정확히 맞춤.</p>
+
+  <h2>3-2. 공기저항이 들어오면? — 직관</h2>
+  <p>위 결과는 모두 공기저항 무시. 실제로는 속도에 비례 또는 제곱하는 저항력이 작용해 다음과 같이 변합니다.</p>
+  <ul>
+    <li><strong>최적 발사각이 45°보다 작아짐</strong> (공기저항이 수평 속도를 깎아먹기 때문). 야구공·골프공 최적 각은 30~40°.</li>
+    <li><strong>궤적이 비대칭</strong> — 상승 구간이 하강 구간보다 길어 보임(저항으로 감속).</li>
+    <li><strong>terminal velocity</strong> — 충분히 떨어지면 저항이 중력과 맞아 등속 낙하. 빗방울·낙하산.</li>
+  </ul>
+  <p>학부 첫 학기는 공기저항 무시 문제만 다룹니다. 실제 분석은 미분방정식을 수치로 풀어야 하는데, 정성적 직관은 위 세 줄.</p>
+
+  <h2>4. 출발/착지 높이가 다를 때</h2>
+  <p>대표 공식 $R = v_0^2 \sin(2\theta_0)/g$는 출발과 착지가 같은 높이라는 가정에서 나온 결과. 절벽에서 던지거나 농구 슛처럼 높이가 다르면 $y(t)$ 식을 처음부터 다시 풀어야 합니다.</p>
+
+  <div class="note">
+    <strong>예제 — 절벽에서 수평 발사</strong> — 높이 $h = 80$ m 절벽에서 수평으로 $v_0 = 15$ m/s로 던졌다. (a) 지면 도달 시간, (b) 수평 도달 거리, (c) 충돌 직전 속도(크기와 각도).
+    <br><br>
+    <strong>풀이</strong> — 좌표계: 절벽 끝을 원점, 오른쪽 +x, 위쪽 +y.
+    <br>$y$ 운동: $0 = h - \tfrac{1}{2}g t^2 \Rightarrow t = \sqrt{2h/g} = \sqrt{160/9.81} \approx \mathbf{4.04\text{ s}}$
+    <br>$x$ 운동: $R = v_0 t = 15(4.04) \approx \mathbf{60.6\text{ m}}$
+    <br>충돌 속도: $v_x = 15$ m/s, $v_y = -gt = -39.6$ m/s. 크기 $|v| = \sqrt{15^2 + 39.6^2} \approx \mathbf{42.4\text{ m/s}}$, 수평으로부터 $\arctan(39.6/15) \approx \mathbf{69.2°}$ 아래.
+  </div>
+
+  <div class="note">
+    <strong>예제 — 농구 슛(대각선 도달)</strong> — 선수가 림 높이보다 1.0 m 낮은 위치에서 림까지 수평거리 5 m, 림 높이는 던진 점보다 0.9 m 위. 발사각 $\theta_0 = 50°$일 때 필요한 초속 $v_0$는?
+    <br><br>
+    <strong>풀이</strong> — 두 식 $x = v_0\cos\theta_0\,t$, $y = v_0\sin\theta_0\,t - \tfrac{1}{2}g t^2$. 림 좌표 $(5, 0.9)$ 대입.
+    <br>첫 식에서 $t = 5/(v_0\cos 50°) = 5/(0.643 v_0) = 7.78/v_0$
+    <br>둘째 식: $0.9 = v_0\sin 50° \cdot (7.78/v_0) - \tfrac{1}{2}(9.81)(7.78/v_0)^2 = 0.766(7.78) - \tfrac{1}{2}(9.81)(60.5/v_0^2)$
+    <br>$0.9 = 5.96 - 296.7/v_0^2 \Rightarrow 296.7/v_0^2 = 5.06 \Rightarrow v_0^2 = 58.6 \Rightarrow v_0 \approx \mathbf{7.66\text{ m/s}}$.
+    <br>실제 자유투에서는 7~8 m/s 수준이 보통이므로 합리적인 답.
+  </div>
+
+  <h3>발사각 두 개가 같은 사거리를 주는 이유</h3>
+  <p>$R = v_0^2 \sin 2\theta_0/g$에서 $\sin 2\theta_0 = \sin 2(90°-\theta_0)$이므로, 같은 사거리를 주는 두 각도는 $\theta_0$와 $(90°-\theta_0)$. 예: 30°와 60°가 같은 사거리. 한 쪽은 낮고 빠르게, 다른 쪽은 높고 천천히 가는 경로.</p>
+
+  <h2>4-1. 추가 예제 — 골프 드라이버 샷</h2>
+  <div class="note">
+    <strong>예제</strong> — 골프공이 발사각 12°(클럽의 로프트), 초속 70 m/s(약 250 km/h)로 떨어진다. 진공 가정 시 사거리는?
+    <br><br>
+    <strong>풀이</strong> — $R = v_0^2 \sin 2\theta_0/g = 4900 \cdot \sin 24°/9.81 \approx 4900 \cdot 0.407/9.81 \approx \mathbf{203\text{ m}}$
+    <br>실제 PGA 투어 평균 드라이브 비거리가 약 270 m라는 점이 흥미. 진공 가정으로 203 m가 나왔는데 실제 더 멀리 가는 이유? — <strong>딤플(dimple)이 만든 양력</strong>(스핀 + 표면 효과)이 공을 더 오래 띄움. 공기저항을 빼지 않고 이용하는 설계.
+  </div>
+
+  <h2>4-2. 추가 예제 — 농구 자유투의 최적 각</h2>
+  <div class="note">
+    <strong>예제</strong> — 평균 키 선수의 슛 출발점 약 2.1 m, 림 높이 3.05 m, 거리 4.2 m. 림에 정확히 도달하는 발사각·초속 조합이 무수히 많음. NBA 분석에 따르면 최적 발사각은 <strong>45~52°</strong> 부근에서 슈팅 마진(공이 림을 통과할 가능성)이 가장 큼. 너무 낮으면 림 가장자리에 부딪힐 확률이 늘고, 너무 높으면 거리 오차가 커짐.
+  </div>
+
+  <h2>5. 응용 — 연속 사진으로 보는 발사체</h2>
+  <svg viewBox="0 0 640 220" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:6px">
+    <line x1="20" y1="200" x2="620" y2="200" stroke="#888" stroke-width="2"/>
+    <text x="320" y="218" text-anchor="middle" font-size="11" fill="#555">x (수평 위치) — 균일 간격 = 등속</text>
+    <!-- positions at t=0..6 with theta=60, v0=20, g=9.81 -->
+    <g>
+      <circle cx="20" cy="200" r="6" fill="#0b5fff"/><text x="20" y="195" text-anchor="middle" font-size="10">t=0</text>
+      <circle cx="120" cy="120" r="6" fill="#0b5fff"/><text x="120" y="113" text-anchor="middle" font-size="10">t=1</text>
+      <circle cx="220" cy="60" r="6" fill="#0b5fff"/><text x="220" y="53" text-anchor="middle" font-size="10">t=2</text>
+      <circle cx="320" cy="40" r="6" fill="#0b5fff"/><text x="320" y="33" text-anchor="middle" font-size="10">t=3 (정점)</text>
+      <circle cx="420" cy="60" r="6" fill="#0b5fff"/><text x="420" y="53" text-anchor="middle" font-size="10">t=4</text>
+      <circle cx="520" cy="120" r="6" fill="#0b5fff"/><text x="520" y="113" text-anchor="middle" font-size="10">t=5</text>
+      <circle cx="620" cy="200" r="6" fill="#0b5fff"/><text x="620" y="195" text-anchor="middle" font-size="10">t=6</text>
+    </g>
+    <path d="M 20 200 Q 320 -120 620 200" fill="none" stroke="#0b5fff" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <text x="20" y="20" font-size="12" fill="#444">스트로보 사진 효과: 수평 간격이 균일(=등속), 수직 간격이 점점 줄다 늘어남(=등가속도).</text>
+  </svg>
+
+  <h2>6. 연습 문제</h2>
+  <div class="note" style="background:#f5f8fc;border-color:#0b5fff">
+    <ol style="margin:6px 0 0 0">
+      <li>발사각 30°, 초속 25 m/s. 사거리·최고점·체공시간을 ($g$=9.81) 구하라.</li>
+      <li>같은 초속·같은 사거리를 만드는 두 각도를 구하라(문제 1과 같은 사거리).</li>
+      <li>높이 1.5 m에서 수평으로 9 m/s로 굴린 공이 닿는 위치는?</li>
+      <li>몽키 헌터에서 사냥꾼이 화살을 60 m 떨어진 원숭이를 정확히 직선으로 겨누었고 화살 초속이 40 m/s. 화살이 도달하는 데 걸리는 시간과, 그 동안 두 물체가 떨어진 거리(둘 다 같음)를 구하라.</li>
+      <li>축구공이 바닥에서 30°로 차여 25 m 거리의 골대(높이 2.4 m)를 정확히 통과했다. 초속을 구하라.</li>
+      <li>달 표면($g_M = 1.62$ m/s²)에서 같은 초속·각도로 발사하면 사거리는 지구의 몇 배?</li>
+    </ol>
+    <strong>약식 답</strong>: 1) $R \approx 55.2$ m, $H \approx 7.97$ m, $T \approx 2.55$ s &nbsp;&nbsp; 2) 30°와 60° &nbsp;&nbsp; 3) ≈4.97 m &nbsp;&nbsp; 4) $t \approx 1.5$ s, 두 물체 모두 약 11.0 m 떨어짐 &nbsp;&nbsp; 5) ≈18.0 m/s &nbsp;&nbsp; 6) $g$ 분의 1배 → 9.81/1.62 ≈ 6.06배
+  </div>
+
+  <h2>6-1. 응용 — 스포츠별 발사체 데이터</h2>
+  <table>
+    <thead><tr><th>종목</th><th>출발 속도</th><th>최적 각</th><th>비거리/사거리</th></tr></thead>
+    <tbody>
+      <tr><td>골프 (드라이버)</td><td>70 m/s</td><td>10~14°(클럽 로프트)</td><td>~250 m (백스핀 양력 활용)</td></tr>
+      <tr><td>야구 (홈런 타구)</td><td>45 m/s</td><td>25~30°</td><td>~120 m</td></tr>
+      <tr><td>축구 (장거리 슛)</td><td>30 m/s</td><td>30~40°</td><td>~70 m</td></tr>
+      <tr><td>창던지기</td><td>30 m/s</td><td>33~36°</td><td>~85 m (남자 세계기록)</td></tr>
+      <tr><td>해머던지기</td><td>28 m/s</td><td>~44°</td><td>~85 m</td></tr>
+      <tr><td>높이뛰기</td><td>4.5 m/s 수직</td><td>거의 90°</td><td>~2.45 m (남자 세계기록)</td></tr>
+    </tbody>
+  </table>
+  <p>최적 각이 45°보다 작은 이유: ① 공기저항이 수평속도를 깎아먹음 ② 출발 높이가 착지 높이보다 높음(선수가 공을 위에서 던짐). 던지기 종목은 36~40°, 골프·야구처럼 양력이 추가되는 종목은 더 작아짐.</p>
+
+  <h2>6-2. 응용 — 미사일·포탄·로켓 궤적</h2>
+  <ul>
+    <li><strong>박격포</strong>: 단거리 발사체로 큰 발사각(60~80°) 사용. 산을 넘어 적 진지에 떨어뜨림.</li>
+    <li><strong>곡사포</strong>: 중거리 발사체. 발사각 25~50° 다양.</li>
+    <li><strong>탄도 미사일</strong>: 사거리가 매우 길어(1000 km 이상) 지구 곡률·자전(코리올리)·공기저항 모두 고려해야. 단순 발사체 식으로는 부족.</li>
+    <li><strong>로켓</strong>: 발사체와 다름 — 추력이 비행 중 작용. 발사 후 공기를 빠져나가면 단순한 자유운동.</li>
+  </ul>
+
+  <h2>6-3. 추가 예제 — 두 발사체 비교</h2>
+  <div class="note">
+    <strong>예제</strong> — 두 공이 같은 높이에서 동시에 출발. 공 A는 수평으로 12 m/s, 공 B는 30°로 12 m/s. 어느 공이 먼저 지면에 닿나? 출발 높이는 8 m.
+    <br><br>
+    <strong>풀이</strong> — $y$ 운동만 보면 됨.
+    <ul style="margin:6px 0 0 0">
+      <li>공 A: $0 = 8 - \tfrac{1}{2}(9.81)t^2 \Rightarrow t_A = \sqrt{16/9.81} \approx 1.28$ s</li>
+      <li>공 B: $0 = 8 + 12\sin 30° \cdot t - \tfrac{1}{2}(9.81) t^2 = 8 + 6t - 4.905 t^2$. 근의 공식: $t_B = (6 + \sqrt{36 + 156.96})/9.81 \approx (6 + 13.89)/9.81 \approx 2.03$ s</li>
+    </ul>
+    <strong>공 A가 먼저 닿음</strong>(1.28 s vs 2.03 s) — B는 위로 발사되어 더 오래 떠있음.
+  </div>
+
+  <h2>7. 흔한 오개념</h2>
   <ul>
     <li><strong>"수평으로 더 빨리 던지면 더 빨리 떨어진다"</strong> — 틀림. 수평 속도는 $y$ 방향 운동에 영향을 주지 않습니다. 절벽에서 공을 굴리든 던지든 떨어지는 데 걸리는 시간은 같습니다(공기 저항 제외).</li>
     <li><strong>"최고점에서 가속도가 0"</strong> — 틀림. 속도의 $y$ 성분만 0일 뿐, 가속도는 여전히 $-g$입니다.</li>

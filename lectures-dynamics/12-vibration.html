@@ -34,6 +34,14 @@
   <h1 class="page-title">Week 12. 진동 입문</h1>
   <p class="lead">한 학기 동안 배운 모든 것이 만나는 곳. 동역학에서 가장 자주 마주치는 운동의 패턴.</p>
 
+  <h2>0. 학습 목표</h2>
+  <ul>
+    <li>SHM의 운동방정식과 해를 적고, 주기·진폭·위상의 의미를 안다.</li>
+    <li>감쇠 진동의 세 모드(부족·임계·과)를 구별한다.</li>
+    <li>강제 진동과 공명 현상을 이해한다.</li>
+    <li>자동차 서스펜션·구조물 진동·타코마 다리 등 실제 사례에 연결한다.</li>
+  </ul>
+
   <h2>1. 단순조화운동(SHM)</h2>
   <p>복원력이 변위에 비례할 때 — $F = -kx$ — 운동방정식은 다음과 같습니다.</p>
   $$ m\ddot x = -kx \quad\Rightarrow\quad \ddot x + \omega_n^2 x = 0, \quad \omega_n = \sqrt{k/m} $$
@@ -207,7 +215,64 @@
   })();
   </script>
 
-  <h2>4. 흔한 오개념과 한 학기 정리</h2>
+  <h2>3-1. 강제 진동과 공명</h2>
+  <p>외부에서 주기적인 힘 $F_0\cos(\Omega t)$가 가해지는 경우 운동 방정식:</p>
+  $$ m\ddot x + c\dot x + k x = F_0\cos(\Omega t) $$
+  <p>정상 응답(transient가 사라진 후) 진폭은</p>
+  $$ X(\Omega) = \frac{F_0/k}{\sqrt{(1-r^2)^2 + (2\zeta r)^2}}, \qquad r = \frac{\Omega}{\omega_n} $$
+  <p>$r=1$, 즉 외력 진동수가 고유진동수와 일치할 때 응답 진폭이 최대 — 이게 <strong>공명(resonance)</strong>입니다. 감쇠 $\zeta$가 작을수록 공명 시 진폭이 큼.</p>
+
+  <div class="tip">
+    <strong>왜 공명이 위험한가</strong> — 작은 주기적 힘이라도 시스템 고유진동수와 맞으면 진폭이 누적되어 파괴 수준에 이를 수 있음. 군대가 다리를 건널 때 발맞춰 행진하지 않는 이유, 와이퍼가 특정 속도에서 떨리는 이유 모두 공명.
+  </div>
+
+  <h2>3-2. 응용 — 자동차 서스펜션 설계</h2>
+  <p>차체를 질량 $m$, 코일스프링을 $k$, 댐퍼를 $c$로 모델링한 1자유도 시스템.</p>
+  <ul>
+    <li><strong>고유진동수</strong>: 보통 차체 진동 1~2 Hz로 설계 ($\omega_n = 2\pi f$). 1 Hz라면 $\omega_n \approx 6.28$ rad/s.</li>
+    <li><strong>감쇠비</strong>: $\zeta \approx 0.2$~$0.4$ — 임계 감쇠보다 약간 작아 부드러우면서도 빠르게 안정.</li>
+    <li><strong>왜 1 Hz?</strong> — 사람이 가장 편안하게 느끼는 주파수. 0.5 Hz는 멀미, 5 Hz 이상은 불쾌한 떨림.</li>
+  </ul>
+  <p>승용차의 부드러운 승차감 ↔ 스포츠카의 단단한 핸들링은 $k$, $c$ 선택의 trade-off.</p>
+
+  <h2>3-3. 응용 — 구조물 진동과 타코마 다리</h2>
+  <p>1940년 미국 워싱턴주 타코마 협곡 다리(Tacoma Narrows Bridge)가 개통 4개월 만에 바람에 의해 무너진 사고. 시속 64 km 바람이 일정 진동수의 와류를 만들어 다리의 비틀림 고유진동수와 공명. 진폭이 점점 커져 결국 붕괴.</p>
+  <p>이후 모든 큰 다리 설계는 풍동 시험·동역학 해석을 거치게 됨. 동역학이 단순한 이론이 아니라 <em>안전을 좌우하는 실용 학문</em>임을 보여주는 대표 사례.</p>
+  <ul>
+    <li>고층빌딩의 풍하중 — TMD(tuned mass damper, 동조 질량 감쇠기)로 진동 흡수. 대만 타이베이 101은 660톤 진자형 TMD 장착.</li>
+    <li>지진하중 — 구조물 고유진동수가 지진의 주요 진동수 대역과 겹치지 않도록 설계.</li>
+  </ul>
+
+  <h2>3-4. 응용 — MEMS·정밀 기기</h2>
+  <p>스마트폰 가속도계·자이로스코프·시계 모두 미세 진동자(MEMS resonator)의 응용. 인체의 청각도 cochlea 안의 미세 섬모가 다양한 진동수 대역을 받아들이는 진동자 배열.</p>
+
+  <h2>4. 한 학기를 진동에서 보는 시각</h2>
+  <p>각 강의의 결과가 진동 식 안에 어떻게 들어가 있는지:</p>
+  <table>
+    <thead><tr><th>주차</th><th>진동에서의 역할</th></tr></thead>
+    <tbody>
+      <tr><td>W2 (운동학)</td><td>$\ddot x$, $\dot x$, $x$의 관계가 SHM 방정식의 뼈대</td></tr>
+      <tr><td>W6 (F=ma)</td><td>$F_{스프링}=-kx$ 가 $m\ddot x + kx = 0$의 출발점</td></tr>
+      <tr><td>W7 (에너지)</td><td>$\tfrac{1}{2}mv^2 + \tfrac{1}{2}kx^2 = $ 일정 → 위상평면이 타원</td></tr>
+      <tr><td>W11 (강체 회전)</td><td>물리진자: $I_O\ddot\theta + mgd\sin\theta = 0$ 도 같은 식</td></tr>
+      <tr><td>W12 (감쇠·공명)</td><td>위 모든 것에 $c\dot x$ 한 항만 추가하면 모든 실제 시스템 모델</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. 연습 문제</h2>
+  <div class="note" style="background:#f5f8fc;border-color:#0b5fff">
+    <ol style="margin:6px 0 0 0">
+      <li>$m=2$ kg, $k=200$ N/m. 고유진동수와 주기는?</li>
+      <li>0.5 m 단진자의 작은 각도 주기는? 1 m면? 비교해보고 결과의 의미 설명.</li>
+      <li>$m=1$ kg, $k=400$ N/m, $\zeta=0.1$ 시스템. 외력 $F_0=10$ N의 진동수가 (a) 5 rad/s (b) 20 rad/s (c) 50 rad/s일 때 정상 응답 진폭. 어디서 가장 크나?</li>
+      <li>임계 감쇠 ($\zeta=1$)인 시스템의 $c$ 값은? $m=2$ kg, $k=50$ N/m.</li>
+      <li>차량 서스펜션: 차체 1200 kg, 4개 코일이 부담 → 한 코일당 300 kg. 이 단위가 1.5 Hz로 진동하려면 한 코일의 강성은? (단순 $\omega_n=\sqrt{k/m}$)</li>
+      <li>지진의 주요 주파수가 1.5~3 Hz. 고유주파수가 그 안에 있는 빌딩이 위험한 이유?</li>
+    </ol>
+    <strong>약식 답</strong>: 1) $\omega_n = 10$ rad/s, $T \approx 0.628$ s &nbsp;&nbsp; 2) 0.5 m: 1.42 s, 1 m: 2.01 s; 길이가 길수록 느림 ($T \propto \sqrt L$) &nbsp;&nbsp; 3) $\omega_n = 20$, $r$ 비율로 (b)에서 공명, (a) 작음, (c) 작음 &nbsp;&nbsp; 4) $c = 2\sqrt{mk} = 20$ N·s/m &nbsp;&nbsp; 5) $\omega_n = 2\pi(1.5) = 9.42$ rad/s, $k = m\omega_n^2 = 300 \cdot 88.8 \approx 26{,}600$ N/m &nbsp;&nbsp; 6) 공명 — 작은 지진 진동에도 진폭 누적되어 손상
+  </div>
+
+  <h2>6. 흔한 오개념과 한 학기 정리</h2>
   <ul>
     <li><strong>"질량이 클수록 진자가 더 빨리 흔들린다"</strong> — 단진자에서 질량은 식에서 약분돼 사라집니다. 주기는 $L$과 $g$만으로 정해집니다.</li>
     <li><strong>"감쇠가 크면 평형까지 빨리 간다"</strong> — 일정 수준 이상으로 감쇠를 키우면 오히려 느려집니다(과 감쇠). 가장 빠른 건 임계 감쇠 $\zeta=1$.</li>
@@ -215,6 +280,163 @@
   </ul>
 
   <div class="tip"><strong>다음 학기로 가는 다리</strong> — 이 식 $\ddot x + 2\zeta\omega_n \dot x + \omega_n^2 x = 0$은 <a href="../control.html">자동제어</a>의 2차 시스템 단위계단 응답으로 다시 등장합니다. RLC 회로(<a href="../mech.html">기전공학기초 W7</a>)도 정확히 같은 형태의 미분방정식이에요. 같은 식이 기계·전기·제어 어디서나 나온다는 사실이 공학의 매력입니다.</div>
+
+  <h2>3-A. 다자유도 시스템 입문 — 모드 분석</h2>
+  <p>실제 구조물은 1 자유도가 아닙니다. 두 자유도 시스템(예: 차체+바퀴 두 개)이라면 두 개의 고유진동수가 등장하고, 각각의 진동 모드(mode shape)가 다릅니다.</p>
+  <ul>
+    <li><strong>저주파 모드</strong>: 두 질량이 같은 방향으로 함께 흔들림. 차체 전체의 상하 진동.</li>
+    <li><strong>고주파 모드</strong>: 두 질량이 반대 방향. 차체 피칭(앞뒤가 위/아래로).</li>
+  </ul>
+  <p>$N$ 자유도 시스템은 $N$개의 모드를 가지며, 임의의 운동은 이 모드들의 선형 조합. 이 분석을 모드 해석(modal analysis)이라 하며, 항공기 동체·고층빌딩·우주선 패널 설계의 핵심 도구. 학부 수준에서는 1자유도까지만 다룸.</p>
+
+  <h2>3-B. 진동 측정·계측</h2>
+  <p>구조물·차량의 진동을 측정하는 표준 센서들:</p>
+  <ul>
+    <li><strong>가속도계(accelerometer)</strong>: 작은 질량+스프링+감쇠 시스템. 외부 가속도가 질량의 변위로 변환되어 검출. MEMS 가속도계는 스마트폰·차량·드론에 내장.</li>
+    <li><strong>변위 센서(LVDT, 광학)</strong>: 진동 진폭이 큰 저주파 운동 측정.</li>
+    <li><strong>스트레인 게이지</strong>: 변형률 측정 → 진동 응력 추정.</li>
+    <li><strong>레이저 도플러 진동계</strong>: 비접촉, 매우 정밀.</li>
+  </ul>
+  <p>측정 후 푸리에 변환으로 주파수 스펙트럼을 보면 어떤 모드가 활성화되었는지 식별 가능 — 진동 진단의 핵심 절차.</p>
+
+  <h2>3-C. 응용 — 진동 진단(condition monitoring)</h2>
+  <p>회전 기계(모터, 펌프, 터빈)의 가속도 신호를 지속 측정하면 부품 손상 전조를 조기에 발견할 수 있음.</p>
+  <ul>
+    <li>베어링 손상: 회전수의 정수 배 위치에 새 피크 출현.</li>
+    <li>축 정렬 불량(misalignment): 1× 회전수에 큰 진동.</li>
+    <li>불균형(imbalance): 1× 회전수에 진동, 회전수에 따라 진폭 변화.</li>
+  </ul>
+  <p>이런 분석을 산업 4.0 시대에 IoT 센서·머신러닝과 결합해 <em>예지 보전(predictive maintenance)</em>으로 발전. 한 학기 동역학이 산업 현장에서 살아있는 도구가 되는 또 다른 사례.</p>
+
+  <h2>3-D. 한 학기를 마무리하며</h2>
+  <p>한 학기 동안 우리는 다음 길을 따라왔습니다.</p>
+  <ol>
+    <li>운동학 4주차로 좌표계와 미적분 도구를 익히고,</li>
+    <li>F=ma·일에너지·운동량 세 도구로 입자 운동의 다양한 모습을 풀고,</li>
+    <li>강체로 점에서 덩어리로 확장한 뒤,</li>
+    <li>진동에서 한 학기의 모든 식이 한 데 만나는 현상을 보았습니다.</li>
+  </ol>
+  <p>이 내용은 졸업 후 첫 산업/연구 현장에서 곧 다시 만납니다. 자율주행에서 차량 동역학, 로봇에서 매니퓰레이터 운동학, 메카트로닉스에서 액추에이터 모델, 항공우주에서 위성 자세 제어 — 모두 학부 동역학의 직접적 응용 또는 확장이에요. 이 강의가 끝난 후에도 옆에 두고 가끔 펼쳐보면 좋습니다.</p>
+  <div class="tip">
+    <strong>다음 단계 추천</strong> — 동역학 졸업 후 자연스럽게 이어지는 분야:
+    <ul style="margin:6px 0 0 0">
+      <li><a href="../control.html">자동제어</a> — 시스템에 입력을 주어 원하는 출력을 만드는 법.</li>
+      <li><a href="../mechatronics.html">메카트로닉스</a> — 동역학 + 전자 + 제어 + 컴퓨팅의 결합.</li>
+      <li><a href="../path-planning.html">경로계획·추종</a> — 차량 동역학을 활용한 자율주행.</li>
+      <li><a href="../mpc.html">모델예측제어</a> — 동역학 모델을 이용한 최적 제어.</li>
+      <li><a href="../index.html">로봇공학특론</a> — 강체 동역학을 다관절 로봇으로 확장.</li>
+    </ul>
+  </div>
+
+  <h2>5. 한 학기 종합 지도</h2>
+  <p>이 강의의 큰 그림을 한 화면에 정리해 두면 시험 직전 복습이 한결 쉽습니다.</p>
+
+  <div class="demo">
+    <h4>📍 동역학 한 학기 개념 지도</h4>
+    <p>운동학(파란색)이 토대를 만들고, 그 위에 운동역학(빨간색)이 세 갈래로 갈라지며, 강체에서 회전이 더해지고, 진동에서 모든 게 만납니다. 화살표는 <em>"앞 주차의 결과를 그대로 가져와 쓴다"</em>는 의존 관계.</p>
+    <svg viewBox="0 0 720 460" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:8px">
+      <defs>
+        <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 Z" fill="#666"/>
+        </marker>
+      </defs>
+      <!-- W1 -->
+      <rect x="20" y="20" width="120" height="44" rx="8" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="80" y="40" text-anchor="middle" font-size="13" font-weight="bold" fill="#0742b8">W1 OT</text>
+      <text x="80" y="56" text-anchor="middle" font-size="11" fill="#444">정역학 vs 동역학</text>
+
+      <!-- 운동학 영역 -->
+      <rect x="10" y="90" width="350" height="160" rx="8" fill="#f4f8ff" stroke="#0b5fff" stroke-dasharray="4,4"/>
+      <text x="20" y="108" font-size="12" font-weight="bold" fill="#0b5fff">운동학 (kinematics)</text>
+
+      <rect x="20" y="120" width="100" height="44" rx="8" fill="#fff" stroke="#0b5fff"/>
+      <text x="70" y="138" text-anchor="middle" font-size="12" font-weight="bold" fill="#0742b8">W2 직선</text>
+      <text x="70" y="154" text-anchor="middle" font-size="10" fill="#444">s, v, a</text>
+
+      <rect x="130" y="120" width="100" height="44" rx="8" fill="#fff" stroke="#0b5fff"/>
+      <text x="180" y="138" text-anchor="middle" font-size="12" font-weight="bold" fill="#0742b8">W3 곡선 xy</text>
+      <text x="180" y="154" text-anchor="middle" font-size="10" fill="#444">발사체</text>
+
+      <rect x="240" y="120" width="100" height="44" rx="8" fill="#fff" stroke="#0b5fff"/>
+      <text x="290" y="138" text-anchor="middle" font-size="12" font-weight="bold" fill="#0742b8">W4 n-t, 극</text>
+      <text x="290" y="154" text-anchor="middle" font-size="10" fill="#444">원운동, 곡률</text>
+
+      <rect x="130" y="190" width="100" height="44" rx="8" fill="#fff" stroke="#0b5fff"/>
+      <text x="180" y="208" text-anchor="middle" font-size="12" font-weight="bold" fill="#0742b8">W5 상대·종속</text>
+      <text x="180" y="224" text-anchor="middle" font-size="10" fill="#444">도르래, 좌표 변환</text>
+
+      <!-- 운동역학 영역 -->
+      <rect x="380" y="90" width="330" height="160" rx="8" fill="#fff5f5" stroke="#c62828" stroke-dasharray="4,4"/>
+      <text x="390" y="108" font-size="12" font-weight="bold" fill="#c62828">운동역학 (kinetics) — 같은 문제, 세 도구</text>
+
+      <rect x="390" y="120" width="100" height="44" rx="8" fill="#fff" stroke="#c62828"/>
+      <text x="440" y="138" text-anchor="middle" font-size="12" font-weight="bold" fill="#c62828">W6 F=ma</text>
+      <text x="440" y="154" text-anchor="middle" font-size="10" fill="#444">시간 미분방정식</text>
+
+      <rect x="500" y="120" width="100" height="44" rx="8" fill="#fff" stroke="#c62828"/>
+      <text x="550" y="138" text-anchor="middle" font-size="12" font-weight="bold" fill="#c62828">W7 일-에너지</text>
+      <text x="550" y="154" text-anchor="middle" font-size="10" fill="#444">위치 적분</text>
+
+      <rect x="610" y="120" width="100" height="44" rx="8" fill="#fff" stroke="#c62828"/>
+      <text x="660" y="138" text-anchor="middle" font-size="12" font-weight="bold" fill="#c62828">W8 충격량-운동량</text>
+      <text x="660" y="154" text-anchor="middle" font-size="10" fill="#444">시간 적분</text>
+
+      <text x="545" y="200" text-anchor="middle" font-size="11" fill="#666" font-style="italic">선택 기준: 시간 묻나? F=ma · 거리 묻나? 일-에너지 · 충돌·짧은 시간? 충격량</text>
+
+      <!-- 강체 -->
+      <rect x="20" y="280" width="690" height="100" rx="8" fill="#fff7e8" stroke="#f5b400" stroke-dasharray="4,4"/>
+      <text x="30" y="298" font-size="12" font-weight="bold" fill="#a07a00">강체 (rigid body) — 점이 덩어리로</text>
+
+      <rect x="30" y="310" width="200" height="50" rx="8" fill="#fff" stroke="#f5b400"/>
+      <text x="130" y="328" text-anchor="middle" font-size="12" font-weight="bold" fill="#a07a00">W9 운동학 1 — 회전, 굴림</text>
+      <text x="130" y="345" text-anchor="middle" font-size="10" fill="#444">θ, ω, α — W2 회전판</text>
+
+      <rect x="245" y="310" width="200" height="50" rx="8" fill="#fff" stroke="#f5b400"/>
+      <text x="345" y="328" text-anchor="middle" font-size="12" font-weight="bold" fill="#a07a00">W10 운동학 2 — IC, 4절</text>
+      <text x="345" y="345" text-anchor="middle" font-size="10" fill="#444">병진+회전 = 순간중심</text>
+
+      <rect x="460" y="310" width="240" height="50" rx="8" fill="#fff" stroke="#f5b400"/>
+      <text x="580" y="328" text-anchor="middle" font-size="12" font-weight="bold" fill="#a07a00">W11 운동역학 — F=ma + M=Iα</text>
+      <text x="580" y="345" text-anchor="middle" font-size="10" fill="#444">관성모멘트 I, 평행축 정리</text>
+
+      <!-- W12 진동 -->
+      <rect x="220" y="400" width="280" height="50" rx="8" fill="#f3e8ff" stroke="#9e35b8"/>
+      <text x="360" y="418" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a1f9c">W12 진동 — 모든 것이 만나는 곳</text>
+      <text x="360" y="436" text-anchor="middle" font-size="10" fill="#444">F=ma + 에너지 + SHM + 감쇠</text>
+
+      <!-- 화살표들 -->
+      <line x1="80" y1="64" x2="80" y2="116" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="120" y1="142" x2="128" y2="142" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="230" y1="142" x2="238" y2="142" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="180" y1="164" x2="180" y2="186" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="340" y1="142" x2="386" y2="142" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="230" y1="212" x2="386" y2="142" stroke="#666" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arr)"/>
+      <line x1="290" y1="164" x2="350" y2="276" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="440" y1="164" x2="580" y2="306" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="345" y1="360" x2="360" y2="396" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="580" y1="360" x2="400" y2="400" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="550" y1="164" x2="360" y2="396" stroke="#666" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arr)"/>
+    </svg>
+    <p style="color:#666;font-size:12px;margin-top:8px">실선 화살표 = 직접 의존, 점선 화살표 = 개념적 연결.</p>
+  </div>
+
+  <h2>6. 한 줄 요약 — 시험 전날 보는 표</h2>
+  <table>
+    <thead><tr><th>주차</th><th>한 줄로</th><th>대표 식</th></tr></thead>
+    <tbody>
+      <tr><td>W2</td><td>위치를 미분하면 속도, 또 미분하면 가속도</td><td>$v = \dot s,\; a = \ddot s$</td></tr>
+      <tr><td>W3</td><td>두 축은 따로 움직인다(독립)</td><td>$x = v_0\cos\theta\,t,\; y = v_0\sin\theta\,t - \tfrac{1}{2}gt^2$</td></tr>
+      <tr><td>W4</td><td>가속도 = 빨라지는 양 + 휘는 양</td><td>$\mathbf{a} = \dot v\,\hat e_t + (v^2/\rho)\,\hat e_n$</td></tr>
+      <tr><td>W5</td><td>줄로 묶이면 위치가 한 식으로</td><td>$\sum k_i s_i = L \Rightarrow \sum k_i \dot s_i = 0$</td></tr>
+      <tr><td>W6</td><td>합력 = 질량 × 가속도, FBD부터</td><td>$\sum \mathbf{F} = m\mathbf{a}$</td></tr>
+      <tr><td>W7</td><td>한 일 = 운동에너지 변화</td><td>$U_{1\to 2} = \Delta T$</td></tr>
+      <tr><td>W8</td><td>충격량 = 운동량 변화</td><td>$\int \mathbf{F}\,dt = \Delta \mathbf{p}$</td></tr>
+      <tr><td>W9</td><td>회전은 직선의 그림자(이름만 다름)</td><td>$v = r\omega,\; a_t = r\alpha,\; a_n = r\omega^2$</td></tr>
+      <tr><td>W10</td><td>순간중심을 찾으면 모든 점 속도가 보임</td><td>$|\mathbf{v}_P| = r_{IC}\omega$</td></tr>
+      <tr><td>W11</td><td>병진(F=ma) + 회전(M=Iα), 두 식</td><td>$\sum \mathbf{F} = m\mathbf{a}_G,\; \sum M_G = I_G\alpha$</td></tr>
+      <tr><td>W12</td><td>안정 평형 근처면 거의 다 SHM</td><td>$\ddot x + 2\zeta\omega_n\dot x + \omega_n^2 x = 0$</td></tr>
+    </tbody>
+  </table>
 
   <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="11-rigid-kinetics.html">← W11</a> · <a href="../dynamics.html">강의 목록 (한 학기 끝!)</a></p>
 </main>

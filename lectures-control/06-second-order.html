@@ -37,11 +37,20 @@
 
   <div class="toc"><h4>목차</h4><ol>
     <li>2차 시스템의 표준형</li>
+    <li>$\zeta$와 $\omega_n$의 물리적 의미 - 질량-스프링-댐퍼 사례</li>
     <li>네 가지 응답 모드</li>
     <li>성능 지표 — 오버슈트·정착시간·상승시간</li>
     <li>극점 위치와 응답 모양</li>
-    <li>인터랙티브: ζ와 ωₙ 만져보기</li>
+    <li>인터랙티브 1: 설계 명세 → s-평면 영역</li>
+    <li>인터랙티브 2: ζ와 ωₙ 만져보기</li>
+    <li>인터랙티브 3: 감쇠비별 응답 비교</li>
     <li>실무: 설계 명세 → ζ, ωₙ → 게인</li>
+    <li>친숙한 2차 시스템 응용</li>
+    <li>손계산 예제 5문제</li>
+    <li>주파수 응답과 공진</li>
+    <li>3차 이상 시스템과 지배 극점</li>
+    <li>연습문제 (10문제)</li>
+    <li>다음 강의로의 다리</li>
   </ol></div>
 
   <h2>1. 2차 시스템의 표준형</h2>
@@ -61,7 +70,75 @@
 
   <p>$\zeta$의 값에 따라 극점이 실수냐 복소수냐가 갈리면서 응답 모양이 완전히 바뀝니다.</p>
 
-  <h2>2. 네 가지 응답 모드</h2>
+  <h2>2. $\zeta$와 $\omega_n$의 물리적 의미 - 질량-스프링-댐퍼 사례</h2>
+
+  <p>2차 시스템의 모든 직관은 다음 한 그림에서 나옵니다 — 질량 $m$, 스프링 상수 $k$, 점성 댐퍼 $c$로 이루어진
+  가장 단순한 기계 시스템.</p>
+
+  <figure>
+    <svg viewBox="0 0 360 200" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="40" x2="40" y2="160" stroke="#333" stroke-width="3"/>
+      <path d="M40,80 L60,75 L80,85 L100,75 L120,85 L140,75 L160,80" stroke="#333" fill="none" stroke-width="2"/>
+      <text x="80" y="68" font-size="11" fill="#333">k</text>
+      <line x1="40" y1="120" x2="160" y2="120" stroke="#333" stroke-width="2"/>
+      <rect x="50" y="115" width="20" height="10" fill="#333"/>
+      <line x1="70" y1="120" x2="90" y2="120" stroke="#333" stroke-width="2"/>
+      <rect x="90" y="110" width="40" height="20" fill="none" stroke="#333" stroke-width="2"/>
+      <line x1="100" y1="115" x2="100" y2="125" stroke="#333"/>
+      <line x1="110" y1="115" x2="110" y2="125" stroke="#333"/>
+      <line x1="120" y1="115" x2="120" y2="125" stroke="#333"/>
+      <line x1="130" y1="120" x2="160" y2="120" stroke="#333" stroke-width="2"/>
+      <text x="100" y="105" font-size="11" fill="#333">c (댐퍼)</text>
+      <rect x="160" y="60" width="80" height="80" fill="#0b5fff" fill-opacity="0.2" stroke="#0b5fff" stroke-width="2"/>
+      <text x="190" y="105" font-size="14" fill="#0b5fff">m</text>
+      <line x1="240" y1="100" x2="320" y2="100" stroke="#c62828" stroke-width="3" marker-end="url(#arr6)"/>
+      <defs><marker id="arr6" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#c62828"/></marker></defs>
+      <text x="280" y="92" font-size="11" fill="#c62828">F (입력)</text>
+      <text x="180" y="180" font-size="11" fill="#444">x (출력 변위)</text>
+    </svg>
+    <figcaption>그림. 질량-스프링-댐퍼 — 모든 2차 시스템의 원형. 뉴턴 운동방정식: $m\ddot x + c\dot x + kx = F$.</figcaption>
+  </figure>
+
+  <p>표준형과 비교하면</p>
+  $$ \omega_n = \sqrt{\frac{k}{m}}\;\;[\text{rad/s}], \qquad \zeta = \frac{c}{2\sqrt{mk}}\;\;[\text{무차원}] $$
+
+  <h3>2.1 $\omega_n$의 직관 — "스프링이 얼마나 강한가"</h3>
+  <p>댐퍼가 없는($c=0$) 한계에서 시스템은 영원히 진동합니다. 그 진동의 각주파수가 $\omega_n = \sqrt{k/m}$.
+  스프링이 강할수록(k 큼), 질량이 작을수록(m 작음) 빠른 진동 — 직관과 일치. 자동차 서스펜션을 더 강한 스프링으로 바꾸면
+  진동이 더 빨라지지만 차체가 더 단단해 보임.</p>
+
+  <h3>2.2 $\zeta$의 직관 — "댐핑이 얼마나 효과적인가"</h3>
+  <p>$\zeta$는 댐핑 계수 $c$를 "임계 댐핑" $c_\text{cr} = 2\sqrt{mk}$로 정규화한 비율입니다. 즉</p>
+  $$ \zeta = \frac{c}{c_\text{cr}} $$
+  <p>임계 댐핑이란 진동 없이 가장 빠르게 평형으로 돌아오는 댐핑 값. $\zeta < 1$이면 댐핑이 모자라 진동, $\zeta > 1$이면
+  과한 댐핑으로 천천히 수렴, $\zeta = 1$이 임계 (이론적으로 가장 빠른 비진동 응답).</p>
+
+  <h3>2.3 RLC 회로 - 또 하나의 친숙한 2차 시스템</h3>
+  <figure>
+    <svg viewBox="0 0 360 140" xmlns="http://www.w3.org/2000/svg">
+      <line x1="20" y1="40" x2="60" y2="40" stroke="#333" stroke-width="2"/>
+      <text x="20" y="32" font-size="11" fill="#333">u(t)</text>
+      <rect x="60" y="32" width="50" height="16" fill="none" stroke="#333" stroke-width="2"/>
+      <text x="78" y="44" font-size="11" fill="#333">R</text>
+      <line x1="110" y1="40" x2="150" y2="40" stroke="#333" stroke-width="2"/>
+      <path d="M150,40 a8,8 0 0,1 16,0 a8,8 0 0,1 16,0 a8,8 0 0,1 16,0 a8,8 0 0,1 16,0" stroke="#333" fill="none" stroke-width="2"/>
+      <text x="180" y="28" font-size="11" fill="#333">L</text>
+      <line x1="214" y1="40" x2="260" y2="40" stroke="#333" stroke-width="2"/>
+      <line x1="260" y1="20" x2="260" y2="60" stroke="#333" stroke-width="3"/>
+      <line x1="280" y1="20" x2="280" y2="60" stroke="#333" stroke-width="3"/>
+      <text x="285" y="44" font-size="11" fill="#333">C</text>
+      <line x1="280" y1="40" x2="340" y2="40" stroke="#333" stroke-width="2"/>
+      <text x="305" y="32" font-size="11" fill="#0b5fff">y=v_C</text>
+      <line x1="20" y1="40" x2="20" y2="100" stroke="#333" stroke-width="2"/>
+      <line x1="20" y1="100" x2="340" y2="100" stroke="#333" stroke-width="2"/>
+      <line x1="340" y1="40" x2="340" y2="100" stroke="#333" stroke-width="2"/>
+    </svg>
+    <figcaption>그림. RLC 직렬회로. $LC\ddot v_C + RC\dot v_C + v_C = u$.</figcaption>
+  </figure>
+  <p>비교하면 $\omega_n = 1/\sqrt{LC}$, $\zeta = (R/2)\sqrt{C/L}$. RLC 라디오 동조회로의 공진 현상이 정확히 2차 시스템의
+  $\omega \approx \omega_n$에서의 큰 응답.</p>
+
+  <h2>3. 네 가지 응답 모드</h2>
 
   <table>
     <thead><tr><th>$\zeta$ 범위</th><th>이름</th><th>극점</th><th>응답</th></tr></thead>
@@ -82,7 +159,24 @@
      \omega_d = \omega_n\sqrt{1-\zeta^2},\;\; \phi = \arccos(\zeta) $$
   <p>$\omega_d$는 <strong>감쇠 진동수(damped natural frequency)</strong>. 실제로 진동을 관찰하면 보이는 그 주파수입니다.</p>
 
-  <h2>3. 성능 지표</h2>
+  <h3>2.4 네 가지 모드의 시간응답 식 - 한 페이지 모음</h3>
+  <p>학생들이 가장 자주 묻는 "어느 식을 어디 쓰는가"를 정리합니다.</p>
+
+  <p><strong>① 무감쇠 ($\zeta = 0$)</strong>:</p>
+  $$ y(t) = 1 - \cos(\omega_n t) $$
+
+  <p><strong>② 미감쇠 ($0 < \zeta < 1$)</strong>:</p>
+  $$ y(t) = 1 - \frac{e^{-\zeta\omega_n t}}{\sqrt{1-\zeta^2}}\sin(\omega_d t + \phi),\;\; \phi = \arccos\zeta $$
+
+  <p><strong>③ 임계감쇠 ($\zeta = 1$)</strong>:</p>
+  $$ y(t) = 1 - (1 + \omega_n t)\,e^{-\omega_n t} $$
+
+  <p><strong>④ 과감쇠 ($\zeta > 1$)</strong>:</p>
+  $$ y(t) = 1 - \frac{1}{2\sqrt{\zeta^2-1}}\Bigl[\frac{e^{-r_1 t}}{r_1} - \frac{e^{-r_2 t}}{r_2}\Bigr]\cdot(\text{스케일}) $$
+  <p>여기서 $r_{1,2} = \zeta\omega_n \mp \omega_n\sqrt{\zeta^2-1}$는 두 실수 극점의 절댓값.
+  과감쇠는 두 1차 시스템의 합으로 분해되어 빠른 모드와 느린 모드가 함께 들어 있고, 보통 느린 모드가 응답을 지배합니다 — W5의 "지배 극점" 개념의 첫 등장.</p>
+
+  <h2>4. 성능 지표</h2>
 
   <p>설계 명세는 보통 시간응답 위에 그려진 다음 다섯 숫자로 주어집니다.</p>
 
@@ -149,6 +243,18 @@
     $\zeta=0.4 \to 25\%$, $0.5 \to 16\%$, $0.6 \to 9.5\%$, $0.7 \to 4.6\%$, $0.8 \to 1.5\%$.
     "오버슈트 5% 이내" 명세가 흔하니 $\zeta \approx 0.7$부터 떠올리면 됩니다.
   </div>
+
+  <h3>3.1 성능 지표 손계산 한 사이클</h3>
+  <p>$\omega_n = 4$ rad/s, $\zeta = 0.5$인 시스템. 위 표의 모든 지표를 계산해 봅시다.</p>
+  <ul>
+    <li>$\omega_d = \omega_n\sqrt{1-\zeta^2} = 4\sqrt{0.75} \approx 3.464$ rad/s</li>
+    <li>$M_p = e^{-\pi\zeta/\sqrt{1-\zeta^2}} = e^{-\pi\cdot 0.5/0.866} = e^{-1.814} \approx 0.163 = 16.3\%$</li>
+    <li>$t_p = \pi/\omega_d = \pi/3.464 \approx 0.907$ s</li>
+    <li>$t_s$ (2%) $\approx 4/(\zeta\omega_n) = 4/2 = 2$ s</li>
+    <li>$t_d \approx (1 + 0.7\cdot 0.5)/4 = 0.337$ s (50% 도달)</li>
+    <li>$t_r$ (0~100% 첫 도달) $\approx (\pi - \arccos 0.5)/\omega_d = (\pi - \pi/3)/3.464 \approx 0.605$ s</li>
+  </ul>
+  <p>이 한 세트를 외워두면 시험에서 $\zeta=0.5$ 케이스가 나올 때 즉시 확인용으로 쓸 수 있습니다.</p>
 
   <h2>4. 극점 위치와 응답 모양</h2>
 
@@ -289,7 +395,142 @@
     <li>오른쪽 점선이 명세선이고 파란/빨간 응답이 그 선 안에 들어오면 통과.</li>
   </ul>
 
-  <h2>5. 인터랙티브: ζ와 ωₙ 만져보기</h2>
+  <h3>4.1 극점 위치의 4가지 케이스 시각 정리</h3>
+
+  <figure>
+    <svg viewBox="0 0 480 240" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="120" x2="460" y2="120" stroke="#999"/>
+      <line x1="240" y1="20" x2="240" y2="220" stroke="#999"/>
+      <text x="450" y="115" font-size="11" fill="#666">Re</text>
+      <text x="245" y="20" font-size="11" fill="#666">Im</text>
+      <!-- undamped -->
+      <circle cx="240" cy="60" r="5" fill="#9c27b0"/>
+      <circle cx="240" cy="180" r="5" fill="#9c27b0"/>
+      <text x="250" y="58" font-size="11" fill="#9c27b0">ζ=0 (허수축)</text>
+      <!-- under-damped -->
+      <circle cx="170" cy="55" r="5" fill="#0b5fff"/>
+      <circle cx="170" cy="185" r="5" fill="#0b5fff"/>
+      <text x="80" y="50" font-size="11" fill="#0b5fff">0&lt;ζ&lt;1 (복소)</text>
+      <!-- critically damped -->
+      <circle cx="100" cy="120" r="5" fill="#2e7d32"/>
+      <circle cx="103" cy="120" r="3" fill="#fff"/>
+      <text x="40" y="135" font-size="11" fill="#2e7d32">ζ=1 (중복근)</text>
+      <!-- over-damped -->
+      <circle cx="60" cy="120" r="5" fill="#f57c00"/>
+      <circle cx="140" cy="120" r="5" fill="#f57c00"/>
+      <text x="70" y="155" font-size="11" fill="#f57c00">ζ&gt;1 (실수 두 근)</text>
+      <!-- arc of constant wn -->
+      <path d="M 100,120 A 100,100 0 0 0 240,20" stroke="#888" stroke-dasharray="3,3" fill="none"/>
+      <text x="155" y="35" font-size="10" fill="#888">|s|=ωn</text>
+    </svg>
+    <figcaption>그림. 2차 시스템의 극점 위치: $\omega_n$은 원점에서의 거리(반지름), $\zeta$는 음의 실축과 이루는 각의 코사인.</figcaption>
+  </figure>
+
+  <h3>4.2 등고선 직관 — "같은 ζ 선" 과 "같은 ωₙ 선"</h3>
+  <ul>
+    <li>같은 $\omega_n$: 원점 중심의 반원 (반지름 = $\omega_n$). 이 위의 모든 점은 같은 자연주파수.</li>
+    <li>같은 $\zeta$: 원점에서 나오는 직선 (음의 실축과 각도 $\beta = \arccos\zeta$). 이 직선 위의 모든 점은 같은 감쇠비.</li>
+    <li>같은 $\sigma = \zeta\omega_n$ (정착시간): 수직선 (s-평면에서 같은 실수부).</li>
+    <li>같은 $\omega_d$ (진동주파수): 수평선 (같은 허수부).</li>
+  </ul>
+  <p>이 네 등고선이 s-평면을 격자처럼 덮고, 설계 시 어디에 폐루프 극점을 두느냐를 직관적으로 결정하게 합니다.</p>
+
+  <h2>5. 친숙한 2차 시스템 응용</h2>
+
+  <p>2차 시스템이 진짜로 어디 있는가를 5가지 응용으로 잡아봅니다. 시정수 감각 대신 이번엔 $\zeta, \omega_n$ 감각이 필요합니다.</p>
+
+  <h3>5.1 자동차 서스펜션</h3>
+  <p>승용차 한 바퀴당 질량 $m \approx 300$ kg, 스프링 $k \approx 2 \times 10^4$ N/m. $\omega_n = \sqrt{k/m} \approx 8.16$ rad/s = 1.3 Hz.
+  설계 목표: 승차감을 위해 $\zeta \approx 0.3$ (살짝 진동) ~ 운동성능을 위해 $\zeta \approx 0.7$ (단단). 댐퍼 $c$ 값으로 조절.</p>
+  <ul>
+    <li>$\zeta = 0.3$ (편안한 세단): 오버슈트 ~37%, 정착시간 ~1.6 s. 돌출물 위에서 차체가 한두 번 출렁이고 멈춤.</li>
+    <li>$\zeta = 0.7$ (스포츠카): 오버슈트 ~5%, 정착시간 ~0.7 s. 돌출물 위에서 차체가 거의 한 번에 자세 회복.</li>
+  </ul>
+  <p>자동차 서스펜션 댐퍼가 망가지면 $\zeta$가 줄어 진동이 길어지고 — 한 번 누른 보닛이 두세 번 출렁이면 댐퍼 점검 신호.</p>
+
+  <h3>5.2 DC 모터의 정확한 2차 모델</h3>
+  <p>W5에서 "전기적 시정수가 작아서 무시" 가정을 풀면 모터는 2차가 됩니다.</p>
+  $$ G(s) = \frac{K_t}{LJs^2 + (LB + RJ)s + (RB + K_tK_e)} $$
+  <p>$L$ 인덕턴스, $R$ 저항, $J$ 관성, $B$ 점성마찰, $K_t, K_e$ 토크/역기전력 상수. 표준형으로 옮기면
+  $\omega_n = \sqrt{(RB+K_tK_e)/(LJ)}$, $\zeta$는 보통 작아서 살짝 진동하는 응답을 보임. 정밀 제어에서는 이 2차 모델을 써야 합니다.</p>
+
+  <h3>5.3 빌딩 진동 (지진 응답)</h3>
+  <p>고층 빌딩의 1차 진동 모드는 본질적으로 거대한 질량-스프링-댐퍼. 30층 빌딩의 자연주파수는 약 $0.3 \sim 0.5$ Hz로,
+  지진의 주된 주파수와 가까울 수 있어 공진 위험. 이걸 막기 위해 빌딩 꼭대기에 거대한 질량을 매달아 (TMD, Tuned Mass Damper) 댐핑을 인위적으로 키웁니다.</p>
+
+  <h3>5.4 Quadcopter의 자세 동역학</h3>
+  <p>드론 한 축의 자세각 $\theta$에 대한 회전 운동방정식 $J\ddot\theta = M$ (입력 모멘트 $M$). 자체로는 적분기 두 개라
+  열린 루프에서 불안정. PD 제어를 걸면 $J\ddot\theta + K_d\dot\theta + K_p\theta = K_p\theta_\text{ref}$ → 2차 시스템 형태.
+  $\omega_n = \sqrt{K_p/J}$, $\zeta = K_d/(2\sqrt{K_p J})$. PD 게인이 곧 $\zeta, \omega_n$을 정함 — 드론 튜닝의 본질.</p>
+
+  <h3>5.5 RC 카의 조향 응답</h3>
+  <p>RC 카가 명령 조향각에 도달하는 응답도 2차로 모델링 가능. 서보 모터의 관성과 회복 토크가 $J, k$를 만들고,
+  마찰이 댐핑. 너무 빠른 조향 명령은 오버슈트 → 차가 미끄러짐. 그래서 RC 카 펌웨어에는 보통 명령에 1차 LPF를 걸어
+  조향 입력 자체를 부드럽게 만듭니다.</p>
+
+  <h2>6. 손계산 예제 5문제</h2>
+
+  <h3>예제 1. 표준형 변환</h3>
+  <p><strong>문제</strong>: $G(s) = 16/(s^2 + 4s + 16)$. ① $\omega_n, \zeta$ ② 극점 위치 ③ 오버슈트 ④ 정착시간(2%).</p>
+  <p><strong>풀이</strong>:
+  ① $\omega_n^2 = 16$ → $\omega_n = 4$ rad/s. $2\zeta\omega_n = 4$ → $\zeta = 0.5$.
+  ② $s = -2 \pm j\sqrt{12} = -2 \pm 3.464j$.
+  ③ $M_p = e^{-\pi\cdot 0.5/0.866} = 16.3\%$.
+  ④ $t_s = 4/(0.5\cdot 4) = 2$ s.</p>
+
+  <h3>예제 2. 명세 → 시스템</h3>
+  <p><strong>문제</strong>: 오버슈트 5% 이하, 정착시간 0.5초 이내를 만족하는 2차 표준형 시스템의 $\omega_n, \zeta$ 범위.</p>
+  <p><strong>풀이</strong>:
+  $M_p \le 0.05$ → $\zeta \ge 0.690$ (5% 명세의 표준 답).
+  $t_s \le 0.5$ → $\zeta\omega_n \ge 8$.
+  $\zeta = 0.7$ 사용 시 $\omega_n \ge 8/0.7 \approx 11.4$ rad/s.
+  안전 마진을 위해 $\zeta = 0.7, \omega_n = 12$ 정도로 설계. 검증: $M_p = 4.6\%$, $t_s = 4/(0.7\cdot 12) = 0.476$ s. 둘 다 통과.</p>
+
+  <h3>예제 3. 임펄스응답 정량 분석</h3>
+  <p><strong>문제</strong>: $\omega_n = 2, \zeta = 0.2$인 시스템에 단위 임펄스를 가했을 때, 첫 번째 양의 피크 시간과 그 값.</p>
+  <p><strong>풀이</strong>: 임펄스응답은 $h(t) = (\omega_n/\sqrt{1-\zeta^2})e^{-\zeta\omega_n t}\sin(\omega_d t)$.
+  $\omega_d = 2\sqrt{0.96} = 1.96$. $h$의 미분이 0이 되는 시점: $t = (1/\omega_d)\arctan(\omega_d/(\zeta\omega_n)) = (1/1.96)\arctan(1.96/0.4) = 0.726$ s.
+  값: $h(0.726) = (2/0.98)e^{-0.4\cdot 0.726}\sin(1.96\cdot 0.726) = 2.04 \cdot 0.747 \cdot 0.999 \approx 1.52$.</p>
+
+  <h3>예제 4. 두 시스템 응답 모드 비교</h3>
+  <p><strong>문제</strong>: $G_A = 4/(s^2 + 0.4s + 4)$, $G_B = 4/(s^2 + 4s + 4)$, $G_C = 4/(s^2 + 8s + 4)$. 어느 게
+  미감쇠/임계/과감쇠?</p>
+  <p><strong>풀이</strong>:
+  공통 $\omega_n = 2$. 분모의 $s$ 항이 $2\zeta\omega_n = 4\zeta$.
+  $G_A$: $0.4 = 4\zeta$ → $\zeta = 0.1$ (강한 미감쇠).
+  $G_B$: $4 = 4\zeta$ → $\zeta = 1$ (임계).
+  $G_C$: $8 = 4\zeta$ → $\zeta = 2$ (과감쇠).</p>
+
+  <h3>예제 4.5. PID + 1차 공정으로 만들어지는 2차 폐루프</h3>
+  <p><strong>문제</strong>: 1차 공정 $G(s) = 2/(0.5s+1)$에 PD 제어기 $C(s) = K_p + K_d s$를 단위 피드백으로 걸었다.
+  $K_p = 5, K_d = 0.5$일 때 폐루프 전달함수의 $\zeta, \omega_n$을 구하라.</p>
+  <p><strong>풀이</strong>:
+  $L(s) = C(s)G(s) = (K_p + K_d s)\cdot 2/(0.5s+1) = (10 + s)/(0.5s+1)$.
+  잠깐, 이건 1차 + 영점이라 폐루프가 1차임. 2차 폐루프를 만드려면 공정이 적분기(2차 또는 적분기+1차)여야 함.
+  $G(s) = 1/[s(s+2)]$로 바꿔 보자.
+  $L = (K_p + K_d s)/[s(s+2)]$. 폐루프 분모: $s(s+2) + K_p + K_d s = s^2 + (2+K_d)s + K_p$.
+  비교 → $\omega_n = \sqrt{K_p}, 2\zeta\omega_n = 2 + K_d$.
+  $K_p = 25, K_d = 5$ 예: $\omega_n = 5, \zeta = 7/(2\cdot 5) = 0.7$. PD 게인이 직접 $\zeta, \omega_n$을 만든다는 점이 중요.</p>
+
+  <h3>예제 5. 진동 측정으로 $\zeta$ 추정 (로그 감쇠율)</h3>
+  <p><strong>문제</strong>: 어떤 시스템에 임펄스를 가했더니 진동 응답이 보였다. 첫 번째 피크 1.0, 두 번째 피크 0.4였다면 $\zeta$는?</p>
+  <p><strong>풀이</strong>: 두 피크의 비 $1.0/0.4 = 2.5$. 한 주기 동안의 감쇠 = $e^{2\pi\zeta/\sqrt{1-\zeta^2}}$.
+  $\ln 2.5 = 0.916 = 2\pi\zeta/\sqrt{1-\zeta^2}$ → $\zeta = 0.916/\sqrt{(2\pi)^2 + 0.916^2} = 0.916/6.35 \approx 0.144$.
+  실험에서 $\zeta$를 추정하는 가장 보편적인 방법인 "로그 감쇠율(logarithmic decrement)" 기법.</p>
+
+  <h2>7. 인터랙티브 1: 설계 명세 → s-평면 영역</h2>
+
+  <p>본 강의 4절의 인터랙티브 ("설계 명세 → s-평면 허용 영역 → 시간응답") 데모를 다시 한 번 만져 봅시다. 다음 시나리오로 직접 확인하세요.</p>
+  <ul>
+    <li><strong>시나리오 A</strong>: $M_p^* = 5\%, t_s^* = 1$ s. 초록 영역 안에 들어오는 극점 위치를 찾아보세요. 답: 예 $s = -4 \pm 4j$ ($\omega_n = 5.66, \zeta = 0.707$).</li>
+    <li><strong>시나리오 B</strong>: $M_p^* = 20\%$로 완화하면 부채꼴이 넓어짐. 어떤 새로운 극점 위치가 추가로 허용?</li>
+    <li><strong>시나리오 C</strong>: $t_s^* = 0.3$ s로 강화하면 수직 경계가 −13.3으로 이동. 좁은 영역에서 살아남는 극점을 찾아보세요.</li>
+    <li><strong>시나리오 D</strong>: 두 명세를 동시에 강화 ($M_p^* = 5\%, t_s^* = 0.3$). 영역이 좁은 사각형 부분으로 줄어듦. 이 경우 게인을 매우 크게 잡아야 하는데 — 다음 주 안정성과의 trade-off.</li>
+  </ul>
+
+  <p>이 데모를 손으로 만져 보면서 "명세 강화 = 영역 축소 = 더 큰 게인 필요"의 정량 감각을 잡으면 W9 근궤적이 훨씬 빠르게 이해됩니다.</p>
+
+  <h2>8. 인터랙티브 2: ζ와 ωₙ 만져보기</h2>
 
   <div class="demo">
     <h4>🎮 인터랙티브: 2차 계단응답 + 극점 위치 동시 보기</h4>
@@ -368,7 +609,82 @@
     <li>$\zeta = 0.7$ 부근이 학부 자동제어의 "기본값"</li>
   </ul>
 
-  <h2>6. 실무: 설계 명세 → ζ, ωₙ → 게인</h2>
+  <h2>9. 인터랙티브 3: 감쇠비별 응답 비교</h2>
+
+  <div class="demo">
+    <h4>인터랙티브: 같은 ωₙ에서 ζ를 바꾸며 응답 곡선 겹쳐보기</h4>
+    <p>같은 고유주파수에서 감쇠비만 바뀌면 응답 모양이 어떻게 변화하는지를 한눈에 보세요. 무감쇠/미감쇠/임계/과감쇠를 동시에 그립니다.</p>
+    <canvas id="c6overlay" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>고유주파수 ωₙ <span class="val" id="c6oV">2.0</span><input type="range" id="c6w" min="0.5" max="5" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c6overlay'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c6oV').textContent=(+$('c6w').value).toFixed(1);};
+    $('c6w').oninput=upd;
+    function loop(){
+      const wn=+$('c6w').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=50, oy=270, w=560, h=220, T=10;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,oy-h*0.5);x.lineTo(ox+w,oy-h*0.5);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='10px sans-serif';x.fillText('1.0',ox-22,oy-h*0.5+4);
+      const stepResp=(z,t)=>{
+        if(z<0.001) return 1-Math.cos(wn*t);
+        if(z<1){const wd=wn*Math.sqrt(1-z*z);
+          return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z) * Math.sin(wd*t + Math.acos(z));}
+        if(Math.abs(z-1)<1e-3) return 1 - (1+wn*t)*Math.exp(-wn*t);
+        const a=z*wn, b=wn*Math.sqrt(z*z-1);
+        const r1=-a+b, r2=-a-b;
+        return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);};
+      const cases=[
+        {z:0.1, color:'#9c27b0', label:'ζ=0.1 강한 진동'},
+        {z:0.4, color:'#f57c00', label:'ζ=0.4'},
+        {z:0.7, color:'#0b5fff', label:'ζ=0.7 표준'},
+        {z:1.0, color:'#2e7d32', label:'ζ=1.0 임계'},
+        {z:2.0, color:'#666',    label:'ζ=2.0 과감쇠'},
+      ];
+      cases.forEach(cs=>{
+        x.strokeStyle=cs.color;x.lineWidth=2;x.beginPath();
+        for(let i=0;i<=300;i++){const t=i*T/300, y=stepResp(cs.z,t);
+          const xx=ox+i*w/300, yy=oy-Math.max(0,Math.min(2,y))*h*0.5;
+          if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+        x.stroke();
+      });
+      x.font='12px sans-serif';
+      cases.forEach((cs,i)=>{x.fillStyle=cs.color;x.fillText(cs.label,ox+i*120,30);});
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰</strong>:</p>
+  <ul>
+    <li>$\zeta=0.1$: 강한 진동, 오버슈트 70% 이상.</li>
+    <li>$\zeta=0.7$: 적당한 오버슈트(~5%)와 빠른 정착 — 학부 자동제어 표준.</li>
+    <li>$\zeta=1.0$: 진동 없음, 정착이 가장 빠른 비진동 응답 (임계).</li>
+    <li>$\zeta=2.0$: 진동 없음, 그러나 임계보다 더 천천히 정착 — "과감쇠는 빠른 게 아니다".</li>
+    <li>$\omega_n$만 키우면 모든 곡선이 시간축으로 압축 (모양은 같음).</li>
+  </ul>
+
+  <h3>9.1 같은 ζ에서 ωₙ만 바뀔 때 vs 같은 ωₙ에서 ζ만 바뀔 때 - 정량 비교</h3>
+  <p>다음 표는 학생들이 가장 자주 헷갈리는 두 매개변수의 효과를 분리해 정리합니다.</p>
+
+  <table>
+    <thead><tr><th>변화</th><th>오버슈트 Mp</th><th>피크시간 tp</th><th>정착시간 ts</th><th>응답 모양</th></tr></thead>
+    <tbody>
+      <tr><td>ζ 고정, ωₙ 두 배</td><td>변화 없음</td><td>1/2</td><td>1/2</td><td>시간축으로 압축, 모양 동일</td></tr>
+      <tr><td>ωₙ 고정, ζ 0.3 → 0.7</td><td>37% → 5%</td><td>약간 증가</td><td>거의 동일</td><td>오버슈트 줄어듦, 모양 평탄</td></tr>
+      <tr><td>ωₙ 고정, ζ 0.7 → 1.0</td><td>5% → 0%</td><td>없음 (단조)</td><td>증가</td><td>진동 사라짐, 약간 느려짐</td></tr>
+      <tr><td>ωₙ 두 배 + ζ 절반</td><td>증가</td><td>1/4</td><td>거의 동일 ($\zeta\omega_n$ 동일)</td><td>빠르게 진동, 비슷한 정착</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. 실무: 설계 명세 → ζ, ωₙ → 게인</h2>
 
   <p>설계는 보통 다음 흐름으로 진행됩니다.</p>
 
@@ -394,7 +710,176 @@ for i, z in enumerate(z_list):
         ax.set_title(f'ζ={z}, ωn={wn}'); ax.grid()
 plt.tight_layout(); plt.show()</code></pre>
 
-  <h2>7. 핵심 정리</h2>
+  <h2>10.5 응용 사례: 자동차 서스펜션 ζ 측정 실험</h2>
+
+  <p>실제 자동차의 서스펜션 감쇠 상태를 가늠하는 표준 절차 ("바운스 테스트"):</p>
+  <ol>
+    <li>차의 한쪽 (예: 운전석 앞 펜더)을 두 손으로 강하게 눌렀다 놓는다.</li>
+    <li>차체가 위아래로 출렁이는 횟수를 센다.</li>
+    <li>"한 번 출렁이고 멈춤" → ζ ≈ 0.5 (적정).</li>
+    <li>"두 번 이상 출렁임" → ζ < 0.3, 댐퍼 점검 필요.</li>
+    <li>"바로 멈춤, 출렁임 없음" → ζ ≥ 1, 새 차이거나 단단한 스포츠 댐퍼.</li>
+  </ol>
+
+  <p>로그 감쇠율로 정량화: 첫 피크 진폭 $A_1$, $n$번째 피크 $A_n$의 비를 측정하면 $\zeta$를 추정할 수 있습니다.</p>
+  $$ \delta = \frac{1}{n-1}\ln\frac{A_1}{A_n} = \frac{2\pi\zeta}{\sqrt{1-\zeta^2}} $$
+
+  <p>"한 번 출렁임 = 한 주기" 기준이면 $A_2/A_1 \approx 0.04$ 정도이면 ζ ≈ 0.5라는 직관.</p>
+
+  <h2>11. 주파수 응답과 공진</h2>
+
+  <p>2차 시스템의 주파수 응답:</p>
+  $$ G(j\omega) = \frac{\omega_n^2}{(j\omega)^2 + 2\zeta\omega_n(j\omega) + \omega_n^2} = \frac{1}{1 - (\omega/\omega_n)^2 + j2\zeta(\omega/\omega_n)} $$
+
+  <p>크기:</p>
+  $$ |G(j\omega)| = \frac{1}{\sqrt{[1-(\omega/\omega_n)^2]^2 + [2\zeta(\omega/\omega_n)]^2}} $$
+
+  <h3>11.1 공진 봉우리 (Resonance Peak)</h3>
+  <p>$|G|$가 최대가 되는 주파수를 찾기 위해 분모를 미분해서 0으로 놓으면</p>
+  $$ \omega_r = \omega_n\sqrt{1 - 2\zeta^2}, \quad |G(j\omega_r)| = \frac{1}{2\zeta\sqrt{1-\zeta^2}} \;\;(\text{공진 봉우리값}) $$
+
+  <p>$\zeta < 1/\sqrt 2 \approx 0.707$일 때만 공진 봉우리가 존재. $\zeta \ge 0.707$이면 봉우리 없이 단조 감소.
+  실무에서 $\zeta = 0.707$이 "공진을 막는 최소 댐핑"의 의미로 자주 등장합니다.</p>
+
+  <table>
+    <thead><tr><th>$\zeta$</th><th>$\omega_r/\omega_n$</th><th>피크값 [dB]</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>0.1</td><td>0.99</td><td>+14.0</td><td>강한 공진</td></tr>
+      <tr><td>0.3</td><td>0.91</td><td>+4.4</td><td>중간 공진</td></tr>
+      <tr><td>0.5</td><td>0.71</td><td>+1.2</td><td>약한 공진</td></tr>
+      <tr><td>0.707</td><td>0</td><td>0.0</td><td>봉우리 사라짐 (한계)</td></tr>
+      <tr><td>1.0</td><td>—</td><td>—</td><td>봉우리 없음</td></tr>
+    </tbody>
+  </table>
+
+  <h3>11.2 보드 선도 점근선 (2차)</h3>
+  <ul>
+    <li>$\omega \ll \omega_n$: $|G| \approx 1$ (0 dB), 위상 0°.</li>
+    <li>$\omega \gg \omega_n$: $|G| \approx (\omega_n/\omega)^2$, −40 dB/decade로 떨어짐, 위상 → −180°.</li>
+    <li>$\omega = \omega_n$: 위상 정확히 −90°, 크기 = $1/(2\zeta)$.</li>
+  </ul>
+  <p>1차의 −20 dB/decade에 비해 두 배인 −40 dB/decade. 차수가 1 늘 때마다 −20 dB/decade씩 추가.</p>
+
+  <h3>11.3 대역폭 (Bandwidth)</h3>
+  <p>$|G(j\omega)|$가 DC 게인보다 −3 dB 떨어지는 주파수 $\omega_B$를 대역폭이라 합니다.
+  2차 시스템에서</p>
+  $$ \omega_B = \omega_n\sqrt{(1 - 2\zeta^2) + \sqrt{4\zeta^4 - 4\zeta^2 + 2}} $$
+  <p>$\zeta = 0.7$ 근처에서 $\omega_B \approx \omega_n$. 즉 고유주파수가 곧 대역폭의 좋은 추정값.
+  설계 흐름: "응답 시간 → ωₙ → 대역폭" 의 상호 변환이 자동제어의 핵심 trade-off.</p>
+
+  <h3>11.4 공진의 일상 사례</h3>
+  <ul>
+    <li><strong>옷장 위 진동 인형</strong>: 청소기·세탁기의 모터가 옷장의 1차 공진주파수와 가까워 인형이 점점 크게 흔들리다 떨어짐.</li>
+    <li><strong>다리의 보행 공진 (Tacoma Narrows, Millennium Bridge)</strong>: 사람들의 보행 주파수와 다리의 자연주파수가 일치 → 1차 모드 발산. ζ를 키우는 댐퍼 추가가 해법.</li>
+    <li><strong>유리잔 공명</strong>: 가수의 목소리가 와인글라스의 자연주파수와 일치하면 컵이 깨질 정도로 진폭이 커짐. ζ가 매우 작은 (높은 Q) 시스템의 극단 사례.</li>
+    <li><strong>라디오 튜너</strong>: 의도적으로 작은 ζ의 RLC를 만들어 특정 주파수만 큰 응답이 나오게 함.</li>
+  </ul>
+
+  <h3>11.5 Q 인자와 ζ의 관계</h3>
+  <p>전기·기계 진동 분야에서 자주 쓰는 Q 인자(Quality factor)와 ζ는 같은 정보의 다른 표현입니다.</p>
+  $$ Q = \frac{1}{2\zeta} $$
+  <p>$\zeta = 0.05$ → $Q = 10$ (꽤 선택적인 라디오), $\zeta = 0.5$ → $Q = 1$ (감쇠 강함). 안테나 공진기의 Q는 100 이상이지만,
+  자동차 서스펜션의 Q는 1~2 정도. "공진기"와 "댐퍼"의 차이가 한 숫자 Q에 압축됩니다.</p>
+
+  <h2>12. 3차 이상 시스템과 지배 극점</h2>
+
+  <p>실제 시스템은 거의 항상 3차 이상이지만, 그 응답이 종종 2차 시스템처럼 보이는 이유는 <strong>지배 극점(dominant pole)</strong>
+  개념 때문입니다.</p>
+
+  <h3>12.1 정의</h3>
+  <p>여러 극점 중에 다른 극점들이 ① 더 멀리 (실수부 절댓값이 5배 이상 크고) ② 영점이 가까이 없을 때, 가장 원점에 가까운 극점들이
+  응답을 "지배"합니다. 멀리 있는 극점들은 빠르게 감쇠해서 짧은 시간에 사라지고, 그 이후의 응답은 가까운 극점만으로 결정됩니다.</p>
+
+  <h3>12.2 예제 — 3차를 2차로 근사</h3>
+  <p>$G(s) = \dfrac{20}{(s+1)(s+2)(s+10)}$. 극점 $-1, -2, -10$.
+  $-10$은 다른 둘보다 5배 멀리 있으므로 지배 극점은 $-1, -2$. 근사 모델:</p>
+  $$ G(s) \approx \frac{20}{10\cdot(s+1)(s+2)} = \frac{2}{(s+1)(s+2)} = \frac{2}{s^2 + 3s + 2} $$
+  <p>(DC 게인 보존을 위해 $-10$을 분자에 흡수). 이 근사 시스템은 $\omega_n = \sqrt 2$, $\zeta = 3/(2\sqrt 2) \approx 1.06$ — 약한 과감쇠 2차.
+  실제 응답과 시뮬레이션해 보면 0.5초 이후 거의 일치.</p>
+
+  <h3>12.2.5 지배 극점 판단의 5배 규칙</h3>
+  <p>실무에서는 다음 규칙이 자주 사용됩니다.</p>
+  <ul>
+    <li>다른 극점들의 실수부 절댓값이 지배 극점 쌍 실수부 절댓값의 5배 이상</li>
+    <li>그리고 그 극점들 근처에 영점이 없음 (영점은 극점 효과를 상쇄)</li>
+    <li>이 두 조건이 만족되면 "다른 극점 무시, 지배 극점 쌍만으로 분석" 가능</li>
+  </ul>
+
+  <p>5배가 어디서 나오는가? 멀리 있는 극점 $-5\zeta\omega_n$의 시정수가 가까운 극점의 1/5이라는 의미. 정착시간 비율이 5배이므로,
+  지배 극점이 아직 첫 진동의 1/5 지점에 있을 때 멀리 있는 모드는 이미 완전히 사라져 응답에서 보이지 않음.</p>
+
+  <h3>12.3 영점이 있을 때의 영향</h3>
+  <p>분자에 영점이 있으면 응답이 "더 빨라" 보이거나 "오버슈트가 늘거나" 합니다. 표준형이 아닌 일반 2차</p>
+  $$ G(s) = \frac{\omega_n^2(\tau_z s + 1)}{s^2 + 2\zeta\omega_n s + \omega_n^2} $$
+  <p>에서 $\tau_z$가 양수이면 영점이 좌반평면에 있고, 응답이 더 빠르고 오버슈트가 커집니다. $\tau_z$가 음수면 영점이
+  우반평면(non-minimum phase) — 응답이 처음에 반대 방향으로 갔다가 돌아오는 이상한 행동을 보입니다 (예: 비행기의 고도 제어,
+  탱크의 액위 - 보일러 응답).</p>
+
+  <h2>13. 연습문제</h2>
+
+  <ol>
+    <li>$G(s) = 25/(s^2+8s+25)$의 $\omega_n, \zeta$, 오버슈트, 정착시간을 구하라.</li>
+    <li>오버슈트 10% 이하, 정착시간(2%) 1초 이내 명세에 맞는 $\zeta, \omega_n$의 한 쌍을 제시하라.</li>
+    <li>$\omega_n = 5, \zeta = 0.5$인 시스템의 단위 스텝 입력에 대한 피크 시간과 피크 값.</li>
+    <li>로그 감쇠율: 임펄스 응답에서 첫 피크 2.0, 다섯 번째 피크 0.5. $\zeta$는?</li>
+    <li>RLC 회로 $L=1$ mH, $C=10$ μF, $R=1$ Ω. $\omega_n, \zeta$, 공진 주파수.</li>
+    <li>$G_1(s) = 4/(s^2+s+4)$와 $G_2(s) = 4/(s^2+4s+4)$의 정착시간 비.</li>
+    <li>2차 시스템의 보드 선도에서 공진 봉우리가 +6 dB라면 $\zeta$는?</li>
+    <li>$\zeta = 0.6$이고 $t_p = 0.5$ s. $\omega_n$은?</li>
+    <li>4차 시스템 $G(s) = 100/[(s+1)(s+2)(s+10)(s+50)]$. 지배 극점은 무엇이고, 2차 근사는?</li>
+    <li>드론 자세제어: $J = 0.01$ kg·m², 명세 $\omega_n = 10, \zeta = 0.7$. PD 게인 $K_p, K_d$를 구하라.</li>
+  </ol>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>답</strong></summary>
+    <ol>
+      <li>$\omega_n = 5, \zeta = 0.8$. $M_p = 1.5\%$, $t_s = 1$ s.</li>
+      <li>$M_p = 10\%$ → $\zeta \ge 0.59$. $t_s \le 1$ → $\zeta\omega_n \ge 4$. 예: $\zeta = 0.7, \omega_n = 6$.</li>
+      <li>$\omega_d = 5\sqrt{0.75} = 4.33$. $t_p = \pi/4.33 = 0.726$ s. 피크 = $1 + e^{-\pi\cdot 0.5/0.866} = 1.163$.</li>
+      <li>4 주기 동안 $2.0/0.5 = 4$. 한 주기 비 $4^{1/4} = 1.414$. $\ln 1.414 = 0.347 = 2\pi\zeta/\sqrt{1-\zeta^2}$ → $\zeta \approx 0.055$.</li>
+      <li>$\omega_n = 1/\sqrt{LC} = 10^4$ rad/s. $\zeta = (R/2)\sqrt{C/L} = 0.5 \cdot 0.1 = 0.05$. 공진 $\omega_r = \omega_n\sqrt{1 - 2\zeta^2} \approx \omega_n$.</li>
+      <li>$G_1$: $\zeta=0.25$. $G_2$: $\zeta=1$ (임계). $t_s$ 비 = $4/(0.25\cdot 2) : 4/(1\cdot 2) = 8:2 = 4:1$. $G_1$이 4배 느리게 정착.</li>
+      <li>+6 dB = 2.0 = $1/(2\zeta\sqrt{1-\zeta^2})$. 풀면 $\zeta \approx 0.13$.</li>
+      <li>$t_p = \pi/\omega_d$. $\omega_d = \omega_n\sqrt{1-0.36} = 0.8\omega_n$. $0.5 = \pi/(0.8\omega_n)$ → $\omega_n = 7.85$ rad/s.</li>
+      <li>$-1, -2$ 지배. $-10, -50$ 무시. 근사: $G(s) \approx 1/[(s+1)(s+2)] = 1/(s^2+3s+2)$ (분자 100을 나머지 극점 곱 500으로 나눠 1로 정규화한 후 DC 게인 0.5로 일치).</li>
+      <li>$K_p = J\omega_n^2 = 0.01 \cdot 100 = 1$. $K_d = 2J\zeta\omega_n = 0.01\cdot 2\cdot 0.7\cdot 10 = 0.14$.</li>
+    </ol>
+  </details>
+
+  <h2>14. 다음 강의로의 다리</h2>
+
+  <p>이번 주에 본 모든 공식 (오버슈트, 정착시간, 공진 봉우리)은 <strong>폐루프가 안정하다</strong>는 가정 아래
+  성립합니다. 그런데 어떤 게인 값에서 폐루프가 불안정해질지를 어떻게 알까요? 이게 다음 주 W7 정상상태 오차 (안정 가정 필요)와 W8 Routh-Hurwitz 안정성의 핵심 질문입니다.</p>
+
+  <p>또한 W9 근궤적은 게인 변화에 따라 폐루프 극점이 s-평면에서 어떻게 움직이는지를 그립니다 — 이번 주 4절의 "허용 영역" 그림이
+  근궤적 위에서 어떤 게인이 그 영역으로 들어가는지를 알려주는 것이 다음의 핵심.</p>
+
+  <p>준비 운동: 다음 폐루프 시스템의 분모를 전개하고, 2차로 정리해 $\zeta, \omega_n$을 게인 $K$의 함수로 표현하라.</p>
+  $$ T(s) = \frac{K}{s^2 + 4s + K} $$
+  <p>(답: $\omega_n = \sqrt K$, $\zeta = 2/\sqrt K$. $K$를 늘릴수록 $\omega_n$ 증가, $\zeta$ 감소 — 빠르지만 진동.)</p>
+
+  <h2>14.5 자주 하는 실수와 함정</h2>
+
+  <ol>
+    <li><strong>실수</strong>: $\zeta$가 클수록 응답이 빠르다고 생각.<br>
+        <strong>진단</strong>: $\zeta = 1$ (임계)이 가장 빠른 비진동 응답. 그 이상은 더 느려짐.</li>
+    <li><strong>실수</strong>: 오버슈트 공식을 100배 안 하고 답.<br>
+        <strong>진단</strong>: $M_p = e^{-\pi\zeta/\sqrt{1-\zeta^2}}$는 비율 (0~1). 백분율은 ×100.</li>
+    <li><strong>실수</strong>: 정착시간을 모든 ζ에서 $4/(\zeta\omega_n)$으로.<br>
+        <strong>진단</strong>: 이 공식은 ζ < 1 (미감쇠) 가정. 과감쇠는 더 복잡.</li>
+    <li><strong>실수</strong>: $\omega_n$만 키우면 오버슈트가 작아진다고 착각.<br>
+        <strong>진단</strong>: 오버슈트는 ζ만의 함수. $\omega_n$은 시간 척도만 바꿈.</li>
+    <li><strong>실수</strong>: 분자에 영점이 있는 시스템에 표준형 공식을 그대로 적용.<br>
+        <strong>진단</strong>: 영점이 있으면 오버슈트가 더 커지거나 응답이 빨라짐. 표준 공식은 분자 = $\omega_n^2$ 경우만.</li>
+    <li><strong>실수</strong>: 우반평면 영점 (non-minimum phase)이 있는 시스템에 표준 분석.<br>
+        <strong>진단</strong>: 응답이 처음에 반대 방향으로 갔다가 돌아오는 행동 (예: 보일러). 다른 분석 필요.</li>
+    <li><strong>실수</strong>: 공진 봉우리가 항상 있다고 가정.<br>
+        <strong>진단</strong>: $\zeta \ge 0.707$이면 봉우리 없음 (단조 감소).</li>
+    <li><strong>실수</strong>: 임펄스응답의 첫 피크에 1을 더해서 답.<br>
+        <strong>진단</strong>: 임펄스응답은 0에서 시작 (정상값 없음). 1+Mp는 스텝응답에만.</li>
+  </ol>
+
+  <h2>15. 핵심 정리</h2>
   <div class="tip">
     <ul>
       <li>2차 시스템은 ζ와 ωₙ 두 매개변수로 모든 응답이 결정.</li>
@@ -404,6 +889,81 @@ plt.tight_layout(); plt.show()</code></pre>
       <li>설계 명세 → s-평면 영역 → 게인 선택의 흐름이 W12까지 이어진다.</li>
     </ul>
   </div>
+
+  <h2>16. 부록 - 한 페이지 요약 카드</h2>
+
+  <div class="tip">
+    <h3>2차 시스템 요약 카드</h3>
+    <p><strong>표준형</strong>: $G(s) = \omega_n^2/(s^2 + 2\zeta\omega_n s + \omega_n^2)$.</p>
+    <p><strong>극점</strong>: $s = -\zeta\omega_n \pm j\omega_d$, $\omega_d = \omega_n\sqrt{1-\zeta^2}$.</p>
+    <p><strong>네 모드</strong>: $\zeta=0$ 무감쇠, $0<\zeta<1$ 미감쇠, $\zeta=1$ 임계, $\zeta>1$ 과감쇠.</p>
+    <p><strong>오버슈트</strong>: $M_p = e^{-\pi\zeta/\sqrt{1-\zeta^2}}$.</p>
+    <p><strong>정착시간(2%)</strong>: $t_s \approx 4/(\zeta\omega_n)$.</p>
+    <p><strong>피크시간</strong>: $t_p = \pi/\omega_d$.</p>
+    <p><strong>공진</strong>: $\omega_r = \omega_n\sqrt{1-2\zeta^2}$ (ζ&lt;0.707일 때만).</p>
+    <p><strong>대역폭</strong>: $\omega_B \approx \omega_n$ (ζ ≈ 0.7 근처).</p>
+    <p><strong>표준 명세 → ζ</strong>: 5% → ζ ≥ 0.69; 10% → ζ ≥ 0.59; 20% → ζ ≥ 0.45.</p>
+    <p><strong>응용</strong>: 서스펜션, RLC, 빌딩 진동, 드론 자세, 모터 정밀 모델.</p>
+  </div>
+
+  <h3>16.1 자주 받는 질문 (FAQ)</h3>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q1. 왜 ζ = 0.7이 그렇게 자주 등장하나요?</strong></summary>
+    <p>① 오버슈트 5% 명세의 표준 답 (정확히는 $\zeta = 0.690$이지만 0.7로 반올림).
+    ② 공진 봉우리가 막 사라지는 경계 ($\zeta = 0.707$).
+    ③ 대역폭이 거의 $\omega_n$과 같아짐 (시간/주파수 매칭이 자연스러움).
+    이 세 가지가 모두 ζ ≈ 0.7 근처에서 동시에 만족돼서 "기본값"으로 자리잡음.</p>
+  </details>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q2. 임계 감쇠는 정말로 "가장 빠른 응답"인가요?</strong></summary>
+    <p>비진동 응답 중에서 가장 빠릅니다. 진동을 허용하면 ζ < 1 미감쇠가 ±2% 정착에서 더 빠를 수 있습니다.
+    실무 표준 ζ = 0.7이 임계보다 빠른 이유 — 살짝의 진동을 허용하는 대신 더 빠른 정착을 얻음.</p>
+  </details>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q3. 오버슈트 0%로 만들 수는 없나요?</strong></summary>
+    <p>2차 표준형에서 ζ ≥ 1이면 오버슈트가 정확히 0%. 그러나 정착이 느려짐. 또는 분자에 적절한 영점을 추가하면 ζ < 1에서도
+    오버슈트를 줄일 수 있음 (lead 보상기). 실용적으로는 5% 미만이면 "오버슈트 거의 없음"으로 봄.</p>
+  </details>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q4. 시스템이 3차 이상이면 ζ, ωₙ 정의는?</strong></summary>
+    <p>지배 극점 쌍에 대해서만 정의. 3차 이상에서 모든 극점에 ζ, ωₙ을 부여하지는 않습니다. 다만 각 복소 극점 쌍에 대한
+    "modal damping ratio"는 정의 가능 (W13 상태공간에서).</p>
+  </details>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q5. ωₙ과 대역폭이 정확히 같은가요?</strong></summary>
+    <p>아니요. ζ에 따라 다릅니다. ζ = 0.707에서만 정확히 같고, ζ가 작을수록 대역폭 > ωₙ, ζ가 클수록 대역폭 < ωₙ.
+    표준 ζ = 0.7 근처에서 둘이 거의 같다고 외워두면 90% 이상 맞음.</p>
+  </details>
+
+  <h3>16.2 추천 추가 학습</h3>
+  <ul>
+    <li>Ogata, "Modern Control Engineering" 5장 후반 (Higher-Order Systems, Dominant Poles)</li>
+    <li>Nise, "Control Systems Engineering" 4장 (Time Response)</li>
+    <li>구글 검색 키워드: "second order step response", "logarithmic decrement", "non-minimum phase"</li>
+    <li>실험: 자동차 서스펜션 동영상에서 차체 반동 횟수 세고 ζ 추정</li>
+  </ul>
+
+  <h3>16.3 자기 점검 체크리스트</h3>
+  <ul>
+    <li>임의의 2차 분모에서 $\zeta, \omega_n$을 1분 안에 추출</li>
+    <li>$\zeta = 0.5, 0.7, 1.0, 1.5$의 응답 모양을 손으로 그릴 수 있음</li>
+    <li>주어진 명세 (Mp, ts)에서 $\zeta, \omega_n$의 허용 범위 결정</li>
+    <li>s-평면의 폐루프 극점 위치만 보고 응답 정성 예측</li>
+    <li>2차 시스템의 보드 선도 점근선 그리기, 공진 유무 판별</li>
+    <li>로그 감쇠율로 측정 데이터에서 $\zeta$ 추정</li>
+    <li>지배 극점 개념으로 3차 이상 시스템을 2차로 근사</li>
+    <li>드론·서스펜션·RLC 등 응용에서 $\zeta, \omega_n$ 추출</li>
+  </ul>
+
+  <h3>16.4 마지막 한 줄</h3>
+  <p>2차 시스템은 자동제어 강의 전체에서 가장 자주 등장하는 모델입니다. 1차의 시정수 하나가 2차에서 두 매개변수로 확장되면서
+  진동·공진·오버슈트라는 새로운 현상이 등장했습니다. 다음 주 W7부터는 폐루프 시스템의 정상상태 오차와 안정성을 다루는데,
+  지금 익힌 $\zeta, \omega_n$의 직관이 매주 사용됩니다.</p>
 
   <div class="prevnext">
     <a href="05-first-order.html"><small>← 이전</small>W5. 1차 시스템</a>

@@ -70,6 +70,31 @@
     실제로 안정적으로 실행"하는 건 자동제어 이론입니다. 이 강의를 마치면 그 둘의 경계가 또렷해집니다.
   </div>
 
+  <h3>역사 한 토막 — 와트의 조속기에서 무인 자동차까지</h3>
+  <p>자동제어가 학문이 된 시작은 1788년 제임스 와트(James Watt)의 <strong>원심 조속기(centrifugal governor)</strong>입니다.
+  증기기관 출력축에 무거운 공 두 개를 매달아, 회전이 빨라지면 원심력으로 공이 벌어지면서 증기 밸브를 자동으로 닫게 만든 장치죠.
+  사람의 손이 닿지 않아도 회전 속도가 일정하게 유지됩니다. <em>"측정 → 비교 → 액추에이터 갱신"</em>의 첫 기계적 구현이었습니다.</p>
+  <p>그 뒤 1868년 맥스웰(J. C. Maxwell)이 <em>"On Governors"</em> 논문에서 조속기의 진동 문제를 미분방정식으로 분석한 것이
+  현대 제어이론의 출발점입니다. 이후 1940년대 벨 연구소의 보드(Bode)·니콜스(Nichols), 1960년대 칼만(Kalman)을 거쳐
+  오늘날 테슬라 오토파일럿, 보스턴 다이나믹스 휴머노이드, 한화에어로스페이스 누리호 자세 제어까지
+  같은 원리가 확장되어 왔습니다.</p>
+
+  <div class="tip">
+    <strong>그림으로 보는 흐름</strong> — 230년 동안 "측정-비교-갱신"이라는 핵심 아이디어는 변하지 않았습니다.
+    바뀐 건 (1) 측정 정확도(IMU·LiDAR·카메라), (2) 계산 속도(MCU·GPU), (3) 알고리즘의 표현력(PID → LQR → MPC → RL)뿐.
+    이 강의는 그중 가장 단단한 1번 줄기를 다집니다.
+  </div>
+
+  <h3>자동제어를 잘하는 사람의 사고 습관</h3>
+  <p>학부 4학년이나 대학원 신입생을 가르쳐 보면, 자동제어를 빨리 흡수하는 학생들의 공통점이 있습니다.</p>
+  <ul>
+    <li><strong>"입력은 무엇이고 출력은 무엇인가"</strong>를 항상 먼저 묻는다. 모든 시스템은 박스이고, 박스를 열기 전에 인터페이스부터.</li>
+    <li><strong>"이 신호가 시간이 지나면 어디로 가는가"</strong>를 손으로 그리는 습관. 그래프 못 그리면 식 의미도 안 잡힙니다.</li>
+    <li><strong>"왜 이 게인을 이 값으로 두었나"</strong>를 묻는다. 숫자에는 이유가 있어야 합니다.</li>
+    <li><strong>한 줄 비유</strong>를 자주 만든다. "이 시스템은 결국 샤워꼭지와 같다"라고 말할 수 있으면 핵심이 잡힌 것.</li>
+  </ul>
+  <p>이 강의 내내 위 네 질문을 끊임없이 반복합니다. 익숙해지면 새로운 시스템을 처음 봐도 30초 안에 모델 윤곽을 그릴 수 있게 됩니다.</p>
+
   <h2>2. 제어시스템의 구성 요소</h2>
 
   <p>자동제어를 처음 배울 때 가장 헷갈리는 것이 용어입니다. 사실 다섯 개만 외우면 끝납니다.</p>
@@ -119,6 +144,36 @@
   <p>이 다섯 개만 정확히 구분해도 자동제어 책의 절반은 읽힙니다. 나머지는 "어떻게 좋은 $u$를 계산할까?"에 대한
   여러 답일 뿐이에요.</p>
 
+  <h3>센서가 없으면 어떻게 될까? — 개념 실험</h3>
+  <p>전기포트로 물을 끓인다고 합시다. 센서(온도계)가 있다면 100℃에 도달하자마자 자동으로 전원을 끊을 수 있죠.
+  센서가 없다면? 시간을 미리 측정해 두었다가 "5분 30초 후 전원 OFF"라고 타이머를 걸 수밖에 없습니다.
+  하지만 물의 양이 다르면? 실내 온도가 다르면? 항상 똑같이 끓는다는 보장이 없습니다.</p>
+  <p>이게 바로 <strong>측정 = 적응력</strong>이라는 자동제어의 첫 번째 교훈입니다.
+  센서가 비싸도 구축한 시스템이 단단해지는 이유고, 반대로 비용 압박이 심한 가전(저가형 전기포트)에서는
+  여전히 타이머 기반 개회로가 살아있는 이유이기도 합니다.</p>
+
+  <h3>액추에이터의 한계 — 현실은 무한 토크가 아니다</h3>
+  <p>제어기가 수학적으로 $u(t) = 1000$ N·m을 명령해도, 실제 모터가 낼 수 있는 최대 토크가 50 N·m이면
+  나머지 950은 그냥 사라집니다. 이걸 <strong>포화(saturation)</strong>라고 부르고, W12에서 PID
+  적분 와인드업(integral windup)을 다룰 때 다시 만납니다. 자동제어 이론이 가장 자주 무너지는 지점이
+  바로 액추에이터 한계 무시예요.</p>
+
+  <table>
+    <thead><tr><th>흔한 액추에이터</th><th>전형적 한계</th><th>주의점</th></tr></thead>
+    <tbody>
+      <tr><td>BLDC 모터</td><td>정격 토크 ±5 N·m, 정격 속도 3000 rpm</td><td>전류 한계로 가속이 제한</td></tr>
+      <tr><td>유압 실린더</td><td>속도 0.5 m/s, 힘 50 kN</td><td>밸브 응답 지연이 큼</td></tr>
+      <tr><td>드론 프로펠러</td><td>RPM 0~12000, 추력 0~25 N</td><td>음의 추력 불가(중력에 의존)</td></tr>
+      <tr><td>차량 엔진</td><td>토크 200 N·m, 응답 0.3 s</td><td>변속기 비선형성 추가</td></tr>
+      <tr><td>전열히터</td><td>전력 0~3 kW</td><td>음의 가열 불가, 냉각은 자연 손실에만 의존</td></tr>
+    </tbody>
+  </table>
+
+  <h3>센서의 잡음과 지연 — 측정도 완벽하지 않다</h3>
+  <p>실제 센서는 (1) <em>잡음</em>(noise) — 매 측정마다 작은 오차가 더해짐, (2) <em>편향</em>(bias) — 평균이 어긋남,
+  (3) <em>지연</em>(lag) — 신호가 늦게 들어옴, (4) <em>샘플링</em>(sampling) — 연속적이지 않고 일정 주기로만 들어옴
+  의 네 가지 이슈를 동반합니다. W11 주파수영역에서 잡음 영향을, W14에서 디지털 샘플링을 다룰 때 다시 등장합니다.</p>
+
   <h2>3. 개회로 vs 폐회로 — 두 가지 전략</h2>
 
   <h3>한 줄 비유부터</h3>
@@ -146,6 +201,27 @@
     "<strong>얼마나 세게 보정할까(게인)</strong>"가 됩니다. 이 질문에 답하는 도구가 바로 W2~W11에서 배울
     라플라스·전달함수·근궤적·Bode 선도입니다.
   </div>
+
+  <h3>손계산 예제 — 외란이 있을 때 정상상태 오차 비교</h3>
+  <p>플랜트 게인 $G = 2$, 제어기 $C = K$ (단순 비례), 단위 외란 $d = 1$, 목표 $r = 5$로 두고 둘 다 정상상태에서 어디로 가는지 계산해 봅시다.</p>
+  <p><strong>개회로</strong>: $u = C r = K \cdot 5 = 5K$. 출력 $y_{ol} = G u + d = 2 \cdot 5K + 1 = 10K + 1$.
+  $y_{ol} = r = 5$가 되려면 $K = 0.4$로 미리 정해두어야 하지만, $d$가 $1$이 아니라 $0$이거나 $2$로 바뀌면 그대로 어긋납니다.</p>
+  <p><strong>폐회로</strong>: $u = K(r - y)$, $y_{cl} = G u + d = 2K(r - y_{cl}) + d$.
+  $(1 + 2K)\, y_{cl} = 2K r + d$, 즉 $y_{cl} = \dfrac{2K r + d}{1 + 2K}$. $K = 10$이면 $y_{cl} = \dfrac{100 + 1}{21} \approx 4.81$,
+  $K = 100$이면 $y_{cl} \approx 4.98$. 게인이 클수록 외란 항이 1/(1+2K)로 작아져 목표에 가까워집니다.</p>
+
+  <p>이 단순한 산수가 폐회로의 우월성을 정량적으로 보여줍니다. 외란 영향이 $\dfrac{1}{1+2K}$로 줄어드는 이 식을
+  W7에서는 <em>외란 감도(disturbance sensitivity)</em> $S = 1/(1+GC)$로 일반화합니다.</p>
+
+  <h3>왜 무한 게인은 안 될까? — 직관적 설명</h3>
+  <p>"$K$를 무한히 키우면 외란 영향이 0이 되니까 좋은 거 아닌가?"라고 묻는 학생이 매년 한 명씩 있습니다.
+  이론적으로는 맞지만 현실은 다음 세 가지가 막습니다.</p>
+  <ul>
+    <li><strong>액추에이터 포화</strong>: 무한 토크는 없습니다. 모터는 정격 이상을 못 냅니다.</li>
+    <li><strong>잡음 증폭</strong>: 측정 잡음 $n$이 있으면 $u = K(r - y - n)$이 되어, 큰 $K$는 잡음도 함께 증폭합니다.</li>
+    <li><strong>안정성 한계</strong>: 시스템에 시정수·지연이 있으면 큰 $K$는 진동을 유발해 불안정해집니다. 이것이 W8~W9의 주제.</li>
+  </ul>
+  <p>그래서 자동제어는 결국 <em>"가능한 한 큰 $K$를 안전하게 쓰는 법"</em>을 찾는 학문이라고 요약해도 과장이 아닙니다.</p>
 
   <h2>4. 인터랙티브: 외란이 있을 때 누가 살아남는가</h2>
 
@@ -236,6 +312,73 @@
     통한다는 뜻이에요.</li>
   </ul>
 
+  <h2>4-B. 두 번째 인터랙티브 — 비례 게인 vs PI 제어기 비교</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비례(P)만 vs 적분 추가(PI) — 정상상태 오차의 실종</h4>
+    <p>같은 1차 플랜트에 단순 P 제어기와 PI 제어기를 동시에 걸어 보았습니다. 외란을 가하면 둘의 차이가
+    한눈에 보입니다. <span style="color:#0b5fff;font-weight:600">파랑(P 제어)</span>은 외란이 있는 동안
+    잔류 오차가 남고, <span style="color:#2e7d32;font-weight:600">초록(PI 제어)</span>은 적분 항이
+    천천히 그 오차를 0으로 끌어옵니다. 이것이 W12에서 배울 PID 제어의 P와 I 항 역할 분담입니다.</p>
+    <canvas id="c1piDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>외란 d <span class="val" id="c1dV">1.5</span><input type="range" id="c1d" min="-3" max="3" step="0.1" value="1.5"></label>
+      <label>P 게인 Kp <span class="val" id="c1kpV">2</span><input type="range" id="c1kp" min="0.1" max="6" step="0.1" value="2"></label>
+      <label>I 게인 Ki <span class="val" id="c1kiV">1.5</span><input type="range" id="c1ki" min="0" max="4" step="0.1" value="1.5"></label>
+      <button id="c1Reset" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c1piDemo');if(!c)return;
+    const x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{
+      $('c1dV').textContent=(+$('c1d').value).toFixed(1);
+      $('c1kpV').textContent=(+$('c1kp').value).toFixed(1);
+      $('c1kiV').textContent=(+$('c1ki').value).toFixed(1);
+    };
+    ['c1d','c1kp','c1ki'].forEach(id=>$(id).oninput=upd);
+    const K=1.0, tau=2.0;
+    let yp=0, ypi=0, eint=0, ref=3, hist=[];
+    $('c1Reset').onclick=()=>{yp=0;ypi=0;eint=0;hist=[];};
+    function loop(){
+      const d=+$('c1d').value, Kp=+$('c1kp').value, Ki=+$('c1ki').value;
+      const dt=0.04;
+      const ep=ref-yp;
+      const epi=ref-ypi;
+      eint+=epi*dt;
+      const up=Kp*ep;
+      const upi=Kp*epi+Ki*eint;
+      yp+=dt*((K*up+d-yp)/tau);
+      ypi+=dt*((K*upi+d-ypi)/tau);
+      hist.push({yp,ypi,ref}); if(hist.length>360)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40,oy=270,w=560,h=210;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      const ry=oy-ref*40;x.moveTo(ox,ry);x.lineTo(ox+w,ry);x.stroke();x.setLineDash([]);
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('r='+ref,ox+w-30,ry-6);x.fillText('0',ox-12,oy+4);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((p,i)=>{const xx=ox+i*w/360, yy=oy-p.yp*40; if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='#2e7d32';x.beginPath();
+      hist.forEach((p,i)=>{const xx=ox+i*w/360, yy=oy-p.ypi*40; if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('P 제어 (파랑) — 잔류 오차 '+(ref-yp).toFixed(2),ox+10,oy-h+18);
+      x.fillText('PI 제어 (초록) — 잔류 오차 '+(ref-ypi).toFixed(2),ox+10,oy-h+38);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>실험해 볼 것</strong>:</p>
+  <ul>
+    <li>$d$를 0이 아닌 값으로 두면 P 제어는 잔류 오차가 남는다.</li>
+    <li>$K_i$를 키우면 PI는 더 빨리 오차를 없앤다(단, 너무 크면 오버슈트가 생긴다).</li>
+    <li>$K_p$만 너무 크게 하면 진동 가능성이 보인다 — 1차 플랜트라 발산은 안 하지만, 2차 이상이면 발산.</li>
+  </ul>
+
   <h2>5. 일상과 산업 속의 자동제어</h2>
 
   <p>자동제어가 어디에 쓰이는지 한 번에 감을 잡으면 이후 14주가 훨씬 잘 와닿습니다.</p>
@@ -255,6 +398,33 @@
   <p>모두 같은 구조 — <em>측정 → 오차 계산 → 입력 갱신</em>의 반복 — 입니다. 이 강의는 그 "어떻게 갱신할까"의
   체계적인 답을 단계별로 만듭니다.</p>
 
+  <h3>한국 산업 속 사례 — 더 구체적인 숫자로</h3>
+
+  <h4>현대자동차 어댑티브 크루즈 컨트롤(ACC)</h4>
+  <p>레이더로 앞차와의 거리 $d_{front}$를 측정해 운전자가 설정한 거리(보통 1.2~3.0초 시간 간격)로 유지합니다.
+  목표 거리에서 어긋나면 스로틀(엔진 토크) 또는 브레이크를 자동 조작. 측정 주기는 전형적으로 50 Hz,
+  안전 인증 ASIL-B 등급 이상이 요구됩니다. 이 강의의 W6 2차 시스템·W12 PID 튜닝이 그대로 적용되는 응용입니다.</p>
+
+  <h4>한화에어로스페이스 누리호 자세 제어</h4>
+  <p>로켓이 수직으로 올라가는 동안 바람·연료 무게 중심 변화로 기울어지면, 김벌(엔진 노즐 회전)을 1° 단위로
+  조정해 자세를 유지합니다. 측정은 IMU(관성측정장치) 100~1000 Hz, 제어 주기 50 Hz 정도. 자세 각 오차가
+  수도 없이 들어와도 안정적으로 추적해야 하므로 W11 주파수영역 분석과 W13 강건제어가 핵심입니다.</p>
+
+  <h4>LG·삼성 인버터 에어컨</h4>
+  <p>옛날 ON/OFF 방식 에어컨은 온도가 설정값에 도달하면 컴프레서를 끄고, 다시 올라가면 켰습니다.
+  진동이 큰 전형적인 <em>릴레이 제어</em>죠. 인버터 모델은 컴프레서 모터의 회전수를 PI 제어로 부드럽게
+  조절해 전력 소모를 30~50% 줄였습니다. 같은 자동제어 이론, 적용 방식 한 번 바꾸니 시장이 뒤집혔어요.</p>
+
+  <h4>두산로보틱스 협동로봇 M0617</h4>
+  <p>6축 매니퓰레이터, 페이로드 6 kg, 위치 반복정확도 ±0.05 mm. 각 관절 모터는 두 단 캐스케이드 PID로
+  내부 루프(전류 → 1 kHz)와 외부 루프(위치 → 200 Hz)를 분리해 운영합니다. 이 캐스케이드 구조는 W4 블록선도와 W13~W14에서
+  자세히 봅니다.</p>
+
+  <h4>한국항공우주연구원 무인 드론</h4>
+  <p>쿼드콥터의 자세 안정화는 IMU(가속도계+자이로) 데이터를 칼만 필터로 융합한 뒤,
+  외부 PID(자세각 명령) → 내부 PID(각속도) → 모터 PWM 출력의 3단 캐스케이드로 구현됩니다.
+  이론은 학부 자동제어 그대로지만, 실제로 안정시키려면 W14에서 다룰 디지털 구현·잡음 처리 기법이 필수입니다.</p>
+
   <h2>6. 14주 로드맵</h2>
 
   <p>이 강의가 끝날 때 여러분은 다음 질문에 모두 답할 수 있게 됩니다.</p>
@@ -265,6 +435,27 @@
     <li>잡음·외란이 있을 때도 동작하는가? (W10–W11 주파수영역)</li>
     <li>현실에서 PID를 어떻게 튜닝하고, 로봇에 어떻게 적용하는가? (W12–W14)</li>
   </ul>
+
+  <h3>각 주차에서 만나는 핵심 질문 — 한 줄 요약</h3>
+  <table>
+    <thead><tr><th>주차</th><th>핵심 질문</th><th>대표 도구</th></tr></thead>
+    <tbody>
+      <tr><td>W1</td><td>자동제어가 왜 필요한가?</td><td>개회로 vs 폐회로</td></tr>
+      <tr><td>W2</td><td>미분방정식을 어떻게 쉽게 풀까?</td><td>라플라스 변환</td></tr>
+      <tr><td>W3</td><td>물리 시스템을 한 줄 식으로?</td><td>전달함수</td></tr>
+      <tr><td>W4</td><td>여러 블록을 어떻게 합칠까?</td><td>블록선도 환원</td></tr>
+      <tr><td>W5</td><td>1차 시스템은 얼마나 빠른가?</td><td>시정수 $\tau$, 63% 법칙</td></tr>
+      <tr><td>W6</td><td>2차 시스템은 얼마나 흔들리는가?</td><td>$\zeta, \omega_n$, 오버슈트</td></tr>
+      <tr><td>W7</td><td>정상상태 오차를 0으로?</td><td>시스템 타입(0/I/II)</td></tr>
+      <tr><td>W8</td><td>이 시스템은 안정한가?</td><td>Routh-Hurwitz</td></tr>
+      <tr><td>W9</td><td>게인이 변하면 극점은?</td><td>근궤적</td></tr>
+      <tr><td>W10</td><td>주파수별 응답은?</td><td>Bode 선도</td></tr>
+      <tr><td>W11</td><td>안정여유가 얼마나?</td><td>GM, PM, Nyquist</td></tr>
+      <tr><td>W12</td><td>실용적 PID 설계법?</td><td>Ziegler-Nichols</td></tr>
+      <tr><td>W13</td><td>로봇 모터에 어떻게 적용?</td><td>캐스케이드 제어</td></tr>
+      <tr><td>W14</td><td>디지털 컴퓨터로 어떻게 구현?</td><td>이산 PID, 샘플링</td></tr>
+    </tbody>
+  </table>
 
   <figure>
     <svg viewBox="0 0 700 130" xmlns="http://www.w3.org/2000/svg">
@@ -295,6 +486,55 @@
     </svg>
     <figcaption>그림 2. 14주 학습 흐름. 왼쪽에서 오른쪽으로, 도구를 쌓고 마지막에 응용으로 모입니다.</figcaption>
   </figure>
+
+  <h2>6-B. 추가 SVG: 폐루프와 외란·잡음 모두 포함한 일반 구조</h2>
+
+  <figure>
+    <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arF" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <text x="20" y="125">r(t)</text>
+      <line x1="55" y1="120" x2="95" y2="120" stroke="#333"/>
+      <circle cx="110" cy="120" r="14" fill="#fff" stroke="#333"/>
+      <text x="110" y="124" text-anchor="middle">−</text>
+      <line x1="124" y1="120" x2="160" y2="120" stroke="#333" marker-end="url(#arF)"/>
+      <text x="135" y="110" font-size="11" fill="#666">e</text>
+      <rect x="160" y="100" width="100" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="210" y="125" text-anchor="middle">제어기 C(s)</text>
+      <line x1="260" y1="120" x2="310" y2="120" stroke="#333" marker-end="url(#arF)"/>
+      <text x="270" y="110" font-size="11" fill="#666">u</text>
+      <circle cx="325" cy="120" r="14" fill="#fff" stroke="#333"/>
+      <text x="325" y="124" text-anchor="middle">+</text>
+      <line x1="325" y1="60" x2="325" y2="106" stroke="#333" marker-end="url(#arF)"/>
+      <text x="305" y="55" font-size="11" fill="#c62828">외란 d(t)</text>
+      <line x1="339" y1="120" x2="380" y2="120" stroke="#333" marker-end="url(#arF)"/>
+      <rect x="380" y="100" width="100" height="40" fill="#fce4ec" stroke="#c62828"/>
+      <text x="430" y="125" text-anchor="middle">플랜트 G(s)</text>
+      <line x1="480" y1="120" x2="540" y2="120" stroke="#333"/>
+      <text x="495" y="110" font-size="11" fill="#666">y</text>
+      <circle cx="555" cy="120" r="14" fill="#fff" stroke="#333"/>
+      <text x="555" y="124" text-anchor="middle">+</text>
+      <line x1="555" y1="180" x2="555" y2="134" stroke="#333" marker-end="url(#arF)"/>
+      <text x="530" y="195" font-size="11" fill="#9c27b0">잡음 n(t)</text>
+      <line x1="569" y1="120" x2="710" y2="120" stroke="#333" marker-end="url(#arF)"/>
+      <text x="715" y="125">y_meas</text>
+      <line x1="640" y1="120" x2="640" y2="200" stroke="#333"/>
+      <line x1="640" y1="200" x2="110" y2="200" stroke="#333"/>
+      <line x1="110" y1="200" x2="110" y2="135" stroke="#333" marker-end="url(#arF)"/>
+    </svg>
+    <figcaption>그림 3. 실제 폐루프에는 외란 $d$와 측정 잡음 $n$이 함께 들어옵니다.
+    "큰 게인은 외란을 누르지만 잡음을 키운다" — 이 트레이드오프가 W11의 주제.</figcaption>
+  </figure>
+
+  <h3>같은 그림에서 읽어내야 하는 4가지 전달함수</h3>
+  <p>위 그림에서 출력 $y$, 제어입력 $u$, 측정 신호 $y_{meas}$가 어떻게 결정되는지 정리해 두면
+  W4·W7·W11에서 같은 식을 다시 볼 때 이해가 빠릅니다.</p>
+  <ul>
+    <li>$T = \dfrac{Y}{R} = \dfrac{GC}{1 + GC}$ — <em>기준 추적 함수</em>. 목표를 얼마나 잘 따라가나.</li>
+    <li>$S = \dfrac{Y}{D} = \dfrac{1}{1 + GC}$ — <em>외란 감도</em>. 외란이 출력에 얼마나 새어나가나.</li>
+    <li>$T_n = \dfrac{Y}{N} = \dfrac{-GC}{1 + GC}$ — <em>잡음 감도</em>. 잡음이 출력에 얼마나 들어오나.</li>
+    <li>$U_r = \dfrac{U}{R} = \dfrac{C}{1 + GC}$ — <em>제어노력 함수</em>. 한 번 명령에 얼마나 큰 입력이 필요한가.</li>
+  </ul>
+  <p>흥미로운 항등식: $S + T = 1$. 한쪽을 누르면 다른 쪽이 자동으로 결정됩니다. 이것이 자동제어의 가장 깊은 트레이드오프 중 하나.</p>
 
   <h2>7. 코드로 만나기 — 첫 번째 시뮬레이션</h2>
 
@@ -337,22 +577,454 @@ plt.show()</code></pre>
   <p>한 줄씩 바꿔보면서 직감을 키워 보세요. <code>K_act</code>를 1.5로 바꾸면 개루프만 어긋나고,
   <code>Kp</code>를 50으로 키우면 폐루프가 진동을 시작합니다. 이 진동이 바로 W8 안정성 분석으로 이어집니다.</p>
 
+  <h2>7-B. 흔한 함정과 시험 출제 패턴</h2>
+
+  <div class="warn">
+    <strong>학생들이 첫 시험에서 자주 놓치는 5가지</strong>
+    <ol>
+      <li><strong>입력/출력 혼동</strong>. "이 시스템에서 입력은?" 질문에 대답을 못 한다면 모델링이 시작될 수 없습니다. 자동차 크루즈 컨트롤의 입력은 스로틀 명령이지 차속이 아닙니다. 차속은 출력.</li>
+      <li><strong>"개루프인데 왜 피드백이 있어요?"</strong>. 사람이 손으로 측정해 다음 행동을 정하는 것도 사실은 폐루프입니다. <em>제어기 내부에 자동 측정-비교 회로가 없다면 개루프</em>로 봅니다.</li>
+      <li><strong>플랜트와 제어기를 합쳐서 "시스템"이라 부르고 그쳐버린다</strong>. 분리해야 어떤 부분을 우리가 설계할 수 있는지(=제어기) 명확해집니다.</li>
+      <li><strong>외란과 잡음을 구별 안 한다</strong>. 외란은 "출력에 영향을 주는 외부 신호"(예: 바람), 잡음은 "측정 신호에 섞이는 오류"(예: 센서 노이즈). 입구가 다릅니다.</li>
+      <li><strong>"안정 = 진동 없음"이라고 외운다</strong>. 안정 시스템도 감쇠하면서 진동할 수 있습니다. 안정성의 진짜 정의는 W8에서.</li>
+    </ol>
+  </div>
+
+  <h3>시험 출제 패턴 미리 보기</h3>
+  <p>14주 동안 거의 매년 나오는 문제 유형을 미리 알려드립니다. 강의를 들으며 "이 부분이 그거구나" 하고 표시하면 좋아요.</p>
+  <ul>
+    <li><strong>중간고사 1번 단골</strong> — "다음 시스템은 개회로인가 폐회로인가? 이유는?" (이 강의 W1)</li>
+    <li><strong>중간고사 2번 단골</strong> — 라플라스 변환표·부분분수 손계산 (W2)</li>
+    <li><strong>중간고사 3번 단골</strong> — 물리 시스템(MSD/RC/모터)에서 전달함수 유도 (W3)</li>
+    <li><strong>중간고사 4번 단골</strong> — 블록선도 환원 후 폐루프 전달함수 구하기 (W4)</li>
+    <li><strong>기말고사 1번</strong> — 1차/2차 시스템 시간응답 매개변수($\tau, \zeta, \omega_n$, $t_p, M_p$) (W5~W6)</li>
+    <li><strong>기말고사 2번</strong> — Routh-Hurwitz 안정성 판정 (W8)</li>
+    <li><strong>기말고사 3번</strong> — 근궤적 스케치 (W9)</li>
+    <li><strong>기말고사 4번</strong> — Bode 선도와 안정여유(GM·PM) (W10~W11)</li>
+    <li><strong>기말고사 5번</strong> — PID 설계와 응용 분석 (W12~W14)</li>
+  </ul>
+
+  <h2>7-C. 연습문제</h2>
+
+  <p>혼자 풀어 보세요. 답은 부록 또는 다음 주 시작 시 공개됩니다.</p>
+
+  <ol>
+    <li><strong>구분 문제</strong> — 다음 시스템이 개회로/폐회로 중 어느 쪽인지 답하고 이유를 적어 보세요.
+      <ul>
+        <li>(a) 일반 토스터 (시간 다이얼)</li>
+        <li>(b) 자동 비데(설정 온수 온도)</li>
+        <li>(c) 가스레인지 (사람이 불꽃 보면서 손으로 다이얼)</li>
+        <li>(d) 차량 자동변속기 (RPM 따라 기어 변경)</li>
+        <li>(e) 형광등 점등 회로</li>
+      </ul>
+    </li>
+    <li><strong>구성요소 식별</strong> — 가정용 식기세척기에서 "물 온도를 50℃로 유지"하는 기능에 대해
+    $r, y, e, u$, 플랜트, 액추에이터, 센서를 각각 무엇으로 잡을지 표로 적어 보세요.</li>
+    <li><strong>외란 정량화</strong> — 본문 4-B 데모 식 $y_{cl} = (2K r + d)/(1 + 2K)$에서
+    $r = 10$, $d = 2$일 때 $K$가 (a) 1, (b) 5, (c) 50, (d) $\infty$일 때의 정상상태 출력과 정상상태 오차를 각각 계산하세요.</li>
+    <li><strong>액추에이터 포화 사고 실험</strong> — 폐회로 제어기가 $u = 200(r - y)$를 명령했는데
+    실제 모터의 $u$ 한계가 ±10이면 어떻게 될까? 학생 본인의 말로 두 줄로 설명하세요.</li>
+    <li><strong>센서 잡음 실험</strong> — 위 데모를 변형해 측정 $y_{meas} = y + n$ ($n$은 평균 0, 표준편차 0.1의 백색잡음)이라면
+    P 게인을 키울 때 어떤 부작용이 생길지 두 가지 적어 보세요.</li>
+    <li><strong>한 줄 비유 만들기</strong> — 본문에서 "샤워꼭지" 비유를 들었습니다. 여러분 일상에서 폐회로/개회로를 비교할 수 있는 비유를
+    하나 만들어 5줄로 적어 보세요.</li>
+    <li><strong>응용 매핑</strong> — 위 표(가전·자동차·로보틱스 등) 외에 본인이 평소에 쓰는 기기 하나를 골라 $r, u, y$를 매핑해 보세요.</li>
+    <li><strong>14주 로드맵 자기평가</strong> — 6장 끝의 다섯 질문 중 지금 시점에 어렴풋이라도 답할 수 있는 것이 몇 개인지 솔직하게 세고,
+    14주차에 같은 질문을 다시 받았을 때 자기 답이 어떻게 달라질지 한 줄씩 적어 보세요.</li>
+  </ol>
+
+  <h2>7-D. 두 번째 코드 — 외란·잡음 함께 시뮬레이션</h2>
+
+  <p>위 6-B의 그림과 정확히 같은 구조를 코드로 옮기면 다음과 같습니다. 잡음이 더해진 후 큰 게인이 어떤 일을 하는지
+  눈으로 확인하세요.</p>
+
+<pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+
+np.random.seed(0)
+tau, K = 2.0, 1.0
+dt, T = 0.02, 20.0
+N = int(T/dt); t = np.arange(N)*dt
+
+r = np.where(t<10, 1.0, 2.0)             # 10초에 목표 변경
+d = 0.5*(t>5) - 0.5*(t>14)                # 외란 펄스
+n = 0.05*np.random.randn(N)              # 측정 잡음
+
+for Kp in [1.0, 5.0, 30.0]:
+    y = 0.0; log = []
+    for k in range(N):
+        ymeas = y + n[k]
+        u = Kp*(r[k] - ymeas)
+        y += dt*((K*u + d[k] - y)/tau)
+        log.append(y)
+    plt.plot(t, log, label=f'Kp = {Kp}')
+plt.plot(t, r, 'r--', label='reference')
+plt.xlabel('time [s]'); plt.ylabel('y'); plt.legend(); plt.grid()
+plt.title('큰 게인은 외란을 잘 잡지만 잡음을 출력으로 끌어옵니다')
+plt.show()</code></pre>
+
+  <p>결과: $K_p = 30$은 외란 펄스를 거의 흡수하지만, 잡음 때문에 출력이 부글거립니다.
+  $K_p = 1$은 부드럽지만 외란에 약하고요. 이 시각적 트레이드오프가 W11에서 정량화됩니다.</p>
+
+  <h2>7-E. 한 줄로 외우는 자동제어 격언 12개</h2>
+
+  <p>14주가 끝나면 모두 자명해질 문장들입니다. 처음 보면 추상적이지만, 강의가 끝날 때 다시 보면 한 줄 한 줄이 무게를 얻습니다.</p>
+
+  <ol>
+    <li>"측정 없이는 보정이 없다."</li>
+    <li>"같은 시스템도 좌반평면 극점에서만 안정하다."</li>
+    <li>"적분 항이 없으면 정상상태 오차는 사라지지 않는다."</li>
+    <li>"빠르면 진동, 안전하면 느림 — 트레이드오프는 영원하다."</li>
+    <li>"고게인은 잡음의 친구이자 외란의 적이다."</li>
+    <li>"실험에서 게인을 두 배로 높여도 안정하면, 안정여유는 6 dB 이상이다."</li>
+    <li>"모델은 항상 틀린다. 강건성을 잊지 말라."</li>
+    <li>"포화는 모든 이론을 무너뜨린다 — 와인드업을 잡아라."</li>
+    <li>"모터 한 대보다 캐스케이드 두 단이 거의 항상 낫다."</li>
+    <li>"디지털 구현은 샘플링이 모델의 일부다."</li>
+    <li>"먼저 안정시키고, 그 다음 빨라지게 하고, 마지막으로 정확하게 만들어라."</li>
+    <li>"안정성은 협상하지 않는다."</li>
+  </ol>
+
   <h2>8. 핵심 정리</h2>
   <div class="tip">
     <ul>
       <li><strong>자동제어</strong> = 측정 → 오차 → 입력 갱신을 자동으로 반복하는 일.</li>
       <li><strong>개회로</strong>는 모델이 완벽할 때만 통하고, <strong>폐회로</strong>는 외란·모델 오차에 강하다.</li>
       <li>폐회로의 무기는 <em>측정과 게인</em>. 게인이 클수록 외란 억제력은 커지지만 안정성은 위험해진다.</li>
+      <li>실제 시스템에는 외란 $d$, 잡음 $n$, 액추에이터 포화가 늘 따라온다 — 이론을 모두 비틀어 놓는 현실 변수.</li>
+      <li>네 가지 전달함수($T, S, T_n, U_r$)를 같은 그림에서 읽을 수 있어야 W4 이후가 수월하다.</li>
       <li>W2부터는 "얼마나 큰 게인까지 안정한가"를 정확히 계산하는 수학 도구를 쌓는다.</li>
     </ul>
   </div>
 
-  <h2>9. 더 깊이 공부하기</h2>
+  <h2>9. 다음 강의로 가는 다리</h2>
+
+  <p>지금까지는 자동제어가 무엇인지 <em>그림과 비유로</em> 잡았습니다. W2부터는 그 그림에 식을 입힙니다.</p>
+
+  <ul>
+    <li><strong>W2 라플라스 변환</strong> — 시간영역 미분방정식을 s영역 대수식으로 바꿔, "샤워꼭지를 천천히 돌리면 어떻게 될까"를 적분 없이 답합니다.</li>
+    <li><strong>W3 전달함수</strong> — 모든 LTI 시스템을 한 줄짜리 분수식 $G(s) = N(s)/D(s)$로 표현하는 법을 익힙니다. RC 회로, MSD, DC 모터 — 학부 자동제어의 3대 단골.</li>
+    <li><strong>W4 블록선도</strong> — 그림으로 그린 시스템을 식으로 줄이는 알고리즘. 폐루프 전달함수 $G/(1+GH)$가 등장합니다.</li>
+    <li><strong>W5~W7 시간응답</strong> — 같은 모델로 "얼마나 빠르게? 얼마나 정확하게?"를 정량화합니다.</li>
+    <li><strong>W8~W11 안정성·주파수영역</strong> — 게인을 얼마나 키워도 되는지 수학적으로 답합니다.</li>
+    <li><strong>W12~W14 PID와 응용</strong> — 모든 도구를 모아 실제 로봇·드론·자동차에 적용합니다.</li>
+  </ul>
+
+  <h3>후속 과목으로의 연결</h3>
+  <ul>
+    <li><strong>모델예측제어(MPC)</strong>: 한 시점의 게인이 아니라 미래 N 스텝을 모두 보고 최적 입력을 정합니다. 본 강의의 모든 도구(전달함수·상태공간·안정성)가 전제 지식.</li>
+    <li><strong>강건제어(Robust Control)</strong>: 모델 오차·외란을 명시적으로 다룹니다. W11의 감도 함수가 직접 확장됩니다.</li>
+    <li><strong>최적제어(LQR/LQG)</strong>: 비용함수를 최소화하는 게인을 자동으로 찾는 방법. W14에서 맛보기로 만나고 대학원에서 본격적.</li>
+    <li><strong>학습기반 제어(RL/iLC)</strong>: 모델을 모르는 상황에서 데이터로부터 좋은 정책을 배웁니다. 다만 안정성 보증은 여전히 고전 제어가 책임지는 부분이 큽니다.</li>
+    <li><strong>로봇공학특론·메카트로닉스</strong>: 본 강의의 전달함수·PID·안정성을 그대로 사용합니다. <a href="../lectures/07-feedback-control.html">로봇공학특론 L7</a>은 본 강의의 W12 PID 부분의 로봇 버전.</li>
+  </ul>
+
+  <h2>10. 더 깊이 공부하기</h2>
   <ul>
     <li>Norman S. Nise, <em>Control Systems Engineering</em>, 8th ed. — 학부 표준 교재. 1장이 이 주차와 정확히 같은 범위.</li>
     <li>Karl J. Åström &amp; Richard M. Murray, <em>Feedback Systems</em> (무료 PDF: <a href="https://fbswiki.org">fbswiki.org</a>) — 더 모던하고 시스템 사고에 강한 입문서.</li>
+    <li>Gene F. Franklin, <em>Feedback Control of Dynamic Systems</em>, 8th ed. — Stanford 표준. 디지털 제어 비중이 높음.</li>
+    <li>Katsuhiko Ogata, <em>Modern Control Engineering</em>, 5th ed. — 한국어판 번역서가 있어 처음 읽기 좋음.</li>
+    <li>Brian Douglas의 YouTube 채널 <em>Control Systems Lectures</em> — 직관 설명이 압도적입니다. 영어지만 자막 활성화 추천.</li>
     <li>관련 강의: <a href="../lectures/07-feedback-control.html">로봇공학특론 L7 피드백 제어</a>는 본 강의의 PID 부분(W12)을 로봇 관점에서 먼저 빠르게 훑은 버전입니다.</li>
+    <li>관련 강의: <a href="../mechatronics.html">메카트로닉스</a>의 센서·액추에이터 단원과 함께 보면 W3 모델링이 훨씬 잘 잡힙니다.</li>
+    <li>관련 강의: <a href="../linear-algebra.html">선형대수학</a> — W14에서 다룰 상태공간 표현은 행렬 연산 이해가 필수.</li>
   </ul>
+
+  <h2>10-B. 미니 케이스 스터디 — 진짜 시스템 5개 분해</h2>
+
+  <p>강의 내내 추상적인 1차/2차 시스템만 다루기 쉬운데, 실제 산업 시스템 5개를 같은 다이어그램 언어로 분해해 보겠습니다.</p>
+
+  <h3>케이스 1 — 가정용 인덕션 레인지</h3>
+  <p>설정 화력 단계(1~9)에 따라 코일에 흐르는 고주파 전류량을 PWM으로 조절합니다. 냄비 바닥 온도는 직접 측정하지 않고
+  코일 인덕턴스 변화로 간접 측정. 사용자가 설정 단계만 정하므로 사실상 <em>개회로</em> + 안전을 위한 과열 차단 폐회로의 혼합입니다.</p>
+  <ul>
+    <li>$r$: 사용자 설정 화력 단계 (1~9)</li>
+    <li>$u$: 코일 PWM 듀티사이클</li>
+    <li>$y$: 냄비 바닥 온도 (간접 추정)</li>
+    <li>외란: 냄비 종류·물 양·실내 온도</li>
+    <li>왜 개회로? 직접 측정의 비용/복잡도가 낮은 것보다 큼.</li>
+  </ul>
+
+  <h3>케이스 2 — 전동 휠체어 속도 제어</h3>
+  <p>조이스틱 각도가 목표 속도, 좌우 모터의 RPM을 엔코더로 측정. 폐회로 PI 제어로 사용자 의도와 실제 속도를 일치시킴.
+  경사로에서도 동일한 속도를 유지하기 위해 외란(중력 성분)을 보상합니다.</p>
+  <ul>
+    <li>$r$: 조이스틱 → 목표 좌·우 바퀴 속도 [rad/s]</li>
+    <li>$u$: 모터 PWM 듀티</li>
+    <li>$y$: 엔코더로 측정한 실제 속도</li>
+    <li>외란: 경사·노면 마찰·사용자 체중</li>
+    <li>제어 주기: 100~200 Hz 일반적</li>
+  </ul>
+
+  <h3>케이스 3 — 산업용 3D 프린터 베드 가열</h3>
+  <p>유리 전이온도가 까다로운 ABS 필라멘트는 베드 온도를 정확히 110±2℃로 유지해야 합니다. 열전대 NTC 센서, 12V 또는 24V
+  히터 전선, MCU의 PID 펌웨어로 구성. 시정수가 30초 이상으로 길고 데드타임도 있어 단순 P 제어가 어려운 대표 사례입니다.</p>
+  <ul>
+    <li>$r$: 110℃</li>
+    <li>$u$: 히터 PWM (0~100%)</li>
+    <li>$y$: NTC 온도 측정</li>
+    <li>외란: 실내 환기·필라멘트 종류·인쇄물 크기</li>
+    <li>흔한 PID 게인: $K_p \approx 25, K_i \approx 0.5, K_d \approx 80$ (Marlin 펌웨어 기본값 근처)</li>
+  </ul>
+
+  <h3>케이스 4 — 농업용 드론 정밀 살포</h3>
+  <p>GPS RTK로 cm 단위 위치를 측정해 미리 정해진 라인을 따라 비행하면서 분사 노즐을 자동 ON/OFF. 풍속에
+  따라 분사량을 보상해 면적당 균일한 약제량을 유지합니다. 외부 루프(GPS 위치) → 내부 루프(자세각) → 모터 PWM의
+  3단 캐스케이드 + 분사 제어 보조 루프가 같이 돕니다.</p>
+
+  <h3>케이스 5 — 한국 KTX 정시 제어</h3>
+  <p>역간 거리·신호·곡선 한계 속도를 종합해 목표 속도 프로파일을 만들고, ATO(자동운전)가 견인전동기 토크를
+  실시간으로 갱신합니다. 사람 운전자보다 30% 정밀한 정시 도달이 가능하다고 한국철도기술연구원 자료에 보고되어 있습니다.
+  근본 원리는 PID에 외란 보상(구배·풍압)을 더한 산업용 제어와 같습니다.</p>
+
+  <h2>10-C. 안정성·정확성·강건성 — 자동제어의 세 기둥</h2>
+
+  <p>강의 전체를 관통하는 세 가지 평가 기준입니다. 한 시스템을 평가할 때 항상 이 세 가지를 동시에 봅니다.</p>
+
+  <table>
+    <thead><tr><th>축</th><th>질문</th><th>대표 지표</th><th>다루는 주차</th></tr></thead>
+    <tbody>
+      <tr><td>안정성 (Stability)</td><td>발산하지 않는가?</td><td>모든 폐루프 극점이 좌반평면</td><td>W8, W9, W11</td></tr>
+      <tr><td>정확성 (Performance)</td><td>얼마나 빨리·정확히 따라가나?</td><td>$t_r, t_s, M_p, e_{ss}$</td><td>W5–W7, W12</td></tr>
+      <tr><td>강건성 (Robustness)</td><td>모델·외란 변화에 잘 견디나?</td><td>안정여유 GM, PM, 감도 $S$</td><td>W11</td></tr>
+    </tbody>
+  </table>
+
+  <p>세 축이 서로 충돌합니다. 빠르게 만들면(정확성) 진동이 생기고(안정성), 빠르게 만들 게인이 외란에 견딜 여유를 깎습니다(강건성).
+  자동제어는 이 세 축의 균형점을 찾는 디자인 작업입니다.</p>
+
+  <h2>10-D. 학습 전략 — 이 강의 잘 따라가는 법</h2>
+
+  <ol>
+    <li><strong>매주 손계산 1문제, 코드 1문제</strong> — 이론과 도구를 동시에 단단히. 한 쪽만 익히면 시험 또는 실험에서 막힌다.</li>
+    <li><strong>그래프부터 그려라</strong> — 식보다 그래프. 1차 응답 모양, s-평면 극점 위치를 손그림으로 그려 보면 직관이 빨리 잡힌다.</li>
+    <li><strong>각 주차 끝 "한 줄 요약"을 자기 말로</strong> — 본인 단어로 다시 써보지 못하면 이해한 게 아니다.</li>
+    <li><strong>친구와 토론</strong> — "$K_p$를 키우면 왜 진동해?" 같은 질문에 답해 봐야 진짜로 안다.</li>
+    <li><strong>실제 시스템과 연결</strong> — 모터 한 대 사서 직접 PID 돌려 보면 학기말이 다른 사람이 된다. 본 학과 메카트로닉스 실험실의 BLDC 모듈을 활용하세요.</li>
+  </ol>
+
+  <h2>11. FAQ — 첫 주차 학생 단골 질문</h2>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q1. 라플라스를 정말 외워야 하나요? 수치 시뮬레이션으로 다 풀 수 있지 않나요?</strong></summary>
+    <p>수치 시뮬레이션은 "지금 이 게인에서 어떻게 되나"는 보여 줘도, "왜 그렇게 되나"는 안 보여 줍니다.
+    예를 들어 "$K_p = 12$일 때 진동이 시작된다"는 사실을 시뮬레이션이 알려 주지만, "$K_p$가 11.97 이상이면 안정성을 잃는다"는
+    정확한 임계값과 그 이유를 알려면 분석적 도구(라플라스·전달함수)가 필요합니다.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q2. PID만 알면 충분한 거 아닌가요?</strong></summary>
+    <p>PID는 가장 널리 쓰이지만, "왜 이 PID 게인이 이 시스템에 적합한가"를 설계하려면 라플라스부터 차근차근 쌓아야 합니다.
+    PID 설명만 외운 사람은 새로운 시스템을 만났을 때 "Ziegler-Nichols 표를 또 한 번 돌려봐야지"가 한계입니다.
+    이 강의는 게인 한 자릿수까지 해석적으로 정해 보고 그 의미까지 답할 수 있는 능력을 목표로 합니다.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q3. 비선형 시스템은 어떻게 하나요?</strong></summary>
+    <p>학부 자동제어는 LTI(선형·시불변)에 한정합니다. 비선형은 (1) 동작점에서 선형화, (2) 비선형 제어 기법(Lyapunov, sliding mode 등)으로 별도 다룹니다.
+    본 강의에서 배우는 도구가 비선형 분석의 출발점입니다.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q4. 왜 Hz, rad/s, dB 같은 단위가 자주 등장하나요?</strong></summary>
+    <p>주파수영역 분석(W10~W11)에서는 $\omega$ [rad/s] 단위가 표준이고, 사람의 직관이 닿는 Hz와는 $f = \omega/(2\pi)$ 관계입니다.
+    크기는 dB(데시벨, $20 \log_{10}|G|$) 단위가 표준이고, 곱셈을 덧셈으로 바꿔주기 때문에 Bode 선도 같은 도구가 가능해집니다.
+    W10에서 처음 본격적으로 등장하니 일단 익숙해질 준비만 하세요.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q5. 저는 코딩이 더 익숙합니다. Python만 알면 안 되나요?</strong></summary>
+    <p>Python(<code>python-control</code>, <code>scipy.signal</code>)은 본 강의 내내 쓰지만, 그건 결과를 시각화하고
+    검증하는 용도입니다. 시험은 손계산이 압도적이고, 산업 현장에서 제어기를 처음 설계할 때도
+    "이론적으로 적정 게인 범위가 어디"를 종이에 먼저 적어야 합니다. 두 가지 모두 익숙해지는 것이 목표입니다.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q6. MATLAB을 꼭 써야 하나요?</strong></summary>
+    <p>MATLAB의 Control System Toolbox·Simulink는 산업 표준이지만, 학부 강의 범위는 Python으로도 100% 커버됩니다.
+    졸업 후 자동차·항공·발전 등 보수적 산업으로 가면 MATLAB을 만나게 되니 그때 따로 학습하면 충분합니다.
+    이 강의에서는 Python을 일관되게 사용합니다.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q7. 학기 중 본인 노트북에서 실험할 수 있는 추천 키트가 있나요?</strong></summary>
+    <p>아두이노 + DC 모터 + 엔코더(약 5만 원) 조합이 가장 쉽습니다. STM32 + BLDC 모터(SimpleFOC)는 한 단계 위.
+    드론은 ArduPilot 또는 PX4 위에서 시뮬레이션부터 시작하기를 권장합니다(Gazebo, jMAVSim 등 무료 시뮬레이터 제공).</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q8. 과제·프로젝트는 어떤 유형이 나오나요?</strong></summary>
+    <p>중간고사 후 미니 프로젝트가 있을 가능성이 높습니다. 흔한 주제: (1) 도립진자 PID 안정화, (2) 1자유도 드론 자세 제어,
+    (3) 차량 종방향 크루즈 컨트롤 시뮬레이션. 모두 본 강의의 W5~W12 도구로 해결 가능합니다.</p>
+  </details>
+
+  <h2>11-B. 자기점검 체크리스트 — 1주차를 마쳤다면</h2>
+
+  <p>다음 항목을 모두 체크할 수 있다면 W2로 넘어갈 준비가 됐습니다. 두 개 이상 막히면 위 인터랙티브 데모를 한 번 더 만져 보세요.</p>
+
+  <ul>
+    <li>☐ 자동제어를 한 줄로 정의할 수 있다.</li>
+    <li>☐ 개회로와 폐회로의 차이를 일상 예시로 설명할 수 있다.</li>
+    <li>☐ $r, y, e, u$, 플랜트, 액추에이터, 센서 7개 용어를 헷갈리지 않는다.</li>
+    <li>☐ 폐루프 출력 식 $y_{cl} = (GC \cdot r + d)/(1 + GC)$를 외워서 적을 수 있다.</li>
+    <li>☐ 게인을 키우면 외란 억제가 좋아지지만 안정성/잡음 측면 비용이 든다는 트레이드오프를 말로 설명할 수 있다.</li>
+    <li>☐ 자동제어와 AI/RL이 어떻게 협력하는지 한 단락으로 답할 수 있다.</li>
+    <li>☐ 14주 로드맵을 한 번에 떠올릴 수 있다(수학 → 응답 → 안정성 → 주파수 → PID → 응용).</li>
+    <li>☐ 본인이 평소 쓰는 기기 1개를 골라 $r, u, y, d$를 매핑할 수 있다.</li>
+  </ul>
+
+  <h2>11-C. 한 줄 용어집</h2>
+
+  <table>
+    <thead><tr><th>용어</th><th>한 줄 의미</th><th>처음 등장</th></tr></thead>
+    <tbody>
+      <tr><td>플랜트(Plant)</td><td>제어 대상이 되는 물리 시스템</td><td>W1</td></tr>
+      <tr><td>액추에이터(Actuator)</td><td>제어 신호를 물리 작용으로 바꾸는 장치(모터, 밸브 등)</td><td>W1</td></tr>
+      <tr><td>센서(Sensor)</td><td>물리량을 신호로 변환하는 장치</td><td>W1</td></tr>
+      <tr><td>제어기(Controller)</td><td>오차로부터 입력을 계산하는 알고리즘</td><td>W1</td></tr>
+      <tr><td>오차(Error)</td><td>$r - y$. 목표와 실제의 차이</td><td>W1</td></tr>
+      <tr><td>외란(Disturbance)</td><td>출력에 영향을 주는 외부 신호</td><td>W1</td></tr>
+      <tr><td>잡음(Noise)</td><td>측정값에 섞이는 무작위 오차</td><td>W1</td></tr>
+      <tr><td>개회로(Open-loop)</td><td>출력을 측정하지 않고 입력만 정해두는 구조</td><td>W1</td></tr>
+      <tr><td>폐회로(Closed-loop)</td><td>출력을 측정해서 입력을 갱신하는 구조</td><td>W1</td></tr>
+      <tr><td>안정(Stable)</td><td>시간이 지나도 출력이 발산하지 않음</td><td>W1, W8</td></tr>
+      <tr><td>전달함수(Transfer Function)</td><td>$Y(s)/U(s)$. 시스템 동특성의 압축 표현</td><td>W3</td></tr>
+      <tr><td>극점(Pole)</td><td>전달함수 분모의 근. 응답 모드를 결정</td><td>W2, W3</td></tr>
+      <tr><td>영점(Zero)</td><td>전달함수 분자의 근. 응답 모양을 형성</td><td>W3</td></tr>
+      <tr><td>특성방정식</td><td>폐루프 분모 = 0. 안정성 분석의 출발점</td><td>W4, W8</td></tr>
+      <tr><td>감도 함수(Sensitivity)</td><td>$S = 1/(1+GC)$. 외란 영향을 측정</td><td>W4, W11</td></tr>
+      <tr><td>안정여유(GM, PM)</td><td>안정성을 잃기까지의 게인·위상 여유</td><td>W11</td></tr>
+      <tr><td>PID</td><td>비례·적분·미분 세 항으로 구성된 표준 제어기</td><td>W12</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 용어 17개를 외울 필요는 없습니다. 강의 진도가 나갈 때마다 이 표로 돌아와 새로 익숙해진 단어에 동그라미를 쳐 보세요.
+  학기말에 모두 파란 동그라미가 되는 게 목표입니다.</p>
+
+  <h2>11-D. 학습 자료 - 무료 한국어/영어 자원 모음</h2>
+  <ul>
+    <li><strong>한국어</strong> — KOCW <em>자동제어</em> 강의(여러 교수님 무료 공개), <em>유튜브 "자동제어 강의" 검색</em></li>
+    <li><strong>영어</strong> — <a href="https://www.youtube.com/c/BrianBDouglas">Brian Douglas YouTube</a> (직관 압도적), <a href="https://www.coursera.org/learn/control-systems">Coursera "Control of Mobile Robots"</a> (Georgia Tech)</li>
+    <li><strong>인터랙티브</strong> — <a href="https://controlguru.com/">controlguru.com</a> (산업 PID), <a href="https://www.eeweb.com/tools/circuit-analysis/">eeweb.com</a> 회로 시뮬레이터</li>
+    <li><strong>오픈소스 도구</strong> — <code>python-control</code>, <code>scipy.signal</code>, <code>matplotlib</code>, <code>sympy</code></li>
+    <li><strong>실습 키트</strong> — Quanser Aero(연구실용), 학부 실습용 DIY 도립진자(아두이노 + 엔코더)</li>
+  </ul>
+
+  <h2>11-E. 미니 프로젝트 아이디어 모음 (학기말 자율 과제용)</h2>
+
+  <p>학기말에 본인 흥미에 맞는 미니 프로젝트를 진행하는 학생들이 매년 늘고 있습니다. 본 강의의 도구로 도전 가능한 주제를 난이도별로 정리합니다.</p>
+
+  <h3>입문 난이도 (W6~W7 수준이면 가능)</h3>
+  <ol>
+    <li><strong>아두이노 LED 밝기 PID 제어</strong> — 포토다이오드로 밝기를 측정해 PWM으로 LED를 조절. 외란은 손전등으로 시연. 비용 1만 원 미만.</li>
+    <li><strong>물 온도 PID</strong> — DS18B20 센서 + 12V 히터로 비커 물 온도를 일정하게. 시정수가 길어 PID 튜닝 직관 학습에 좋음.</li>
+    <li><strong>차량 종방향 크루즈 컨트롤 시뮬레이션</strong> — Python으로 차량 1차 종방향 모델 + PI 제어기. 노면 구배를 외란으로 입력.</li>
+  </ol>
+
+  <h3>중급 난이도 (W11 이후)</h3>
+  <ol start="4">
+    <li><strong>도립진자 안정화</strong> — 카트 위 진자를 수직으로 세우는 클래식 문제. 본 강의의 모든 도구를 동원합니다.</li>
+    <li><strong>BLDC 모터 속도 제어</strong> — 엔코더 피드백, 캐스케이드 PI(전류·속도). SimpleFOC 라이브러리 활용 가능.</li>
+    <li><strong>드론 자세 시뮬레이션</strong> — 6자유도 쿼드콥터 모델 + PID. Gazebo 또는 PyBullet 활용.</li>
+  </ol>
+
+  <h3>도전 난이도 (W14 이후 또는 대학원생 수준)</h3>
+  <ol start="7">
+    <li><strong>2-link 로봇 팔 위치 제어</strong> — 비선형 동역학 + 컴퓨티드 토크 제어. 라그랑지안 모델링 필요.</li>
+    <li><strong>모델예측제어(MPC) 미니버전</strong> — 1차원 차량 충돌 회피. CasADi 라이브러리 추천.</li>
+    <li><strong>강화학습 + 자동제어 하이브리드</strong> — 외부 RL이 목표 궤적을 정하고, 내부 PID가 추적. 안정성 보증을 어떻게 줄지 토론.</li>
+  </ol>
+
+  <h2>11-F. 마지막 한마디 — 첫 주차의 마음가짐</h2>
+
+  <p>자동제어는 처음에는 식이 많아 보입니다. 하지만 14주 동안 식이 늘어나는 게 아니라, <em>같은 식을 여러 각도에서 다시 보는 일</em>이 반복됩니다.
+  $G/(1+GH)$라는 단 한 줄이 전달함수(W3), 블록선도(W4), 시간응답(W5~W7), 안정성(W8~W9), 주파수영역(W10~W11), PID(W12)까지
+  모두를 관통합니다. 강의 내내 이 한 줄로 돌아오는 것을 즐기세요.</p>
+
+  <p>또한 자동제어는 <strong>그림으로 이해하는 학문</strong>입니다. 식만 외우면 시험 70점, 그림(시간응답·s-평면·Bode 선도)으로 이해하면
+  100점에 가까워집니다. 매주 강의 노트 옆에 손그림 한두 장씩만 그려도 학기말에 자기 자신이 놀랍게 다른 사람이 됩니다.</p>
+
+  <p>마지막으로, 자동제어는 <strong>실험이 가르치는 학문</strong>입니다. 모터 한 대, 아두이노 한 대만 있어도 PID의 P/I/D 각각이
+  무엇을 하는지 손으로 느낄 수 있습니다. 이번 학기에 한 번이라도 직접 만져 보면, 졸업 후 어떤 시스템을 만나도 두렵지 않습니다.</p>
+
+  <div class="tip">
+    <strong>한 학기 약속</strong> — 매주 (1) 강의 한 번, (2) 손계산 1문제, (3) 코드 1줄 변경,
+    (4) 실제 시스템 1개 떠올리기. 14주 동안 이것만 지키면 자동제어를 자기 언어로 말할 수 있게 됩니다.
+  </div>
+
+  <h2>12. 부록 — 1주차 연습문제 풀이 힌트</h2>
+
+  <p>자기 풀이를 마친 뒤 비교용으로만 보세요.</p>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>문제 1 풀이 힌트</strong></summary>
+    <ul>
+      <li>(a) 토스터 — 개회로. 시간 다이얼만 보고 굽기 정도가 빵 종류·습도에 영향받음.</li>
+      <li>(b) 비데 — 폐회로. 온수 센서로 측정해 가열 ON/OFF.</li>
+      <li>(c) 가스레인지 — 사람이 측정 주체. 시스템만 보면 개회로(가스 노브 → 불꽃).</li>
+      <li>(d) 자동변속기 — 폐회로. RPM·차속을 측정해 변속.</li>
+      <li>(e) 형광등 점등 회로 — 개회로. 단순 ON/OFF, 측정 없음.</li>
+    </ul>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>문제 3 풀이</strong></summary>
+    <p>식: $y_{cl} = (2K \cdot 10 + 2)/(1 + 2K) = (20K + 2)/(1 + 2K)$.</p>
+    <ul>
+      <li>(a) $K = 1$: $y = 22/3 \approx 7.33$, 오차 $\approx 2.67$</li>
+      <li>(b) $K = 5$: $y = 102/11 \approx 9.27$, 오차 $\approx 0.73$</li>
+      <li>(c) $K = 50$: $y = 1002/101 \approx 9.92$, 오차 $\approx 0.08$</li>
+      <li>(d) $K \to \infty$: $y \to 10$, 오차 $\to 0$</li>
+    </ul>
+    <p>관찰: 게인을 키울수록 외란 영향이 줄어들지만 여전히 단순 P 제어로는 0이 되지 않음. 이 한계가 W7에서 적분 항(I)로 해결됩니다.</p>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>문제 4 풀이</strong></summary>
+    <p>제어기가 200을 명령해도 실제 입력은 ±10에서 잘립니다(saturation). 따라서 시스템은 마치 게인이 작은 것처럼 천천히 반응하며,
+    오차가 있는 채로 적분기가 계속 누적되면 와인드업이 발생해 목표 도달 후 큰 오버슈트가 생깁니다. W12에서 anti-windup 기법으로 해결.</p>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>문제 5 풀이</strong></summary>
+    <ul>
+      <li>입력 $u = K_p(r - y - n)$이 되어 $u$가 잡음 $-K_p \cdot n$만큼 흔들립니다 → 액추에이터가 부글거리며 마모·전력 낭비.</li>
+      <li>출력 $y$도 잡음 영향을 받아 정확도가 오히려 떨어짐 — 큰 게인이 잡음을 증폭하는 효과.</li>
+    </ul>
+  </details>
+
+  <h2>13. 다음 시간 예고</h2>
+
+  <p>다음 W2에서는 라플라스 변환을 본격적으로 다룹니다. 미분방정식이 다항식으로 바뀌는 마법을 직접 손으로 경험할 거예요.
+  변환표 7개와 4가지 성질만 외우면 학부 자동제어의 90%를 처리할 수 있습니다. 다음 시간 전까지:</p>
+  <ul>
+    <li>지수함수 $e^{-at}$의 적분과 미분을 손계산으로 다시 풀어 보세요.</li>
+    <li>$\sin, \cos$의 미분 관계를 외워두세요. 라플라스 변환표에서 자주 나옵니다.</li>
+    <li>본 강의의 인터랙티브 데모를 한 번 더 만져 보고, 폐루프 정상상태 식 $y = GC \cdot r/(1+GC)$가 손에 잡힐 때까지 외워 두세요.</li>
+  </ul>
+
+  <p>준비됐다면 <a href="02-laplace.html">W2. 라플라스 변환</a>으로 이동해 봅시다.</p>
+
+  <h2>14. 보너스 — 자동제어 일화 모음</h2>
+
+  <h3>14-1. 콩코드의 자동 비행 모드 (1969)</h3>
+  <p>마하 2로 비행하는 콩코드는 사람의 반응 시간으로는 도저히 자세를 잡을 수 없어 <em>FBW(Fly-by-Wire)</em> 자동 안정화 시스템이 필수였습니다.
+  당시 아날로그 회로로 구현된 PID 컴퓨터가 비행기 안정성의 핵심이었고, 같은 원리가 오늘날 보잉 787, 에어버스 A350의
+  디지털 FBW로 발전합니다.</p>
+
+  <h3>14-2. 토요타 프리우스 회생 제동 (1997)</h3>
+  <p>전기 모터를 발전기로 동시에 사용하기 위해 모터 토크와 유압 브레이크 토크의 합이 운전자가 원하는 감속도와 정확히
+  일치하도록 PID로 합성합니다. 이 폐루프 합성 제어가 하이브리드차의 연비 향상 핵심 기술. 한국 현대 아이오닉도 같은 원리.</p>
+
+  <h3>14-3. 보스턴 다이나믹스 Atlas의 균형 (2013~)</h3>
+  <p>180 cm 휴머노이드가 두 발로 서서 점프·텀블링까지 합니다. 핵심은 발바닥 6축 힘/토크 센서 + IMU 자세각을
+  100~1000 Hz로 측정해 매 스텝마다 ZMP(Zero Moment Point)를 다시 계산하는 폐루프 제어. 본 강의의 PID에
+  최적제어·MPC가 결합된 형태입니다.</p>
+
+  <h3>14-4. 누리호 발사 성공 (2022)</h3>
+  <p>3단 액체 로켓 엔진의 자세 제어는 김벌 노즐 회전(±5°) + 보조 추력기 조합으로 이뤄집니다.
+  대기 상승 단계 외란(돌풍, 무게중심 변화)을 고려한 강건제어 설계가 한국항공우주연구원의 30년 누적 기술. 본 강의의 W11 안정여유 분석이 직접 적용됩니다.</p>
+
+  <h3>14-5. 두산로보틱스 협동로봇 안전 정지 (2018~)</h3>
+  <p>사람과 같은 공간에서 일하는 협동로봇은 충돌 감지 → 50 ms 이내 안전 정지가 ISO 10218 인증의 핵심.
+  관절 토크 추정 + 외부 토크 옵저버 + 임계값 트리거의 폐루프 안전 제어 구조. 본 강의의 W13 캐스케이드 PID + 옵저버 설계.</p>
+
+  <h2>15. 마무리</h2>
+  <p>1주차가 끝났습니다. 식 한 줄, 그림 한 장이 마음에 남았다면 충분합니다. 자동제어는 마라톤이 아니라 작은 직관을
+  쌓는 일입니다. 매주 한 가지씩 새로운 직관이 더해질 거예요. 다음 주에 라플라스 변환의 마법을 만나러 갑시다.</p>
 
   <div class="prevnext">
     <a href="../control.html"><small>← 강의 목록</small>자동제어 14주 전체 보기</a>

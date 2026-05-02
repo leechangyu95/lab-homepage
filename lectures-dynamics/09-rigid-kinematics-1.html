@@ -34,6 +34,14 @@
   <h1 class="page-title">Week 9. 강체의 평면 운동학 — 병진과 고정축 회전</h1>
   <p class="lead">이제 점이 아니라 "덩어리"를 다룹니다. 덩어리 위 모든 점이 같은 운동을 하는 두 가지 단순한 경우부터.</p>
 
+  <h2>0. 학습 목표</h2>
+  <ul>
+    <li>강체의 평면 운동을 병진·고정축 회전·일반 평면운동 세 가지로 분류한다.</li>
+    <li>각변위·각속도·각가속도와 회전체 위 점의 선속도·접선/법선 가속도 관계를 안다.</li>
+    <li>직선 운동학 식과 회전 운동학 식의 1:1 대응을 활용한다.</li>
+    <li>굴림 운동(rolling)에서 중심·접촉점의 운동을 식으로 다룬다.</li>
+  </ul>
+
   <h2>1. 강체란?</h2>
   <p>강체(rigid body)는 어떤 두 점 사이의 거리가 시간에 무관한 물체입니다. 변형이 없다는 가정이지만, 학부 동역학에서는 이 가정으로 충분히 정확한 답이 나옵니다.</p>
   <p>강체의 평면 운동은 세 가지로 분류돼요.</p>
@@ -43,6 +51,22 @@
     <li><strong>일반 평면운동 (general plane motion)</strong> — 병진 + 회전. (W10)</li>
   </ol>
 
+  <h2>1-1. 강체 가정의 한계 — 언제 깨지나</h2>
+  <p>강체는 학부 동역학의 단순화 가정. 실제 물체는 약간씩 변형됩니다. 강체 가정이 좋은/나쁜 영역:</p>
+  <ul>
+    <li><strong>좋음</strong>: 자동차 본체, 기계 부품, 구조물 — 변형이 운동에 비해 매우 작음.</li>
+    <li><strong>나쁨</strong>: 고무, 천, 액체, 진동하는 막대 — 변형이 운동의 본질.</li>
+    <li><strong>중간</strong>: 항공기 날개, 긴 빔, 드론 프로펠러 — 강체로 1차 분석 후 변형 보정 필요. 이런 분석을 <em>유연 다체 동역학</em>(flexible multibody dynamics)이라 부르고 대학원 과목.</li>
+  </ul>
+
+  <h2>1-2. 평면운동의 자유도 (DOF)</h2>
+  <p>3차원 공간에서 강체는 6 자유도(병진 3 + 회전 3). 평면운동(2D)으로 제한하면 3 자유도(병진 2 + 회전 1) — $x, y, \theta$. 이게 학부에서 다루는 단순화의 정도.</p>
+  <ul>
+    <li>병진: $x, y$ — 모든 점이 같은 양만큼 이동.</li>
+    <li>고정축 회전: $\theta$ 1자유도. 모든 점이 한 축을 중심으로 같은 각으로 회전.</li>
+    <li>일반 평면운동: $(x_G, y_G, \theta)$ 3자유도. 질량중심의 병진 + 그 둘레의 회전.</li>
+  </ul>
+
   <h2>2. 병진</h2>
   <p>덩어리 전체가 평행이동만 하는 경우. 모든 점이 같은 $\mathbf{v}, \mathbf{a}$를 가지므로, 사실상 한 점의 운동학(W2–W4)이 전부입니다.</p>
 
@@ -51,6 +75,25 @@
   $$ \omega = \frac{d\theta}{dt}, \qquad \alpha = \frac{d\omega}{dt} = \frac{d^2\theta}{dt^2} $$
   <p>등각가속도일 때 W2의 직선 등가속도 식과 똑같은 모양이 나옵니다.</p>
   $$ \omega = \omega_0 + \alpha t, \quad \theta = \theta_0 + \omega_0 t + \tfrac{1}{2}\alpha t^2, \quad \omega^2 = \omega_0^2 + 2\alpha(\theta-\theta_0) $$
+
+  <div class="tip">
+    <strong>직선 ↔ 회전 — 한 줄 한 줄 대응</strong>. W2~W4를 잘 이해했다면 회전은 거의 새로 배울 게 없습니다. 변수 이름만 바뀐 것.
+    <table style="margin-top:8px">
+      <thead><tr><th>의미</th><th>직선 운동(W2)</th><th>회전 운동(W9)</th></tr></thead>
+      <tbody>
+        <tr><td>위치 / 각도</td><td>$s$ [m]</td><td>$\theta$ [rad]</td></tr>
+        <tr><td>속도 / 각속도</td><td>$v = \dot s$ [m/s]</td><td>$\omega = \dot\theta$ [rad/s]</td></tr>
+        <tr><td>가속도 / 각가속도</td><td>$a = \dot v$ [m/s²]</td><td>$\alpha = \dot\omega$ [rad/s²]</td></tr>
+        <tr><td>등(가)속도 식 1</td><td>$v = v_0 + a t$</td><td>$\omega = \omega_0 + \alpha t$</td></tr>
+        <tr><td>등(가)속도 식 2</td><td>$s = s_0 + v_0 t + \tfrac{1}{2}at^2$</td><td>$\theta = \theta_0 + \omega_0 t + \tfrac{1}{2}\alpha t^2$</td></tr>
+        <tr><td>시간 없는 식</td><td>$v^2 = v_0^2 + 2a(s-s_0)$</td><td>$\omega^2 = \omega_0^2 + 2\alpha(\theta-\theta_0)$</td></tr>
+        <tr><td>관성</td><td>질량 $m$</td><td>관성모멘트 $I$ (W11에서)</td></tr>
+        <tr><td>뉴턴 2법칙</td><td>$\sum F = m a$</td><td>$\sum M = I \alpha$ (W11)</td></tr>
+        <tr><td>운동량</td><td>$p = m v$</td><td>각운동량 $H = I \omega$</td></tr>
+        <tr><td>운동에너지</td><td>$\tfrac{1}{2}m v^2$</td><td>$\tfrac{1}{2}I \omega^2$</td></tr>
+      </tbody>
+    </table>
+  </div>
 
   <h3>회전체 위 점의 속도와 가속도</h3>
   <p>고정축에서 거리 $r$만큼 떨어진 점은 반지름 $r$인 원을 그립니다. 그래서 W4의 원운동 결과를 그대로 가져다 씁니다.</p>
@@ -190,7 +233,90 @@
   })();
   </script>
 
-  <h2>5. 흔한 오개념</h2>
+  <h2>5. 응용 — 톱니바퀴(기어)와 풀리</h2>
+  <p>두 톱니바퀴가 맞물려 있을 때 접촉점에서 두 바퀴의 선속도가 같음(미끄러지지 않음). $r_1 \omega_1 = r_2 \omega_2$. 따라서 각속도 비:</p>
+  $$ \frac{\omega_2}{\omega_1} = \frac{r_1}{r_2} = \frac{N_1}{N_2} \quad (N: \text{잇수}) $$
+  <p>잇수 비가 그대로 회전수 비. 자동차 변속기·자전거 기어·시계 모두 이 원리.</p>
+
+  <div class="note">
+    <strong>예제 — 자전거 기어 비</strong>
+    <p>크랭크 톱니 50, 뒷바퀴 톱니 16, 뒷바퀴 반지름 0.35 m. 페달 회전수 $\omega_p = 1.5$ rev/s = $3\pi$ rad/s. 자전거 속도는?</p>
+    <ul style="margin:6px 0 0 0">
+      <li>뒷바퀴 각속도 $\omega_w = \omega_p \cdot 50/16 \approx 9.42 \cdot 3.125 \approx 29.45$ rad/s</li>
+      <li>지면에 대한 자전거 속도 (굴림): $v = r \omega_w = 0.35 \cdot 29.45 \approx \mathbf{10.3\text{ m/s}}$ ≈ 37 km/h</li>
+    </ul>
+    크랭크 톱니가 클수록 / 뒷바퀴 톱니가 작을수록 빨라지지만 페달이 무거움(같은 속도에 더 큰 토크 필요). 이게 자전거 변속의 원리.
+  </div>
+
+  <h2>6. 응용 — 디스크와 자동차 휠</h2>
+  <ul>
+    <li><strong>차바퀴</strong> — 시속 100 km/h(=27.8 m/s)에서 반지름 0.31 m 타이어의 회전수: $\omega = v/r \approx 89.7$ rad/s ≈ 856 rpm. 휠을 때리는 떨림 진동수가 14 Hz로 들어옴 — 진동(W12)에서 다시 다룸.</li>
+    <li><strong>드릴·CNC</strong> — 5000 rpm = 524 rad/s. 끝단 속도 $v = r\omega$. 반지름 5 mm 드릴 끝단 속도 ≈ 2.6 m/s.</li>
+    <li><strong>풍력 발전기 블레이드</strong> — 블레이드 끝단 속도가 음속을 넘지 않도록 회전수 제한. 60 m 블레이드는 50~70 m 끝 속도, 그래서 고작 12 rpm 수준이지만 그것만으로 MW급 출력.</li>
+  </ul>
+
+  <svg viewBox="0 0 640 220" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:6px">
+    <text x="20" y="22" font-size="13" font-weight="bold" fill="#0b5fff">자전거의 두 운동: 휠은 굴림, 차체는 병진</text>
+    <!-- 지면 -->
+    <line x1="20" y1="180" x2="620" y2="180" stroke="#888" stroke-width="2"/>
+    <!-- 앞바퀴 -->
+    <circle cx="180" cy="140" r="40" fill="#eee" stroke="#333" stroke-width="2"/>
+    <line x1="180" y1="100" x2="180" y2="180" stroke="#888" stroke-width="1.5"/>
+    <line x1="140" y1="140" x2="220" y2="140" stroke="#888" stroke-width="1.5"/>
+    <circle cx="180" cy="140" r="3" fill="#333"/>
+    <text x="180" y="195" text-anchor="middle" font-size="10" fill="#c62828">접촉점 v=0</text>
+    <!-- 뒷바퀴 -->
+    <circle cx="420" cy="140" r="40" fill="#eee" stroke="#333" stroke-width="2"/>
+    <line x1="420" y1="100" x2="420" y2="180" stroke="#888" stroke-width="1.5"/>
+    <line x1="380" y1="140" x2="460" y2="140" stroke="#888" stroke-width="1.5"/>
+    <circle cx="420" cy="140" r="3" fill="#333"/>
+    <text x="420" y="195" text-anchor="middle" font-size="10" fill="#c62828">접촉점 v=0</text>
+    <!-- 프레임 -->
+    <line x1="180" y1="140" x2="300" y2="80" stroke="#0b5fff" stroke-width="3"/>
+    <line x1="420" y1="140" x2="300" y2="80" stroke="#0b5fff" stroke-width="3"/>
+    <line x1="180" y1="140" x2="420" y2="140" stroke="#0b5fff" stroke-width="3" stroke-dasharray="4,3"/>
+    <!-- 속도 화살표 -->
+    <line x1="180" y1="100" x2="240" y2="100" stroke="#2e7d32" stroke-width="2" marker-end="url(#arr2)"/>
+    <text x="220" y="92" text-anchor="middle" font-size="10" fill="#2e7d32">v=2v_c (꼭대기)</text>
+    <line x1="180" y1="140" x2="220" y2="140" stroke="#2e7d32" stroke-width="2" marker-end="url(#arr2)"/>
+    <text x="200" y="135" text-anchor="middle" font-size="10" fill="#2e7d32">v_c (중심)</text>
+    <defs>
+      <marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6 Z" fill="#2e7d32"/>
+      </marker>
+    </defs>
+  </svg>
+
+  <h2>7. 연습 문제</h2>
+  <div class="note" style="background:#f5f8fc;border-color:#0b5fff">
+    <ol style="margin:6px 0 0 0">
+      <li>회전판이 정지에서 출발해 일정 각가속도 2 rad/s²로 가속. 4초 후 (a) 각속도 (b) 회전수.</li>
+      <li>반지름 0.4 m 디스크가 $\omega=10$ rad/s. 가장자리 점의 (a) 선속도 (b) 구심가속도.</li>
+      <li>자동차 휠 반지름 0.32 m, 차 속도 25 m/s. 휠의 회전수(rpm)?</li>
+      <li>두 톱니바퀴 잇수 24 / 60. 작은 쪽이 100 rpm일 때 큰 쪽 회전수와 회전 방향.</li>
+      <li>굴림 바퀴(반지름 $r$, 중심 속도 $v_c$)에서 (a) 중심에서 거리 $r/2$만큼 위에 있는 점의 속도, (b) 중심에서 거리 $r$만큼 옆에 있는 점의 속도.</li>
+      <li>회전판이 30 rpm에서 60 rpm으로 8초에 가속. 일정 각가속도 가정 시 (a) $\alpha$, (b) 그 동안 회전한 각도.</li>
+    </ol>
+    <strong>약식 답</strong>: 1) (a) 8 rad/s (b) $16/(2\pi) \approx 2.55$ rev &nbsp;&nbsp; 2) (a) 4 m/s (b) 40 m/s² &nbsp;&nbsp; 3) $25/0.32 \cdot 60/(2\pi) \approx 746$ rpm &nbsp;&nbsp; 4) 40 rpm, 반대 방향 &nbsp;&nbsp; 5) (a) 거리 $r/2$만큼 위(중심 위쪽) → 접촉점에서 $r + r/2 = 3r/2$ → $v = 3 v_c/2$ (b) 옆 거리 $r$ → 접촉점에서 $\sqrt{r^2+r^2}=r\sqrt 2$ → $v = v_c\sqrt 2$ &nbsp;&nbsp; 6) (a) $\alpha = (2\pi - \pi)/8 = \pi/8 \approx 0.393$ rad/s² (b) $\theta = (3\pi/2)(8) = 12\pi \approx 37.7$ rad ≈ 6 rev
+  </div>
+
+  <h2>7-1. 응용 — 굴림 vs 미끄러짐</h2>
+  <p>같은 바퀴라도 미끄러지지 않는 굴림 vs 완전 미끄럼은 다릅니다.</p>
+  <table>
+    <thead><tr><th>운동</th><th>접촉점 속도</th><th>$v_c, \omega$ 관계</th><th>예</th></tr></thead>
+    <tbody>
+      <tr><td>순수 굴림 (no slip)</td><td>0</td><td>$v_c = R\omega$</td><td>천천히 출발하는 차바퀴</td></tr>
+      <tr><td>회전만, 병진 0 (스피닝)</td><td>$R\omega$ (미끄럼)</td><td>$v_c = 0,\;\omega \ne 0$</td><td>제자리에서 헛돎</td></tr>
+      <tr><td>병진만, 회전 0 (슬라이딩)</td><td>$v_c$ (미끄럼)</td><td>$v_c \ne 0,\;\omega = 0$</td><td>잠긴 휠 빙판 미끄러짐</td></tr>
+      <tr><td>일반(부분 미끄럼)</td><td>$v_c - R\omega$</td><td>둘 다 독립</td><td>가속하는 자동차 휠</td></tr>
+    </tbody>
+  </table>
+  <p>드래그 레이스 출발 시 휠스핀이 일어나는 이유: 엔진 토크가 매우 크면 마찰 한계를 넘어 휠이 헛돎(스핀). 토크와 미끄럼 한계의 균형을 맞추는 게 가속 성능의 핵심.</p>
+
+  <h2>7-2. 응용 — 디스크/CD 회전</h2>
+  <p>CD 플레이어는 일정한 선속도(CLV, constant linear velocity)로 데이터를 읽기 위해, 안쪽 트랙(짧은 반지름)에서는 빠르게, 바깥 트랙(긴 반지름)에서는 느리게 회전. 200 rpm(안쪽)에서 500 rpm(바깥)까지 변화. 하드디스크는 반대로 정속(CAV)을 쓰지만 데이터 밀도가 다름.</p>
+
+  <h2>8. 흔한 오개념</h2>
   <ul>
     <li><strong>"각속도는 위치마다 다르다"</strong> — 강체에서 각속도 $\omega$는 <em>물체 전체의 한 값</em>입니다. 점마다 다른 건 선속도 $v=r\omega$.</li>
     <li><strong>"굴림에서 접촉점이 정지면 마찰력이 일을 안 한다"</strong> — 맞습니다(순수 굴림). 접촉점 변위가 0이라 일도 0. 마찰이 있어야 굴림이 가능하지만, 그 마찰은 일을 하지 않아 에너지 손실이 없습니다.</li>

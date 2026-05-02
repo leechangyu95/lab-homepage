@@ -77,6 +77,25 @@
     <figcaption>그림 1. 라플라스 변환은 어려운 미분방정식을 우회해서 푸는 길입니다.</figcaption>
   </figure>
 
+  <h3>한 단계 더 — 왜 하필 $e^{-st}$인가?</h3>
+  <p>"적분 안에 왜 지수함수가 들어갈까"라는 질문은 자동제어를 처음 배우는 학생이 거의 다 한 번씩 하는 질문입니다.
+  이유는 <strong>지수함수가 LTI 시스템의 고유함수(eigenfunction)</strong>이기 때문입니다.</p>
+  <p>선형·시불변 시스템에 $e^{st}$를 입력하면 출력도 같은 모양 $G(s) e^{st}$로 나옵니다. 즉 지수함수는
+  시스템을 통과해도 모양이 바뀌지 않고 크기만 $G(s)$ 배가 됩니다. 이건 행렬에 고유벡터를 넣으면 같은
+  방향으로 나오는 것과 정확히 같은 현상이에요. 따라서 모든 입력 $f(t)$를 지수함수의 합으로 분해해 두면,
+  각 성분에 대한 시스템의 동작을 단순한 곱셈으로 처리할 수 있게 됩니다. 라플라스 변환은 그 분해를 수행하는 도구입니다.</p>
+
+  <div class="note">
+    <strong>푸리에와의 관계</strong> — 푸리에 변환은 $s = j\omega$인 경우(허수축에서만)의 라플라스 변환입니다.
+    푸리에는 "주파수별 진폭"을 보여 주고, 라플라스는 "감쇠율 $\sigma$ + 진동수 $\omega$별 진폭"을 보여 줍니다.
+    안정성 분석에는 $\sigma$ 정보가 결정적이므로 자동제어는 라플라스를 표준으로 씁니다.
+  </div>
+
+  <h3>왜 $t \geq 0$만 다루는가?</h3>
+  <p>제어 시스템은 보통 "어느 시점부터" 시작합니다. 시동 버튼을 누른 그 순간이 $t = 0$. 그 전의 데이터는
+  필요 없거나 초기조건으로 압축돼 있습니다. 그래서 라플라스의 적분 구간은 $0 \to \infty$입니다(단측 변환, unilateral Laplace).
+  양측 변환(bilateral)도 존재하지만 학부 자동제어에서는 만나지 않아요.</p>
+
   <h2>2. 정의와 직관</h2>
 
   <p>시간 함수 $f(t)$ ($t \geq 0$)의 라플라스 변환은 다음과 같이 정의됩니다.</p>
@@ -90,6 +109,45 @@
     <strong>실무 팁</strong> — 자동제어에서는 정의식으로 직접 적분할 일이 거의 없습니다.
     아래 변환표 7개와 4가지 성질만 외워서 표 보고 변환·역변환합니다. 정의는 "왜 그게 가능한가" 정도만 이해하면 충분.
   </div>
+
+  <h3>정의식으로 직접 한 번만 풀어보기 — 단위 스텝</h3>
+  <p>나중에 표를 외우더라도, 정의식 직접 적용을 최소 한 번은 해 봐야 라플라스가 단순한 마법이 아니라 적분이라는 사실이 손에 잡힙니다.</p>
+  <p>$f(t) = 1$ ($t \geq 0$, 단위 스텝)일 때:</p>
+  $$ F(s) = \int_0^\infty 1 \cdot e^{-st}\, dt = \left[-\frac{e^{-st}}{s}\right]_0^\infty = 0 - \left(-\frac{1}{s}\right) = \frac{1}{s} $$
+  <p>$\text{Re}(s) > 0$이어야 위 적분이 수렴합니다. 이 영역을 <strong>수렴 영역(ROC, Region of Convergence)</strong>이라 부르는데,
+  자동제어 학부 과정에서는 변환쌍 표가 모든 함수에 대해 자동으로 적절한 영역을 보장하므로 거의 신경 쓰지 않습니다.</p>
+
+  <h3>두 번째 정의 적용 — 지수 감쇠</h3>
+  <p>$f(t) = e^{-at}$ ($a > 0$)의 라플라스를 직접 풀어 봅시다.</p>
+  $$ F(s) = \int_0^\infty e^{-at} \cdot e^{-st}\, dt = \int_0^\infty e^{-(s+a)t}\, dt = \frac{1}{s+a} $$
+  <p>같은 패턴이죠? 실제로 변환표의 행 대부분은 위 두 적분의 변형으로 유도됩니다. 수업에서는 한 번씩만 짚고 넘어가고,
+  실제 문제풀이에서는 표를 사전처럼 사용합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arL2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <text x="20" y="30" font-size="14" fill="#444" font-weight="600">시간영역에서 본 지수함수</text>
+      <line x1="20" y1="180" x2="340" y2="180" stroke="#bbb"/>
+      <line x1="20" y1="60" x2="20" y2="195" stroke="#bbb"/>
+      <text x="335" y="195" font-size="11">t</text>
+      <text x="6" y="65" font-size="11">f</text>
+      <path d="M20,80 Q60,100 100,130 T180,170 T260,178 T340,180" fill="none" stroke="#0b5fff" stroke-width="2"/>
+      <text x="120" y="95" fill="#0b5fff" font-size="12">f(t) = e^(-at)</text>
+
+      <text x="380" y="30" font-size="14" fill="#444" font-weight="600">s-영역에서 본 같은 함수</text>
+      <line x1="380" y1="180" x2="700" y2="180" stroke="#bbb"/>
+      <line x1="380" y1="60" x2="380" y2="195" stroke="#bbb"/>
+      <text x="695" y="195" font-size="11">σ</text>
+      <text x="365" y="65" font-size="11">|F|</text>
+      <path d="M380,180 L390,180 L400,178 L420,170 L450,150 L500,110 L600,80 L700,72" fill="none" stroke="#c62828" stroke-width="2"/>
+      <circle cx="380" cy="180" r="0"/>
+      <circle cx="380" cy="180" r="4" fill="#c62828"/>
+      <text x="395" y="175" font-size="12" fill="#c62828">극점 s = -a</text>
+      <text x="500" y="100" font-size="12" fill="#c62828">F(s) = 1/(s+a)</text>
+    </svg>
+    <figcaption>그림 2. 지수 감쇠는 시간영역에서 매끈한 곡선, s-영역에서는 단 하나의 극점.
+    이 "압축" 능력이 라플라스가 강력한 이유입니다.</figcaption>
+  </figure>
 
   <h2>3. 꼭 알아야 할 변환쌍 7개</h2>
 
@@ -107,6 +165,29 @@
   </table>
 
   <p>이 일곱 개와 다음 절의 4가지 성질의 조합이면 학부 자동제어에서 만나는 거의 모든 신호를 다룰 수 있습니다.</p>
+
+  <h3>변환표 외우는 요령</h3>
+  <p>처음 보면 외울 게 많아 보이지만, 패턴 4개로 줄일 수 있습니다.</p>
+  <ul>
+    <li><strong>단순한 패턴</strong>: $\delta(t) \leftrightarrow 1$, 단위 스텝 $\leftrightarrow 1/s$</li>
+    <li><strong>지수 패턴</strong>: $e^{-at} \leftrightarrow 1/(s+a)$, $t e^{-at} \leftrightarrow 1/(s+a)^2$</li>
+    <li><strong>거듭제곱 패턴</strong>: $t^n \leftrightarrow n!/s^{n+1}$</li>
+    <li><strong>진동 패턴</strong>: $\sin \leftrightarrow \omega/(s^2+\omega^2)$, $\cos \leftrightarrow s/(s^2+\omega^2)$</li>
+  </ul>
+  <p>이 4가지 패턴 + s-이동(주파수 이동, 다음 절) = 자동제어 학부 과정의 99%.</p>
+
+  <h3>확장 변환표 — 추가로 알아두면 편한 5쌍</h3>
+  <table>
+    <thead><tr><th>$f(t)$</th><th>$F(s)$</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>$te^{-at}$</td><td>$\dfrac{1}{(s+a)^2}$</td><td>반복근 패턴</td></tr>
+      <tr><td>$e^{-at}\sin(\omega t)$</td><td>$\dfrac{\omega}{(s+a)^2 + \omega^2}$</td><td>감쇠 사인 — 2차 시스템 응답</td></tr>
+      <tr><td>$e^{-at}\cos(\omega t)$</td><td>$\dfrac{s+a}{(s+a)^2 + \omega^2}$</td><td>감쇠 코사인</td></tr>
+      <tr><td>$\sinh(at)$</td><td>$\dfrac{a}{s^2 - a^2}$</td><td>쌍곡선사인 — 불안정 시스템</td></tr>
+      <tr><td>$\cosh(at)$</td><td>$\dfrac{s}{s^2 - a^2}$</td><td>쌍곡선코사인</td></tr>
+    </tbody>
+  </table>
+  <p>맨 위 두 줄이 W6 2차 시스템 분석에서 자주 등장합니다. 미리 친숙해 두세요.</p>
 
   <h2>4. 핵심 성질: 미분·적분·시간이동·최종값</h2>
 
@@ -132,6 +213,32 @@
   $$ \lim_{t\to\infty} f(t) = \lim_{s\to 0} sF(s) \quad \text{(우변이 안정할 때만)} $$
   <p>역변환을 하지 않고도 "정상상태에서 출력이 어디로 가는지"를 바로 읽는 마법. W7 정상상태 오차 계산의 주역입니다.</p>
 
+  <h3>초기값 정리 (Initial Value Theorem)</h3>
+  $$ \lim_{t\to 0^+} f(t) = \lim_{s\to \infty} sF(s) $$
+  <p>최종값 정리의 짝꿍. 응답의 시작 순간 값을 변환에서 직접 읽어냅니다. 시뮬레이션 검증할 때 자주 사용.</p>
+
+  <h3>합성곱(Convolution) 정리</h3>
+  $$ \mathcal{L}\{f * g\}(s) = F(s) G(s) $$
+  <p>"시간영역의 합성곱은 s영역의 곱셈"이라는 강력한 성질. 자동제어에서 직렬 결합한 두 시스템의 전달함수가
+  단순히 곱해지는 이유가 바로 이것입니다. W4 블록선도 직렬 결합 규칙의 수학적 근거.</p>
+
+  <h3>4가지 성질을 한눈에 — 표 정리</h3>
+  <table>
+    <thead><tr><th>성질</th><th>시간영역</th><th>s영역</th><th>자동제어 활용</th></tr></thead>
+    <tbody>
+      <tr><td>선형성</td><td>$af + bg$</td><td>$aF + bG$</td><td>모든 곳</td></tr>
+      <tr><td>1차 미분</td><td>$\dot{f}$</td><td>$sF - f(0^-)$</td><td>미분방정식 → 다항식</td></tr>
+      <tr><td>2차 미분</td><td>$\ddot{f}$</td><td>$s^2 F - sf(0^-) - \dot{f}(0^-)$</td><td>2차 시스템 모델링</td></tr>
+      <tr><td>적분</td><td>$\int_0^t f\,d\tau$</td><td>$F/s$</td><td>PID의 I 항</td></tr>
+      <tr><td>시간이동</td><td>$f(t-T)u(t-T)$</td><td>$e^{-Ts}F$</td><td>지연시간(deadtime)</td></tr>
+      <tr><td>s-이동</td><td>$e^{-at}f(t)$</td><td>$F(s+a)$</td><td>감쇠진동 변환</td></tr>
+      <tr><td>스케일링</td><td>$f(at)$</td><td>$F(s/a)/a$</td><td>시간단위 변환</td></tr>
+      <tr><td>합성곱</td><td>$f * g$</td><td>$FG$</td><td>직렬 결합</td></tr>
+      <tr><td>최종값</td><td>$f(\infty)$</td><td>$\lim_{s\to 0} sF$</td><td>정상상태 오차</td></tr>
+      <tr><td>초기값</td><td>$f(0^+)$</td><td>$\lim_{s\to\infty} sF$</td><td>응답 시작 검증</td></tr>
+    </tbody>
+  </table>
+
   <h2>5. 역변환과 부분분수</h2>
 
   <p>$Y(s)$가 두 다항식의 비로 나오면(거의 항상 그렇습니다), <strong>부분분수 분해</strong>로 변환표 형태로 쪼갭니다.</p>
@@ -145,6 +252,18 @@
   <p>변환표로 역변환:</p>
   $$ \boxed{\,y(t) = K\left(1 - e^{-t/\tau}\right)\,} $$
   <p>이게 바로 W5에서 다루는 1차 시스템 계단응답 공식입니다. 라플라스 한 번이면 미분방정식 적분 없이 끝.</p>
+
+  <h3>예제 1.5: 단계마다 손계산을 함께 — RC 회로</h3>
+  <p>RC 회로 $RC \dot{v}_o + v_o = v_i$, $v_o(0) = 0$, $v_i$는 5V 단위 스텝, $RC = 0.1$초.</p>
+  <p><strong>1단계 — 라플라스</strong>: $(0.1 s + 1) V_o(s) = V_i(s) = 5/s$. 따라서
+  $V_o(s) = \dfrac{5}{s(0.1s + 1)} = \dfrac{50}{s(s + 10)}$.</p>
+  <p><strong>2단계 — 부분분수</strong>: $V_o = \dfrac{A}{s} + \dfrac{B}{s+10}$.
+  $A = \lim_{s\to 0} sV_o = 50/10 = 5$. $B = \lim_{s\to -10}(s+10) V_o = 50/(-10) = -5$.</p>
+  <p><strong>3단계 — 역변환</strong>: $v_o(t) = 5(1 - e^{-10 t})$ V.</p>
+  <p><strong>4단계 — 검산</strong>: $t = 0$에서 $v_o = 0$ ✓. $t \to \infty$에서 $v_o = 5$ V ✓.
+  최종값 정리로도 확인: $\lim_{s\to 0} s V_o(s) = \lim_{s\to 0} \dfrac{50}{s+10} = 5$ ✓.</p>
+
+  <p><strong>물리 해석</strong>: $\tau = 1/10 = 0.1$초가 곧 $RC$. 약 0.5초($5\tau$)면 99% 도달. 이것이 W5 1차 시스템의 골든 룰입니다.</p>
 
   <h3>예제 2: 부분분수 (반복근·복소근)</h3>
   <p>분모에 반복근이나 복소근이 있을 때는 약간의 트릭이 필요합니다.</p>
@@ -174,6 +293,36 @@
     </ol>
     <p><strong>반복근일 때</strong>: 예 $F(s) = \dfrac{1}{(s+1)^2(s+3)}$이면 $F = \dfrac{A}{s+1} + \dfrac{B}{(s+1)^2} + \dfrac{C}{s+3}$. $B$는 커버업으로 ($(s+1)^2$를 가리고 $s = -1$ 대입), $A$는 양변에 $(s+1)^2$ 곱한 뒤 한 번 미분하고 $s = -1$ 대입. 처음엔 어렵지만 패턴이 정해져 있어 익숙해지면 빠릅니다.</p>
   </details>
+
+  <h3>예제 3 — 2차 시스템(미감쇠 진동)의 역변환</h3>
+  <p>$F(s) = \dfrac{4}{s^2 + 2s + 5}$. 분모를 완전제곱으로 정리.</p>
+  $$ s^2 + 2s + 5 = (s+1)^2 + 4 = (s+1)^2 + 2^2 $$
+  <p>표에서 $\dfrac{\omega}{(s+a)^2 + \omega^2} \leftrightarrow e^{-at}\sin(\omega t)$. 여기서 $a = 1, \omega = 2$.
+  분자가 $4 = 2 \cdot 2 = 2\omega$이므로</p>
+  $$ \boxed{\, f(t) = 2 e^{-t} \sin(2t), \quad t \ge 0 \,} $$
+  <p>이것이 W6에서 다룰 감쇠 진동(under-damped) 응답의 표준 모양입니다. 진폭이 $e^{-t}$로 줄면서 사인 진동.</p>
+
+  <h3>예제 4 — 시간이동(지연)이 포함된 신호</h3>
+  <p>$f(t) = u(t - 2)$ ($t = 2$초 후에 켜지는 단위 스텝). 시간이동 성질로:</p>
+  $$ F(s) = e^{-2s} \cdot \mathcal{L}\{u(t)\} = \frac{e^{-2s}}{s} $$
+  <p>이런 식으로 지연시간(deadtime)이 들어간 시스템은 $e^{-Ts}$ 인자를 갖게 됩니다.
+  자동차 엔진의 연료 분사 → 토크 발생 사이 약 100~300 ms 지연, 화학 공정 파이프 라인의 수송 지연 등 실제로 자주 등장합니다.</p>
+
+  <h3>예제 5 — 미분방정식 직접 풀기 (초기조건 포함)</h3>
+  <p>$\ddot{y} + 3\dot{y} + 2y = 0$, $y(0) = 1$, $\dot{y}(0) = -1$. (수치 입력 없는 자유응답)</p>
+  <p>라플라스(미분 성질 적용):</p>
+  $$ s^2 Y - sy(0) - \dot{y}(0) + 3(sY - y(0)) + 2Y = 0 $$
+  $$ (s^2 + 3s + 2) Y = s y(0) + \dot{y}(0) + 3 y(0) = s \cdot 1 + (-1) + 3 \cdot 1 = s + 2 $$
+  $$ Y(s) = \frac{s+2}{s^2 + 3s + 2} = \frac{s+2}{(s+1)(s+2)} = \frac{1}{s+1} $$
+  <p>역변환: $y(t) = e^{-t}$. 검산: $\dot{y}(0) = -1$ ✓, $y(0) = 1$ ✓.
+  여기서 분자에 $(s+2)$가 있어 분모의 $(s+2)$를 상쇄(pole-zero cancellation)했습니다 — 학기 후반에 다시 만날 중요 개념.</p>
+
+  <h3>예제 6 — 두 입력의 중첩</h3>
+  <p>1차 시스템 $\dot{y} + y = u_1 + u_2$에 단위 스텝 $u_1$과 단위 임펄스 $u_2 = \delta(t)$를 동시에 입력.</p>
+  <p>라플라스: $(s + 1) Y = U_1 + U_2 = 1/s + 1$. 따라서 $Y = \dfrac{1}{s(s+1)} + \dfrac{1}{s+1}$.</p>
+  $$ y(t) = (1 - e^{-t}) + e^{-t} = 1 $$
+  <p>흥미롭게도 두 응답이 정확히 합쳐져 출력이 즉시 1로 도달합니다. 임펄스 입력이 시스템의 초기 상태를 한 번에 점프시킨 효과.
+  이런 관찰은 W7에서 "임펄스응답이 1차 미분된 단위 스텝 응답과 같다"는 사실로 일반화됩니다.</p>
 
   <h2>6. 인터랙티브: 시간영역 ↔ s-영역</h2>
 
@@ -249,6 +398,158 @@
     출발점입니다.
   </div>
 
+  <h2>6-B. 두 번째 인터랙티브 — 부분분수와 시간응답 합성</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 극점의 합성 응답</h4>
+    <p>$F(s) = \dfrac{A}{s + a_1} + \dfrac{B}{s + a_2}$ 꼴에서 두 극점 $-a_1, -a_2$의 위치와 계수 $A, B$를 직접 움직여
+    $f(t) = A e^{-a_1 t} + B e^{-a_2 t}$ 가 어떻게 변하는지 봅니다. 같은 부호의 두 항을 더하면 단조 응답,
+    부호가 다르면 처음엔 빠르게 변했다가 천천히 가라앉는 응답이 됩니다.</p>
+    <canvas id="c2sum" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>a₁ <span class="val" id="c2a1V">1.0</span><input type="range" id="c2a1" min="0.1" max="5" step="0.1" value="1.0"></label>
+      <label>A <span class="val" id="c2AV">2.0</span><input type="range" id="c2A" min="-3" max="3" step="0.1" value="2.0"></label>
+      <label>a₂ <span class="val" id="c2a2V">3.0</span><input type="range" id="c2a2" min="0.1" max="6" step="0.1" value="3.0"></label>
+      <label>B <span class="val" id="c2BV">-1.0</span><input type="range" id="c2B" min="-3" max="3" step="0.1" value="-1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c2sum');if(!c)return;
+    const x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{
+      $('c2a1V').textContent=(+$('c2a1').value).toFixed(1);
+      $('c2a2V').textContent=(+$('c2a2').value).toFixed(1);
+      $('c2AV').textContent=(+$('c2A').value).toFixed(1);
+      $('c2BV').textContent=(+$('c2B').value).toFixed(1);
+    };
+    ['c2a1','c2a2','c2A','c2B'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const a1=+$('c2a1').value, a2=+$('c2a2').value, A=+$('c2A').value, B=+$('c2B').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40,oy=200,w=560,h=160;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy+50);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('t',ox+w+5,oy+4);x.fillText('f(t)',ox-30,oy-h+10);
+      const draw=(fn,col,lab,off)=>{
+        x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+        for(let i=0;i<300;i++){const t=i*0.04, y=fn(t); const xx=ox+i*w/300, yy=oy-y*30;
+          if(yy<oy-h+5||yy>oy+45)continue;
+          if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+        x.stroke();
+        x.fillStyle=col;x.font='12px sans-serif';x.fillText(lab,ox+10,oy-h+25+off);
+      };
+      draw(t=>A*Math.exp(-a1*t),'#0b5fff','A·e^(-a₁t) (파랑)',0);
+      draw(t=>B*Math.exp(-a2*t),'#f57c00','B·e^(-a₂t) (주황)',16);
+      draw(t=>A*Math.exp(-a1*t)+B*Math.exp(-a2*t),'#2e7d32','합성 f(t) (초록)',32);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>실험해 볼 것</strong>:</p>
+  <ul>
+    <li>$A = 1, B = -1, a_1 = 0.5, a_2 = 5$ — 빠른 음의 항이 빠르게 사라져 천천히 1로 수렴 (느린 1차에 가까운 모양).</li>
+    <li>두 극점 모두 양수일 때 음의 합($A = -1, B = -1$) — 부호가 음수인 응답.</li>
+    <li>$A + B = 0$ — 시작값이 0인 응답. 펄스처럼 잠시 올랐다 다시 0으로.</li>
+  </ul>
+
+  <h2>6-C. 라플라스 변환의 전형적 워크플로</h2>
+
+  <p>지금까지 흩어져 있던 단계를 한 그림으로 정리하면 다음과 같습니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arWF" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#333"/></marker></defs>
+      <rect x="20" y="80" width="120" height="40" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="80" y="105" text-anchor="middle" font-size="13">미분방정식</text>
+      <line x1="140" y1="100" x2="170" y2="100" stroke="#333" marker-end="url(#arWF)"/>
+      <text x="155" y="92" text-anchor="middle" font-size="11">𝓛</text>
+      <rect x="170" y="80" width="120" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="230" y="105" text-anchor="middle" font-size="13">대수 방정식</text>
+      <line x1="290" y1="100" x2="320" y2="100" stroke="#333" marker-end="url(#arWF)"/>
+      <text x="305" y="92" text-anchor="middle" font-size="11">대수</text>
+      <rect x="320" y="80" width="120" height="40" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="380" y="105" text-anchor="middle" font-size="13">Y(s) 분리</text>
+      <line x1="440" y1="100" x2="470" y2="100" stroke="#333" marker-end="url(#arWF)"/>
+      <text x="455" y="92" text-anchor="middle" font-size="11">부분분수</text>
+      <rect x="470" y="80" width="130" height="40" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="535" y="105" text-anchor="middle" font-size="13">표 형태로 분해</text>
+      <line x1="600" y1="100" x2="630" y2="100" stroke="#333" marker-end="url(#arWF)"/>
+      <text x="615" y="92" text-anchor="middle" font-size="11">𝓛⁻¹</text>
+      <rect x="630" y="80" width="110" height="40" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="685" y="105" text-anchor="middle" font-size="13">y(t) 답</text>
+      <text x="380" y="160" text-anchor="middle" font-size="12" fill="#666">5단계 — 모든 학부 자동제어 문제의 표준 흐름</text>
+    </svg>
+    <figcaption>그림 3. 라플라스 워크플로 5단계.</figcaption>
+  </figure>
+
+  <p>다섯 번째 단계의 검산 도구로 <strong>최종값 정리</strong>를 사용하면 역변환 없이도 정상상태 값을 미리 확인할 수 있습니다.
+  답이 맞는지 빠르게 확인하는 학생용 치트키죠.</p>
+
+  <h2>6-D. s-평면 영역 지도 — 극점 위치별 시간응답 시그니처</h2>
+
+  <p>방금 본 인터랙티브에서 σ, ω를 손으로 옮겨 보았는데, 이걸 정적인 지도로도 정리해 두면 시험에서 빠릅니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arSP" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#888"/></marker></defs>
+      <rect x="20" y="20" width="320" height="320" fill="rgba(46,125,50,0.05)" stroke="none"/>
+      <rect x="340" y="20" width="320" height="320" fill="rgba(198,40,40,0.05)" stroke="none"/>
+      <line x1="20" y1="180" x2="660" y2="180" stroke="#888"/>
+      <line x1="340" y1="20" x2="340" y2="340" stroke="#888"/>
+      <text x="650" y="175" font-size="11">Re(s)</text>
+      <text x="345" y="30" font-size="11">Im(s)</text>
+      <text x="170" y="40" text-anchor="middle" font-size="13" fill="#2e7d32" font-weight="600">안정 (좌반평면)</text>
+      <text x="500" y="40" text-anchor="middle" font-size="13" fill="#c62828" font-weight="600">불안정 (우반평면)</text>
+      <!-- A: real left negative -->
+      <circle cx="180" cy="180" r="6" fill="#0b5fff"/>
+      <text x="190" y="175" font-size="11">A</text>
+      <text x="120" y="220" font-size="11" fill="#444">A: σ&lt;0, ω=0 → 단조 감쇠</text>
+      <!-- B: complex pair stable underdamped -->
+      <circle cx="220" cy="120" r="6" fill="#0b5fff"/>
+      <circle cx="220" cy="240" r="6" fill="#0b5fff"/>
+      <text x="230" y="115" font-size="11">B</text>
+      <text x="120" y="280" font-size="11" fill="#444">B: σ&lt;0, ω≠0 → 감쇠 진동</text>
+      <!-- C: imaginary axis -->
+      <circle cx="340" cy="100" r="6" fill="#fbc02d"/>
+      <circle cx="340" cy="260" r="6" fill="#fbc02d"/>
+      <text x="350" y="95" font-size="11">C</text>
+      <text x="120" y="320" font-size="11" fill="#444">C: σ=0 → 무한 진동(경계)</text>
+      <!-- D: real right -->
+      <circle cx="500" cy="180" r="6" fill="#c62828"/>
+      <text x="510" y="175" font-size="11">D</text>
+      <text x="450" y="220" font-size="11" fill="#444">D: σ&gt;0, ω=0 → 단조 발산</text>
+      <!-- E: complex pair right -->
+      <circle cx="560" cy="100" r="6" fill="#c62828"/>
+      <circle cx="560" cy="260" r="6" fill="#c62828"/>
+      <text x="570" y="95" font-size="11">E</text>
+      <text x="450" y="280" font-size="11" fill="#444">E: σ&gt;0, ω≠0 → 진동 발산</text>
+      <text x="340" y="355" text-anchor="middle" font-size="11" fill="#666">극점 위치 한눈에 — 자동제어의 모든 안정성 분석은 이 지도 위에서 일어남</text>
+    </svg>
+    <figcaption>그림 4. s-평면의 5가지 대표 위치와 각각의 시간응답 시그니처. 학기말까지 머리에 새겨 두세요.</figcaption>
+  </figure>
+
+  <h3>"극점이 가까울수록 천천히, 멀수록 빠르게" — 시간 상수의 직관</h3>
+  <p>실수 극점 $s = -a$에 대응하는 시간응답은 $e^{-at}$. $a$가 클수록 빠르게 감쇠합니다. 즉 <em>극점이 원점에서 멀수록 빠르고, 가까울수록 느림</em>.
+  복소수 극점에서는 실수부 $\sigma$가 감쇠 속도(시간 상수 $1/|\sigma|$), 허수부 $\omega$가 진동 주파수.
+  이 두 직관만 외우면 어떤 전달함수든 응답 모양을 5초 안에 그릴 수 있습니다.</p>
+
+  <h3>1차/2차 시스템에서의 극점 위치</h3>
+  <ul>
+    <li><strong>1차 $1/(\tau s + 1)$</strong>: 극점 $s = -1/\tau$ 하나. 항상 단조 응답.</li>
+    <li><strong>2차 $\omega_n^2/(s^2 + 2\zeta\omega_n s + \omega_n^2)$</strong>: 극점 $s = -\zeta\omega_n \pm j\omega_n\sqrt{1-\zeta^2}$.
+      <ul>
+        <li>$\zeta = 0$: 허수축 위 (무한 진동)</li>
+        <li>$0 < \zeta < 1$: 좌반평면 복소수 쌍 (감쇠 진동)</li>
+        <li>$\zeta = 1$: 좌반평면 실수 중근 (임계감쇠)</li>
+        <li>$\zeta > 1$: 좌반평면 서로 다른 두 실수 극점 (과감쇠)</li>
+      </ul>
+    </li>
+  </ul>
+  <p>이 분류는 W6에서 본격적으로 사용합니다. 미리 알아두면 W6가 훨씬 쉬워져요.</p>
+
   <h2>7. Python으로 라플라스 다루기</h2>
 
   <p>SymPy는 라플라스 변환을 기호적으로 계산해 주고, <code>python-control</code>은 전달함수를 객체로 다룹니다.</p>
@@ -281,6 +582,102 @@ plt.xlabel('time [s]'); plt.ylabel('y(t)'); plt.legend(); plt.grid()
 plt.title('1차 시스템 계단응답:  y(t) = K(1 - e^(-t/τ))')
 plt.show()</code></pre>
 
+  <h2>7-B. 흔한 함정과 시험 출제 패턴</h2>
+
+  <div class="warn">
+    <strong>라플라스 변환 손계산에서 매년 반복되는 실수 7가지</strong>
+    <ol>
+      <li><strong>미분 성질의 초기값 부호 빠뜨림</strong>: $\mathcal{L}\{\dot{f}\} = sF - f(0^-)$. 마이너스 부호 자주 빼먹습니다.</li>
+      <li><strong>초기조건이 0이 아닌 경우</strong>: 전달함수 정의에서는 0으로 두지만, 자유응답·과도응답 분석에서는 살아 있어야 함. 둘을 헷갈리면 답이 다 어긋납니다.</li>
+      <li><strong>커버업할 때 다른 항의 분모를 가림</strong>: 예제 1번에 자세히. 항상 "그 항의 분모"만 가립니다.</li>
+      <li><strong>반복근에서 $A, B, \dots$ 구하는 순서 혼동</strong>: $B$(가장 높은 차수 분모)부터 커버업, 그 다음 $A$는 미분.</li>
+      <li><strong>복소근 부분분수 시도</strong>: 복소근을 분해할 때는 $As + B$를 분자에 두는 것이 안전합니다 — 부분분수에서 헷갈림.</li>
+      <li><strong>최종값 정리 오용</strong>: $sF(s)$가 우반평면 극점을 가지면 정리 자체가 성립하지 않음. 안정성 먼저 확인!</li>
+      <li><strong>시간이동 vs s-이동 혼동</strong>: $f(t-T) \to e^{-Ts}F(s)$ (지수가 $s$로), $e^{-at}f(t) \to F(s+a)$ ($s$가 이동). 두 식이 자주 섞입니다.</li>
+    </ol>
+  </div>
+
+  <h3>시험 출제 패턴 미리 보기</h3>
+  <ul>
+    <li><strong>라플라스 변환쌍 빈칸 채우기</strong> — 가장 쉬운 출제. 표 7쌍은 시험 직전 한 번 더.</li>
+    <li><strong>1차/2차 시스템 계단응답 손계산</strong> — 필수. 본 강의 예제 1, 1.5, 3번이 표준 형태.</li>
+    <li><strong>부분분수 분해 후 역변환</strong> — 단근·반복근·복소근 셋 다 한 문제씩.</li>
+    <li><strong>최종값 정리 적용</strong> — 정상상태 오차 미리 보기. W7과 연결.</li>
+    <li><strong>지연시간 포함 시스템</strong> — $e^{-Ts}$가 분자에 있는 경우.</li>
+  </ul>
+
+  <h2>7-C. 산업 응용 — 라플라스가 어디에 쓰이는가</h2>
+
+  <h3>응용 1 — 자동차 서스펜션 모델</h3>
+  <p>차량 1/4 모델: 차체 질량 $m_s$, 서스펜션 강성 $k_s$, 댐퍼 $c_s$. 노면 입력 $z_r$에 대한 차체 변위 $z_s$ 응답을
+  라플라스로 풀면 $\dfrac{Z_s(s)}{Z_r(s)} = \dfrac{c_s s + k_s}{m_s s^2 + c_s s + k_s}$. 분자에 $s$가 있어 영점이 존재하고,
+  이 영점이 승차감 vs 노면 추적성의 트레이드오프를 결정합니다.</p>
+
+  <h3>응용 2 — 드론 모터의 1차 응답</h3>
+  <p>BLDC 모터는 ESC 입력 $u$ → 회전수 $\omega$로 보면 약 $G(s) = \dfrac{K_\omega}{\tau_m s + 1}$ 형태의 1차.
+  $\tau_m$이 작을수록(전형적으로 30~80 ms) 빠른 자세 응답이 가능. 같은 라플라스 변환표로 직접 분석 가능합니다.</p>
+
+  <h3>응용 3 — 화학 반응기 데드타임</h3>
+  <p>긴 파이프라인에서 원료가 반응기까지 도달하는 데 약 30~60초 걸린다면 전체 모델은 $G(s) = \dfrac{K e^{-Ts}}{\tau s + 1}$
+  형태의 1차 + 데드타임. 학부에서는 $e^{-Ts}$를 Padé 근사로 다루지만, 라플라스 그대로의 표현이 정확합니다.</p>
+
+  <h3>응용 4 — RL 회로 PWM 모터 드라이버</h3>
+  <p>PWM 입력 $u$ → 코일 전류 $i$로 보면 $G(s) = \dfrac{1/R}{(L/R) s + 1}$. 코일 인덕턴스 $L$이 작을수록(예: 10 μH) 응답이 빠름.
+  여러분이 SimpleFOC, ODrive로 BLDC 모터 제어를 해 본다면 정확히 이 식이 내부에 들어 있습니다.</p>
+
+  <h3>응용 5 — 가전 인덕션 가열 제어</h3>
+  <p>유도가열은 짧은 펄스로 코일에 큰 전류를 흘려 냄비 바닥을 가열. 평균 전력 입력 $P$ → 냄비 온도 $T$를 보면
+  $G(s) = \dfrac{K}{(\tau_1 s + 1)(\tau_2 s + 1)}$ 같은 2차. $\tau_1$은 코일↔냄비 열교환, $\tau_2$는 냄비↔물 열교환.
+  분리 시정수 모델이 라플라스로 한눈에 보입니다.</p>
+
+  <h2>7-D. 연습문제</h2>
+
+  <p>혼자 풀어 보세요. 각 문제는 위 변환표와 4가지 성질만으로 해결 가능합니다.</p>
+
+  <ol>
+    <li><strong>변환표 적용</strong> — 다음 함수의 라플라스 변환을 구하세요.
+      <ul>
+        <li>(a) $f(t) = 5 + 3 e^{-2t}$</li>
+        <li>(b) $f(t) = t e^{-t}$</li>
+        <li>(c) $f(t) = \sin(3t) + \cos(3t)$</li>
+        <li>(d) $f(t) = e^{-t} \sin(2t)$</li>
+        <li>(e) $f(t) = u(t-1) - u(t-3)$ (1초~3초 펄스)</li>
+      </ul>
+    </li>
+    <li><strong>역변환</strong> — 다음 $F(s)$의 시간영역 함수를 구하세요.
+      <ul>
+        <li>(a) $\dfrac{4}{s(s+2)}$</li>
+        <li>(b) $\dfrac{s+3}{(s+1)(s+2)}$</li>
+        <li>(c) $\dfrac{1}{(s+1)^2(s+2)}$</li>
+        <li>(d) $\dfrac{2}{s^2 + 4s + 13}$ (힌트: 완전제곱)</li>
+        <li>(e) $\dfrac{e^{-s}}{s+1}$</li>
+      </ul>
+    </li>
+    <li><strong>미분방정식 풀기</strong> — $\dot{y} + 2y = 4 u(t)$, $y(0) = 1$. $y(t)$를 구하세요.</li>
+    <li><strong>2차 미분방정식</strong> — $\ddot{y} + 4 \dot{y} + 4 y = 0$, $y(0) = 0, \dot{y}(0) = 1$. 임계감쇠 사례.</li>
+    <li><strong>RC 회로</strong> — $RC = 0.5$, 입력 $v_i = 10 V \cdot u(t)$, 초기전압 $v_o(0) = 2$ V. $v_o(t)$를 구하세요.</li>
+    <li><strong>최종값 정리</strong> — $Y(s) = \dfrac{10}{s(s^2 + 3s + 2)}$. 최종값과 초기값을 정리만으로 구하세요.</li>
+    <li><strong>합성곱 vs s-곱셈</strong> — $f(t) = e^{-t}, g(t) = u(t)$의 합성곱 $h(t) = (f*g)(t)$를 (a) 시간영역 적분, (b) 라플라스 후 역변환 두 방식으로 각각 구하고 비교하세요.</li>
+    <li><strong>시간이동</strong> — 0~2초 동안만 1, 그 후 0이 되는 신호의 라플라스 변환을 구하세요. ($f(t) = u(t) - u(t-2)$)</li>
+    <li><strong>응용 — 자동차 서스펜션</strong> — $m_s = 250$ kg, $k_s = 16000$ N/m, $c_s = 1500$ N·s/m. 노면 입력 $z_r$이 $0.05 \cdot u(t)$ m 스텝일 때
+    차체 변위 $z_s(t)$의 라플라스 표현을 구하고, 최종값을 계산하세요.</li>
+    <li><strong>응용 — 모터 1차 모델</strong> — $G(s) = 5/(0.05 s + 1)$인 BLDC 모터에 12 V 단위 스텝 입력. 1차 정착 시간 $4\tau$ 후의 회전수와
+    정상상태 회전수를 구하세요.</li>
+  </ol>
+
+  <h2>7-E. 정리 — 라플라스를 이렇게 사용하라</h2>
+
+  <p>실전에서는 라플라스 변환을 다음 4가지 패턴으로 만납니다. 매 문제를 만났을 때 어느 패턴인지 먼저 분류하세요.</p>
+
+  <ol>
+    <li><strong>변환 패턴</strong>: 시간 함수가 주어지고 $F(s)$를 구함. → 변환표 + 선형성·시간이동 적용.</li>
+    <li><strong>역변환 패턴</strong>: $F(s)$가 주어지고 $f(t)$를 구함. → 부분분수 분해 후 변환표 매칭.</li>
+    <li><strong>미분방정식 풀이 패턴</strong>: 시간영역 미분방정식 → 라플라스 → $Y(s)$ 분리 → 역변환.</li>
+    <li><strong>정상상태 분석 패턴</strong>: $F(s)$의 최종값만 필요 → 최종값 정리 적용 (역변환 생략).</li>
+  </ol>
+
+  <p>이 4가지 패턴을 머릿속에 두고 매 문제마다 자동으로 분류하면, 라플라스가 단순한 도구가 아니라 사고방식이 됩니다.</p>
+
   <h2>8. 핵심 정리</h2>
   <div class="tip">
     <ul>
@@ -291,6 +688,279 @@ plt.show()</code></pre>
       <li>극점의 위치(s-평면)가 시스템의 안정성과 시간응답을 결정한다 — 이번 강의의 가장 큰 직관.</li>
     </ul>
   </div>
+
+  <h2>9. 다음 강의로 가는 다리</h2>
+
+  <p>지금 우리는 시스템 도구상자에 두 개를 채웠습니다.</p>
+  <ul>
+    <li>W1: 자동제어가 무엇이고 왜 필요한가 (개념적 도구).</li>
+    <li>W2: 미분방정식을 대수식으로 바꾸는 라플라스 변환 (수학적 도구).</li>
+  </ul>
+  <p>W3에서는 이 라플라스를 무기로 들고, 실제 물리 시스템(MSD, RC, DC 모터)을 한 줄짜리 분수식 $G(s)$로 압축하는 법을 배웁니다.
+  W3의 모든 예제는 본 강의의 라플라스를 사용해 유도되니, 변환표가 손에 익을수록 W3가 쉬워집니다.</p>
+
+  <h3>후속 과목으로의 연결</h3>
+  <ul>
+    <li><strong>W3 전달함수</strong>: 라플라스로 미분방정식을 변환한 결과가 곧 전달함수. 이번 강의의 자연스러운 다음 단계.</li>
+    <li><strong>W5~W6 시간응답</strong>: 1차/2차 시스템의 표준 응답 식이 라플라스 역변환으로 직접 유도됩니다.</li>
+    <li><strong>W7 정상상태 오차</strong>: 최종값 정리만으로 정상상태 오차의 시스템 타입(0/I/II)을 분류합니다.</li>
+    <li><strong>W14 디지털 제어</strong>: 라플라스의 이산 버전인 z변환이 등장합니다. 두 변환의 매핑 $z = e^{sT}$가 핵심.</li>
+    <li><strong>신호처리 강의</strong>: 푸리에·라플라스의 일반화로 z변환·DTFT가 이어집니다.</li>
+  </ul>
+
+  <h2>10. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Norman S. Nise, <em>Control Systems Engineering</em> 2장 — 본 강의 범위와 정확히 같음.</li>
+    <li>Lathi, <em>Linear Systems and Signals</em> 4장 — 라플라스에 한 학기 분량을 할애한 깊은 책.</li>
+    <li>Erwin Kreyszig, <em>Advanced Engineering Mathematics</em> 6장 — 공학수학 표준. 부분분수 한 절이 매우 정리되어 있음.</li>
+    <li>SymPy 공식 문서 <code>laplace_transform</code>, <code>inverse_laplace_transform</code> — 손계산 검증용 친구.</li>
+    <li><a href="https://www.youtube.com/watch?v=zvbdoSeGAgI">3Blue1Brown <em>Laplace transform visually</em></a> — 라플라스의 시각적 직관에 가장 좋은 자료.</li>
+    <li>관련 강의: <a href="../calculus.html">미분적분학</a>의 적분·지수함수 단원이 본 강의의 토대.</li>
+  </ul>
+
+  <h2>11. FAQ — 라플라스 학습 단골 질문</h2>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q1. 라플라스를 모르고도 자동제어를 할 수 있나요?</strong></summary>
+    <p>현실적으로는 가능합니다(Ziegler-Nichols로 PID만 튜닝). 하지만 안정성·강건성을 분석하거나 새로운 시스템을 모델링하려면 라플라스 없이는 불가능합니다.
+    학부 자동제어 시험에서 라플라스를 모르면 60점 이상 받기 어렵습니다.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q2. 푸리에 변환과 라플라스 변환의 관계가 궁금합니다.</strong></summary>
+    <p>푸리에 변환은 $s = j\omega$ (실수부 0, 허수축에서만 적분)인 경우의 라플라스 특수형입니다. 푸리에는 신호의 주파수 성분만 분석하고,
+    라플라스는 감쇠율까지 분석합니다. 안정성 분석에는 감쇠율이 결정적이므로 자동제어는 라플라스를 표준으로 씁니다. W10에서 둘이 다시 만납니다.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q3. 변환표를 매번 봐도 되나요?</strong></summary>
+    <p>시험 대부분에서 변환표를 제공합니다. 하지만 7쌍 + 4가지 성질은 표 없이도 빠르게 떠올릴 수 있어야 시험 시간 안에 풀립니다.
+    표는 보조 수단이지, 사고 속도가 표 검색에 묶이면 안 됩니다.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q4. 부분분수가 너무 어렵습니다. 다른 방법은 없나요?</strong></summary>
+    <p>SymPy의 <code>apart</code> 함수가 자동으로 부분분수 분해를 해 주고, 답을 검증하는 데 좋습니다.
+    하지만 시험에서는 손으로 풀 수 있어야 하므로 단근 5문제, 반복근 3문제, 복소근 2문제를 직접 풀어 보세요. 한 시간이면 패턴이 잡힙니다.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>Q5. 단측 vs 양측 라플라스 변환의 차이는?</strong></summary>
+    <p>단측은 $\int_0^\infty$, 양측은 $\int_{-\infty}^\infty$. 자동제어는 시스템이 어느 시점부터 시작한다고 가정하므로 단측이 표준입니다.
+    양측은 신호처리·통신 분야에서 더 자주 등장합니다.</p>
+  </details>
+
+  <h2>12. 자기점검 체크리스트</h2>
+  <ul>
+    <li>☐ 변환쌍 7개를 표 없이 적을 수 있다.</li>
+    <li>☐ 1차 미분/적분 성질을 외워서 적용할 수 있다.</li>
+    <li>☐ 단위 스텝 입력 1차 시스템 응답을 라플라스로 풀 수 있다.</li>
+    <li>☐ 부분분수 분해(단근, 반복근)를 손으로 한다.</li>
+    <li>☐ 최종값 정리를 적용해 정상상태 값을 5초 안에 답한다.</li>
+    <li>☐ 시간이동 vs s-이동을 안 헷갈린다.</li>
+    <li>☐ 극점이 좌반평면에 있어야 안정이라는 사실을 외운다.</li>
+    <li>☐ 본 강의의 인터랙티브 데모를 한 번 만져 보았다.</li>
+  </ul>
+
+  <h2>13. 부록 — 연습문제 풀이 힌트</h2>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>1번 (a)~(e) 답</strong></summary>
+    <ul>
+      <li>(a) $5/s + 3/(s+2)$</li>
+      <li>(b) $1/(s+1)^2$</li>
+      <li>(c) $3/(s^2+9) + s/(s^2+9) = (s+3)/(s^2+9)$</li>
+      <li>(d) $2/((s+1)^2 + 4) = 2/(s^2 + 2s + 5)$</li>
+      <li>(e) $(e^{-s} - e^{-3s})/s$</li>
+    </ul>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>2번 (a)~(e) 답</strong></summary>
+    <ul>
+      <li>(a) $4/s(s+2) = 2/s - 2/(s+2)$ → $2(1 - e^{-2t})$</li>
+      <li>(b) $(s+3)/((s+1)(s+2)) = 2/(s+1) - 1/(s+2)$ → $2e^{-t} - e^{-2t}$</li>
+      <li>(c) $1/(s+1)^2 (s+2) = 1/(s+1) - 1/(s+1)^2 - 1/(s+2)$ → $e^{-t} - te^{-t} - e^{-2t}$</li>
+      <li>(d) $s^2 + 4s + 13 = (s+2)^2 + 9$. $2/((s+2)^2 + 3^2) = (2/3) \cdot (3/((s+2)^2 + 9))$ → $(2/3) e^{-2t} \sin(3t)$</li>
+      <li>(e) 시간이동: $f(t) = e^{-(t-1)} u(t-1)$</li>
+    </ul>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>3번 답</strong></summary>
+    <p>$(s+2) Y - 1 = 4/s$, $Y = (4/s + 1)/(s+2) = 4/(s(s+2)) + 1/(s+2)$.
+    $4/(s(s+2)) = 2/s - 2/(s+2)$. 따라서 $Y = 2/s - 2/(s+2) + 1/(s+2) = 2/s - 1/(s+2)$.
+    역변환: $y(t) = 2 - e^{-2t}$. 검산: $y(0) = 1$ ✓, $y(\infty) = 2$.</p>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>4번 답 (임계감쇠)</strong></summary>
+    <p>$s^2 Y - s y(0) - \dot{y}(0) + 4(sY - y(0)) + 4 Y = 0$. 초기조건 대입:
+    $(s^2 + 4s + 4) Y = 1$, 즉 $Y = 1/(s+2)^2$. 역변환: $y(t) = t e^{-2t}$.
+    임계감쇠 응답의 표준 모양 — $t = 0.5$에서 최대값 $0.5 e^{-1} \approx 0.184$.</p>
+  </details>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>6번 답</strong></summary>
+    <p>$Y = 10/(s(s^2 + 3s + 2)) = 10/(s(s+1)(s+2))$.
+    최종값: $\lim_{s\to 0} sY = 10/(1 \cdot 2) = 5$. 초기값: $\lim_{s\to\infty} sY = 0$.</p>
+  </details>
+
+  <h2>14. 보충 — Heaviside 전개와 일반 부분분수 공식</h2>
+
+  <p>학부에서 가장 자주 만나는 부분분수 형태와 일반 공식을 한 번 더 정리합니다.</p>
+
+  <h3>14-1. 단근(simple poles)만 있을 때</h3>
+  <p>$F(s) = \dfrac{N(s)}{(s+p_1)(s+p_2)\cdots(s+p_n)}$ (분자 차수 < 분모 차수, 모두 단근).</p>
+  $$ F(s) = \sum_{k=1}^n \frac{A_k}{s+p_k}, \quad A_k = \lim_{s \to -p_k} (s+p_k) F(s) $$
+  <p>역변환: $f(t) = \sum_{k=1}^n A_k e^{-p_k t}$.</p>
+
+  <h3>14-2. 한 개의 반복근이 있을 때</h3>
+  <p>$F(s) = \dfrac{N(s)}{(s+p)^m \cdot Q(s)}$. 반복근에 해당하는 부분은 다음과 같이 전개:</p>
+  $$ \frac{B_1}{s+p} + \frac{B_2}{(s+p)^2} + \cdots + \frac{B_m}{(s+p)^m} $$
+  <p>각 계수는</p>
+  $$ B_{m-k} = \frac{1}{k!}\, \frac{d^k}{ds^k}\bigl[(s+p)^m F(s)\bigr]\bigg|_{s = -p} $$
+  <p>역변환: $\dfrac{B_j}{(s+p)^j} \leftrightarrow \dfrac{B_j t^{j-1}}{(j-1)!} e^{-pt}$.</p>
+
+  <h3>14-3. 복소근(complex poles)이 있을 때</h3>
+  <p>복소공액쌍을 한 묶음으로 처리하는 게 깔끔합니다. 분모에 $s^2 + 2\sigma s + \omega^2$이 있으면(완전제곱: $(s+\sigma)^2 + \omega_d^2$),
+  분자에 $\alpha s + \beta$를 두고:</p>
+  $$ \frac{\alpha s + \beta}{(s+\sigma)^2 + \omega_d^2} = \frac{\alpha (s+\sigma) + (\beta - \alpha\sigma)}{(s+\sigma)^2 + \omega_d^2} $$
+  <p>역변환은 $e^{-\sigma t}[\alpha \cos(\omega_d t) + \dfrac{\beta - \alpha\sigma}{\omega_d}\sin(\omega_d t)]$.</p>
+
+  <p>이 세 패턴이 학부 자동제어 부분분수의 95%입니다. 시험 직전에 한 번 더 보세요.</p>
+
+  <h2>15. 보충 — 라플라스 변환의 12가지 자주 쓰는 공식 한 페이지 요약</h2>
+
+  <table>
+    <thead><tr><th>#</th><th>$f(t)$</th><th>$F(s)$</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>$\delta(t)$</td><td>$1$</td></tr>
+      <tr><td>2</td><td>$1$ (단위 스텝)</td><td>$1/s$</td></tr>
+      <tr><td>3</td><td>$t$</td><td>$1/s^2$</td></tr>
+      <tr><td>4</td><td>$t^n / n!$</td><td>$1/s^{n+1}$</td></tr>
+      <tr><td>5</td><td>$e^{-at}$</td><td>$1/(s+a)$</td></tr>
+      <tr><td>6</td><td>$te^{-at}$</td><td>$1/(s+a)^2$</td></tr>
+      <tr><td>7</td><td>$\sin(\omega t)$</td><td>$\omega/(s^2 + \omega^2)$</td></tr>
+      <tr><td>8</td><td>$\cos(\omega t)$</td><td>$s/(s^2 + \omega^2)$</td></tr>
+      <tr><td>9</td><td>$e^{-at}\sin(\omega t)$</td><td>$\omega/((s+a)^2 + \omega^2)$</td></tr>
+      <tr><td>10</td><td>$e^{-at}\cos(\omega t)$</td><td>$(s+a)/((s+a)^2 + \omega^2)$</td></tr>
+      <tr><td>11</td><td>$1 - e^{-t/\tau}$ (1차 계단응답)</td><td>$1/(s(\tau s + 1))$</td></tr>
+      <tr><td>12</td><td>$\frac{1}{\omega_n\sqrt{1-\zeta^2}}e^{-\zeta\omega_n t}\sin(\omega_d t)$ (2차 임펄스)</td><td>$1/(s^2 + 2\zeta\omega_n s + \omega_n^2)$</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 12개를 외우면 학부 자동제어에서 만나는 시간응답 거의 모두를 표 보지 않고 처리할 수 있습니다.
+  특히 11~12번은 W5~W6에서 매번 등장하니 익숙해지면 시험 시간이 압도적으로 줄어듭니다.</p>
+
+  <h2>16. 마무리</h2>
+  <p>라플라스 변환은 자동제어를 처음 배울 때 가장 큰 산입니다. 하지만 산을 한 번 넘어가면 그 뒤로는 모든 길이 평탄합니다.
+  W3 전달함수, W4 블록선도, W5~W6 시간응답, W7 정상상태 오차 — 모두 본 강의의 도구를 그대로 사용합니다.
+  변환표가 손에 익을 때까지 매주 5문제씩만 풀어 보세요. 학기말이 다른 사람이 됩니다.</p>
+
+  <p>준비됐다면 <a href="03-transfer-function.html">W3. 전달함수 &amp; 시스템 모델링</a>으로 가서 라플라스를 본격 활용해 봅시다.</p>
+
+  <h2>17. 보너스 — 라플라스 일화</h2>
+
+  <h3>피에르-시몽 라플라스 (1749~1827)</h3>
+  <p>프랑스의 천문학자·수학자. 천체의 운동을 분석하기 위해 1782년경 변환을 제안했습니다. 처음에는 확률·통계학 도구로 사용되다가,
+  20세기 헤비사이드(O. Heaviside)가 전기회로 분석에 도입하면서 공학에서 가장 자주 쓰이는 도구가 되었습니다.</p>
+
+  <h3>라플라스가 자동제어에 들어온 이야기</h3>
+  <p>1940년대 벨 연구소의 헨드릭 보드(Bode)와 해리 나이키스트(Nyquist)가 통신 회로 안정성 문제를 풀기 위해 라플라스를
+  적극 활용하면서, 라플라스 + 주파수응답 분석이 자동제어의 표준 언어가 되었습니다. 본 강의의 W10~W11 Bode 선도가
+  바로 그 결실입니다.</p>
+
+  <p>1960년대에 들어 칼만(R. E. Kalman)이 상태공간 표현을 제안하면서 라플라스 = "고전 제어", 상태공간 = "현대 제어"라는
+  구분이 생겼지만, 두 표현은 동등하고 본 강의는 두 가지 모두를 다룹니다(라플라스는 W2~W12, 상태공간은 W14에서).</p>
+
+  <h2>18. 추가 학습 자료 — 라플라스 손에 익히기</h2>
+
+  <h3>매일 5분 연습 — "라플라스 카드"</h3>
+  <p>한 손에 들어오는 카드 12장에 시간 함수, 다른 12장에 s영역 표현을 적어 두고, 매일 5분씩 짝 맞추기 게임을 해 보세요.
+  3주 안에 표 없이 변환·역변환이 가능해집니다. 실제로 본 학과 졸업생 중 자동제어 우수성적을 받은 학생들이 가장 많이 추천한 방법입니다.</p>
+
+  <h3>SymPy로 자기 답 검증하기</h3>
+
+<pre><code class="language-python">import sympy as sp
+t, s = sp.symbols('t s', positive=True)
+
+# 예제 4번: 시간이동 검증
+expr = sp.exp(-s) / (s + 1)
+ans = sp.inverse_laplace_transform(expr, s, t)
+print(ans)   # exp(-(t-1)) * Heaviside(t-1)
+
+# 부분분수 자동 분해
+F = (2*s + 5) / (s * (s + 1) * (s + 3))
+print(sp.apart(F, s))
+# 5/(3*s) - 3/(2*(s+1)) - 1/(6*(s+3))   ← 본 강의 cover-up 답과 일치</code></pre>
+
+  <p>SymPy는 손계산의 답안 검증에 매우 유용합니다. 하지만 시험에서는 손으로 풀 수 있어야 하니, "먼저 손, 그 다음 SymPy" 순서를 지키세요.</p>
+
+  <h3>SciPy로 시간응답 시뮬레이션</h3>
+
+<pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+# 본 강의 예제 3: F(s) = 4 / (s^2 + 2s + 5)  →  f(t) = 2 e^(-t) sin(2t)
+G = signal.TransferFunction([4.0], [1.0, 2.0, 5.0])
+t = np.linspace(0, 8, 800)
+_, y = signal.impulse(G, T=t)
+plt.plot(t, y, label='SciPy impulse')
+plt.plot(t, 2*np.exp(-t)*np.sin(2*t), '--', label='analytic 2e^(-t)sin(2t)')
+plt.legend(); plt.grid(); plt.xlabel('t [s]'); plt.ylabel('f(t)')
+plt.title('손계산 vs SciPy — 정확히 일치하는지 확인')
+plt.show()</code></pre>
+
+  <h3>학습 순서 권장</h3>
+  <ol>
+    <li>변환표 7쌍 외우기 (1일)</li>
+    <li>4가지 성질(미분/적분/시간이동/s-이동) 외우기 (1일)</li>
+    <li>최종값 정리 적용 연습 (5문제, 1일)</li>
+    <li>부분분수 단근 5문제 풀이 (2일)</li>
+    <li>부분분수 반복근·복소근 각 3문제 (2일)</li>
+    <li>1차/2차 시스템 계단응답 손계산 (3일)</li>
+    <li>본 강의 연습문제 모두 풀이 (3일)</li>
+  </ol>
+  <p>총 13일이면 라플라스가 자기 손에 익습니다. W3 시작 전까지 충분한 시간이에요.</p>
+
+  <h2>19. 자주 헷갈리는 표기 정리</h2>
+
+  <p>강의 노트와 교재마다 표기가 살짝 다를 수 있어 혼란을 줍니다. 본 강의의 표기를 명확히 해 둡니다.</p>
+
+  <ul>
+    <li><strong>$f(t)$ vs $F(s)$</strong>: 소문자는 시간영역, 대문자는 s영역. 항상 일관.</li>
+    <li><strong>$u(t)$</strong>: 단위 스텝 함수(Heaviside). 제어입력 $u$와 표기가 같아 헷갈리지만 문맥으로 구분.</li>
+    <li><strong>$\mathcal{L}\{\cdot\}$</strong>: 라플라스 변환 연산자. $\mathcal{L}^{-1}\{\cdot\}$는 역변환.</li>
+    <li><strong>초기조건</strong>: $f(0^-)$ = 0 직전 시점 값. 임펄스 입력 같은 즉시 점프가 있을 때 $f(0^-)$와 $f(0^+)$가 다름.</li>
+    <li><strong>지연시간</strong>: $T_d$ 또는 $\tau_d$ 또는 $L$. 본 강의는 $T$로 통일.</li>
+  </ul>
+
+  <p>표기는 어디까지나 약속입니다. 한 번 정해두면 학기 내내 같이 가니, 노트 첫 페이지에 적어 두세요.</p>
+
+  <h2>20. 스토리 — 라플라스로 풀어보는 작은 문제</h2>
+
+  <h3>스토리 1: 자율주행차의 종방향 가속도 명령</h3>
+  <p>한 자율주행차가 정지 상태에서 출발해 60 km/h(약 16.7 m/s)에 도달하는 데 8초 걸리도록 설계되어 있습니다.
+  종방향 차량 모델을 1차 시스템 $\dot{v} + v/\tau = u/\tau$, $\tau = 2$초라고 가정합시다(스로틀 → 속도 응답이 약 2초 시정수).</p>
+  <p>$8\tau \approx 16$초까지 99% 도달인데 8초에 60 km/h를 넣으려면 어떻게 해야 할까요? 답은 "목표를 더 큰 값으로 내릴려라"입니다.
+  최종값 정리: $v(\infty) = K u$. $u = $ 일정한 명령일 때 8초에 99% 도달은 너무 빠릅니다.</p>
+  <p>그래서 실제 ACC는 단순 1차가 아니라 PI 제어기로 폐루프를 형성해 시정수를 단축합니다. 이는 W7~W12에서 본격적으로.</p>
+
+  <h3>스토리 2: 가전 보일러 정상상태 오차</h3>
+  <p>가정용 가스보일러가 설정 온도 65℃를 목표로 PI 제어합니다. 외란(찬 공기 유입) 5℃가 들어왔을 때
+  오차가 정상상태에서 0이 되는지 검증하려면 라플라스의 최종값 정리가 가장 빠릅니다.</p>
+  <p>$E(s) = R(s) - Y(s)$의 최종값 $\lim_{s\to 0} sE(s)$를 계산해 0이 되면 OK. PI 제어기의 적분 항 덕에 외란이 있어도
+  정상상태 오차는 0임을 다섯 줄 안에 증명할 수 있습니다.</p>
+
+  <h2>21. 학기 중간 자기점검 — "라플라스를 진짜 안다"의 기준</h2>
+
+  <p>다음 5가지 질문에 모두 답할 수 있다면 라플라스 단원은 졸업입니다.</p>
+  <ol>
+    <li>$\mathcal{L}\{\dot{f}\}$를 적고, 그 우변에서 초기값이 왜 빼져야 하는지 한 줄로 설명할 수 있는가?</li>
+    <li>$\dfrac{1}{(s+1)(s+3)}$의 시간영역 표현을 5초 안에 적을 수 있는가?</li>
+    <li>$\dfrac{1}{s(s^2 + 2s + 5)}$의 정상상태 값을 역변환 없이 답할 수 있는가?</li>
+    <li>$e^{-2s}/s$가 시간영역에서 어떤 모양인지 그릴 수 있는가?</li>
+    <li>"극점이 좌반평면에 있어야 안정"이 라플라스 변환과 어떻게 연결되는지 설명할 수 있는가?</li>
+  </ol>
+
+  <p>5문제 모두 답할 수 있다면 W3로 진행해도 좋습니다. 하나라도 막히면 위 인터랙티브 데모와 예제로 돌아가 한 번 더 만져 보세요.</p>
 
   <div class="prevnext">
     <a href="01-intro.html"><small>← 이전</small>W1. 자동제어 개요</a>
