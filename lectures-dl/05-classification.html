@@ -650,8 +650,213 @@ for m in [svm, dt, rf]:
     <li>랜덤포레스트가 단일 결정트리보다 안정적인 이유 두 가지를 댈 수 있나요?</li>
   </ol>
 
+  <h2>🌳 결정트리 손계산 — 엔트로피와 정보 이득</h2>
+  <p>결정트리는 매 분기마다 "어느 변수의 어느 값에서 자르면 가장 잘 나뉘는가"를 결정합니다. 그 기준이 <strong>정보 이득(information gain)</strong>입니다. 엔트로피로 정의합니다.</p>
+  $$ H(S) = -\sum_c p_c \log_2 p_c $$
+  <p>예: 클래스 0이 6개, 클래스 1이 4개인 노드.<br>
+  $H = -0.6 \log_2 0.6 - 0.4 \log_2 0.4 \approx 0.97$ (1에 가까움 = 매우 섞여있음).</p>
+  <p>이 노드를 어떤 조건으로 둘로 나눠 (왼쪽: 0이 5개, 1이 1개), (오른쪽: 0이 1개, 1이 3개)가 됐다고 합시다.</p>
+  <ul>
+    <li>왼쪽 엔트로피: $H_L = -\frac{5}{6}\log_2\frac{5}{6} - \frac{1}{6}\log_2\frac{1}{6} \approx 0.65$</li>
+    <li>오른쪽 엔트로피: $H_R = -\frac{1}{4}\log_2\frac{1}{4} - \frac{3}{4}\log_2\frac{3}{4} \approx 0.81$</li>
+    <li>가중 평균: $\frac{6}{10} \cdot 0.65 + \frac{4}{10} \cdot 0.81 = 0.71$</li>
+  </ul>
+  <p>정보 이득 = $0.97 - 0.71 = 0.26$. 모든 후보 분할에 대해 같은 계산을 해서 정보 이득이 가장 큰 분할을 선택. 이를 재귀적으로 반복하면 트리가 완성됩니다.</p>
+  <p>scikit-learn의 결정트리는 기본적으로 엔트로피 대신 <strong>지니 불순도(Gini impurity)</strong>를 씁니다 — $G(S) = 1 - \sum p_c^2$. 두 지표는 거의 같은 결정을 내리고, 지니가 약간 더 빠릅니다.</p>
+
+  <h2>📈 부스팅 — 트리를 순차적으로 쌓기</h2>
+  <p>랜덤포레스트는 트리들을 <em>독립적</em>으로 학습해 평균합니다. <strong>부스팅</strong>은 다른 접근입니다 — 첫 트리를 학습한 뒤, 그 트리가 <em>틀린 샘플</em>에 더 큰 가중치를 주어 다음 트리를 학습합니다. 이를 100~1000번 반복.</p>
+  <ul>
+    <li><strong>AdaBoost</strong> — 부스팅의 시작. 1995년.</li>
+    <li><strong>GBM (Gradient Boosting Machine)</strong> — 손실 함수의 그래디언트를 다음 트리가 예측하도록.</li>
+    <li><strong>XGBoost</strong> (2014) — GBM의 고성능 구현. Kaggle 우승의 단골.</li>
+    <li><strong>LightGBM</strong> (Microsoft, 2017) — 더 빠른 GBM. 큰 데이터의 표준.</li>
+    <li><strong>CatBoost</strong> (Yandex, 2017) — 범주형 변수에 특화.</li>
+  </ul>
+  <p>딥러닝이 비전·음성·언어를 지배하지만, <em>표 형태의 작은~중간 데이터</em>에서는 여전히 GBM 계열이 1순위입니다. Kaggle 대회 표 데이터 부분의 80% 이상이 LightGBM/XGBoost 기반이라는 통계도 있습니다.</p>
+
+  <h2>📋 분류 알고리즘 비교 한 페이지</h2>
+  <table>
+    <thead><tr><th>알고리즘</th><th>학습 속도</th><th>예측 속도</th><th>해석성</th><th>스케일 영향</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>KNN</td><td>없음(즉시)</td><td>매우 느림</td><td>중간</td><td>매우 큼</td><td>거리 기반, 작은 데이터에 좋음</td></tr>
+      <tr><td>로지스틱 회귀</td><td>빠름</td><td>매우 빠름</td><td>매우 높음</td><td>큼</td><td>해석 가능, 직선 경계</td></tr>
+      <tr><td>SVM (RBF)</td><td>중간</td><td>중간</td><td>낮음</td><td>큼</td><td>커널로 비선형, 작은 데이터 강함</td></tr>
+      <tr><td>결정트리</td><td>빠름</td><td>매우 빠름</td><td>매우 높음</td><td>없음</td><td>비선형, 과적합 쉬움</td></tr>
+      <tr><td>랜덤포레스트</td><td>중간</td><td>빠름</td><td>중간</td><td>없음</td><td>안정적 베이스라인</td></tr>
+      <tr><td>XGBoost / LightGBM</td><td>중간</td><td>빠름</td><td>낮음</td><td>없음</td><td>표 데이터의 강자</td></tr>
+      <tr><td>신경망 (W7~)</td><td>느림</td><td>중간</td><td>매우 낮음</td><td>큼</td><td>큰 데이터에 강함</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🎯 어떤 모델을 언제 쓸까 — 의사결정 트리</h2>
+  <ol>
+    <li>해석성이 필수인가? (의료·금융) → <strong>로지스틱 회귀</strong> 또는 <strong>결정트리</strong>.</li>
+    <li>표 데이터 + 많은 샘플인가? → <strong>LightGBM/XGBoost</strong>.</li>
+    <li>이미지/음성/텍스트인가? → <strong>신경망</strong> (W9~).</li>
+    <li>샘플이 매우 적은가(&lt; 1000)? → <strong>SVM (RBF)</strong>.</li>
+    <li>아무것도 모르겠는가? → <strong>랜덤포레스트</strong>로 시작. 이게 베이스라인.</li>
+  </ol>
+
+  <h2>🧪 미니 워크쓰루 — 같은 데이터, 4가지 모델 비교</h2>
+  <pre><code>from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
+X, y = make_moons(n_samples=300, noise=0.25, random_state=42)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.3, random_state=42)
+sc = StandardScaler(); X_tr = sc.fit_transform(X_tr); X_te = sc.transform(X_te)
+
+models = {
+    'KNN(K=5)': KNeighborsClassifier(5),
+    'SVM(RBF)': SVC(kernel='rbf', C=1.0, gamma='auto'),
+    'Tree(d=4)': DecisionTreeClassifier(max_depth=4, random_state=42),
+    'RF(100)': RandomForestClassifier(n_estimators=100, random_state=42),
+}
+for name, m in models.items():
+    m.fit(X_tr, y_tr)
+    print(f'{name:12s}: 학습 {m.score(X_tr, y_tr):.3f}  테스트 {m.score(X_te, y_te):.3f}')</code></pre>
+  <p>실행하면 KNN과 SVM이 두 반달(half-moon) 데이터에서 가장 부드러운 결정 경계를 그리고, 단일 트리는 격자 모양 경계로 일부 점을 놓치며, 랜덤포레스트가 그 사이에서 균형 잡힌 결과를 보입니다. 데이터가 다르면 순위도 바뀝니다 — <em>한 모델이 항상 최고</em>는 없습니다.</p>
+
+  <h2>📝 연습문제 — 손으로 풀어보기</h2>
+
+  <div class="tip"><strong>연습 1.</strong> 클래스가 0이 6개, 1이 6개로 완전히 균형 잡힌 노드의 엔트로피와 지니 불순도는?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>$p_0 = p_1 = 0.5$. 엔트로피 = $-0.5 \log_2 0.5 - 0.5 \log_2 0.5 = -0.5 \cdot (-1) - 0.5 \cdot (-1) = 1$. 지니 = $1 - 0.5^2 - 0.5^2 = 0.5$. 둘 다 "두 클래스 균형"의 최대값. 분류기 입장에서 가장 어려운 상태.</p></details></div>
+
+  <div class="tip"><strong>연습 2.</strong> SVM에서 C가 매우 크면(예: 1000) 결정 경계는 어떻게 변할까요? 작으면(예: 0.01)?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>C는 "오분류에 얼마나 큰 벌점을 줄 것인가"의 가중치. C가 크면 마진을 좁혀서라도 모든 훈련 점을 맞추려 함 → 좁고 들쭉날쭉한 경계 (과적합 위험). C가 작으면 약간의 오분류를 허용하고 마진을 넓게 → 부드러운 경계 (과소적합 위험). 보통 C=0.1~10 사이에서 그리드서치.</p></details></div>
+
+  <div class="tip"><strong>연습 3.</strong> 결정트리에서 <code>max_depth=2</code>로 두면 잎 노드는 최대 몇 개까지 가능한가요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>이진 트리이므로 깊이 d에서 잎 노드 최대 = $2^d$. <code>max_depth=2</code>면 4개. 즉 최대 4개의 결정 영역. 데이터가 4개의 군집으로 나뉜다면 잘 맞지만, 더 복잡한 패턴이면 과소적합.</p></details></div>
+
+  <div class="tip"><strong>연습 4.</strong> 랜덤포레스트가 단일 결정트리보다 일반화 성능이 좋은 두 가지 이유를 말해보세요.
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>(1) <strong>배깅(bagging)</strong>: 각 트리가 데이터 부분집합으로 학습 → 트리들이 독립적이라 평균이 분산을 줄임. (2) <strong>특성 무작위화</strong>: 각 분기에서 일부 특성만 후보로 → 트리들이 서로 다른 패턴을 잡아 다양성 증가. 이 둘이 합쳐져 단일 트리의 과적합 위험을 평균이 상쇄.</p></details></div>
+
+  <div class="tip"><strong>연습 5.</strong> 클래스 비율이 99:1인 사기 거래 탐지 문제. KNN K=5로 학습했더니 정확도 99%가 나왔습니다. 이 결과를 신뢰할 수 있을까요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>아니요. 99:1 비율에서 모든 점을 다수 클래스로 예측해도 정확도 99%가 나오기 때문. KNN K=5는 99% 다수 클래스 비율 데이터에서 거의 항상 다수 클래스 이웃이 5명 중 5명일 가능성이 높아, 사실상 "다수 클래스만 예측"하는 분류기가 됩니다. <strong>F1, Precision, Recall, ROC AUC</strong>를 봐야 합니다. 또는 <code>class_weight</code> 또는 SMOTE 적용.</p></details></div>
+
+  <h2>❓ FAQ</h2>
+  <div class="note"><strong>Q1. SVM의 RBF 커널과 신경망 중 어느 것이 더 강력한가요?</strong><br>
+  A. 데이터가 작으면 SVM(RBF)이 더 안정적이고, 데이터가 크면(수만 이상) 신경망이 압도합니다. SVM은 메모리 사용이 $O(N^2)$이라 큰 데이터에 부적합. 또 GPU 가속이 어려운 점도 단점.</div>
+  <div class="note"><strong>Q2. 결정트리의 깊이는 어떻게 정하나요?</strong><br>
+  A. 그리드서치(<code>max_depth = 3, 5, 7, 10, None</code>)와 교차검증. None은 무한 깊이로 거의 항상 과적합이라 추천 안 함. 데이터가 많으면 깊이가 약간 더 효과적.</div>
+  <div class="note"><strong>Q3. 랜덤포레스트의 트리 수(n_estimators)는 많을수록 좋은가요?</strong><br>
+  A. 어느 정도까지는 좋습니다. 100 → 500은 보통 효과 있고, 500 → 5000은 거의 차이 없음. 트리 수가 많아도 과적합되지 않는 게 RF의 큰 장점이지만, 100~500이 현실적인 절충점.</div>
+  <div class="note"><strong>Q4. SVM·트리 모두 표준화가 필요한가요?</strong><br>
+  A. SVM은 거리 기반이라 표준화가 거의 필수. 트리/RF/XGBoost는 분기 기준이 임곗값이라 스케일에 둔감해 표준화 효과가 거의 없음 — 안 해도 됩니다.</div>
+  <div class="note"><strong>Q5. 어느 모델부터 시도해야 하나요?</strong><br>
+  A. 베이스라인 순서: <em>로지스틱 회귀 → 랜덤포레스트 → LightGBM → 신경망</em>. 처음 두 개는 5분 안에 돌릴 수 있고, 그 결과보다 못한 모델은 실패라고 볼 수 있습니다.</div>
+
   <h2>👀 다음 주 미리보기 — W6 비지도학습</h2>
   <p>지금까지 우리가 본 모델들은 모두 <em>"입력과 정답"의 짝</em>이 있는 지도학습이었습니다. 다음 주에는 정답 없이 데이터의 구조를 찾는 <strong>비지도학습</strong>을 만납니다 — 군집화(K-means, DBSCAN)와 차원축소(PCA)가 등장합니다. 라벨링이 비싼 현실 데이터에서 가장 유용한 도구들입니다.</p>
+
+  <h2>🎨 보너스 데모 — Confusion Matrix 시각화</h2>
+  <p>분류 결과를 가장 직관적으로 보는 도구가 혼동 행렬입니다. 다중 클래스에서는 어디서 헷갈리는지를 한눈에 볼 수 있습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 3-클래스 분류기의 혼동 행렬</h4>
+    <p>가상의 분류기가 손글씨 숫자 0/1/2를 맞춘 결과를 시뮬레이션. 대각선이 진할수록 좋은 분류기. 비대각선의 진한 칸은 "어디서 헷갈리는가"의 단서.</p>
+    <canvas id="cmDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>혼동 정도 <span class="val" id="cmCV">0.2</span><input type="range" id="cmC" min="0" max="0.5" step="0.02" value="0.2"></label>
+      <button id="cmR">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cmDemo');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let cm=[[0,0,0],[0,0,0],[0,0,0]];
+    function gen(){
+      const conf=+document.getElementById('cmC').value;
+      cm=[[0,0,0],[0,0,0],[0,0,0]];
+      for(let i=0;i<300;i++){
+        const trueClass=i%3;
+        const r=Math.random();
+        let pred=trueClass;
+        if(r<conf){pred=(trueClass+1)%3;}
+        else if(r<conf*1.3){pred=(trueClass+2)%3;}
+        cm[trueClass][pred]++;
+      }
+      draw();
+    }
+    function draw(){
+      const conf=+document.getElementById('cmC').value;
+      document.getElementById('cmCV').textContent=conf.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cellW=80,cellH=70,startX=180,startY=70;
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText('예측',startX+cellW*1.2,30);
+      ctx.save();ctx.translate(60,startY+cellH*1.5);ctx.rotate(-Math.PI/2);ctx.fillText('실제',0,0);ctx.restore();
+      const max=Math.max(...cm.flat());
+      for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+        const t=cm[i][j]/max;
+        const x=startX+j*cellW,y=startY+i*cellH;
+        ctx.fillStyle=`rgba(11,95,255,${t*0.9+0.1})`;
+        ctx.fillRect(x,y,cellW-2,cellH-2);
+        ctx.fillStyle=t>0.5?'#fff':'#222';
+        ctx.font='bold 18px sans-serif';
+        ctx.fillText(cm[i][j],x+cellW/2-10,y+cellH/2+5);
+      }
+      // labels
+      ctx.fillStyle='#666';ctx.font='13px sans-serif';
+      for(let i=0;i<3;i++){
+        ctx.fillText(`클래스 ${i}`,startX-65,startY+i*cellH+cellH/2+5);
+        ctx.fillText(`${i}`,startX+i*cellW+cellW/2-3,startY-8);
+      }
+      // metrics
+      let acc=0,total=0;
+      for(let i=0;i<3;i++){acc+=cm[i][i];for(let j=0;j<3;j++)total+=cm[i][j];}
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText(`Accuracy: ${(acc/total*100).toFixed(1)}% (${acc}/${total})`,startX,startY+cellH*3+25);
+    }
+    document.getElementById('cmC').addEventListener('input',gen);
+    document.getElementById('cmR').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <h2>🔁 K-Fold + 그리드서치 — 모델 선택의 표준 절차</h2>
+  <p>"어떤 모델, 어떤 하이퍼파라미터가 가장 좋은가"를 데이터로 결정하는 표준 절차입니다.</p>
+  <pre><code>from sklearn.model_selection import GridSearchCV
+from sklearn.svm import SVC
+
+param_grid = {
+    'C': [0.1, 1, 10, 100],
+    'gamma': [0.001, 0.01, 0.1, 1],
+    'kernel': ['rbf']
+}
+grid = GridSearchCV(SVC(), param_grid, cv=5, scoring='f1_macro', n_jobs=-1)
+grid.fit(X_tr, y_tr)
+print('최적 파라미터:', grid.best_params_)
+print('최적 CV 점수 :', grid.best_score_)
+print('테스트 점수  :', grid.score(X_te, y_te))</code></pre>
+  <p>위 코드는 4 × 4 = 16가지 조합 × 5-fold = 80번의 학습을 자동으로 수행합니다. 작은 데이터에서는 몇 분, 큰 데이터에서는 몇 시간이 걸릴 수 있어 실전에서는 RandomizedSearchCV(무작위 샘플링) 또는 베이지안 최적화(Optuna)를 씁니다.</p>
+
+  <h2>🗒️ 이번 주 체크리스트</h2>
+  <ul>
+    <li>☐ KNN의 결정 경계가 들쭉날쭉한 이유를 설명할 수 있다.</li>
+    <li>☐ SVM의 마진 개념을 그림으로 그릴 수 있다.</li>
+    <li>☐ 커널 트릭의 직관(고차원 매핑)을 안다.</li>
+    <li>☐ 결정트리의 분기 기준(엔트로피/지니)을 안다.</li>
+    <li>☐ 랜덤포레스트가 단일 트리보다 안정적인 두 이유를 댈 수 있다.</li>
+    <li>☐ 부스팅과 배깅의 차이를 한 줄로 말할 수 있다.</li>
+    <li>☐ 그리드서치 + 교차검증의 흐름을 코드로 적을 수 있다.</li>
+  </ul>
+
+  <h2>🧭 한 줄 정리 — 이번 주의 빅 아이디어</h2>
+  <div class="tip"><p><strong>"같은 분류 문제에 여러 모델, 다른 결정 경계."</strong> KNN의 들쭉날쭉, SVM의 마진, 트리의 격자, 포레스트의 매끈함 — 같은 데이터를 어떻게 보느냐가 모델의 정체성입니다. 베이스라인은 항상 랜덤포레스트, 표 데이터의 강자는 LightGBM.</p></div>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>
@@ -659,7 +864,131 @@ for m in [svm, dt, rf]:
     <li><strong>scikit-learn SVM 가이드</strong> — <a href="https://scikit-learn.org/stable/modules/svm.html">공식 문서</a>. 커널 종류와 C·γ의 의미.</li>
     <li><strong>Random Forests</strong> — Leo Breiman 원논문(2001).</li>
     <li><strong>Visual Intro to Decision Trees</strong> — <a href="http://www.r2d3.us/visual-intro-to-machine-learning-part-1/">r2d3.us</a>. 결정트리 시각화의 명작.</li>
+    <li><strong>XGBoost: A Scalable Tree Boosting System</strong> — Chen &amp; Guestrin, 2016. 표 데이터 강자의 원논문.</li>
+    <li><strong>StatQuest — Decision Trees / Random Forest / SVM</strong> 시리즈. 유튜브 한국어 자막.</li>
+    <li><strong>Distill — A Visual Introduction to Machine Learning</strong>. r2d3.us 두 번째 편. 편향-분산 직관.</li>
   </ul>
+
+  <h2>📌 부록 — 모델 선택의 한 페이지 결정도</h2>
+  <ol>
+    <li>입력이 텍스트/이미지/음성? → 신경망 (W7~)</li>
+    <li>표 데이터 + 1만 건 이상? → LightGBM 또는 XGBoost</li>
+    <li>표 데이터 + 1천~1만 건? → Random Forest로 시작, GBM과 비교</li>
+    <li>샘플 1천 건 미만? → SVM(RBF) 또는 로지스틱 회귀</li>
+    <li>해석성이 가장 중요? → 로지스틱 회귀 또는 얕은 결정트리</li>
+    <li>모르겠으면? → Random Forest. 거의 항상 합리적인 베이스라인을 줍니다.</li>
+  </ol>
+
+  <h2>📚 미니 용어집</h2>
+  <table>
+    <thead><tr><th>용어</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>마진(margin)</td><td>SVM에서 결정 경계와 가장 가까운 점까지의 거리. 클수록 일반화 좋음.</td></tr>
+      <tr><td>서포트 벡터</td><td>마진 위에 있는 결정적인 데이터점들. 결정 경계를 정의.</td></tr>
+      <tr><td>커널 트릭</td><td>고차원 매핑을 직접 하지 않고 내적만 바꿔 비선형 효과.</td></tr>
+      <tr><td>RBF 커널</td><td>$\exp(-\gamma \|x - y\|^2)$. 가장 널리 쓰임.</td></tr>
+      <tr><td>γ (감마)</td><td>RBF의 폭. 크면 좁고 들쭉날쭉, 작으면 넓고 부드러움.</td></tr>
+      <tr><td>C</td><td>SVM의 정규화 역수. 크면 오분류 벌점 강함(과적합 위험).</td></tr>
+      <tr><td>지니/엔트로피</td><td>결정트리의 분기 기준. 클래스 섞임을 한 숫자로.</td></tr>
+      <tr><td>배깅(bagging)</td><td>데이터 부분집합으로 학습한 여러 모델의 평균. RF의 기반.</td></tr>
+      <tr><td>부스팅</td><td>이전 모델의 오류에 가중을 주어 순차적으로 학습. XGBoost.</td></tr>
+      <tr><td>OOB(out-of-bag)</td><td>RF에서 부트스트랩에 안 뽑힌 샘플로 자동 검증.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🌟 SVM 깊이 들어가기 — 마진 최대화의 수학</h2>
+  <p>"왜 SVM은 마진을 최대화할까?"의 직관은 단순합니다 — <em>경계 양쪽에 안전 거리를 두면 새 데이터가 와도 잘 분류할 가능성이 높다</em>. 수학적으로는 다음 문제를 풉니다.</p>
+  $$ \min_{\mathbf w, b} \frac{1}{2}\|\mathbf w\|^2 \quad \text{s.t.} \quad y_i (\mathbf w^\top \mathbf x_i + b) \geq 1 $$
+  <p>제약조건은 "모든 점이 마진 바깥에 있다"는 뜻이고, 목적은 "$\|\mathbf w\|$를 최소화"인데 마진이 $2/\|\mathbf w\|$이므로 결국 마진 최대화. 라그랑주 승수법과 KKT 조건으로 풀면 dual 형태가 나오고, 거기서 커널 함수만 바꾸면 비선형 SVM이 됩니다.</p>
+  <p>실제 데이터는 완벽히 분리되지 않으므로 <strong>슬랙 변수 $\xi_i$</strong>를 도입한 <em>soft-margin SVM</em>이 표준입니다.</p>
+  $$ \min_{\mathbf w, b, \boldsymbol\xi} \frac{1}{2}\|\mathbf w\|^2 + C \sum_i \xi_i $$
+  <p>여기서 $C$가 우리가 위에서 봤던 그 하이퍼파라미터입니다. C가 크면 오분류 벌점이 커서 좁은 마진, 작으면 부드러운 경계.</p>
+
+  <h2>🌟 결정트리 깊이 들어가기 — 가지치기와 정규화</h2>
+  <p>트리가 끝까지 자라면 거의 항상 과적합. 두 가지 대처법이 표준입니다.</p>
+  <ul>
+    <li><strong>사전 가지치기(pre-pruning)</strong> — <code>max_depth</code>, <code>min_samples_split</code>, <code>min_samples_leaf</code>로 트리가 너무 깊어지기 전에 멈춤.</li>
+    <li><strong>사후 가지치기(post-pruning)</strong> — 일단 끝까지 자라고, 그 후 약한 가지부터 잘라냄. <code>ccp_alpha</code> (cost-complexity).</li>
+  </ul>
+  <p>실전 권장: 사전 가지치기로 빠르게 출발(<code>max_depth=5~10, min_samples_leaf=20</code>) → 성능이 부족하면 GridSearch로 미세 조정.</p>
+
+  <h2>🧪 보너스 — 특성 중요도(feature importance)</h2>
+  <p>랜덤포레스트와 GBM의 큰 장점 중 하나는 <em>"어떤 특성이 예측에 가장 중요했는가"</em>를 자동으로 알려준다는 점입니다.</p>
+  <pre><code>rf = RandomForestClassifier(n_estimators=200).fit(X_tr, y_tr)
+import pandas as pd
+imp = pd.Series(rf.feature_importances_, index=feature_names)
+imp.sort_values(ascending=False).head(10).plot.barh()</code></pre>
+  <p>이 한 줄짜리 그림이 비즈니스 의사결정에 자주 쓰입니다 — "이 특성을 더 수집할 가치가 있을까?", "이 특성은 빼도 될까?". 단, 특성 중요도는 트리 구조에서 분기에 자주 쓰인 정도이고, <em>인과관계가 아니라 상관관계</em>임을 잊지 마세요.</p>
+
+  <h2>🌟 KNN 깊이 들어가기 — 가중 KNN과 거리 척도 선택</h2>
+  <p>기본 KNN은 K개 이웃이 모두 동등하게 한 표씩 가지지만, 가까운 이웃에 더 큰 표를 주는 게 자연스럽습니다.</p>
+  $$ \hat y(\mathbf x) = \arg\max_c \sum_{i \in N_K} \frac{1}{d(\mathbf x, \mathbf x_i) + \epsilon} \cdot \mathbb 1(y_i = c) $$
+  <p>scikit-learn에서 <code>weights='distance'</code> 옵션 한 줄로 활성화. 거리 척도도 <code>metric='euclidean'/'manhattan'/'cosine'</code>로 바꿀 수 있습니다.</p>
+  <ul>
+    <li><strong>코사인 거리</strong> — 텍스트나 임베딩처럼 "방향"이 중요할 때(W13 트랜스포머 임베딩의 표준).</li>
+    <li><strong>맨해튼 거리</strong> — 격자 구조 데이터(체스판 좌표 등).</li>
+    <li><strong>마할라노비스 거리</strong> — 공분산을 고려해 변수 간 상관 보정.</li>
+  </ul>
+
+  <h2>🌟 랜덤포레스트 깊이 — 부트스트랩과 OOB</h2>
+  <p>랜덤포레스트의 핵심 트릭은 <strong>부트스트랩 샘플링</strong>입니다 — 학습 데이터 N개에서 N개를 <em>복원 추출</em>합니다. 같은 샘플이 여러 번 뽑히기도 하고, 어떤 샘플은 한 번도 안 뽑힙니다(약 36.8%). 이 안 뽑힌 샘플들을 그 트리의 검증 셋으로 쓰면, 별도의 검증 분할 없이도 모델 평가가 가능합니다 — <strong>OOB(out-of-bag) 점수</strong>.</p>
+  <pre><code>rf = RandomForestClassifier(n_estimators=200, oob_score=True)
+rf.fit(X_tr, y_tr)
+print('OOB score:', rf.oob_score_)   # train_test_split 없이 추정 정확도</code></pre>
+  <p>이게 RF의 또 다른 매력 — 같은 데이터로 학습하면서 동시에 평가까지 한 번에 끝납니다.</p>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:24px">— 5주차 끝. 분류의 도구상자가 한 단계 풍부해졌습니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">다음 주는 <em>라벨 없이</em> 데이터의 구조를 찾습니다.</p>
+  <p style="font-size:12px;color:var(--muted)">예습 권장: 아이리스 데이터셋(<code>load_iris</code>)에 위 5가지 모델을 모두 적용해 점수를 비교하는 실습.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <h2>🎯 자가 학습용 추가 문제</h2>
+  <ol>
+    <li>SVM(RBF) 학습 후 서포트 벡터 수가 전체 데이터의 80%였습니다. 어떤 의미인가요?</li>
+    <li>결정트리에서 <code>min_samples_split=20</code>의 의미와 영향?</li>
+    <li>랜덤포레스트의 <code>max_features='sqrt'</code>는 왜 분류에서 표준값인가?</li>
+    <li>XGBoost의 <code>learning_rate</code>를 작게 하면 트리 수는 어떻게 조정해야 하나?</li>
+    <li>같은 데이터에 KNN K=5가 RF(100)보다 정확도가 높게 나왔습니다. 가능한 원인은?</li>
+  </ol>
+  <p style="font-size:13px;color:var(--muted)">정답 힌트: 1) 데이터가 매우 어렵거나 잡음이 많음/모델이 과적합. C 키우거나 γ 조정. 2) 노드 분할에 최소 20개 샘플 필요 — 트리 깊이 제한. 3) 특성 수의 √만큼만 후보로 — 트리 다양성 확보. 4) lr ↓이면 n_estimators ↑로 보정. 5) 데이터가 매우 작거나, 거리 기반 구조가 강함.</p>
+
+  <h2>🌐 응용 사례 — 산업에서 이 모델들이 쓰이는 모습</h2>
+  <ul>
+    <li><strong>SVM</strong> — 텍스트 분류(스팸·감성 분석)에 한때 표준이었음. 지금도 작은 데이터셋에서 신경망보다 안정.</li>
+    <li><strong>결정트리</strong> — 의사결정 시스템·전문가 시스템. 의료 진단 알고리즘이 시각화하기 좋은 형태.</li>
+    <li><strong>랜덤포레스트</strong> — 신용카드 사기 탐지, 의료 진단, 마케팅 반응 예측의 전통적 베이스라인.</li>
+    <li><strong>XGBoost/LightGBM</strong> — Kaggle 표 데이터 우승, 광고 CTR 예측, 클릭률 예측, 추천 시스템의 1차 점수 함수.</li>
+    <li><strong>KNN</strong> — 추천 시스템(아이템 유사도), 이상치 탐지, 작은 의료 데이터.</li>
+  </ul>
+  <p>다음 주는 <em>라벨 없이</em> 데이터의 패턴을 찾습니다 — 군집화와 차원 축소.</p>
+
+  <h2>🔁 한 페이지 흐름 — 분류 모델 선택의 의사결정도</h2>
+  <ol>
+    <li>데이터 탐색 → 클래스 분포, 특성 분포, 결측치 확인.</li>
+    <li>전처리 → 표준화(거리/선형 모델), One-Hot(범주형), 결측 대체.</li>
+    <li>분할 → train_test_split(stratify=y).</li>
+    <li>베이스라인 → 로지스틱 회귀로 시작.</li>
+    <li>강력한 베이스라인 → 랜덤포레스트 또는 LightGBM.</li>
+    <li>하이퍼파라미터 튜닝 → GridSearch + 5-fold CV.</li>
+    <li>평가 → Confusion matrix, F1, ROC AUC, 클래스별 지표.</li>
+    <li>해석 → Feature importance, SHAP, partial dependence plot.</li>
+    <li>배포 → joblib.dump로 저장, FastAPI 등으로 서빙.</li>
+  </ol>
+  <p>이 9단계가 표 형태 분류 문제의 전형적 흐름이고, 신경망까지 가도 처음 8단계는 거의 같습니다. <strong>"기본을 따르면 거의 항상 좋다"</strong>는 게 실무에서 가장 중요한 교훈입니다.</p>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:18px">— 정말 끝. 다음 주에 봐요. 🌊</p>
+
+  <h2>📌 보너스 — 다중 클래스 SVM</h2>
+  <p>SVM은 본래 이진 분류 알고리즘입니다. 다중 클래스에는 두 가지 방식으로 확장합니다.</p>
+  <ul>
+    <li><strong>One-vs-Rest (OvR)</strong> — K개 클래스에 K개의 이진 SVM(클래스 i vs 나머지)을 학습, 가장 큰 점수의 클래스 선택. 빠르고 표준.</li>
+    <li><strong>One-vs-One (OvO)</strong> — K(K-1)/2개의 이진 SVM(모든 클래스 쌍)을 학습, 다수결. K가 크면 분류기 수가 폭발하지만, 각 분류기가 작은 부분 데이터로 학습되어 학습 자체는 빠름.</li>
+  </ul>
+  <p>scikit-learn은 <code>SVC</code>가 OvO를 기본, <code>LinearSVC</code>가 OvR을 기본으로 사용합니다. 보통 결과는 비슷하니 큰 데이터에서는 빠른 OvR.</p>
+
+  <p style="font-size:12px;color:var(--muted);margin-top:18px">참고: 이번 주 데모 중 RBF 커널 시각화는 γ를 0.01~10 범위에서 직접 굴려보면 마진의 형태가 어떻게 바뀌는지 즉각 보입니다.</p>
+  <p style="font-size:12px;color:var(--muted)">읽어주셔서 감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
 
   <nav class="prevnext">
     <a href="04-regression-2.html"><small>← 이전</small>W4. 회귀 2</a>

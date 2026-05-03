@@ -534,6 +534,665 @@
     <li><strong>휘트스톤 브릿지</strong> — 1k × 4 평형 브릿지를 만들고 한 저항만 1.05k로 바꾼 뒤 $V_o$를 측정. 약 300mV 근처가 나오는지 확인.</li>
   </ul>
 
+  <h2>10. 중첩의 원리 — 전원이 여러 개일 때</h2>
+  <p class="lead">두 명의 손님이 같은 가게에서 동시에 쇼핑을 했다고 합시다. 각자 따로 사고 영수증을 더하면 전체 매출이 됩니다. 회로도 같습니다 — 전원이 여러 개여도 각 전원이 단독으로 만든 효과를 따로 계산해 합치면 전체 답이 나옵니다.</p>
+
+  <h3>10.1 친절한 비유 — "각자 쇼핑한 영수증의 합"</h3>
+  <div class="note">
+    <strong>비유</strong> — 슈퍼마켓에 손님 A(전원 1)와 B(전원 2)가 동시에 들어가 결제했다고 상상하세요.
+    <ul>
+      <li>A만 따로 결제한 영수증 = 전원 1만 살린 회로의 응답</li>
+      <li>B만 따로 결제한 영수증 = 전원 2만 살린 회로의 응답</li>
+      <li>가게 총 매출 = 두 영수증의 합 = 전체 회로의 응답</li>
+    </ul>
+    이 비유의 핵심은 <strong>각 손님의 결제는 다른 손님과 무관</strong>하다는 점입니다. 회로에서도 마찬가지로 한 전원의 효과는 다른 전원의 존재와 독립적입니다 — 단, <em>선형</em>(저항·이상적 전원·이상적 종속 전원)인 경우에 한해서요.
+  </div>
+
+  <h3>10.2 중첩의 원리 — 정확한 정의</h3>
+  <p>선형 회로에서, 어떤 가지의 전압이나 전류는 <strong>각 독립 전원이 단독으로 작용했을 때의 응답들의 대수적 합</strong>과 같습니다.</p>
+  $$ V_{\text{total}} = V_{(1)} + V_{(2)} + \cdots + V_{(n)} $$
+  $$ I_{\text{total}} = I_{(1)} + I_{(2)} + \cdots + I_{(n)} $$
+  <p>여기서 $V_{(k)}$는 "전원 $k$만 살아 있고 나머지 전원은 모두 끈" 상태에서의 응답입니다.</p>
+
+  <h3>10.3 전원을 "끄는" 정확한 방법</h3>
+  <table>
+    <thead><tr><th>전원 종류</th><th>끄는 방법</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>독립 전압원 $V_s$</td><td><strong>단락(short)</strong> — 0Ω 전선으로 대체</td><td>0V 전압원 = 양단 전위차 0 = 단락</td></tr>
+      <tr><td>독립 전류원 $I_s$</td><td><strong>개방(open)</strong> — 가지 자체를 끊음</td><td>0A 전류원 = 흐르지 않음 = 개방</td></tr>
+      <tr><td>종속 전원</td><td><strong>그대로 두기</strong> — 끄지 않음</td><td>제어 변수에 따라 자동으로 동작</td></tr>
+    </tbody>
+  </table>
+  <div class="warn">
+    <strong>흔한 실수</strong> — 학생들이 자주 헷갈리는 부분: 전압원을 "제거"한다고 가지를 끊어버리거나, 전류원을 "제거"한다고 단락하는 경우가 많습니다. 정확히는 <em>전압원→단락</em>, <em>전류원→개방</em>입니다. "값이 0인 전원으로 만든다"는 의미를 떠올리면 헷갈리지 않습니다.
+  </div>
+
+  <h3>10.4 단계별 절차 (5단계)</h3>
+  <ol>
+    <li>회로의 모든 독립 전원 목록 작성 ($V_{s1}, V_{s2}, I_{s1}, \ldots$).</li>
+    <li>전원 1만 살리고 나머지를 모두 끔(전압원→단락, 전류원→개방).</li>
+    <li>이 단순화된 회로에서 관심 변수 $V$ 또는 $I$를 계산 → $V_{(1)}$ 또는 $I_{(1)}$.</li>
+    <li>전원 2, 3, …에 대해 같은 작업 반복.</li>
+    <li>모든 응답을 부호까지 고려해 합산: $V = V_{(1)} + V_{(2)} + \cdots$.</li>
+  </ol>
+
+  <h3>10.5 예제 1 — 두 전압원 (12V, 6V)과 세 저항</h3>
+  <div class="ex">
+    <strong>문제</strong> — 12V 전원이 $R_1 = 4\,\Omega$를 거쳐 노드 A에, 6V 전원이 $R_2 = 2\,\Omega$를 거쳐 노드 A에 연결. A에서 $R_3 = 3\,\Omega$이 GND로. 노드 A의 전위 $V_A$를 중첩으로 구하시오.
+  </div>
+
+  <p><strong>1단계 — 12V만 살림 (6V는 단락)</strong></p>
+  <p>6V 전원이 단락되면 $R_2$의 한쪽 끝이 직접 GND가 됩니다. 따라서 A에서 보는 등가 저항은 $R_2 \| R_3 = (2 \times 3)/(2+3) = 1.2\,\Omega$. 12V 전원에서 본 $R_1$ 직렬 + $R_2\|R_3$ 병렬:</p>
+  $$ V_A^{(1)} = 12 \cdot \frac{R_2 \| R_3}{R_1 + R_2 \| R_3} = 12 \cdot \frac{1.2}{4 + 1.2} = 12 \cdot \frac{1.2}{5.2} \approx 2.769\,\text{V} $$
+
+  <p><strong>2단계 — 6V만 살림 (12V는 단락)</strong></p>
+  <p>이번엔 $R_1$의 한쪽 끝이 GND. A에서 본 저항은 $R_1 \| R_3 = (4 \times 3)/(4+3) = 12/7 \approx 1.714\,\Omega$.</p>
+  $$ V_A^{(2)} = 6 \cdot \frac{R_1 \| R_3}{R_2 + R_1 \| R_3} = 6 \cdot \frac{12/7}{2 + 12/7} = 6 \cdot \frac{12/7}{26/7} = 6 \cdot \frac{12}{26} \approx 2.769\,\text{V} $$
+
+  <p><strong>3단계 — 합산</strong></p>
+  $$ V_A = V_A^{(1)} + V_A^{(2)} \approx 2.769 + 2.769 = 5.538\,\text{V} $$
+
+  <p><strong>검산 (노드 방정식 직접 풀이)</strong>: KCL at A — $\dfrac{12 - V_A}{4} + \dfrac{6 - V_A}{2} = \dfrac{V_A}{3}$. 양변에 12 곱하면 $3(12-V_A) + 6(6-V_A) = 4 V_A \Rightarrow 36 - 3V_A + 36 - 6V_A = 4V_A \Rightarrow 72 = 13 V_A \Rightarrow V_A \approx 5.538\,\text{V}$. 일치!</p>
+
+  <h3>10.6 예제 2 — 전압원 + 전류원 혼합</h3>
+  <div class="ex">
+    <strong>문제</strong> — 10V 전압원과 2A 전류원이 같은 회로에 있을 때 $R = 5\,\Omega$ 부하를 흐르는 전류 $I_R$을 구하시오. 회로: 10V → $R_1 = 5\Omega$ → A, A에서 $R = 5\,\Omega$ 부하로 GND, 그리고 2A 전류원이 A로 주입.
+  </div>
+  <p><strong>전압원만 (전류원 개방)</strong>: $R_1$과 $R$이 직렬, $I_R^{(1)} = 10/(5+5) = 1\,\text{A}$.</p>
+  <p><strong>전류원만 (전압원 단락)</strong>: $R_1$이 GND로 직접 연결됨. 2A가 $R_1$과 $R$ 병렬로 분배. 전류 분배 (저항이 작은 쪽이 더 많이):</p>
+  $$ I_R^{(2)} = 2 \cdot \frac{R_1}{R_1 + R} = 2 \cdot \frac{5}{10} = 1\,\text{A} $$
+  <p><strong>합산</strong>: $I_R = 1 + 1 = 2\,\text{A}$.</p>
+
+  <h3>10.7 중첩의 핵심 제약 — 비선형 양 (전력)에는 안 됨</h3>
+  <div class="warn">
+    <strong>주의</strong> — 중첩은 <em>전압·전류처럼 선형 양</em>에 대해서만 성립합니다. 전력 $P = VI = I^2 R = V^2/R$은 <strong>제곱항</strong>이라 비선형이므로 중첩이 직접 성립하지 않습니다.
+    <ul>
+      <li>틀림: $P_{\text{total}} = P_{(1)} + P_{(2)}$
+      <li>맞음: 먼저 $V$ 또는 $I$를 중첩으로 구한 뒤, $P = V^2/R$ 계산.
+    </ul>
+    예: $V_{(1)} = 3$V, $V_{(2)} = 2$V → 전체 $V = 5$V. 5Ω에서 $P = 25/5 = 5$W. 그러나 따로 더하면 $9/5 + 4/5 = 2.6$W (틀림).
+  </div>
+
+  <h2>11. 중첩 vs 테브난 vs 노턴 — 어느 도구를 언제?</h2>
+  <p>지금까지 배운 세 가지 분석 도구는 같은 답을 내지만, 상황에 따라 한 쪽이 압도적으로 빠릅니다.</p>
+
+  <h3>11.1 비교표 (한눈에)</h3>
+  <table>
+    <thead>
+      <tr><th>도구</th><th>핵심 아이디어</th><th>강점</th><th>약점</th><th>추천 상황</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>중첩의 원리</strong></td>
+        <td>전원을 하나씩 살리며 풀고 더함</td>
+        <td>독립 전원이 2~3개로 적을 때 직관적</td>
+        <td>전원 수가 늘면 작업량 폭증</td>
+        <td>전원 2~3개, 부하 고정</td>
+      </tr>
+      <tr>
+        <td><strong>테브난 등가</strong></td>
+        <td>회로를 $V_{Th} + R_{Th}$ 직렬로</td>
+        <td>부하 변경에 강함, 전압원 분석에 자연스러움</td>
+        <td>$V_{Th}$, $R_{Th}$ 한 번 구하는 데 시간</td>
+        <td>같은 회로, 부하만 여러 번 바뀜</td>
+      </tr>
+      <tr>
+        <td><strong>노턴 등가</strong></td>
+        <td>회로를 $I_N + R_N$ 병렬로</td>
+        <td>전류원 분석에 자연스러움, 단락 전류 측정에 직관적</td>
+        <td>병렬 형태가 KVL과 잘 안 맞음</td>
+        <td>전류원 위주 회로, 단락 전류 분석</td>
+      </tr>
+      <tr>
+        <td><strong>KCL/KVL 직접</strong></td>
+        <td>모든 미지수를 한 번에 행렬식</td>
+        <td>가장 일반적, 컴퓨터로 풀기 쉬움</td>
+        <td>손계산 시 오류 많음</td>
+        <td>SPICE 시뮬레이션, 행렬 계산기</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>11.2 의사 결정 흐름</h3>
+  <ol>
+    <li><strong>"같은 회로에 부하만 바꿔가며 풀어야 하나?"</strong> → 테브난·노턴 등가가 압도적 우위.</li>
+    <li><strong>"전원이 여러 개고 모두 다른 종류(전압+전류)인가?"</strong> → 중첩의 원리가 깔끔.</li>
+    <li><strong>"전원이 1~2개고 부하도 고정?"</strong> → KCL/KVL 직접 풀이로 충분.</li>
+    <li><strong>"두 단자에서 보이는 모습만 알면 됨?"</strong> → 등가회로 (테브난 또는 노턴).</li>
+  </ol>
+
+  <h3>11.3 같은 회로, 세 가지 접근 — 비교</h3>
+  <div class="ex">
+    <strong>예제</strong> — 12V 전원 + 6Ω 직렬 + 3Ω 병렬 + 부하 $R_L = 4\,\Omega$. $V_L$을 구하시오.
+  </div>
+
+  <p><strong>방법 1 — KCL/KVL 직접</strong> (1번에 처리):</p>
+  $$ V_L = 12 \cdot \frac{(3 \| 4)}{6 + (3 \| 4)} = 12 \cdot \frac{12/7}{6 + 12/7} = 12 \cdot \frac{12}{54} \approx 2.667\,\text{V} $$
+
+  <p><strong>방법 2 — 테브난</strong> ($V_{Th} = 12 \cdot 3/9 = 4$V, $R_{Th} = 6\|3 = 2$Ω):</p>
+  $$ V_L = 4 \cdot \frac{4}{2+4} = \frac{16}{6} \approx 2.667\,\text{V} $$
+
+  <p><strong>방법 3 — 노턴</strong> ($I_N = 12/6 = 2$A, $R_N = 2$Ω):</p>
+  $$ V_L = I_N \cdot (R_N \| R_L) = 2 \cdot \frac{2 \cdot 4}{6} \approx 2.667\,\text{V} $$
+
+  <p>세 방법 모두 같은 결과. 단발 분석은 KCL이 빠르고, $R_L$이 자주 바뀌면 테브난이 유리합니다.</p>
+
+  <h2>12. 휘트스톤 브릿지의 다양한 응용</h2>
+  <p>휘트스톤 브릿지는 19세기에 발명되어 21세기까지 거의 모든 정밀 측정에 쓰이고 있는 "회로계의 고전 명작"입니다. 작은 저항 변화를 안정적으로 전압으로 바꾸는 능력 덕분이에요.</p>
+
+  <h3>12.1 스트레인 게이지 — 변형을 측정</h3>
+  <p>스트레인 게이지는 얇은 금속 박막을 지그재그 형태로 만든 것입니다. 외력으로 늘어나면 길이가 길어지고 단면적이 줄어 저항이 증가합니다.</p>
+  $$ \frac{\Delta R}{R} = G \cdot \varepsilon $$
+  <p>여기서 $G$는 게이지 팩터(보통 2 정도), $\varepsilon$은 변형률입니다. 변형률 0.001(0.1%)일 때 $\Delta R/R \approx 0.002 = 0.2\%$.</p>
+
+  <div class="ex">
+    <strong>예제</strong> — 1kΩ 스트레인 게이지에 변형률 $\varepsilon = 1000\,\mu\varepsilon$($= 10^{-3}$)이 가해졌을 때, 5V 휘트스톤 브릿지(1-arm active)의 출력은?
+  </div>
+  $$ \Delta R = G \cdot \varepsilon \cdot R = 2 \cdot 10^{-3} \cdot 1000 = 2\,\Omega $$
+  $$ V_o \approx \frac{V_s}{4} \cdot \frac{\Delta R}{R} = \frac{5}{4} \cdot \frac{2}{1000} = 2.5\,\text{mV} $$
+  <p>2.5mV는 그대로 ADC로 읽기엔 너무 작아 일반적으로 1000배 정도 증폭(계측 증폭기)해 2.5V 신호로 만듭니다.</p>
+
+  <h3>12.2 RTD (백금 측온저항체) — 온도를 측정</h3>
+  <p>백금(Pt) 저항은 온도에 매우 안정적으로 비례합니다. Pt100은 0°C에서 100Ω, Pt1000은 0°C에서 1000Ω.</p>
+  $$ R(T) \approx R_0 \cdot (1 + \alpha T), \quad \alpha \approx 3.85 \times 10^{-3} / ^\circ\text{C} $$
+
+  <div class="ex">
+    <strong>예제</strong> — Pt100을 25°C에서 측정. $R(25) = 100 \cdot (1 + 3.85 \times 10^{-3} \cdot 25) = 100 \cdot 1.09625 = 109.625\,\Omega$. 무온도 시(0°C) 100Ω과 매칭한 휘트스톤 브릿지($V_s = 5$V)의 출력?
+  </div>
+  $$ \Delta R = 9.625\,\Omega, \quad V_o \approx \frac{5}{4} \cdot \frac{9.625}{100} = 0.120\,\text{V} = 120\,\text{mV} $$
+
+  <h3>12.3 압력 센서 — 다이어프램과 게이지</h3>
+  <p>실리콘 또는 금속 다이어프램에 압력이 가해지면 변형됩니다. 다이어프램에 4개 스트레인 게이지(2개 인장, 2개 압축)를 배치한 4-arm active 휘트스톤 브릿지 = 정밀 압력 센서.</p>
+
+  <h3>12.4 반-브릿지(Half-bridge) vs 풀-브릿지(Full-bridge) 비교</h3>
+  <table>
+    <thead>
+      <tr><th>구성</th><th>활성 게이지 수</th><th>출력 감도</th><th>온도 보상</th><th>용도</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1/4 브릿지</td><td>1</td><td>$V_s \Delta R / 4R$</td><td>없음</td><td>간단한 변형 측정</td></tr>
+      <tr><td>1/2 브릿지</td><td>2 (인장+압축)</td><td>$V_s \Delta R / 2R$</td><td>부분</td><td>휨 변형, 토크</td></tr>
+      <tr><td>풀 브릿지</td><td>4 (2인장+2압축)</td><td>$V_s \Delta R / R$</td><td>완전 보상</td><td>로드셀, 정밀 압력</td></tr>
+    </tbody>
+  </table>
+  <p>풀 브릿지는 1/4 브릿지보다 출력이 4배 크고, 4개 게이지가 같은 환경에 있으므로 온도 변화에 의한 저항 변화가 상쇄되어 측정 안정성이 매우 높습니다.</p>
+
+  <h3>12.5 SVG — 풀-브릿지 로드셀의 게이지 배치</h3>
+  <figure>
+    <svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+      <rect x="50" y="100" width="500" height="60" fill="#fff7e6" stroke="#d46b08" stroke-width="2"/>
+      <text x="300" y="135" text-anchor="middle" font-size="14" fill="#d46b08">금속 빔 (외력 ↓ 받음)</text>
+      <path d="M 300 90 L 295 80 L 305 80 Z" fill="#c1121f"/>
+      <text x="320" y="85" font-size="12" fill="#c1121f">하중 F</text>
+      <rect x="120" y="95" width="40" height="10" fill="#1b5e20" opacity="0.7"/>
+      <text x="140" y="92" text-anchor="middle" font-size="11" fill="#1b5e20">G1 (인장+ΔR)</text>
+      <rect x="440" y="95" width="40" height="10" fill="#1b5e20" opacity="0.7"/>
+      <text x="460" y="92" text-anchor="middle" font-size="11" fill="#1b5e20">G3 (인장+ΔR)</text>
+      <rect x="120" y="155" width="40" height="10" fill="#0742b8" opacity="0.7"/>
+      <text x="140" y="178" text-anchor="middle" font-size="11" fill="#0742b8">G2 (압축−ΔR)</text>
+      <rect x="440" y="155" width="40" height="10" fill="#0742b8" opacity="0.7"/>
+      <text x="460" y="178" text-anchor="middle" font-size="11" fill="#0742b8">G4 (압축−ΔR)</text>
+      <text x="50" y="220" font-size="12" fill="#333">휘트스톤 연결: G1·G3은 R+ΔR, G2·G4는 R−ΔR로 배치</text>
+      <text x="50" y="240" font-size="12" fill="#333">출력 = V_s · ΔR / R (1-arm 대비 4배 감도, 온도 보상)</text>
+      <text x="50" y="260" font-size="11" fill="#666">하중↓ → 윗면 인장, 아랫면 압축 → 4개 모두 같은 부호로 출력에 기여</text>
+    </svg>
+    <figcaption>그림 3. 풀-브릿지 로드셀의 게이지 배치. 4개 게이지가 휘트스톤 브릿지 4개 가지에 배치되어 4배 감도와 온도 보상을 동시에 얻습니다.</figcaption>
+  </figure>
+
+  <h2>13. 자가 점검 문제 (정답 포함)</h2>
+  <p>다음 문제를 풀면서 이해도를 점검하세요. 각 문제는 답을 보기 전에 직접 시도하는 것을 권장합니다.</p>
+
+  <h3>문제 1 — 중첩의 원리 기본</h3>
+  <div class="ex">
+    <p>20V 전원과 4A 전류원이 동일한 회로에 있고 관심 저항 $R = 4\,\Omega$. 전압원만 살렸을 때 $R$ 양단 전압이 8V, 전류원만 살렸을 때가 6V였다. 두 전원이 모두 살아 있을 때 $R$ 양단 전압은?</p>
+  </div>
+  <details>
+    <summary>정답</summary>
+    <div class="sol"><p>중첩의 원리: $V_R = 8 + 6 = 14\,\text{V}$. (선형 양이므로 단순 합)</p></div>
+  </details>
+
+  <h3>문제 2 — 테브난 등가 계산</h3>
+  <div class="ex">
+    <p>30V 전원이 $R_1 = 6\,\Omega$를 거쳐 노드 A로, A에서 $R_2 = 12\,\Omega$로 GND. A-GND의 테브난 등가 ($V_{Th}$, $R_{Th}$)를 구하시오.</p>
+  </div>
+  <details>
+    <summary>정답</summary>
+    <div class="sol">
+      <p>$V_{Th} = 30 \cdot 12/(6+12) = 30 \cdot 2/3 = 20\,\text{V}$</p>
+      <p>$R_{Th} = 6 \| 12 = (6 \cdot 12)/18 = 4\,\Omega$</p>
+    </div>
+  </details>
+
+  <h3>문제 3 — 노턴 변환</h3>
+  <div class="ex">
+    <p>위 문제 2의 테브난 등가를 노턴 등가로 변환하시오.</p>
+  </div>
+  <details>
+    <summary>정답</summary>
+    <div class="sol">
+      <p>$I_N = V_{Th}/R_{Th} = 20/4 = 5\,\text{A}$, $R_N = R_{Th} = 4\,\Omega$.</p>
+    </div>
+  </details>
+
+  <h3>문제 4 — 최대 전력 전달</h3>
+  <div class="ex">
+    <p>$V_{Th} = 24\,\text{V}$, $R_{Th} = 8\,\Omega$일 때 최대 전력을 전달받는 부하 $R_L$과 그때 전력 $P_{\max}$는?</p>
+  </div>
+  <details>
+    <summary>정답</summary>
+    <div class="sol">
+      <p>$R_L = R_{Th} = 8\,\Omega$, $P_{\max} = V_{Th}^2 / (4 R_{Th}) = 576/32 = 18\,\text{W}$.</p>
+    </div>
+  </details>
+
+  <h3>문제 5 — 휘트스톤 평형</h3>
+  <div class="ex">
+    <p>$R_1 = 100\,\Omega$, $R_2 = 200\,\Omega$, $R_3 = 150\,\Omega$일 때 평형이 되는 $R_4$는?</p>
+  </div>
+  <details>
+    <summary>정답</summary>
+    <div class="sol">
+      <p>평형 조건 $R_1 R_4 = R_2 R_3 \Rightarrow R_4 = R_2 R_3 / R_1 = 200 \cdot 150 / 100 = 300\,\Omega$.</p>
+    </div>
+  </details>
+
+  <h3>문제 6 — 휘트스톤 불평형 출력</h3>
+  <div class="ex">
+    <p>4개 모두 1kΩ인 휘트스톤 브릿지에 $V_s = 10\,\text{V}$ 인가. 한 가지가 $\Delta R = 5\,\Omega$ 변했을 때 $V_o$는?</p>
+  </div>
+  <details>
+    <summary>정답</summary>
+    <div class="sol">
+      <p>$V_o \approx (V_s/4) \cdot (\Delta R / R) = (10/4) \cdot (5/1000) = 12.5\,\text{mV}$.</p>
+    </div>
+  </details>
+
+  <h3>문제 7 — 중첩 + 전력 함정</h3>
+  <div class="ex">
+    <p>5Ω 저항에 전원 1만 살리면 $V_1 = 4$V, 전원 2만 살리면 $V_2 = 3$V. 두 전원이 모두 살아 있을 때 5Ω의 소비전력은?</p>
+  </div>
+  <details>
+    <summary>정답</summary>
+    <div class="sol">
+      <p>먼저 중첩으로 전압 합산: $V = 4 + 3 = 7\,\text{V}$. 그 다음 전력 계산: $P = V^2/R = 49/5 = 9.8\,\text{W}$.</p>
+      <p>(주의: $P_1 + P_2 = 16/5 + 9/5 = 5\,\text{W}$로 더하면 틀림 — 전력은 비선형!)</p>
+    </div>
+  </details>
+
+  <h3>문제 8 — 테브난 등가의 부하 변경</h3>
+  <div class="ex">
+    <p>$V_{Th} = 12\,\text{V}$, $R_{Th} = 3\,\Omega$인 회로에 $R_L$을 1Ω, 3Ω, 9Ω으로 바꿀 때 $V_L$, $I_L$, $P_L$의 변화를 표로 작성하시오.</p>
+  </div>
+  <details>
+    <summary>정답</summary>
+    <div class="sol">
+      <table>
+        <thead><tr><th>$R_L$ (Ω)</th><th>$V_L$ (V)</th><th>$I_L$ (A)</th><th>$P_L$ (W)</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>3</td><td>3</td><td>9</td></tr>
+          <tr><td>3</td><td>6</td><td>2</td><td>12 (최대)</td></tr>
+          <tr><td>9</td><td>9</td><td>1</td><td>9</td></tr>
+        </tbody>
+      </table>
+      <p>$R_L = R_{Th} = 3\,\Omega$일 때 $P_L$이 최대 12W. 이는 $V_{Th}^2/(4 R_{Th}) = 144/12 = 12$로 검증됨.</p>
+    </div>
+  </details>
+
+  <h2>14. 흔한 오답 패턴 분석</h2>
+  <p>학생들이 시험에서 자주 틀리는 부분을 미리 알면 큰 도움이 됩니다. 아래 5가지를 특히 조심하세요.</p>
+
+  <h3>14.1 오답 #1 — 전원 끄는 방법 헷갈림</h3>
+  <div class="warn">
+    <strong>잘못된 풀이</strong>: 전류원을 단락시키거나 전압원을 개방. <br>
+    <strong>올바른 풀이</strong>: <em>전압원→단락(0V), 전류원→개방(0A)</em>. "값을 0으로 만든다"는 개념을 떠올리세요.
+  </div>
+
+  <h3>14.2 오답 #2 — 종속 전원도 끔</h3>
+  <div class="warn">
+    <strong>잘못된 풀이</strong>: 중첩에서 종속 전원도 0으로 만듦. <br>
+    <strong>올바른 풀이</strong>: 종속 전원은 제어 변수에 의해 결정되므로 그대로 둡니다. 독립 전원만 차례로 조작.
+  </div>
+
+  <h3>14.3 오답 #3 — 전력에 중첩 적용</h3>
+  <div class="warn">
+    <strong>잘못된 풀이</strong>: $P = P_{(1)} + P_{(2)}$로 전력을 직접 합산. <br>
+    <strong>올바른 풀이</strong>: 전력은 $V$나 $I$의 제곱이라 비선형. 먼저 $V$ 또는 $I$를 중첩으로 구한 뒤, $P = V^2/R$ 계산.
+  </div>
+
+  <h3>14.4 오답 #4 — $R_{Th}$ 구할 때 전원 끄기 누락</h3>
+  <div class="warn">
+    <strong>잘못된 풀이</strong>: 회로 그대로 두고 두 단자에서 본 저항을 계산. <br>
+    <strong>올바른 풀이</strong>: 모든 독립 전원을 끄고(전압원→단락, 전류원→개방) 두 단자에서 본 합성 저항을 구합니다.
+  </div>
+
+  <h3>14.5 오답 #5 — 휘트스톤 평형 조건 곱·합 혼동</h3>
+  <div class="warn">
+    <strong>잘못된 풀이</strong>: $R_1 + R_4 = R_2 + R_3$ (합)으로 평형 조건 사용. <br>
+    <strong>올바른 풀이</strong>: $R_1 R_4 = R_2 R_3$ (곱). 대각선으로 마주 보는 저항의 <em>곱</em>이 같아야 평형. 비율로 다시 쓰면 $R_1/R_2 = R_3/R_4$.
+  </div>
+
+  <h2>15. 일상 응용 — 등가회로가 보이는 곳</h2>
+  <p>등가회로 개념은 전공자가 회로를 보는 방식을 영구히 바꿉니다. 일상의 여러 부품도 사실은 모두 "테브난 등가"로 모델링됩니다.</p>
+
+  <h3>15.1 자동차 12V 배터리</h3>
+  <p>"12V 배터리"의 12V는 <em>무부하 전압(OCV, open-circuit voltage)</em> = $V_{Th}$입니다. 실제 배터리 안에는 작은 내부저항 $R_{Th} \approx 0.01 \sim 0.05\,\Omega$이 있어요.</p>
+  <ul>
+    <li><strong>크랭킹(시동)</strong>: 스타터 모터가 200~400A를 잠깐 끌어당김. 내부 0.05Ω으로도 $V_{drop} = 200 \cdot 0.05 = 10\,\text{V}$ 정도가 내부 저항에서 떨어져 단자 전압이 일시적으로 2V까지 처박힘. 라디오·시계가 리셋되는 이유.</li>
+    <li><strong>일반 사용</strong>: 50A 이하라 단자 전압이 약 11.7~12.5V로 거의 일정.</li>
+    <li><strong>배터리 노화</strong>: $R_{Th}$ 증가가 핵심 신호. 같은 부하에 단자 전압이 더 떨어지면 교체 시기.</li>
+  </ul>
+
+  <h3>15.2 노트북 어댑터 (충전기)</h3>
+  <p>"19V/3.42A 65W" 어댑터는 사실 19V 테브난 전압원에 매우 작은 $R_{Th}$를 가진 모델입니다. 부하가 0.1A이든 3A이든 19V를 거의 일정하게 유지하는 것이 핵심 사양.</p>
+  <ul>
+    <li>$R_{Th}$가 너무 크면 전류 끌 때 전압이 처져 노트북이 충전 모드 진입 못 함.</li>
+    <li>최대 전력 65W는 $V \cdot I = 19 \cdot 3.42$. 그 이상에선 보호 회로가 차단.</li>
+  </ul>
+
+  <h3>15.3 휴대폰 배터리</h3>
+  <p>리튬이온 셀 한 개의 OCV ≈ 4.2V (만충), 3.0V (방전 종료). 내부저항은 신품이 30~50mΩ, 노화 시 100mΩ 이상.</p>
+  <ul>
+    <li>고속 충전(예: 3A) 시 $V_{drop} = 3 \cdot 0.05 = 0.15\,\text{V}$만 내부저항에 떨어짐.</li>
+    <li>BMS(Battery Management System)는 이 $R_{Th}$를 실시간 추적해 SOH(State of Health) 표시.</li>
+  </ul>
+
+  <h3>15.4 USB 5V 어댑터의 한계</h3>
+  <p>저렴한 5V/2A USB 어댑터는 $R_{Th}$가 0.3Ω 이상으로 큽니다. 2A를 빨아당기면 단자 전압이 $5 - 2 \cdot 0.3 = 4.4\,\text{V}$로 처져, 빠른 충전이 안 되는 이유.</p>
+
+  <h3>15.5 태양광 패널</h3>
+  <p>태양광 패널은 <em>비선형</em>이라 단순 테브난 모델로는 부족하지만, 동작점 근방에선 등가 모델로 근사 가능. MPPT는 부하 임피던스를 실시간으로 조절해 패널의 "등가 내부저항"과 매칭(최대 전력 전달).</p>
+
+  <h2>16. 용어 사전 (W5)</h2>
+  <table>
+    <thead><tr><th>용어</th><th>정의</th><th>예/단위</th></tr></thead>
+    <tbody>
+      <tr><td>중첩의 원리</td><td>선형 회로에서 각 전원의 단독 응답의 합이 전체 응답</td><td>전압·전류만 적용 (전력 X)</td></tr>
+      <tr><td>테브난 등가</td><td>두 단자에서 본 회로 = $V_{Th}$ + $R_{Th}$ 직렬</td><td>(V, Ω) 쌍</td></tr>
+      <tr><td>노턴 등가</td><td>두 단자에서 본 회로 = $I_N$ + $R_N$ 병렬</td><td>(A, Ω) 쌍</td></tr>
+      <tr><td>개방 전압 $V_{oc}$</td><td>부하 떼고 두 단자에서 잰 전압</td><td>= $V_{Th}$</td></tr>
+      <tr><td>단락 전류 $I_{sc}$</td><td>두 단자를 전선으로 연결하고 잰 전류</td><td>= $I_N$</td></tr>
+      <tr><td>$R_{Th}$, $R_N$</td><td>전원 끄고 두 단자에서 본 합성 저항</td><td>같은 값</td></tr>
+      <tr><td>최대 전력 전달</td><td>$R_L = R_{Th}$일 때 $P_L$ 최대</td><td>$P_{\max} = V_{Th}^2/(4 R_{Th})$</td></tr>
+      <tr><td>휘트스톤 브릿지</td><td>4 저항 다이아몬드 회로</td><td>평형: $R_1 R_4 = R_2 R_3$</td></tr>
+      <tr><td>스트레인 게이지</td><td>변형으로 저항이 변하는 박막 센서</td><td>$\Delta R / R = G \cdot \varepsilon$</td></tr>
+      <tr><td>게이지 팩터 $G$</td><td>변형률에 대한 저항 변화 비율</td><td>금속 박막 ≈ 2</td></tr>
+      <tr><td>로드셀</td><td>4-arm 풀 브릿지로 무게 측정</td><td>저울·산업 계량</td></tr>
+    </tbody>
+  </table>
+
+  <h2>17. 식 모음표</h2>
+  <table>
+    <thead><tr><th>구분</th><th>식</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>중첩 (전압)</td><td>$V = V_{(1)} + V_{(2)} + \cdots$</td><td>전압원만 살린 응답의 합</td></tr>
+      <tr><td>중첩 (전류)</td><td>$I = I_{(1)} + I_{(2)} + \cdots$</td><td>전류원만 살린 응답의 합</td></tr>
+      <tr><td>테브난</td><td>$V_{Th}$ = 개방 전압, $R_{Th}$ = 전원 끈 저항</td><td>직렬 등가</td></tr>
+      <tr><td>노턴</td><td>$I_N$ = 단락 전류, $R_N = R_{Th}$</td><td>병렬 등가</td></tr>
+      <tr><td>변환</td><td>$V_{Th} = I_N R_N$, $I_N = V_{Th}/R_{Th}$</td><td>옴의 법칙</td></tr>
+      <tr><td>$V_L$ (테브난)</td><td>$V_L = V_{Th} \cdot R_L / (R_{Th} + R_L)$</td><td>전압 분배</td></tr>
+      <tr><td>$I_L$ (노턴)</td><td>$I_L = I_N \cdot R_N / (R_N + R_L)$</td><td>전류 분배</td></tr>
+      <tr><td>최대 전력</td><td>$P_{\max} = V_{Th}^2 / (4 R_{Th})$</td><td>$R_L = R_{Th}$</td></tr>
+      <tr><td>휘트스톤 평형</td><td>$R_1 R_4 = R_2 R_3$</td><td>$V_o = 0$</td></tr>
+      <tr><td>휘트스톤 1-arm</td><td>$V_o \approx (V_s/4)(\Delta R/R)$</td><td>$\Delta R \ll R$</td></tr>
+      <tr><td>휘트스톤 풀</td><td>$V_o \approx V_s (\Delta R/R)$</td><td>4-arm active</td></tr>
+      <tr><td>스트레인</td><td>$\Delta R / R = G \varepsilon$</td><td>$G$: 게이지 팩터</td></tr>
+      <tr><td>RTD</td><td>$R(T) = R_0 (1 + \alpha T)$</td><td>Pt100: $R_0=100$Ω</td></tr>
+    </tbody>
+  </table>
+
+  <h2>18. 수치 감각 — 외워두면 좋은 값</h2>
+  <table>
+    <thead><tr><th>대상</th><th>전형적 값</th><th>주의점</th></tr></thead>
+    <tbody>
+      <tr><td>자동차 배터리 $R_{Th}$</td><td>0.01 ~ 0.05 Ω</td><td>노화 시 0.1 Ω 이상</td></tr>
+      <tr><td>리튬이온 셀 $R_{Th}$</td><td>30 ~ 50 mΩ (신품)</td><td>노화 시 100 mΩ+</td></tr>
+      <tr><td>USB 5V 어댑터 $R_{Th}$</td><td>0.1 ~ 0.5 Ω</td><td>고출력일수록 작음</td></tr>
+      <tr><td>스피커 임피던스</td><td>4, 8, 16 Ω</td><td>주파수 따라 변함</td></tr>
+      <tr><td>RF 표준 임피던스</td><td>50 Ω (산업), 75 Ω (영상)</td><td>안테나·케이블</td></tr>
+      <tr><td>스트레인 게이지 $R$</td><td>120, 350, 1000 Ω</td><td>표준 규격</td></tr>
+      <tr><td>스트레인 게이지 $\Delta R/R$</td><td>0.001 ~ 0.005 (0.1~0.5%)</td><td>실용 범위</td></tr>
+      <tr><td>Pt100 $\alpha$</td><td>$3.85 \times 10^{-3}$ /°C</td><td>0.385 Ω/°C @ 100Ω</td></tr>
+      <tr><td>휘트스톤 출력 $V_o$</td><td>1 ~ 10 mV</td><td>증폭 필요</td></tr>
+      <tr><td>계측 증폭기 이득</td><td>100 ~ 1000</td><td>1 ~ 10V로 변환</td></tr>
+    </tbody>
+  </table>
+
+  <h2>19. SVG — 테브난 변환의 4단계</h2>
+  <figure>
+    <svg viewBox="0 0 700 360" xmlns="http://www.w3.org/2000/svg">
+      <text x="350" y="25" text-anchor="middle" font-size="15" font-weight="bold" fill="#333">테브난 등가 변환의 4단계</text>
+      <g transform="translate(20,50)">
+        <rect width="160" height="120" fill="#fff7e6" stroke="#d46b08" stroke-width="2"/>
+        <text x="80" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#d46b08">1. 원본 회로</text>
+        <line x1="20" y1="40" x2="20" y2="100" stroke="#333" stroke-width="2"/>
+        <text x="5" y="60" font-size="10" fill="#0742b8">V_s</text>
+        <line x1="20" y1="40" x2="80" y2="40" stroke="#c62828" stroke-width="3"/>
+        <text x="40" y="35" font-size="10" fill="#c62828">R_1</text>
+        <line x1="80" y1="40" x2="80" y2="100" stroke="#c62828" stroke-width="3"/>
+        <text x="85" y="70" font-size="10" fill="#c62828">R_2</text>
+        <line x1="80" y1="40" x2="140" y2="40" stroke="#333" stroke-width="2"/>
+        <line x1="140" y1="40" x2="140" y2="100" stroke="#1b5e20" stroke-width="3"/>
+        <text x="145" y="70" font-size="10" fill="#1b5e20">R_L</text>
+        <line x1="20" y1="100" x2="140" y2="100" stroke="#333" stroke-width="2"/>
+      </g>
+      <text x="200" y="115" font-size="20" fill="#666">→</text>
+      <g transform="translate(220,50)">
+        <rect width="160" height="120" fill="#e8f5e9" stroke="#1b5e20" stroke-width="2"/>
+        <text x="80" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#1b5e20">2. 부하 제거 → V_Th</text>
+        <line x1="20" y1="40" x2="20" y2="100" stroke="#333" stroke-width="2"/>
+        <text x="5" y="60" font-size="10" fill="#0742b8">V_s</text>
+        <line x1="20" y1="40" x2="80" y2="40" stroke="#c62828" stroke-width="3"/>
+        <text x="40" y="35" font-size="10" fill="#c62828">R_1</text>
+        <line x1="80" y1="40" x2="80" y2="100" stroke="#c62828" stroke-width="3"/>
+        <text x="85" y="70" font-size="10" fill="#c62828">R_2</text>
+        <line x1="80" y1="40" x2="140" y2="40" stroke="#333" stroke-width="2"/>
+        <circle cx="140" cy="40" r="4" fill="#0742b8"/>
+        <circle cx="140" cy="100" r="4" fill="#0742b8"/>
+        <text x="148" y="44" font-size="10" fill="#0742b8">a</text>
+        <text x="148" y="104" font-size="10" fill="#0742b8">b</text>
+        <line x1="20" y1="100" x2="140" y2="100" stroke="#333" stroke-width="2"/>
+        <text x="80" y="115" text-anchor="middle" font-size="11" fill="#1b5e20">V_ab = V_Th</text>
+      </g>
+      <text x="400" y="115" font-size="20" fill="#666">→</text>
+      <g transform="translate(420,50)">
+        <rect width="160" height="120" fill="#e3f2fd" stroke="#0742b8" stroke-width="2"/>
+        <text x="80" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#0742b8">3. 전원 끄기 → R_Th</text>
+        <line x1="20" y1="40" x2="20" y2="100" stroke="#333" stroke-width="2" stroke-dasharray="3,2"/>
+        <text x="5" y="60" font-size="9" fill="#999">단락</text>
+        <line x1="20" y1="40" x2="80" y2="40" stroke="#c62828" stroke-width="3"/>
+        <text x="40" y="35" font-size="10" fill="#c62828">R_1</text>
+        <line x1="80" y1="40" x2="80" y2="100" stroke="#c62828" stroke-width="3"/>
+        <text x="85" y="70" font-size="10" fill="#c62828">R_2</text>
+        <line x1="80" y1="40" x2="140" y2="40" stroke="#333" stroke-width="2"/>
+        <circle cx="140" cy="40" r="4" fill="#0742b8"/>
+        <circle cx="140" cy="100" r="4" fill="#0742b8"/>
+        <line x1="20" y1="100" x2="140" y2="100" stroke="#333" stroke-width="2"/>
+        <text x="80" y="115" text-anchor="middle" font-size="11" fill="#0742b8">R_Th = R_1 ∥ R_2</text>
+      </g>
+      <g transform="translate(220,210)">
+        <rect width="260" height="120" fill="#fce4ec" stroke="#c62828" stroke-width="2"/>
+        <text x="130" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#c62828">4. 등가회로 + 부하 → V_L 빠르게</text>
+        <line x1="30" y1="40" x2="30" y2="100" stroke="#333" stroke-width="2"/>
+        <text x="5" y="60" font-size="10" fill="#0742b8">V_Th</text>
+        <line x1="30" y1="40" x2="100" y2="40" stroke="#c62828" stroke-width="3"/>
+        <text x="55" y="35" font-size="10" fill="#c62828">R_Th</text>
+        <line x1="100" y1="40" x2="200" y2="40" stroke="#333" stroke-width="2"/>
+        <line x1="200" y1="40" x2="200" y2="100" stroke="#1b5e20" stroke-width="3"/>
+        <text x="208" y="70" font-size="10" fill="#1b5e20">R_L</text>
+        <line x1="30" y1="100" x2="200" y2="100" stroke="#333" stroke-width="2"/>
+        <text x="130" y="115" text-anchor="middle" font-size="11" fill="#c62828">V_L = V_Th · R_L / (R_Th + R_L)</text>
+      </g>
+    </svg>
+    <figcaption>그림 4. 테브난 변환의 4단계 — 원본 회로에서 시작해 부하 제거(개방 전압 측정), 전원 끄기(저항 측정), 등가회로 완성으로 진행됩니다.</figcaption>
+  </figure>
+
+  <h2>20. Falstad 시뮬레이터 추가 데모</h2>
+  <p>Falstad <a href="https://www.falstad.com/circuit/" target="_blank" rel="noopener">Circuit Simulator</a>는 브라우저에서 회로를 그리고 즉시 시뮬레이션할 수 있는 무료 도구입니다. 다음 시나리오를 직접 만들어 검증해 보세요.</p>
+
+  <h3>20.1 데모 1 — 중첩의 원리 검증</h3>
+  <ol>
+    <li>10V 전압원, 5Ω, 노드 A, 5Ω 부하, 그리고 별도로 1A 전류원이 A에 주입되는 회로를 작성.</li>
+    <li>A의 전압을 측정 (예: $V_A = 7.5\,\text{V}$).</li>
+    <li>전류원을 0A로 설정 → A의 전압 = 5V.</li>
+    <li>전압원을 0V로 설정, 전류원을 1A로 → A의 전압 = 2.5V.</li>
+    <li>$5 + 2.5 = 7.5$V = 전체 응답. 중첩의 원리 검증!</li>
+  </ol>
+
+  <h3>20.2 데모 2 — 테브난과 노턴의 동등성</h3>
+  <ol>
+    <li>$V_{Th} = 12$V, $R_{Th} = 4$Ω 테브난 회로에 $R_L = 4$Ω 부하 → $V_L = 6$V, $I_L = 1.5$A.</li>
+    <li>같은 회로를 노턴으로 변환: $I_N = 12/4 = 3$A, $R_N = 4$Ω.</li>
+    <li>3A 전류원 + 4Ω 병렬 + 4Ω 부하 → $V_L = 6$V, $I_L = 1.5$A. 동일!</li>
+  </ol>
+
+  <h3>20.3 데모 3 — 최대 전력 전달의 봉우리</h3>
+  <ol>
+    <li>$V_{Th} = 10$V, $R_{Th} = 5$Ω 회로에 가변 저항 $R_L$.</li>
+    <li>$R_L$을 1Ω → 20Ω으로 1Ω 단위로 변경하며 부하 전력 $P_L$ 기록.</li>
+    <li>$R_L = 5$Ω에서 $P_{\max} = 100/(4 \cdot 5) = 5$W로 최대 봉우리 확인.</li>
+  </ol>
+
+  <h3>20.4 데모 4 — 휘트스톤 브릿지 시뮬레이션</h3>
+  <ol>
+    <li>4개 1kΩ 저항으로 다이아몬드 형태 브릿지 작성, 5V 전원 인가.</li>
+    <li>두 분압점 사이 전압 측정 → 0V (평형).</li>
+    <li>한 저항을 1.001kΩ로 변경(0.1% 변화) → 약 1.25mV 출력.</li>
+    <li>해석값 $(V_s/4)(\Delta R/R) = (5/4)(1/1000) = 1.25$mV와 일치.</li>
+  </ol>
+
+  <h2>21. FAQ — 자주 나오는 질문</h2>
+
+  <h3>Q1. 중첩의 원리는 항상 성립합니까?</h3>
+  <p><strong>A.</strong> <em>선형</em> 회로에서만 성립합니다. 저항·이상적 전원·이상적 종속 전원으로 구성된 회로는 선형이지만, 다이오드·트랜지스터·포화된 인덕터 등은 비선형이라 중첩이 안 됩니다.</p>
+
+  <h3>Q2. 테브난 등가는 회로 안쪽에서도 성립하나요?</h3>
+  <p><strong>A.</strong> 아니요. 테브난 등가는 <em>두 단자에서 본 외부 동작</em>만 같습니다. 등가 회로 안쪽의 전류·전압은 원본 회로와 다를 수 있어요. 예: 원본 회로에서 6Ω을 흐르는 전류를 알고 싶다면 등가 회로로는 못 구합니다.</p>
+
+  <h3>Q3. $R_{Th}$를 구할 때 종속 전원도 끄나요?</h3>
+  <p><strong>A.</strong> 끄지 않습니다. 종속 전원은 그대로 두고, 두 단자에 시험 전압 $V_{test}$을 인가해 흐르는 전류 $I_{test}$를 구한 뒤 $R_{Th} = V_{test}/I_{test}$로 계산합니다.</p>
+
+  <h3>Q4. 최대 전력 전달 시 효율이 50%인데, 왜 이게 좋은 건가요?</h3>
+  <p><strong>A.</strong> "최대 전력"과 "최대 효율"은 다른 목표입니다. 신호 전송(오디오·통신·안테나)에서는 부하에 도달하는 절대 전력이 중요해 50% 효율을 감수합니다. 반면 전력 송전망은 효율 우선이라 부하 저항 ≫ 송전선 저항으로 설계해 효율 99%대를 달성합니다.</p>
+
+  <h3>Q5. 휘트스톤 브릿지는 왜 4개 저항인가요? 3개나 5개로 안 되나요?</h3>
+  <p><strong>A.</strong> 4개가 두 개의 독립적 분압 회로를 만들어 비교할 수 있는 최소 구성이기 때문입니다. 3개로는 비교 기준이 없고, 5개 이상은 회로가 복잡해질 뿐 추가 정밀도가 없어요.</p>
+
+  <h3>Q6. 1-arm, 2-arm, 4-arm 중 뭐를 써야 하나요?</h3>
+  <p><strong>A.</strong> 비용·정밀도·온도 보상 요구에 따라 다릅니다.</p>
+  <ul>
+    <li>1-arm: 가장 간단·저렴, 학습용·간이 측정에 적합.</li>
+    <li>2-arm (반-브릿지): 휨이나 토크 측정에 적합, 부분적 온도 보상.</li>
+    <li>4-arm (풀-브릿지): 최고 감도와 완전한 온도 보상, 정밀 로드셀의 표준.</li>
+  </ul>
+
+  <h3>Q7. 휘트스톤 브릿지의 $V_o$를 ADC로 직접 읽어도 되나요?</h3>
+  <p><strong>A.</strong> 보통은 안 됩니다. $V_o$는 mV 수준이라 ADC의 분해능에 비해 너무 작습니다. 일반적으로 계측 증폭기(in-amp)로 100~1000배 증폭한 뒤 ADC로 읽습니다.</p>
+
+  <h3>Q8. 종속 전원이 있는 회로는 어떻게 푸나요?</h3>
+  <p><strong>A.</strong> 중첩에서는 독립 전원만 켜고 끄며, 종속 전원은 항상 그대로 둡니다. 테브난 $R_{Th}$ 계산 시에는 시험 전압법(test source method)을 씁니다 — 두 단자에 1V를 인가해 흐르는 전류를 측정하면 $R_{Th} = 1/I$.</p>
+
+  <h3>Q9. 노턴 등가가 테브난보다 편한 경우는 언제인가요?</h3>
+  <p><strong>A.</strong> 회로에 전류원이 많을 때, 또는 단락 전류 자체에 관심이 있을 때(예: 단락 회로 보호 회로 설계). 또한 병렬 합성에 익숙한 사람은 노턴 형태가 더 직관적입니다.</p>
+
+  <h3>Q10. 시험에서 어떤 도구를 우선적으로 시도해야 하나요?</h3>
+  <p><strong>A.</strong> 문제 유형에 따라:</p>
+  <ul>
+    <li>"부하를 바꿔가며" 같은 표현 → <strong>테브난 등가</strong> 우선.</li>
+    <li>"전원이 두 개" + 부하 고정 → <strong>중첩의 원리</strong>.</li>
+    <li>"단락 전류" 또는 전류원 위주 → <strong>노턴 등가</strong>.</li>
+    <li>"평형 조건" 또는 "$V_o = 0$" → <strong>휘트스톤 평형</strong>.</li>
+    <li>모르겠으면 노드 방정식(KCL) — 항상 가능.</li>
+  </ul>
+
+  <h2>22. 학습 일지 (자기 평가)</h2>
+  <p>이번 주 학습한 내용을 자기 평가하세요. 각 항목에 ✓를 매겨 보세요.</p>
+  <table>
+    <thead><tr><th>항목</th><th>이해 정도 (1~5)</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>중첩의 원리 의미와 절차</td><td>__</td><td>5단계로 설명할 수 있는가?</td></tr>
+      <tr><td>전원을 끄는 방법 (전압원→단락, 전류원→개방)</td><td>__</td><td>왜 그런지 이유까지?</td></tr>
+      <tr><td>테브난 등가의 개념과 5단계 절차</td><td>__</td><td>$V_{Th}$, $R_{Th}$ 정의?</td></tr>
+      <tr><td>노턴 등가와 테브난과의 변환</td><td>__</td><td>$V_{Th} = I_N R_N$ 유도?</td></tr>
+      <tr><td>최대 전력 전달 정리</td><td>__</td><td>$R_L = R_{Th}$일 때 $P_{\max}$ 식?</td></tr>
+      <tr><td>휘트스톤 평형 조건과 불평형 출력</td><td>__</td><td>$R_1 R_4 = R_2 R_3$ 유도?</td></tr>
+      <tr><td>스트레인 게이지·로드셀의 원리</td><td>__</td><td>풀 브릿지가 왜 4배 감도?</td></tr>
+      <tr><td>전력에 중첩이 안 되는 이유</td><td>__</td><td>비선형성?</td></tr>
+    </tbody>
+  </table>
+  <p class="note">한 항목이라도 3 이하면 그 부분의 본문 + 자가 점검 문제를 다시 보세요. 다음 주 진도가 등가회로를 전제로 하므로 먼저 다지고 가는 게 효율적입니다.</p>
+
+  <h2>23. 다음 주 미리보기 — W6 교류회로</h2>
+  <p>지금까지 배운 직류회로 분석 도구는 <em>모두</em> 교류회로에도 그대로 적용됩니다. 단, 한 가지 큰 변화가 있어요 — 저항 $R$이 <strong>임피던스 $Z$</strong>로 일반화됩니다.</p>
+
+  <h3>23.1 직류 → 교류로 옮겨갈 때</h3>
+  <ul>
+    <li><strong>옴의 법칙</strong>: $V = IR$ → $V = IZ$ (복소수)</li>
+    <li><strong>저항</strong>: 실수 → <strong>임피던스</strong>: 복소수 ($Z = R + jX$).</li>
+    <li><strong>커패시터</strong>: 직류에선 개방 → 교류에선 $Z_C = 1/(j\omega C)$.</li>
+    <li><strong>인덕터</strong>: 직류에선 단락 → 교류에선 $Z_L = j\omega L$.</li>
+    <li>중첩·테브난·노턴·최대 전력 전달 — <strong>모두 그대로</strong> 성립 (복소수로).</li>
+  </ul>
+
+  <h3>23.2 W6에서 추가될 새 개념</h3>
+  <ul>
+    <li>위상(phase)과 페이저(phasor)</li>
+    <li>저항·커패시턴스·인덕턴스의 주파수 응답</li>
+    <li>RC, RL, RLC 회로의 시간·주파수 응답</li>
+    <li>공진(resonance)과 Q 팩터</li>
+  </ul>
+
+  <h3>23.3 미리 준비할 것</h3>
+  <ul>
+    <li>복소수 기본 (실수부+허수부, 크기와 각도, 오일러 공식 $e^{j\theta} = \cos\theta + j\sin\theta$).</li>
+    <li>삼각함수 미분 (sin·cos의 미분).</li>
+    <li>이번 주의 테브난·노턴 절차 — W6에서 임피던스로 그대로 재사용.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>핵심 인사이트</strong> — "직류에서 배운 모든 분석 도구는 교류에서도 그대로 작동한다. 단, 저항 대신 임피던스라는 복소수를 쓰면 된다." 이것 한 문장이 W6의 모든 것을 요약합니다.
+  </div>
+
+  <h2>24. 마무리 — 5주 동안의 여정</h2>
+  <p>W1부터 W5까지 회로 분석의 기초를 한 줄로 요약하면:</p>
+  <ol>
+    <li><strong>W1-W2</strong>: 옴의 법칙, KCL, KVL — 회로의 가장 기본적 법칙.</li>
+    <li><strong>W3</strong>: 직·병렬 합성, 전압·전류 분배 — 빠른 계산 도구.</li>
+    <li><strong>W4</strong>: 노드·메시 해석 — 체계적 풀이 방법.</li>
+    <li><strong>W5</strong>: 중첩·테브난·노턴·최대 전력 — 회로 추상화의 정수.</li>
+  </ol>
+  <p>W5의 핵심 메시지: <em>"회로의 복잡함은 외부에서 보면 결국 두 수($V_{Th}$, $R_{Th}$)로 요약된다."</em> 이 통찰이 다음 학기 메카트로닉스, 자동제어, 신호처리까지 그대로 이어집니다.</p>
+
+  <div class="cards">
+    <div class="card">
+      <h4>이번 주 핵심 요약</h4>
+      <ul>
+        <li>중첩: 전원 하나씩 살리며 합산</li>
+        <li>테브난: $V_{Th}$ + $R_{Th}$ 직렬</li>
+        <li>노턴: $I_N$ + $R_N$ 병렬</li>
+        <li>최대 전력: $R_L = R_{Th}$</li>
+        <li>휘트스톤: $R_1 R_4 = R_2 R_3$</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>다음 주 (W6) 키워드</h4>
+      <ul>
+        <li>임피던스 $Z$, 페이저</li>
+        <li>RC·RL·RLC</li>
+        <li>주파수 응답</li>
+        <li>공진과 Q 팩터</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>학습 자료</h4>
+      <ul>
+        <li>Falstad 시뮬레이터로 즉시 검증</li>
+        <li>자가 점검 8문제 풀이</li>
+        <li>FAQ 10개로 개념 정리</li>
+        <li>식 모음표 암기</li>
+      </ul>
+    </div>
+  </div>
+
   <nav class="prevnext">
     <a href="04-dc-analysis-1.html"><small>← 이전</small>W4. 직류회로 해석 1</a>
     <a href="06-ac-circuit.html" class="next"><small>다음 →</small>W6. 교류회로</a>

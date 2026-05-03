@@ -81,6 +81,274 @@
   <h3>데모 2 — 자동차 에어백 영상</h3>
   <p>충돌 슬로우모션. 정지 시간 10배 → 힘 1/10.</p>
 
+  <h3>🎮 인터랙티브 데모 1 — 충격력-시간 그래프 (에어백 vs 단단한 벽)</h3>
+  <p>같은 운동량 변화 $\Delta p$를 만드는 두 충돌을 비교합니다. 충돌 시간 $\Delta t$를 슬라이더로 늘리면 평균 힘 $\bar F = \Delta p / \Delta t$가 어떻게 줄어드는지 직접 확인하세요. 에어백·헬멧·낙법이 왜 효과적인지 한 번에 이해됩니다.</p>
+
+  <div class="demo">
+    <h4>충격력-시간 시뮬레이터 — "같은 $\Delta p$, 다른 $\Delta t$"</h4>
+    <p>파랑(부드러운 충돌, 에어백)과 빨강(단단한 충돌, 콘크리트 벽)이 만드는 힘-시간 그래프입니다. 두 곡선 아래 면적(=충격량)은 항상 같지만, 최대 힘은 충돌 시간이 짧을수록 폭발적으로 커집니다.</p>
+    <canvas id="w4_impulseCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>질량 $m$ <span class="val" id="w4_imp_mV">70</span> kg
+        <input type="range" id="w4_imp_m" min="10" max="200" step="5" value="70"></label>
+      <label>충돌 전 속도 $v$ <span class="val" id="w4_imp_vV">10</span> m/s
+        <input type="range" id="w4_imp_v" min="1" max="40" step="1" value="10"></label>
+      <label>부드러운 $\Delta t_\text{soft}$ <span class="val" id="w4_imp_t1V">0.5</span> s
+        <input type="range" id="w4_imp_t1" min="0.05" max="1.0" step="0.05" value="0.5"></label>
+      <label>단단한 $\Delta t_\text{hard}$ <span class="val" id="w4_imp_t2V">0.05</span> s
+        <input type="range" id="w4_imp_t2" min="0.01" max="0.3" step="0.005" value="0.05"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$\Delta t_\text{hard}$를 0.01 s로 → 빨간 첨두값이 어디까지 치솟는지 확인 (인체 한계 ≈ 50 g)</li>
+        <li>두 시간을 같게 → 두 곡선이 겹쳐 같은 힘 (충돌 시간이 같으면 힘도 같음)</li>
+        <li>$v$를 두 배로 → 면적·첨두 모두 두 배. 속도가 위험한 이유</li>
+        <li>충격량은 두 색 모두 똑같이 $m\,v$ — 운동량을 멈추기 위한 "총량"은 변함없음</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w4_impulseCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const m=+document.getElementById('w4_imp_m').value;
+      const v=+document.getElementById('w4_imp_v').value;
+      const t1=+document.getElementById('w4_imp_t1').value;
+      const t2=+document.getElementById('w4_imp_t2').value;
+      document.getElementById('w4_imp_mV').textContent=m;
+      document.getElementById('w4_imp_vV').textContent=v;
+      document.getElementById('w4_imp_t1V').textContent=t1.toFixed(2);
+      document.getElementById('w4_imp_t2V').textContent=t2.toFixed(3);
+      const dp=m*v;
+      const Fpeak1=2*dp/t1, Fpeak2=2*dp/t2;
+      const Fmax=Math.max(Fpeak1,Fpeak2);
+      const Tmax=Math.max(t1,t2)*1.2;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const M=44;
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(M,H-M);ctx.lineTo(W-M,H-M);
+      ctx.moveTo(M,H-M);ctx.lineTo(M,M);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('시간 (s)',W/2-20,H-12);
+      ctx.save();ctx.translate(14,H/2);ctx.rotate(-Math.PI/2);
+      ctx.fillText('힘 F (N)',0,0);ctx.restore();
+      function curve(T,Fp,col,fill){
+        ctx.strokeStyle=col;ctx.fillStyle=fill;ctx.lineWidth=2.5;
+        ctx.beginPath();
+        for(let i=0;i<=80;i++){
+          const t=(T*i)/80;
+          const f=Fp*Math.sin(Math.PI*t/T);
+          const px=M+(t/Tmax)*(W-2*M);
+          const py=H-M-(f/Fmax)*(H-2*M);
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+        ctx.beginPath();ctx.moveTo(M,H-M);
+        for(let i=0;i<=80;i++){
+          const t=(T*i)/80;
+          const f=Fp*Math.sin(Math.PI*t/T);
+          const px=M+(t/Tmax)*(W-2*M);
+          const py=H-M-(f/Fmax)*(H-2*M);
+          ctx.lineTo(px,py);
+        }
+        ctx.lineTo(M+(T/Tmax)*(W-2*M),H-M);
+        ctx.closePath();ctx.fill();
+      }
+      curve(t1,Fpeak1,'#0b5fff','rgba(11,95,255,0.18)');
+      curve(t2,Fpeak2,'#c62828','rgba(198,40,40,0.22)');
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-220,30,200,108);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,30,200,108);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('Δp = '+dp.toFixed(0)+' N·s (공통)',W-210,50);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText('부드러움: F_peak ≈ '+Fpeak1.toFixed(0)+' N',W-210,72);
+      ctx.fillText('   ≈ '+(Fpeak1/(m*9.8)).toFixed(1)+'g',W-210,90);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('단단함: F_peak ≈ '+Fpeak2.toFixed(0)+' N',W-210,110);
+      ctx.fillText('   ≈ '+(Fpeak2/(m*9.8)).toFixed(1)+'g',W-210,128);
+    }
+    ['w4_imp_m','w4_imp_v','w4_imp_t1','w4_imp_t2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h3>🎮 인터랙티브 데모 2 — 1D 충돌 시뮬레이터 (반발계수 슬라이더)</h3>
+  <p>두 물체의 질량 $m_1, m_2$, 초기 속도 $v_1, v_2$, 그리고 <strong>반발계수 $e$</strong>(0=완전비탄성, 1=완전탄성)를 직접 조절합니다. 충돌 전후의 운동량 합과 운동에너지가 어떻게 변하는지 실시간 표로 확인하세요.</p>
+
+  <div class="demo">
+    <h4>1D 충돌 — "운동량은 항상 보존, 에너지는 e=1일 때만"</h4>
+    <p>반발계수 $e$의 정의: 충돌 후 상대속도 / 충돌 전 상대속도(부호 반전). 일반 1D 식:</p>
+    <p>$v_1' = \dfrac{m_1 v_1 + m_2 v_2 - e\,m_2(v_1 - v_2)}{m_1+m_2}$, &nbsp; $v_2' = \dfrac{m_1 v_1 + m_2 v_2 + e\,m_1(v_1 - v_2)}{m_1+m_2}$</p>
+    <canvas id="w4_collisionCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$m_1$ <span class="val" id="w4_c_m1V">2</span> kg
+        <input type="range" id="w4_c_m1" min="0.5" max="10" step="0.5" value="2"></label>
+      <label>$m_2$ <span class="val" id="w4_c_m2V">3</span> kg
+        <input type="range" id="w4_c_m2" min="0.5" max="10" step="0.5" value="3"></label>
+      <label>$v_1$ <span class="val" id="w4_c_v1V">5</span> m/s
+        <input type="range" id="w4_c_v1" min="-10" max="10" step="0.5" value="5"></label>
+      <label>$v_2$ <span class="val" id="w4_c_v2V">0</span> m/s
+        <input type="range" id="w4_c_v2" min="-10" max="10" step="0.5" value="0"></label>
+      <label>반발계수 $e$ <span class="val" id="w4_c_eV">1.00</span>
+        <input type="range" id="w4_c_e" min="0" max="1" step="0.05" value="1.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$m_1=m_2$, $e=1$, $v_2=0$ → "속도 교환" 결과 확인 ($v_1'=0, v_2'=v_1$)</li>
+        <li>$e=0$ → 두 공이 같은 속도로 붙어감(완전비탄성). 운동량 합은 그대로</li>
+        <li>$m_2 \gg m_1$, $e=1$ → 작은 공 거의 반사($v_1' \approx -v_1$, 벽 충돌)</li>
+        <li>표에서 $\Delta K$가 $e=1$이면 0, $e=0$이면 최대임을 확인</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w4_collisionCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const m1=+document.getElementById('w4_c_m1').value;
+      const m2=+document.getElementById('w4_c_m2').value;
+      const v1=+document.getElementById('w4_c_v1').value;
+      const v2=+document.getElementById('w4_c_v2').value;
+      const e=+document.getElementById('w4_c_e').value;
+      document.getElementById('w4_c_m1V').textContent=m1.toFixed(1);
+      document.getElementById('w4_c_m2V').textContent=m2.toFixed(1);
+      document.getElementById('w4_c_v1V').textContent=v1.toFixed(1);
+      document.getElementById('w4_c_v2V').textContent=v2.toFixed(1);
+      document.getElementById('w4_c_eV').textContent=e.toFixed(2);
+      const M=m1+m2;
+      const v1p=(m1*v1+m2*v2-e*m2*(v1-v2))/M;
+      const v2p=(m1*v1+m2*v2+e*m1*(v1-v2))/M;
+      const p_b=m1*v1+m2*v2, p_a=m1*v1p+m2*v2p;
+      const K_b=0.5*m1*v1*v1+0.5*m2*v2*v2;
+      const K_a=0.5*m1*v1p*v1p+0.5*m2*v2p*v2p;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // before
+      ctx.fillStyle='#444';ctx.font='bold 13px sans-serif';
+      ctx.fillText('충돌 전',24,28);
+      ctx.fillText('충돌 후',24,170);
+      function ball(cx,cy,m,v,col){
+        const r=8+Math.sqrt(m)*6;
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#333';ctx.lineWidth=1.5;
+        const ax=cx+v*8;
+        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ax,cy);ctx.stroke();
+        const sgn=v>=0?1:-1;
+        ctx.beginPath();ctx.moveTo(ax,cy);
+        ctx.lineTo(ax-sgn*8,cy-5);ctx.lineTo(ax-sgn*8,cy+5);ctx.closePath();ctx.fillStyle='#333';ctx.fill();
+        ctx.fillStyle='#222';ctx.font='11px sans-serif';
+        ctx.fillText('m='+m.toFixed(1)+'  v='+v.toFixed(2),cx-r,cy+r+14);
+      }
+      ball(180,70,m1,v1,'#0b5fff');
+      ball(440,70,m2,v2,'#ff8c00');
+      ball(180,210,m1,v1p,'#0b5fff');
+      ball(440,210,m2,v2p,'#ff8c00');
+      // info
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(20,260,W-40,52);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(20,260,W-40,52);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('Σp 전 = '+p_b.toFixed(2)+' kg·m/s,  Σp 후 = '+p_a.toFixed(2)+' kg·m/s  (보존)',32,280);
+      const dK=K_a-K_b, lossPct=K_b>0?(-dK/K_b*100):0;
+      ctx.fillText('K 전 = '+K_b.toFixed(2)+' J,  K 후 = '+K_a.toFixed(2)+' J,  ΔK = '+dK.toFixed(2)+' J  (손실 '+lossPct.toFixed(1)+'%)',32,300);
+    }
+    ['w4_c_m1','w4_c_m2','w4_c_v1','w4_c_v2','w4_c_e'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h3>🎮 인터랙티브 데모 3 — 2D 당구공 충돌 (같은 질량 + 탄성)</h3>
+  <p>같은 질량의 두 공이 비스듬히 충돌할 때 두 공이 <strong>정확히 90°로 갈라지는</strong> 현상을 시각화합니다. 충돌 매개변수 $b$(중심선과 진행선 사이 수직 거리)를 바꿔 보세요.</p>
+
+  <div class="demo">
+    <h4>2D 탄성 충돌 — "당구의 90° 법칙"</h4>
+    <p>왼쪽에서 오는 흰 공이 정지한 빨간 공을 친다. 충돌 매개변수 $b$가 0이면 정통(빨강만 직진), 공의 지름과 같으면 빗겨감(거의 그대로). 그 사이에서 두 공의 속도 벡터가 항상 직각.</p>
+    <canvas id="w4_billiardCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>충돌 매개변수 $b/d$ <span class="val" id="w4_bV">0.5</span>
+        <input type="range" id="w4_b" min="0" max="0.99" step="0.05" value="0.5"></label>
+      <label>입사 속도 $v_0$ <span class="val" id="w4_v0V">5</span> m/s
+        <input type="range" id="w4_v0" min="1" max="10" step="0.5" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>발견할 것</strong>
+      <ul>
+        <li>두 빨간·파란 화살표가 항상 직각 (내적 = 0)</li>
+        <li>$b=0$ → 흰 공 정지, 빨간 공이 모든 운동량 가져감 (1D 속도 교환)</li>
+        <li>$b/d$가 1에 가까우면 흰 공이 거의 그대로 진행</li>
+        <li>운동량 보존: $\vec p_\text{흰}+\vec p_\text{빨} = m\vec v_0$ (벡터 합)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w4_billiardCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const b=+document.getElementById('w4_b').value;
+      const v0=+document.getElementById('w4_v0').value;
+      document.getElementById('w4_bV').textContent=b.toFixed(2);
+      document.getElementById('w4_v0V').textContent=v0.toFixed(1);
+      // 같은질량 탄성 2D: 충돌각 sin(theta)=b
+      const theta=Math.asin(b);
+      // 흰공: 입사 +x. 충돌 후 흰공은 perpendicular 방향, 빨간공은 중심선 방향.
+      // 빨간공 속도 = v0*cos(theta), 방향=중심선; 흰공=v0*sin(theta), 수직
+      const cx=W/2,cy=H/2;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#e3e6ea';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+      // 충돌 위치 시각화
+      const r=22;
+      // 빨간공 정지 위치 (가운데)
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+      // 흰공 충돌 직전 위치 (왼쪽, b만큼 위로 오프셋)
+      const offY=b*r*2*0.5; // visual scale
+      ctx.fillStyle='#fff';ctx.strokeStyle='#666';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(cx-2*r-2,cy-offY,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+      // 충돌 후 화살표
+      function arrow(x1,y1,vx,vy,col){
+        const sc=14;
+        const x2=x1+vx*sc,y2=y1+vy*sc;
+        ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+        const ang=Math.atan2(y2-y1,x2-x1),hl=10;
+        ctx.beginPath();ctx.moveTo(x2,y2);
+        ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+        ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+        ctx.closePath();ctx.fill();
+      }
+      // 입사 화살표
+      arrow(cx-3*r,cy-offY,v0*0.3,0,'#888');
+      // 충돌 후: 빨간공 (중심선 따라, 위쪽에서 비스듬)
+      const vR=v0*Math.cos(theta);
+      const vW=v0*Math.sin(theta);
+      // 중심선 방향 단위벡터 (왼쪽 위에서 오른쪽 아래로 — 충돌점 -> 빨간공 중심 = 빨간공이 갈 방향)
+      // 흰공 중심에서 빨간공 중심으로
+      const dxC=2*r+2, dyC=offY; const Lc=Math.hypot(dxC,dyC);
+      const ux=dxC/Lc, uy=dyC/Lc; // unit center-line
+      const px=-uy, py=ux; // perpendicular
+      // 빨간공 후
+      arrow(cx,cy,vR*ux,vR*uy,'#c62828');
+      // 흰공 후 (수직 방향, b가 양수면 위로 빠짐)
+      arrow(cx-dxC,cy-offY,vW*(-px),vW*(-py),'#0b5fff');
+      // info
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(20,18,260,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(20,18,260,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('산란각 θ = '+(theta*180/Math.PI).toFixed(1)+'°',32,38);
+      ctx.fillText('빨간공 속도 = v0·cosθ = '+vR.toFixed(2),32,56);
+      ctx.fillText('흰공 속도 = v0·sinθ = '+vW.toFixed(2),32,74);
+      // 90도 표시
+      ctx.fillStyle='#2e7d32';ctx.font='bold 12px sans-serif';
+      ctx.fillText('두 화살표가 항상 직각 (90°)',W-220,30);
+    }
+    ['w4_b','w4_v0'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>4. 운동량 보존</h2>
   <p>외력 0이면 계의 총 운동량 일정. 두 물체가 주고받는 힘은 3법칙으로 상쇄.</p>
   $$ \sum m_i\vec{v}_i\Big|_{\text{before}} = \sum m_i\vec{v}_i\Big|_{\text{after}} $$
@@ -196,7 +464,536 @@
     <li>(시뮬) PhET <em>Collision Lab</em>로 1D·2D 탄성·비탄성 운동량/에너지 표 작성. A4 한 장.</li>
   </ol>
 
-  <div class="note"><strong>다음 주 미리보기</strong> — 점입자에서 회전하는 강체로 확장. 식의 모양은 그대로 가져온다(직선 ↔ 회전 대응).</div>
+  <h2>예제를 한 번 더 — 단계별 사고 과정 🪜</h2>
+  <p>탄성 충돌은 식이 두 줄(운동량 + 에너지)이라 처음엔 막막합니다. 같은 문제를 <strong>5단계</strong>로 풀어보면 시험장에서도 자동으로 손이 움직입니다.</p>
+
+  <div class="note">
+    <strong>예제 (1D 탄성).</strong> $m_1=2$ kg 공이 $v_1=6$ m/s로, 정지한 $m_2=4$ kg 공과 정통(1D) 탄성 충돌. 충돌 후 두 속도 $v_1', v_2'$를 구하라.
+  </div>
+
+  <h3>1단계 — 그림과 좌표</h3>
+  <p>오른쪽이 +x. 충돌 전 그림에 두 공을 그리고 화살표로 속도 방향 표시. 충돌 후엔 부호가 바뀔 수 있으니 일단 둘 다 +x로 가정하고 계산 후 부호로 진위 확인.</p>
+  <pre><code>충돌 전:    [m1=2]→ v1=6        [m2=4]  v2=0
+충돌 후:    [m1=2] v1'=?        [m2=4] v2'=?
+좌표:       오른쪽 +x</code></pre>
+
+  <h3>2단계 — 두 보존법칙 적기</h3>
+  <ul>
+    <li>운동량: $m_1 v_1 + m_2 v_2 = m_1 v_1' + m_2 v_2'$
+      → $2(6) + 4(0) = 2 v_1' + 4 v_2'$
+      → $\;12 = 2 v_1' + 4 v_2'$ ... (1)</li>
+    <li>탄성이므로 KE 보존, 또는 더 쉬운 <em>상대속도 부호 반전</em>:
+      $v_1 - v_2 = -(v_1' - v_2')$
+      → $6 = -(v_1' - v_2') = v_2' - v_1'$ ... (2)</li>
+  </ul>
+
+  <h3>3단계 — 연립</h3>
+  <p>(2)를 $v_2' = v_1' + 6$으로 (1)에 대입:</p>
+  $$ 12 = 2 v_1' + 4(v_1' + 6) = 6 v_1' + 24 \;\Rightarrow\; v_1' = -2 \text{ m/s} $$
+  <p>그러면 $v_2' = -2 + 6 = 4$ m/s.</p>
+
+  <h3>4단계 — 공식 검산</h3>
+  <p>$v_1' = \dfrac{m_1-m_2}{m_1+m_2} v_1 = \dfrac{2-4}{6}(6) = -2$ ✓, $\;v_2' = \dfrac{2 m_1}{m_1+m_2} v_1 = \dfrac{4}{6}(6) = 4$ ✓.</p>
+
+  <h3>5단계 — 물리적 해석</h3>
+  <ul>
+    <li>$v_1' < 0$: 가벼운 공이 튕겨 돌아옴(예상대로 — $m_1<m_2$).</li>
+    <li>운동량 합: 전 $12$, 후 $2(-2)+4(4)=12$ ✓ 보존.</li>
+    <li>운동에너지: 전 $\tfrac12(2)(36)=36$ J, 후 $\tfrac12(2)(4)+\tfrac12(4)(16)=4+32=36$ J ✓ 보존.</li>
+    <li>같은 문제로 $e=0.5$를 시도하면 위 데모 2의 표가 그대로 나옴.</li>
+  </ul>
+  <div class="tip"><strong>요령</strong> — KE 보존식은 제곱이라 풀기 어렵다. 대신 "상대속도 부호 반전"식이 1차식이라 항상 더 쉽다. 탄성 충돌이라는 단어를 보면 즉시 이 식을 먼저 적자.</div>
+
+  <h2>연습문제 — 집에서 풀어보기 ✏️</h2>
+  <p>한 문제마다 풀이 토글이 있습니다. 본인이 먼저 풀어 보고 막힐 때만 펼치세요. 12문제 + 도전 3문제.</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 1</strong> (충격량 기본) — 0.15 kg 야구공이 40 m/s로 와서 40 m/s로 그대로 되돌아갔다. 충격량의 크기는?</summary>
+    <p style="margin-top:10px">$\Delta p = m(v_f - v_i) = 0.15(-40 - 40) = -12$ kg·m/s. 크기 <strong>12 N·s</strong>. 부호는 방향 반전이라는 의미.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 2</strong> (평균 힘) — 위 문제에서 배트와 공이 1.0 ms 동안 접촉했다면 평균 힘은?</summary>
+    <p style="margin-top:10px">$\bar F = \Delta p / \Delta t = 12 / 0.001 = 12{,}000$ N. 약 1.2톤짜리 차의 무게. 짧은 충돌 시간 = 거대한 힘.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 3</strong> (반동) — 80 kg 사람이 정지 빙판에서 4 kg 가방을 5 m/s로 던졌다. 사람의 속도는?</summary>
+    <p style="margin-top:10px">초기 운동량 0 → $0 = 80 v_p + 4(5)$ → $v_p = -0.25$ m/s. <strong>반대 방향 0.25 m/s</strong>. 무거운 사람이 천천히 밀려남.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 4</strong> (완전비탄성) — 1500 kg 차(20 m/s)가 정지한 1000 kg 차에 후방추돌, 둘이 붙어 감. 공통 속도와 KE 손실은?</summary>
+    <p style="margin-top:10px">$1500(20) = 2500 v' \Rightarrow v' = 12$ m/s. 처음 KE = $\tfrac12(1500)(400)=300{,}000$ J. 나중 = $\tfrac12(2500)(144)=180{,}000$ J. 손실 <strong>120 kJ</strong>(40%). 이게 차체 변형·열·소음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 5</strong> (1D 탄성) — 같은 질량 두 공. A가 8 m/s로 정지한 B를 정통 탄성 충돌. 결과?</summary>
+    <p style="margin-top:10px">같은 질량 1D 탄성 → <strong>속도 교환</strong>. A는 정지, B는 8 m/s. 당구의 기본 원리.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 6</strong> (다른 질량 탄성) — $m_1=1$ kg(10 m/s) + 정지한 $m_2=3$ kg, 1D 탄성. 두 속도?</summary>
+    <p style="margin-top:10px">$v_1' = \dfrac{1-3}{4}(10) = -5$ m/s. $v_2' = \dfrac{2}{4}(10) = 5$ m/s. 작은 공이 튕겨 돌아옴.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 7</strong> (벽 튕김 — 무한대 질량) — 0.5 kg 공이 8 m/s로 단단한 벽에 정통 탄성 충돌. 충격량과 평균 힘(접촉 0.02 s)?</summary>
+    <p style="margin-top:10px">$\Delta p = 0.5(-8-8) = -8$ kg·m/s, 크기 8 N·s. 평균 힘 $|F| = 8/0.02 = 400$ N. 같은 공을 5초에 걸쳐 부드럽게 멈추면 1.6 N뿐 — 250배 차이.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 8</strong> (반발계수) — 농구공을 1.8 m에서 떨어뜨려 1.0 m까지 튀어올랐다. 반발계수 $e$는?</summary>
+    <p style="margin-top:10px">바닥과의 충돌 직전 속도 $v = \sqrt{2gh} = \sqrt{2(9.8)(1.8)} \approx 5.94$ m/s. 직후 $v' = \sqrt{2(9.8)(1.0)} \approx 4.43$ m/s. $e = v'/v \approx 0.75$. (실제 농구공 표 값과 일치.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 9</strong> (2D 충돌) — 같은 질량 두 공. 흰공 4 m/s 입사, 정지한 빨간 공과 비스듬 탄성 충돌. 흰공이 30°로 빠졌다면 빨간공의 방향과 두 속력은?</summary>
+    <p style="margin-top:10px">같은 질량 2D 탄성 → 두 공이 90°. 빨간공은 -60° 방향. $v_\text{흰} = 4\sin60° \approx 3.46$ m/s, $v_\text{빨} = 4\cos60° = 2$ m/s? — 실제론 흰공 30°에 맞춰: $v_\text{흰}=4\cos30°\approx 3.46$, $v_\text{빨}=4\sin30°=2$. 검산: $\vec p_x: 4 = 3.46\cos30° + 2\cos(-60°) = 3 + 1 = 4$ ✓.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 10</strong> (질량중심) — $m_1=2$ kg($x=0$), $m_2=3$ kg($x=4$ m). CM 위치는? $m_1$이 $v_1=2$ m/s, $m_2$ 정지. CM 속도?</summary>
+    <p style="margin-top:10px">$x_\text{CM} = (2(0)+3(4))/5 = 2.4$ m. $v_\text{CM} = (2(2)+3(0))/5 = 0.8$ m/s. 외력 0이면 CM은 0.8 m/s로 등속 — 두 공이 어떻게 충돌하든 CM의 운동은 그대로.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 11</strong> (탄도진자) — 10 g 총알이 2 kg 나무에 박혀 함께 0.30 m 올라갔다. 총알의 초속도는?</summary>
+    <p style="margin-top:10px">충돌 직후 공통 속도 $v'$: $\tfrac12(M+m){v'}^2 = (M+m)gh \Rightarrow v' = \sqrt{2gh} = \sqrt{5.88} \approx 2.43$ m/s. 충돌(완전비탄성) 운동량: $m v_0 = (M+m)v'$ → $v_0 = (2.01/0.01)(2.43) \approx 488$ m/s. 약 마하 1.4.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 12</strong> (로켓) — 5 kg 로켓이 1 kg 연료를 100 m/s로 분사. 치올코프스키 식으로 $\Delta v$는?</summary>
+    <p style="margin-top:10px">$\Delta v = u \ln(m_i/m_f) = 100 \ln(5/4) \approx 100(0.223) = 22.3$ m/s. 같은 연료라도 한꺼번에 다 쓸 때보다 천천히 쓸 때가 효율 — 다단 로켓의 원리.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 ⭐1</strong> (뉴턴 요람) — 5개 공이 매달린 요람에서 1번 공 1개를 들었다 놓는다. 왜 5번 공 1개만 같은 속도로 튀어나가고, "2개가 절반 속도로"는 안 일어나는지 식으로 보이시오.</summary>
+    <p style="margin-top:10px">"1개 1배 속도" vs "2개 1/2 속도"는 둘 다 운동량 $1\cdot v$로 같다. 그러나 KE는 전자 $\tfrac12 v^2$, 후자 $2\cdot\tfrac12(v/2)^2 = v^2/4$ — KE가 절반으로 줄어 보존이 깨짐. 탄성 충돌에서는 운동량 + 에너지 보존을 모두 만족해야 하므로 유일한 해는 "1개가 같은 속도로". 일반화: $n$개를 들면 $n$개가 나옴.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 ⭐2</strong> (공 두 개 떨어뜨리기) — 큰 공($M$)과 작은 공($m, m\ll M$)을 살짝 띄워 함께 떨어뜨린다. 큰 공이 바닥 직후 $v$로 위로 향했고 작은 공이 $v$로 아래로 향한 순간 충돌(탄성, 1D)했다. 작은 공의 충돌 후 속도는?</summary>
+    <p style="margin-top:10px">큰 공의 좌표계로 보면 작은 공이 $2v$로 다가오는 셈. 무한대 질량 벽 근사 → 작은 공이 $-2v$로 튕김. 다시 지상 좌표계: $-2v + v = +3v$ — 즉 떨어진 속도의 <strong>3배 속도로 위로</strong>. 높이로는 $9$배. 농구공+테니스공 데모의 정량적 답.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 ⭐3</strong> (변하는 질량 — 컨베이어) — 모래가 위에서 일정한 비율 $\lambda$ kg/s로 정지 컨베이어에 떨어진다. 컨베이어를 일정 속도 $v$로 끌려면 필요한 힘은?</summary>
+    <p style="margin-top:10px">초당 $\lambda$ kg가 0 → $v$로 가속되니 $\dfrac{dp}{dt} = \lambda v$. 따라서 외력 $F = \lambda v$. (마찰 무시, 모래가 미끄러지지 않고 즉시 컨베이어 속도로 함께 움직인다고 가정.) 일률은 $P = Fv = \lambda v^2$인데 흥미롭게도 모래의 KE 증가율은 $\tfrac12 \lambda v^2$. 차이 $\tfrac12 \lambda v^2$는 미끄러짐 마찰열 — 짐 싣기는 본질적으로 비탄성.</p>
+  </details>
+
+  <h2>❓ 학생 단골 질문 (FAQ)</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q1.</strong> 운동량과 운동에너지 — 왜 둘 다 필요한가요?</summary>
+    <p style="margin-top:10px">정보가 다릅니다. 운동량은 벡터(방향), 운동에너지는 스칼라(크기). 충돌처럼 방향이 핵심인 문제는 운동량, 높이·일·열처럼 크기만 중요한 문제는 에너지. 또한 운동량은 외력 0이면 항상 보존, 운동에너지는 탄성 충돌에서만 보존 — 비대칭이 문제 해결의 열쇠입니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q2.</strong> 충돌하면 에너지가 어디로 사라지나요?</summary>
+    <p style="margin-top:10px">사라지는 것이 아니라 다른 형태로 변환됩니다 — 열(차체 변형으로 인한 분자 진동), 소리(공기 압력파), 영구 변형(크럼플 존), 빛(스파크). 운동에너지의 정의("거시적 직선·회전 운동의 에너지")만 줄어드는 것입니다. 총 에너지는 항상 보존.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q3.</strong> 완전비탄성에서 "운동량도 사라지지 않냐"는 직관이 자꾸 듭니다.</summary>
+    <p style="margin-top:10px">완전비탄성 = 두 물체가 붙어서 같이 감. 두 물체의 질량 합이 그만큼 큰 운동량을 그대로 유지합니다. 1500 kg 차 + 1000 kg 차가 12 m/s로 함께 가면 운동량 30000 — 처음 1500×20과 동일. <strong>속도는 줄지만 질량이 늘어 운동량은 그대로</strong>입니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q4.</strong> 운동량 보존이 성립하려면 정확히 어떤 조건이 필요한가요?</summary>
+    <p style="margin-top:10px">"외력의 합이 0"입니다. 더 정확히: 짧은 충돌 시간 동안 외력의 충격량 $\int F_\text{ext} dt$가 충돌력의 충격량보다 훨씬 작으면 보존을 적용할 수 있습니다. 자동차 충돌 0.1초 동안 마찰력은 무시 가능 — 충돌 직전·직후 운동량은 같다고 본다는 의미.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q5.</strong> 반발계수 $e$는 어떻게 측정하나요?</summary>
+    <p style="margin-top:10px">가장 쉬운 방법: 공을 높이 $h_1$에서 가만히 떨어뜨려 튕긴 높이 $h_2$를 잰다. $e = \sqrt{h_2/h_1}$. 야구공 ≈ 0.55, 농구공 ≈ 0.75, 테니스공 ≈ 0.73, 골프공 ≈ 0.83. 이번 주 실험 B에서 직접 측정합니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q6.</strong> 로켓이 진공에서 어떻게 추진되나요? "밀 공기"가 없잖아요.</summary>
+    <p style="margin-top:10px">로켓은 공기를 밀어 가는 게 아니라, <strong>연료를 뒤로 분사하는 반작용</strong>으로 갑니다. 운동량 보존: 분사된 연료의 운동량 = 로켓의 운동량 변화(반대 방향). 진공이 오히려 더 효율적입니다(공기저항 없음). 풍선 로켓 데모를 진공 챔버에서 해도 똑같이 날아갑니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q7.</strong> $K = p^2/(2m)$ 식은 어디서 나왔나요?</summary>
+    <p style="margin-top:10px">$p = mv$이므로 $v = p/m$. $K = \tfrac12 mv^2 = \tfrac12 m (p/m)^2 = p^2/(2m)$. 같은 운동량을 가지는 두 물체 중 가벼운 쪽이 KE가 큼 — 입자 가속기에서 전자가 양성자보다 적은 에너지로도 큰 운동량을 가지는 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q8.</strong> 같은 질량 2D 탄성에서 왜 정확히 90°로 갈라지나요?</summary>
+    <p style="margin-top:10px">운동량 보존 $\vec p_0 = \vec p_1 + \vec p_2$, 에너지 보존 $|\vec p_0|^2 = |\vec p_1|^2 + |\vec p_2|^2$ (같은 질량이라 분모 동일). 두 식을 합하면 $|\vec p_0|^2 = |\vec p_1+ \vec p_2|^2 = |\vec p_1|^2 + |\vec p_2|^2 + 2\vec p_1\cdot\vec p_2$. → $\vec p_1 \cdot \vec p_2 = 0$ → 90°. <em>같은 질량과 탄성</em> 두 조건이 동시에 필요.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q9.</strong> 자동차 안전벨트와 에어백, 둘 다 있는데 무엇이 다른가요?</summary>
+    <p style="margin-top:10px">둘 다 충돌 시간 $\Delta t$를 늘려 평균 힘을 줄이는 같은 원리지만, 작용 부위가 다릅니다. 안전벨트는 몸 전체의 운동량을 어깨·골반 폭의 띠로 분산해서 받음. 에어백은 머리·가슴이 핸들에 직접 부딪히지 않도록 막는 보조. 안전벨트 없이 에어백만 → 머리가 에어백에 너무 빨리 박혀 오히려 위험. 함께 써야 효과.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q10.</strong> 충격량 단위 N·s와 운동량 단위 kg·m/s가 같다는 게 신기합니다.</summary>
+    <p style="margin-top:10px">$N\cdot s = (kg\cdot m/s^2)\cdot s = kg\cdot m/s$. 차원적으로 동치입니다. 의미 차이: 충격량은 "주고받은 양"(원인), 운동량은 "물체가 가진 양"(결과). 두 단위 다 시험에 등장하니 자유롭게 쓰세요.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q11.</strong> 충돌 동안 "내력"과 "외력"의 구분이 헷갈립니다.</summary>
+    <p style="margin-top:10px">계 안의 두 물체끼리 주고받는 힘이 내력(뉴턴 3법칙으로 합 = 0). 계 바깥에서 작용하는 힘(중력, 마찰, 노끈 장력 등)이 외력. 운동량 보존이 성립하려면 외력의 합이 0이거나 짧은 시간 동안 무시 가능해야 함. <em>두 물체를 하나의 계로 묶어 생각하라</em>는 게 핵심 트릭.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q12.</strong> 헬멧이 머리를 보호하는 원리를 한 문장으로?</summary>
+    <p style="margin-top:10px">헬멧 내부 발포소재(EPS)가 부서지면서 충돌 시간을 5~10배로 늘려 같은 운동량을 정지시킬 때 평균 힘을 1/5~1/10으로 줄입니다. 단단한 외피는 압력을 분산하는 역할. 그래서 한 번 큰 충격을 받은 헬멧은 <strong>겉이 멀쩡해 보여도 교체</strong>해야 합니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q13.</strong> 충돌 문제에서 "에너지 보존이냐 운동량 보존이냐" 어떻게 골라야 하나요?</summary>
+    <p style="margin-top:10px">충돌 자체에는 항상 운동량 보존(외력 0이면). 운동에너지 보존은 "탄성"이라는 단어가 있을 때만. 탄도진자처럼 충돌 + 그 후 끌어올림 같은 합성 문제는 단계별로 — 충돌 단계는 운동량, 끌어올림 단계는 에너지. <strong>"한 단계, 한 보존법칙"</strong>이 안전한 원칙.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q14.</strong> 질량중심(CM)을 굳이 왜 도입하나요?</summary>
+    <p style="margin-top:10px">복잡한 계도 CM의 운동만 보면 단순합니다. 망치를 던져도 CM은 깨끗한 포물선. 충돌 후 두 공이 어디로 가든 CM은 그대로 직진. 자동차 충돌 시뮬레이션, 로봇 보행 제어, 우주선 자세제어 모두 CM이 출발점입니다. 다음 주 회전운동에선 CM이 회전 중심 후보로 또 등장합니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q15.</strong> 시험 1주 전, 무엇부터 봐야 할까요?</summary>
+    <p style="margin-top:10px">(1) 운동량 vs 에너지 표(들어가기 전에 박스). (2) 충돌 종류 표(섹션 5). (3) 데모 2(1D 충돌 슬라이더)로 $e$의 효과 직관. (4) 연습문제 12개 중 8개. (5) 자주 틀리는 실수 BEST 10. — 이 순서면 90분에 끝납니다.</p>
+  </details>
+
+  <h2>📝 자주 틀리는 계산 실수 BEST 10</h2>
+  <p>본인이 시험에서 답이 틀렸을 때 <em>먼저 의심해야 할 10가지</em>. 운동량 단원에서 가장 자주 점수가 빠지는 곳입니다.</p>
+
+  <table>
+    <thead><tr><th>실수</th><th>예시</th><th>예방법</th></tr></thead>
+    <tbody>
+      <tr><td>1. 운동량 부호 누락</td><td>벽 충돌 후 -v인데 +v로 대입</td><td>운동량은 벡터. 방향 바뀌면 부호도 바뀜</td></tr>
+      <tr><td>2. 두 보존을 동시 적용</td><td>완전비탄성에 KE 보존 적용</td><td>"탄성"이란 단어가 있을 때만 KE 보존</td></tr>
+      <tr><td>3. 1D인지 2D인지 혼동</td><td>1D 식을 비스듬한 충돌에 직접 적용</td><td>2D는 x, y 각 성분에 따로 1D 식</td></tr>
+      <tr><td>4. KE 보존식을 풀려고 함</td><td>$v_1'^2$ 두 미지수 연립</td><td>"상대속도 부호 반전" 식으로 대체 (1차식)</td></tr>
+      <tr><td>5. 외력의 영향을 무시 못 할 때 보존 적용</td><td>긴 시간 마찰이 있는 트랙에 운동량 보존</td><td>충돌 직전·직후만 보존, 그 후엔 일-에너지</td></tr>
+      <tr><td>6. 충격량과 운동량 변화의 부호</td><td>$J = -\Delta p$로 적음</td><td>$J = +\Delta p$. 충격량은 운동량 변화 그 자체</td></tr>
+      <tr><td>7. 단위 g/m vs kg/m</td><td>야구공 150 g을 150으로 대입</td><td>SI는 kg. 0.15로 환산 후 대입</td></tr>
+      <tr><td>8. 평균 힘과 최대 힘 혼동</td><td>$F_\text{max} = \Delta p/\Delta t$로 답</td><td>$\bar F = \Delta p/\Delta t$. 최대값은 평균의 2배 정도</td></tr>
+      <tr><td>9. 반발계수 정의 헷갈림</td><td>$e = v_2'/v_1$로 적음</td><td>$e = (v_2' - v_1')/(v_1 - v_2)$. <em>상대</em>속도 비율</td></tr>
+      <tr><td>10. 질량중심에서 질량 잊음</td><td>$x_\text{CM} = (x_1+x_2)/2$로 일반화</td><td>가중평균. 질량을 곱해서 더하고 총질량으로 나눔</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>한 줄 시험장 체크리스트</strong> — ① 좌표 + 부호, ② 운동량 식부터, ③ 탄성이면 상대속도 식 추가, ④ 답에 단위(N·s 또는 kg·m/s), ⑤ Σp 검산, ⑥ KE 손실 음수인지 확인. 이 6가지면 운동량 단원의 점수 누수가 거의 사라집니다.
+  </div>
+
+  <h2>🧪 핸드폰으로 5분 실험 — 직접 측정</h2>
+  <p>운동량은 측정하기 까다로워 보이지만, 핸드폰 한 대로 충격력과 반발계수를 모두 잴 수 있습니다.</p>
+
+  <h3>실험 A — 반발계수 측정 (3분)</h3>
+  <ol>
+    <li>벽에 줄자 또는 미터자를 수직으로 붙임.</li>
+    <li>야구공·농구공·테니스공·골프공 등 다양한 공 준비.</li>
+    <li>높이 $h_1$에서 가만히 떨어뜨림 → 튕긴 최고점 $h_2$ 측정 (옆에서 영상 촬영해 정지 화면).</li>
+    <li>$e = \sqrt{h_2/h_1}$ 계산.</li>
+    <li>5번 평균 → 부록의 표(농구공 0.75, 야구공 0.55 등)와 비교.</li>
+  </ol>
+  <p><em>예상 오차원:</em> 떨어뜨릴 때 회전이 들어가면 $e$가 낮게 측정. 가만히 정지 상태에서 놓는 것이 핵심.</p>
+
+  <h3>실험 B — Phyphox로 충격력 측정 (5분)</h3>
+  <ol>
+    <li><a href="https://phyphox.org/">Phyphox</a> 앱 → "Acceleration with g" 실험 선택.</li>
+    <li>핸드폰을 두꺼운 책 위에 올려놓고, 책을 1 cm 정도 들어 손에 떨어뜨림(부드러움).</li>
+    <li>두 번째: 같은 높이에서 책 없이 직접 핸드폰만 타일 바닥에 떨어뜨림(단단함, <strong>매트 위에서!</strong> — 사고 방지).</li>
+    <li>가속도 그래프의 첨두 값을 비교 — 부드러운 쪽이 5~10배 작음.</li>
+    <li>$F = ma$로 충격력 환산. 핸드폰 200 g × 50 g 가속도 = 약 100 N(= 10 kg 무게).</li>
+  </ol>
+  <p><em>주의:</em> 실험 B는 핸드폰 파손 위험. 두꺼운 매트 위에서 짧은 거리만. 안되겠다 싶으면 영상으로 충분.</p>
+
+  <h3>실험 C — 풍선 로켓 (운동량 보존)</h3>
+  <ol>
+    <li>풍선에 빨대를 테이프로 붙이고, 그 빨대로 긴 줄을 끼움(가이드 레일).</li>
+    <li>풍선을 불고 입구를 잡았다가 놓는다 → 풍선이 줄을 따라 빠르게 이동.</li>
+    <li>도달 거리·시간을 영상으로 측정 → 평균 속도. 풍선 무게 + 분사 공기량(대략 추정)으로 운동량 비교.</li>
+    <li>토론: 만약 진공이라면 더 잘 갈까, 아니면 못 갈까? (정답: 더 잘 감 — 공기저항 없음.)</li>
+  </ol>
+
+  <h2>🌍 충돌 시간·운동량의 실생활 감각</h2>
+  <p>식의 답이 합리적인지 판단하려면, 일상의 운동량 수치와 충돌 시간을 머릿속에 담아두는 게 큰 도움이 됩니다.</p>
+
+  <table>
+    <thead><tr><th>상황</th><th>운동량 (대략)</th><th>충돌 시간</th><th>평균 힘</th></tr></thead>
+    <tbody>
+      <tr><td>야구 직구가 글러브에</td><td>0.15 kg × 40 m/s = 6 N·s</td><td>≈ 15 ms</td><td>≈ 400 N</td></tr>
+      <tr><td>야구 배트가 공에</td><td>≈ 12 N·s (왕복)</td><td>≈ 0.7 ms</td><td>≈ 17000 N</td></tr>
+      <tr><td>축구 강슛(헤딩)</td><td>0.43 kg × 25 m/s = 11 N·s</td><td>≈ 5 ms</td><td>≈ 2200 N</td></tr>
+      <tr><td>총알(소총)</td><td>0.01 kg × 800 m/s = 8 N·s</td><td>≈ 0.3 ms (관통)</td><td>≈ 27000 N</td></tr>
+      <tr><td>자동차 50 km/h 정면충돌</td><td>1500 kg × 14 m/s = 21000 N·s</td><td>≈ 0.15 s</td><td>≈ 140000 N</td></tr>
+      <tr><td>같은 충돌 + 에어백</td><td>21000 N·s</td><td>≈ 0.5 s</td><td>≈ 42000 N (1/3)</td></tr>
+      <tr><td>권투 잽</td><td>5 kg × 6 m/s ≈ 30 N·s</td><td>≈ 80 ms</td><td>≈ 380 N</td></tr>
+      <tr><td>망치질(못)</td><td>0.5 kg × 5 m/s = 2.5 N·s</td><td>≈ 1 ms</td><td>≈ 2500 N</td></tr>
+      <tr><td>달걀 → 손바닥(부드럽게)</td><td>0.06 kg × 4 m/s = 0.24 N·s</td><td>≈ 0.2 s</td><td>≈ 1.2 N (안 깨짐)</td></tr>
+      <tr><td>달걀 → 단단한 벽</td><td>0.24 N·s</td><td>≈ 0.005 s</td><td>≈ 48 N (깨짐)</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>활용</strong> — 답이 "사람이 한 손으로 50000 N을 쳤다"는 식이면 어딘가 식 실수가 났다는 강력한 신호. 사람의 한 방은 보통 300~3000 N 범위.</div>
+
+  <h2>🏟️ 실생활 응용 깊게 보기</h2>
+  <p>운동량·충격량 식이 실제 세상에 어떻게 쓰이는지 5가지 예로 본다.</p>
+
+  <h3>응용 1 — 자동차 안전벨트와 에어백 (충격량 분산)</h3>
+  <p>50 km/h(14 m/s) 정면충돌, 70 kg 운전자. 정지하는 운동량 변화: $\Delta p = 70 \times 14 = 980$ N·s.</p>
+  <ul>
+    <li>안전벨트 없이 핸들에 머리만 부딪힘: $\Delta t \approx 5$ ms → $\bar F \approx 196$ kN. 머리뼈 한계 ≈ 6 kN을 30배 초과 → 즉사.</li>
+    <li>안전벨트만: $\Delta t \approx 100$ ms → $\bar F \approx 9.8$ kN. 가슴 멍·갈비뼈 골절 가능.</li>
+    <li>안전벨트 + 에어백: $\Delta t \approx 150$ ms → $\bar F \approx 6.5$ kN. 생존 가능성 크게 상승.</li>
+  </ul>
+  <p>크럼플 존(crumple zone)은 차체 앞부분이 변형되며 추가로 50~100 ms를 늘려줌. 같은 식, 다른 부위.</p>
+
+  <h3>응용 2 — 헬멧과 낙법</h3>
+  <p>자전거에서 머리를 1 m 높이에서 떨어뜨림 → 충돌 직전 속도 $v = \sqrt{2gh} \approx 4.4$ m/s. 4 kg 머리:</p>
+  <ul>
+    <li>맨머리(콘크리트, $\Delta t \approx 1$ ms) → $\bar F \approx 17.6$ kN. 즉시 두개골 골절.</li>
+    <li>헬멧(EPS, $\Delta t \approx 6$ ms) → $\bar F \approx 2.9$ kN. 충격 1/6, 보통 회복.</li>
+  </ul>
+  <p>유도·합기도의 낙법도 같은 원리: 손바닥으로 바닥을 미리 쳐 충돌 시간을 늘림.</p>
+
+  <h3>응용 3 — 로켓 추진과 다단 로켓</h3>
+  <p>치올코프스키 식 $\Delta v = u \ln(m_i/m_f)$. 지구 저궤도 진입에 필요한 $\Delta v \approx 9$ km/s. 일반 로켓 분사 속도 $u \approx 4$ km/s.</p>
+  <ul>
+    <li>1단 로켓: $9 = 4 \ln(m_i/m_f) \Rightarrow m_i/m_f \approx 9.5$. 즉 무게의 89%가 연료. 구조적으로 거의 불가능.</li>
+    <li>다단(3단) 로켓: 각 단 ${\Delta v_k \approx 3}$ → 각 단 $m_i/m_f \approx 2.1$. 합 9 km/s. 누리호·팰컨9가 다단인 이유.</li>
+  </ul>
+
+  <h3>응용 4 — 당구·풀</h3>
+  <ul>
+    <li>같은 질량 + 탄성 → 90° 분리. 프로 선수는 이 각도를 수평·수직 분해해 정확히 계산.</li>
+    <li>스톱 샷(정면 정통): 흰공이 빨간공에 모든 운동량 전달 → 흰공 정지.</li>
+    <li>드로 샷(아래 회전): 회전 마찰로 운동량을 분산해 흰공이 뒤로 빠짐 — 다음 주 회전 토픽.</li>
+  </ul>
+
+  <h3>응용 5 — 입자물리 가속기</h3>
+  <p>LHC에서 두 양성자(7 TeV씩, 정면)가 충돌. 운동량은 보존, 충돌 후 새로 생긴 입자들 운동량 합 = 0(질량중심 좌표계 선택). 검출기는 $\vec p$가 부족한 방향을 보고 "보이지 않는 입자(중성미자, 암흑물질 후보)"를 추정 — <strong>운동량 보존이 새 입자 발견의 손전등</strong>이라는 표현은 이래서 나옴.</p>
+
+  <h2>📚 부록 1 — 반발계수 표</h2>
+  <p>강의실에서 직접 측정해 볼 만한 값들. 표면(바닥재)에 따라 다르지만 평균값.</p>
+  <table>
+    <thead><tr><th>물체</th><th>반발계수 $e$</th><th>1.5 m에서 떨어뜨릴 때 튕긴 높이</th></tr></thead>
+    <tbody>
+      <tr><td>골프공 (콘크리트)</td><td>≈ 0.83</td><td>≈ 1.03 m</td></tr>
+      <tr><td>슈퍼볼(고무)</td><td>≈ 0.85~0.90</td><td>≈ 1.08~1.22 m</td></tr>
+      <tr><td>농구공 (목재 코트)</td><td>≈ 0.75~0.80</td><td>≈ 0.84~0.96 m</td></tr>
+      <tr><td>테니스공 (콘크리트)</td><td>≈ 0.73</td><td>≈ 0.80 m</td></tr>
+      <tr><td>당구공 (펠트 큐션)</td><td>≈ 0.65</td><td>≈ 0.63 m</td></tr>
+      <tr><td>야구공 (단단한 벽)</td><td>≈ 0.55</td><td>≈ 0.45 m</td></tr>
+      <tr><td>탁구공</td><td>≈ 0.90 (탁자 위)</td><td>≈ 1.22 m</td></tr>
+      <tr><td>점토(뭉치)</td><td>≈ 0 (완전비탄성)</td><td>0 m</td></tr>
+      <tr><td>강철구슬 (강철판)</td><td>≈ 0.60~0.70</td><td>≈ 0.54~0.74 m</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📐 SI 단위 빠른 참조 — 운동량·충격량 편</h2>
+  <p>이 단원에서 가장 자주 단위 실수가 일어나는 곳은 <strong>g과 kg의 혼동</strong>, <strong>N·s와 kg·m/s가 같다는 사실의 망각</strong>입니다.</p>
+  <table>
+    <thead><tr><th>양</th><th>SI 단위</th><th>외워둘 환산/관계</th></tr></thead>
+    <tbody>
+      <tr><td>운동량 $\vec p$</td><td>kg·m/s</td><td>= N·s (충격량과 동치)</td></tr>
+      <tr><td>충격량 $\vec J$</td><td>N·s</td><td>= kg·m/s</td></tr>
+      <tr><td>힘 $F$</td><td>N</td><td>1 N = 1 kg·m/s². 사과 한 개의 무게 ≈ 1 N</td></tr>
+      <tr><td>질량 $m$</td><td>kg</td><td>1 g = 0.001 kg. 야구공 150 g = 0.15 kg</td></tr>
+      <tr><td>속도 $v$</td><td>m/s</td><td>1 m/s = 3.6 km/h</td></tr>
+      <tr><td>반발계수 $e$</td><td>무차원</td><td>0 ≤ $e$ ≤ 1</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>차원 일관성</strong> — $J = \int F\,dt$의 차원: N·s = kg·m/s. $\Delta p = m\Delta v$의 차원: kg·m/s. 양변 단위 일치 ✓. 식이 의심스러우면 항상 양변 차원 점검.</div>
+
+  <h2>🗺️ 개념 지도 — 4주차가 어디서 와서 어디로 가는가</h2>
+  <p>운동량 보존은 14주 동안 가장 자주 재등장하는 개념 중 하나입니다.</p>
+
+  <pre><code>          ┌── (W2) 뉴턴 3법칙       ──→ 운동량 보존의 출처(상호작용력)
+          │
+          ├── (W3) 일·에너지         ──→ 탄성 충돌에서 KE 보존, 비탄성에선 손실
+          │
+W4 운동량 ┼── (W5) 회전·각운동량     ──→ 같은 보존 구조: $\sum I\omega$ 보존
+   ·충돌  │                          (피겨 스케이팅 회전 가속 = 각운동량 보존)
+          │
+          ├── (W6) 단진동           ──→ 단진자의 충돌(수레 + 스프링)
+          │
+          ├── (W11) 유체            ──→ 베르누이도 운동량 보존의 변형
+          │
+          └── (W14) 전자기 운동      ──→ 충돌하는 하전입자, 광자의 운동량
+
+  더 멀리:
+    • 자율주행 — 충돌 시뮬 + 안전벨트 거동 모델
+    • 로봇 보행 — 발 디딤은 충격 흡수(충돌 시간 늘리기)
+    • 우주공학 — 치올코프스키 식이 모든 미션 설계의 출발
+    • 입자물리 — 운동량 보존이 새 입자 검출의 핵심 신호
+    • 게임 물리 엔진 — 강체 충돌 = 본문 데모 2와 동일 코드</code></pre>
+
+  <p><strong>한 줄 결론</strong> — 운동량은 <em>보존</em>이라는 가장 강력한 도구를 처음 만나는 단원입니다. 보존이라는 단어를 만나면 다음 주 회전·11주 유체·14주 전자기에서 같은 패턴을 즉시 알아챌 수 있습니다.</p>
+
+  <h2>🎯 한 페이지 요약 — 시험 직전 5분 노트</h2>
+  <div class="tip">
+    <h4 style="margin-top:0">절대 잊지 말 것</h4>
+    <ol>
+      <li><strong>운동량 $\vec p = m\vec v$</strong>(벡터). <strong>운동에너지 $K = \tfrac12 m v^2$</strong>(스칼라). $K = p^2/(2m)$.</li>
+      <li><strong>충격량-운동량 정리:</strong> $\vec J = \int \vec F\,dt = \Delta\vec p$. 같은 $\Delta p$, $\Delta t$ 늘리면 $\bar F$ 줄어듦.</li>
+      <li><strong>운동량 보존:</strong> 외력 0인 계의 $\sum m_i \vec v_i$ = 일정. <em>거의 모든 충돌 문제의 첫 줄.</em></li>
+      <li><strong>탄성 vs 완전비탄성:</strong> 둘 다 운동량 보존. KE는 탄성에서만. 완전비탄성은 함께 움직임.</li>
+      <li><strong>1D 탄성 빠른 풀이:</strong> 운동량 보존 + $v_1 - v_2 = -(v_1' - v_2')$.</li>
+      <li><strong>같은 질량 1D 탄성:</strong> 속도 교환. 같은 질량 2D 탄성: 90° 분리.</li>
+      <li><strong>반발계수 $e = (v_2'-v_1')/(v_1-v_2)$</strong>. $0\le e\le 1$.</li>
+      <li><strong>치올코프스키:</strong> $\Delta v = u\ln(m_i/m_f)$. 분사 속도가 작으면 연료 비율로 보상.</li>
+      <li><strong>질량중심:</strong> 외력 0이면 $\vec v_\text{CM}$ 일정. 어떻게 충돌하든 CM은 그대로 직진.</li>
+      <li><strong>단위:</strong> kg·m/s = N·s. g → kg, km/h → m/s 환산은 식 들어가기 전에.</li>
+    </ol>
+  </div>
+
+  <h2>🎓 1분 미니퀴즈 — 5문항</h2>
+  <p>아래 5문제를 1분 안에 머릿속으로 답해 보세요. 4개 이상이면 4주차 OK.</p>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 1.</strong> 외력이 0일 때 보존되는 양은? (운동량 / 운동에너지 / 둘 다)</summary>
+    <p style="margin-top:8px">운동량은 항상. 운동에너지는 탄성 충돌에서만. (둘 다 보존되면 "탄성"이라 부른다.)</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 2.</strong> 같은 운동량 4 kg·m/s를 가진 0.1 kg 총알과 100 kg 사람. KE 비율은?</summary>
+    <p style="margin-top:8px">$K = p^2/(2m)$. 비율 = $m_\text{사람}/m_\text{총알} = 1000$배. 총알이 KE 1000배 큼. (속도 차이를 떠올리면 당연.)</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 3.</strong> 0.15 kg 야구공이 30 m/s로 와서 30 m/s로 되돌아갔다. 충격량 크기는?</summary>
+    <p style="margin-top:8px">$|\Delta p| = 0.15(30+30) = 9$ N·s. (방향 반전이라 합산.)</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 4.</strong> 같은 질량 + 정면 + 탄성 + 한 쪽이 정지. 결과는?</summary>
+    <p style="margin-top:8px">속도 교환. 친 공이 정지, 정지해 있던 공이 그 속도로 출발.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 5.</strong> 1 m에서 떨어뜨린 공이 0.64 m로 튕겼다. 반발계수는?</summary>
+    <p style="margin-top:8px">$e = \sqrt{0.64/1} = 0.8$. (높이비의 제곱근.)</p>
+  </details>
+
+  <h2>📖 더 깊이 — 참고자료</h2>
+  <ul>
+    <li><strong>Halliday, Resnick, Walker</strong>, <em>Fundamentals of Physics</em> — 9장(질량중심·운동량). 한국어판 끝 문제 풍부.</li>
+    <li><strong>Khan Academy 한국어 — 운동량과 충돌</strong>: 영상 + 즉시 채점.</li>
+    <li><strong>Walter Lewin MIT 8.01 Lecture 15, 16</strong>: 운동량 보존, 충돌, 로켓의 라이브 실험. (영어 자막)</li>
+    <li><strong>3Blue1Brown</strong>, <em>The most unexpected answer to a counting puzzle</em> (YouTube): 1D 탄성 충돌과 $\pi$의 놀라운 관계.</li>
+    <li><strong>PhET Collision Lab</strong> <a href="https://phet.colorado.edu/sims/html/collision-lab/latest/collision-lab_ko.html">phet.colorado.edu</a>: 1D·2D 충돌 시뮬레이터.</li>
+    <li><strong>Phyphox</strong> <a href="https://phyphox.org/">phyphox.org</a>: 핸드폰 가속도계로 충격력 측정.</li>
+    <li><strong>NASA Ares I 다단 로켓 영상</strong>: 치올코프스키 식이 왜 다단을 부르는지 시각적으로.</li>
+  </ul>
+
+  <h2>📋 학습 체크리스트</h2>
+  <div class="tip">
+    이번 주 끝나기 전에 다음을 모두 ✅ 할 수 있는지 확인하세요:
+    <ul style="list-style:none;padding-left:0">
+      <li>☐ 운동량과 운동에너지의 차이를 한 문장으로 설명할 수 있다.</li>
+      <li>☐ 충격량-운동량 정리 $\vec J = \Delta \vec p$를 사용해 평균 힘을 구할 수 있다.</li>
+      <li>☐ 외력 0인 계의 운동량 보존을 1D·2D 모두에서 적용할 수 있다.</li>
+      <li>☐ 1D 탄성 충돌을 두 보존법칙(또는 상대속도 식)으로 풀 수 있다.</li>
+      <li>☐ 완전비탄성 충돌의 KE 손실을 계산할 수 있다.</li>
+      <li>☐ 반발계수 $e$의 정의와 측정 방법을 안다.</li>
+      <li>☐ 같은 질량 2D 탄성 충돌이 90°로 갈라지는 이유를 설명할 수 있다.</li>
+      <li>☐ 질량중심을 구하고 외력 0일 때 그것이 등속 직선임을 안다.</li>
+      <li>☐ 치올코프스키 식과 다단 로켓의 필요성을 안다.</li>
+      <li>☐ 데모 1·2·3을 직접 가지고 놀아 봤다.</li>
+      <li>☐ 연습문제 12개 중 8개 이상을 풀이 없이 풀 수 있다.</li>
+      <li>☐ 1분 미니퀴즈 5문제를 모두 맞췄다.</li>
+      <li>☐ 핸드폰 실험 A(반발계수) 또는 C(풍선 로켓) 중 하나를 직접 시도했다.</li>
+      <li>☐ 자주 틀리는 계산 실수 BEST 10을 한 번 읽어봤다.</li>
+    </ul>
+    하나라도 막히면 그 섹션으로 돌아가 다시 5분만 보세요.
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>학습 시간 가이드</strong> — 평균적인 학생이 본 페이지를 처음 끝까지 읽는 데 약 90분.
+    데모와 연습문제를 모두 따라가면 약 3시간이 적정.
+    시험 1주 전에는 시험 직전 5분 노트 + 미니퀴즈 + 도전 문제 1개로 1시간이면 복습 끝.
+  </div>
+
+  <h3>🩺 진단 트리 — 어디부터 다시 봐야 하나</h3>
+  <pre><code>지금 막힌 부분?
+  ├─ "운동량과 KE 구분이 안 됨"          → 들어가기 전 박스 + 데모 2의 표
+  ├─ "충격량 식이 어디 쓰이는지 모름"    → 응용 1·2 + 실생활 데이터 표
+  ├─ "1D 탄성 식 외워지지 않음"          → 5단계 풀이 + 데모 2(슬라이더 동치)
+  ├─ "2D는 너무 어려움"                  → 같은 질량 + 90° 결과만 외우기 → 데모 3
+  ├─ "반발계수 의미 모호"                → 부록 1 표 + 실험 A
+  ├─ "로켓이 왜 다단인지"                → 응용 3 (∆v 계산 직접 따라하기)
+  └─ "문제 풀이 어디서 시작할지 모름"    → 자주 틀리는 실수 BEST 10 먼저</code></pre>
+
+  <h2>📚 추가 학습 가이드</h2>
+
+  <h3>🎓 단계별 복습 일정 — 일주일/하루/한 시간 전</h3>
+  <table>
+    <thead><tr><th>시점</th><th>해야 할 것</th><th>피해야 할 것</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1주 전</strong></td><td>강의안 통독 1회, 인터랙티브 데모 모두 직접 조작, 연습문제 풀이 시도</td><td>한 번에 다 외우려 하기</td></tr>
+      <tr><td><strong>3일 전</strong></td><td>FAQ + 자주 틀리는 실수 정독, 미니퀴즈로 자가 진단, 막힌 부분 강의안 다시</td><td>아예 새 자료 시작</td></tr>
+      <tr><td><strong>1일 전</strong></td><td>핵심 식 + 시험 직전 5분 노트만, 일찍 잠</td><td>밤샘 공부, 새 유형 풀이 시도</td></tr>
+      <tr><td><strong>1시간 전</strong></td><td>시험 직전 5분 노트만 차분히 읽기</td><td>시험장에서 새 문제 풀어보기, 친구 답 비교</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🧭 학습 우선순위 — 시간이 부족할 때</h3>
+  <p>모든 섹션을 다 보지 못할 때 다음 우선순위로:</p>
+  <ol>
+    <li><strong>핵심 식 + 자주 틀리는 실수</strong> (시험 점수에 직접 영향)</li>
+    <li><strong>인터랙티브 데모 1-2개 직접 조작</strong> (직관 형성)</li>
+    <li><strong>연습문제 5-7개 풀이</strong> (실전 감각)</li>
+    <li><strong>FAQ 정독</strong> (헷갈리는 개념 정리)</li>
+    <li>응용 / 실생활 데이터 (여유 있을 때)</li>
+  </ol>
+
+  <h3>📓 효율적인 노트 정리</h3>
+  <div class="tip">
+    <ul>
+      <li><strong>한 페이지 요약</strong>: 시험 직전 5분 노트의 핵심을 손으로 다시 적기. 손글씨가 기억에 강함.</li>
+      <li><strong>색깔 구분</strong>: 식 (파랑) / 단위 (초록) / 자주 틀림 표시 (빨강) — 시각적 인덱싱.</li>
+      <li><strong>오답 노트</strong>: 연습문제에서 틀린 문제 → 어디서 헷갈렸는지 한 줄 메모. 재시험 직전에만 다시 봄.</li>
+    </ul>
+  </div>
+
+  <h3>🔗 다음 강의 준비 — 자가점검 3문</h3>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>자가점검 1.</strong> 이번 주 가장 중요한 식 한 개를 외우지 않고 유도할 수 있나요?</summary>
+    <p style="margin-top:10px">"왜 그 식이 나오는가"를 설명할 수 있으면 OK. 못 한다면 단계별 사고 과정으로 돌아가 한 번 더 따라가 보세요.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>자가점검 2.</strong> 인터랙티브 데모를 모두 직접 조작해 보았나요?</summary>
+    <p style="margin-top:10px">슬라이더로 극단값(최소, 최대, 0)을 시험해 보세요. 식의 의미가 더 명확해집니다.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>자가점검 3.</strong> 자주 틀리는 계산 실수 BEST 10 중 본인이 평소 자주 하는 것 1-2개를 의식하고 있나요?</summary>
+    <p style="margin-top:10px">시험장에서 그 항목만 한 번 더 의심하면 점수가 한 학점 차이 납니다.</p>
+  </details>
+
+  <h3>🌐 더 많은 자료가 필요할 때</h3>
+  <ul>
+    <li><strong>YouTube</strong>: <em>Khan Academy Korean</em>(한국어 자막), <em>Walter Lewin MIT 8.01/8.02</em>(영어 + 자막), <em>3Blue1Brown</em>(미적분·선형대수 직관 영상)</li>
+    <li><strong>모의 시험</strong>: 한국물리올림피아드(KPhO) 기출, 대학수학능력시험 물리 II</li>
+    <li><strong>오픈코스</strong>: <a href="https://ocw.mit.edu/courses/8-01sc-classical-mechanics-fall-2016/">MIT OCW 8.01</a>, <a href="https://www.edwith.org/">edwith.org</a> 한국어 강의</li>
+  </ul>
+
+  <h3>💪 학습 동기 — 이 주차가 어디로 이어지는가</h3>
+  <div class="note">
+    이번 주 배운 것은 단순히 시험 끝나면 잊는 지식이 아닙니다.
+    <ul>
+      <li>학부 4학년 <strong>자율주행 / 로봇공학 / 모델예측제어(MPC)</strong> 강의에서 그대로 응용</li>
+      <li>대학원 <strong>제어공학 · 동역학 · 항공우주공학</strong> 연구의 출발점</li>
+      <li>실무에서 <strong>전자제품 설계 · 게임 물리 엔진 · 시뮬레이션</strong>에 직접 사용</li>
+    </ul>
+    <strong>지금의 한 시간 투자 = 4학년 한 학기 절약.</strong> 기초가 든든해야 위에 쌓을 게 있습니다.
+  </div>
+
+  <div class="prevnext">
+    <a href="03-energy-conservation.html"><small>← 이전</small>W3. 에너지 보존</a>
+    <a href="05-rotation.html" class="next"><small>다음 →</small>W5. 회전과 각운동량</a>
+  </div>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 점입자에서 회전하는 강체로 확장. 식의 모양은 그대로 가져온다(직선 ↔ 회전 대응). 운동량 $\to$ 각운동량, 힘 $\to$ 토크, 질량 $\to$ 관성모멘트, 그리고 <strong>운동량 보존 $\to$ 각운동량 보존</strong>. 피겨 스케이팅 선수가 팔을 모으면 회전이 빨라지는 정량적 이유.</div>
+
+  <div class="warn" style="margin-top:14px">
+    <strong>📌 한 줄 마무리</strong>
+    — 운동량 보존은 충돌 후 두 물체의 움직임을 단 두 식만으로 결정합니다.
+    에어백·헬멧·로켓 추진까지 모두 같은 원리.
+    다음 주(W5 회전)에서 같은 보존 원리가 <em>각운동량 보존</em>으로 자연스럽게 확장됩니다.
+  </div>
 </main>
 
 <footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>

@@ -217,6 +217,774 @@
     </tbody>
   </table>
 
+  <h2>🎮 인터랙티브 데모 1 — 자석-코일 유도 (렌츠의 법칙 실시간)</h2>
+  <p>막대자석을 코일 쪽으로 다가가게 하거나 멀어지게 하면, 자속 $\Phi_B$가 변하면서 유도 기전력 $\varepsilon = -d\Phi_B/dt$가 발생합니다. <strong>방향(부호)</strong>은 렌츠 법칙 — "변화를 방해하는" 쪽으로 흐릅니다. 자석 위치 슬라이더와 자석 속도 슬라이더를 움직여 EMF가 어떻게 바뀌는지 확인해 보세요.</p>
+
+  <div class="demo">
+    <h4>자석-코일 유도 시뮬레이터</h4>
+    <p>막대자석의 N극(빨강)이 코일에 다가오면 코일 안 자속 증가 → 유도 전류는 자석을 <em>밀어내는</em> 방향(파란색 화살표). 멀어지면 자속 감소 → 유도 전류는 자석을 <em>끌어당기는</em> 방향. 두 경우 모두 부호가 반대.</p>
+    <canvas id="w14_coil" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>자석 위치 $x$ <span class="val" id="w14_coilXV">-3.0</span> cm
+        <input type="range" id="w14_coilX" min="-8" max="8" step="0.1" value="-3"></label>
+      <label>자석 속도 $v$ <span class="val" id="w14_coilVV">+2.0</span> cm/s
+        <input type="range" id="w14_coilV" min="-5" max="5" step="0.1" value="2"></label>
+      <label>코일 권수 $N$ <span class="val" id="w14_coilNV">100</span>
+        <input type="range" id="w14_coilN" min="10" max="500" step="10" value="100"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>자석을 코일에 다가가게(속도 +) → 유도 EMF가 한 방향, 멀어지게(속도 -) → 반대 방향.</li>
+        <li>자석이 코일 정중앙($x=0$)을 통과하는 순간 자속의 변화율이 최대(EMF 최대)가 아니라, <em>자속 자체</em>가 최대 → 변화율은 그때 0이 됨에 주목.</li>
+        <li>권수 $N$을 두 배로 → EMF도 두 배. ($\varepsilon = -N\, d\Phi/dt$)</li>
+        <li>속도 0으로 두면 자석이 코일 안에 박혀 있어도 EMF=0. <strong>변화가 핵심</strong>.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w14_coil');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function flux(x){ // Gaussian-ish profile centered at coil (x=0)
+      const sigma=2.5;
+      return Math.exp(-(x*x)/(2*sigma*sigma));
+    }
+    function dflux(x){
+      const sigma=2.5;
+      return -x/(sigma*sigma)*flux(x);
+    }
+    function draw(){
+      const x=+document.getElementById('w14_coilX').value;
+      const v=+document.getElementById('w14_coilV').value;
+      const N=+document.getElementById('w14_coilN').value;
+      document.getElementById('w14_coilXV').textContent=x.toFixed(1);
+      document.getElementById('w14_coilVV').textContent=(v>=0?'+':'')+v.toFixed(1);
+      document.getElementById('w14_coilNV').textContent=N;
+      const Phi=flux(x);
+      const dPhi=dflux(x)*v; // dPhi/dt
+      const EMF=-N*dPhi*0.5; // scaled
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // draw coil at center
+      const cx=W/2, cy=H/2-20;
+      ctx.strokeStyle='#b08000';ctx.lineWidth=4;
+      for(let i=-3;i<=3;i++){
+        ctx.beginPath();ctx.ellipse(cx+i*8,cy,14,40,0,0,Math.PI*2);ctx.stroke();
+      }
+      // ammeter / EMF gauge
+      ctx.fillStyle='#fff';ctx.strokeStyle='#888';
+      ctx.fillRect(cx-50,cy+60,100,50);ctx.strokeRect(cx-50,cy+60,100,50);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('EMF',cx-12,cy+78);
+      ctx.fillStyle=EMF>0?'#0b5fff':(EMF<0?'#c62828':'#888');
+      ctx.font='bold 14px sans-serif';
+      ctx.fillText((EMF>=0?'+':'')+EMF.toFixed(2)+' V',cx-32,cy+98);
+      // draw magnet
+      const sc=22;
+      const mx=cx+x*sc;
+      ctx.fillStyle='#c62828';ctx.fillRect(mx-30,cy-12,30,24); // N
+      ctx.fillStyle='#1b5e20';ctx.fillRect(mx,cy-12,30,24); // S
+      ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';
+      ctx.fillText('N',mx-20,cy+5);ctx.fillText('S',mx+10,cy+5);
+      // velocity arrow
+      if(Math.abs(v)>0.05){
+        const av=v*15;
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(mx+15,cy-30);ctx.lineTo(mx+15+av,cy-30);ctx.stroke();
+        const ang=av>0?0:Math.PI;
+        ctx.beginPath();ctx.moveTo(mx+15+av,cy-30);
+        ctx.lineTo(mx+15+av-8*Math.cos(ang-0.4),cy-30-8*Math.sin(ang-0.4));
+        ctx.lineTo(mx+15+av-8*Math.cos(ang+0.4),cy-30-8*Math.sin(ang+0.4));
+        ctx.closePath();ctx.fillStyle='#0b5fff';ctx.fill();
+        ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+        ctx.fillText('v',mx+15+av/2-3,cy-36);
+      }
+      // info box
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(8,8,260,76);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,260,76);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('자속 Φ_B (상대) = '+Phi.toFixed(3),16,28);
+      ctx.fillText('dΦ/dt = '+dPhi.toFixed(3),16,46);
+      ctx.fillText('ε = -N dΦ/dt = '+EMF.toFixed(3)+' V',16,64);
+      ctx.fillText('(부호 + : 한 방향, - : 반대 방향)',16,80);
+    }
+    ['w14_coilX','w14_coilV','w14_coilN'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>🎮 인터랙티브 데모 2 — 변압기 권수비 시뮬레이터</h2>
+  <p>변압기는 1차 코일 권수 $N_1$, 2차 코일 권수 $N_2$의 비율만으로 전압비를 결정합니다 ($V_2/V_1 = N_2/N_1$). 슬라이더로 $N_1$, $N_2$를 바꿔 출력 전압이 어떻게 변하는지 확인하세요. <strong>승압(step-up)</strong>은 $N_2 > N_1$, <strong>강압(step-down)</strong>은 그 반대.</p>
+
+  <div class="demo">
+    <h4>변압기 시뮬레이터 — 발전소부터 핸드폰 어댑터까지</h4>
+    <p>이상 변압기에서 전력 보존 $V_1 I_1 = V_2 I_2$ → 전압이 올라가면 전류는 그만큼 떨어진다. 송전탑이 수백 kV로 올리는 이유는 손실 $P=I^2R$을 줄이기 위함.</p>
+    <canvas id="w14_xfmr" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>1차 전압 $V_1$ <span class="val" id="w14_xV1V">220</span> V
+        <input type="range" id="w14_xV1" min="10" max="500" step="10" value="220"></label>
+      <label>1차 권수 $N_1$ <span class="val" id="w14_xN1V">100</span>
+        <input type="range" id="w14_xN1" min="10" max="500" step="10" value="100"></label>
+      <label>2차 권수 $N_2$ <span class="val" id="w14_xN2V">500</span>
+        <input type="range" id="w14_xN2" min="10" max="2000" step="10" value="500"></label>
+      <label>부하 전류 $I_2$ <span class="val" id="w14_xI2V">0.5</span> A
+        <input type="range" id="w14_xI2" min="0.1" max="5" step="0.1" value="0.5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$N_1=100, N_2=500$ → 5배 승압 ($V_2 = 5 V_1$). 핸드폰 충전 어댑터는 그 반대(강압).</li>
+        <li>발전소 시뮬레이션: $V_1=10000$, $N_2/N_1 = 50$ → $V_2 = 500$ kV. 송전 손실 1/2500.</li>
+        <li>$N_2$가 클수록 $V_2$ 증가하지만 $I_1$도 증가 → 1차에서 더 많은 전류가 필요.</li>
+        <li>변압기는 <strong>DC에서 작동 안 함</strong> — $V_1$이 일정하면 $\Phi_B$ 일정 → 유도 0.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w14_xfmr');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const V1=+document.getElementById('w14_xV1').value;
+      const N1=+document.getElementById('w14_xN1').value;
+      const N2=+document.getElementById('w14_xN2').value;
+      const I2=+document.getElementById('w14_xI2').value;
+      document.getElementById('w14_xV1V').textContent=V1;
+      document.getElementById('w14_xN1V').textContent=N1;
+      document.getElementById('w14_xN2V').textContent=N2;
+      document.getElementById('w14_xI2V').textContent=I2.toFixed(1);
+      const V2=V1*N2/N1;
+      const I1=I2*N2/N1;
+      const P=V2*I2;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // iron core
+      const cx=W/2, cy=H/2;
+      ctx.strokeStyle='#444';ctx.lineWidth=8;ctx.fillStyle='#e8e8e8';
+      ctx.fillRect(cx-90,cy-80,180,160);ctx.strokeRect(cx-90,cy-80,180,160);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(cx-60,cy-50,120,100);ctx.strokeRect(cx-60,cy-50,120,100);
+      // primary coil
+      const np=Math.min(12,Math.max(3,Math.round(N1/30)));
+      ctx.strokeStyle='#b08000';ctx.lineWidth=3;
+      for(let i=0;i<np;i++){
+        const yy=cy-40+i*(80/(np-1||1));
+        ctx.beginPath();ctx.ellipse(cx-90,yy,8,5,0,0,Math.PI*2);ctx.stroke();
+      }
+      // secondary coil
+      const ns=Math.min(20,Math.max(3,Math.round(N2/30)));
+      ctx.strokeStyle='#0b5fff';
+      for(let i=0;i<ns;i++){
+        const yy=cy-40+i*(80/(ns-1||1));
+        ctx.beginPath();ctx.ellipse(cx+90,yy,8,5,0,0,Math.PI*2);ctx.stroke();
+      }
+      // labels
+      ctx.fillStyle='#b08000';ctx.font='bold 13px sans-serif';
+      ctx.fillText('1차 (N₁='+N1+')',cx-150,cy-90);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText('2차 (N₂='+N2+')',cx+50,cy-90);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('철심',cx-15,cy+5);
+      // info
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(8,8,200,108);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,200,108);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('V₁ = '+V1+' V',16,28);
+      ctx.fillText('I₁ = '+I1.toFixed(2)+' A',16,46);
+      ctx.fillText('V₂ = '+V2.toFixed(0)+' V',16,64);
+      ctx.fillText('I₂ = '+I2.toFixed(2)+' A',16,82);
+      ctx.fillText('P = '+P.toFixed(0)+' W',16,100);
+      // ratio
+      ctx.fillStyle=N2>N1?'#2e7d32':'#c62828';ctx.font='bold 13px sans-serif';
+      ctx.fillText((N2>N1?'승압 (step-up) ×':'강압 (step-down) ×')+(N2/N1).toFixed(2),W-220,30);
+    }
+    ['w14_xV1','w14_xN1','w14_xN2','w14_xI2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>🎮 인터랙티브 데모 3 — 전자기파 (E·B 진동)</h2>
+  <p>맥스웰 4식이 예측하는 가장 놀라운 결과 — <strong>매질 없이 진공 속을 진행하는 전자기파</strong>. 전기장 $\vec E$(파랑)와 자기장 $\vec B$(빨강)가 서로 수직하게 진동하며 빛의 속도 $c \approx 3 \times 10^8$ m/s로 전파됩니다. 주파수 슬라이더로 빛의 색·종류가 바뀌는 것을 확인.</p>
+
+  <div class="demo">
+    <h4>EM 파동 시뮬레이터 — "변하는 E가 B를, 변하는 B가 E를"</h4>
+    <p>$\vec E \perp \vec B \perp$ 진행방향. 진폭은 임의이지만 비율은 $E/B = c$로 고정. 식 한 줄: $c = 1/\sqrt{\mu_0\varepsilon_0}$.</p>
+    <canvas id="w14_em" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>주파수 $f$ <span class="val" id="w14_emFV">1.0</span> ×10¹⁴ Hz
+        <input type="range" id="w14_emF" min="0.4" max="3.0" step="0.05" value="1.0"></label>
+      <label>진폭 $E_0$ <span class="val" id="w14_emAV">1.0</span>
+        <input type="range" id="w14_emA" min="0.3" max="1.5" step="0.05" value="1.0"></label>
+      <label>일시정지 <input type="checkbox" id="w14_emPause"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$\vec E$와 $\vec B$가 같은 위상으로 진동 (둘 다 동시에 0, 동시에 최대).</li>
+        <li>두 벡터는 서로 수직, 또 진행방향에도 수직 → <strong>횡파(transverse wave)</strong>.</li>
+        <li>주파수를 0.4 → 3.0으로 올리면 파장 $\lambda = c/f$가 짧아짐. 가시광 범위(약 4~7.5×10¹⁴ Hz).</li>
+        <li>모든 주파수에서 속도는 같음 — 빛의 속도 $c$.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w14_em');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let phase=0;
+    function draw(){
+      const f=+document.getElementById('w14_emF').value;
+      const A=+document.getElementById('w14_emA').value;
+      const paused=document.getElementById('w14_emPause').checked;
+      document.getElementById('w14_emFV').textContent=f.toFixed(2);
+      document.getElementById('w14_emAV').textContent=A.toFixed(2);
+      ctx.fillStyle='#0a0e1a';ctx.fillRect(0,0,W,H);
+      const cy=H/2;
+      // axis
+      ctx.strokeStyle='#445';ctx.lineWidth=1;ctx.beginPath();
+      ctx.moveTo(20,cy);ctx.lineTo(W-20,cy);ctx.stroke();
+      // wave
+      const k=f*0.04, amp=70*A;
+      // E field (vertical, blue)
+      ctx.strokeStyle='#3da9ff';ctx.lineWidth=2;ctx.beginPath();
+      for(let xp=20;xp<=W-20;xp++){
+        const xx=xp-20;
+        const yE=cy-amp*Math.sin(k*xx-phase);
+        if(xp===20)ctx.moveTo(xp,yE);else ctx.lineTo(xp,yE);
+      }
+      ctx.stroke();
+      // B field (horizontal-ish, drawn as separate y series red, offset)
+      ctx.strokeStyle='#ff5050';ctx.lineWidth=2;ctx.beginPath();
+      for(let xp=20;xp<=W-20;xp++){
+        const xx=xp-20;
+        const yB=cy+amp*0.6*Math.sin(k*xx-phase);
+        if(xp===20)ctx.moveTo(xp,yB);else ctx.lineTo(xp,yB);
+      }
+      ctx.stroke();
+      // arrows at fixed x
+      for(let xp=80;xp<W-40;xp+=80){
+        const xx=xp-20;
+        const eE=-amp*Math.sin(k*xx-phase);
+        const eB=amp*0.6*Math.sin(k*xx-phase);
+        // E arrow blue
+        ctx.strokeStyle='#3da9ff';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(xp,cy);ctx.lineTo(xp,cy+eE);ctx.stroke();
+        // B arrow red
+        ctx.strokeStyle='#ff5050';
+        ctx.beginPath();ctx.moveTo(xp,cy);ctx.lineTo(xp,cy+eB);ctx.stroke();
+      }
+      // labels
+      ctx.fillStyle='#3da9ff';ctx.font='bold 13px sans-serif';
+      ctx.fillText('E (전기장)',30,30);
+      ctx.fillStyle='#ff5050';
+      ctx.fillText('B (자기장)',30,50);
+      ctx.fillStyle='#ddd';ctx.font='12px sans-serif';
+      ctx.fillText('→ 진행방향 (속도 c)',W-160,cy-8);
+      ctx.fillText('λ = c/f',W-100,30);
+      if(!paused) phase+=0.05*f;
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+  </script>
+
+  <h2>🪜 단계별 사고 — 패러데이로부터 변압기 식 유도 (5단계)</h2>
+  <p>변압기 식 $V_2/V_1 = N_2/N_1$은 외워야 할 식이 아니라 <em>패러데이 한 줄에서 두 번 적용</em>해 나오는 자연스러운 결과입니다. 시험에서도 식을 잊었을 때 1분만에 재현할 수 있어야 합니다.</p>
+
+  <div class="note">
+    <strong>설정.</strong> 같은 철심에 1차 코일 $N_1$ 권, 2차 코일 $N_2$ 권. 1차에 교류 $V_1(t)$ 인가. 철심을 통과하는 자속 $\Phi_B(t)$는 <em>두 코일 모두 같다</em>(이상 변압기 가정).
+  </div>
+
+  <h3>1단계 — 두 코일에 패러데이 법칙</h3>
+  <p>각 코일의 한 권에 유도되는 EMF는 $-d\Phi_B/dt$. 권수가 $N$이면 직렬연결이므로 합산.</p>
+  $$ V_1 = -N_1 \frac{d\Phi_B}{dt}, \qquad V_2 = -N_2 \frac{d\Phi_B}{dt} $$
+
+  <h3>2단계 — 같은 자속, 같은 시간 미분</h3>
+  <p>두 코일이 같은 철심을 공유하므로 $d\Phi_B/dt$가 동일. 두 식의 비율을 잡으면 그 항이 통째로 사라진다.</p>
+  $$ \frac{V_2}{V_1} = \frac{-N_2\, d\Phi_B/dt}{-N_1\, d\Phi_B/dt} = \frac{N_2}{N_1} $$
+
+  <h3>3단계 — 전력 보존 (이상 가정)</h3>
+  <p>이상 변압기는 손실 0이라 $P_1 = P_2$. 실효치 기준:</p>
+  $$ V_1 I_1 = V_2 I_2 \;\Longrightarrow\; \frac{I_2}{I_1} = \frac{V_1}{V_2} = \frac{N_1}{N_2} $$
+  <p>전압이 5배 커지면 전류는 1/5로 작아진다. <strong>고압송전이 손실을 줄이는 이유</strong>가 여기에서 직접 따라옴.</p>
+
+  <h3>4단계 — DC에서는 왜 안 되나?</h3>
+  <p>DC면 $V_1$이 일정 → $\Phi_B$도 일정 → $d\Phi_B/dt = 0$ → $V_2 = 0$. 변압기는 <strong>변화</strong>를 먹고 사는 장치. 이 이유로 송전·배전이 AC다.</p>
+
+  <h3>5단계 — 검증 (단위·극한)</h3>
+  <ul>
+    <li>단위: $V_1, V_2$ 모두 V, $N_1, N_2$ 무차원 → 비율식 단위 일관성 ✓</li>
+    <li>$N_2 = N_1$이면 $V_2 = V_1$ — 절연(isolation) 변압기. ✓</li>
+    <li>$N_2 \to 0$이면 $V_2 \to 0$ — 권수 없으면 출력도 없음. ✓</li>
+  </ul>
+
+  <h2>✏️ 연습문제 — 집에서 풀어보기</h2>
+  <p>각 문제를 본인이 먼저 푼 뒤 토글을 펼쳐 풀이를 확인하세요. 시험 한 주 전 다시 푸는 것을 추천.</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 1</strong> (자속) — 0.04 m² 사각형 코일이 0.6 T 자기장 안에 자기장과 평행하게 놓여 있다. 자속은?</summary>
+    <p style="margin-top:10px">자기장과 코일면이 평행 → 면 법선과 자기장은 수직 → $\theta=90°$, $\cos 90°=0$ → $\Phi_B = 0$. <strong>방향 함정</strong>: "평행"이라는 단어가 자기장과 코일면이 평행하다는 의미인지, 자기장과 면 법선이 평행하다는 의미인지 정확히 읽기.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 2</strong> (패러데이) — 50권 코일, 면적 0.02 m². 자기장이 2 T에서 0.5 T로 0.1 s에 줄어들면 평균 EMF?</summary>
+    <p style="margin-top:10px">$\Delta\Phi = (0.5-2)(0.02) = -0.03$ Wb (한 권당). $\bar\varepsilon = -N\,\Delta\Phi/\Delta t = -50(-0.03)/0.1 = 15$ V.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 3</strong> (운동 EMF) — 0.8 m 도선이 1.2 T 자기장 안에서 자기장에 수직 방향으로 3 m/s. 기전력?</summary>
+    <p style="margin-top:10px">$\varepsilon = BLv = 1.2 \times 0.8 \times 3 = 2.88$ V.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 4</strong> (렌츠 방향) — 코일 면이 종이면, 자기장이 종이 안쪽으로. 코일 면적이 줄고 있다. 유도 전류 방향(시계/반시계)?</summary>
+    <p style="margin-top:10px">자속(종이 안쪽 방향)이 줄고 있음 → 유도 전류는 그 자속을 <em>유지</em>하는 방향(종이 안쪽으로 자기장 만드는 방향) → 오른손 법칙으로 <strong>시계방향</strong>(앞면에서 볼 때).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 5</strong> (자체유도) — $L = 0.05$ H 인덕터에 흐르는 전류가 4 A에서 1 A로 0.02 s에 변한다. 역기전력?</summary>
+    <p style="margin-top:10px">$\varepsilon_L = -L\,dI/dt = -0.05 \times (1-4)/0.02 = -0.05 \times (-150) = 7.5$ V (전류 감소를 막는 방향).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 6</strong> (인덕터 에너지) — 200 mH 인덕터에 0.5 A. 저장 에너지?</summary>
+    <p style="margin-top:10px">$U = \tfrac{1}{2}LI^2 = \tfrac{1}{2}(0.2)(0.25) = 0.025$ J = 25 mJ.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 7</strong> (변압기) — 핸드폰 어댑터: 1차 220 V, 2차 5 V. 권수비 $N_1:N_2$?</summary>
+    <p style="margin-top:10px">$N_1/N_2 = V_1/V_2 = 44$. 1차가 2차의 44배 권수 → 강압 변압기.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 8</strong> (송전 손실) — 100 km 송전선 저항 5 Ω. 100 MW를 (a) 22 kV로, (b) 500 kV로 송전 시 손실?</summary>
+    <p style="margin-top:10px">(a) $I = 10^8/22000 \approx 4545$ A. $P_\text{loss} = I^2R \approx 1.03 \times 10^8$ W = 103 MW (실제로는 보낼 수 없음). (b) $I = 200$ A. $P_\text{loss} = 200000$ W = 200 kW. <strong>약 500배 차이</strong>. 고압 송전의 위력.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 9</strong> (회전 발전기) — 200권, 0.005 m² 코일이 0.4 T에서 50 Hz로 회전. 최대 EMF?</summary>
+    <p style="margin-top:10px">$\varepsilon_\text{max} = NBA\omega = 200(0.4)(0.005)(2\pi \cdot 50) \approx 125.7$ V. 실효치는 $/\sqrt 2 \approx 88.9$ V.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 10</strong> (전자기파) — 와이파이 2.4 GHz의 파장은?</summary>
+    <p style="margin-top:10px">$\lambda = c/f = (3\times 10^8)/(2.4\times 10^9) = 0.125$ m = 12.5 cm. 가정용 안테나 크기와 비슷한 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 11</strong> (변위전류) — 면적 0.01 m² 평행판 캐패시터에 전기장이 1 ms 동안 0에서 $5\times 10^5$ V/m로 변한다. 변위전류?</summary>
+    <p style="margin-top:10px">$I_d = \varepsilon_0 A\,dE/dt = (8.85\times 10^{-12})(0.01)(5\times 10^8) \approx 4.4 \times 10^{-5}$ A = 44 μA. 작지만 <strong>이게 있어야 자기장이 만들어져 EM파 가능</strong>.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 12</strong> (도전 ⭐) — 자기장 안 도선 사각루프(가로 $a$, 세로 $b$)가 자기장 밖으로 일정 속도 $v$로 빠져나간다. 빠져나가는 동안 EMF와 흐르는 전류 방향?</summary>
+    <p style="margin-top:10px">루프가 빠져나가는 변의 길이 $b$만 자기장 안. $\Phi = B b x$ (남은 길이 $x$). $\varepsilon = -d\Phi/dt = -B b (dx/dt) = -B b (-v) = Bbv$ (자속 감소). 렌츠로 자속 유지 방향 → 자기장이 종이 안쪽이면 시계 반대방향.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐⭐</strong> (LC 진동) — $L=10$ mH 인덕터와 $C=100$ μF 캐패시터 직렬. 캐패시터에 처음 5 V 충전. 진동 주파수와 최대 전류?</summary>
+    <p style="margin-top:10px">$\omega = 1/\sqrt{LC} = 1/\sqrt{10^{-5}} = 1000$ rad/s, $f \approx 159$ Hz. 에너지 보존 $\tfrac{1}{2}CV^2 = \tfrac{1}{2}LI_\text{max}^2$ → $I_\text{max} = V\sqrt{C/L} = 5\sqrt{100\times 10^{-6}/10^{-2}} = 5 \times 0.1 = 0.5$ A. <em>LC 회로 = 전기적 단진동 (W6 SHM의 전기 버전)</em>.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐⭐⭐</strong> (별까지의 거리) — 지구에서 12 광년 떨어진 별. 신호를 보내고 답을 받기까지 최소 시간?</summary>
+    <p style="margin-top:10px">왕복 24년. <em>광속 한계는 맥스웰 4식의 직접적 결론</em>. 어떤 정보·물질도 $c$보다 빠르게 전파될 수 없음(W15 이후 상대성 이론에서 다시 다룸).</p>
+  </details>
+
+  <h2>❓ 학생 단골 질문 (FAQ)</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q1.</strong> 렌츠의 법칙은 왜 항상 "반대 방향"인가요? 자연이 정말 변화를 싫어하나요?</summary>
+    <p style="margin-top:10px">에너지 보존의 결과입니다. 만약 유도 전류가 변화를 <em>도와주는</em> 방향으로 흐른다면 변화가 자연히 가속되며 무한히 에너지가 생겨남(공짜 에너지). 그건 불가능 → 반드시 <em>방해</em> 방향. 자석을 코일에 밀어넣으려면 본인이 일을 해야 하고 그 일이 전기에너지로 변환됨.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q2.</strong> 패러데이 식의 마이너스 부호는 정말 중요한가요? 크기 계산할 땐 무시해도 되지 않나요?</summary>
+    <p style="margin-top:10px">크기 문제에서는 부호를 따로 보고 풀어도 OK입니다. 다만 회로 내 전압의 합이나 LC 진동·과도응답을 다루면 부호가 결정적. <strong>시험에서 방향(시계/반시계) 묻는 문제</strong>는 부호의 의미를 묻는 것.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q3.</strong> 맥스웰 방정식은 왜 4개인가요? 더 줄일 수 없나요?</summary>
+    <p style="margin-top:10px">4개의 식은 (전기 가우스, 자기 가우스, 패러데이, 앙페르-맥스웰)로 각각 다른 상황을 다룹니다. 사실 텐서 형식(상대론)으로 쓰면 단 <strong>2개의 식</strong>으로 줄어듭니다($\partial_\mu F^{\mu\nu} = J^\nu$, $\partial_\mu \tilde F^{\mu\nu}=0$). 학부에서는 4개로 분리해 직관을 잡는 것이 표준.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q4.</strong> 빛이 전자기파라는 사실을 어떻게 처음 확인했나요?</summary>
+    <p style="margin-top:10px">맥스웰이 1865년 이론으로 $c = 1/\sqrt{\mu_0\varepsilon_0}$를 계산해 당시 측정된 광속과 일치함을 발견. 헤르츠가 1887년 실험실에서 라디오파(저주파 EM파)를 만들고 검출, 빛과 같은 반사·굴절·간섭 성질을 보임으로써 결정적 확인.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q5.</strong> 변위 전류는 실제로 흐르는 전류인가요?</summary>
+    <p style="margin-top:10px">전하가 이동하는 것이 아니므로 <em>전류는 아닙니다</em>. 다만 자기장을 만드는 효과는 진짜 전류와 같음. "변하는 전기장이 자기장을 만든다"를 식으로 표현하기 위한 항. 캐패시터 사이의 빈 공간에서도 자기장이 형성되는 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q6.</strong> 변압기는 왜 DC에서 작동 안 하나요?</summary>
+    <p style="margin-top:10px">DC면 1차 전류·자속이 시간에 따라 일정 → $d\Phi/dt = 0$ → 2차에 EMF 0. 변압기는 <em>변화</em>가 본질. 가정 콘센트가 60 Hz AC인 이유 중 하나가 변압기로 송전·배전을 효율적으로 하기 위함.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q7.</strong> 인덕터와 저항은 어떻게 다른가요? 둘 다 전류를 막는 거 아닌가요?</summary>
+    <p style="margin-top:10px">저항은 <em>전류 자체</em>를 일정한 비율로 막음(에너지 소산). 인덕터는 <em>전류의 변화</em>만 막음(에너지를 자기장으로 저장). 정상상태(DC)에선 인덕터는 단락(0Ω)이지만, 막 켰을 때나 끌 때 큰 역기전력. 자동차 점화 코일이 이 원리.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q8.</strong> 무선 충전은 어떻게 동작하나요? 두 코일이 만나지도 않는데?</summary>
+    <p style="margin-top:10px">송신 코일에 AC를 흘려 변하는 자기장을 만듦 → 그 자기장이 수신 코일을 통과 → 패러데이로 EMF 유도. 본질적으로 변압기와 같지만 철심 대신 공기. 효율은 거리에 매우 민감(거리 두 배에 효율 1/4 이하). 그래서 무선 충전 패드는 폰을 정확히 올려야.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q9.</strong> 인덕션 레인지는 냄비를 직접 가열하는 원리인가요?</summary>
+    <p style="margin-top:10px">예. 인덕션 코일이 20~50 kHz AC 자기장을 만듦 → 철 냄비 바닥에 맴돌이 전류(eddy current) 유도 → 그 전류가 냄비 저항으로 줄가열. <strong>유리·세라믹은 가열 안 됨</strong>(자기장이 통과해버림). 알루미늄도 잘 안 가열(저항이 낮음). 그래서 "인덕션 호환" 표시가 필요.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q10.</strong> 빛의 속도가 모든 관찰자에게 같다는 게 맥스웰 식과 어떻게 연결되나요?</summary>
+    <p style="margin-top:10px">맥스웰 식이 $c = 1/\sqrt{\mu_0\varepsilon_0}$를 예측하는데, 이 값에는 관찰자의 속도가 들어있지 않음. → 어느 관찰자가 보든 빛은 $c$로 진행. 이 모순을 해결하려 아인슈타인이 특수상대성이론을 만듦(1905). <em>맥스웰 → 상대론 → 시공간</em>의 연결.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q11.</strong> 자기장이 단극(monopole)인 자석은 왜 없나요?</summary>
+    <p style="margin-top:10px">자기 가우스 법칙 $\oint \vec B \cdot d\vec A = 0$이 그것을 금지. 어떤 폐곡면에서 N극이 들어오면 반드시 같은 양의 자기장이 다시 나가야 함. 자석을 반으로 잘라도 N과 S가 새로 생김. 단, 입자물리에서 <em>자기 단극자</em>가 존재하는지는 현재도 활발한 연구 분야(아직 발견 안 됨).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q12.</strong> RFID·교통카드는 배터리 없이 어떻게 작동하나요?</summary>
+    <p style="margin-top:10px">판독기가 13.56 MHz 자기장을 방사 → 카드 안 코일에 유도 EMF → 그 작은 전력으로 카드 칩이 동작·응답. 카드는 사실상 미니 변압기의 2차 코일. 우리가 매일 쓰는 무전원 IoT 기술의 기원.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q13.</strong> MRI는 자기 유도와 어떤 관계인가요?</summary>
+    <p style="margin-top:10px">MRI는 강한 정자기장 안에서 인체 양성자(주로 물 분자의 H)가 RF 펄스에 따라 세차운동(precession)하며 발하는 EM파를 검출. 정확히 말하면 패러데이보단 <em>핵자기공명(NMR)</em>. 그러나 검출 코일이 양성자의 회복(relaxation) 자기장을 잡아내는 부분에서 패러데이가 직접 사용됨.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q14.</strong> "맥스웰 4식 안에 빛이 있다"는 표현이 너무 추상적입니다. 구체적으로?</summary>
+    <p style="margin-top:10px">4식을 $E$, $B$만으로 정리하면 자유공간에서 $\nabla^2 \vec E = \mu_0\varepsilon_0\, \partial^2\vec E/\partial t^2$가 나옵니다. 이건 <em>속도 $c=1/\sqrt{\mu_0\varepsilon_0}$로 진행하는 파동방정식</em> 그 자체. 즉 식을 푸는 것 = 빛의 진행을 푸는 것. <strong>이론적 예측이 실험적 확인보다 먼저</strong>가 물리학사의 결정적 사건.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q15.</strong> 14주가 학기의 끝인 줄 알았는데, 다음에 또 뭐가 있나요?</summary>
+    <p style="margin-top:10px">학부에선 (1) <em>광학·간섭·회절</em>(이번 학기 추가 챕터 또는 다음 학기), (2) <em>특수상대성</em>(맥스웰의 직접적 결과), (3) <em>양자역학</em>(빛이 입자이기도 함 → 광자), (4) <em>전자기학 II</em>에서 4식을 텐서·게이지로 다시 봄. 이번 학기에 익힌 직관이 모두 거기서 다시 사용됩니다.</p>
+  </details>
+
+  <h2>📝 자주 틀리는 계산 실수 BEST 10</h2>
+  <p>전자기 유도 단원에서 <em>먼저 의심해야 할 10가지</em>. 개념을 알면서도 점수를 잃는 경로 대부분이 여기 있습니다.</p>
+
+  <table>
+    <thead><tr><th>실수</th><th>예시</th><th>예방법</th></tr></thead>
+    <tbody>
+      <tr><td>1. 자속 면적 부호</td><td>$\Phi = BA$로 무조건 +로</td><td>면 법선 방향을 먼저 정한 뒤 $\cos\theta$ 부호 결정</td></tr>
+      <tr><td>2. 권수 $N$ 누락</td><td>$\varepsilon = -d\Phi/dt$만 적용</td><td>다권 코일은 $\varepsilon = -N\,d\Phi/dt$</td></tr>
+      <tr><td>3. EMF 부호 실수</td><td>마이너스를 빼먹어 방향이 반대</td><td>크기 답이라도 <em>식에는</em> -를 항상 명시</td></tr>
+      <tr><td>4. cm/mm $\to$ m 환산 누락</td><td>면적 5 cm² → 5로 대입</td><td>SI 단위 통일 후 대입 (cm² → ×10⁻⁴ m²)</td></tr>
+      <tr><td>5. 각도 단위(DEG/RAD)</td><td>$\omega = 2\pi f$를 $f$ 그대로</td><td>각진동수와 주파수 구분, 계산기 모드 확인</td></tr>
+      <tr><td>6. 변압기 비율 뒤집기</td><td>$V_2/V_1 = N_1/N_2$로</td><td>"많은 권수 = 큰 전압" 직관으로 검산</td></tr>
+      <tr><td>7. 인덕터 에너지 $\tfrac{1}{2}LI^2$ 깜빡 1/2</td><td>$U = LI^2$로 두 배</td><td>캐패시터 $\tfrac{1}{2}CV^2$와 짝으로 외움</td></tr>
+      <tr><td>8. AC 실효값 vs 최댓값</td><td>$V_\text{rms}$를 $V_\text{max}$로 대입</td><td>$V_\text{rms} = V_\text{max}/\sqrt 2$ 변환 명시</td></tr>
+      <tr><td>9. 운동 EMF에서 $v$ 성분 무시</td><td>도선이 비스듬해도 $BLv$ 그대로</td><td>$v_\perp$만 유효 — $v\sin\theta$ 곱하기</td></tr>
+      <tr><td>10. 단위 누락</td><td>"5"라고만 적고 V·Wb·H 누락</td><td>매 답에 단위 — 시험 1점/문항</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>전자기 단원 시험장 체크리스트</strong> — ① 면 법선 방향 정의, ② 권수 $N$ 곱했는가, ③ EMF 부호(렌츠), ④ SI 단위 환산, ⑤ DEG/RAD, ⑥ 답에 단위. 이 6가지를 매 문제마다 확인하면 점수가 한 학점 오릅니다.
+  </div>
+
+  <h2>🧪 5분 실험 — 손으로 확인하기</h2>
+  <p>이론은 머리로, 실험은 손으로. 각각 5분 안에 가능합니다.</p>
+
+  <h3>실험 A — 알루미늄 통 안에 자석 떨어뜨리기 (와전류 브레이크)</h3>
+  <ol>
+    <li>준비물: 두꺼운 알루미늄(또는 구리) 파이프 약 30 cm, 네오디뮴 자석, 같은 크기 비자성 추(쇠구슬 NO).</li>
+    <li>자석을 파이프 위에서 가만히 놓고 떨어지는 시간 측정 (스마트폰 스톱워치).</li>
+    <li>같은 크기 비자성 추로 같은 실험 → 시간 비교.</li>
+    <li>자석은 비자성 추보다 <strong>5~10배</strong> 천천히 떨어짐.</li>
+  </ol>
+  <p><em>왜?</em> 자석이 움직이며 파이프 벽에 자속 변화 → 와전류 유도 → 그 와전류가 자석에 반대 방향 힘. 파이프가 두꺼울수록 효과 큼. 롤러코스터·고속전철 비상제동의 원리.</p>
+
+  <h3>실험 B — 핸드폰을 흔들어 LED 켜기 (수동 발전기)</h3>
+  <ol>
+    <li>준비물: 작은 코일(에나멜선 100~500권), 네오디뮴 자석, 저전력 LED, 멀티미터.</li>
+    <li>자석을 코일 안에서 빠르게 흔들면 LED가 깜빡임 (또는 멀티미터가 mV 출력).</li>
+    <li>흔드는 속도와 권수를 바꿔가며 출력 변화 관찰. ($\varepsilon \propto N \cdot v$)</li>
+  </ol>
+  <p><em>주의:</em> 손전등용 "흔들면 켜지는 손전등"이 정확히 이 원리. 시판 제품을 분해해보면 코일·자석·캐패시터·LED 구조가 그대로.</p>
+
+  <h3>실험 C — 무선 충전 패드 + 알루미늄 호일</h3>
+  <ol>
+    <li>핸드폰을 무선 충전 패드 위에 올려 정상 충전 확인.</li>
+    <li>패드와 폰 사이에 종이 한 장 → 충전 OK (자기장 통과).</li>
+    <li>패드와 폰 사이에 알루미늄 호일 한 장 → <strong>충전 멈춤</strong>.</li>
+  </ol>
+  <p><em>왜?</em> 호일 자체에 와전류가 유도되어 송신 자기장을 차단(렌츠). 같은 이유로 인덕션 레인지 위에 알루미늄을 두면 가열 안 되고 도리어 코일 보호 회로가 동작.</p>
+
+  <h2>🌍 다양한 EMF·전자기 수치 — 실생활 감각</h2>
+  <p>식의 답이 합리적인지 판단하려면 평소 실제 수치를 외워두는 것이 도움이 됩니다.</p>
+
+  <table>
+    <thead><tr><th>대상</th><th>전압 / 전력 / 주파수</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>AA 건전지</td><td>1.5 V (DC)</td><td>화학반응 EMF</td></tr>
+      <tr><td>자동차 배터리</td><td>12 V (DC)</td><td>점화 코일이 → 20 kV로 승압</td></tr>
+      <tr><td>가정 콘센트 (한국)</td><td>220 V, 60 Hz (AC)</td><td>실효값. 최댓값 ≈ 311 V</td></tr>
+      <tr><td>핸드폰 무선충전</td><td>5~15 W, 100~200 kHz</td><td>Qi 표준</td></tr>
+      <tr><td>인덕션 레인지</td><td>1~3 kW, 20~50 kHz</td><td>맴돌이 전류로 직접 가열</td></tr>
+      <tr><td>전기자동차 충전</td><td>최대 350 kW (DC 급속)</td><td>3-phase AC 입력</td></tr>
+      <tr><td>지하철 변전소</td><td>22.9 kV → 1500 V (DC)</td><td>변압기 + 정류</td></tr>
+      <tr><td>송전탑</td><td>154 kV / 345 kV / 765 kV</td><td>한국 초고압</td></tr>
+      <tr><td>발전소 발전기 출력</td><td>약 22 kV, 60 Hz</td><td>변압기 거쳐 송전</td></tr>
+      <tr><td>RFID/교통카드</td><td>13.56 MHz</td><td>NFC</td></tr>
+      <tr><td>FM 라디오</td><td>88~108 MHz</td><td>$\lambda \approx 3$ m</td></tr>
+      <tr><td>WiFi 2.4 GHz</td><td>$\lambda \approx 12.5$ cm</td><td>가정용 라우터</td></tr>
+      <tr><td>전자레인지</td><td>2.45 GHz, 700~1200 W</td><td>물 분자 진동 가열</td></tr>
+      <tr><td>5G 셀룰러</td><td>3.5 GHz / 28 GHz</td><td>밀리미터파</td></tr>
+      <tr><td>가시광 (적색)</td><td>4.3×10¹⁴ Hz, 700 nm</td><td>EM파 스펙트럼 일부</td></tr>
+      <tr><td>가시광 (보라)</td><td>7.5×10¹⁴ Hz, 400 nm</td><td>고주파 끝</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>활용</strong> — 시험 답이 "가정 콘센트가 22000 V"가 나오면 100배 엇갈림. 어딘가 단위·환산 실수 신호.</div>
+
+  <h2>🏟️ 실생활 응용 깊게 보기</h2>
+  <p>전자기 유도와 맥스웰의 응용은 거의 모든 현대 기술. 다섯 가지를 깊게.</p>
+
+  <h3>응용 1 — 발전소 (모든 발전소가 결국 코일 회전)</h3>
+  <p>화력·수력·원자력·풍력 발전소의 공통점: <strong>증기/물/바람이 터빈을 돌리고, 그 터빈이 자석 안 코일을 돌린다</strong>. 패러데이가 그 핵심. 전 세계 전력의 약 95%가 이 방식.</p>
+  <ul>
+    <li>한국 표준: 60 Hz, 22 kV → 송전망에서 154/345/765 kV로 승압.</li>
+    <li>코일 회전 주파수 60 Hz × 발전기 극수에 따라 회전 속도 결정.</li>
+    <li><strong>학기 핵심 메시지:</strong> "당신이 노트북을 켜는 순간 흐르는 전류는 누군가가 멀리서 코일을 돌리고 있다는 뜻."</li>
+  </ul>
+
+  <h3>응용 2 — 송전망 (변압기의 위력)</h3>
+  <p>발전소 → 765 kV 초고압 송전 → 154 kV 변전소 → 22.9 kV 배전 → 가정 220 V. 매 단계 변압기. 만약 22 kV 그대로 가정까지 보내면 송전 손실이 약 2500배(문제 8 참고). 에디슨이 DC 송전을 주장하다 테슬라+웨스팅하우스의 AC에 졌던 1890년대 "전류 전쟁"의 결정적 이유.</p>
+
+  <h3>응용 3 — 무선충전·NFC·RFID (코일 결합)</h3>
+  <p>모두 같은 원리: 송신 코일 AC → 변하는 $\vec B$ → 수신 코일에 패러데이로 EMF.</p>
+  <ul>
+    <li>Qi 표준 (스마트폰 충전): 100~200 kHz, 5~15 W, 거리 ~5 mm.</li>
+    <li>NFC (교통카드, 결제): 13.56 MHz, 수십 mW, 거리 ~5 cm.</li>
+    <li>전기차 무선충전: 85 kHz, 11 kW, 거리 10~15 cm (개발 중).</li>
+  </ul>
+  <p>거리가 멀어지면 효율이 급격히 떨어짐 — 자기장이 거리의 세제곱으로 감소.</p>
+
+  <h3>응용 4 — 인덕션 가열 (와전류로 직접 가열)</h3>
+  <p>가전: 인덕션 레인지. 산업: 금속 열처리·용접·녹임. <strong>철-니켈 합금</strong>이 효율 최대.</p>
+  <ul>
+    <li>20~50 kHz AC 코일이 냄비 바닥에 변하는 자기장 → 와전류 → $I^2R$ 가열.</li>
+    <li>가스 화구 대비 효율 80% (가스는 40~50%) — 열이 냄비에 직접 발생.</li>
+    <li>유리·세라믹 식기는 가열 안 되어 안전. 알루미늄/구리는 저항 너무 낮아 비효율.</li>
+  </ul>
+
+  <h3>응용 5 — 안테나·통신 (맥스웰의 직접 응용)</h3>
+  <p>모든 라디오·TV·휴대전화·WiFi·위성통신이 맥스웰 4식의 해를 송수신.</p>
+  <ul>
+    <li>안테나 길이는 보통 $\lambda/4$ 또는 $\lambda/2$ — 휴대전화 안테나가 손가락 길이인 이유 ($\lambda \sim$ 30 cm at 900 MHz).</li>
+    <li>5G 28 GHz는 $\lambda \approx 1$ cm — 작은 어레이 안테나, 그러나 직진성 강해 건물에 약함.</li>
+    <li>위성 통신: GHz 대역, 수만 km 거리에 EM파로 정보 전송. <em>광속이라 수십 ms 지연</em>.</li>
+  </ul>
+
+  <h3>응용 6 — 신용카드 마그네틱 스트라이프</h3>
+  <p>카드 뒷면 검은띠는 미세 자성 입자가 정렬된 상태로 정보를 저장. 카드 리더기는 띠 위로 헤드(코일)를 통과시키며 자속 변화로 EMF 유도 → 그 신호를 디지털로 변환. 카드를 "긁는다"는 표현은 정확히 패러데이 식의 적용. NFC로 대체 중이지만 여전히 백업.</p>
+
+  <h2>📚 부록 — 대표 유도 문제 식 표</h2>
+  <p>전자기 유도의 핵심 공식을 한 페이지로. <strong>외울 게 거의 없습니다</strong> — 패러데이 한 줄에서 다 따라옴.</p>
+
+  <table>
+    <thead><tr><th>상황</th><th>식</th><th>유래</th></tr></thead>
+    <tbody>
+      <tr><td>자속 정의</td><td>$\Phi_B = \int \vec B \cdot d\vec A = BA\cos\theta$</td><td>면 법선과 $\vec B$ 사이 각</td></tr>
+      <tr><td>패러데이 (1권)</td><td>$\varepsilon = -d\Phi_B/dt$</td><td>기본 법칙</td></tr>
+      <tr><td>패러데이 ($N$권)</td><td>$\varepsilon = -N\,d\Phi_B/dt$</td><td>직렬 연결</td></tr>
+      <tr><td>운동 EMF</td><td>$\varepsilon = BLv$</td><td>패러데이의 특수 경우 ($A$가 변함)</td></tr>
+      <tr><td>회전 코일 EMF</td><td>$\varepsilon = NBA\omega\sin(\omega t)$</td><td>$\theta$가 변함, $\Phi = BA\cos\omega t$</td></tr>
+      <tr><td>자체유도 (인덕터)</td><td>$\varepsilon_L = -L\,dI/dt$</td><td>$L$ = 인덕턴스, 단위 H</td></tr>
+      <tr><td>인덕터 에너지</td><td>$U = \tfrac{1}{2}LI^2$</td><td>캐패시터 $\tfrac{1}{2}CV^2$의 자기 짝</td></tr>
+      <tr><td>변압기</td><td>$V_2/V_1 = N_2/N_1$</td><td>패러데이를 두 코일에</td></tr>
+      <tr><td>변압기 전류비</td><td>$I_2/I_1 = N_1/N_2$</td><td>전력 보존 (이상)</td></tr>
+      <tr><td>변위 전류</td><td>$I_d = \varepsilon_0\, d\Phi_E/dt$</td><td>맥스웰의 추가 항</td></tr>
+      <tr><td>빛의 속도</td><td>$c = 1/\sqrt{\mu_0\varepsilon_0}$</td><td>맥스웰 4식의 직접 결과</td></tr>
+      <tr><td>EM파 파장</td><td>$\lambda = c/f$</td><td>모든 EM파 공통</td></tr>
+      <tr><td>RC 시간상수</td><td>$\tau = RC$</td><td>참고 (12주)</td></tr>
+      <tr><td>RL 시간상수</td><td>$\tau = L/R$</td><td>전류 변화의 시간 척도</td></tr>
+      <tr><td>LC 진동</td><td>$\omega = 1/\sqrt{LC}$</td><td>전기적 단진동 (W6 짝)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📐 SI 단위 빠른 참조 — 전자기 유도</h2>
+  <p>새 단위가 가장 많이 등장하는 단원입니다. 한 번 정리하면 시험에서 단위 실수 0.</p>
+
+  <table>
+    <thead><tr><th>양</th><th>SI 단위</th><th>기본 단위 표현</th></tr></thead>
+    <tbody>
+      <tr><td>자속 $\Phi_B$</td><td>웨버 (Wb)</td><td>1 Wb = 1 T·m² = 1 V·s</td></tr>
+      <tr><td>자기장 $B$</td><td>테슬라 (T)</td><td>1 T = 1 Wb/m² = 1 V·s/m²</td></tr>
+      <tr><td>EMF $\varepsilon$</td><td>볼트 (V)</td><td>1 V = 1 J/C = 1 Wb/s</td></tr>
+      <tr><td>인덕턴스 $L$</td><td>헨리 (H)</td><td>1 H = 1 V·s/A = 1 Wb/A</td></tr>
+      <tr><td>주파수 $f$</td><td>헤르츠 (Hz)</td><td>1 Hz = 1/s</td></tr>
+      <tr><td>각진동수 $\omega$</td><td>rad/s</td><td>$\omega = 2\pi f$</td></tr>
+      <tr><td>광속 $c$</td><td>m/s</td><td>$\approx 3 \times 10^8$ (정확히 $299{,}792{,}458$)</td></tr>
+      <tr><td>자유공간 투자율 $\mu_0$</td><td>H/m</td><td>$4\pi \times 10^{-7}$ (≈ $1.26\times 10^{-6}$)</td></tr>
+      <tr><td>자유공간 유전율 $\varepsilon_0$</td><td>F/m</td><td>$8.85\times 10^{-12}$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>차원 일관성 검증 — 빛의 속도 식</h3>
+  <p>$c = 1/\sqrt{\mu_0\varepsilon_0}$가 정말 m/s 단위가 나오는가?</p>
+  <ul>
+    <li>$\mu_0\varepsilon_0$의 단위: (H/m)(F/m) = (V·s/A·m)(C/V·m) = (s·C)/(A·m²) = s²/m² (∵ A=C/s)</li>
+    <li>그 역수의 제곱근: $\sqrt{m^2/s^2} = $ m/s ✓</li>
+  </ul>
+
+  <h2>🗺️ 개념 지도 — 14주가 1~13주를 어떻게 통합하는가</h2>
+  <p>맥스웰의 통합성·우아함을 직시하는 한 그림. 14주는 단순한 새 주제가 아니라, 학기 전체의 <strong>클라이맥스</strong>입니다.</p>
+
+  <pre><code>     W1 운동학(미분/벡터)──────────────────┐
+     W2 뉴턴 F=ma  ──── 힘의 개념 ─────────┤
+     W3 일·에너지 ──── 에너지 보존 ────────┤   ┌── 렌츠 = 에너지 보존
+     W4 운동량  ───── 보존법칙 ────────────┤   │
+     W5 회전운동 ──── 토크/각운동량 ───────┤   │
+     W6 단진동 ────── 사인 운동 ───────────┤   ├── LC 진동 = 전기 SHM
+     W7 (중간)                            │   │
+     W8 파동 ──────── 매질 통한 전파 ──────┤   ├── EM파도 파동 (단, 매질 불요)
+     W9 열역학 ─────── 다체계 평균 ────────┤   │
+     W10 정전기 / 전기장 E ────────────────┤   │
+     W11 전위 / 가우스 ────────────────────┤   ├──┐
+     W12 회로/저항/캐패시터 ────────────────┤   │  │
+     W13 자기장 B / 앙페르 ─────────────────┤   │  │
+                                          │   │  │
+                                          ▼   ▼  ▼
+                          ┌─────────────────────────────────────┐
+                          │  W14 — 맥스웰 4식  (오늘)            │
+                          │                                      │
+                          │  ① ∇·E = ρ/ε₀     (W10 가우스)       │
+                          │  ② ∇·B = 0        (단극자 없음)      │
+                          │  ③ ∇×E = -∂B/∂t   (오늘 패러데이)    │
+                          │  ④ ∇×B = μ₀J + μ₀ε₀∂E/∂t (앙페르+추가)│
+                          │                                      │
+                          │      ↓ (자유공간에서 정리)           │
+                          │                                      │
+                          │  ∇²E = μ₀ε₀ ∂²E/∂t²                 │
+                          │  → 속도 c = 1/√(μ₀ε₀) 파동           │
+                          │  → "빛이다"                          │
+                          └─────────────────────────────────────┘
+                                     │
+                                     ▼
+            W15 기말 / 다음 학기: 광학·상대론·양자전기역학</code></pre>
+
+  <p><strong>한 줄 결론</strong> — 맥스웰은 1865년 단지 4개의 식을 한 페이지에 모았을 뿐입니다. 그러자 그 안에 빛이, 라디오가, 와이파이가, 인터넷이, 우리 눈이 보는 모든 것이 들어있었습니다. <em>이 한 학기를 끝내는 학생이 받는 가장 큰 선물.</em></p>
+
+  <h2>🎯 시험 직전 5분 노트 — 맥스웰 4식 한 페이지 외우기</h2>
+  <div class="tip">
+    <h4 style="margin-top:0">절대 잊지 말 것</h4>
+    <ol>
+      <li><strong>자속:</strong> $\Phi_B = BA\cos\theta$. 변할 수 있는 3가지 — $B$, $A$, $\theta$.</li>
+      <li><strong>패러데이:</strong> $\varepsilon = -N\,d\Phi_B/dt$. 마이너스 = 렌츠 = 에너지 보존.</li>
+      <li><strong>운동 EMF:</strong> $\varepsilon = BLv$. 도선이 자기장 가로지를 때.</li>
+      <li><strong>인덕터:</strong> $\varepsilon_L = -L\,dI/dt$, $U = \tfrac{1}{2}LI^2$.</li>
+      <li><strong>변압기:</strong> $V_2/V_1 = N_2/N_1 = I_1/I_2$. AC만.</li>
+      <li><strong>맥스웰 4식 (한 줄로):</strong>
+        <pre><code>① ∇·E = ρ/ε₀     ─── 전하가 E의 원천
+② ∇·B = 0         ─── 자기 단극자 없음
+③ ∇×E = -∂B/∂t    ─── 패러데이
+④ ∇×B = μ₀J + μ₀ε₀∂E/∂t ─── 앙페르-맥스웰</code></pre></li>
+      <li><strong>빛의 속도:</strong> $c = 1/\sqrt{\mu_0\varepsilon_0} \approx 3\times 10^8$ m/s.</li>
+      <li><strong>EM파:</strong> $\vec E \perp \vec B \perp$ 진행, $\lambda = c/f$.</li>
+    </ol>
+  </div>
+
+  <div class="tip">
+    <strong>맥스웰 4식 30초 외우기 팁</strong> — "발산 두 개, 회전 두 개". 발산은 전하·자하 (자하 0), 회전은 시간 변화 (각각 $-\partial B/\partial t$, $\mu_0 J + \mu_0\varepsilon_0\,\partial E/\partial t$). 마지막 항이 <em>맥스웰의 한 줄</em> → 빛이 가능하게 한 추가.
+  </div>
+
+  <h2>🎓 1분 미니퀴즈 — 5문항</h2>
+  <p>1분 안에 머릿속으로 답해 보고 토글로 확인. 4개 이상 맞으면 14주차 OK.</p>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 1.</strong> 자석을 코일 안에 가만히 두면 EMF는?</summary>
+    <p style="margin-top:8px">0. $\Phi_B$가 안 변하므로. 변화 없으면 유도 없음.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 2.</strong> 변압기 1차 100권, 2차 1000권, 1차 220 V. 2차 전압?</summary>
+    <p style="margin-top:8px">$V_2 = 220 \times 10 = 2200$ V (승압).</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 3.</strong> $L = 0.1$ H, 전류가 1초에 2 A 변하면 역기전력?</summary>
+    <p style="margin-top:8px">$|\varepsilon| = L\,|dI/dt| = 0.1 \times 2 = 0.2$ V.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 4.</strong> 맥스웰 4식 중 빛(EM파)을 가능하게 한 결정적 항은?</summary>
+    <p style="margin-top:8px">앙페르-맥스웰 식의 변위 전류 $\mu_0\varepsilon_0\,\partial E/\partial t$. 이게 없으면 자기 유지 사이클이 안 됨.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 5.</strong> 와이파이 5 GHz의 파장은?</summary>
+    <p style="margin-top:8px">$\lambda = c/f = (3\times 10^8)/(5\times 10^9) = 0.06$ m = 6 cm.</p>
+  </details>
+
+  <h2>📖 더 깊이 — 참고자료</h2>
+  <ul>
+    <li><strong>Halliday, Resnick, Walker</strong>, <em>Fundamentals of Physics</em> — 30장(유도와 인덕턴스), 31장(전자기 진동·AC), 32장(맥스웰·EM파).</li>
+    <li><strong>Khan Academy 한국어 — 전자기 유도 단원</strong> (무료): 영상 + 즉시 채점 문제.</li>
+    <li><strong>Walter Lewin MIT 8.02 Lecture 20–26</strong>: 패러데이·렌츠·인덕터·변압기·EM파 라이브 데모. 전설의 강의 (영어, 자막).
+      <ul>
+        <li>Lec 20: Inductance and RL Circuits</li>
+        <li>Lec 21: Magnetic Materials</li>
+        <li>Lec 22: Hysteresis and Electromagnets</li>
+        <li>Lec 23: Faraday's Law (★ Thomson Jumping Ring 데모)</li>
+        <li>Lec 24: Transformers</li>
+        <li>Lec 26: Maxwell's Equations and EM Waves</li>
+      </ul>
+    </li>
+    <li><strong>3Blue1Brown</strong> — "Faraday's Law", "Visualizing Maxwell's Equations" 영상.</li>
+    <li><strong>Veritasium</strong>, "How Special Relativity Made Me Hate Maxwell's Equations" — 4식의 통합성에 대한 직관적 설명.</li>
+    <li><strong>Feynman Lectures, Vol. II, Ch. 18</strong> — 맥스웰 식의 형이상학적 의미. 평생 한 번은 읽을 가치.</li>
+    <li><strong>PhET Faraday's Electromagnetic Lab</strong> (무료 시뮬레이션): 자석·코일·변압기·발전기 모두 가지고 놀 수 있음.</li>
+  </ul>
+
+  <h2>📋 학습 체크리스트</h2>
+  <div class="tip">
+    이번 주 끝나기 전에 다음을 모두 ✅ 표시할 수 있는지 확인하세요:
+    <ul style="list-style:none;padding-left:0">
+      <li>☐ 자속 $\Phi_B$를 정의하고 면 법선·자기장 각도로 계산할 수 있다.</li>
+      <li>☐ 패러데이 식 $\varepsilon = -N\,d\Phi/dt$로 EMF 크기와 방향을 모두 구할 수 있다.</li>
+      <li>☐ 렌츠 법칙 4단계 풀이로 유도 전류 방향을 결정할 수 있다.</li>
+      <li>☐ 운동 EMF $BLv$를 도선의 속도 성분으로 풀 수 있다.</li>
+      <li>☐ 자체유도 $\varepsilon_L = -L\,dI/dt$와 인덕터 에너지 $\tfrac{1}{2}LI^2$를 구분 사용한다.</li>
+      <li>☐ 변압기 권수비를 패러데이 두 번 적용으로 유도할 수 있다.</li>
+      <li>☐ 고압송전이 손실을 줄이는 이유를 $P=I^2R$로 설명한다.</li>
+      <li>☐ 맥스웰 4식의 모양을 외우고 각각의 의미를 한 줄로 말할 수 있다.</li>
+      <li>☐ $c = 1/\sqrt{\mu_0\varepsilon_0}$가 맥스웰 식의 직접 결과임을 안다.</li>
+      <li>☐ 데모 1·2·3을 모두 슬라이더로 가지고 놀아봤다.</li>
+      <li>☐ 연습문제 12개 중 9개 이상을 풀이 없이 풀 수 있다.</li>
+      <li>☐ 1분 미니퀴즈 5문제를 모두 맞췄다.</li>
+      <li>☐ 5분 실험 A·B·C 중 하나는 직접 시도했다.</li>
+      <li>☐ 자주 틀리는 계산 실수 BEST 10을 한 번 읽어봤다.</li>
+    </ul>
+    하나라도 막히면 그 섹션으로 돌아가 다시 5분만 보세요. 14주가 학기 전체 통합이라 누적 효과가 가장 큰 주차입니다.
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>학습 시간 가이드</strong> — 평균 학생이 본 페이지를 처음 읽는 데 약 2시간.
+    데모 3개 + 연습문제 12 + 도전 3 + FAQ 15까지 모두 따라가면 약 4~5시간 적정.
+    기말 직전 복습은 <em>시험 직전 5분 노트 + 맥스웰 4식 한 페이지 + 미니퀴즈</em>로 1시간이면 충분.
+  </div>
+
+  <h3>진단 트리 — 어디부터 다시 봐야 할까?</h3>
+  <pre><code>14주 자가진단:
+  Q. "패러데이 식이 어디서 왔는지" 설명 가능?
+     ├── No  → 자속 정의(섹션 1) + 패러데이(섹션 2) 30분 재학습
+     └── Yes → ▼
+  Q. "렌츠 법칙으로 방향" 즉답 가능?
+     ├── No  → 렌츠 4단계 풀이 + 데모 1로 5분 연습
+     └── Yes → ▼
+  Q. "변압기 식 유도 5단계" 화이트보드에 쓸 수 있나?
+     ├── No  → 단계별 사고(섹션 🪜) 30분 + 데모 2 슬라이더
+     └── Yes → ▼
+  Q. "맥스웰 4식과 빛의 속도 연결" 한 문장으로?
+     ├── No  → 맥스웰 4식 표 + Lewin Lec 26 / 3Blue1Brown 시청
+     └── Yes → ▼
+  Q. 미니퀴즈 5/5 가능?
+     ├── No  → 틀린 문항 섹션 다시 읽기
+     └── Yes → 14주차 마스터 ✅</code></pre>
+
   <h2>과제 13 (학기 마지막)</h2>
   <ol>
     <li>(개념) 발전소가 교류를 쓰는 이유를 송전 손실 + 변압기로.</li>

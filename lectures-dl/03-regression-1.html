@@ -594,8 +594,300 @@ sgd.fit(X, y)</code></pre>
     <li>1차원 선형회귀는 정규방정식으로 한 방에 풀 수 있는데, 왜 딥러닝에서는 그게 안 될까요?</li>
   </ol>
 
+  <h2>🎨 비용함수의 모양 — "그릇"을 그려보자</h2>
+  <p>$J(w, b)$는 두 변수의 함수입니다. 이를 시각화하면 <strong>3차원의 그릇 모양</strong>이 됩니다. 가장 낮은 점이 우리가 찾고 싶은 최적 $(w^*, b^*)$. MSE 손실은 항상 볼록(convex)이라, 어디서 출발해도 같은 바닥으로 굴러가는 좋은 성질을 가집니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비용 등고선과 경사하강 경로</h4>
+    <p>MSE 비용을 등고선으로 그리고, 시작점에서 경사하강이 어떤 경로로 최적점을 향해 가는지 추적합니다. 학습률을 바꿔보면 경로가 어떻게 변하는지 볼 수 있습니다.</p>
+    <canvas id="contour" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>학습률 α <span class="val" id="ctaV">0.05</span><input type="range" id="cta" min="0.001" max="0.4" step="0.005" value="0.05"></label>
+      <label>반복 횟수 <span class="val" id="ctnV">30</span><input type="range" id="ctn" min="5" max="100" step="1" value="30"></label>
+      <button id="ctR">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('contour');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[[1,2.1],[2,3.0],[3,4.9],[4,7.2],[5,9.0]];
+    function loss(w,b){let s=0;data.forEach(([x,y])=>{const e=w*x+b-y;s+=e*e;});return s/data.length;}
+    function grad(w,b){let gw=0,gb=0;data.forEach(([x,y])=>{const e=w*x+b-y;gw+=2*e*x;gb+=2*e;});return [gw/data.length,gb/data.length];}
+    function draw(){
+      const lr=+document.getElementById('cta').value;
+      const iters=+document.getElementById('ctn').value;
+      document.getElementById('ctaV').textContent=lr.toFixed(3);
+      document.getElementById('ctnV').textContent=iters;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const wmn=-1,wmx=4,bmn=-3,bmx=3;
+      const Nx=80,Ny=60;
+      // contours
+      for(let i=0;i<Nx;i++)for(let j=0;j<Ny;j++){
+        const w=wmn+(wmx-wmn)*i/Nx,b=bmn+(bmx-bmn)*j/Ny;
+        const L=loss(w,b);
+        const t=Math.min(1,L/40);
+        const r=Math.floor(255*(1-t)+200*t);
+        const g=Math.floor(255*(1-t)+220*t);
+        const bl=Math.floor(255*(1-t)+255*t);
+        ctx.fillStyle=`rgb(${r},${g},${bl})`;
+        ctx.fillRect(60+i*(W-100)/Nx,30+j*(H-80)/Ny,(W-100)/Nx+1,(H-80)/Ny+1);
+      }
+      // contour lines
+      ctx.strokeStyle='#888';ctx.lineWidth=0.5;
+      for(let lv of [0.5,2,5,10,20,40]){
+        ctx.beginPath();
+        for(let i=0;i<Nx;i++){
+          const w=wmn+(wmx-wmn)*i/Nx;
+          // find b where loss == lv (rough)
+          for(let j=0;j<Ny-1;j++){
+            const b1=bmn+(bmx-bmn)*j/Ny,b2=bmn+(bmx-bmn)*(j+1)/Ny;
+            if((loss(w,b1)-lv)*(loss(w,b2)-lv)<0){
+              const x=60+i*(W-100)/Nx;
+              const y=30+j*(H-80)/Ny;
+              ctx.fillStyle='rgba(0,0,0,0.3)';
+              ctx.fillRect(x,y,1,1);
+            }
+          }
+        }
+      }
+      // gradient descent path
+      let w=-0.5,b=-2.5;
+      const path=[[w,b]];
+      for(let i=0;i<iters;i++){const [gw,gb]=grad(w,b);w-=lr*gw;b-=lr*gb;path.push([w,b]);if(Math.abs(w)>10||Math.abs(b)>10)break;}
+      function px(w){return 60+(w-wmn)/(wmx-wmn)*(W-100);}
+      function py(b){return 30+(b-bmn)/(bmx-bmn)*(H-80);}
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;
+      ctx.beginPath();
+      path.forEach((p,i)=>{const x=px(p[0]),y=py(p[1]);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      ctx.fillStyle='#c62828';
+      path.forEach(p=>{ctx.beginPath();ctx.arc(px(p[0]),py(p[1]),3,0,Math.PI*2);ctx.fill();});
+      // optimum (analytical)
+      const N=data.length;
+      const sumx=data.reduce((s,[x,y])=>s+x,0),sumy=data.reduce((s,[x,y])=>s+y,0);
+      const sumxx=data.reduce((s,[x,y])=>s+x*x,0),sumxy=data.reduce((s,[x,y])=>s+x*y,0);
+      const wOpt=(N*sumxy-sumx*sumy)/(N*sumxx-sumx*sumx);
+      const bOpt=(sumy-wOpt*sumx)/N;
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(px(wOpt),py(bOpt),6,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`초록 = 정규방정식 해 (w*=${wOpt.toFixed(2)}, b*=${bOpt.toFixed(2)})`,60,22);
+      ctx.fillStyle='#c62828';ctx.fillText(`빨강 = 경사하강 경로 (현재 w=${path[path.length-1][0].toFixed(2)}, b=${path[path.length-1][1].toFixed(2)})`,60,H-15);
+    }
+    document.getElementById('cta').addEventListener('input',draw);
+    document.getElementById('ctn').addEventListener('input',draw);
+    document.getElementById('ctR').addEventListener('click',draw);
+    draw();
+  })();
+  </script>
+
+  <p>학습률을 0.001로 두고 반복을 100으로 늘려도 빨강 점이 거의 안 움직임을 봅니다 — 너무 작은 보폭. 학습률 0.05로 두면 30번 반복으로 정확히 초록 최적점에 도달. 0.3으로 키우면 경로가 출렁이고, 0.4 가까이 가면 발산해서 점이 화면 밖으로 사라집니다. <strong>같은 알고리즘인데 학습률 하나로 결과가 완전히 갈리는</strong> 이유를 눈으로 확인할 수 있습니다.</p>
+
+  <h2>📝 단계별 워크쓰루 — 손으로 경사하강 한 번 굴리기</h2>
+  <p>위에서 본 식들을 종이로 한 번 굴려봅시다. 데이터: $(x, y) = (1, 2), (2, 3), (3, 5)$. 시작점 $w = 0, b = 0$, 학습률 $\alpha = 0.1$.</p>
+
+  <p><strong>예측과 오차 (반복 0).</strong></p>
+  <table>
+    <thead><tr><th>i</th><th>$x_i$</th><th>$y_i$</th><th>$\hat y_i = wx_i + b$</th><th>$e_i = \hat y_i - y_i$</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>1</td><td>2</td><td>0</td><td>−2</td></tr>
+      <tr><td>2</td><td>2</td><td>3</td><td>0</td><td>−3</td></tr>
+      <tr><td>3</td><td>3</td><td>5</td><td>0</td><td>−5</td></tr>
+    </tbody>
+  </table>
+  <p>비용 $J = (4 + 9 + 25)/3 \approx 12.67$.</p>
+  <p><strong>경사 계산.</strong> $\partial J/\partial w = (2/N)\sum e_i x_i = (2/3)(−2 \cdot 1 + −3 \cdot 2 + −5 \cdot 3) = (2/3)(−23) \approx −15.33$.<br>
+  $\partial J/\partial b = (2/N)\sum e_i = (2/3)(−10) \approx −6.67$.</p>
+  <p><strong>업데이트.</strong> $w \leftarrow 0 - 0.1 \cdot (-15.33) = 1.533$.<br>
+  $b \leftarrow 0 - 0.1 \cdot (-6.67) = 0.667$.</p>
+
+  <p><strong>반복 1로 다시 예측·비용 계산.</strong></p>
+  <table>
+    <thead><tr><th>i</th><th>$\hat y_i$</th><th>$e_i$</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>$1.533 \cdot 1 + 0.667 = 2.200$</td><td>0.200</td></tr>
+      <tr><td>2</td><td>$1.533 \cdot 2 + 0.667 = 3.733$</td><td>0.733</td></tr>
+      <tr><td>3</td><td>$1.533 \cdot 3 + 0.667 = 5.267$</td><td>0.267</td></tr>
+    </tbody>
+  </table>
+  <p>비용 $J \approx (0.04 + 0.537 + 0.071)/3 \approx 0.216$. 무려 12.67에서 0.22로 한 번 만에 60배 가까이 줄었습니다.</p>
+
+  <p>한 번 더 반복하면 $w \approx 1.49$, $b \approx 0.86$ 정도로 수렴해 갑니다. 이 데이터의 정확한 최적해는 $w = 1.5$, $b = 1/3$ 부근. 손계산만으로도 매우 가까이 갔다는 점이 인상적입니다. <strong>경사하강법은 "느리지만 보편적"이라는 게 핵심</strong>입니다 — 어떤 함수든 미분만 가능하면 같은 알고리즘이 통합니다.</p>
+
+  <h2>🪜 미니배치와 확률적 경사하강법 — 큰 데이터의 표준</h2>
+  <p>지금까지 본 경사하강법은 <strong>전체 데이터</strong>로 매 스텝 경사를 계산하는 <em>배치 경사하강법(Batch GD)</em>입니다. 데이터가 100만 건이면 한 스텝에 100만 건을 다 봐야 하니 너무 느립니다. 두 가지 변형이 있습니다.</p>
+  <ul>
+    <li><strong>확률적 경사하강법(SGD)</strong> — 매 스텝 데이터 한 건만 보고 업데이트. 빠르지만 잡음이 큼.</li>
+    <li><strong>미니배치 경사하강법</strong> — 매 스텝 32~512건 정도의 작은 배치만 보고 업데이트. 둘의 절충. <em>딥러닝의 사실상 표준</em>.</li>
+  </ul>
+  <p>왜 미니배치가 표준이 됐는가? (1) GPU가 행렬 연산에 강해 32건 한 번에 처리하는 게 1건씩 32번보다 훨씬 빠르고, (2) 잡음이 적당히 있어 손실 곡면의 작은 함정에서 빠져나오는 데 도움이 되기도 합니다. <strong>한 epoch(에폭)</strong>은 "전체 데이터를 한 번씩 다 본다"는 뜻이고, 여러 미니배치 스텝의 합입니다.</p>
+  <table>
+    <thead><tr><th>방법</th><th>스텝당 본 데이터</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>Batch GD</td><td>전체 N건</td><td>경사가 정확, 안정적</td><td>큰 데이터에 매우 느림</td></tr>
+      <tr><td>SGD</td><td>1건</td><td>빠른 업데이트, 메모리 작음</td><td>잡음 큼, GPU 비효율</td></tr>
+      <tr><td>Mini-batch (32–512)</td><td>32–512건</td><td>속도·안정·GPU 호환</td><td>배치 크기 튜닝 필요</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🎯 학습률 튜닝 가이드 — 4단계로 끝내기</h2>
+  <p>학생들이 "학습률을 어떻게 정하느냐"라고 가장 자주 질문합니다. 실전에서 통하는 4단계 절차를 그대로 따라 해도 9할의 문제가 풀립니다.</p>
+  <ol>
+    <li><strong>큰 값으로 시작</strong> — 보통 $\alpha = 0.1$. 손실이 발산하거나 NaN이면 너무 큼.</li>
+    <li><strong>발산하면 ÷10</strong> — 0.1 → 0.01 → 0.001. 안정적으로 줄어드는 곳까지.</li>
+    <li><strong>너무 느리면 ×3</strong> — 손실이 100스텝 동안 거의 안 줄면 보폭 키우기.</li>
+    <li><strong>스케줄링</strong> — 처음에는 크게, 끝에는 작게(<em>learning rate decay</em>). 가장 쉬운 방법은 "절반씩 줄이기"를 일정 주기로.</li>
+  </ol>
+  <p>딥러닝 시대에는 위 절차의 자동화 버전이 표준입니다 — Adam, RMSProp 같은 적응형 최적화기가 매 스텝 학습률을 자동으로 조정합니다(<a href="08-dnn-backprop.html">W8</a>에서 자세히). 그러나 직관은 같습니다: <em>처음엔 과감하게, 가까이 갈수록 조심스럽게</em>.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 학습률 비교 — 같은 문제, 다른 보폭</h4>
+    <p>같은 데이터·시작점에서 학습률을 바꾸면 손실 곡선이 어떻게 변하는지 동시에 보여줍니다. 너무 크면 발산, 너무 작으면 거의 정지, 적당하면 빠르게 수렴.</p>
+    <canvas id="lrCmp" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>최대 반복 <span class="val" id="lrIV">50</span><input type="range" id="lrI" min="10" max="200" step="5" value="50"></label>
+      <button id="lrR">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lrCmp');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[[1,2],[2,3],[3,5],[4,7.5],[5,9]];
+    function loss(w,b){let s=0;data.forEach(([x,y])=>{const e=w*x+b-y;s+=e*e;});return s/data.length;}
+    function grad(w,b){let gw=0,gb=0;data.forEach(([x,y])=>{const e=w*x+b-y;gw+=2*e*x;gb+=2*e;});return [gw/data.length,gb/data.length];}
+    function run(lr,iters){
+      let w=0,b=0;const hist=[loss(w,b)];
+      for(let i=0;i<iters;i++){const [gw,gb]=grad(w,b);w-=lr*gw;b-=lr*gb;hist.push(loss(w,b));if(!isFinite(hist[hist.length-1])||hist[hist.length-1]>1e6)break;}
+      return hist;
+    }
+    function draw(){
+      const iters=+document.getElementById('lrI').value;
+      document.getElementById('lrIV').textContent=iters;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const PL=50,PR=20,PT=30,PB=40;
+      const plotW=W-PL-PR,plotH=H-PT-PB;
+      ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+plotH);ctx.lineTo(PL+plotW,PT+plotH);ctx.stroke();
+      const lrs=[{a:0.001,col:'#888',lab:'α=0.001 (느림)'},{a:0.05,col:'#0b5fff',lab:'α=0.05 (적당)'},{a:0.3,col:'#ff8c00',lab:'α=0.3 (불안정)'},{a:0.5,col:'#c62828',lab:'α=0.5 (발산)'}];
+      const histories=lrs.map(l=>({col:l.col,lab:l.lab,h:run(l.a,iters)}));
+      const maxLoss=20;
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('손실 J',14,PT+plotH/2);
+      ctx.fillText('반복 →',PL+plotW/2,H-12);
+      for(let v=0;v<=maxLoss;v+=4){const y=PT+plotH*(1-v/maxLoss);ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+plotW,y);ctx.stroke();ctx.fillStyle='#888';ctx.fillText(v,PL-25,y+4);}
+      histories.forEach(({col,lab,h},k)=>{
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+        h.forEach((v,i)=>{const x=PL+plotW*i/Math.max(1,iters);const y=PT+plotH*(1-Math.min(maxLoss,v)/maxLoss);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+        ctx.fillStyle=col;ctx.fillText(lab,PL+10+k*120,PT+12);
+      });
+    }
+    document.getElementById('lrI').addEventListener('input',draw);
+    document.getElementById('lrR').addEventListener('click',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>📈 모멘텀과 적응형 옵티마이저 — 미리보기</h2>
+  <p>"학습률을 자동으로 튜닝하는 방법은 없을까?"라는 의문에서 등장한 것이 모멘텀과 Adam 같은 적응형 옵티마이저입니다. <a href="08-dnn-backprop.html">W8</a>에서 자세히 다루지만, 직관만 짧게 미리 보겠습니다.</p>
+  <ul>
+    <li><strong>SGD + Momentum</strong> — 직전 업데이트 방향을 일부 유지(<em>관성</em>). 좁은 골짜기를 따라 빠르게 미끄러지는 느낌. 식: $v \leftarrow \beta v - \alpha g$, $w \leftarrow w + v$.</li>
+    <li><strong>RMSProp</strong> — 각 파라미터마다 최근 경사의 크기에 반비례하게 학습률을 자동 조정. 큰 경사에는 작은 보폭, 작은 경사에는 큰 보폭.</li>
+    <li><strong>Adam</strong> — Momentum + RMSProp 결합. 딥러닝에서 가장 많이 쓰이는 디폴트.</li>
+  </ul>
+  <p>이름이 어려워 보여도 본질은 "<em>경사 한 개만 보는 SGD에 약간의 관성과 자동 학습률을 추가</em>"한 것입니다. 우리는 W3에서 가장 단순한 버전(SGD)부터 단단히 배운 뒤, 점점 정교한 버전으로 올라갑니다.</p>
+
+  <h2>📊 모델 평가 지표 — 회귀에서 자주 쓰는 4가지</h2>
+  <p>MSE 외에도 회귀 문제에서 흔히 쓰는 지표가 있습니다. 각각의 강점과 함정을 정리합니다.</p>
+  <table>
+    <thead><tr><th>지표</th><th>식</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>MSE</td><td>$\frac{1}{N}\sum(y - \hat y)^2$</td><td>큰 오차 강하게 벌. 단위가 제곱.</td></tr>
+      <tr><td>RMSE</td><td>$\sqrt{\text{MSE}}$</td><td>단위가 원본과 같아 해석 쉬움.</td></tr>
+      <tr><td>MAE</td><td>$\frac{1}{N}\sum |y - \hat y|$</td><td>이상치에 강건. 미분 어려운 점 0에서.</td></tr>
+      <tr><td>$R^2$</td><td>$1 - \frac{\sum(y-\hat y)^2}{\sum(y-\bar y)^2}$</td><td>0~1 비율. 1=완벽, 0=평균만큼.</td></tr>
+    </tbody>
+  </table>
+  <p>$R^2$는 "<em>평균값으로 그냥 답하는 것보다 우리 모델이 얼마나 더 잘하는가</em>"의 비율입니다. 0이면 평균과 같은 수준이고, 1이면 완벽 예측. 음수가 나올 수도 있는데, 그 경우 모델이 "<em>차라리 평균값을 쓰는 게 낫다</em>"는 뜻입니다 — 모델이 잘못 짜였다는 강력한 신호.</p>
+
   <h2>👀 다음 주 미리보기 — W4 로지스틱 회귀</h2>
   <p>오늘 우리는 <em>"숫자"</em>를 예측하는 선형회귀를 배웠습니다. 다음 주에는 살짝 비틀어 — 직선의 출력을 0~1 사이 확률로 짜내는 <strong>시그모이드 함수</strong>를 끼워, "<em>분류</em> 문제를 푸는 회귀 모델"을 만듭니다. 거기서 또 다른 손실함수(교차 엔트로피)가 자연스레 등장합니다. 오늘의 MSE/경사하강이 그대로 살아남으니 안심하고 따라오세요.</p>
+
+  <h2>❌ 자주 하는 실수 7가지 — 회귀 디버깅 체크리스트</h2>
+  <ol>
+    <li><strong>표준화 안 하고 돌렸다.</strong> 변수의 스케일이 다르면 학습률 하나로 모든 가중치를 잘 다루기 어려움. 결과: 어떤 가중치는 빨리 움직이고 다른 건 거의 안 움직임. → <code>StandardScaler</code> 적용.</li>
+    <li><strong>학습률이 너무 크다.</strong> 손실이 진동하거나 NaN이 나옴. → 한 자릿수씩 줄이며 안정 영역 찾기.</li>
+    <li><strong>학습률이 너무 작다.</strong> 손실이 거의 안 줄어들거나 100스텝 동안 비슷. → 3~10배 키우기.</li>
+    <li><strong>학습/테스트를 안 나눴다.</strong> 훈련 손실만 보고 있으면 과적합을 못 잡음. → <code>train_test_split</code>으로 둘 다 매 에폭 측정.</li>
+    <li><strong>$y$의 단위를 잊었다.</strong> RMSE가 100만이라고 해서 나쁜 게 아님(예: 집값 예측은 단위가 만 원). 단위와 함께 보고.</li>
+    <li><strong>이상치를 무시했다.</strong> MSE는 큰 오차에 매우 민감해서 이상치 한두 점이 모델을 끌고 감. → 이상치 검토 또는 MAE/Huber 손실 고려.</li>
+    <li><strong>데이터 누수.</strong> 표준화를 학습+테스트 합쳐서 함. 또는 미래 정보가 피처에 포함됨. → <a href="02-data-handling.html">W2</a> 참고.</li>
+  </ol>
+
+  <h2>🧪 미니 프로젝트 — 1차원 회귀 끝까지 해보기</h2>
+  <p>이번 주 내용을 자기 손으로 굴리는 가장 빠른 길은 작은 프로젝트입니다.</p>
+  <ol>
+    <li><strong>데이터 만들기</strong> — 친구 5명의 키(cm)와 몸무게(kg)를 측정. 또는 sklearn의 <code>load_diabetes</code>·<code>make_regression</code>.</li>
+    <li><strong>표준화</strong> — <code>StandardScaler</code> 적용.</li>
+    <li><strong>해석적 해</strong> — 정규방정식으로 $w, b$ 한 방에 계산. <code>np.linalg.lstsq</code>.</li>
+    <li><strong>경사하강법으로 같은 답 얻기</strong> — 직접 numpy로 50줄 안에 구현. 손실 곡선 그리기.</li>
+    <li><strong>학습률 비교</strong> — $\alpha = 0.001, 0.01, 0.1, 1$ 네 가지로 같은 코드 돌리기. 각각 손실 곡선 한 그림에.</li>
+    <li><strong>scikit-learn으로 검증</strong> — <code>LinearRegression</code> 결과와 일치하는지 확인.</li>
+  </ol>
+  <p>이 프로젝트가 끝나면 여러분은 머신러닝의 <strong>전체 흐름</strong>(데이터 → 표준화 → 학습 → 검증)을 한 번 끝까지 굴려본 것입니다. 다음 주부터 만나는 모든 모델은 이 골격에 살을 붙이는 형태로 진화합니다.</p>
+
+  <h2>❓ FAQ — 회귀를 처음 배울 때 자주 받는 질문</h2>
+  <div class="note"><strong>Q1. 정규방정식이 한 방에 답을 주는데 왜 경사하강법을 배우나요?</strong><br>
+  A. (1) 데이터가 너무 크면 $X^\top X$의 역행렬 계산이 메모리·시간상 불가능합니다(차원이 수만이면 행렬 크기가 수억). (2) 신경망처럼 비선형 모델에서는 정규방정식 같은 닫힌 해가 없고 경사하강만 통합니다. (3) 미니배치, 적응형 학습률 같은 확장이 자연스럽습니다. 한 마디로 — <em>경사하강은 보편적이고, 정규방정식은 특수한 운 좋은 경우</em>입니다.</div>
+  <div class="note"><strong>Q2. 손실이 줄지 않으면 어떻게 디버깅하나요?</strong><br>
+  A. 우선순위로 점검: ① 학습률(가장 흔한 원인) → ② 데이터 스케일 → ③ 데이터 자체(NaN, 단위 오류) → ④ 코드 버그(부호, 인덱스). 한 번에 하나씩 바꾸세요. 동시에 여러 개 바꾸면 어느 변경이 효과인지 알 수 없습니다.</div>
+  <div class="note"><strong>Q3. 손실 곡선이 진동하는데 정상인가요?</strong><br>
+  A. 약간의 진동은 정상(특히 미니배치 학습에서). 큰 폭으로 출렁이거나 발산하면 학습률을 줄이세요. "진동하면서도 평균적으로 내려가는 곡선"이 가장 흔한 정상 패턴입니다.</div>
+  <div class="note"><strong>Q4. 데이터가 직선이 아니라 곡선처럼 보입니다. 그래도 선형회귀 쓸 수 있나요?</strong><br>
+  A. 가능합니다. 입력 $x$를 $x, x^2, x^3$ 같은 새 피처로 확장하면 모델은 여전히 "파라미터에 대해 선형"이고 곡선을 그릴 수 있습니다. 이를 <em>다항 회귀(polynomial regression)</em>라고 부르고 다음 주 <a href="04-regression-2.html">W4</a>에서 다룹니다.</div>
+  <div class="note"><strong>Q5. 머신러닝의 다른 모델도 다 이런 식으로 학습하나요?</strong><br>
+  A. 거의 그렇습니다. <em>로지스틱 회귀, SVM, 신경망, CNN, RNN, 트랜스포머</em>까지 모두 "비용함수를 정의하고 경사하강으로 최소화"라는 동일한 골격을 따릅니다. 이번 주가 머신러닝 전체에서 가장 중요한 한 주인 이유입니다.</div>
+
+  <h2>🗒️ 이번 주 체크리스트</h2>
+  <ul>
+    <li>☐ "회귀"가 무엇이며 분류와 어떻게 다른지 한 줄로 답할 수 있다.</li>
+    <li>☐ 비용함수 MSE를 식과 그림으로 설명할 수 있다.</li>
+    <li>☐ 경사하강법의 한 스텝 식을 적을 수 있다.</li>
+    <li>☐ 학습률이 너무 크면·너무 작으면 어떤 일이 벌어지는지 안다.</li>
+    <li>☐ 정규방정식과 경사하강법의 장·단점을 비교할 수 있다.</li>
+    <li>☐ 위 인터랙티브 데모 중 최소 두 개를 직접 굴려봤다.</li>
+  </ul>
+
+  <h2>🧭 한 줄 정리 — 이번 주의 빅 아이디어</h2>
+  <div class="tip"><p><strong>"학습이란 비용함수를 정의하고, 경사하강으로 최소화하는 것이다."</strong> 이 한 문장이 한 학기 모든 모델에 그대로 적용됩니다. 다음 주부터는 <em>가설</em>(직선)과 <em>비용</em>(MSE)이 어떻게 진화하는지를 따라가게 됩니다.</p></div>
+
+  <h2>📐 부록 — 정규방정식 유도</h2>
+  <p>왜 $w^* = (X^\top X)^{-1} X^\top y$가 비용을 최소화하는지 한 번 풀어 둡시다(선형대수가 처음이라면 건너뛰어도 됩니다).</p>
+  <p>다중 회귀에서 비용을 행렬 형태로 적으면</p>
+  $$ J(\mathbf w) = \tfrac{1}{N} \|X\mathbf w - \mathbf y\|^2 = \tfrac{1}{N}(X\mathbf w - \mathbf y)^\top (X\mathbf w - \mathbf y) $$
+  <p>$\mathbf w$로 미분해 0으로 두면</p>
+  $$ \frac{\partial J}{\partial \mathbf w} = \tfrac{2}{N} X^\top (X\mathbf w - \mathbf y) = 0 \quad\Rightarrow\quad X^\top X \mathbf w = X^\top \mathbf y $$
+  <p>이를 풀면 위 식이 나옵니다. 단, $X^\top X$가 비가역이면(특성이 서로 강하게 상관되거나 데이터 수보다 특성 수가 많으면) 역행렬이 없어 직접 풀 수 없고, <em>유사역행렬(pseudo-inverse)</em>이나 정규화가 필요합니다.</p>
+
+  <h2>🌟 미니 사례 — 광고비 vs 매출 회귀</h2>
+  <p>가상의 회사 데이터로 회귀의 실전 흐름을 한 번 따라가 봅시다. 7개월간 매월 광고비(만 원)와 매출(백만 원)을 측정했습니다.</p>
+  <table>
+    <thead><tr><th>월</th><th>광고비 x</th><th>매출 y</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>10</td><td>21</td></tr>
+      <tr><td>2</td><td>15</td><td>27</td></tr>
+      <tr><td>3</td><td>20</td><td>34</td></tr>
+      <tr><td>4</td><td>25</td><td>40</td></tr>
+      <tr><td>5</td><td>30</td><td>49</td></tr>
+      <tr><td>6</td><td>35</td><td>56</td></tr>
+      <tr><td>7</td><td>40</td><td>62</td></tr>
+    </tbody>
+  </table>
+  <p>정규방정식으로 해를 구하면 $w \approx 1.36$, $b \approx 7.1$. 즉 "광고비를 1만 원 늘리면 매출이 약 1.36 백만 원 증가"한다는 해석. 다음 달 광고비 50만 원이면 예상 매출은 $1.36 \cdot 50 + 7.1 \approx 75.1$ 백만 원.</p>
+  <p>이 한 줄짜리 모델로도 회사는 "광고비를 늘리면 효과가 있다 vs 없다"라는 의사결정을 정량화할 수 있습니다. 머신러닝의 진짜 가치는 <em>거대 모델</em>이 아니라 <em>의사결정의 정량화</em>에 있습니다 — 가장 단순한 모델로 가장 큰 영향을 줄 수 있는 영역이 의외로 많습니다.</p>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>
@@ -603,7 +895,100 @@ sgd.fit(X, y)</code></pre>
     <li><strong>Andrew Ng Machine Learning</strong> — Coursera. 첫 주차 강의 전체가 이 내용입니다.</li>
     <li><strong>An Introduction to Statistical Learning</strong> — James 외, 3장. 통계학자의 관점에서 본 회귀.</li>
     <li><strong>Goodfellow Deep Learning</strong>, 4-5장 — 수치 최적화의 모든 것.</li>
+    <li><strong>Distill — Why Momentum Really Works</strong>, <a href="https://distill.pub/2017/momentum/">distill.pub/2017/momentum</a>. 인터랙티브 시각화로 모멘텀 직관.</li>
+    <li><strong>3Blue1Brown — Gradient descent</strong>. 신경망 시리즈의 두 번째 영상이지만 회귀에 그대로 적용.</li>
   </ul>
+
+  <h2>📌 부록 B — numpy로 처음부터 만든 선형회귀</h2>
+  <p>scikit-learn 없이 한 번 만들어 보면 알고리즘을 진짜로 이해하게 됩니다. 50줄짜리 토이 구현입니다.</p>
+  <pre><code>import numpy as np
+
+# 1) 데이터
+X = np.array([[1.0],[2.0],[3.0],[4.0],[5.0]])
+y = np.array([2.1, 3.0, 4.9, 7.2, 9.0])
+
+# 2) 표준화
+mu, sd = X.mean(0), X.std(0)
+Xz = (X - mu) / sd
+
+# 3) 파라미터 초기화
+N = X.shape[0]
+w = np.zeros(1)
+b = 0.0
+lr = 0.05
+n_iter = 200
+loss_hist = []
+
+# 4) 경사하강법 루프
+for it in range(n_iter):
+    yhat = Xz @ w + b
+    err = yhat - y
+    loss = (err**2).mean()
+    loss_hist.append(loss)
+    grad_w = (2/N) * (Xz.T @ err)
+    grad_b = (2/N) * err.sum()
+    w -= lr * grad_w
+    b -= lr * grad_b
+
+print('w =', w, ' b =', b, ' final loss =', loss_hist[-1])
+
+# 5) 예측 (표준화 그대로 적용)
+def predict(X_new):
+    return ((X_new - mu) / sd) @ w + b
+
+print(predict(np.array([[6.0]])))   # → 학습 결과로 외삽</code></pre>
+  <p>이 50줄 안에 W3의 모든 개념이 들어 있습니다 — 표준화, 가설, 손실, 경사 계산, 업데이트, 예측. 한 학기 끝에 PyTorch로 신경망을 짤 때도 골격은 정확히 같습니다(<code>Xz @ w + b</code>가 <code>self.linear(x)</code>로, 직접 미분이 <code>loss.backward()</code>로 바뀔 뿐).</p>
+
+  <h2>📌 부록 C — 자주 쓰는 손실 함수 한눈에</h2>
+  <p>회귀의 손실은 MSE만 있는 게 아닙니다. 데이터의 성격에 따라 다른 손실이 적합한 경우가 있습니다.</p>
+  <table>
+    <thead><tr><th>손실</th><th>식</th><th>특징</th><th>언제 쓰나</th></tr></thead>
+    <tbody>
+      <tr><td>MSE (L2)</td><td>$\frac{1}{N}\sum (y - \hat y)^2$</td><td>큰 오차 강하게 벌, 미분 매끄러움</td><td>일반 회귀의 기본</td></tr>
+      <tr><td>MAE (L1)</td><td>$\frac{1}{N}\sum |y - \hat y|$</td><td>이상치에 강건, 0에서 미분 어려움</td><td>이상치 많은 데이터</td></tr>
+      <tr><td>Huber</td><td>작은 오차는 L2, 큰 오차는 L1</td><td>둘의 절충, 임계값 δ 필요</td><td>이상치 + 매끄러운 미분 필요</td></tr>
+      <tr><td>Log-cosh</td><td>$\sum \log(\cosh(y-\hat y))$</td><td>Huber와 비슷, 미분이 모든 곳 가능</td><td>회귀 + 자동 미분 환경</td></tr>
+      <tr><td>Quantile</td><td>비대칭 절댓값</td><td>특정 분위 예측</td><td>리스크·신뢰구간 회귀</td></tr>
+    </tbody>
+  </table>
+  <p>다음 주(<a href="04-regression-2.html">W4</a>)는 분류 문제로 넘어가는데, 거기서도 비슷한 표가 등장합니다 — Cross-Entropy, Hinge, Focal Loss 등. 손실 함수를 바꾸는 것만으로 모델의 성격이 크게 달라진다는 점을 미리 기억해 두세요.</p>
+
+  <h2>📚 미니 용어집</h2>
+  <table>
+    <thead><tr><th>용어</th><th>한 줄 의미</th></tr></thead>
+    <tbody>
+      <tr><td>가설(hypothesis)</td><td>데이터를 설명하는 모델 식. 여기서는 $\hat y = wx + b$.</td></tr>
+      <tr><td>파라미터</td><td>학습으로 찾는 값. $w, b$.</td></tr>
+      <tr><td>하이퍼파라미터</td><td>사람이 미리 정함. 학습률·반복 횟수·배치 크기.</td></tr>
+      <tr><td>비용/손실 함수</td><td>잘못 맞춘 정도를 한 숫자로. MSE = $\frac{1}{N}\sum e_i^2$.</td></tr>
+      <tr><td>경사(gradient)</td><td>비용을 파라미터로 미분한 벡터. "가장 가파르게 증가하는 방향".</td></tr>
+      <tr><td>학습률</td><td>경사 반대 방향으로 얼마나 갈지의 보폭.</td></tr>
+      <tr><td>에폭(epoch)</td><td>전체 데이터를 한 번씩 다 본 사이클.</td></tr>
+      <tr><td>수렴(convergence)</td><td>손실이 더 이상 줄지 않는 상태.</td></tr>
+      <tr><td>발산(divergence)</td><td>손실이 폭발해 NaN/Inf로 가는 상태.</td></tr>
+      <tr><td>볼록(convex)</td><td>그릇 모양. 어디서 출발해도 같은 바닥. MSE는 볼록.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🔁 한 페이지 요약 — 회귀의 흐름도</h2>
+  <ol>
+    <li>데이터 $(x_i, y_i)$ 수집 → 표준화.</li>
+    <li>가설 $\hat y = wx + b$ 정의.</li>
+    <li>비용 $J(w,b) = \frac{1}{N}\sum (\hat y_i - y_i)^2$ 정의.</li>
+    <li>$\nabla J$를 계산해 $(w, b)$를 그 반대 방향으로 한 보폭 이동.</li>
+    <li>3–4를 손실이 충분히 작아질 때까지 반복.</li>
+    <li>학습/테스트 셋으로 평가 (RMSE, $R^2$).</li>
+  </ol>
+  <p>이 6단계가 W3의 모든 것이고, 다음 모든 모델이 같은 골격에 살을 붙입니다.</p>
+
+  <h2>📌 마지막 한 마디</h2>
+  <p>이번 주는 어쩌면 한 학기 전체에서 가장 중요한 한 주입니다. <strong>비용함수와 경사하강법</strong>이라는 두 도구가 다음 10주의 모든 모델 — 로지스틱 회귀, 신경망, CNN, RNN, 트랜스포머 — 을 가능하게 만드는 엔진이기 때문입니다. 이 엔진이 손에 익으면, 새 모델을 만나도 <em>"가설은 무엇이지? 손실은 어떻게 정의하지?"</em> 두 질문만 던지면 됩니다. 나머지는 같은 패턴의 반복입니다.</p>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:24px">— 3주차 끝. "학습"이라는 단어가 처음으로 손에 잡혔길 바랍니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">참고: 이번 주 보너스 영상은 위 "더 깊이 공부하기"의 3Blue1Brown — Gradient descent 한 편이면 충분합니다. 강의실 밖에서 한 번만 보세요.</p>
+  <p style="font-size:12px;color:var(--muted)">다음 주는 "출력을 0~1로 짜는 시그모이드"가 새로 등장합니다. 마음의 준비를 하시되, 이번 주 골격이 그대로 살아남는다는 점은 안심해도 좋습니다.</p>
+  <p style="font-size:12px;color:var(--muted)">질문은 lms 게시판 또는 강의 시간 직후 5분 동안 환영합니다. 이번 주 내용이 막혔다면 다음 주가 더 어렵게 느껴지므로, 막힌 부분은 반드시 짚고 넘어가세요.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
 
   <nav class="prevnext">
     <a href="02-data-handling.html"><small>← 이전</small>W2. 데이터 핸들링</a>

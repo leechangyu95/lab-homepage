@@ -602,6 +602,396 @@
     <strong>다른 강의와의 연결</strong> — op-amp는 PID 제어기(<a href="../lectures/07-feedback-control.html">L7</a>)의 P·I·D 항을 그대로 아날로그로 만들 수 있습니다. 또 휘트스톤 브릿지(<a href="05-dc-analysis-2.html">W5</a>)의 미세 출력 신호는 계측 증폭기로 받아 MCU의 ADC가 읽을 수 있는 크기로 키웁니다 — "센서 → 신호 조절 → 디지털화"의 두 번째 블록이 op-amp인 셈이에요.
   </div>
 
+  <h2>op-amp 시작하기 — "왜 이 부품이 그렇게 중요한가"</h2>
+  <p>op-amp(Operational Amplifier, 연산증폭기)는 1960년대부터 아날로그 회로의 표준 블록으로 자리잡았습니다. 칩 한 개에 트랜지스터 수십 개가 들어 있지만, 사용자는 그 안을 몰라도 두 황금 규칙만 알면 거의 모든 회로를 풀 수 있습니다 — "추상화의 힘"의 대표적인 예입니다.</p>
+
+  <h3>왜 op-amp가 만능 블록이라 불리나</h3>
+  <ul>
+    <li><strong>증폭</strong> — mV → V로 신호 키우기.</li>
+    <li><strong>비교</strong> — 두 전압 중 어느 게 더 큰가? 결과를 0/1로.</li>
+    <li><strong>가산</strong> — 여러 신호를 하나로 합산.</li>
+    <li><strong>적분/미분</strong> — 시간 적분, 미분 연산.</li>
+    <li><strong>임피던스 변환</strong> — 약한 신호원을 강한 신호원으로.</li>
+    <li><strong>액티브 필터</strong> — 단순 RC보다 가파른 차단 곡선.</li>
+  </ul>
+  <p>이 모든 것이 RC와 op-amp 한 개의 조합으로 가능합니다. 그래서 "아날로그 회로의 LEGO 블록"이라 불립니다.</p>
+
+  <h3>op-amp 핀 구성 — 8핀 DIP의 표준</h3>
+  <p>가장 흔한 LM741, TL081 등의 8핀 DIP 패키지 핀 배치:</p>
+  <table>
+    <thead><tr><th>핀</th><th>이름</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td>1, 5</td><td>Offset Null</td><td>입력 오프셋 미세 조정 (자주 미사용)</td></tr>
+      <tr><td>2</td><td>− (반전 입력)</td><td>풀이의 $V_-$</td></tr>
+      <tr><td>3</td><td>+ (비반전 입력)</td><td>풀이의 $V_+$</td></tr>
+      <tr><td>4</td><td>$V_{cc-}$ (음 전원)</td><td>주로 −9~−15V 또는 GND</td></tr>
+      <tr><td>6</td><td>출력</td><td>풀이의 $V_{out}$</td></tr>
+      <tr><td>7</td><td>$V_{cc+}$ (양 전원)</td><td>주로 +9~+15V</td></tr>
+      <tr><td>8</td><td>NC</td><td>연결 없음</td></tr>
+    </tbody>
+  </table>
+
+  <h2>op-amp 이해의 두 황금 규칙 — 다시 짚기</h2>
+  <p>op-amp 회로는 거의 모든 풀이가 다음 두 가정 위에 서 있습니다. 외우지 말고 이해하면 모든 회로가 일관되게 풀립니다.</p>
+  <ol>
+    <li><strong>가상 단락 (Virtual Short)</strong> — 음·양 입력 단자의 전압이 같다. 즉 $V_+ = V_-$. <em>피드백이 음(−)으로 잘 걸려 있을 때만</em> 적용.</li>
+    <li><strong>입력 전류 0</strong> — op-amp의 입력 단자에는 전류가 거의 흐르지 않는다. 즉 $I_+ = I_- = 0$.</li>
+  </ol>
+  <p>이 두 규칙은 "이상적인 op-amp" 모델이지만, 학부 수준 회로 풀이에서는 99% 이 가정으로 충분합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 540 220" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="120,40 120,160 240,100" fill="#fff" stroke="#333" stroke-width="2"/>
+      <text x="130" y="70" font-size="14" fill="#1565c0">+</text>
+      <text x="130" y="140" font-size="14" fill="#c62828">−</text>
+      <line x1="60" y1="60" x2="120" y2="60" stroke="#333" stroke-width="2"/>
+      <line x1="60" y1="140" x2="120" y2="140" stroke="#333" stroke-width="2"/>
+      <line x1="240" y1="100" x2="320" y2="100" stroke="#333" stroke-width="2"/>
+      <text x="50" y="55" text-anchor="end" font-size="12" fill="#333">$V_+$</text>
+      <text x="50" y="145" text-anchor="end" font-size="12" fill="#333">$V_-$</text>
+      <text x="330" y="105" font-size="12" fill="#333">$V_{out}$</text>
+      <text x="180" y="195" text-anchor="middle" font-size="11" fill="#666">규칙 1: $V_+ = V_-$ (가상 단락)</text>
+      <text x="180" y="210" text-anchor="middle" font-size="11" fill="#666">규칙 2: $I_+ = I_- = 0$</text>
+    </svg>
+    <figcaption>그림. op-amp 회로의 두 황금 규칙.</figcaption>
+  </figure>
+
+  <h2>op-amp 친절 비유 — "차이에 매우 예민한 시소"</h2>
+  <p>op-amp를 시소(seesaw)로 비유하면 직관이 잡힙니다. 두 발을 같은 높이로 만들기 위해 출력이 어디까지든 움직입니다 — 한 발은 입력 신호, 다른 발은 피드백을 통해 출력에서 돌아온 신호.</p>
+  <ul>
+    <li><strong>두 발 높이 차이가 0.001V</strong> → 시소가 한참 기울어 출력 10V 이동.</li>
+    <li><strong>두 발 높이가 같아질 때까지</strong> → 출력이 자동으로 조정됨.</li>
+    <li><strong>두 발이 절대 같아질 수 없으면(피드백 없음)</strong> → 시소가 완전히 한쪽으로 쓰러짐 (포화).</li>
+  </ul>
+
+  <h2>회로 카탈로그 — 한 페이지로 보는 op-amp 패턴 8</h2>
+  <table>
+    <thead><tr><th>회로</th><th>핵심 식</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>전압 폴로워 (Voltage Follower)</td><td>$V_{out} = V_{in}$</td><td>임피던스 매칭. 부하 보호.</td></tr>
+      <tr><td>비반전 증폭기</td><td>$V_{out} = (1 + R_f/R_g)V_{in}$</td><td>입력 임피던스 매우 큼.</td></tr>
+      <tr><td>반전 증폭기</td><td>$V_{out} = -(R_f/R_{in})V_{in}$</td><td>입력 임피던스 = $R_{in}$. 부호 반전.</td></tr>
+      <tr><td>가산기 (Summing)</td><td>$V_{out} = -R_f(V_1/R_1 + V_2/R_2 + \cdots)$</td><td>아날로그 합.</td></tr>
+      <tr><td>차동 증폭기</td><td>$V_{out} = (R_f/R_1)(V_2 - V_1)$</td><td>차이만 증폭. 노이즈 제거.</td></tr>
+      <tr><td>적분기</td><td>$V_{out} = -\frac{1}{RC}\int V_{in}\,dt$</td><td>$R$, $C$ 한 쌍. 적분 동작.</td></tr>
+      <tr><td>미분기</td><td>$V_{out} = -RC\,dV_{in}/dt$</td><td>고주파에 민감. 노이즈 주의.</td></tr>
+      <tr><td>비교기 (Comparator)</td><td>$V_+ &gt; V_- \to V_{out} = +V_{sat}$</td><td>피드백 없음. 디지털화.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>단계별 예제 풀이 — 비반전 증폭기</h2>
+  <p>가장 자주 등장하는 패턴. 단계별로 두 황금 규칙이 어떻게 사용되는지 보여줍니다.</p>
+
+  <h3>예제 1 — 게인 11배 비반전 증폭기</h3>
+  <p>$R_g = 1\,\text{kΩ}$, $R_f = 10\,\text{kΩ}$. 입력 0.5V일 때 출력은?</p>
+  <div class="sol">
+    <strong>풀이</strong><br>
+    1. 두 황금 규칙으로 $V_- = V_+ = 0.5$V (가상 단락).<br>
+    2. $R_g$를 통해 흐르는 전류: $I = V_-/R_g = 0.5/1\text{k} = 0.5$ mA.<br>
+    3. 입력 전류 0이므로 같은 전류가 $R_f$에도 흐름.<br>
+    4. $V_{out} = V_- + I \cdot R_f = 0.5 + 0.5\text{m} \cdot 10\text{k} = 5.5$ V.<br>
+    5. 게인 = $V_{out}/V_{in} = 5.5/0.5 = 11$. 식 $1 + R_f/R_g = 11$과 일치.
+  </div>
+
+  <h3>예제 2 — 반전 증폭기 게인 −5배</h3>
+  <p>$R_{in} = 2\,\text{kΩ}$, $R_f = 10\,\text{kΩ}$. 입력 +1V일 때 출력은?</p>
+  <div class="sol">
+    <strong>풀이</strong><br>
+    1. 비반전 입력은 GND이므로 $V_- = 0$ (가상 단락).<br>
+    2. 입력 단자 전류: $I = V_{in}/R_{in} = 1/2\text{k} = 0.5$ mA.<br>
+    3. 같은 전류가 $R_f$로 흘러 출력 쪽으로.<br>
+    4. $V_{out} = V_- - I \cdot R_f = 0 - 0.5\text{m} \cdot 10\text{k} = -5$ V.<br>
+    답: 출력 −5V. 부호 반전과 게인 5배 동시 적용.
+  </div>
+
+  <h3>예제 3 — 차동 증폭기로 노이즈 제거</h3>
+  <p>마이크 신호 $V_2 = 100\,\text{mV}$, 잡음 입력 $V_1 = 50\,\text{mV}$가 양 입력에 모두 들어가는 공통 신호. $R_f/R_1 = 100$인 차동 증폭기를 통과시키면?</p>
+  <div class="sol">
+    <strong>풀이</strong> $V_{out} = 100 \times (100 - 50) = 100 \times 50 = 5000$ mV $= 5$ V. 공통 입력은 사라지고 차이만 100배로 증폭. 마이크 → 마이크프리앰프의 핵심 구조.
+  </div>
+
+  <h2>흔한 오답 패턴 — op-amp 회로</h2>
+
+  <h3>오답 1 — 전원 ±공급 누락</h3>
+  <p>op-amp는 출력이 ±$V_{cc}$ 사이에서만 흔들립니다. 전원이 +5V/0V이면 출력은 −값을 가질 수 없습니다. 풀이로는 $V_{out} = -3$이라 나와도 실제 회로에서는 0V로 잘립니다.</p>
+
+  <h3>오답 2 — 출력 포화 무시</h3>
+  <p>비반전 게인 100, 입력 0.1V → 풀이값 10V. 그러나 전원이 ±9V이면 약 8V 부근에서 포화. 풀이값을 그대로 답하면 시험에서 감점.</p>
+
+  <h3>오답 3 — 비교기에 피드백 가정 적용</h3>
+  <p>비교기는 음 피드백이 없습니다. 가상 단락 가정이 성립하지 않습니다. $V_+ \neq V_-$일 수 있고 그것이 정상.</p>
+
+  <h3>오답 4 — 입력 전류가 진짜 0이라 가정</h3>
+  <p>현실 op-amp는 nA~pA 수준 입력 전류 흐름. 메가옴 단위 저항을 쓰면 무시 못함. 학부 수준에서는 0으로 보는 게 보통이지만 정밀 설계에서는 주의.</p>
+
+  <h2>Falstad 데모 — 비반전 증폭기 게인 변화</h2>
+  <ol>
+    <li>op-amp 부품 추가: <code>Draw → Active Building Blocks → Add Op Amp</code>.</li>
+    <li>전원 핀에 ±9V 연결.</li>
+    <li>입력에 0.5V DC 또는 100Hz 사인파 1V.</li>
+    <li>$R_g = 1\,\text{kΩ}$, $R_f$를 1k → 10k → 100k로 바꿔 가며 출력 진폭 관찰.</li>
+    <li>출력이 ±9V 부근에서 잘리는 포화 현상을 직접 확인.</li>
+  </ol>
+
+  <h2>op-amp의 일상 응용 — 어디에 들어 있나</h2>
+  <ul>
+    <li><strong>오디오 마이크 프리앰프</strong> — mV 단위 신호를 V 단위로.</li>
+    <li><strong>휘트스톤 브릿지 차동 증폭</strong> — 스트레인 게이지·온도 센서.</li>
+    <li><strong>ADC 입력 버퍼</strong> — 측정 회로와 ADC 사이 임피던스 매칭.</li>
+    <li><strong>액티브 필터</strong> — 단순 RC 필터보다 가파른 차단 곡선.</li>
+    <li><strong>전류원 회로</strong> — LED 정전류 구동.</li>
+    <li><strong>비교기</strong> — 야간 자동조명, 0/1 임계 회로.</li>
+    <li><strong>적분/미분기</strong> — 아날로그 PID 제어기 구현.</li>
+    <li><strong>슈미트 트리거</strong> — 노이즈 있는 신호의 깨끗한 디지털화.</li>
+  </ul>
+
+  <h2>식 모음표 — 시험 한 페이지</h2>
+  <table>
+    <thead><tr><th>회로</th><th>게인 식</th><th>주의</th></tr></thead>
+    <tbody>
+      <tr><td>전압 폴로워</td><td>$+1$</td><td>임피던스 변환만</td></tr>
+      <tr><td>비반전</td><td>$1 + R_f/R_g$</td><td>입력 임피던스 ≈ ∞</td></tr>
+      <tr><td>반전</td><td>$-R_f/R_{in}$</td><td>입력 임피던스 $= R_{in}$</td></tr>
+      <tr><td>차동</td><td>$R_f/R_1 \cdot (V_2 - V_1)$</td><td>저항 정합 중요</td></tr>
+      <tr><td>가산</td><td>$-\sum (R_f/R_i)V_i$</td><td>저항 비율로 가중치</td></tr>
+      <tr><td>적분</td><td>$-\frac{1}{RC}\int V_{in}\,dt$</td><td>DC 누적 주의</td></tr>
+      <tr><td>미분</td><td>$-RC\,dV_{in}/dt$</td><td>노이즈 증폭됨</td></tr>
+    </tbody>
+  </table>
+
+  <h2>자가 점검 7문항</h2>
+  <ol>
+    <li>op-amp의 두 황금 규칙은?</li>
+    <li>비반전 증폭기 게인 식?</li>
+    <li>반전 증폭기 입력 임피던스는?</li>
+    <li>op-amp 출력의 한계는 무엇이 결정?</li>
+    <li>비교기에서 가상 단락 가정이 성립하지 않는 이유?</li>
+    <li>차동 증폭기가 노이즈 제거에 강한 이유?</li>
+    <li>전압 폴로워는 왜 쓰는가?</li>
+  </ol>
+  <p>정답 — ① 가상 단락 / 입력 전류 0 ② $1+R_f/R_g$ ③ $R_{in}$ ④ ±$V_{cc}$(전원 전압) ⑤ 음 피드백 없음 ⑥ 공통 신호 제거(common-mode rejection) ⑦ 임피던스 매칭(앞단 보호).</p>
+
+  <h2>FAQ — op-amp 자주 묻는 질문</h2>
+
+  <h3>Q1. op-amp는 왜 꼭 +/− 전원이 두 개?</h3>
+  <p>출력이 양·음 모두 흔들려야 사인파 같은 양극성 신호를 처리할 수 있기 때문. 단전원(예 5V만)으로 동작시키려면 입력에 DC 바이어스를 더해 출력 중점을 2.5V로 만들어야 합니다.</p>
+
+  <h3>Q2. 게인을 무한히 키울 수 있나?</h3>
+  <p>이론상 가능하지만, 출력은 ±$V_{cc}$에 막힙니다. 또한 매우 큰 게인은 노이즈도 같이 키웁니다. 실용적으로 단 한 단의 게인은 100~1000 정도가 한계.</p>
+
+  <h3>Q3. 입력에 큰 전압이 들어가면?</h3>
+  <p>op-amp 입력은 보통 ±$V_{cc}$ 안의 전압만 받을 수 있습니다. 이를 넘으면 IC가 파괴될 수 있습니다. 입력 보호 다이오드를 두거나 입력 저항을 두는 것이 실무 패턴.</p>
+
+  <h3>Q4. 적분기가 자꾸 포화되는 이유?</h3>
+  <p>입력에 작은 DC 오프셋이 있어도 적분이 누적되어 출력이 ±$V_{cc}$로 향합니다. 큰 저항을 $C$에 병렬로 추가해 누설 경로를 만들면 해결.</p>
+
+  <h3>Q5. op-amp 칩의 전형적 부품 번호는?</h3>
+  <p>입문용으로 LM741(오래된 표준), TL081/TL082(좋은 J-FET 입력), LM358(단전원), TLV9001(현대 저전압) 등이 있습니다. 모두 동일한 두 규칙으로 풀이 가능.</p>
+
+  <h2>op-amp 회로 설계 — 5단계 표준 절차</h2>
+  <ol>
+    <li><strong>요구사항 정리</strong> — 입력 진폭·주파수, 출력 요구 진폭, 전원 가용성.</li>
+    <li><strong>회로 구조 선택</strong> — 비반전(고임피던스), 반전(저항 비율), 차동(노이즈 제거).</li>
+    <li><strong>저항값 선택</strong> — 보통 1kΩ~100kΩ. 너무 작으면 전류 낭비, 너무 크면 노이즈.</li>
+    <li><strong>전원 선택</strong> — 출력 진폭의 1.5배 이상.</li>
+    <li><strong>검증</strong> — Falstad에서 시뮬, 실제 IC로 측정.</li>
+  </ol>
+
+  <h2>실전 예제 — 마이크 프리앰프 설계</h2>
+  <p>마이크 출력 약 5 mV (rms)를 ADC 입력에 맞게 1V (rms)로 키우려면 게인 약 200배가 필요합니다. 비반전 증폭기로:</p>
+  <ul>
+    <li>$R_g = 1\,\text{kΩ}$ 선택.</li>
+    <li>$1 + R_f/R_g = 200$ → $R_f = 199\,\text{kΩ} \approx 200\,\text{kΩ}$ (표준값).</li>
+    <li>전원 ±9V 충분.</li>
+  </ul>
+  <p>이 회로 한 개가 거의 모든 동영상 카메라·콘덴서 마이크 인터페이스의 기본 구조입니다.</p>
+
+  <h2>실전 예제 2 — LED 정전류 구동기</h2>
+  <p>LED는 정전압이 아니라 정전류로 구동해야 안정적입니다. op-amp + MOSFET 조합으로 정전류 회로를 만듭니다.</p>
+  <div class="sol">
+    <strong>아이디어</strong> — op-amp로 LED 직렬 저항 양단의 전압을 일정하게 유지. $V_{ref} = 0.6$V, $R_s = 60$Ω이면 LED 전류 = 10mA로 고정. 입력 전압이 변해도 LED 전류는 일정.
+  </div>
+
+  <h2>실전 예제 3 — 슈미트 트리거 노이즈 보호</h2>
+  <p>비교기에 양 피드백을 추가하면 임계값에 히스테리시스가 생겨 노이즈가 있어도 출력이 깨끗하게 0/1로 떨어집니다.</p>
+  <ul>
+    <li>임계값 두 개: 상승 시 $V_{TH+}$, 하강 시 $V_{TH-}$.</li>
+    <li>두 값 사이를 데드밴드(dead band)라 부르며 노이즈 폭보다 크게 설계.</li>
+    <li>야간 자동조명, 적외선 센서 등에 흔히 사용.</li>
+  </ul>
+
+  <h2>op-amp 한계와 현실 — 이상 vs 실제</h2>
+  <table>
+    <thead><tr><th>특성</th><th>이상 op-amp</th><th>실제 op-amp 예 (LM741)</th></tr></thead>
+    <tbody>
+      <tr><td>오픈 루프 게인</td><td>∞</td><td>약 $2\times10^5$</td></tr>
+      <tr><td>입력 임피던스</td><td>∞</td><td>약 2 MΩ</td></tr>
+      <tr><td>출력 임피던스</td><td>0</td><td>약 75 Ω</td></tr>
+      <tr><td>대역폭</td><td>∞</td><td>약 1 MHz (gain×BW)</td></tr>
+      <tr><td>출력 한계</td><td>±$\infty$</td><td>±$V_{cc} - 1$~$2$V</td></tr>
+      <tr><td>입력 전류</td><td>0</td><td>약 80 nA</td></tr>
+      <tr><td>오프셋 전압</td><td>0</td><td>약 1~5 mV</td></tr>
+    </tbody>
+  </table>
+  <p>이 차이가 학부 회로에서는 무시되지만, 정밀 측정·고주파 회로에서는 결정적입니다.</p>
+
+  <h2>학기 후 응용 — 다음 학기 강의에서 다시 만나는 op-amp</h2>
+  <ul>
+    <li><strong>메카트로닉스 (W11)</strong> — 휘트스톤 브릿지 + 차동 증폭 + ADC.</li>
+    <li><strong>자동제어</strong> — 아날로그 PID 회로(P=비례, I=적분, D=미분 op-amp 회로).</li>
+    <li><strong>신호 및 시스템</strong> — 액티브 필터(저역·고역·대역).</li>
+    <li><strong>임베디드</strong> — 센서 신호 컨디셔닝의 표준 블록.</li>
+  </ul>
+
+  <h2>op-amp 회로 풀이 워크북 — 단계별 5문제</h2>
+
+  <h3>워크 1 — 폴로워의 의미</h3>
+  <p>$V_{out} = V_{in}$인데 왜 사용하나요? — 부하가 입력원에서 직접 전류를 빼앗지 않게 하려는 임피던스 분리. 마이크에서 ADC로 가는 사이에 자주 들어갑니다.</p>
+
+  <h3>워크 2 — 가산기 디자인</h3>
+  <p>두 입력 $V_1, V_2$를 가중치 1:2로 합산해서 $-V_{out}$로 출력하려면? $R_1 = R_f, R_2 = R_f/2$로 설정.</p>
+
+  <h3>워크 3 — 적분기 출력 계산</h3>
+  <p>$R = 10\,\text{kΩ}, C = 1\,\mu\text{F}$, 입력 −1V DC. 1초 후 출력은? $V_{out} = -\frac{1}{RC}\int_0^1 (-1)\,dt = +100$V — 그러나 $V_{cc}$=±9V면 +9V에서 포화. 적분기 자주 포화되는 이유.</p>
+
+  <h3>워크 4 — 비교기 임계 조정</h3>
+  <p>비반전 입력에 0.5V 기준, 반전 입력에 가변 신호. 신호가 0.5V를 넘으면 출력 +$V_{sat}$, 아래면 −$V_{sat}$. 임계 변경은 기준 전압만 바꾸면 됨.</p>
+
+  <h3>워크 5 — 슈미트 트리거 임계값</h3>
+  <p>$R_1 = 10\,\text{kΩ}, R_2 = 90\,\text{kΩ}$, $V_{cc}=±9$V로 양 피드백. 상승 임계 $V_{TH+} = +0.9$V, 하강 임계 $V_{TH-} = -0.9$V. 데드밴드 1.8V.</p>
+
+  <h2>op-amp 용어 사전</h2>
+  <table>
+    <thead><tr><th>용어</th><th>한국어</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>op-amp</td><td>연산증폭기</td><td>차이를 매우 큰 게인으로 증폭하는 IC</td></tr>
+      <tr><td>open-loop gain</td><td>개방 루프 게인</td><td>피드백 없는 상태의 매우 큰 게인 ($A_{OL}$)</td></tr>
+      <tr><td>closed-loop gain</td><td>폐 루프 게인</td><td>피드백 회로 적용 후의 게인</td></tr>
+      <tr><td>virtual short</td><td>가상 단락</td><td>$V_+ = V_-$ 가정</td></tr>
+      <tr><td>negative feedback</td><td>음 피드백</td><td>출력의 일부를 반전 입력으로 되돌림</td></tr>
+      <tr><td>positive feedback</td><td>양 피드백</td><td>출력의 일부를 비반전 입력으로 (히스테리시스)</td></tr>
+      <tr><td>saturation</td><td>포화</td><td>출력이 ±$V_{cc}$에 막힘</td></tr>
+      <tr><td>slew rate</td><td>슬류 레이트</td><td>출력이 빠르게 변할 수 있는 한계 (V/μs)</td></tr>
+      <tr><td>CMRR</td><td>공통신호 제거비</td><td>차동 입력에서 공통 신호를 얼마나 잘 무시하나</td></tr>
+      <tr><td>offset voltage</td><td>입력 오프셋 전압</td><td>입력이 0일 때도 작은 출력이 나오는 원인</td></tr>
+    </tbody>
+  </table>
+
+  <h2>op-amp 학기 후 추천 읽을거리</h2>
+  <ul>
+    <li><strong>《Practical Electronics for Inventors》</strong> — op-amp 챕터의 그림이 매우 직관적.</li>
+    <li><strong>Texas Instruments — "Op Amps for Everyone"</strong> 무료 PDF 매뉴얼.</li>
+    <li><strong>Linear Technology(현 Analog Devices)</strong>의 Application Notes — 산업급 회로 설계 사례.</li>
+  </ul>
+
+  <h2>op-amp 자주 사용 회로 — Top 5 즐겨찾기</h2>
+  <ol>
+    <li><strong>비반전 증폭기</strong> — 마이크 프리앰프, ADC 입력 버퍼.</li>
+    <li><strong>차동 증폭기</strong> — 휘트스톤 브릿지 출력 증폭.</li>
+    <li><strong>전압 폴로워</strong> — 임피던스 매칭 만능.</li>
+    <li><strong>적분기</strong> — 아날로그 PID 제어기 I 항.</li>
+    <li><strong>비교기 + 슈미트 트리거</strong> — 디지털 임계 회로.</li>
+  </ol>
+  <p>이 5개 회로의 풀이를 손에 익히면 학부 수준 op-amp 시험의 90%가 처리됩니다.</p>
+
+  <h2>op-amp 응용 — 액티브 필터 입문</h2>
+  <p>RC만으로 만들어진 패시브 필터는 차단 곡선이 완만하지만, op-amp + RC 조합(액티브 필터)는 더 가파른 차단을 얻을 수 있습니다.</p>
+
+  <h3>1차 액티브 저역통과 필터</h3>
+  <p>비반전 증폭기 입력에 RC 저역통과를 두면 됩니다. 차단 주파수 $f_c = 1/(2\pi RC)$, 게인 $1+R_f/R_g$. 입력 임피던스가 매우 커서 앞단에 부하를 안 줍니다.</p>
+
+  <h3>2차 Sallen-Key 필터</h3>
+  <p>op-amp 1개 + RC 2쌍으로 −40 dB/decade 차단 곡선을 만듭니다. 음향·계측용 표준 회로입니다.</p>
+
+  <h2>op-amp 응용 — 아날로그 PID 제어기</h2>
+  <p>제어공학의 PID 제어기는 op-amp 4개로 아날로그 회로 한 장에 구현됩니다.</p>
+  <ul>
+    <li><strong>P 항</strong> — 반전 증폭기 (게인 $K_p$).</li>
+    <li><strong>I 항</strong> — 적분기 (게인 $1/(R_iC_i)$ → 시상수 $1/T_i$).</li>
+    <li><strong>D 항</strong> — 미분기 (게인 $R_dC_d$).</li>
+    <li><strong>합산기</strong> — 세 항을 가산기로 합치고 출력으로.</li>
+  </ul>
+  <p>최근에는 디지털 마이크로컨트롤러로 같은 알고리즘을 구현하지만, 1960~1990년대 산업 PID는 모두 이 아날로그 회로로 동작했습니다. 자동제어 강의에서 다시 만납니다.</p>
+
+  <h2>op-amp 한 줄 정리 — 시험 직전 카드</h2>
+  <div class="hl">
+    <strong>두 황금 규칙</strong>: $V_+ = V_-$ (가상 단락), $I_+ = I_- = 0$ (입력 전류 0)<br>
+    <strong>비반전</strong>: $A_v = 1 + R_f/R_g$<br>
+    <strong>반전</strong>: $A_v = -R_f/R_{in}$<br>
+    <strong>차동</strong>: $V_{out} = (R_f/R_1)(V_2 - V_1)$<br>
+    <strong>출력 한계</strong>: ±$V_{cc}$ (포화 주의)<br>
+    <strong>비교기</strong>: 가상 단락 가정 미적용 — 음 피드백 없음.
+  </div>
+
+  <h2>op-amp 흔한 회로별 완성 예제 모음</h2>
+
+  <h3>완성 예제 1 — 온도 센서 + 차동 증폭</h3>
+  <p>휘트스톤 브릿지 출력(약 ±10 mV) → 차동 증폭기 게인 100 → ±1V → ADC.</p>
+
+  <h3>완성 예제 2 — 광 센서 야간조명</h3>
+  <p>CdS + 저항 분압 → op-amp 비교기 → 트랜지스터 스위치 → LED.</p>
+
+  <h3>완성 예제 3 — 아두이노용 0~5V 범위 변환기</h3>
+  <p>±10V 신호를 0~5V로 매핑하려면: 차동 증폭기 + 가산기 조합. $V_{out} = 0.25(V_{in} + 10)$.</p>
+
+  <h3>완성 예제 4 — 마이크 음량 표시</h3>
+  <p>마이크 → 비반전 증폭 → 정류 다이오드 → RC 적분 → LED 막대.</p>
+
+  <h3>완성 예제 5 — 정전류 LED 드라이버</h3>
+  <p>op-amp + MOSFET + sense 저항. LED 전류 = $V_{ref}/R_{sense}$로 입력 전압 변동에 무관하게 일정.</p>
+
+  <h2>op-amp 시뮬레이션 추천 시나리오 5</h2>
+  <ol>
+    <li>비반전 게인 11배 → 입력 0.5V → 출력 5.5V 확인.</li>
+    <li>반전 게인 −5배 → 입력 +1V → 출력 −5V.</li>
+    <li>적분기 → 입력 사각파 → 출력 삼각파.</li>
+    <li>미분기 → 입력 삼각파 → 출력 사각파(미분).</li>
+    <li>슈미트 트리거 → 노이즈 섞인 사인파 → 깨끗한 디지털 출력.</li>
+  </ol>
+
+  <h2>학기 후 op-amp 학습 체크리스트</h2>
+  <ul>
+    <li>두 황금 규칙을 외우지 않고도 회로에서 자동 적용한다.</li>
+    <li>비반전·반전·차동·가산·적분·미분 게인 식을 즉시 떠올린다.</li>
+    <li>출력 포화의 의미를 이해하고 회로 풀이에서 한계 표시.</li>
+    <li>비교기와 증폭기의 차이(피드백 종류)를 한 줄로 설명.</li>
+    <li>실제 op-amp의 한계(slew rate, 입력 전류, 오프셋)를 인지.</li>
+  </ul>
+
+  <h2>다음 학기에 만나는 op-amp 응용 정리</h2>
+  <table>
+    <thead><tr><th>강의</th><th>op-amp 사용처</th></tr></thead>
+    <tbody>
+      <tr><td>메카트로닉스</td><td>센서 신호 컨디셔닝, 휘트스톤 차동 증폭</td></tr>
+      <tr><td>자동제어</td><td>아날로그 PID 제어기, 보상기 회로</td></tr>
+      <tr><td>신호 및 시스템</td><td>액티브 필터(저역·고역·대역·노치)</td></tr>
+      <tr><td>임베디드</td><td>ADC 입력 버퍼, 비교기 인터럽트</td></tr>
+      <tr><td>의료기기</td><td>심전도(ECG)·뇌파(EEG) 차동 증폭</td></tr>
+    </tbody>
+  </table>
+  <p>한 학기 op-amp 한 단원이 이렇게 많은 후속 강의·산업 응용으로 이어집니다 — 회로의 만능 블록이라는 별명이 결코 과장이 아닙니다.</p>
+
+  <h3>이번 주 추천 도전 과제</h3>
+  <p>Falstad에서 비반전 증폭기를 만들고 $R_f$를 천천히 키워가며 출력이 포화되는 순간을 직접 측정해보세요. "수식대로 풀면 100V인데 실제 출력은 8V"라는 상황을 한 번 보면 포화가 평생 잊히지 않습니다.</p>
+
+  <h3>학기 마무리를 향해</h3>
+  <p class="lead">아날로그의 마지막 단원이 끝났습니다. 다음 주는 0과 1의 세계 — 디지털 논리. op-amp 비교기의 출력이 디지털 회로의 입력이 되는 그 다리를 건너갑니다.</p>
+
+  <h3>학습 일지 한 줄</h3>
+  <p>"이번 주에 새로 익힌 도구: 두 황금 규칙으로 모든 op-amp 회로를 푼다."</p>
+
+  <h2>한 학기 진도 위치 — W11 마무리</h2>
+  <p>전체 12주 중 11주차. 약 92% 진행. op-amp는 아날로그 회로의 만능 블록으로, 학기 후 어디에서든 다시 만납니다. 다음 주는 마지막 W12 디지털 논리 — 0과 1로만 이루어진 세계로 들어갑니다.</p>
+
+  <h3>한 줄 격언</h3>
+  <p class="lead">"op-amp는 식이 아니라 두 규칙이다 — $V_+ = V_-$, $I_+ = I_- = 0$."</p>
+
+  <h3>학습 일지 한 줄</h3>
+  <p>"이번 주에 새로 익힌 직관: 작은 차이를 매우 큰 출력으로 바꾸는 차이 증폭기."</p>
+
+  <h3>다음 주 미리보기</h3>
+  <p>W12 디지털 논리에서는 op-amp 비교기의 출력 — 0/1 디지털 — 이 어떤 식으로 조합되어 컴퓨터의 모든 동작을 만드는지를 봅니다. 한 학기의 마지막이자 가장 큰 보상이 되는 단원입니다.</p>
+
   <nav class="prevnext">
     <a href="10-transistor.html"><small>← 이전</small>W10. 트랜지스터</a>
     <a href="12-digital.html" class="next"><small>다음 →</small>W12. 디지털 논리</a>

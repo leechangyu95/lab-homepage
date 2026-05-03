@@ -788,6 +788,209 @@
   <h2>11. 한 학기 마무리</h2>
   <p>축하합니다. 옴의 법칙 한 줄에서 시작해 디지털 IC가 어떻게 만들어지는지까지 한 바퀴 돌았습니다. 회로 분야는 깊이가 끝없지만, 이 12주의 기초가 단단히 자리 잡혀 있으면 어떤 심화 과목·연구 분야에서도 든든한 발판이 될 거예요.</p>
 
+  <h2>12. 2진수 ↔ 10진수 ↔ 16진수 변환 — 친절 가이드</h2>
+  <p>디지털 회로는 모든 정보를 0과 1로 표현합니다. 그 0/1의 묶음이 바로 2진수. 16진수는 4비트 한 묶음을 한 글자로 줄여 적은 표기법입니다.</p>
+
+  <h3>12.1 2진수 → 10진수</h3>
+  <p>각 자리수를 $2^n$ 가중치로 곱해서 더합니다.</p>
+  <table>
+    <thead><tr><th>비트 자리</th><th>$2^7$</th><th>$2^6$</th><th>$2^5$</th><th>$2^4$</th><th>$2^3$</th><th>$2^2$</th><th>$2^1$</th><th>$2^0$</th></tr></thead>
+    <tbody>
+      <tr><td>가중치</td><td>128</td><td>64</td><td>32</td><td>16</td><td>8</td><td>4</td><td>2</td><td>1</td></tr>
+      <tr><td>예: $\text{10110101}_2$</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td></tr>
+    </tbody>
+  </table>
+  <p>$1\cdot128 + 0\cdot64 + 1\cdot32 + 1\cdot16 + 0\cdot8 + 1\cdot4 + 0\cdot2 + 1\cdot1 = 181$.</p>
+
+  <h3>12.2 10진수 → 2진수</h3>
+  <p>2로 계속 나누면서 나머지를 거꾸로 적습니다. 예 $13 \div 2 = 6 \text{ R } 1$, $6 \div 2 = 3 \text{ R } 0$, $3 \div 2 = 1 \text{ R } 1$, $1 \div 2 = 0 \text{ R } 1$ → 거꾸로 1101. 즉 $13_{10} = 1101_2$.</p>
+
+  <h3>12.3 2진수 ↔ 16진수</h3>
+  <p>4비트 묶음 단위로 16진수 한 글자로 변환합니다.</p>
+  <table>
+    <thead><tr><th>4비트</th><th>10진수</th><th>16진수</th></tr></thead>
+    <tbody>
+      <tr><td>0000</td><td>0</td><td>0</td></tr>
+      <tr><td>0001</td><td>1</td><td>1</td></tr>
+      <tr><td>0101</td><td>5</td><td>5</td></tr>
+      <tr><td>1010</td><td>10</td><td>A</td></tr>
+      <tr><td>1100</td><td>12</td><td>C</td></tr>
+      <tr><td>1111</td><td>15</td><td>F</td></tr>
+    </tbody>
+  </table>
+  <p>예: $\text{10110101}_2 = 1011\,0101 = \text{B}5_{16}$.</p>
+
+  <h3>12.4 변환 연습 5문항</h3>
+  <ol>
+    <li>$\text{1010}_2$ = ?₁₀</li>
+    <li>$\text{11111111}_2$ = ?₁₀</li>
+    <li>$25_{10}$ = ?₂</li>
+    <li>$\text{F}_{16}$ = ?₂</li>
+    <li>$\text{2A}_{16}$ = ?₁₀</li>
+  </ol>
+  <p>정답 — ① 10 ② 255 ③ 11001 ④ 1111 ⑤ 42.</p>
+
+  <h2>13. 부울 대수 — 한 페이지 정리</h2>
+  <p>2진수 회로의 식 변환·간소화에 사용하는 대수입니다. 이걸 아는 만큼 회로를 작게 만들 수 있습니다.</p>
+  <table>
+    <thead><tr><th>법칙</th><th>식</th></tr></thead>
+    <tbody>
+      <tr><td>항등</td><td>$A + 0 = A,\quad A \cdot 1 = A$</td></tr>
+      <tr><td>지배</td><td>$A + 1 = 1,\quad A \cdot 0 = 0$</td></tr>
+      <tr><td>중복</td><td>$A + A = A,\quad A \cdot A = A$</td></tr>
+      <tr><td>상보</td><td>$A + \overline{A} = 1,\quad A \cdot \overline{A} = 0$</td></tr>
+      <tr><td>이중부정</td><td>$\overline{\overline{A}} = A$</td></tr>
+      <tr><td>교환</td><td>$A + B = B + A,\quad A \cdot B = B \cdot A$</td></tr>
+      <tr><td>결합</td><td>$(A+B)+C = A+(B+C)$</td></tr>
+      <tr><td>분배</td><td>$A(B+C) = AB + AC$</td></tr>
+      <tr><td>흡수</td><td>$A + AB = A,\quad A(A+B) = A$</td></tr>
+      <tr><td>드 모르간</td><td>$\overline{A+B} = \overline{A} \cdot \overline{B},\quad \overline{A \cdot B} = \overline{A} + \overline{B}$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>13.1 식 단순화 예제</h3>
+  <p>$F = A\overline{B} + AB + \overline{A}B$를 단순화하라.</p>
+  <div class="sol">
+    <strong>풀이</strong><br>
+    1. 분배: $F = A(\overline{B}+B) + \overline{A}B$.<br>
+    2. 상보: $\overline{B}+B = 1$. → $F = A + \overline{A}B$.<br>
+    3. 흡수: $A + \overline{A}B = A + B$.<br>
+    답: $F = A + B$. 게이트 수가 5개 → 2개로 줄어듭니다.
+  </div>
+
+  <h2>14. 카르노 맵 입문 — 시각적 단순화</h2>
+  <p>3~4 변수 부울 식의 단순화를 표로 그리는 도구입니다. 시험에서 자주 등장하는 단원입니다.</p>
+
+  <h3>14.1 2변수 카르노 맵</h3>
+  <table>
+    <thead><tr><th></th><th>$B=0$</th><th>$B=1$</th></tr></thead>
+    <tbody>
+      <tr><td>$A=0$</td><td>$\overline{A}\,\overline{B}$</td><td>$\overline{A}\,B$</td></tr>
+      <tr><td>$A=1$</td><td>$A\,\overline{B}$</td><td>$A\,B$</td></tr>
+    </tbody>
+  </table>
+  <p>출력이 1인 칸을 묶고(2개·4개·8개), 묶음이 가로·세로 인접한 변수만 남깁니다.</p>
+
+  <h3>14.2 4변수 카르노 맵 예제</h3>
+  <p>$F(A,B,C,D) = \sum m(0,2,5,7,8,10,13,15)$ — 8개 1을 묶으면 $F = D + B$로 단순화. 게이트 8개의 회로가 OR 1개로 줄어듭니다.</p>
+
+  <h2>15. 디지털 회로 응용 — 8가지 사용 예</h2>
+  <ul>
+    <li><strong>CPU</strong> — 명령어 디코더는 거대한 조합 회로.</li>
+    <li><strong>메모리</strong> — 주소 디코더 + 플립플롭 어레이.</li>
+    <li><strong>디지털 시계</strong> — 카운터 + 디스플레이 디코더.</li>
+    <li><strong>신호등 제어</strong> — 상태 기계(state machine).</li>
+    <li><strong>키패드 스캔</strong> — 행·열 디코더.</li>
+    <li><strong>UART 통신</strong> — 시프트 레지스터 + 보드 레이트 카운터.</li>
+    <li><strong>SPI/I2C</strong> — 클록 + 데이터 동기 라인.</li>
+    <li><strong>FPGA</strong> — 프로그래머블 게이트 + 룩업 테이블.</li>
+  </ul>
+
+  <h2>16. 흔한 오답 패턴</h2>
+  <ol>
+    <li><strong>NAND vs NOR 혼동</strong> — NAND는 모두 1이면 0, NOR는 모두 0이면 1. 헷갈리면 진리표 그리기.</li>
+    <li><strong>드 모르간 부호 반전 누락</strong> — 곱이 합이 되거나 합이 곱이 될 때 모두 부호도 같이 반전.</li>
+    <li><strong>음수 표현 혼동</strong> — 2의 보수는 부호 비트(MSB)와 크기를 같이 본다.</li>
+    <li><strong>플립플롭 클록 에지 무시</strong> — 상승 에지 vs 하강 에지 항상 명시.</li>
+    <li><strong>글리치(spike) 무시</strong> — 조합 회로의 중간 시점 출력은 일시적으로 잘못된 값을 가질 수 있음.</li>
+  </ol>
+
+  <h2>17. Falstad 데모 — 4비트 카운터</h2>
+  <ol>
+    <li><code>Draw → Logic Family → Add D Flip-Flop</code>로 D 플립플롭 4개 연결.</li>
+    <li>각 플립플롭의 $\overline{Q}$를 다음 단의 D로 연결 (T 플립플롭처럼 동작).</li>
+    <li>클록 입력에 1Hz 사각파.</li>
+    <li>출력 4비트가 0000 → 0001 → 0010 → ... → 1111 → 0000 순환 확인.</li>
+    <li>BCD 디코더 + 7-세그먼트 LED를 연결하면 0~F가 디스플레이에 표시됨.</li>
+  </ol>
+
+  <h2>18. 자가 점검 7문항</h2>
+  <ol>
+    <li>$\text{1101}_2$ = ?₁₀</li>
+    <li>드 모르간 법칙 한 줄?</li>
+    <li>D 플립플롭은 클록 에지에서 무엇을 저장?</li>
+    <li>NAND 게이트 진리표 (4행)?</li>
+    <li>4비트 카운터의 최대 값은?</li>
+    <li>조합 회로와 순차 회로의 차이?</li>
+    <li>2의 보수 4비트로 −5는?</li>
+  </ol>
+  <p>정답 — ① 13 ② $\overline{A+B}=\overline{A}\overline{B}$ ③ D 입력 값 ④ (0,0)→1, (0,1)→1, (1,0)→1, (1,1)→0 ⑤ 15 ⑥ 메모리(저장) 유무 ⑦ 1011.</p>
+
+  <h2>19. FAQ — 디지털 회로 자주 묻는 질문</h2>
+
+  <h3>Q1. CPU 안에는 정말 트랜지스터가 200억 개?</h3>
+  <p>네. 2024년 기준 고급 CPU/SoC 한 개당 트랜지스터 수가 100억~200억 개. CMOS 공정이 5nm/3nm까지 미세화되어 가능해졌습니다.</p>
+
+  <h3>Q2. 디지털 회로는 정말 0/1만 다루나요?</h3>
+  <p>겉보기는 그렇지만, 안은 매우 정밀한 아날로그 회로입니다. 트랜지스터 한 개의 작은 전압 노이즈가 전체 시스템을 망가뜨릴 수 있어, 사실 가장 정밀한 회로 중 하나입니다.</p>
+
+  <h3>Q3. 클록 주파수가 빠를수록 빠른 컴퓨터?</h3>
+  <p>대체로 그렇지만 한계가 있습니다. 클록이 빨라지면 발열·전력 소모가 급증하고, 신호가 게이트를 지나가는 데 걸리는 시간이 한 사이클 내에 끝나야 합니다. 그래서 멀티코어·파이프라인 같은 다른 방법이 사용됩니다.</p>
+
+  <h3>Q4. 양수 논리(positive logic)와 음수 논리(negative logic) 차이?</h3>
+  <p>양수 논리는 1=H, 0=L. 음수 논리는 1=L, 0=H. 일반적으로는 양수 논리이지만 일부 통신 표준이나 액티브-로우 신호에서는 음수 논리가 사용됩니다.</p>
+
+  <h3>Q5. FPGA는 무엇인가요?</h3>
+  <p>Field Programmable Gate Array. 디지털 회로를 소프트웨어처럼 "프로그래밍"할 수 있는 칩. 고정된 ASIC보다 유연하고, CPU보다 병렬 처리에 강합니다. 신호처리·딥러닝 가속에 사용됩니다.</p>
+
+  <h2>20. 학기 마무리 메시지</h2>
+  <p class="lead">한 학기 동안 옴의 법칙 한 줄에서 출발해, 트랜지스터 200억 개로 만들어진 컴퓨터까지 한 바퀴 돌았습니다. 외운 것보다 풀어본 것이 평생 갑니다. 다음 학기에 메카트로닉스·자동제어로 다시 만납시다.</p>
+
+  <h3>20.1 한 학기 진도 시각화</h3>
+  <figure>
+    <svg viewBox="0 0 720 80" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="30" width="680" height="20" fill="#eee" stroke="#aaa"/>
+      <rect x="20" y="30" width="680" height="20" fill="#1565c0"/>
+      <text x="20" y="20" font-size="11" fill="#333">W1</text>
+      <text x="700" y="20" font-size="11" fill="#1565c0" font-weight="bold" text-anchor="end">W12 (완주!)</text>
+    </svg>
+    <figcaption>그림. 12주 완주 — 옴의 법칙에서 디지털 논리까지.</figcaption>
+  </figure>
+
+  <h3>20.2 학기 후 추천 학습 순서</h3>
+  <ol>
+    <li><strong>2학년 1학기</strong> — 메카트로닉스 / 동역학.</li>
+    <li><strong>2학년 2학기</strong> — 자동제어 / 신호 및 시스템.</li>
+    <li><strong>3학년</strong> — 임베디드 / 로봇공학.</li>
+    <li><strong>4학년 또는 대학원</strong> — 모델예측제어(MPC) / 머신러닝 응용.</li>
+  </ol>
+
+  <h3>20.3 한 줄 격언</h3>
+  <p class="lead">"풀어본 한 문제가 외운 열 식보다 강하다."</p>
+
+  <h2>21. 한 학기 디지털 핵심 카드 — 시험 직전 한 페이지</h2>
+  <div class="hl">
+    <strong>2진수</strong>: 자리수 가중치 $2^n$<br>
+    <strong>16진수</strong>: 4비트 = 1자리 (0~F)<br>
+    <strong>드 모르간</strong>: $\overline{A+B}=\overline{A}\overline{B}$, $\overline{AB}=\overline{A}+\overline{B}$<br>
+    <strong>주요 게이트</strong>: AND, OR, NOT, NAND, NOR, XOR<br>
+    <strong>D 플립플롭</strong>: 클록 에지에서 D를 Q로 저장<br>
+    <strong>조합 vs 순차</strong>: 메모리 유무
+  </div>
+
+  <h2>22. 한 학기 자기 평가 — 5단계 체크</h2>
+  <ol>
+    <li><strong>옴의 법칙</strong> — 단위까지 정확히 적기. (W2)</li>
+    <li><strong>KCL/KVL + 분배기</strong> — 직병렬·노드·메쉬 빠르게 풀이. (W3~W4)</li>
+    <li><strong>중첩·테브난</strong> — 복잡한 회로를 단순한 등가로 환원. (W5)</li>
+    <li><strong>RC·RL·페이저</strong> — 시간 변화·교류 대응. (W6~W8)</li>
+    <li><strong>다이오드·트랜지스터·op-amp·디지털</strong> — 부품별 동작 직관. (W9~W12)</li>
+  </ol>
+  <p>5단계 모두 ○ 되면 학기 마무리 완성. △ 되는 항목은 한 주씩 다시 펴 보세요.</p>
+
+  <h2>23. 학기 후 첫 미니 프로젝트 — 추천 5가지</h2>
+  <ol>
+    <li><strong>LED 깜빡이</strong> — 555 타이머 + RC, 한 시간이면 완성.</li>
+    <li><strong>가변 LED 밝기 조절</strong> — 가변저항 + LED.</li>
+    <li><strong>야간 자동조명</strong> — CdS + op-amp 비교기 + 트랜지스터.</li>
+    <li><strong>아두이노 + 모터 PWM</strong> — MOSFET + 다이오드.</li>
+    <li><strong>4비트 카운터 LED 표시기</strong> — D 플립플롭 + LED.</li>
+  </ol>
+  <p>모두 학부 수준 부품 키트(3~5만원)와 1~2주의 시간으로 가능. 졸업 전에 한 번씩 만들어 보세요.</p>
+
+  <h3>24. 한 줄 마무리</h3>
+  <p class="lead">한 학기 회로의 모든 길은 결국 옴의 법칙 한 줄에서 시작합니다. 한 학기 수고 많았습니다 — 다음 학기에 더 큰 시스템에서 다시 만나요.</p>
+
   <nav class="prevnext">
     <a href="11-opamp.html"><small>← 이전</small>W11. 아날로그 기초·연산증폭기</a>
     <a href="../mech.html" class="next"><small>다음 →</small>강의 목록으로</a>

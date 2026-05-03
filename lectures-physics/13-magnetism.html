@@ -122,6 +122,312 @@
   $$ \oint \vec{B}\cdot d\vec{l} = \mu_0 I_{\text{enc}} $$
   <p>대칭이 있으면 빠르게 풀린다. 직선 도선 → 원 곡선 → $B\cdot 2\pi r = \mu_0 I$. 솔레노이드 → 사각 곡선 → $B = \mu_0 n I$.</p>
 
+  <h2>🎮 인터랙티브 데모 1 — 자기장 안 입자의 원운동</h2>
+  <p>전하 $q$, 속도 $v$, 자기장 $B$ 슬라이더를 움직이며 회전 반경 $r = mv/(qB)$가 어떻게 변하는지 직접 확인하세요. 자기장 방향(지면 안/밖)에 따라 회전 방향이 바뀌고, 부호 반전 시 궤적이 거울 대칭이 됨을 시각으로 익힙니다.</p>
+
+  <div class="demo">
+    <h4>로런츠 힘으로 도는 입자 시뮬레이터</h4>
+    <p>자기장은 화면 안쪽(⊗) 또는 바깥쪽(⊙). 양전하($q&gt;0$) 기준 오른손 법칙으로 회전 방향을 직접 예측해 보고, 시뮬레이터로 확인하세요.</p>
+    <canvas id="w13_lorentz" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>전하 $q$ <span class="val" id="w13_qV">+1</span> e
+        <input type="range" id="w13_q" min="-2" max="2" step="1" value="1"></label>
+      <label>속력 $v$ <span class="val" id="w13_vV">3.0</span>
+        <input type="range" id="w13_v" min="0.5" max="6" step="0.1" value="3.0"></label>
+      <label>자기장 $B$ <span class="val" id="w13_BV">1.0</span>
+        <input type="range" id="w13_B" min="0.2" max="3" step="0.1" value="1.0"></label>
+      <label>$B$ 방향 <span class="val" id="w13_dirV">⊗ (안쪽)</span>
+        <input type="range" id="w13_dir" min="-1" max="1" step="2" value="1"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$B$ 두 배 → 반경 1/2. <em>$r = mv/(qB)$의 정직한 결과.</em></li>
+        <li>$v$ 두 배 → 반경 두 배지만 주기 $T = 2\pi m/(qB)$는 일정.</li>
+        <li>$q$를 양 → 음으로 → 회전 방향 반전(시계 ↔ 반시계).</li>
+        <li>$B$ 방향 반전 → 회전 방향 반전.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w13_lorentz');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const q=+document.getElementById('w13_q').value;
+      const v=+document.getElementById('w13_v').value;
+      const B=+document.getElementById('w13_B').value;
+      const dir=+document.getElementById('w13_dir').value;
+      document.getElementById('w13_qV').textContent=(q>=0?'+':'')+q;
+      document.getElementById('w13_vV').textContent=v.toFixed(1);
+      document.getElementById('w13_BV').textContent=B.toFixed(1);
+      document.getElementById('w13_dirV').textContent=dir>0?'⊗ (안쪽)':'⊙ (바깥쪽)';
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // dot grid showing B field direction
+      ctx.fillStyle='#cfd8e3';
+      for(let xi=20;xi<W;xi+=40){
+        for(let yi=20;yi<H;yi+=40){
+          if(dir>0){ctx.beginPath();ctx.arc(xi,yi,5,0,Math.PI*2);ctx.stroke();
+            ctx.beginPath();ctx.moveTo(xi-3.5,yi-3.5);ctx.lineTo(xi+3.5,yi+3.5);
+            ctx.moveTo(xi+3.5,yi-3.5);ctx.lineTo(xi-3.5,yi+3.5);ctx.stroke();}
+          else{ctx.beginPath();ctx.arc(xi,yi,5,0,Math.PI*2);ctx.stroke();
+            ctx.beginPath();ctx.arc(xi,yi,1.5,0,Math.PI*2);ctx.fill();}
+        }
+      }
+      // particle radius scaled
+      const m=1.0;
+      let r=80;
+      if(q!==0 && B>0)r=Math.min(150, m*v/(Math.abs(q)*B)*30);
+      const cx=W/2,cy=H/2;
+      // sense of rotation: F = qv x B; if B into page (+), v right (+x), then F = q(+x x -z) = q(+y) -> if q>0, force up, circle goes up
+      const sense=(q*dir>0)?-1:1;
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+      // particle position animated
+      const t=Date.now()/600;
+      const ang=sense*t;
+      const px=cx+r*Math.cos(ang),py=cy+r*Math.sin(ang);
+      ctx.fillStyle=q>=0?'#c62828':'#1565c0';
+      ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(q>=0?'+':'-',px,py);
+      ctx.textAlign='start';ctx.textBaseline='alphabetic';
+      // velocity arrow
+      const vx=-r*sense*Math.sin(ang),vy=r*sense*Math.cos(ang);
+      const vn=Math.hypot(vx,vy)||1;
+      const ux=vx/vn,uy=vy/vn;
+      ctx.strokeStyle='#2e7d32';ctx.fillStyle='#2e7d32';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+ux*30,py+uy*30);ctx.stroke();
+      const an=Math.atan2(uy,ux);
+      ctx.beginPath();ctx.moveTo(px+ux*30,py+uy*30);
+      ctx.lineTo(px+ux*30-8*Math.cos(an-0.4),py+uy*30-8*Math.sin(an-0.4));
+      ctx.lineTo(px+ux*30-8*Math.cos(an+0.4),py+uy*30-8*Math.sin(an+0.4));
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,210,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,210,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('반경 r ≈ '+(r/30).toFixed(2)+' (임의단위)',16,28);
+      ctx.fillText('주기 T ∝ m/(|q|B) = '+(1/(Math.abs(q||1)*B)).toFixed(2),16,46);
+      ctx.fillText('회전 '+(sense>0?'시계방향':'반시계방향'),16,64);
+      requestAnimationFrame(draw);
+    }
+    ['w13_q','w13_v','w13_B','w13_dir'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{}));
+    draw();
+  })();
+  </script>
+
+  <h2>🎮 인터랙티브 데모 2 — 직선 도선이 만드는 동심원 자기장</h2>
+  <p>전류 $I$ 슬라이더를 움직여 자기장 세기 $B = \mu_0 I/(2\pi r)$가 거리 $r$에 반비례함을 시각으로 확인합니다. 도선을 엄지로 잡으면 손가락이 도는 방향 — 오른손 법칙을 화살표로 그려줍니다.</p>
+
+  <div class="demo">
+    <h4>앙페르 동심원 — 화면을 뚫고 나오는 도선</h4>
+    <p>중앙의 ⊙는 전류가 화면 바깥으로 나오는 방향(반대로 ⊗는 안으로). 화살표 길이는 $B$ 크기, 동심원 위에 그려집니다.</p>
+    <canvas id="w13_wire" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>전류 $I$ <span class="val" id="w13_IV">5</span> A
+        <input type="range" id="w13_I" min="-20" max="20" step="1" value="5"></label>
+      <label>표시할 동심원 수 <span class="val" id="w13_nV">5</span>
+        <input type="range" id="w13_n" min="2" max="8" step="1" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰</strong>
+      <ul>
+        <li>같은 동심원 위 $|B|$ 일정. 멀어질수록 약해짐.</li>
+        <li>전류 부호 반전 → 모든 화살표 동시에 반대로.</li>
+        <li>$I=10$ A, $r=2$ cm일 때 $B = (4\pi\!\times\!10^{-7})(10)/(2\pi\!\times\!0.02) = 10^{-4}$ T = 1 G — 지구 자기장의 두 배 정도.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w13_wire');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const I=+document.getElementById('w13_I').value;
+      const n=+document.getElementById('w13_n').value;
+      document.getElementById('w13_IV').textContent=I;
+      document.getElementById('w13_nV').textContent=n;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2;
+      // wire symbol
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx,cy,14,0,Math.PI*2);ctx.stroke();
+      if(I>=0){ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fillStyle='#222';ctx.fill();}
+      else{ctx.beginPath();ctx.moveTo(cx-9,cy-9);ctx.lineTo(cx+9,cy+9);
+        ctx.moveTo(cx+9,cy-9);ctx.lineTo(cx-9,cy+9);ctx.stroke();}
+      // concentric circles
+      const sense=I>=0?1:-1;
+      const Imag=Math.abs(I);
+      for(let k=1;k<=n;k++){
+        const r=30+k*38;
+        if(r>Math.min(W,H)/2-20)break;
+        ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+        ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+        // arrows around the circle
+        const Bmag=Imag/r*30;
+        const len=Math.min(28, 6+Bmag*0.5);
+        const arrows=8;
+        for(let a=0;a<arrows;a++){
+          const ang=a*2*Math.PI/arrows;
+          const ax=cx+r*Math.cos(ang),ay=cy+r*Math.sin(ang);
+          // tangent direction (counterclockwise for positive)
+          const tx=-Math.sin(ang)*sense,ty=Math.cos(ang)*sense;
+          ctx.strokeStyle='#0b5fff';ctx.fillStyle='#0b5fff';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(ax-tx*len/2,ay-ty*len/2);
+          ctx.lineTo(ax+tx*len/2,ay+ty*len/2);ctx.stroke();
+          const ahn=Math.atan2(ty,tx);
+          const tipx=ax+tx*len/2,tipy=ay+ty*len/2;
+          ctx.beginPath();ctx.moveTo(tipx,tipy);
+          ctx.lineTo(tipx-7*Math.cos(ahn-0.4),tipy-7*Math.sin(ahn-0.4));
+          ctx.lineTo(tipx-7*Math.cos(ahn+0.4),tipy-7*Math.sin(ahn+0.4));
+          ctx.closePath();ctx.fill();
+        }
+      }
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,260,52);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,260,52);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('I = '+I+' A, 방향: '+(I>=0?'화면 밖(⊙)':'화면 안(⊗)'),16,28);
+      ctx.fillText('B ∝ 1/r — 멀어질수록 화살표 짧음',16,46);
+    }
+    ['w13_I','w13_n'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>🎮 인터랙티브 데모 3 — 솔레노이드 내부 균일 자기장</h2>
+  <p>권수 $N$, 길이 $L$, 전류 $I$를 바꿔 내부 자기장 $B = \mu_0 n I$가 균일함을 확인하세요. ($n = N/L$). 끝부분에서 자기장선이 빠져나가는 모습이 막대자석과 닮았다는 사실에 주목.</p>
+
+  <div class="demo">
+    <h4>솔레노이드 단면 — 내부는 균일·외부는 약함</h4>
+    <p>위쪽 코일 단면은 ⊙(밖으로), 아래쪽은 ⊗(안으로) — 모든 코일이 같은 방향으로 감겨 있을 때.</p>
+    <canvas id="w13_sole" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>권수 $N$ <span class="val" id="w13_NV">200</span>
+        <input type="range" id="w13_N" min="50" max="500" step="10" value="200"></label>
+      <label>길이 $L$ <span class="val" id="w13_LV">0.20</span> m
+        <input type="range" id="w13_L" min="0.05" max="0.5" step="0.01" value="0.20"></label>
+      <label>전류 $I$ <span class="val" id="w13_IsV">2.0</span> A
+        <input type="range" id="w13_Is" min="0.1" max="10" step="0.1" value="2.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$N$을 늘리면 → 코일 단면이 촘촘해짐 → 내부 $B$ 비례 증가.</li>
+        <li>$L$을 늘리면 → $n = N/L$ 감소 → 내부 $B$ 약해짐.</li>
+        <li>전류만 두 배 → $B$도 두 배. 매우 직선적.</li>
+        <li>외부 자기장은 $\approx 0$ — 모든 화살표가 안으로 모임. 막대자석의 N극(왼쪽)·S극(오른쪽).</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w13_sole');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const N=+document.getElementById('w13_N').value;
+      const L=+document.getElementById('w13_L').value;
+      const I=+document.getElementById('w13_Is').value;
+      document.getElementById('w13_NV').textContent=N;
+      document.getElementById('w13_LV').textContent=L.toFixed(2);
+      document.getElementById('w13_IsV').textContent=I.toFixed(1);
+      const mu0=4*Math.PI*1e-7;
+      const n=N/L;
+      const B=mu0*n*I;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // solenoid box
+      const x0=80,y0=H/2-60,x1=W-80,y1=H/2+60;
+      ctx.strokeStyle='#888';ctx.lineWidth=1;
+      ctx.strokeRect(x0,y0,x1-x0,y1-y0);
+      // top row: dots (out), bottom row: x (in)
+      const turns=Math.min(40, Math.floor(N/8));
+      const step=(x1-x0)/(turns+1);
+      ctx.font='14px sans-serif';
+      for(let k=1;k<=turns;k++){
+        const xx=x0+k*step;
+        // top: ⊙
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(xx,y0,7,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(xx,y0,2.5,0,Math.PI*2);ctx.fill();
+        // bottom: ⊗
+        ctx.beginPath();ctx.arc(xx,y1,7,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(xx-4,y1-4);ctx.lineTo(xx+4,y1+4);
+        ctx.moveTo(xx+4,y1-4);ctx.lineTo(xx-4,y1+4);ctx.stroke();
+      }
+      // inside arrows (uniform)
+      const Bscale=Math.min(40, B*1e5);
+      const rows=3,cols=8;
+      for(let r=0;r<rows;r++){
+        for(let cc=0;cc<cols;cc++){
+          const ax=x0+30+cc*((x1-x0-60)/(cols-1));
+          const ay=y0+30+r*((y1-y0-60)/(rows-1));
+          ctx.strokeStyle='#c62828';ctx.fillStyle='#c62828';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(ax-Bscale/2,ay);ctx.lineTo(ax+Bscale/2,ay);ctx.stroke();
+          ctx.beginPath();ctx.moveTo(ax+Bscale/2,ay);
+          ctx.lineTo(ax+Bscale/2-7,ay-4);ctx.lineTo(ax+Bscale/2-7,ay+4);
+          ctx.closePath();ctx.fill();
+        }
+      }
+      // labels
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('N극',x0-30,H/2+5);
+      ctx.fillText('S극',x1+10,H/2+5);
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,300,68);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,300,68);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('n = N/L = '+n.toFixed(0)+' turns/m',16,28);
+      ctx.fillText('B = μ₀ n I = '+B.toExponential(2)+' T',16,46);
+      ctx.fillText('= '+(B*1e4).toFixed(2)+' G  (지구≈0.5 G, MRI≈10⁴ G)',16,64);
+    }
+    ['w13_N','w13_L','w13_Is'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>🪜 단계별 사고 과정 — 앙페르 법칙으로 솔레노이드 자기장 유도</h2>
+  <p>"$B = \mu_0 n I$"가 어떻게 튀어나왔을까? 식을 외우지 말고 5단계 논증을 따라가 보세요. 시험에서 식만 던져두고 "유도하시오"가 나와도 막힘 없이 풀 수 있게 됩니다.</p>
+
+  <div class="note">
+    <strong>문제.</strong> 길이 $L$, 권수 $N$, 전류 $I$인 무한 길이(또는 매우 긴) 솔레노이드의 내부 자기장을 앙페르 법칙으로 구하시오.
+  </div>
+
+  <h3>1단계 — 대칭부터 분석</h3>
+  <p>긴 솔레노이드는 축을 따라 평행이동·회전 대칭 → 내부 자기장은 <strong>축 방향</strong>으로만 향하고 위치에 무관(균일). 외부는 거리에 따라 빠르게 0으로 수렴(이상화에선 정확히 0).</p>
+  <pre><code>            (외부 B ≈ 0)
+   ┌─────────────────────────┐
+   │  →  →  →  →  →  →  →    │  ← 내부 균일, 축 방향
+   │  →  →  →  →  →  →  →    │
+   └─────────────────────────┘
+            (외부 B ≈ 0)</code></pre>
+
+  <h3>2단계 — 앙페르 곡선 잡기 (직사각형!)</h3>
+  <p>대칭에 맞춰 <em>적분 경로가 단순해지는</em> 곡선을 잡는 게 핵심. 솔레노이드는 직사각형 곡선(내부에 한 변, 외부에 평행한 한 변, 두 변은 수직).</p>
+  <pre><code>          ─────────►  (path 1: 내부, 길이 ℓ, B와 평행)
+         │           │
+         │           │
+   path 4│           │ path 2 (B에 수직)
+         │           │
+          ◄─────────  (path 3: 외부, B≈0)</code></pre>
+
+  <h3>3단계 — 좌변(선적분) 계산</h3>
+  <p>$\oint \vec B \cdot d\vec l$를 네 변으로 분해:</p>
+  <ul>
+    <li>경로 1 (내부, 길이 $\ell$): $\vec B \parallel d\vec l$ → 기여 $= B\ell$.</li>
+    <li>경로 3 (외부): $\vec B \approx 0$ → 기여 $= 0$.</li>
+    <li>경로 2, 4 (수직): $\vec B \perp d\vec l$ 또는 $\vec B = 0$ → 기여 $= 0$.</li>
+  </ul>
+  $$ \oint \vec B \cdot d\vec l = B\ell $$
+
+  <h3>4단계 — 우변(둘러싼 전류) 계산</h3>
+  <p>이 직사각형이 둘러싼 코일 수: $n\ell$ ($n = N/L$이 단위 길이당 권수). 각 코일이 전류 $I$ 한 번씩 통과:</p>
+  $$ I_{\text{enc}} = (n\ell) I $$
+
+  <h3>5단계 — 앙페르 법칙 적용 → 답</h3>
+  $$ B\ell = \mu_0 (n\ell) I \;\Longrightarrow\; \boxed{B = \mu_0 n I} $$
+  <div class="tip">
+    이 5단계 패턴(대칭 → 곡선 선택 → 좌변 → 우변 → 풀기)은 <strong>직선 도선</strong>(원 곡선), <strong>토로이드</strong>(원 곡선), <strong>두꺼운 도선 내부</strong>(작은 원 곡선) 모두에 그대로 적용됩니다. 외울 식 없이 매번 같은 사고로.
+  </div>
+
   <h2>흔한 오개념</h2>
   <table>
     <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
@@ -173,6 +479,402 @@
     <strong>정답</strong>: (1) 힘이 항상 속도에 수직 → $\vec F\cdot\vec v = 0$. (2) 토크 받음(자기 모멘트 정렬). 단 정렬되어 있으면 토크 0. (3) 헬리컬(스크류) 운동: 평행 성분은 등속, 수직 성분은 원운동. (4) 한 도선이 만든 $B$ 안에 다른 도선의 전류가 있어 $F = IL\times B$가 끌림 방향.
   </div>
 
+  <h2>연습문제 — 집에서 풀어보기 ✏️</h2>
+  <p>풀이 토글이 있습니다. 먼저 본인이 풀어보고 막히면 펼치세요. 자기력은 외적이라 부호·방향에서 가장 자주 막힙니다 — 매 문제 오른손을 들고 직접 따라하는 게 시험장 비결.</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 1</strong> (로런츠 힘 크기) — 양성자가 $v = 2\times 10^6$ m/s로 $B = 0.5$ T 자기장에 수직 진입. 받는 힘은?</summary>
+    <p style="margin-top:10px">$F = qvB = (1.6\times 10^{-19})(2\times 10^6)(0.5) = 1.6\times 10^{-13}$ N. 방향은 $\vec v\times\vec B$로 결정 — 오른손으로 직접 확인.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 2</strong> (사이클로트론 반경) — 전자($m=9.11\times 10^{-31}$ kg)가 $5\times 10^7$ m/s로 0.01 T 자기장에 수직 진입. 원 반경?</summary>
+    <p style="margin-top:10px">$r = mv/(qB) = (9.11\times 10^{-31})(5\times 10^7)/((1.6\times 10^{-19})(0.01)) \approx 0.028$ m = 2.8 cm. 텔레비전 CRT의 전자 빔이 휘는 정도와 같은 스케일.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 3</strong> (사이클로트론 주파수) — 위 문제 2의 전자가 한 바퀴 도는 데 걸리는 주기와 주파수?</summary>
+    <p style="margin-top:10px">$T = 2\pi m/(qB) = 2\pi(9.11\times 10^{-31})/((1.6\times 10^{-19})(0.01)) \approx 3.6\times 10^{-9}$ s = 3.6 ns. $f = 1/T \approx 280$ MHz. 사이클로트론 주파수는 속도와 무관 — 가속기 설계의 핵심.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 4</strong> (헬리컬 운동) — 양성자가 자기장에 30°로 진입. 자기장 방향 성분과 수직 성분이 각각 어떤 운동을 하는지?</summary>
+    <p style="margin-top:10px">자기장 방향 성분 $v_\parallel = v\cos 30°$ — <strong>등속</strong>(자기력 0). 수직 성분 $v_\perp = v\sin 30°$ — <strong>원운동</strong>(반경 $r = mv_\perp/(qB)$). 합치면 나선(헬리컬) 궤적. 오로라가 극지방에 모이는 이유 — 양성자가 자기력선을 따라 헬리컬 운동.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 5</strong> (도선 위 힘) — 0.5 m 길이 도선에 8 A 흐른다. 자기장 0.3 T가 도선에 60° 각도. 도선이 받는 힘?</summary>
+    <p style="margin-top:10px">$F = ILB\sin\theta = (8)(0.5)(0.3)\sin 60° = 1.2 \times 0.866 \approx 1.04$ N.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 6</strong> (직선 도선 자기장) — 100 A가 흐르는 송전선에서 1 m 떨어진 점의 자기장은? 지구 자기장(0.5 G)과 비교.</summary>
+    <p style="margin-top:10px">$B = \mu_0 I/(2\pi r) = (4\pi\times 10^{-7})(100)/(2\pi\times 1) = 2\times 10^{-5}$ T = 0.2 G. 지구 자기장의 약 40% — 나침반이 송전선 근처에서 흐트러지는 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 7</strong> (두 평행 도선) — 5 cm 떨어진 두 도선에 각각 20 A 같은 방향. 도선 1 m당 받는 힘과 방향?</summary>
+    <p style="margin-top:10px">$F/L = \mu_0 I_1 I_2/(2\pi d) = (4\pi\times 10^{-7})(400)/(2\pi\times 0.05) = 1.6\times 10^{-3}$ N/m. 같은 방향 → <strong>끌림</strong>. 반대 방향이면 같은 크기로 밀림.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 8</strong> (솔레노이드 설계) — 길이 0.3 m 솔레노이드를 1 T 자기장으로 만들고 싶다. 권수 1500이라면 필요한 전류?</summary>
+    <p style="margin-top:10px">$B = \mu_0 n I$에서 $n = 1500/0.3 = 5000$/m. $I = B/(\mu_0 n) = 1/((4\pi\times 10^{-7})(5000)) \approx 159$ A. 매우 큰 전류 — MRI는 초전도 코일로 저항 없이 흘려 해결.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 9</strong> (모터 토크) — 직사각형 코일(가로 0.1 m, 세로 0.05 m), 권수 200, 전류 2 A, 자기장 0.4 T(코일 면 평행). 토크?</summary>
+    <p style="margin-top:10px">$\tau = NIAB\sin\theta$. 면적 $A = 0.005$ m². 코일 면이 $\vec B$와 평행 → 면 법선과 $\vec B$ 사이 각 $\theta = 90°$, $\sin = 1$. $\tau = (200)(2)(0.005)(0.4) = 0.8$ N·m. 코일이 정렬되면 0.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 10</strong> (질량 분석기) — 같은 운동에너지($K$)로 가속된 단일 이온화 입자. 질량비 $m_1:m_2 = 1:2$일 때 자기장 $B$ 안에서 원 반경비는?</summary>
+    <p style="margin-top:10px">$K = \tfrac12 mv^2$이므로 $v = \sqrt{2K/m}$. $r = mv/(qB) = m\sqrt{2K/m}/(qB) = \sqrt{2Km}/(qB)$. 따라서 $r \propto \sqrt m$ → $r_1:r_2 = 1:\sqrt 2 \approx 1:1.41$. 질량분석기가 이런 식으로 동위원소를 분리.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 11</strong> (홀 전압) — 두께 0.5 mm 도체에 1 A 흐름. 0.4 T 자기장 수직. 전하 밀도 $n = 8.5\times 10^{28}$/m³(구리). 홀 전압?</summary>
+    <p style="margin-top:10px">$V_H = IB/(nqt) = (1)(0.4)/((8.5\times 10^{28})(1.6\times 10^{-19})(5\times 10^{-4})) \approx 5.9\times 10^{-8}$ V ≈ 60 nV. 매우 작아 정밀 측정 필요. 반도체에선 $n$이 작아 $V_H$가 1000배 큼 → 홀 센서가 반도체로 만들어지는 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 12</strong> (오른손 법칙 종합) — 양전하 +$q$가 +x 방향으로 움직이고, 자기장이 +z 방향. 받는 힘 방향?</summary>
+    <p style="margin-top:10px">$\vec F = q\vec v\times\vec B = q(\hat x\times\hat z) = q(-\hat y) = -y$ 방향. (외적 표: $\hat x\times\hat z = -\hat y$.) 오른손으로: 손가락 +x → +z로 감으면 엄지가 -y 방향.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 ⭐</strong> (속도 선택기) — 전기장 $E$와 자기장 $B$가 수직. 입자가 전기력과 자기력이 정확히 상쇄되어 직진하려면 속력은?</summary>
+    <p style="margin-top:10px">$qE = qvB \Rightarrow v = E/B$. 전하·질량과 무관. 톰슨이 전자의 $e/m$를 처음 측정할 때 사용한 장치(velocity selector). 질량분석기 입구에서 같은 속력 입자만 골라낼 때 사용.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 ⭐⭐</strong> (사이클로트론 최대 에너지) — 반경 $R$ 사이클로트론, 자기장 $B$. 가속할 수 있는 양성자의 최대 운동에너지는?</summary>
+    <p style="margin-top:10px">최대 반경에서 $r = mv/(qB) = R$ → $v = qBR/m$. $K = \tfrac12 mv^2 = q^2 B^2 R^2/(2m)$. 예: $B = 1.5$ T, $R = 0.5$ m → $K \approx 4.3\times 10^{-12}$ J ≈ 27 MeV. 양성자 치료기 수준. 더 큰 에너지엔 싱크로트론 필요(상대론 보정).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 ⭐⭐⭐</strong> (토로이드 자기장) — 큰 반경 $R$, 작은 반경 $a$, 권수 $N$인 토로이드 내부 자기장을 앙페르 법칙으로 유도하시오.</summary>
+    <p style="margin-top:10px">대칭: 내부에서 $\vec B$는 환축 따라 원. 앙페르 곡선: 환축에 평행한 원(반경 $r$). 좌변 $= B(2\pi r)$. 우변: 곡선이 둘러싼 코일은 $N$개 모두 — $\mu_0 NI$. 결과: $B = \mu_0 NI/(2\pi r)$. 토로이드 안에서 $r$이 변할수록 $B$도 변함(균일하지 않음 — 솔레노이드와 차이). 외부($r > R+a$ 또는 $r < R-a$)는 둘러싼 전류 0이라 $B = 0$. ITER 토카막 핵융합로의 자기장 설계 핵심.</p>
+  </details>
+
+  <h2>🪜 한 번 더 — 단계별 사고 과정 (도선 위의 힘)</h2>
+  <p>"$\vec F = I\vec L\times\vec B$"가 어디서 나왔는지, 그리고 시험장에서 막혔을 때 어떻게 풀어가는지 5단계로.</p>
+
+  <div class="note">
+    <strong>예제.</strong> 길이 0.4 m 직선 도선이 +x 방향으로 6 A 흐른다. 자기장 $\vec B = 0.3\hat y$ T가 걸려 있다. 도선이 받는 힘을 크기와 방향 모두 구하시오.
+  </div>
+
+  <h3>1단계 — 그림과 좌표 설정</h3>
+  <pre><code>     z
+     ↑
+     │     I = 6 A →
+     │   ●──────────●     ← 도선 (+x 방향, 길이 0.4 m)
+     │
+     └───────────► x
+            │
+            ▼
+            B = 0.3 T (+y 방향, 화면 안쪽)</code></pre>
+
+  <h3>2단계 — 식 구조 확인</h3>
+  <p>$\vec F = I \vec L \times \vec B$. 여기서 $\vec L$의 크기는 도선 길이, 방향은 <strong>전류가 흐르는 방향</strong>이다. 따라서 $\vec L = (0.4)\hat x$ m, $\vec B = (0.3)\hat y$ T.</p>
+
+  <h3>3단계 — 외적 계산</h3>
+  <p>표를 외워두면 빠르다: $\hat x\times\hat y = \hat z$, $\hat y\times\hat z = \hat x$, $\hat z\times\hat x = \hat y$ (오른손 사이클).</p>
+  $$ \vec L\times\vec B = (0.4\hat x)\times(0.3\hat y) = 0.12\,(\hat x\times\hat y) = 0.12\,\hat z \;\text{m·T} $$
+
+  <h3>4단계 — 힘 크기·방향</h3>
+  $$ \vec F = (6)(0.12\hat z) = 0.72\,\hat z \text{ N} $$
+  <p>크기 0.72 N, 방향 +z(위쪽). 오른손으로 검산: 손가락 +x → +y로 감으면 엄지가 +z. ✓</p>
+
+  <h3>5단계 — 합리성 체크</h3>
+  <ul>
+    <li>단위: A · m · T = N. ✓ (T = N/(A·m)이므로.)</li>
+    <li>크기 감각: U자 자석 사이 도선이 튀어 오를 때 받는 힘과 비슷한 스케일.</li>
+    <li>전류 방향 반전 → 힘도 반전. 자기장 방향 반전도 마찬가지.</li>
+  </ul>
+  <div class="tip"><strong>시험 단골 함정</strong> — 도선과 자기장이 평행하면 외적 0 → 힘 0. "도선이 자기장 안에 있으면 무조건 힘"이라는 오해 주의.</div>
+
+  <h2>❓ 학생 단골 질문 (FAQ)</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q1.</strong> 오른손 법칙이 헷갈립니다. 손가락을 어떻게 잡아야 정확한가요?</summary>
+    <p style="margin-top:10px">두 가지가 있습니다. (i) <strong>외적 $\vec A\times\vec B$</strong>: 오른손 손가락을 $\vec A$ 방향으로 펴고, $\vec B$ 방향으로 <em>구부림</em>. 엄지가 $\vec A\times\vec B$. (ii) <strong>전류와 자기장</strong>: 오른손 엄지를 전류 방향으로, 손가락이 도선을 감는 방향이 자기장 방향. 두 법칙은 다른 상황이지만 모두 오른손이라 자주 섞입니다. 매 문제에서 어느 쪽을 쓰는지 명시하고 손을 직접 들어 확인하세요.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q2.</strong> 왜 자기 단극(monopole)은 존재하지 않나요? 발견되면 어떻게 되나요?</summary>
+    <p style="margin-top:10px">현재까지 실험적으로 발견되지 않아 $\nabla\cdot\vec B = 0$이 맥스웰 4식 중 하나로 자리잡고 있습니다. 그러나 디랙(Dirac, 1931)은 자기 단극이 단 하나라도 존재하면 전하 양자화가 자연스럽게 설명된다고 보였고, 일부 대통일 이론은 자기 단극의 존재를 예측합니다. 1982년 카브레라(Cabrera) 검출기에서 단 한 번의 신호가 잡혔으나 재현되지 않았습니다. 발견되면 노벨상 + 물리학 교과서 다시 쓰기.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q3.</strong> 지구 자기장의 N극은 사실 S극이라는 말이 헷갈립니다.</summary>
+    <p style="margin-top:10px">맞습니다. 나침반의 N극이 가리키는 "북극"은 지구 자기장 관점에서는 <strong>S극</strong>입니다(N과 S는 끌어당기니까). 명칭 혼동을 피하려고 지자기학에선 "지자기 북극(north geomagnetic pole)"이라는 용어를 쓰며, 이것이 사실은 자기적 S극임을 분명히 합니다. 또한 지자기 북극은 지리적 북극과 약 11° 어긋나 있으며, 매년 50–60 km씩 이동하고 있습니다. 약 78만 년에 한 번씩 N과 S가 뒤집히는 <em>지자기 역전</em>도 일어납니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q4.</strong> 자기력은 일을 하지 않는다는데, 모터는 분명 일을 합니다. 모순 아닌가요?</summary>
+    <p style="margin-top:10px">자기력 자체는 입자 운동에 일을 하지 않습니다($\vec F\perp\vec v$). 모터에서 일을 하는 건 사실 <em>전원(EMF)</em>이고, 자기력은 단지 전류의 운동 방향을 회전축 방향으로 <strong>전환</strong>해 줍니다. 더 정확히는, 도선 안 전하의 운동 방향이 자기력에 의해 옆으로 돌리고, 그 측면 전하 흐름에 대해 도선 격자(이온)가 반작용 힘을 받아 회전하는 것. 자기력은 "방향 전환자", 일은 EMF가 한다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q5.</strong> 솔레노이드 외부 자기장이 정말 0인가요? 막대자석 N극에서 나오는 자기력선은 보입니다만.</summary>
+    <p style="margin-top:10px">"이상화된 무한 솔레노이드"의 외부는 0입니다. 그러나 실제는 유한 길이라 끝부분에서 자기장선이 빠져나옵니다 — 이 모양이 막대자석과 동일하게 보입니다. 솔레노이드의 N극(자기장이 나오는 쪽)과 S극(들어가는 쪽). 길이가 직경보다 10배 이상 길면 내부 식 $B = \mu_0 nI$가 거의 정확.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q6.</strong> 전자 하나가 도는 것도 자기장을 만드나요? 그렇다면 원자 안에는 항상 자기장이 있는 건가요?</summary>
+    <p style="margin-top:10px">예. 전자의 궤도 운동은 작은 전류 루프이므로 자기 모멘트를 만듭니다(궤도 자기 모멘트). 그리고 전자 자체에 <em>스핀</em>이라는 내재 자기 모멘트도 있습니다. 강자성체(철·니켈 등)에서는 이 스핀들이 정렬해 거시적 자석이 됩니다. 이것이 모든 자석의 본질 — "움직이는 전하"라는 개념이 양자 수준으로 확장된 것.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q7.</strong> 비오-사바르 법칙과 앙페르 법칙은 어느 걸 언제 써야 하나요?</summary>
+    <p style="margin-top:10px">대칭이 좋으면(직선·원형·솔레노이드·토로이드) 앙페르 법칙이 압도적으로 빠릅니다. 대칭이 깨진 경우(유한 길이 도선, 임의 모양 코일, 헬름홀츠 코일 한쪽 점) 비오-사바르 법칙으로 적분해야 합니다. 시험에서는 대부분 앙페르로 풀 수 있게 설계되어 있고, 비오-사바르는 직접 적분이 필요한 문제(원형 도선 중심 등)에서만 등장합니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q8.</strong> MRI가 1–3 T라는 게 얼마나 강한 건지 감이 안 옵니다.</summary>
+    <p style="margin-top:10px">지구 자기장의 약 2만~6만 배입니다. 1.5 T 정도면 동전이 자석 옆에서 1 m 거리에 있어도 끌려갈 수 있고, 3 T라면 산소 탱크가 발사체가 됩니다(실제 사망 사고 발생). 그래서 MRI 검사실 입장 전에 모든 금속을 제거해야 합니다. 구리·알루미늄 같은 비자성 금속도 자기장 변화 중에 와전류로 끌립니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q9.</strong> 두 도선이 같은 방향이면 끌리는데, 두 자석은 같은 극끼리 밀립니다. 모순 같습니다.</summary>
+    <p style="margin-top:10px">전혀 모순 아닙니다. 두 도선이 "같은 방향" = 한 도선이 만든 자기장 안에 다른 도선이 있는데, 그 자기장이 다른 도선의 방향에 맞춰 끌어당기는 힘 방향. 자석은 N-S 쌍극자 모형으로 보면 N의 같은 극끼리 마주보는 것이 사실은 두 자기 쌍극자의 <em>반대 방향 정렬</em>이라 밀립니다. 도선과 자석은 서로 다른 비교 — 도선은 단극 평행, 자석은 쌍극자.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q10.</strong> 사이클로트론 주파수가 속도에 무관하다는 게 신기합니다. 왜 그런가요?</summary>
+    <p style="margin-top:10px">$T = 2\pi r/v = 2\pi(mv/qB)/v = 2\pi m/(qB)$ — $v$가 약분되어 사라집니다. 빠르게 돌면 반경이 커지지만 둘레도 그만큼 커져 시간이 같습니다. 이 사실 덕분에 사이클로트론은 일정한 주파수의 RF로 점점 빨라지는 입자를 가속할 수 있습니다(상대론 영역 전까지). 상대론에 들어가면 $m$이 $\gamma m$으로 커져 주파수가 변해 싱크로트론이 필요.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q11.</strong> 자기장 단위 T(테슬라)와 G(가우스)는 어떻게 변환하나요?</summary>
+    <p style="margin-top:10px">1 T = $10^4$ G. 1 G = $10^{-4}$ T. 지구 자기장 ≈ 0.5 G = $5\times 10^{-5}$ T, 막대자석 ≈ 100 G = 0.01 T, MRI ≈ $1.5\times 10^4$ G = 1.5 T, 중성자별 표면 ≈ $10^{12}$ G = $10^8$ T. 가우스는 옛 CGS 단위지만 지구 자기장 같은 작은 값에서는 여전히 자주 보입니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q12.</strong> 오로라가 극지방에 보이는 이유가 자기장과 관련 있다고 들었습니다.</summary>
+    <p style="margin-top:10px">맞습니다. 태양에서 날아오는 전하 입자(태양풍)는 지구 자기장의 자기력선을 따라 헬리컬 운동(Q4번 문제와 같은 메커니즘)을 합니다. 자기력선이 극지방에서 지표로 모여 들어가므로 입자도 극지방으로 집중되어 대기 분자와 충돌하며 빛을 냅니다. 같은 이유로 적도 근처에서는 보기 어렵습니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q13.</strong> 자석을 반으로 자르면 N극·S극이 분리되지 않고 새로운 N과 S가 양쪽에 생기는 이유는?</summary>
+    <p style="margin-top:10px">자석은 무수히 많은 작은 자기 쌍극자(원자의 자기 모멘트)가 정렬된 결과입니다. 자르는 곳에 새 양 끝이 생기면, 그 끝에 모여 있는 쌍극자의 한쪽 극이 노출되어 새 N과 S가 됩니다. 단극을 만들려면 양자 수준에서 단극 입자가 필요하지만, 그건 발견되지 않은 상태(Q2 참고).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q14.</strong> 시험 직전 어디에 시간을 가장 많이 써야 하나요?</summary>
+    <p style="margin-top:10px">(1) 오른손 법칙 — 외적 부호. 매번 손을 들고 한 번씩 확인. (2) $\vec F = q\vec v\times\vec B$, $r = mv/(qB)$, $B = \mu_0 I/(2\pi r)$, $B = \mu_0 nI$ — 이 4개 식만 정확히. (3) 앙페르 법칙으로 솔레노이드 유도(5단계) 한 번 손으로 다시 풀어보기. (4) 단위(T, A·m, μ₀의 값) 확인. — 이 순서면 충분.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q15.</strong> 다음 주(전자기 유도)와 이번 주의 연결은?</summary>
+    <p style="margin-top:10px">이번 주는 "<strong>일정한 자기장</strong>이 무엇을 하는가" — 전류는 자기장을 만들고, 움직이는 전하는 자기력 받음. 다음 주는 "<strong>변하는 자기장</strong>이 무엇을 하는가" — 전기장을 유도(패러데이). 그 결합이 맥스웰 방정식 → 빛이 전자기파라는 결론. 이번 주의 자기장 만드는 능력 + 다음 주의 자기장 변화 검출 능력이 합쳐져 무선통신·발전기·변압기·MRI까지 모두 설명됩니다.</p>
+  </details>
+
+  <h2>📝 자주 틀리는 계산 실수 BEST 10</h2>
+  <p>자기 단원에서 학생이 시험에서 답이 틀렸을 때 <em>먼저 의심해야 할 10가지</em>. 개념을 알면서도 점수를 잃는 가장 큰 이유는 거의 항상 이 중 하나입니다.</p>
+
+  <table>
+    <thead><tr><th>실수</th><th>예시</th><th>예방법</th></tr></thead>
+    <tbody>
+      <tr><td>1. 외적 부호 반대</td><td>$\hat y\times\hat x = +\hat z$로 적음</td><td>오른손 사이클: $\hat x\to\hat y\to\hat z\to\hat x$ 한 번 외움. 반시계 = +, 시계 = -</td></tr>
+      <tr><td>2. 음전하 부호 누락</td><td>전자에 $\vec F = q\vec v\times\vec B$ 쓸 때 $q = +e$로</td><td>전자라면 $q = -e$ 명시. 힘 방향이 양전하의 반대</td></tr>
+      <tr><td>3. $\sin\theta$ 빼먹기</td><td>$\vec v$와 $\vec B$ 평행 아닐 때 $F = qvB$로</td><td>$F = qvB\sin\theta$. 평행이면 0, 수직이면 최대</td></tr>
+      <tr><td>4. 도선 자기장 방향 반대</td><td>오른손 엄지를 전류 방향과 반대로</td><td>"엄지가 전류, 손가락이 자기장이 도는 방향" 매번 확인</td></tr>
+      <tr><td>5. 단위 T를 G로 혼동</td><td>지구 자기장 0.5라 적고 T 단위로 계산</td><td>0.5 G = $5\times 10^{-5}$ T. 단위 변환 후 대입</td></tr>
+      <tr><td>6. $\mu_0$ 값 잘못</td><td>$4\pi\times 10^{-7}$ 대신 $4\times 10^{-7}$</td><td>$\mu_0 = 4\pi\times 10^{-7}$ T·m/A — $\pi$가 들어감</td></tr>
+      <tr><td>7. 솔레노이드 $n$ 헷갈림</td><td>$n = N$(전체 권수)로 사용</td><td>$n = N/L$(단위 길이당 권수). 분모 잊지 말 것</td></tr>
+      <tr><td>8. 두 도선 거리·방향 부호</td><td>같은 방향인데 밀림이라 답</td><td>"같은 방향 = 끌림, 반대 = 밀림"을 한 줄로 외움</td></tr>
+      <tr><td>9. 사이클로트론 주기 실수</td><td>$T = 2\pi r/v$만 쓰고 $v$ 약분 안 함</td><td>$T = 2\pi m/(qB)$ — $v$ 무관. 한 줄 외움</td></tr>
+      <tr><td>10. $\hat L$ 방향 = 도선 방향 아님</td><td>임의로 도선의 한쪽 끝을 양으로 잡음</td><td>$\vec L$의 방향 = <strong>전류가 흐르는 방향</strong>. 매번 명시</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>한 줄 시험장 체크리스트</strong> — ① 오른손 들어 외적 직접 확인, ② 전하 부호 확인($q=\pm e$), ③ 각도($\sin\theta$), ④ 단위 변환(G↔T, cm↔m), ⑤ $\mu_0$의 $\pi$. 이 5가지를 매 문제마다 확인하면 자기 단원 점수가 한 단계 올라갑니다.
+  </div>
+
+  <h2>🧪 핸드폰·집에서 5분 실험 — 자기를 손으로 느끼기</h2>
+  <p>자기는 보이지 않지만 핸드폰과 간단한 도구로 누구나 측정·관찰할 수 있습니다. 적어도 한 가지는 직접 해보세요 — 머리로만 푸는 자기와 손으로 느끼는 자기는 다릅니다.</p>
+
+  <h3>실험 A — 외스터드 재현 (1820년 그 순간) (3분)</h3>
+  <ol>
+    <li>나침반을 책상 위에 놓고 바늘이 안정될 때까지 기다림(북쪽 가리킴).</li>
+    <li>나침반 위(또는 옆)에 절연된 전선을 남북 방향으로 놓음.</li>
+    <li>1.5 V 건전지로 전선에 잠깐(1초!) 전류 흘림 — 너무 길면 전선 발열.</li>
+    <li>나침반 바늘이 동·서로 휘는 것을 관찰.</li>
+    <li>전선의 전류 방향(+/- 단자) 바꿔 다시 시도 → 바늘도 반대 방향으로 휨.</li>
+  </ol>
+  <p><em>학습 포인트:</em> 한국 시간으로 1820년의 외스터드의 발견을 4분 만에 재현. 전기와 자기의 첫 연결 — 강의 핵심을 손가락으로 느낌.</p>
+
+  <h3>실험 B — 핸드폰 자기 센서로 자석 측정 (5분)</h3>
+  <ol>
+    <li>Phyphox 또는 Sensor Logger 앱 설치(무료). "자기장(Magnetometer)" 측정 모드.</li>
+    <li>핸드폰을 책상에 두고 안정된 값(지구 자기장 ≈ 30–60 μT) 기록.</li>
+    <li>막대자석을 핸드폰 옆에 가까이/멀리 하면서 거리별 측정값 기록.</li>
+    <li>$B(r)$ 그래프 그려보기 — 자석이 쌍극자라면 $B \propto 1/r^3$.</li>
+  </ol>
+  <p><em>학습 포인트:</em> 직선 도선($1/r$)과 자석(쌍극자, $1/r^3$)의 거리 의존성이 다름을 직접 측정.</p>
+
+  <h3>실험 C — 5분 모터 만들기 (5분)</h3>
+  <ol>
+    <li>준비물: AA 건전지, 네오디뮴 자석(작은 것), 에나멜 동선(20–30 cm), 사포.</li>
+    <li>동선을 건전지 둘레에 5–10번 감아 코일 만듦.</li>
+    <li>코일의 양쪽 끝을 사포로 한쪽 면만 긁어 절연 제거(중요 — 이게 회전마다 ON/OFF 스위치 역할).</li>
+    <li>건전지의 +극에 자석을 붙이고, 반대쪽에 코일 끝 두 개를 양쪽으로 걸침.</li>
+    <li>약간 밀어주면 회전 시작. 빠를 땐 분당 수천 회.</li>
+  </ol>
+  <p><em>학습 포인트:</em> $\vec F = I\vec L\times\vec B$가 어떻게 회전(토크)으로 바뀌는지 손으로 확인. 코일 절연을 한쪽만 벗기는 게 정류자(commutator) 역할.</p>
+
+  <h3>실험 D — 철가루로 자기력선 패턴 (3분)</h3>
+  <ol>
+    <li>철가루(또는 곱게 자른 강철 수세미) 준비.</li>
+    <li>종이 한 장 위에 막대자석을 놓고, 그 위에 종이를 한 장 더 덮음.</li>
+    <li>철가루를 위에 살살 뿌리며 종이를 톡톡 두드림.</li>
+    <li>자기력선이 N극에서 S극으로 곡선을 이루며 정렬되는 것 관찰.</li>
+    <li>막대자석 두 개로 N-N(밀림), N-S(끌림) 패턴 비교.</li>
+  </ol>
+  <p><em>학습 포인트:</em> 자기력선은 "공간 안에 있는 보이지 않는 곡선" — 철가루로 시각화. 학기 내내 자기장 그림을 그릴 때 머릿속에 이 영상을 떠올리세요.</p>
+
+  <h2>🌍 자기장 수치의 실생활 감각</h2>
+  <p>식을 풀고 답이 합리적인지 판단하려면 평소에 <em>실생활 자기장 스케일</em>을 머릿속에 두는 게 큰 도움이 됩니다.</p>
+
+  <table>
+    <thead><tr><th>대상</th><th>자기장 크기</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>인간 뇌(MEG)</td><td>$10^{-13}$ T = 0.1 pT</td><td>SQUID 검출기로만 측정 가능</td></tr>
+      <tr><td>심장(MCG)</td><td>$10^{-10}$ T = 0.1 nT</td><td>심전도와 함께 진단 도구</td></tr>
+      <tr><td>지구 자기장</td><td>$2.5$–$6.5\times 10^{-5}$ T (0.25–0.65 G)</td><td>위도에 따라 변함. 한국 ≈ 0.5 G</td></tr>
+      <tr><td>송전선 1 m 옆 (100 A)</td><td>$2\times 10^{-5}$ T</td><td>지구 자기장의 약 40%</td></tr>
+      <tr><td>냉장고 자석</td><td>$10^{-3}$ T = 10 G</td><td>일상에서 가장 흔한 자석</td></tr>
+      <tr><td>막대자석 / 네오디뮴</td><td>$10^{-2}$–$1$ T</td><td>네오디뮴이 가장 강한 영구자석</td></tr>
+      <tr><td>스피커 코일</td><td>$\approx 0.5$ T</td><td>대형 우퍼는 1 T</td></tr>
+      <tr><td>MRI 진단</td><td>$1.5$–$3$ T</td><td>최신 연구용은 7 T까지</td></tr>
+      <tr><td>실험실 초전도 자석</td><td>$10$–$45$ T</td><td>NHMFL 미국 연구소</td></tr>
+      <tr><td>펄스 자석(파괴 직전)</td><td>$\sim 10^3$ T</td><td>몇 ms만 유지 후 폭발</td></tr>
+      <tr><td>중성자별 표면</td><td>$10^8$ T = $10^{12}$ G</td><td>자기장만으로 원자가 찌그러짐</td></tr>
+      <tr><td>마그네타(magnetar)</td><td>$10^{11}$ T</td><td>알려진 가장 강한 자기장</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>활용</strong> — 시험 답이 "자석이 1000 T를 만든다" 나오면 중성자별 수준. 식 실수 확신.</div>
+
+  <h2>🏟️ 실생활 응용 깊게 보기 — 5가지 깊은 사례</h2>
+
+  <h3>응용 1 — DC 모터의 작동 원리</h3>
+  <p>모든 모터는 한 줄 식: $\vec F = I\vec L\times\vec B$. 코일에 전류 → 양쪽 도선이 반대 방향 힘 → 토크 → 회전. 회전이 180°를 지나면 토크 방향이 반대가 되므로 <strong>정류자(commutator)</strong>로 매 반바퀴마다 전류 방향을 뒤집어 항상 같은 방향 회전을 유지.</p>
+  <pre><code>     N극  ●─────────────●  S극
+          │             │
+          │   I →       │  ← 위쪽 힘 +z
+          │   ↑           │
+          │   │ 코일      │
+          │   ↓           │
+          │   I ←       │  ← 아래쪽 힘 -z
+          │             │
+          ●─────────────●
+                ↑
+               회전축</code></pre>
+  <p>토크 식: $\tau = NIAB\sin\theta$. 이 식이 헤어드라이어, 드릴, 자율주행차 모터, 산업용 로봇 팔까지 모두 같은 식.</p>
+
+  <h3>응용 2 — MRI (자기공명영상)</h3>
+  <p>강력한 자기장(1.5–3 T)으로 인체 내 수소 원자핵 스핀을 정렬 → RF 펄스로 흔들기 → 다시 정렬되며 발하는 신호로 영상 재구성. 원리적으로 모두 양자역학이지만 자기장의 핵심 역할:</p>
+  <ul>
+    <li>주 자석: 균일한 큰 자기장 만듦. 솔레노이드 + 초전도(액체 헬륨 4 K).</li>
+    <li>경사 코일: $B$의 위치별 미세 변화 → 위치별로 신호 주파수 다름 → 영상 재구성.</li>
+    <li>RF 코일: 흔드는 역할.</li>
+  </ul>
+  <p>1980년대 초 등장 후 의료 진단에 혁명. 노벨상(2003): Lauterbur, Mansfield.</p>
+
+  <h3>응용 3 — 자기부상열차 (Maglev)</h3>
+  <p>두 시스템: (i) 일본·중국 상하이의 <strong>EMS</strong>(electromagnetic suspension): 전자석으로 레일 아래에서 끌어당겨 1 cm 떠 있음. 능동 제어 필요. (ii) JR 마그레브의 <strong>EDS</strong>(electrodynamic): 초전도 자석 + 레일 측면 코일에 유도전류로 밀어 띄움. 시속 500 km/h 이상.</p>
+  <p>구동: 레일 안에 선형 동기 모터 — 같은 식 $\vec F = I\vec L\times\vec B$가 직선 운동으로. 마찰이 없어 에너지 효율과 소음 측면에서 우수.</p>
+
+  <h3>응용 4 — 입자 가속기와 LHC</h3>
+  <p>제네바 LHC(둘레 27 km) 양성자가 거의 광속으로 도는 이유 — 8.3 T 초전도 쌍극자 자석 1232개가 양성자 빔을 환에 가둠. $r = mv/(qB)$에 따라 $r$이 정해지고, 그 $r$이 LHC 환의 곡률과 일치해야 함. 사극자(quadrupole) 자석은 빔을 좁게 모음. 자기는 입자물리 실험의 뼈대.</p>
+  <p>양성자 치료기(암 치료)도 같은 원리 — 작은 사이클로트론(에너지 230 MeV)이 양성자 빔을 종양에 정확히 맞춤. 수도권 대형 병원에 수십 대 운영.</p>
+
+  <h3>응용 5 — 발전기 / 변압기 (W14 미리보기)</h3>
+  <p>모터를 거꾸로 — 외부 힘으로 코일을 돌리면 자기장 안에서 도선이 움직여 자기 선속 변화 → 유도 EMF → 전류. 발전소의 모든 발전기가 이 원리. 변압기는 한 코일의 변화 자기장이 다른 코일에 EMF를 유도하는 장치 — 송전망의 전압 변환에 핵심. 다음 주(W14) 패러데이 법칙에서 정량화.</p>
+
+  <h2>📚 부록 — 대표 도선 분포의 자기장 식 모음</h2>
+  <p>비오-사바르 또는 앙페르 법칙으로 유도되는 대표 자기장 식 6가지. 시험 직전 한 표로.</p>
+
+  <table>
+    <thead><tr><th>도선 분포</th><th>자기장 (위치)</th><th>방향</th><th>유도 방법</th></tr></thead>
+    <tbody>
+      <tr><td>무한 직선 도선</td><td>$B = \dfrac{\mu_0 I}{2\pi r}$</td><td>도선을 감는 동심원</td><td>앙페르(원 곡선)</td></tr>
+      <tr><td>유한 길이 도선 (수직 거리 $d$, 양 끝 각 $\theta_1, \theta_2$)</td><td>$B = \dfrac{\mu_0 I}{4\pi d}(\sin\theta_2 - \sin\theta_1)$</td><td>도선 수직 평면</td><td>비오-사바르 적분</td></tr>
+      <tr><td>원형 코일 중심</td><td>$B = \dfrac{\mu_0 I}{2R}$</td><td>코일 면 수직</td><td>비오-사바르 적분</td></tr>
+      <tr><td>원형 코일 축 위(중심 $z$ 거리)</td><td>$B = \dfrac{\mu_0 I R^2}{2(R^2+z^2)^{3/2}}$</td><td>축 방향</td><td>비오-사바르 적분</td></tr>
+      <tr><td>무한 솔레노이드 내부</td><td>$B = \mu_0 n I$ ($n = N/L$)</td><td>축 방향, 균일</td><td>앙페르(직사각형)</td></tr>
+      <tr><td>토로이드 내부 (반경 $r$)</td><td>$B = \dfrac{\mu_0 N I}{2\pi r}$</td><td>환축 따라 원</td><td>앙페르(원 곡선)</td></tr>
+      <tr><td>두꺼운 도선 내부 (반경 $a$, 거리 $r < a$)</td><td>$B = \dfrac{\mu_0 I r}{2\pi a^2}$</td><td>동심원</td><td>앙페르(원 곡선) — 둘러싼 전류는 비례</td></tr>
+    </tbody>
+  </table>
+  <div class="tip">처음 6개 식을 외우는 것보다 <strong>유도 방법(앙페르 5단계)</strong>을 외우는 게 시험·실무에서 강합니다. 새로운 분포가 나와도 같은 단계로 풀면 끝.</div>
+
+  <h2>📐 SI 단위 빠른 참조 — 자기 단원</h2>
+  <p>자기 단원은 단위가 가장 자주 헷갈립니다. 한 표로 정리.</p>
+
+  <table>
+    <thead><tr><th>양</th><th>SI 단위</th><th>외워둘 환산</th></tr></thead>
+    <tbody>
+      <tr><td>자기장 $B$</td><td>테슬라 T = N/(A·m) = kg/(A·s²)</td><td><strong>1 T = $10^4$ G</strong> ← 시험 단골</td></tr>
+      <tr><td>자기 선속 $\Phi_B$</td><td>웨버 Wb = T·m²</td><td>다음 주 패러데이에 등장</td></tr>
+      <tr><td>전류 $I$</td><td>암페어 A = C/s</td><td>두 평행 도선 정의</td></tr>
+      <tr><td>투자율 $\mu_0$</td><td>T·m/A = N/A²</td><td>$\mu_0 = 4\pi\times 10^{-7}$ T·m/A</td></tr>
+      <tr><td>자기 모멘트 $\mu$</td><td>A·m²</td><td>$\mu = NIA$ — 코일 자기 모멘트</td></tr>
+      <tr><td>홀 전압 $V_H$</td><td>V = J/C</td><td>$V_H = IB/(nqt)$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>차원 일관성 — 식이 맞는지 확인하는 법</h3>
+  <ul>
+    <li>$F = qvB$ → C·(m/s)·T = C·(m/s)·N/(A·m) = C·N/(A·s) = N (∵ A = C/s) ✓</li>
+    <li>$r = mv/(qB)$ → kg·(m/s)/(C·T) = kg·(m/s)·A·m/(C·N) = m ✓</li>
+    <li>$B = \mu_0 nI$ → (T·m/A)·(1/m)·A = T ✓</li>
+  </ul>
+  <div class="tip">단위 환산이 맞으면 식은 거의 맞습니다. 답이 이상할 땐 단위부터 추적하세요.</div>
+
+  <h2>🗺️ 개념 지도 — W13이 어디로 이어지는가</h2>
+  <p>"이거 외운 게 어디 쓰이지?"가 들 때, 다음 그림 한 번. 자기는 W14에서 폭발적으로 확장됩니다.</p>
+
+  <pre><code>             ┌── (W10) 전기장 / 가우스 법칙   ──→ 자기장 단원의 쌍대 도구
+             │       (정전하 → 전기장)              (움직이는 전하 → 자기장)
+             │
+   W13 자기  ┼── (W12) 회로 / 옴 법칙          ──→ 전류는 자기장의 원천
+   (자기장/  │       I = V/R                         → I = q·n·v·A로 재해석
+    자기력)  │
+             ├── (W14) 패러데이 / 맥스웰        ──→ 변하는 B → 전기장
+             │       (자기 선속 변화)                → 발전기·변압기·전자기파
+             │
+             └── (W11) 전위 / 전기 위치에너지   ──→ 자기력 ∙ v = 0이라
+                                                        스칼라 위치에너지 없음
+
+   더 멀리:
+     • 양자역학: 전자 스핀 + 자기 쌍극자 모멘트 → 분광학, 양자컴퓨팅
+     • 천체물리: 별의 자기장, 펄서, 마그네타
+     • 공학: 전기차 모터 효율, MRI 영상, 핵융합로 토카막
+     • 신호처리(딥러닝): 홀 센서 데이터 → IMU/자율주행 자세 추정</code></pre>
+
+  <p><strong>한 줄 결론</strong> — "<em>움직이는 전하 ↔ 자기장</em>"이라는 한 쌍이 W10~W14 모든 전자기 단원의 뼈대. 이번 주가 그 한쪽 화살표(전하 → 자기장 + 자기력), 다음 주가 반대 화살표(변하는 자기장 → 전기장).</p>
+
+  <h2>🎯 한 페이지 요약 — 시험 직전 5분 노트</h2>
+  <div class="tip">
+    <h4 style="margin-top:0">절대 잊지 말 것</h4>
+    <ol>
+      <li><strong>로런츠 힘:</strong> $\vec F = q\vec v\times\vec B$, $|F| = qvB\sin\theta$. 정지 전하·평행 속도면 0.</li>
+      <li><strong>일을 안 함:</strong> $\vec F\perp\vec v$ → 속력 일정, 방향만 변함.</li>
+      <li><strong>원운동 반경:</strong> $r = mv/(qB)$. 사이클로트론 주기 $T = 2\pi m/(qB)$ (속도 무관).</li>
+      <li><strong>도선 위 힘:</strong> $\vec F = I\vec L\times\vec B$. 토크 $\tau = NIAB\sin\theta$.</li>
+      <li><strong>도선이 만드는 자기장:</strong> 직선 $\mu_0 I/(2\pi r)$, 원형 중심 $\mu_0 I/(2R)$, 솔레노이드 $\mu_0 nI$.</li>
+      <li><strong>두 평행 도선:</strong> $F/L = \mu_0 I_1 I_2/(2\pi d)$. 같은 방향 끌림, 반대 밀림.</li>
+      <li><strong>앙페르 법칙:</strong> $\oint\vec B\cdot d\vec l = \mu_0 I_{\text{enc}}$. 대칭 좋으면 단번에 풀림.</li>
+      <li><strong>자기 단극 없음:</strong> $\oint\vec B\cdot d\vec A = 0$.</li>
+      <li><strong>오른손 법칙:</strong> 외적 한 번, 도선-자기장 한 번. 매 문제 손 들기.</li>
+      <li><strong>단위:</strong> 1 T = $10^4$ G. $\mu_0 = 4\pi\times 10^{-7}$ T·m/A. 지구 ≈ 0.5 G, MRI ≈ $1.5\times 10^4$ G.</li>
+    </ol>
+  </div>
+
   <h2>응용·확장</h2>
   <table>
     <thead><tr><th>분야</th><th>어떻게 쓰나</th></tr></thead>
@@ -186,14 +888,115 @@
     </tbody>
   </table>
 
+  <h2>🎓 1분 미니퀴즈 — 5문항</h2>
+  <p>아래 5문항을 1분 안에 머릿속으로 답해 보고 토글로 확인. 4개 이상 맞으면 W13 OK.</p>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 1.</strong> 자기력이 정지 전하에 작용할까?</summary>
+    <p style="margin-top:8px">아니오. $\vec F = q\vec v\times\vec B$에서 $v = 0$이면 0.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 2.</strong> 자기장 안에서 등속 원운동하는 양성자의 운동에너지는 변하는가?</summary>
+    <p style="margin-top:8px">변하지 않음. 자기력은 일을 하지 않으므로 속력 일정 → KE 일정.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 3.</strong> 솔레노이드 내부 자기장이 권수 두 배가 되면 어떻게?</summary>
+    <p style="margin-top:8px">두 배. $B = \mu_0 nI$이고 $n = N/L$이므로 $N$이 두 배면 $B$도 두 배.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 4.</strong> 두 평행 도선에 같은 방향 전류가 흐르면 끌림? 밀림?</summary>
+    <p style="margin-top:8px">끌림. 한 도선이 만든 $\vec B$ 안에 다른 도선이 $\vec F = I\vec L\times\vec B$로 끌어당기는 방향.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 5.</strong> 1 T는 몇 G인가?</summary>
+    <p style="margin-top:8px">1 T = $10^4$ G = 10000 G. 지구 자기장(0.5 G) 대비 2만 배.</p>
+  </details>
+
+  <h2>📋 학습 체크리스트</h2>
+  <div class="tip">
+    이번 주 끝나기 전에 다음을 모두 ✅ 표시할 수 있는지 확인하세요:
+    <ul style="list-style:none;padding-left:0">
+      <li>☐ $\vec F = q\vec v\times\vec B$를 오른손 법칙으로 방향까지 결정할 수 있다.</li>
+      <li>☐ 자기력이 일을 하지 않는 이유를 한 줄로 설명할 수 있다.</li>
+      <li>☐ 사이클로트론 반경 $r = mv/(qB)$와 주기 $T = 2\pi m/(qB)$를 유도·적용할 수 있다.</li>
+      <li>☐ 도선 위 힘 $\vec F = I\vec L\times\vec B$, 모터 토크 $\tau = NIAB\sin\theta$를 적용할 수 있다.</li>
+      <li>☐ 직선·원형·솔레노이드·토로이드 자기장 식을 알맞은 상황에 쓸 수 있다.</li>
+      <li>☐ 앙페르 법칙으로 솔레노이드 자기장을 5단계로 유도할 수 있다.</li>
+      <li>☐ 두 평행 도선 사이 힘의 크기·방향(끌림/밀림)을 결정할 수 있다.</li>
+      <li>☐ 인터랙티브 데모 1·2·3을 직접 만져보며 식의 의존성을 시각으로 확인했다.</li>
+      <li>☐ 단위(T, G, μ₀)와 환산을 암기하고 식 검산에 사용할 수 있다.</li>
+      <li>☐ 연습문제 12개 중 8개 이상을 풀이 보지 않고 풀 수 있다.</li>
+      <li>☐ 1분 미니퀴즈 5문제 모두 맞췄다.</li>
+      <li>☐ 5분 실험 중 적어도 한 가지(외스터드, 자기 센서, 5분 모터)를 직접 시도했다.</li>
+      <li>☐ 자주 틀리는 계산 실수 BEST 10을 한 번 읽어봤다.</li>
+    </ul>
+    하나라도 막히면 그 섹션으로 돌아가 5분만 다시 보세요. 자기 단원은 시험에서 4–5문제로 큰 비중을 차지합니다.
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>학습 시간 가이드</strong> — 본 페이지를 처음부터 끝까지 읽는 데 약 100분.
+    인터랙티브 데모와 연습문제까지 모두 따라가면 약 3.5시간이 적정.
+    시험 1주 전에는 미니퀴즈 + 연습문제 + 시험 직전 5분 노트 위주로 1.5시간이면 복습 끝.
+  </div>
+
+  <h2>🧠 시험에서 자주 나오는 패턴 5가지</h2>
+  <p>한국 기초물리 시험에서 자기 단원이 어떻게 출제되는지 5가지 대표 패턴. 각 패턴의 풀이 키 한 줄.</p>
+
+  <ul>
+    <li><strong>패턴 A — 자기장 안 입자 운동:</strong> "양성자/전자가 $v$로 $B$에 진입, 반경/주기/도달 시간?". 키: $r = mv/(qB)$, $T = 2\pi m/(qB)$. 헬리컬이면 수직·평행 성분 분리.</li>
+    <li><strong>패턴 B — 도선 위 힘 또는 모터 토크:</strong> "$L$ 도선에 $I$, 자기장 $B$, 받는 힘?" 또는 "코일 토크". 키: $\vec F = I\vec L\times\vec B$, $\tau = NIAB\sin\theta$. 각도 주의.</li>
+    <li><strong>패턴 C — 도선이 만든 자기장:</strong> "거리 $r$에서 $B$" 또는 "두 도선 합성 자기장". 키: 직선 $\mu_0 I/(2\pi r)$, 벡터 합 — 방향 오른손으로.</li>
+    <li><strong>패턴 D — 솔레노이드 / 토로이드 설계:</strong> "원하는 $B$를 위해 $N$, $I$ 결정". 키: $B = \mu_0 nI$, $n = N/L$.</li>
+    <li><strong>패턴 E — 두 평행 도선 사이 힘:</strong> "끌림인지 밀림인지, 단위 길이당 힘". 키: $F/L = \mu_0 I_1 I_2/(2\pi d)$, 같은 방향 끌림.</li>
+  </ul>
+
+  <div class="tip">시험 5문제 중 보통 3문제가 위 패턴 A, B, C에서 나옵니다. 데모 1·2·3을 다시 만져보며 시각·식·답이 한 번에 떠오르게 만드세요.</div>
+
+  <h2>🩺 진단 트리 — 어디서 막혔나?</h2>
+  <p>문제를 풀다 막히는 위치는 학생마다 다릅니다. 본인 증상에 맞는 처방을 찾아가세요.</p>
+
+  <table>
+    <thead><tr><th>증상</th><th>가능한 원인</th><th>처방</th></tr></thead>
+    <tbody>
+      <tr><td>"오른손 법칙이 매번 다르게 나옴"</td><td>외적 손 자세 미숙</td><td>매 문제 손을 들고 5초씩. 데모 1을 5분 더. 손가락-엄지 방향을 메모지에 그려 옆에 두기.</td></tr>
+      <tr><td>"식이 너무 많아 어떤 걸 써야 할지 모름"</td><td>대칭성 분류 미숙</td><td>부록 표 6개 식을 도선 분포별로 외움. 직선·원형·솔레노이드·토로이드 → 즉답.</td></tr>
+      <tr><td>"앙페르 법칙으로 풀라는데 막막"</td><td>5단계 사고가 자동화 안 됨</td><td>솔레노이드 유도 5단계를 손으로 3번 다시. 그다음 직선 도선·토로이드.</td></tr>
+      <tr><td>"단위에서 항상 한 자릿수 차이"</td><td>$\mu_0$의 $\pi$, G↔T 환산</td><td>$\mu_0 = 4\pi\times 10^{-7}$, 1 T = $10^4$ G 두 개를 시험지 여백에 즉시 적기.</td></tr>
+      <tr><td>"개념은 알겠는데 계산만 들어가면 틀림"</td><td>외적 부호·수직 성분</td><td>실수 BEST 10 표를 다시. 특히 1·2·3번을 매 문제 자가체크.</td></tr>
+      <tr><td>"솔레노이드와 토로이드 차이 모름"</td><td>대칭의 종류 미식별</td><td>솔레노이드는 직선 축(균일 내부), 토로이드는 환축(거리 의존). 부록 표 다시.</td></tr>
+      <tr><td>"전류·자기장·힘 셋의 관계가 헷갈림"</td><td>두 가지 식의 혼동</td><td>"전류 → 자기장(앙페르)" vs "자기장 + 전류 → 힘($I\vec L\times\vec B$)" — 둘은 다른 식. 매번 어느 쪽인지 명시.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📖 더 깊이 — 참고자료</h2>
+  <ul>
+    <li><strong>Halliday, Resnick, Walker</strong>, <em>Fundamentals of Physics</em> — 28장(자기장과 자기력), 29장(자기장의 원천). 한국어판 풍부한 예제.</li>
+    <li><strong>Walter Lewin MIT 8.02 Lecture 14–19</strong>: 로런츠 힘, 자기장, 앙페르 법칙 라이브 데모(영어, 자막 가능). 특히 Lec 16의 사이클로트론 시연 명품.</li>
+    <li><strong>Khan Academy 한국어 — 자기력 단원</strong> (무료): 영상 + 즉시 채점 문제.</li>
+    <li><strong>Phyphox</strong> <a href="https://phyphox.org/">phyphox.org</a>: 핸드폰 자기 센서 앱. 실험 B에서 사용.</li>
+    <li><strong>PhET 시뮬레이션</strong> <a href="https://phet.colorado.edu/">phet.colorado.edu</a> — "Magnet and Compass", "Faraday's Electromagnetic Lab" 추천.</li>
+    <li><strong>Griffiths</strong>, <em>Introduction to Electrodynamics</em> — 5장(자기학). 학부 고급 또는 대학원 입문.</li>
+    <li><strong>3Blue1Brown</strong> "Divergence and curl" (YouTube): $\nabla\times\vec B$ 직관 시각화. 다음 주 맥스웰 식 준비용.</li>
+  </ul>
+
   <h2>과제 12</h2>
   <ol>
-    <li>(개념) 자기부상열차가 어떻게 떠오르고 앞으로 가는지 설명.</li>
-    <li>(계산) Halliday 28·29장 4문제.</li>
-    <li>(만들기) 5분 모터: 가장 빠른 디자인 경연. 영상 + A4 한 장.</li>
+    <li>(개념) 자기부상열차가 어떻게 떠오르고 앞으로 가는지 5문장 이내로 설명. EMS와 EDS 차이 한 줄.</li>
+    <li>(계산) Halliday 28·29장 4문제. 그중 1문제는 토로이드 또는 비균질 도선.</li>
+    <li>(만들기) 5분 모터: 가장 빠른 디자인 경연. 영상(15초) + A4 한 장 설명. 회전수(rpm) 측정 권장.</li>
+    <li>(측정) Phyphox로 본인 책상 위 자기장 측정 → 막대자석을 다양한 거리에 두고 $B(r)$ 그래프 → $1/r^3$ 확인.</li>
   </ol>
 
-  <div class="note"><strong>다음 주 미리보기 — 강의 마지막 주</strong> — 변하는 자기장이 전기장을 만든다(패러데이). 맥스웰 4식 정리 → "빛은 전자기파". 학기의 클라이맥스.</div>
+  <div class="note"><strong>다음 주 미리보기 — 강의 마지막 주</strong> — 변하는 자기장이 전기장을 만든다(패러데이). 맥스웰 4식 정리 → "빛은 전자기파". 학기의 클라이맥스. 이번 주 자기장 식이 다음 주 전기장 유도식에 그대로 들어갑니다.</div>
+
+  <div class="note" style="margin-top:14px">
+    <strong>마무리 한 줄</strong> — 자기는 "움직이는 전하의 힘". 정지 전하·정지 자기장은 의미 없고, 둘 중 하나라도 변할 때 비로소 자기력·자기장이 의미를 가집니다. 다음 주에 "변하는 자기장이 전기장을 만든다"가 더해지면 전자기는 한 그림으로 닫힙니다.
+  </div>
+
+  <div class="prevnext">
+    <a href="12-circuits.html"><small>← 이전</small>W12. 회로</a>
+    <a href="14-induction-maxwell.html" class="next"><small>다음 →</small>W14. 전자기 유도</a>
+  </div>
 </main>
 
 <footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>

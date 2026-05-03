@@ -655,8 +655,157 @@ print(pca.explained_variance_ratio_)</code></pre>
     <li>10000차원 데이터를 PCA로 2차원에 내릴 때, 정보 손실을 줄이려면 어떻게 해야 하나요?</li>
   </ol>
 
+  <h2>📐 K-means 손계산 — 한 번의 사이클</h2>
+  <p>5개 데이터 (1, 1), (1, 2), (5, 4), (6, 5), (5, 6). K=2로 군집화. 초기 중심을 (1, 1), (5, 4)로 시작.</p>
+
+  <p><strong>1. 할당.</strong> 각 점에서 두 중심까지 거리를 계산하고 가까운 쪽에 할당.</p>
+  <table>
+    <thead><tr><th>점</th><th>$d$ to (1,1)</th><th>$d$ to (5,4)</th><th>할당</th></tr></thead>
+    <tbody>
+      <tr><td>(1,1)</td><td>0</td><td>5.0</td><td>군집 A</td></tr>
+      <tr><td>(1,2)</td><td>1.0</td><td>4.47</td><td>군집 A</td></tr>
+      <tr><td>(5,4)</td><td>5.0</td><td>0</td><td>군집 B</td></tr>
+      <tr><td>(6,5)</td><td>6.4</td><td>1.41</td><td>군집 B</td></tr>
+      <tr><td>(5,6)</td><td>6.4</td><td>2.0</td><td>군집 B</td></tr>
+    </tbody>
+  </table>
+  <p><strong>2. 중심 갱신.</strong> 군집 A 평균: ((1+1)/2, (1+2)/2) = (1, 1.5). 군집 B 평균: ((5+6+5)/3, (4+5+6)/3) ≈ (5.33, 5).</p>
+  <p><strong>3. 다시 할당.</strong> 새 중심으로 거리 계산 → 동일한 할당이 나오면 수렴 완료.</p>
+  <p>이렇게 K-means는 "할당 → 평균 → 할당 → 평균"을 반복합니다. 보통 5~10 반복 안에 수렴하고, 데이터가 잘 분리돼 있으면 한 번만에 끝나기도 합니다. 단점은 위 예처럼 <em>초기 중심 선택</em>에 따라 결과가 달라질 수 있어, 실전에서는 <strong>K-means++</strong>이라는 똑똑한 초기화 방식을 씁니다(scikit-learn 기본).</p>
+
+  <h2>📊 K 선택 방법 — 엘보우와 실루엣</h2>
+  <p>"적절한 K는 몇일까?"는 K-means의 영원한 질문입니다. 두 가지 표준 방법.</p>
+  <ul>
+    <li><strong>엘보우(Elbow) 방법</strong> — K를 1, 2, 3, … 늘려가며 군집 내 분산(inertia) 합을 그림. 곡선이 꺾이는(팔꿈치 같은) 지점이 적절한 K.</li>
+    <li><strong>실루엣(Silhouette) 점수</strong> — 각 점이 자기 군집과 얼마나 가깝고 다른 군집과 얼마나 먼지를 -1~1로 측정. 평균이 클수록 좋은 군집화.</li>
+  </ul>
+  <pre><code>from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+inertias, sils = [], []
+for k in range(2, 11):
+    km = KMeans(n_clusters=k, n_init=10, random_state=42).fit(X)
+    inertias.append(km.inertia_)
+    sils.append(silhouette_score(X, km.labels_))</code></pre>
+
+  <h2>🌐 PCA 깊이 들어가기 — 분산을 보존한다는 뜻</h2>
+  <p>PCA의 한 줄 설명은 "분산이 가장 큰 방향으로 새 축을 잡는다"입니다. 왜 분산일까요? <em>분산이 큰 방향에 정보가 많다</em>는 가정 때문입니다 — 모든 점이 한 점에 뭉쳐있으면(분산 0) 정보가 없고, 넓게 퍼져 있으면(분산 큼) 점들이 서로 다른 정체성을 가집니다.</p>
+  <p>수학적으로는 데이터의 공분산 행렬 $\Sigma$의 <strong>고윳값(eigenvalue)</strong>과 <strong>고유벡터(eigenvector)</strong>를 구하는 문제입니다. 큰 고윳값의 고유벡터부터 차례로 골라 새 축으로 사용. 각 축이 설명하는 분산 비율은 <code>explained_variance_ratio_</code>로 확인.</p>
+  <pre><code>from sklearn.decomposition import PCA
+pca = PCA(n_components=10).fit(X)
+print(pca.explained_variance_ratio_)
+# [0.45, 0.20, 0.10, ...] → 첫 두 성분이 65% 설명</code></pre>
+  <p>"몇 개의 주성분을 남길 것인가?"의 표준 기준: 누적 설명 분산이 95% 또는 99%가 되는 지점까지. <code>PCA(n_components=0.95)</code>로 자동 설정.</p>
+
+  <h2>🔍 t-SNE와 UMAP — PCA 다음의 비선형 차원축소</h2>
+  <p>PCA는 선형 변환이라 곡선 구조(예: 도넛, 나선)를 펴지 못합니다. 이를 위한 비선형 도구가 두 가지 있습니다.</p>
+  <ul>
+    <li><strong>t-SNE</strong> (2008) — 고차원 이웃 관계를 저차원에서 보존. 시각화용으로 압도적. 단점: 느리고, 클러스터 사이 거리는 의미 없음.</li>
+    <li><strong>UMAP</strong> (2018) — t-SNE보다 빠르고, 전역 구조도 어느 정도 보존. 최근 표준이 되어가는 중.</li>
+  </ul>
+  <p>두 도구 모두 모델 입력 전처리보다는 <em>시각화</em>가 주 용도입니다. PCA는 "정보 보존 + 빠름"이라 모델 입력 전처리에 자주, t-SNE/UMAP은 "사람이 보기 좋은 그림" 만들 때 자주.</p>
+
+  <h2>🎯 비지도학습 알고리즘 비교</h2>
+  <table>
+    <thead><tr><th>알고리즘</th><th>유형</th><th>K 미리 정함?</th><th>모양</th><th>속도</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>K-means</td><td>군집화</td><td>예</td><td>원형/볼록</td><td>매우 빠름</td><td>가장 표준</td></tr>
+      <tr><td>DBSCAN</td><td>군집화</td><td>아니오</td><td>임의 모양</td><td>중간</td><td>밀도 기반, 잡음 자동 분리</td></tr>
+      <tr><td>계층적</td><td>군집화</td><td>아니오</td><td>임의</td><td>느림</td><td>덴드로그램으로 시각화</td></tr>
+      <tr><td>GMM</td><td>군집화</td><td>예</td><td>타원형</td><td>중간</td><td>확률 기반</td></tr>
+      <tr><td>PCA</td><td>차원축소</td><td>예(차원수)</td><td>선형</td><td>빠름</td><td>분산 최대화</td></tr>
+      <tr><td>t-SNE</td><td>차원축소</td><td>—</td><td>비선형</td><td>매우 느림</td><td>시각화 최강</td></tr>
+      <tr><td>UMAP</td><td>차원축소</td><td>—</td><td>비선형</td><td>빠름</td><td>t-SNE 대안</td></tr>
+      <tr><td>오토인코더</td><td>차원축소</td><td>예</td><td>비선형</td><td>느림</td><td>신경망 기반(W8 이후)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📝 연습문제 — 손으로 풀어보기</h2>
+
+  <div class="tip"><strong>연습 1.</strong> K-means에서 K=3으로 두고 학습했더니 한 군집의 점이 1개뿐인 결과가 나왔습니다. 무엇이 잘못됐을까요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>(1) 이상치가 있어서 그 한 점이 자기만의 군집을 차지. → 이상치 제거 또는 더 강건한 K-medoids. (2) 초기 중심이 운 나쁘게 한 이상치에서 시작. → <code>n_init=10</code>으로 여러 번 재시도. (3) K가 너무 큼. → 엘보우/실루엣으로 K 재조정.</p></details></div>
+
+  <div class="tip"><strong>연습 2.</strong> 100차원 데이터에 PCA를 적용해 2차원으로 줄였는데, 두 주성분의 설명 분산 비율이 각각 5%, 4%였습니다. 이 시각화는 신뢰할 수 있을까요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>아니요. 9%만 설명한다는 건 91%의 정보가 사라졌다는 뜻. 데이터의 진짜 구조가 그 사라진 방향에 있을 가능성이 큼. 이 경우는 (a) 더 많은 주성분을 시도, (b) t-SNE/UMAP 같은 비선형 차원축소 시도, (c) 데이터에 진짜 저차원 구조가 없을 수도 있음을 인정.</p></details></div>
+
+  <div class="tip"><strong>연습 3.</strong> DBSCAN의 eps=0.1, min_samples=5로 학습했더니 모든 점이 잡음(-1 라벨)으로 분류됐습니다. 어떻게 고치죠?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>eps가 너무 작아서 어떤 점도 5개의 이웃을 못 모음. eps를 키우거나(예: 0.5, 1.0) min_samples를 줄임(예: 3). eps의 표준 결정법: k-distance plot에서 거리가 급격히 증가하는 지점을 선택. <code>NearestNeighbors</code>로 그릴 수 있음.</p></details></div>
+
+  <div class="tip"><strong>연습 4.</strong> K-means에 PCA를 결합해 쓰는 표준 절차를 적어보세요.
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>(1) <code>StandardScaler</code>로 표준화. (2) <code>PCA(n_components=k)</code>로 차원 축소(k는 95% 분산 보존). (3) 축소된 공간에서 <code>KMeans</code> 적용. (4) 군집 라벨로 원본 데이터 점에 색칠해 PCA 2D 그림에 시각화. PCA는 "잡음 제거 + 거리 의미 회복"의 효과를 동시에 줘서, 고차원 K-means가 흔들릴 때 안정화시킵니다.</p></details></div>
+
+  <div class="tip"><strong>연습 5.</strong> 같은 데이터에 K-means(K=3)와 GMM(K=3)을 돌렸더니 결과가 달랐습니다. 두 알고리즘의 차이를 설명해보세요.
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>K-means는 모든 군집이 <em>같은 크기의 원형</em>이라 가정. GMM(가우시안 혼합)은 각 군집이 <em>다른 모양·크기의 타원</em>일 수 있다고 가정. 또 GMM은 점이 군집에 속할 <em>확률</em>을 주고(soft assignment), K-means는 0/1 (hard). 길쭉한 군집이나 크기 차이가 큰 군집에서는 GMM이 더 정확.</p></details></div>
+
+  <h2>❓ FAQ</h2>
+  <div class="note"><strong>Q1. K-means에서 K를 데이터 수만큼 두면 어떻게 되나요?</strong><br>
+  A. 각 점이 자기만의 군집이 됩니다. inertia(군집 내 분산)는 0이 되지만 의미가 전혀 없어요. 그래서 엘보우 곡선은 K↑에 따라 단조감소하며, 적절한 K는 <em>"감소 속도가 꺾이는 지점"</em>입니다.</div>
+  <div class="note"><strong>Q2. PCA 적용 전 반드시 표준화해야 하나요?</strong><br>
+  A. 거의 항상 그렇습니다. 변수 단위가 다르면(cm, kg) 단위가 큰 변수가 분산을 지배해 그 방향이 PC1이 됩니다. <code>StandardScaler</code> 적용 후 PCA가 표준 절차.</div>
+  <div class="note"><strong>Q3. DBSCAN과 K-means 중 무엇이 더 좋나요?</strong><br>
+  A. 데이터에 따라 다릅니다. K-means: 군집 수를 알고, 모양이 둥글고, 크기가 비슷할 때. DBSCAN: 군집 수 모르고, 모양이 임의이고, 잡음이 있을 때. 두 가지를 다 시도해 비교가 표준입니다.</div>
+  <div class="note"><strong>Q4. PCA로 차원 축소한 데이터를 다시 원래 차원으로 복구할 수 있나요?</strong><br>
+  A. <code>pca.inverse_transform()</code>으로 원래 차원에 사영시킬 수 있지만, 잘려나간 차원의 정보는 영원히 잃은 상태. "PCA로 압축 → 복원"은 <em>잡음 제거</em>의 효과를 가집니다(<a href="08-dnn-backprop.html">오토인코더</a>의 선구).</div>
+  <div class="note"><strong>Q5. 비지도학습으로 학습한 모델을 어떻게 평가하나요?</strong><br>
+  A. 어렵습니다. 라벨이 없으니 정답이 없어서. 표준 도구는 (a) 실루엣 점수, (b) 도메인 전문가의 정성적 검토, (c) 군집 라벨을 다운스트림 분류기의 특성으로 써서 간접 평가. 비지도학습의 평가는 본질적으로 <em>인간의 해석</em>이 필요합니다.</div>
+
   <h2>👀 다음 주 미리보기 — W7 인공신경망</h2>
   <p>지금까지 우리는 <strong>고전 머신러닝의 도구상자</strong>를 한 바퀴 둘러봤습니다. 다음 주부터는 드디어 — <em>딥러닝의 시작</em>입니다. 1958년 로젠블랫의 퍼셉트론이 어떻게 한 번 죽었다가, 다층 구조와 활성함수로 부활했는지, 그리고 그 작은 변화가 어떻게 세상을 바꿨는지 봅니다.</p>
+
+  <h2>🌟 응용 사례 — 산업에서 비지도학습이 쓰이는 모습</h2>
+  <ul>
+    <li><strong>고객 세분화(Customer Segmentation)</strong> — 통신·유통에서 K-means로 고객을 5~10개 그룹으로 나누고, 각 그룹에 다른 마케팅 메시지. 가장 흔한 응용.</li>
+    <li><strong>이상 탐지(Anomaly Detection)</strong> — DBSCAN이 잡음으로 분류하는 점을 사기 거래·해킹 시도로 추적.</li>
+    <li><strong>추천 시스템</strong> — 사용자/아이템을 PCA·임베딩으로 저차원에 매핑한 뒤 군집화. 비슷한 그룹 사이의 추천.</li>
+    <li><strong>이미지 압축</strong> — JPEG의 핵심 아이디어가 사실 PCA의 사촌(DCT). 몇 개의 주성분만 남겨 파일 크기 1/10.</li>
+    <li><strong>유전체 분석</strong> — 수만 개 유전자 발현 데이터를 PCA로 2D에 보고, 환자 그룹·질병 패턴 탐색.</li>
+    <li><strong>토픽 모델링</strong> — 문서 모음에서 LDA로 잠재 토픽 발견. NLP의 고전.</li>
+  </ul>
+
+  <h2>🔬 비지도학습과 딥러닝 — 임베딩의 시대</h2>
+  <p>"비지도학습은 고전 ML의 영역이고 딥러닝은 지도학습"이라는 인상이 있지만, 사실은 정반대로 가고 있습니다.</p>
+  <ul>
+    <li><strong>오토인코더</strong> — 입력을 작은 차원으로 압축한 뒤 다시 복원. 비지도 차원 축소의 신경망 버전.</li>
+    <li><strong>자기지도학습(SSL)</strong> — 라벨 없는 데이터로 인위적 과제(다음 단어 예측, 마스크된 픽셀 복원)를 만들어 학습. <strong>BERT, GPT의 핵심 학습법</strong>.</li>
+    <li><strong>대조학습(Contrastive)</strong> — 비슷한 쌍은 가깝게, 다른 쌍은 멀게 임베딩 학습. SimCLR, CLIP 등.</li>
+  </ul>
+  <p>여기서 만나는 K-means·PCA는 <em>같은 아이디어의 가장 단순한 형태</em>이고, 신경망 시대의 임베딩 기법들은 그 위에 쌓여 있습니다. 이번 주 도구를 익히면 W11~W13의 임베딩이 훨씬 친숙해집니다.</p>
+
+  <h2>📚 미니 용어집</h2>
+  <table>
+    <thead><tr><th>용어</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>군집화(clustering)</td><td>비슷한 점끼리 묶기. 라벨 없음.</td></tr>
+      <tr><td>차원축소</td><td>고차원을 저차원으로 압축. 정보 보존이 핵심.</td></tr>
+      <tr><td>centroid</td><td>K-means의 군집 중심.</td></tr>
+      <tr><td>inertia</td><td>군집 내 점-중심 거리 제곱합. 작을수록 좋음.</td></tr>
+      <tr><td>실루엣 점수</td><td>군집의 응집·분리 정도. -1~1.</td></tr>
+      <tr><td>주성분</td><td>분산이 가장 큰 새 축들. PCA의 출력.</td></tr>
+      <tr><td>설명 분산 비율</td><td>각 주성분이 담는 분산의 비율.</td></tr>
+      <tr><td>고윳값/고유벡터</td><td>공분산 행렬의 분해 결과. PCA의 수학적 토대.</td></tr>
+      <tr><td>밀도(density)</td><td>DBSCAN의 핵심. 단위 거리 안에 점이 몇 개.</td></tr>
+      <tr><td>core/boundary/noise</td><td>DBSCAN의 점 분류.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🗒️ 이번 주 체크리스트</h2>
+  <ul>
+    <li>☐ 지도학습과 비지도학습의 차이를 한 줄로 답할 수 있다.</li>
+    <li>☐ K-means의 4단계 절차(초기화→할당→갱신→반복)를 안다.</li>
+    <li>☐ 엘보우 방법으로 K를 고르는 흐름을 안다.</li>
+    <li>☐ DBSCAN의 두 하이퍼파라미터(eps, min_samples)의 의미를 안다.</li>
+    <li>☐ PCA의 한 줄 정의("분산 최대 방향")를 말할 수 있다.</li>
+    <li>☐ PCA 적용 전 표준화의 필요성을 안다.</li>
+    <li>☐ t-SNE/UMAP과 PCA의 차이(선형 vs 비선형)를 안다.</li>
+  </ul>
+
+  <h2>🧭 한 줄 정리 — 이번 주의 빅 아이디어</h2>
+  <div class="tip"><p><strong>"라벨이 없어도 데이터에는 구조가 있다."</strong> K-means는 군집을, PCA는 정보가 많은 방향을, DBSCAN은 밀도가 높은 영역을 자동으로 찾습니다. 라벨링 비용이 비싼 현실에서 이 도구들이 첫 단계 EDA의 강력한 동반자입니다.</p></div>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>
@@ -664,7 +813,182 @@ print(pca.explained_variance_ratio_)</code></pre>
     <li><strong>StatQuest PCA</strong> — Josh Starmer의 직관적 설명 영상.</li>
     <li><strong>The Elements of Statistical Learning</strong>, 14장 — 비지도학습의 이론적 토대.</li>
     <li><strong>UMAP, t-SNE</strong> — PCA 다음 단계의 비선형 차원 축소.</li>
+    <li><strong>How to Use t-SNE Effectively</strong> — Distill, <a href="https://distill.pub/2016/misread-tsne/">distill.pub/2016/misread-tsne</a>. 인터랙티브 시각화로 함정들 보여줌.</li>
+    <li><strong>UMAP 공식 문서</strong> — <a href="https://umap-learn.readthedocs.io/">umap-learn</a>. 실전 사용법.</li>
+    <li><strong>StatQuest — Hierarchical Clustering / DBSCAN</strong>. 한국어 자막 가능.</li>
   </ul>
+
+  <h2>🧪 미니 프로젝트 — 도미/빙어를 라벨 없이 군집화</h2>
+  <ol>
+    <li><strong>데이터 준비</strong> — W1에서 본 도미/빙어 데이터(라벨 떼고 사용).</li>
+    <li><strong>표준화</strong> — <code>StandardScaler</code>.</li>
+    <li><strong>K-means K=2</strong> — 학습 후 라벨 출력.</li>
+    <li><strong>실제 라벨과 비교</strong> — 군집 라벨이 도미/빙어와 일치하는가? <code>adjusted_rand_score</code>.</li>
+    <li><strong>DBSCAN</strong> — 같은 데이터에 적용. 잡음 점이 있는가?</li>
+    <li><strong>PCA로 시각화</strong> — 2차원 사영 그림에 군집 라벨 색칠.</li>
+  </ol>
+  <p>이 과제의 핵심 메시지: <em>비지도학습으로도 자연스러운 구조를 잡을 수 있다</em>는 사실. 다만 어느 군집이 "도미"인지는 모델이 모르고, 사람이 이름을 붙여야 합니다.</p>
+
+  <h2>📌 부록 A — 거리 척도 비교</h2>
+  <p>군집화 결과는 거리 척도에 크게 의존합니다.</p>
+  <table>
+    <thead><tr><th>거리</th><th>식</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>유클리드</td><td>$\sqrt{\sum (x_i - y_i)^2}$</td><td>가장 흔함. 회전 불변.</td></tr>
+      <tr><td>맨해튼</td><td>$\sum |x_i - y_i|$</td><td>격자 좌표에 자연스러움.</td></tr>
+      <tr><td>코사인</td><td>$1 - \frac{\mathbf x \cdot \mathbf y}{\|\mathbf x\|\|\mathbf y\|}$</td><td>방향만, 크기 무시. 텍스트/임베딩에.</td></tr>
+      <tr><td>마할라노비스</td><td>$\sqrt{(\mathbf x-\mathbf y)^\top \Sigma^{-1} (\mathbf x-\mathbf y)}$</td><td>변수 간 상관 보정.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🌟 보너스 — 군집 안정성과 검증</h2>
+  <p>"내가 얻은 군집화 결과가 진짜 데이터의 구조인가, 아니면 알고리즘의 운인가?"라는 의문이 들 때 쓰는 도구가 있습니다.</p>
+  <ul>
+    <li><strong>K-means의 여러 번 실행</strong> — <code>n_init=50</code>으로 두면 50번 다른 초기화로 시도하고 최선 결과 선택. 표준.</li>
+    <li><strong>군집 안정성 분석</strong> — 데이터를 부트스트랩 샘플로 여러 번 군집화하고, 같은 군집에 들어가는 비율을 측정. 안정성이 0.8 이상이면 신뢰 가능한 군집.</li>
+    <li><strong>도메인 전문가 검토</strong> — 가장 본질적인 검증. 군집의 평균 특성을 표로 만들어 전문가에게 "이 그룹이 의미가 있는가?" 묻기.</li>
+  </ul>
+
+  <h2>🔁 한 페이지 흐름도</h2>
+  <ol>
+    <li>데이터 준비 → 결측 처리 → 표준화.</li>
+    <li>차원이 높으면 PCA로 축소(설명 분산 95%).</li>
+    <li>탐색용 시각화 — t-SNE 또는 UMAP으로 2D.</li>
+    <li>군집화 — K-means(K 선택은 엘보우/실루엣) 또는 DBSCAN(eps 선택은 k-distance plot).</li>
+    <li>군집 해석 — 각 군집의 평균 특성을 표로, 도메인 의미 부여.</li>
+    <li>다운스트림 — 군집 라벨을 새 특성으로 추가하거나 마케팅·이상탐지 액션으로.</li>
+  </ol>
+  <p>비지도학습은 "결과"가 아니라 "관점"을 얻기 위한 도구입니다. 한 번에 답이 나오기보다, 몇 번의 시도와 해석을 거쳐 데이터가 어떤 구조를 가지는지 알게 됩니다.</p>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:24px">— 6주차 끝. 라벨 없이 데이터의 구조를 보는 눈이 생겼길 바랍니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">다음 주는 드디어 <strong>신경망</strong>이 등장합니다. 한 학기의 큰 분기점.</p>
+  <p style="font-size:12px;color:var(--muted)">예습 권장: 3Blue1Brown의 신경망 시리즈 4편 중 첫 두 편(약 30분).</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <h2>🎯 자가 학습용 추가 문제</h2>
+  <ol>
+    <li>K-means의 시간 복잡도는 $O(N \cdot K \cdot d \cdot I)$입니다. 각 기호가 무엇을 뜻하나요?</li>
+    <li>PCA로 50차원 → 5차원으로 축소했을 때 설명 분산 합이 70%였습니다. 모델 입력으로 적절한가?</li>
+    <li>DBSCAN의 결과로 모든 점이 한 군집에 들어갔습니다. 어떻게 해석해야 하나요?</li>
+    <li>실루엣 점수가 0.1이라면 군집화가 잘 됐다고 볼 수 있나요?</li>
+    <li>K-means에 PCA 전처리를 했더니 결과가 더 좋아졌습니다. 왜일까요?</li>
+  </ol>
+  <p style="font-size:13px;color:var(--muted)">정답 힌트: 1) N=샘플 수, K=군집 수, d=차원, I=반복 횟수. 2) 부족함. 95% 이상 권장. 3) eps가 너무 큼 — 모든 점이 서로의 이웃이 됨. 4) 거의 군집이 안 됨. 0.5 이상이 그럭저럭, 0.7 이상이 좋음. 5) 잡음 차원 제거로 거리가 의미 있어짐 + 차원의 저주 완화.</p>
+
+  <h2>🌐 산업 사례 한 줄 정리</h2>
+  <ul>
+    <li><strong>Netflix</strong> — 영화 임베딩 + K-means/UMAP으로 장르 자동 발견 보조.</li>
+    <li><strong>Spotify</strong> — 사용자 청취 패턴 군집화로 "Discover Weekly" 추천 시드.</li>
+    <li><strong>의료</strong> — 환자 데이터 군집화로 새로운 질병 아형(subtype) 발견.</li>
+    <li><strong>금융</strong> — 거래 패턴 이상치를 DBSCAN으로 잡아 사기 탐지.</li>
+    <li><strong>제조</strong> — 센서 데이터 PCA로 압축 후 이상 패턴 모니터링.</li>
+  </ul>
+  <p>비지도학습은 "정답이 없는 세상"에서 가장 먼저 만나는 도구입니다 — 신선한 데이터셋을 받았을 때 첫 30분에 K-means + PCA를 돌려 보는 게 실무의 첫 단계입니다.</p>
+
+  <h2>📌 부록 B — PCA의 수학적 직관(고등학교 선형대수 수준)</h2>
+  <p>PCA가 어렵게 느껴지는 이유는 "고윳값 분해"라는 단어 때문입니다. 직관만 짧게 짚어둡시다.</p>
+  <ol>
+    <li>데이터 중심을 원점으로 옮긴다(평균 0).</li>
+    <li>모든 방향에 대해 "그 방향으로 점들을 사영했을 때 분산"을 계산한다.</li>
+    <li>분산이 가장 큰 방향이 PC1, 그것에 수직인 방향 중 분산이 가장 큰 게 PC2, …</li>
+    <li>이 방향들을 행렬로 모은 게 사영 행렬. 데이터에 곱하면 새 좌표.</li>
+  </ol>
+  <p>고윳값 분해는 위 과정을 한 번의 행렬 연산으로 푸는 도구일 뿐입니다. NumPy의 <code>np.linalg.eig</code> 한 줄, 또는 더 안정적인 SVD(<code>np.linalg.svd</code>)로 처리됩니다. 사실 scikit-learn의 PCA는 내부적으로 SVD를 씁니다 — 공분산 행렬을 명시적으로 만들지 않고도 같은 결과를 냅니다.</p>
+
+  <h2>📌 부록 C — 실루엣 점수 해석</h2>
+  <p>각 점 $i$에 대해 두 값을 계산합니다.</p>
+  <ul>
+    <li>$a_i$: 같은 군집의 다른 점들과의 평균 거리(작을수록 응집).</li>
+    <li>$b_i$: 가장 가까운 다른 군집의 점들과의 평균 거리(클수록 분리).</li>
+  </ul>
+  $$ s_i = \frac{b_i - a_i}{\max(a_i, b_i)} $$
+  <p>$s_i \in [-1, 1]$. 양수 클수록 좋은 군집, 음수면 군집 자체가 잘못된 것. 전체 평균을 보고 K를 선택합니다.</p>
+
+  <h2>📌 부록 D — DBSCAN 점 분류 직관</h2>
+  <p>DBSCAN은 점을 세 종류로 나눕니다.</p>
+  <ul>
+    <li><strong>코어 점(core)</strong> — 자신을 중심으로 반경 eps 안에 min_samples개 이상의 이웃을 가진 점. 군집의 "내부"를 형성.</li>
+    <li><strong>경계 점(boundary)</strong> — 코어는 아니지만 어떤 코어 점의 eps 이웃에 들어 있는 점. 군집의 "껍질".</li>
+    <li><strong>잡음 점(noise)</strong> — 둘 다 아닌 점. 어떤 군집에도 속하지 않음(라벨 -1).</li>
+  </ul>
+  <p>이 3분류 덕분에 DBSCAN은 K-means가 못하는 두 가지를 합니다: (1) 군집 수를 자동 결정, (2) 잡음을 자동 분리. 군집 모양도 임의로 휘어 있어도 됩니다.</p>
+
+  <h2>📌 부록 E — t-SNE 사용 시 주의 5가지</h2>
+  <ol>
+    <li>실행마다 결과가 달라집니다(난수). <code>random_state</code> 고정.</li>
+    <li>perplexity(보통 5~50)에 매우 민감. 여러 값 시도.</li>
+    <li>군집 사이 거리는 의미 없음. "비슷한 점이 가깝다"만 신뢰.</li>
+    <li>큰 데이터(1만+)에서 매우 느림. UMAP이 대안.</li>
+    <li>모델 입력으로 부적합 — 시각화 전용.</li>
+  </ol>
+
+  <h2>📌 부록 F — 군집화·차원축소 통합 코드</h2>
+  <pre><code>import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
+
+# 1) 데이터 로드 (예: load_iris)
+from sklearn.datasets import load_iris
+data = load_iris()
+X, y_true = data.data, data.target
+
+# 2) 표준화
+sc = StandardScaler()
+Xs = sc.fit_transform(X)
+
+# 3) 엘보우로 K 선택
+inertias = []
+for k in range(2, 8):
+    km = KMeans(n_clusters=k, n_init=10, random_state=42).fit(Xs)
+    inertias.append(km.inertia_)
+plt.plot(range(2, 8), inertias, 'o-')
+plt.xlabel('K'); plt.ylabel('inertia'); plt.title('Elbow')
+plt.show()
+
+# 4) K=3으로 군집화
+km = KMeans(n_clusters=3, n_init=10, random_state=42).fit(Xs)
+print('실루엣:', silhouette_score(Xs, km.labels_))
+
+# 5) PCA로 2D 시각화
+pca = PCA(n_components=2).fit(Xs)
+X2 = pca.transform(Xs)
+plt.scatter(X2[:, 0], X2[:, 1], c=km.labels_, cmap='viridis')
+plt.title(f'설명 분산: {pca.explained_variance_ratio_.sum()*100:.1f}%')
+plt.show()</code></pre>
+  <p>위 30줄이 비지도학습 EDA의 표준 골격입니다. 새 데이터셋을 받았을 때 이 코드를 거의 그대로 복붙해 굴리는 것이 실무의 첫 30분.</p>
+
+  <h2>📌 부록 G — 군집화 결과 해석 가이드</h2>
+  <ol>
+    <li>각 군집의 크기(샘플 수)를 본다.</li>
+    <li>각 군집의 평균 특성을 표로 만든다(<code>df.groupby('cluster').mean()</code>).</li>
+    <li>각 군집의 대표 샘플 5개를 출력해 직접 본다.</li>
+    <li>도메인 전문가에게 "이 군집들에 이름을 붙일 수 있는가?" 물어본다.</li>
+    <li>만약 의미 있는 이름이 안 붙으면 K를 다시 조정한다.</li>
+  </ol>
+  <p><em>의미 있는 이름이 붙는 군집화</em>가 좋은 군집화입니다. 숫자(실루엣 등)는 보조 지표일 뿐, 최종 판단은 도메인 의미입니다.</p>
+
+  <h2>📌 부록 H — 군집의 "수"를 모르겠다면?</h2>
+  <p>실전에서 가장 자주 받는 질문이 "K를 몇으로 두어야 하느냐"입니다. 결정도:</p>
+  <ol>
+    <li>도메인 지식으로 자연스러운 K가 있는가? (예: 고객을 5개 등급으로) → 그것 사용.</li>
+    <li>없다면 엘보우 + 실루엣을 K=2~10에 대해 그림. 두 지표가 동의하는 K 선택.</li>
+    <li>두 지표가 의견이 다르면 → DBSCAN으로 K를 강제하지 말고 자동 결정.</li>
+    <li>그래도 모호하면 → 도메인 전문가와 의논. 데이터만으로는 "정답 K"가 결정되지 않을 때가 많습니다.</li>
+  </ol>
+
+  <p style="font-size:13px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">참고: 다음 주부터는 거의 모든 모델이 신경망 계열입니다. 마음의 준비를 하시고, 이번 주의 PCA가 "오토인코더"라는 이름으로 W8 즈음에 다시 등장한다는 점을 기억해 두세요.</p>
+  <p style="font-size:12px;color:var(--muted)">읽어주셔서 감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">한 마디 더: PCA의 분산 보존 직관이 W8의 오토인코더에서 "재구성 손실"로 진화합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">또 한 마디: K-means의 "할당 → 갱신" 패턴은 EM 알고리즘과 본질이 같습니다. GMM의 학습이 그 일반화 형태.</p>
+  <p style="font-size:12px;color:var(--muted)">마지막 한 마디: 이번 주 도구로 새 데이터셋을 받은 첫날 30분에 EDA를 끝낼 수 있어야 합니다. 그게 한 학기의 가장 큰 보상입니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">진짜로요.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
 
   <nav class="prevnext">
     <a href="05-classification.html"><small>← 이전</small>W5. 분류</a>

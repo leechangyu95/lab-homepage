@@ -83,6 +83,106 @@
   <h3>데모 4 — 크리스마스 전구</h3>
   <p>오래된 직렬형은 한 개 빠지면 전체 꺼짐. 요즘 션트 회로 있는 건 안 꺼짐.</p>
 
+  <h3>인터랙티브 데모 — 직렬·병렬 합성저항 시뮬레이터 🎮</h3>
+  <p>두 저항 $R_1, R_2$의 슬라이더와 배터리 전압 $V$를 움직여 보세요. 직렬과 병렬 두 가지 연결을 동시에 비교하며 합성저항·전류·전압 분배가 어떻게 달라지는지 실시간으로 확인할 수 있습니다.</p>
+
+  <div class="demo">
+    <h4>🔌 직렬 vs 병렬 — 합성저항 시각화</h4>
+    <p>직렬에서는 전류가 어디서나 같고 전압이 분배됩니다. 병렬에서는 전압이 같고 전류가 갈라집니다. <strong>옴 법칙 $V = IR$</strong>은 두 경우 모두 똑같이 성립합니다.</p>
+    <canvas id="w12_rrDemo" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>$R_1$ <span class="val" id="w12_rrR1V">100</span> Ω
+        <input type="range" id="w12_rrR1" min="10" max="500" step="10" value="100"></label>
+      <label>$R_2$ <span class="val" id="w12_rrR2V">200</span> Ω
+        <input type="range" id="w12_rrR2" min="10" max="500" step="10" value="200"></label>
+      <label>배터리 $V$ <span class="val" id="w12_rrVV">12</span> V
+        <input type="range" id="w12_rrV" min="1.5" max="24" step="0.5" value="12"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>발견할 것</strong>
+      <ul>
+        <li>$R_1 = R_2$이면 직렬 합성은 $2R$, 병렬은 $R/2$ → <strong>4배 차이</strong></li>
+        <li>$R_1 \ll R_2$이면 병렬 합성 $\approx R_1$ — 작은 쪽이 거의 다 결정</li>
+        <li>직렬에서 큰 저항에 큰 전압이 걸린다(전압 분배기)</li>
+        <li>병렬에서 작은 저항에 큰 전류가 흐른다(전류 분배기)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w12_rrDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function box(x,y,w,h,label,col){
+      ctx.fillStyle='#fff';ctx.strokeStyle=col;ctx.lineWidth=2;
+      ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);
+      ctx.fillStyle=col;ctx.font='12px sans-serif';
+      ctx.fillText(label,x+w/2-22,y+h/2+4);
+    }
+    function draw(){
+      const R1=+document.getElementById('w12_rrR1').value;
+      const R2=+document.getElementById('w12_rrR2').value;
+      const V =+document.getElementById('w12_rrV').value;
+      document.getElementById('w12_rrR1V').textContent=R1;
+      document.getElementById('w12_rrR2V').textContent=R2;
+      document.getElementById('w12_rrVV').textContent=V.toFixed(1);
+      const Rs=R1+R2,Rp=(R1*R2)/(R1+R2);
+      const Is=V/Rs, V1s=Is*R1, V2s=Is*R2;
+      const I1p=V/R1, I2p=V/R2, Ip=I1p+I2p;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // 좌측: 직렬
+      ctx.fillStyle='#222';ctx.font='bold 14px sans-serif';
+      ctx.fillText('직렬 (Series)',60,28);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      // 배터리 표시
+      ctx.beginPath();ctx.moveTo(60,180);ctx.lineTo(60,80);ctx.lineTo(110,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillRect(55,178,12,4);
+      ctx.fillStyle='#222';ctx.fillText('+',45,178);ctx.fillText('−',45,200);
+      box(110,65,50,30,'R1',(R1>R2?'#c62828':'#0b5fff'));
+      ctx.strokeStyle='#0b5fff';ctx.beginPath();ctx.moveTo(160,80);ctx.lineTo(210,80);ctx.stroke();
+      box(210,65,50,30,'R2',(R2>R1?'#c62828':'#0b5fff'));
+      ctx.beginPath();ctx.moveTo(260,80);ctx.lineTo(290,80);ctx.lineTo(290,180);ctx.lineTo(60,180);ctx.stroke();
+      // 결과창 직렬
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(40,210,260,128);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(40,210,260,128);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('합성 R = R1 + R2 = '+Rs+' Ω',50,228);
+      ctx.fillText('I = V/R = '+(Is*1000).toFixed(2)+' mA (어디서나 같음)',50,246);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('V1 = I·R1 = '+V1s.toFixed(2)+' V',50,266);
+      ctx.fillText('V2 = I·R2 = '+V2s.toFixed(2)+' V',50,284);
+      ctx.fillStyle='#2e7d32';
+      ctx.fillText('확인: V1 + V2 = '+(V1s+V2s).toFixed(2)+' V ≈ '+V.toFixed(1)+' V',50,304);
+      ctx.fillStyle='#666';
+      ctx.fillText('전력: P1 = '+(V1s*Is*1000).toFixed(1)+' mW, P2 = '+(V2s*Is*1000).toFixed(1)+' mW',50,322);
+      // 우측: 병렬
+      ctx.fillStyle='#222';ctx.font='bold 14px sans-serif';
+      ctx.fillText('병렬 (Parallel)',400,28);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(360,180);ctx.lineTo(360,80);ctx.lineTo(600,80);ctx.lineTo(600,180);ctx.lineTo(360,180);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillRect(355,178,12,4);
+      box(420,65,50,30,'R1',(I1p>I2p?'#c62828':'#0b5fff'));
+      ctx.strokeStyle='#0b5fff';
+      ctx.beginPath();ctx.moveTo(445,95);ctx.lineTo(445,130);ctx.lineTo(515,130);ctx.lineTo(515,95);ctx.stroke();
+      box(490,80,50,30,'R2',(I2p>I1p?'#c62828':'#0b5fff'));
+      // 결과창 병렬
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(340,210,280,128);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(340,210,280,128);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('1/R = 1/R1 + 1/R2 → R = '+Rp.toFixed(2)+' Ω',350,228);
+      ctx.fillText('V = '+V.toFixed(1)+' V (양쪽 같음)',350,246);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('I1 = V/R1 = '+(I1p*1000).toFixed(2)+' mA',350,266);
+      ctx.fillText('I2 = V/R2 = '+(I2p*1000).toFixed(2)+' mA',350,284);
+      ctx.fillStyle='#2e7d32';
+      ctx.fillText('총 I = I1 + I2 = '+(Ip*1000).toFixed(2)+' mA',350,304);
+      ctx.fillStyle='#666';
+      ctx.fillText('총 P = V·I = '+(V*Ip*1000).toFixed(1)+' mW',350,322);
+    }
+    ['w12_rrR1','w12_rrR2','w12_rrV'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>4. 키르히호프 법칙</h2>
   <ul>
     <li><strong>KCL</strong>: 노드에 들어오는 전류 합 = 나가는 합 (전하 보존)</li>
@@ -137,6 +237,280 @@
   <p>1 F 슈퍼캡 + 큰 저항 + LED. 충전: LED가 서서히 밝아짐. 방전: 서서히 어두워짐. 핸드폰 카메라 슬로모션으로 깔끔한 지수 곡선 확인.</p>
   <p>응용: 카메라 셔터, ECG 노이즈 필터, 디지털 회로 디바운싱.</p>
 
+  <h3>인터랙티브 데모 — RC 충전·방전 곡선 🎮</h3>
+  <p>저항 $R$, 캐패시턴스 $C$, 전압 $V_0$를 슬라이더로 바꿔 보세요. <strong>시정수 $\tau = RC$</strong>가 어떻게 변하고, $\tau$ 후 정확히 약 63%까지 충전됨을 그래프로 직접 확인할 수 있습니다.</p>
+
+  <div class="demo">
+    <h4>⏱️ RC 시정수 — 충전/방전 곡선</h4>
+    <p>가로축은 시간. 파랑 곡선이 충전 $V_C(t) = V_0(1 - e^{-t/\tau})$, 주황 곡선이 방전 $V_C(t) = V_0 e^{-t/\tau}$. 두 곡선이 시정수 $\tau$에서 만나는 비율(63%/37%)에 주목하세요.</p>
+    <canvas id="w12_rcDemo" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$R$ <span class="val" id="w12_rcRV">10</span> kΩ
+        <input type="range" id="w12_rcR" min="1" max="100" step="1" value="10"></label>
+      <label>$C$ <span class="val" id="w12_rcCV">100</span> μF
+        <input type="range" id="w12_rcC" min="10" max="1000" step="10" value="100"></label>
+      <label>$V_0$ <span class="val" id="w12_rcV0V">5.0</span> V
+        <input type="range" id="w12_rcV0" min="1" max="12" step="0.5" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$R$을 두 배 → $\tau$도 두 배 → 곡선이 천천히 올라간다</li>
+        <li>$C$를 키우면 같은 효과 — $\tau$ 결정에 $R, C$가 동등</li>
+        <li>$\tau$ 후: 63.2% 충전 / 36.8% 잔량 (한 번 외워두면 평생 사용)</li>
+        <li>$5\tau$ 후: 99.3% — 실용적으로 "거의 완료"</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w12_rcDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const R=+document.getElementById('w12_rcR').value;   // kΩ
+      const C=+document.getElementById('w12_rcC').value;   // μF
+      const V0=+document.getElementById('w12_rcV0').value; // V
+      document.getElementById('w12_rcRV').textContent=R;
+      document.getElementById('w12_rcCV').textContent=C;
+      document.getElementById('w12_rcV0V').textContent=V0.toFixed(1);
+      const tau=R*1e3 * C*1e-6; // seconds
+      const TMAX=5*tau;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=46;
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;ctx.beginPath();
+      ctx.moveTo(margin,H-margin);ctx.lineTo(W-margin,H-margin);
+      ctx.moveTo(margin,H-margin);ctx.lineTo(margin,margin);
+      ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('시간 t (s)',W/2-30,H-12);
+      ctx.save();ctx.translate(14,H/2);ctx.rotate(-Math.PI/2);
+      ctx.fillText('전압 V_C (V)',0,0);ctx.restore();
+      const sx=(W-2*margin)/TMAX, sy=(H-2*margin)/V0;
+      // grid
+      ctx.strokeStyle='#eef0f4';
+      for(let k=1;k<=5;k++){
+        const px=margin+k*tau*sx;
+        ctx.beginPath();ctx.moveTo(px,H-margin);ctx.lineTo(px,margin);ctx.stroke();
+        ctx.fillStyle='#999';ctx.fillText(k+'τ',px-8,H-margin+14);
+      }
+      // 0.632 V0 line
+      ctx.strokeStyle='#cfd8e3';ctx.setLineDash([4,4]);
+      const y63=H-margin-0.632*V0*sy;
+      ctx.beginPath();ctx.moveTo(margin,y63);ctx.lineTo(W-margin,y63);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#888';ctx.fillText('0.632 V₀',W-margin-66,y63-4);
+      // 충전곡선 (파랑)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const t=TMAX*i/200;
+        const v=V0*(1-Math.exp(-t/tau));
+        const px=margin+t*sx, py=H-margin-v*sy;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // 방전곡선 (주황)
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const t=TMAX*i/200;
+        const v=V0*Math.exp(-t/tau);
+        const px=margin+t*sx, py=H-margin-v*sy;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // marker at τ
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(margin+tau*sx,H-margin-0.632*V0*sy,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ff8c00';ctx.beginPath();ctx.arc(margin+tau*sx,H-margin-0.368*V0*sy,5,0,Math.PI*2);ctx.fill();
+      // 결과창
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(W-200,30,180,90);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-200,30,180,90);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      let tauStr;
+      if(tau<1e-3) tauStr=(tau*1e6).toFixed(1)+' μs';
+      else if(tau<1) tauStr=(tau*1e3).toFixed(1)+' ms';
+      else tauStr=tau.toFixed(2)+' s';
+      ctx.fillText('τ = RC = '+tauStr,W-190,52);
+      ctx.fillText('5τ ≈ 거의 완료',W-190,72);
+      ctx.fillStyle='#0b5fff';ctx.fillText('● 충전 (Charging)',W-190,90);
+      ctx.fillStyle='#ff8c00';ctx.fillText('● 방전 (Discharging)',W-190,108);
+    }
+    ['w12_rcR','w12_rcC','w12_rcV0'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h3>인터랙티브 데모 — 키르히호프 2-루프 회로 🎮</h3>
+  <p>두 루프의 미지 전류 $I_1, I_2$를 슬라이더로 직접 조절해 보세요. 모든 노드(KCL)와 모든 루프(KVL)에서 식이 0이 될 때 <strong>녹색 체크</strong>가 뜨고, 그렇지 않으면 빨간 X가 표시됩니다. 정답 전류로 자동 맞추기 버튼도 있습니다.</p>
+
+  <div class="demo">
+    <h4>⚖️ KCL/KVL 만족 게임 — 회로 풀기</h4>
+    <p>회로: 좌측 루프에 $\varepsilon_1 = 12$ V, $R_1 = 4$ Ω; 우측 루프에 $\varepsilon_2 = 6$ V, $R_2 = 2$ Ω; 가운데 가지에 $R_3 = 6$ Ω. 가지 전류 $I_1$(좌측, ↓), $I_2$(우측, ↓), $I_3 = I_1 + I_2$(가운데, ↓ KCL).</p>
+    <canvas id="w12_kvDemo" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$I_1$ <span class="val" id="w12_kvI1V">1.0</span> A
+        <input type="range" id="w12_kvI1" min="-3" max="3" step="0.05" value="1"></label>
+      <label>$I_2$ <span class="val" id="w12_kvI2V">0.0</span> A
+        <input type="range" id="w12_kvI2" min="-3" max="3" step="0.05" value="0"></label>
+      <button type="button" id="w12_kvSolve" style="margin-top:8px">정답으로 자동 맞추기</button>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>풀이</strong> — 좌측 KVL: $\varepsilon_1 - I_1 R_1 - (I_1+I_2)R_3 = 0$ → $12 - 4I_1 - 6(I_1+I_2) = 0$.<br>
+      우측 KVL: $\varepsilon_2 - I_2 R_2 - (I_1+I_2)R_3 = 0$ → $6 - 2I_2 - 6(I_1+I_2) = 0$.<br>
+      정리: $10 I_1 + 6 I_2 = 12$, $6 I_1 + 8 I_2 = 6$ → $I_1 \approx 1.105$ A, $I_2 \approx -0.0789$ A. 음수 = 가정 방향과 반대로 흐른다는 뜻.
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w12_kvDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const E1=12,E2=6,R1=4,R2=2,R3=6;
+    function draw(){
+      const I1=+document.getElementById('w12_kvI1').value;
+      const I2=+document.getElementById('w12_kvI2').value;
+      document.getElementById('w12_kvI1V').textContent=I1.toFixed(2);
+      document.getElementById('w12_kvI2V').textContent=I2.toFixed(2);
+      const I3=I1+I2;
+      const KVL1=E1 - I1*R1 - I3*R3;
+      const KVL2=E2 - I2*R2 - I3*R3;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // 회로 그림
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      // 좌측 루프
+      ctx.beginPath();
+      ctx.moveTo(80,80);ctx.lineTo(80,260);ctx.lineTo(320,260);ctx.lineTo(320,80);ctx.lineTo(80,80);
+      // 우측 루프
+      ctx.moveTo(320,80);ctx.lineTo(560,80);ctx.lineTo(560,260);ctx.lineTo(320,260);
+      ctx.stroke();
+      // 배터리 좌
+      ctx.fillStyle='#c62828';ctx.fillRect(70,170,20,4);ctx.fillRect(74,180,12,4);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('ε1='+E1+' V',30,178);
+      // 배터리 우
+      ctx.fillStyle='#c62828';ctx.fillRect(550,170,20,4);ctx.fillRect(554,180,12,4);
+      ctx.fillStyle='#222';
+      ctx.fillText('ε2='+E2+' V',570,178);
+      // R1 (위쪽 좌)
+      ctx.fillStyle='#fff';ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.fillRect(170,68,60,24);ctx.strokeRect(170,68,60,24);
+      ctx.fillStyle='#0b5fff';ctx.fillText('R1='+R1+'Ω',176,84);
+      // R2 (위쪽 우)
+      ctx.fillStyle='#fff';ctx.strokeRect(410,68,60,24);
+      ctx.fillStyle='#0b5fff';ctx.fillText('R2='+R2+'Ω',416,84);
+      // R3 (가운데)
+      ctx.fillStyle='#fff';ctx.strokeRect(295,150,50,40);
+      ctx.fillStyle='#0b5fff';ctx.fillText('R3='+R3+'Ω',300,174);
+      // 전류 화살표
+      ctx.font='12px sans-serif';
+      function arr(x,y,dx,dy,col,label){
+        ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();
+        const ang=Math.atan2(dy,dx),hl=8;
+        ctx.beginPath();ctx.moveTo(x+dx,y+dy);
+        ctx.lineTo(x+dx-hl*Math.cos(ang-0.4),y+dy-hl*Math.sin(ang-0.4));
+        ctx.lineTo(x+dx-hl*Math.cos(ang+0.4),y+dy-hl*Math.sin(ang+0.4));
+        ctx.closePath();ctx.fill();
+        ctx.fillText(label,x+dx+4,y+dy+4);
+      }
+      arr(120,120,0,30,'#c62828','I1='+I1.toFixed(2)+'A');
+      arr(540,120,0,30,'#2e7d32','I2='+I2.toFixed(2)+'A');
+      arr(360,200,0,30,'#7b1fa2','I3='+I3.toFixed(2)+'A');
+      // 결과창
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(40,275,560,55);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(40,275,560,55);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      const ok1=Math.abs(KVL1)<0.05, ok2=Math.abs(KVL2)<0.05;
+      ctx.fillStyle=ok1?'#2e7d32':'#c62828';
+      ctx.fillText((ok1?'✓':'✗')+' 좌측 KVL: ε1 - I1·R1 - I3·R3 = '+KVL1.toFixed(3)+' V',50,295);
+      ctx.fillStyle=ok2?'#2e7d32':'#c62828';
+      ctx.fillText((ok2?'✓':'✗')+' 우측 KVL: ε2 - I2·R2 - I3·R3 = '+KVL2.toFixed(3)+' V',50,315);
+    }
+    ['w12_kvI1','w12_kvI2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    document.getElementById('w12_kvSolve').addEventListener('click',()=>{
+      // 10I1+6I2=12, 6I1+8I2=6 → 행렬식
+      const det=10*8-6*6; const I1=(12*8-6*6)/det, I2=(10*6-6*12)/det;
+      document.getElementById('w12_kvI1').value=I1.toFixed(2);
+      document.getElementById('w12_kvI2').value=I2.toFixed(2);
+      draw();
+    });
+    draw();
+  })();
+  </script>
+
+  <h2>6. EMF와 내부저항 — 진짜 배터리는 이상적이지 않다</h2>
+  <p>이상적인 배터리는 양 단자 전압이 항상 일정($\varepsilon$). 그러나 <strong>실제 배터리는 내부에 작은 저항 $r$</strong>을 갖고 있어, 전류가 흐르면 $Ir$만큼 단자 전압이 떨어진다.</p>
+  $$ V_\text{단자} = \varepsilon - I r $$
+  <ul>
+    <li>EMF (electromotive force) $\varepsilon$: 단위 전하당 화학적/유도적으로 공급된 에너지(단위 V).</li>
+    <li>$I = 0$ (단자 개방) → $V_\text{단자} = \varepsilon$. 전압계로 측정한 "표시 전압".</li>
+    <li>전류가 클수록 단자 전압이 낮아진다. 자동차 시동 시 헤드라이트가 잠깐 어두워지는 이유.</li>
+  </ul>
+
+  <h3>외부 저항 $R$이 연결됐을 때</h3>
+  $$ I = \frac{\varepsilon}{R + r},\qquad P_R = I^2 R = \frac{\varepsilon^2 R}{(R+r)^2} $$
+  <p><strong>최대 전력 전달 정리</strong>: $\dfrac{dP_R}{dR} = 0 \Rightarrow R = r$일 때 외부에 전달되는 전력이 최대. 오디오 임피던스 매칭, 안테나 설계의 기본 원리.</p>
+
+  <div class="tip"><strong>예제.</strong> $\varepsilon = 12$ V, $r = 0.5$ Ω 배터리에 $R = 5.5$ Ω 부하.<br>
+  $I = 12/(5.5+0.5) = 2$ A. 단자 전압 = $12 - 2(0.5) = 11$ V. 부하 전력 = $4 \times 5.5 = 22$ W. 내부 손실 = $4 \times 0.5 = 2$ W (총 24 W의 약 8%).</div>
+
+  <h2>7. 전압 분배기와 전류 분배기</h2>
+  <h3>전압 분배기 (Voltage Divider) — 가장 자주 쓰이는 회로</h3>
+  <p>두 저항을 직렬로, 가운데 노드에서 출력 전압을 뽑는 구조.</p>
+  $$ V_\text{out} = V_\text{in} \cdot \frac{R_2}{R_1 + R_2} $$
+  <p>아두이노에서 5 V → 3.3 V 변환, 센서 신호 레벨 조정, 가변 저항기(potentiometer)의 원리.</p>
+
+  <h3>전류 분배기 (Current Divider)</h3>
+  <p>병렬 두 저항으로 전류 $I$가 들어가면:</p>
+  $$ I_1 = I \cdot \frac{R_2}{R_1 + R_2},\qquad I_2 = I \cdot \frac{R_1}{R_1 + R_2} $$
+  <p>주의: 분자에 <em>반대편</em> 저항이 들어간다. 작은 저항 쪽으로 큰 전류가 가는 사실과 일치.</p>
+
+  <div class="warn"><strong>주의 — 부하가 연결되면 분배 비율이 바뀐다.</strong> $V_\text{out}$에 $R_L$을 연결하면 $R_2$와 $R_L$이 병렬이 되어 출력 전압이 떨어진다. 부하 임피던스가 $R_2$의 10배 이상이면 무시 가능.</div>
+
+  <h2>8. 휘트스톤 브리지 — 정밀 측정의 고전</h2>
+  <p>네 저항을 다이아몬드 모양으로 배치, 가운데에 검류계. 균형 조건:</p>
+  $$ \frac{R_1}{R_2} = \frac{R_3}{R_x} \;\Longrightarrow\; R_x = R_3 \cdot \frac{R_2}{R_1} $$
+  <p>알려진 세 저항으로 미지 저항 $R_x$를 0.01% 정밀도로 측정 가능. 스트레인 게이지(차량 무게 측정), 압력 센서, 온도 센서(서미스터)의 기본 회로.</p>
+
+  <h2>예제를 한 번 더 — 단계별 사고 과정 🪜</h2>
+  <p>"키르히호프가 왜 안 풀리는지 모르겠다"는 학생이 많다. 같은 문제를 <strong>5단계</strong>로 분해해 풀면 어떤 회로든 같은 절차로 해결된다.</p>
+
+  <div class="note">
+    <strong>예제 (다시 풀어보기).</strong> 두 배터리 회로: 좌측 12 V 배터리 + 4 Ω 저항(직렬), 우측 6 V 배터리 + 2 Ω 저항(직렬), 가운데 가지에 6 Ω. 각 가지의 전류를 구하시오.
+  </div>
+
+  <h3>1단계 — 회로도 그리고 전류 화살표 임의 지정</h3>
+  <p>방향이 틀려도 됨 — 답이 음수로 나오면 가정과 반대 방향이라는 뜻.</p>
+  <pre><code>      I1 ↓        I2 ↓
+   ┌───R1───┐  ┌───R2───┐
+   │   4Ω   │  │   2Ω   │
+   ε1 12V   │  │   6V ε2
+   │        ├──R3──┤    │
+   │        │  6Ω  │    │
+   │        ↓ I3   │    │
+   └────────┴──────┴────┘
+       (KCL: I3 = I1 + I2)</code></pre>
+
+  <h3>2단계 — 노드에서 KCL 식 쓰기</h3>
+  <p>가운데 위 노드에서 들어오는 전류 = 나가는 전류:</p>
+  $$ I_3 = I_1 + I_2 $$
+  <p>이 한 식으로 변수 하나 줄였다(미지수 3개 → 독립 미지수 2개).</p>
+
+  <h3>3단계 — 각 루프에서 KVL 식 쓰기</h3>
+  <p>좌측 루프 시계방향으로 한 바퀴:</p>
+  $$ +\varepsilon_1 - I_1 R_1 - I_3 R_3 = 0 \;\Rightarrow\; 12 - 4 I_1 - 6(I_1 + I_2) = 0 $$
+  <p>우측 루프 반시계방향(또는 같은 방식):</p>
+  $$ +\varepsilon_2 - I_2 R_2 - I_3 R_3 = 0 \;\Rightarrow\; 6 - 2 I_2 - 6(I_1 + I_2) = 0 $$
+
+  <h3>4단계 — 연립 일차방정식 풀기</h3>
+  <p>정리:</p>
+  $$ 10 I_1 + 6 I_2 = 12,\qquad 6 I_1 + 8 I_2 = 6 $$
+  <p>크라메르 공식 또는 대입법:</p>
+  $$ I_1 = \frac{12 \cdot 8 - 6 \cdot 6}{10 \cdot 8 - 6 \cdot 6} = \frac{60}{44} \approx 1.36 \text{ A} $$
+  $$ I_2 = \frac{10 \cdot 6 - 6 \cdot 12}{44} = \frac{-12}{44} \approx -0.27 \text{ A} $$
+  <p>$I_2$ 음수 → 가정한 ↓ 방향이 아니라 실제로는 ↑ 방향으로 흐른다는 뜻. 식은 전혀 안 틀렸다.</p>
+
+  <h3>5단계 — 검증 (전력 보존)</h3>
+  <p>배터리 공급 전력 = 저항에서 소비 전력이어야 한다. <em>주의</em>: $I_2$가 음수라면 $\varepsilon_2$는 실제로 충전되고 있는 것(에너지 흡수). 공급 = $\varepsilon_1 |I_1| - \varepsilon_2 |I_2|$, 소비 = $\sum I^2 R$. 두 값이 같으면 OK.</p>
+  <div class="tip"><strong>5단계 절차의 핵심</strong> — KCL로 변수를 줄인 뒤(1개 절감), KVL을 루프 수만큼 쓰면 정확히 풀 수 있다. 노드 N개 → 독립 KCL은 N-1개. 루프 L개 → 독립 KVL은 L개. 미지수 = 가지 수. 항상 식 수가 맞다.</div>
+
   <h2>흔한 오개념</h2>
   <table>
     <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
@@ -145,6 +519,10 @@
       <tr><td>"병렬이 직렬보다 어둡다"</td><td>보통 반대</td></tr>
       <tr><td>"저항을 통과하면 전류가 줄어든다"</td><td>직렬에서 전류는 어디나 같다. 전압이 떨어진다</td></tr>
       <tr><td>"캐패시터에 전류 흐름"</td><td>충·방전 동안만</td></tr>
+      <tr><td>"전선에 손대면 무조건 감전"</td><td>전위차가 있어야 감전. 새가 한 줄에 앉아 있어도 안전(같은 전위).</td></tr>
+      <tr><td>"전압이 높으면 무조건 위험"</td><td>전류가 핵심. 정전기는 수천 V지만 mA 미만이라 살아남음.</td></tr>
+      <tr><td>"AC는 DC보다 무조건 위험"</td><td>주파수와 경로 의존. 60 Hz가 인체 신경에 가장 잘 맞아서 위험. 고주파(MHz)는 표피효과로 덜 위험.</td></tr>
+      <tr><td>"전류는 빛의 속도로 흐른다"</td><td>전기 신호(전자기파)는 빛 속도에 가깝지만 전자 자체의 표류 속도(drift velocity)는 mm/s 수준.</td></tr>
     </tbody>
   </table>
 
@@ -195,7 +573,474 @@
     <li>(실험) 빵판으로 직렬·병렬 LED + 멀티미터로 옴 법칙 검증. A4 한 장.</li>
   </ol>
 
-  <div class="note"><strong>다음 주 미리보기</strong> — 움직이는 전하가 만드는 새 효과 — <strong>자기장</strong>. 1820년 에르스테드의 우연한 발견에서 모터·발전기까지.</div>
+  <h2>연습문제 — 집에서 풀어보기 ✏️</h2>
+  <p>한 문제당 풀이 토글이 있습니다. 먼저 본인이 풀어보고, 막히면 풀이를 펼치세요. 시험 한 주 전에 다시 푸는 걸 추천합니다.</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 1</strong> (옴 법칙 기본) — $9$ V 배터리에 $300$ Ω 저항을 연결했다. 흐르는 전류와 1초간 소비되는 에너지는?</summary>
+    <p style="margin-top:10px">$I = V/R = 9/300 = 0.03$ A = 30 mA. $P = VI = 9 \times 0.03 = 0.27$ W. 1초간 에너지 = $0.27$ J. (또는 $P = V^2/R = 81/300 = 0.27$ W로 같음.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 2</strong> (직렬 합성) — $100$ Ω, $220$ Ω, $470$ Ω 세 저항이 직렬. 12 V를 걸면 각 저항 양단 전압은?</summary>
+    <p style="margin-top:10px">합성 $R = 790$ Ω, $I = 12/790 \approx 15.2$ mA. 각 전압 = $IR$ → $V_1 \approx 1.52$ V, $V_2 \approx 3.34$ V, $V_3 \approx 7.14$ V. 합 ≈ 12.0 V ✓ (KVL 확인).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 3</strong> (병렬 합성) — $6$ Ω과 $3$ Ω이 병렬. 합성 저항과 12 V 인가 시 각 전류는?</summary>
+    <p style="margin-top:10px">$1/R = 1/6 + 1/3 = 3/6$ → $R = 2$ Ω. $I_1 = 12/6 = 2$ A, $I_2 = 12/3 = 4$ A. 총 $I = 6$ A. 검산: $V/R = 12/2 = 6$ A ✓. 작은 저항(3 Ω)에 큰 전류가 흐름.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 4</strong> (전력) — 220 V 콘센트에 1500 W 전기주전자. 흐르는 전류, 저항, 그리고 1시간 사용 전력량(kWh)은?</summary>
+    <p style="margin-top:10px">$I = P/V = 1500/220 \approx 6.82$ A. $R = V/I \approx 32.3$ Ω. 1시간 전력량 = $1.5$ kWh. 전기요금이 kWh당 200원이면 한 시간 끓이는 데 약 300원.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 5</strong> (전압 분배기) — 5 V 입력, $R_1 = 1$ kΩ, $R_2 = 2$ kΩ. 출력 전압 $V_\text{out}$은?</summary>
+    <p style="margin-top:10px">$V_\text{out} = 5 \times 2/(1+2) = 10/3 \approx 3.33$ V. 5 V → 3.3 V 변환의 가장 단순한 방법(단, 부하 임피던스가 충분히 클 때).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 6</strong> (RC 시정수) — $R = 4.7$ kΩ, $C = 22$ μF. $\tau$, 1초 후 충전율, 5τ는?</summary>
+    <p style="margin-top:10px">$\tau = 4.7 \times 10^3 \times 22 \times 10^{-6} = 0.1034$ s ≈ 103 ms. 1 s = 약 9.7τ → 충전율 $\approx 1 - e^{-9.7} \approx 0.99994$ → 사실상 100%. $5\tau \approx 517$ ms.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 7</strong> (다중루프 KVL) — 6 V 배터리 두 개가 같은 방향으로 연결, 각각 직렬로 2 Ω 저항, 가운데 4 Ω 부하. 부하 전류는?</summary>
+    <p style="margin-top:10px">대칭성으로 두 배터리에서 같은 전류 $I$가 가운데로 향함, 부하에는 $2I$. KVL(좌측 루프): $6 - 2I - 4(2I) = 0$ → $10I = 6$ → $I = 0.6$ A. 부하 전류 = $1.2$ A. 부하 전압 = $4 \times 1.2 = 4.8$ V.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 8</strong> (RC 방전) — 100 μF 캐패시터를 10 V로 충전 후 1 MΩ 저항 통해 방전. 5초 후 전압은?</summary>
+    <p style="margin-top:10px">$\tau = 10^6 \times 10^{-4} = 100$ s. $V(5) = 10 \cdot e^{-5/100} = 10 \cdot e^{-0.05} \approx 10 \cdot 0.951 = 9.51$ V. 시정수가 매우 길어 5초로는 거의 안 빠짐.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 9</strong> (내부저항) — 9 V 배터리, 내부저항 1 Ω. 외부 부하 8 Ω. 단자전압과 부하 전력은?</summary>
+    <p style="margin-top:10px">$I = 9/(8+1) = 1$ A. 단자 전압 = $9 - 1 \times 1 = 8$ V. $P_R = 1^2 \times 8 = 8$ W. 내부 손실 = 1 W (총 9 W의 11%).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 10</strong> (저항 직병렬 혼합) — 3 Ω과 6 Ω이 병렬, 그것에 4 Ω이 직렬, 그리고 12 Ω이 전체와 병렬. 합성 저항은?</summary>
+    <p style="margin-top:10px">단계별 — ① 3∥6 = 2 Ω. ② 2 + 4 = 6 Ω. ③ 6∥12 = $\dfrac{6 \cdot 12}{6+12} = 4$ Ω. 답: <strong>4 Ω</strong>. 회로 합성은 항상 가장 안쪽부터 차례로.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 11</strong> (안전 추산) — 220 V 콘센트, 인체 저항 마른 상태 100 kΩ, 젖은 상태 1 kΩ. 두 경우 흐르는 전류와 위험성?</summary>
+    <p style="margin-top:10px">마른: $I = 220/10^5 = 2.2$ mA → 따끔함. 젖은: $I = 220$ mA → 심실세동(100 mA 이상이면 사망 가능). 욕실에서 콘센트가 위험한 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 12</strong> (휘트스톤 브리지) — $R_1 = 100$ Ω, $R_2 = 200$ Ω, $R_3 = 150$ Ω. 균형 시 $R_x$는?</summary>
+    <p style="margin-top:10px">$R_x = R_3 \cdot R_2/R_1 = 150 \times 2 = 300$ Ω. 검류계 영점일 때 이 값이 정답.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐ 1</strong> (최대 전력 전달) — 12 V, $r = 2$ Ω 배터리에 부하 $R$이 연결. 부하 전력이 최대일 때 $R$과 그 전력은?</summary>
+    <p style="margin-top:10px">$P_R = \varepsilon^2 R/(R+r)^2$. $dP/dR = 0$ → $R = r = 2$ Ω. $P_\text{max} = 144 \cdot 2 / 16 = 18$ W. 효율은 50% (절반은 내부에서 손실). 효율을 높이려면 $R \gg r$, 전력을 키우려면 $R = r$ — 트레이드오프.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐ 2</strong> (RC 미분방정식 유도) — $V$가 일정한 회로에서 캐패시터 충전식 $V_C(t) = V(1-e^{-t/RC})$를 KVL과 $i = C\,dV_C/dt$로부터 직접 유도하시오.</summary>
+    <p style="margin-top:10px">KVL: $V = iR + V_C$. $i = C\,dV_C/dt$를 대입하면 $V = RC\dfrac{dV_C}{dt} + V_C$. 이는 1차 선형 ODE. 일반해는 $V_C = V + A e^{-t/RC}$. 초기조건 $V_C(0) = 0$ → $A = -V$. 따라서 $V_C(t) = V(1-e^{-t/RC})$. ✓</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐ 3</strong> (무한 사다리 회로) — 모든 저항이 1 Ω인 무한 사다리 회로의 등가 저항을 구하시오.</summary>
+    <p style="margin-top:10px">자기 닮음 — 등가 저항을 $R$이라 하면, 첫 단계 후의 무한 사다리도 $R$. 그러면 $R = 1 + (1 \parallel R) = 1 + \dfrac{R}{R+1}$. 정리: $R^2 - R - 1 = 0$ → $R = \dfrac{1+\sqrt{5}}{2} \approx 1.618$ Ω (황금비!). 회로 이론에 황금비가 나타나는 유명한 예제.</p>
+  </details>
+
+  <h2>❓ 학생 단골 질문 (FAQ)</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q1.</strong> 직렬과 병렬은 직관적으로 어떻게 구분하나요?</summary>
+    <p style="margin-top:10px">한 줄로 끝까지 갔다가 한 줄로 돌아오면 직렬, 도중에 갈라졌다가 다시 만나면 병렬. 손가락으로 회로를 따라가 보세요. <strong>같은 전류 = 직렬, 같은 전압 = 병렬</strong>이라는 한 줄이 핵심.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q2.</strong> 전선 위에 앉은 새는 왜 감전 안 되나요?</summary>
+    <p style="margin-top:10px">감전은 <strong>전위차</strong>가 있어야 일어납니다. 새의 두 발은 같은 전선 위(같은 전위) → 두 발 사이 $\Delta V \approx 0$ → 전류 안 흐름. 사람이 한 손으로 고압선, 다른 손으로 땅을 잡으면 $\Delta V$ = 수만 V → 위험. 전기 작업자가 '한 손 작업'을 권유받는 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q3.</strong> AC와 DC 중 뭐가 더 위험한가요?</summary>
+    <p style="margin-top:10px">같은 RMS 전압이면 60 Hz AC가 DC보다 약간 더 위험합니다. 이유: 60 Hz가 인체 신경(심장 박동 주파수와 가까움)에 잘 맞아 심실세동을 유발하기 쉬움. 또 AC는 손에 '쥐어버리는' 근수축을 일으켜 떨어지지 못하게 만듦. DC는 한번 차이면 튕겨 나감(상대적으로).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q4.</strong> 전류 방향이 양전하 흐름이라는데, 실제로 흐르는 건 음전하(전자) 아닌가요?</summary>
+    <p style="margin-top:10px">맞습니다. 금속에서 실제 운반자는 자유전자(−). 그러나 18세기 벤자민 프랭클린이 양전하 흐름을 "전류"로 정한 게 관습으로 굳어졌습니다. 회로 해석에는 차이 없음 — 음전하가 ←로 가는 건 양전하가 →로 가는 것과 등가.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q5.</strong> 전자가 정말 빛의 속도로 흐르나요?</summary>
+    <p style="margin-top:10px">아닙니다. 전자의 표류 속도(drift velocity)는 mm/s 수준 — 사람 걸음보다 훨씬 느림. 빛의 속도로 흐르는 건 전자기적 신호(EM field). 스위치를 켜면 전 회로의 전자가 거의 동시에 같이 미세하게 움직이기 시작합니다 — 마치 호스를 가득 채운 물이 한쪽을 누르면 반대쪽이 즉시 나오는 것과 같음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q6.</strong> 전압이 높으면 무조건 위험한가요?</summary>
+    <p style="margin-top:10px">전압만 높다고 위험하진 않습니다. 정전기는 보통 5~20 kV지만 흐르는 전류가 μA급이라 따끔할 뿐. 위험을 결정하는 건 <strong>인체에 흐르는 전류와 그 시간</strong>: 1 mA 따끔, 10 mA 근육 경직, 50 mA 호흡 곤란, 100 mA 심실세동.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q7.</strong> 캐패시터는 결국 끊어진 회로인데 왜 처음에는 전류가 흐르나요?</summary>
+    <p style="margin-top:10px">캐패시터 양극판 사이는 절연. 그러나 충전 중에는 한쪽 판에 +전하가 쌓이면 반대쪽 판의 -전하가 동시에 쌓입니다(전기장이 끌어당김) — 외부에서 보면 마치 전류가 흐른 것과 같음. 이걸 "변위 전류"(displacement current)라 부르고, 맥스웰이 발견.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q8.</strong> 멀티미터로 콘센트 전압을 잴 때 전압계가 왜 회로에 영향을 거의 안 주나요?</summary>
+    <p style="margin-top:10px">전압계의 내부 저항이 매우 큼(보통 10 MΩ). 회로에 병렬로 끼워도 빨려 들어가는 전류가 미세해서 측정 대상이 거의 변하지 않음. 반면 전류계는 매우 작은 저항(~Ω)을 가져 회로에 직렬로 넣어도 전압강하가 작음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q9.</strong> 차단기와 퓨즈의 차이는?</summary>
+    <p style="margin-top:10px">퓨즈는 한번 끊어지면 교체. 차단기(circuit breaker)는 트립되면 레버를 올려 재사용. 둘 다 정격 전류 초과 시 회로를 끊어 화재·감전을 막는 역할. 누전차단기(GFCI/RCD)는 추가로 입력·출력 전류 차이(누설 전류)를 감지해 mA 단위에서도 끊음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q10.</strong> 키르히호프 부호 규칙이 매번 헷갈립니다.</summary>
+    <p style="margin-top:10px">한 가지만 기억하세요. 루프를 도는 방향이 정해지면, "올라가는 곳(낮 → 높)"은 +, "내려가는 곳(높 → 낮)"은 −. 배터리는 −에서 +로 들어가면 +ε. 저항은 가정한 전류 방향과 반대로 들어가면 +IR(올라감), 같은 방향이면 −IR(내려감).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q11.</strong> 전기자동차가 왜 빠른 충전을 위해 고전압을 쓰나요?</summary>
+    <p style="margin-top:10px">전력 $P = VI$. 100 kW를 충전한다고 할 때 400 V면 250 A, 800 V면 125 A. 전류가 크면 케이블이 두꺼워야 하고 손실 $I^2 R$도 커짐. 그래서 최신 EV는 800 V 시스템을 채택(현대 E-GMP, 포르쉐 타이칸 등). 송전선이 수십만 V를 쓰는 것도 같은 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q12.</strong> $\tau = RC$가 시간의 단위가 정말 맞나요?</summary>
+    <p style="margin-top:10px">차원 분석으로 확인: [R] = V/A = V·s/C, [C] = C/V → [RC] = (V·s/C)(C/V) = s. ✓ 시간 단위. R과 C가 동등한 역할로 $\tau$를 결정한다는 사실도 데모로 확인 가능.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q13.</strong> 가전제품의 전력(W)이 클수록 전기 요금이 많이 나오나요?</summary>
+    <p style="margin-top:10px">정확히는 <strong>kWh = 전력 × 사용시간</strong>. 1 kW 전기장판을 8시간 → 8 kWh. 2 kW 헤어드라이어를 10분 → 0.33 kWh. 결론: 전력보다 <strong>전력 × 시간</strong>이 핵심. 표준 누진제 적용 시 한 달 사용량이 임계치 넘으면 단가가 급등.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q14.</strong> 노트북·휴대폰 배터리가 오래되면 왜 빨리 닳나요?</summary>
+    <p style="margin-top:10px">사용에 따라 내부저항 $r$이 증가. $V_\text{단자} = \varepsilon - Ir$이 같은 전류에서 더 떨어지고, 일정 전압 이하면 기기가 셧다운. 또 화학적으로 EMF $\varepsilon$ 자체도 약간 감소. 발열도 늘어남($I^2 r$).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q15.</strong> 다음 주(자기장)와 이번 주는 어떻게 연결되나요?</summary>
+    <p style="margin-top:10px">이번 주는 "전류가 회로 안에서 어떻게 흐르나"였다면, 다음 주는 "<strong>그 전류가 주변 공간에 무엇을 만드나</strong>" — 자기장. 모터·발전기·트랜스포머·인덕터(L)는 모두 W13 주제. 그리고 RC 회로의 형제 격인 <strong>RL 회로</strong>도 같은 미분방정식 형태로 등장합니다.</p>
+  </details>
+
+  <h2>📝 자주 틀리는 계산 실수 BEST 10</h2>
+  <p>회로 문제에서 답이 틀렸을 때 <em>먼저 의심해야 할 10가지</em>. 개념을 알면서 점수를 잃는 가장 큰 이유는 보통 이 중 하나입니다.</p>
+
+  <table>
+    <thead><tr><th>실수</th><th>예시</th><th>예방법</th></tr></thead>
+    <tbody>
+      <tr><td>1. 병렬 합성에서 역수 깜빡</td><td>$R_p = R_1 + R_2$로 적음</td><td>$1/R_p$를 먼저 계산 → 마지막에 역수</td></tr>
+      <tr><td>2. 단위 접두사 혼동</td><td>10 kΩ을 10으로 대입</td><td>kΩ → 10³ Ω, μF → 10⁻⁶ F로 항상 환산 후 대입</td></tr>
+      <tr><td>3. KVL 부호 실수</td><td>저항 통과 시 전류 방향과 부호 반대로</td><td>"전류 따라 가면 전압 떨어짐(−IR)"</td></tr>
+      <tr><td>4. KCL 노드 누락</td><td>두 노드 식 모두 써서 종속 식</td><td>독립 KCL 식 = 노드 수 − 1</td></tr>
+      <tr><td>5. 직렬에서 전압 같다고 가정</td><td>"두 저항 직렬이면 전압이 똑같이 분배" (잘못)</td><td>같은 전류, <strong>저항 비율로 전압 분배</strong></td></tr>
+      <tr><td>6. 병렬에서 전류 같다고 가정</td><td>"각 저항에 같은 전류"</td><td>같은 전압, <strong>저항 반비례로 전류 분배</strong></td></tr>
+      <tr><td>7. 시정수 단위 안 환산</td><td>$\tau = R \cdot C$에 R(kΩ)·C(μF) 그대로</td><td>SI로 환산 후, 또는 ms 단위 트릭(kΩ × μF = ms)</td></tr>
+      <tr><td>8. 충전 vs 방전 식 혼동</td><td>충전을 $V_0 e^{-t/\tau}$로</td><td>0에서 시작해 올라가면 $(1-e^{-t/\tau})$, 가득에서 떨어지면 $e^{-t/\tau}$</td></tr>
+      <tr><td>9. 내부저항 무시</td><td>실제 배터리에 $V = \varepsilon$로</td><td>전류가 클 때만 영향 — 큰 부하에선 보정</td></tr>
+      <tr><td>10. 전력 식 헷갈림</td><td>$P = IV$만 사용</td><td>알려진 두 양에 따라 $P=IV, I^2R, V^2/R$ 골라 쓰기</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>한 줄 시험장 체크리스트</strong> — ① 단위 SI로 환산, ② KVL 부호 일관성, ③ 병렬 합성 역수 마지막, ④ 직렬·병렬 식별(같은 전류/같은 전압), ⑤ 답이 합리적인가? 이 5가지를 매 문제마다 확인.
+  </div>
+
+  <h2>🧪 5분 실험 — 직접 측정해보기</h2>
+  <p>이론은 머리로, 실험은 손으로. 빵판 + 멀티미터 + 저렴한 부품 몇 개로 회로 식들을 모두 검증할 수 있습니다.</p>
+
+  <h3>실험 A — LED 직렬·병렬 비교 (5분)</h3>
+  <ol>
+    <li>9 V 건전지, 220 Ω 저항(또는 LED 정격에 맞는 값) 준비.</li>
+    <li>먼저 LED 한 개 + 저항 직렬 → 정상 밝기 확인.</li>
+    <li>LED 두 개를 직렬로 연결 → 둘 다 어두워짐.</li>
+    <li>LED 두 개를 병렬로 연결(저항은 각각) → 둘 다 정상 밝기.</li>
+    <li>왜? 직렬은 9 V를 둘이 나눠 쓰지만, 병렬은 각각 9 V를 받기 때문.</li>
+  </ol>
+  <div class="warn">LED는 극성 있음 — 긴 다리(+), 평평한 면(−). 거꾸로 끼우면 안 켜짐.</div>
+
+  <h3>실험 B — RC 시정수 측정 (10분)</h3>
+  <ol>
+    <li>10 kΩ 저항 + 100 μF 캐패시터 + 9 V 건전지 + 스위치.</li>
+    <li>이론 $\tau = 10^4 \times 10^{-4} = 1$ s.</li>
+    <li>스위치 ON → 멀티미터로 캐패시터 양단 전압 측정. 1초 후 ≈ 5.7 V (63% × 9), 5초 후 ≈ 9 V.</li>
+    <li>스위치 OFF → 저항 통해 방전. 시간별로 V 기록 → 지수 감소.</li>
+    <li>로그 그래프로 그려보면 직선 — 기울기 = $-1/\tau$.</li>
+  </ol>
+
+  <h3>실험 C — 옴 법칙 직접 검증 (5분)</h3>
+  <ol>
+    <li>가변 전원(또는 다른 값의 건전지 1.5/3/6/9 V)과 알려진 저항.</li>
+    <li>각 전압에서 전류 측정 → 표 만들기.</li>
+    <li>$V$-$I$ 그래프 그려 직선 확인 → 기울기 = $1/R$.</li>
+    <li><em>비선형 소자 비교:</em> 같은 실험을 LED로 하면 직선이 아닌 곡선(다이오드 특성).</li>
+  </ol>
+
+  <h2>🌍 실생활 회로 수치 — 감각 잡기</h2>
+  <p>답이 합리적인지 판단하려면 평소 가전제품의 전압·전류·전력을 외워두면 큰 도움이 됩니다.</p>
+
+  <h3>가전제품 전력</h3>
+  <table>
+    <thead><tr><th>제품</th><th>전력(W)</th><th>220 V에서 전류(A)</th></tr></thead>
+    <tbody>
+      <tr><td>LED 전구</td><td>10 W</td><td>0.045 A = 45 mA</td></tr>
+      <tr><td>형광등</td><td>40 W</td><td>0.18 A</td></tr>
+      <tr><td>노트북 충전기</td><td>65 W</td><td>0.30 A</td></tr>
+      <tr><td>모니터</td><td>30~80 W</td><td>0.14~0.36 A</td></tr>
+      <tr><td>냉장고</td><td>150~400 W</td><td>0.7~1.8 A</td></tr>
+      <tr><td>TV (55인치)</td><td>100 W</td><td>0.45 A</td></tr>
+      <tr><td>전자레인지</td><td>1000 W</td><td>4.5 A</td></tr>
+      <tr><td>헤어드라이어</td><td>1500 W</td><td>6.8 A</td></tr>
+      <tr><td>전기주전자</td><td>1500 W</td><td>6.8 A</td></tr>
+      <tr><td>에어컨(가정용)</td><td>1500~3000 W</td><td>6.8~13.6 A</td></tr>
+      <tr><td>전기차 급속충전</td><td>50,000~350,000 W</td><td>고전압(400~800V)에서 100~500 A</td></tr>
+    </tbody>
+  </table>
+
+  <h3>국가별 콘센트 전압 (2026년 기준)</h3>
+  <table>
+    <thead><tr><th>지역</th><th>전압(V)</th><th>주파수(Hz)</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>한국</td><td>220</td><td>60</td><td>1973년 110 V → 220 V 전환</td></tr>
+      <tr><td>일본</td><td>100</td><td>50/60</td><td>도쿄 50 Hz, 오사카 60 Hz</td></tr>
+      <tr><td>미국</td><td>120</td><td>60</td><td>고출력 가전은 240 V도 있음</td></tr>
+      <tr><td>유럽 (대부분)</td><td>230</td><td>50</td><td>EU 표준</td></tr>
+      <tr><td>중국</td><td>220</td><td>50</td><td></td></tr>
+      <tr><td>인도</td><td>230</td><td>50</td><td></td></tr>
+      <tr><td>호주</td><td>230</td><td>50</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="tip">해외여행 시 멀티 어댑터 + <strong>입력 전압 범위(100~240 V)</strong> 표시된 충전기를 쓰면 안전. 한국 헤어드라이어를 미국 110 V에 꽂으면 전력이 1/4로 떨어져 안 됨.</div>
+
+  <h3>인체 전류 위험 기준</h3>
+  <table>
+    <thead><tr><th>전류 (60 Hz AC)</th><th>몸이 느끼는 것</th></tr></thead>
+    <tbody>
+      <tr><td>1 mA</td><td>따끔함 (감지 한계)</td></tr>
+      <tr><td>5 mA</td><td>아픔 (안전 한계로 통상 사용)</td></tr>
+      <tr><td>10~20 mA</td><td>근육 경직, 떨어지지 못함</td></tr>
+      <tr><td>50 mA</td><td>호흡 곤란, 의식 잃을 수 있음</td></tr>
+      <tr><td>100~200 mA</td><td>심실세동(사망 가능)</td></tr>
+      <tr><td>1 A 이상</td><td>심정지, 화상</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🏟️ 실생활 응용 깊게 보기</h2>
+  <p>회로 식이 실제 어떻게 쓰이는지, 다섯 가지 예로 마무리.</p>
+
+  <h3>응용 1 — 집의 차단기와 누전차단기(GFCI)</h3>
+  <p>가정용 분전반의 차단기는 일반적으로 20~30 A 정격. 한 회로에 1500 W × 4 = 6000 W → $I = 6000/220 = 27$ A → 트립. 이게 한 콘센트에 전기주전자, 전자레인지 등을 동시에 꽂으면 차단기가 내려가는 이유.</p>
+  <p>화장실의 누전차단기는 입력·출력 전류 차이를 감지해 5~30 mA 누설이면 즉시 차단(0.04초). 사람이 감전돼도 심실세동 전에 끊어줌. 1960년대 후반 발명, 사망사고를 80% 줄였다는 통계.</p>
+
+  <h3>응용 2 — 전기차 배터리 시스템</h3>
+  <p>현대 아이오닉 6: 77.4 kWh 배터리, 셀 192개를 직렬 → 약 800 V 시스템.</p>
+  <ul>
+    <li>왜 직렬? 전압을 키워서 같은 출력(P)에 작은 전류 → 케이블 가늘어짐, 손실 ↓.</li>
+    <li>병렬은? 용량(Ah) 늘리기. 셀 단위로 직렬·병렬 조합.</li>
+    <li>BMS(배터리 관리 시스템)가 각 셀의 전압을 측정 → 균형 맞춤(셀 하나가 약하면 전체 성능 저하).</li>
+    <li>350 kW 급속충전 = 800 V × 437 A. 5분에 100 km 주행 분량 충전.</li>
+  </ul>
+
+  <h3>응용 3 — 터치센서 (정전식)</h3>
+  <p>스마트폰 터치스크린은 작은 캐패시터 격자. 손가락이 닿으면 캐패시턴스가 약간 변하고($\Delta C$), RC 회로의 시정수가 변해 IC가 위치를 감지.</p>
+  <p>$\tau = RC$의 변화량은 nF·μs 수준이지만, 마이크로컨트롤러가 1만 회/초로 측정하면 충분히 검출 가능. 회로 이론이 일상 도구가 된 대표적 예.</p>
+
+  <h3>응용 4 — 휘트스톤 브리지로 무게 측정</h3>
+  <p>스트레인 게이지: 금속 박이 늘어나면 길이 증가·단면 감소로 $R$ 미세 증가($R = \rho L/A$). 무게 1 kg 가하면 $\Delta R/R \approx 10^{-3}$ 수준. 이걸 단순한 옴 법칙으로 측정하면 미소 변화를 감지 못 함.</p>
+  <p>대신 휘트스톤 브리지로 균형점에서 출발 → $\Delta R$이 검류계 출력으로 증폭되어 보임. 차량용 스마트 저울, 의료용 압력 센서, 원자력 발전소 압력계의 핵심 회로.</p>
+
+  <h3>응용 5 — 마이크로컨트롤러 풀업/풀다운 저항</h3>
+  <p>아두이노/STM32에서 버튼을 GPIO에 연결할 때, 전선만으로는 입력 핀이 떠있는 상태(floating) → 잡음에 따라 0/1 무작위. 해결: <strong>풀업 저항</strong>(10 kΩ)을 + 전원과 핀 사이에 → 평소 HIGH, 버튼 누르면 GND로 → LOW.</p>
+  <ul>
+    <li>풀업: 평소 1, 누르면 0 (active-low). MCU 내장 풀업도 활용 가능.</li>
+    <li>풀다운: 평소 0, 누르면 1 (active-high).</li>
+    <li>왜 1 kΩ이 아니고 10 kΩ? 전류 손실(I = V/R)을 줄이려는 타협. 너무 크면 잡음 취약, 작으면 누설 전류 ↑.</li>
+  </ul>
+
+  <h2>📚 부록 — 저항 색띠 코드와 표준값</h2>
+  <p>일반 저항기에는 색띠로 값이 표시되어 있습니다. 4-band 코드(가장 흔함):</p>
+  <p>① 첫 자리 ② 둘째 자리 ③ 곱수(10ⁿ) ④ 허용오차</p>
+
+  <table>
+    <thead><tr><th>색</th><th>숫자</th><th>곱수</th><th>허용오차(④)</th></tr></thead>
+    <tbody>
+      <tr><td>검정</td><td>0</td><td>×1</td><td>—</td></tr>
+      <tr><td>갈색</td><td>1</td><td>×10</td><td>±1%</td></tr>
+      <tr><td>빨강</td><td>2</td><td>×100</td><td>±2%</td></tr>
+      <tr><td>주황</td><td>3</td><td>×1k</td><td>—</td></tr>
+      <tr><td>노랑</td><td>4</td><td>×10k</td><td>—</td></tr>
+      <tr><td>초록</td><td>5</td><td>×100k</td><td>±0.5%</td></tr>
+      <tr><td>파랑</td><td>6</td><td>×1M</td><td>±0.25%</td></tr>
+      <tr><td>보라</td><td>7</td><td>×10M</td><td>±0.1%</td></tr>
+      <tr><td>회색</td><td>8</td><td>—</td><td>±0.05%</td></tr>
+      <tr><td>흰색</td><td>9</td><td>—</td><td>—</td></tr>
+      <tr><td>금색</td><td>—</td><td>×0.1</td><td>±5%</td></tr>
+      <tr><td>은색</td><td>—</td><td>×0.01</td><td>±10%</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>예시:</strong> 갈-검-빨-금 = 1, 0, ×100, ±5% → <strong>1000 Ω = 1 kΩ ±5%</strong>.</p>
+
+  <h3>표준 저항값 (E12 시리즈, ±10%)</h3>
+  <p>1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2 — 그리고 10진 곱수(× 10ⁿ).</p>
+  <p>실제 부품 가게에서 흔히 보는 100 Ω, 220 Ω, 330 Ω, 470 Ω, 1 kΩ, 2.2 kΩ, 4.7 kΩ, 10 kΩ는 이 시리즈에서 옴. <strong>왜 정확한 100, 200, 300이 아니라 220, 330?</strong> 로그 스케일에서 균일하게 분포되어 ±10% 범위로 모든 값을 커버하기 위함.</p>
+
+  <h2>📐 SI 단위 빠른 참조</h2>
+  <p>회로에서 자주 단위 실수가 일어나는 곳은 <strong>kΩ↔Ω, μF↔F, mA↔A</strong>입니다.</p>
+
+  <table>
+    <thead><tr><th>양</th><th>SI 단위</th><th>외워둘 환산</th></tr></thead>
+    <tbody>
+      <tr><td>전류 $I$</td><td>A (암페어)</td><td>1 A = 1000 mA = 10⁶ μA</td></tr>
+      <tr><td>전압 $V$</td><td>V (볼트)</td><td>1 V = 1 J/C, 1 kV = 1000 V</td></tr>
+      <tr><td>저항 $R$</td><td>Ω (옴)</td><td>1 kΩ = 10³ Ω, 1 MΩ = 10⁶ Ω</td></tr>
+      <tr><td>전력 $P$</td><td>W (와트)</td><td>1 kW = 1000 W, 1 W = 1 J/s</td></tr>
+      <tr><td>에너지</td><td>J (줄), kWh</td><td>1 kWh = 3.6 × 10⁶ J = 3.6 MJ</td></tr>
+      <tr><td>캐패시턴스 $C$</td><td>F (패럿)</td><td>1 μF = 10⁻⁶ F, 1 nF = 10⁻⁹ F, 1 pF = 10⁻¹² F</td></tr>
+      <tr><td>시간 $\tau$</td><td>s (초)</td><td>1 ms = 10⁻³ s, 1 μs = 10⁻⁶ s</td></tr>
+    </tbody>
+  </table>
+
+  <h3>RC 시정수 트릭</h3>
+  <ul>
+    <li><strong>kΩ × μF = ms</strong>. 예: 10 kΩ × 100 μF = 1000 ms = 1 s.</li>
+    <li><strong>MΩ × μF = s</strong>. 예: 1 MΩ × 1 μF = 1 s.</li>
+    <li><strong>kΩ × pF = ns</strong>. 디지털 회로에서 자주.</li>
+  </ul>
+
+  <h2>🗺️ 개념 지도 — 12주차가 어디로 이어지는가</h2>
+  <p>"이거 외운 게 어디 쓰이지?"가 가끔 들 때, 다음 그림을 한 번 보세요. 12주차 회로는 11주차 위에 서서 13·14주로 이어집니다.</p>
+
+  <pre><code>             ┌── (W11) 전위·캐패시터 ──→ V, C 정의가 이번 주의 출발점
+             │
+   W12 회로  ┼── (W13) 자기장          ──→ 전류 I가 자기장 B를 만든다 (앙페르)
+   (V, I, R, │                              그 자기장이 모터·발전기·트랜스포머로
+    KVL/KCL,│
+    RC, EMF)├── (W14) 전자기 유도     ──→ 변하는 B가 EMF 만든다 (패러데이)
+             │                              RC의 형제 RL 회로, AC 회로
+             │
+             └── (W14+) 빛=전자기파   ──→ AC 회로의 극한이 빛
+   더 멀리:
+     • 자율주행 차량의 전장 시스템 (12V → 48V → 800V 진화)
+     • 로봇의 모터 드라이브, 센서 신호처리 (W12 풀업, ADC)
+     • 반도체·디지털 회로의 모든 출발점 (CMOS도 RC 충방전)
+     • 머신러닝 가속 ASIC (수십억 트랜지스터의 전력·발열도 회로 이론)</code></pre>
+
+  <p><strong>한 줄 결론</strong> — "<em>$V = IR$ + KVL/KCL + $\tau = RC$</em>"라는 한 묶음이 모든 전자회로의 뼈대. 이 한 줄이 자동으로 떠오르면 12주는 마스터.</p>
+
+  <h2>🎯 한 페이지 요약 — 시험 직전 5분 노트</h2>
+  <div class="tip">
+    <h4 style="margin-top:0">절대 잊지 말 것</h4>
+    <ol>
+      <li><strong>옴 법칙:</strong> $V = IR$. $P = VI = I^2R = V^2/R$ — 알려진 두 양에 따라 골라 쓰기.</li>
+      <li><strong>직렬:</strong> $R_s = R_1 + R_2$. 전류 같음, 전압 분배.</li>
+      <li><strong>병렬:</strong> $1/R_p = 1/R_1 + 1/R_2$. 전압 같음, 전류 분배.</li>
+      <li><strong>KCL:</strong> 노드에서 $\sum I_\text{in} = \sum I_\text{out}$ (전하 보존).</li>
+      <li><strong>KVL:</strong> 닫힌 루프에서 $\sum V = 0$ (에너지 보존). 부호 일관성.</li>
+      <li><strong>RC:</strong> $\tau = RC$. 충전 $V_C = V_0(1-e^{-t/\tau})$, 방전 $V_0 e^{-t/\tau}$. $\tau$ 후 63%, $5\tau$ 후 99%.</li>
+      <li><strong>전압 분배기:</strong> $V_\text{out} = V_\text{in} R_2/(R_1+R_2)$.</li>
+      <li><strong>EMF·내부저항:</strong> $V_\text{단자} = \varepsilon - Ir$.</li>
+      <li><strong>단위 환산:</strong> kΩ × μF = ms. MΩ × μF = s.</li>
+      <li><strong>검증 5가지:</strong> 단위 SI, KVL 부호, 병렬 역수, 직병렬 식별, 답 합리성.</li>
+    </ol>
+  </div>
+
+  <h2>🎓 1분 미니퀴즈 — 5문항</h2>
+  <p>아래 5문항을 1분 안에 머릿속으로 답해 보고 토글로 확인. 4개 이상 맞으면 12주차 OK.</p>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 1.</strong> 9 V 배터리에 3 Ω 저항. 흐르는 전류는?</summary>
+    <p style="margin-top:8px">$I = V/R = 9/3 = 3$ A.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 2.</strong> 4 Ω과 6 Ω이 병렬. 합성 저항은?</summary>
+    <p style="margin-top:8px">$R = (4 \cdot 6)/(4+6) = 2.4$ Ω.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 3.</strong> $R = 100$ kΩ, $C = 10$ μF. $\tau$는?</summary>
+    <p style="margin-top:8px">$\tau = 10^5 \times 10^{-5} = 1$ s.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 4.</strong> KVL이 닫힌 루프에서 보장하는 보존량은?</summary>
+    <p style="margin-top:8px">에너지(=단위 전하당 위치에너지). $\sum V = 0$.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 5.</strong> 전선 위의 새가 왜 안 죽는가?</summary>
+    <p style="margin-top:8px">두 발이 같은 전위 → 전위차 0 → 전류 0.</p>
+  </details>
+
+  <h2>📖 더 깊이 — 참고자료</h2>
+  <ul>
+    <li><strong>Halliday, Resnick, Walker</strong>, <em>Fundamentals of Physics</em> — 26장(전류와 저항), 27장(회로). 키르히호프 풀이 풍부한 예제.</li>
+    <li><strong>Walter Lewin MIT 8.02 Lecture 8–12</strong>: 라이브 회로 데모(영어, 자막 가능). 특히 RC 회로 시연이 명품.</li>
+    <li><strong>Khan Academy 한국어 — 전기회로 단원</strong> (무료): 영상 + 즉시 채점 문제.</li>
+    <li><strong>EEVblog</strong> (YouTube): 실무 회로 측정, 디버깅 영상 다수 — 전공자가 보면 즐거움.</li>
+    <li><strong>Falstad Circuit Simulator</strong> <a href="https://falstad.com/circuit/">falstad.com/circuit</a>: 브라우저에서 회로 그리고 실시간 시뮬레이션. 학습 보조로 강추.</li>
+    <li><strong>Tinkercad Circuits</strong> <a href="https://www.tinkercad.com/circuits">tinkercad.com</a>: 가상 빵판 + 아두이노 시뮬. 본문 5분 실험을 컴퓨터로도 가능.</li>
+    <li><strong>The Art of Electronics</strong> (Horowitz & Hill): 전공자용 바이블. 12주 내용을 학부 4년간 확장.</li>
+  </ul>
+
+  <h2>📋 학습 체크리스트</h2>
+  <div class="tip">
+    이번 주 끝나기 전에 다음을 모두 ✅ 표시할 수 있는지 확인하세요:
+    <ul style="list-style:none;padding-left:0">
+      <li>☐ 옴 법칙 $V = IR$로 전류 또는 저항을 5초 안에 계산할 수 있다.</li>
+      <li>☐ 직렬·병렬 합성 저항을 손으로 계산할 수 있다(역수 잊지 않기).</li>
+      <li>☐ 전압 분배기 식 $V_\text{out} = V_\text{in} R_2/(R_1+R_2)$를 즉시 쓸 수 있다.</li>
+      <li>☐ 키르히호프 KCL/KVL 부호 규칙을 일관되게 적용한다.</li>
+      <li>☐ 두 루프 회로를 5단계 절차로 풀 수 있다.</li>
+      <li>☐ RC 시정수 $\tau = RC$의 단위와 의미를 설명할 수 있다.</li>
+      <li>☐ 충전·방전 곡선을 그릴 수 있고 $\tau$, $5\tau$의 의미를 안다.</li>
+      <li>☐ EMF·내부저항이 실제 배터리 동작에 미치는 영향을 안다.</li>
+      <li>☐ 전력 식 세 가지($P = IV, I^2R, V^2/R$)를 상황별로 골라 쓸 수 있다.</li>
+      <li>☐ 단위 환산(kΩ↔Ω, μF↔F, kΩ × μF = ms)을 즉시 한다.</li>
+      <li>☐ 데모 1·2·3(직병렬, RC, KVL)을 직접 가지고 놀아봤다.</li>
+      <li>☐ 연습문제 12개 중 8개 이상을 풀이 없이 풀 수 있다.</li>
+      <li>☐ 1분 미니퀴즈 5문제를 모두 맞췄다.</li>
+      <li>☐ 빵판으로 5분 실험 A 또는 B를 직접 시도했다.</li>
+      <li>☐ 자주 틀리는 계산 실수 BEST 10을 한 번 읽어봤다.</li>
+    </ul>
+    하나라도 막히면 그 섹션으로 돌아가 5분만 더 보세요. 누적되면 시험 직전 부담이 줄어듭니다.
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>학습 시간 가이드</strong> — 평균적인 학생이 본 페이지를 처음 끝까지 읽는 데 약 90분.
+    데모와 연습문제까지 모두 따라가면 약 3시간이 적정.
+    시험 1주 전에는 미니퀴즈 + 연습문제 + 시험 직전 5분 노트 위주로 1.5시간이면 복습 끝.
+  </div>
+
+  <h3>🩺 진단 트리 — 어디부터 막혔나?</h3>
+  <pre><code>  옴 법칙 V=IR 못 풀겠다?
+       │
+       ├─ Yes → 단위 환산 부족 → 부록 SI 단위 다시 보기
+       └─ No
+            │
+       직렬·병렬 합성 헷갈린다?
+            │
+            ├─ Yes → 데모 1로 슬라이더 만져보기
+            └─ No
+                 │
+            KVL/KCL 부호 자꾸 틀린다?
+                 │
+                 ├─ Yes → 5단계 사고 과정 + 데모 3 정답 비교
+                 └─ No
+                      │
+                 RC 식이 안 외워진다?
+                      │
+                      ├─ Yes → 도전 문제 2(미분방정식 유도)로 처음부터
+                      └─ No → 시험 직전 5분 노트 + 미니퀴즈로 마무리</code></pre>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 움직이는 전하가 만드는 새 효과 — <strong>자기장</strong>. 1820년 에르스테드의 우연한 발견에서 모터·발전기까지. RC 회로의 형제 격인 RL 회로도 등장합니다.</div>
+
+  <div class="prevnext">
+    <a href="11-potential-capacitor.html"><small>← 이전</small>W11. 전위와 축전기</a>
+    <a href="13-magnetism.html" class="next"><small>다음 →</small>W13. 자기장</a>
+  </div>
 </main>
 
 <footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>

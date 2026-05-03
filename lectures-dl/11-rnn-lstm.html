@@ -488,8 +488,161 @@ class LSTMNet(nn.Module):
     <li>GRU와 LSTM 중 어느 쪽을 먼저 시도해야 할까요? 왜?</li>
   </ol>
 
+  <h2>📐 RNN 손계산 — 은닉 상태 진화</h2>
+  <p>아주 단순한 1차원 RNN. 입력 시퀀스 (1, 2, 3), 시작 $h_0 = 0$, $W_x = 0.5, W_h = 0.8, b = 0$, 활성 tanh.</p>
+  <ul>
+    <li>$h_1 = \tanh(0.5 \cdot 1 + 0.8 \cdot 0) = \tanh(0.5) \approx 0.462$</li>
+    <li>$h_2 = \tanh(0.5 \cdot 2 + 0.8 \cdot 0.462) = \tanh(1.370) \approx 0.879$</li>
+    <li>$h_3 = \tanh(0.5 \cdot 3 + 0.8 \cdot 0.879) = \tanh(2.203) \approx 0.976$</li>
+  </ul>
+  <p>각 $h_t$가 이전 시점의 정보 $h_{t-1}$을 받아 새 입력 $x_t$와 결합. 이게 RNN의 본질입니다.</p>
+
+  <h2>🌐 LSTM 게이트 구조 — 한 페이지</h2>
+  <p>LSTM에는 세 게이트가 있습니다. 모두 시그모이드(0~1) 출력.</p>
+  <ul>
+    <li><strong>망각 게이트(forget) $f_t$</strong> — 과거의 셀 상태 중 무엇을 잊을지. $f_t = \sigma(W_f [h_{t-1}, x_t] + b_f)$.</li>
+    <li><strong>입력 게이트(input) $i_t$</strong> — 새 정보 중 무엇을 더할지. $i_t = \sigma(W_i [h_{t-1}, x_t] + b_i)$.</li>
+    <li><strong>출력 게이트(output) $o_t$</strong> — 셀 상태 중 무엇을 출력할지. $o_t = \sigma(W_o [h_{t-1}, x_t] + b_o)$.</li>
+  </ul>
+  <p>새 셀 상태 후보: $\tilde C_t = \tanh(W_c [h_{t-1}, x_t] + b_c)$.<br>
+  최종 셀 상태: $C_t = f_t \odot C_{t-1} + i_t \odot \tilde C_t$.<br>
+  은닉 상태: $h_t = o_t \odot \tanh(C_t)$.</p>
+
+  <h2>🚦 GRU — LSTM의 간소화 버전</h2>
+  <p>두 게이트만 사용:</p>
+  <ul>
+    <li><strong>업데이트 게이트 $z_t$</strong> — 과거를 얼마나 유지할지.</li>
+    <li><strong>리셋 게이트 $r_t$</strong> — 과거를 얼마나 무시할지.</li>
+  </ul>
+  <p>$h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde h_t$. 셀 상태가 따로 없고 은닉 상태가 그 역할까지 합. 파라미터 25% 적음, 성능은 대부분 비슷.</p>
+
+  <h2>🎯 BPTT(Backpropagation Through Time)</h2>
+  <p>RNN의 학습은 시간 축으로 펼친 신경망의 역전파입니다.</p>
+  <ol>
+    <li>RNN을 시간 T만큼 펼치면 T층 깊이의 신경망이 됨.</li>
+    <li>출력 손실을 계산.</li>
+    <li>역전파로 각 시점의 그래디언트 계산.</li>
+    <li>같은 가중치 $W_h, W_x, b$에 대한 그래디언트를 모든 시점에서 합산.</li>
+    <li>한 번의 업데이트.</li>
+  </ol>
+  <p>긴 시퀀스(예: T=1000)면 1000층 깊이의 그래디언트를 다뤄야 해 기울기 소실/폭발이 심함. <strong>Truncated BPTT</strong>(예: 50~100 시점만 펼침)로 우회.</p>
+
+  <h2>📊 RNN 종류 한 페이지</h2>
+  <table>
+    <thead><tr><th>이름</th><th>특징</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td>Vanilla RNN</td><td>단순. 단기 기억만.</td><td>짧은 시퀀스</td></tr>
+      <tr><td>LSTM</td><td>3 게이트 + 셀 상태.</td><td>표준</td></tr>
+      <tr><td>GRU</td><td>2 게이트.</td><td>가벼운 LSTM 대안</td></tr>
+      <tr><td>Bi-RNN</td><td>양방향. 좌→우와 우→좌.</td><td>전체 문맥 필요할 때</td></tr>
+      <tr><td>Stacked RNN</td><td>RNN을 여러 층으로.</td><td>표현력 향상</td></tr>
+      <tr><td>Encoder-Decoder</td><td>두 RNN. seq → seq.</td><td>번역 (W12)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🌟 RNN의 5가지 적용 패턴</h2>
+  <ol>
+    <li><strong>One-to-One</strong> — 일반 분류. RNN 안 씀.</li>
+    <li><strong>One-to-Many</strong> — 이미지 → 캡션 생성.</li>
+    <li><strong>Many-to-One</strong> — 문장 → 감성 분류. 마지막 $h_T$만 사용.</li>
+    <li><strong>Many-to-Many (동기)</strong> — 영상 프레임마다 라벨.</li>
+    <li><strong>Many-to-Many (비동기)</strong> — 번역. 입력 다 받고 출력 시작.</li>
+  </ol>
+
+  <h2>📝 연습문제</h2>
+
+  <div class="tip"><strong>연습 1.</strong> RNN의 가중치 $W_h = 0.9$일 때, 50시점 거슬러 올라가면 그래디언트는 대략?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>$0.9^{50} \approx 0.005$. 거의 0. 50단계 전의 정보가 학습에 반영되기 어려움. 이게 vanilla RNN의 장기 의존성 문제. LSTM의 셀 상태가 이를 해결.</p></details></div>
+
+  <div class="tip"><strong>연습 2.</strong> LSTM의 망각 게이트 $f_t = 1$로 고정되면 어떤 동작?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>$C_t = 1 \cdot C_{t-1} + i_t \odot \tilde C_t = C_{t-1} + i_t \odot \tilde C_t$. 과거 셀 상태를 그대로 유지하며 새 정보를 더함. 잊지 않는 메모리. 매우 긴 의존성에 좋지만, 정보가 무한 누적될 위험.</p></details></div>
+
+  <div class="tip"><strong>연습 3.</strong> 문장 길이가 100인 시퀀스에 vanilla RNN을 학습시키면 어떤 문제가 생기나요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>BPTT가 100시점 깊이라 기울기가 소실 또는 폭발. 학습이 멈추거나 NaN. 해결책: (1) LSTM/GRU 사용, (2) Truncated BPTT, (3) Gradient Clipping, (4) 적절한 초기화.</p></details></div>
+
+  <div class="tip"><strong>연습 4.</strong> 양방향 RNN(Bi-RNN)이 단방향보다 좋은 상황과 안 좋은 상황은?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>좋은 상황: 전체 시퀀스를 한 번에 받는 작업(감성 분류, 개체명 인식). 양쪽 문맥 모두 활용. 안 좋은 상황: 실시간 생성/예측. 미래 입력을 모르는 상태에서 동작 안 함.</p></details></div>
+
+  <div class="tip"><strong>연습 5.</strong> 시퀀스 길이가 다른 데이터를 미니배치로 만들 때 어떻게 처리?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>(1) 짧은 시퀀스를 0으로 패딩하여 같은 길이로. (2) <code>pack_padded_sequence</code>로 패딩 부분 무시하도록. (3) 비슷한 길이끼리 묶는 bucket sampling. PyTorch의 <code>nn.utils.rnn.pack_padded_sequence</code> 사용 표준.</p></details></div>
+
+  <h2>❓ FAQ</h2>
+  <div class="note"><strong>Q1. RNN 학습이 안 됩니다. 무엇을 의심?</strong><br>
+  A. ① Gradient clipping 켰는지(보통 <code>clip_grad_norm_(1.0)</code>) ② 시퀀스 길이가 너무 긴지 ③ 학습률이 너무 큰지 ④ Vanilla RNN 대신 LSTM 쓰는지.</div>
+  <div class="note"><strong>Q2. LSTM과 GRU 중?</strong><br>
+  A. 처음에는 GRU(파라미터 적고 학습 빠름). 성능 부족하면 LSTM. 비슷한 성능에 GRU가 보통 25% 빠름.</div>
+  <div class="note"><strong>Q3. RNN을 트랜스포머로 다 대체했나요?</strong><br>
+  A. 거의 그렇습니다. 그러나 RNN이 메모리 적고, 짧은 시퀀스에서 빠르고, 실시간 생성에 자연스럽다는 장점은 남음. 임베디드/엣지에서 여전히 사용.</div>
+  <div class="note"><strong>Q4. 임베딩(Embedding)이 무엇?</strong><br>
+  A. 정수 ID(예: 단어 인덱스)를 고차원 실수 벡터로 매핑. <code>nn.Embedding(num_words, embed_dim)</code>. 학습되는 룩업 테이블. NLP의 첫 층은 거의 항상 임베딩.</div>
+  <div class="note"><strong>Q5. 가변 길이 처리는?</strong><br>
+  A. PyTorch의 <code>pack_padded_sequence</code>와 <code>pad_packed_sequence</code>. 짧은 시퀀스를 패딩한 뒤 RNN이 패딩을 무시하도록.</div>
+
   <h2>👀 다음 주 미리보기 — W12 RNN 심화 (Seq2Seq, Attention)</h2>
   <p>오늘 우리는 단일 RNN으로 시퀀스를 처리하는 법을 배웠습니다. 다음 주에는 — <em>입력도 시퀀스, 출력도 시퀀스</em>인 번역기 같은 문제를 푸는 <strong>인코더-디코더 구조</strong>와, 모든 LLM의 어머니인 <strong>어텐션(attention)</strong> 메커니즘을 만납니다.</p>
+
+  <h2>🎯 RNN PyTorch 실습 — 텍스트 분류</h2>
+  <pre><code>import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+
+class TextClassifier(nn.Module):
+    def __init__(self, vocab_size, embed_dim=128, hidden=64, num_classes=2):
+        super().__init__()
+        self.embed = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.lstm  = nn.LSTM(embed_dim, hidden, batch_first=True, bidirectional=True)
+        self.fc    = nn.Linear(hidden * 2, num_classes)
+    def forward(self, x):
+        x = self.embed(x)               # (B, T, embed)
+        out, _ = self.lstm(x)            # (B, T, 2*hidden)
+        return self.fc(out[:, -1, :])    # 마지막 시점만 분류기로
+
+model = TextClassifier(vocab_size=10000)
+opt = torch.optim.AdamW(model.parameters(), lr=1e-3)
+loss_fn = nn.CrossEntropyLoss()
+
+for epoch in range(10):
+    for X, y in train_loader:           # X: (B, T) 토큰 인덱스
+        loss = loss_fn(model(X), y)
+        opt.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # RNN 필수!
+        opt.step()</code></pre>
+
+  <h2>📚 미니 용어집</h2>
+  <table>
+    <thead><tr><th>용어</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>은닉 상태(hidden state)</td><td>시점 t의 RNN 메모리.</td></tr>
+      <tr><td>셀 상태(cell state)</td><td>LSTM의 장기 메모리. "정보 고속도로".</td></tr>
+      <tr><td>게이트(gate)</td><td>0~1 시그모이드로 정보 흐름 조절.</td></tr>
+      <tr><td>BPTT</td><td>Backpropagation Through Time.</td></tr>
+      <tr><td>Truncated BPTT</td><td>일정 시점만 펼쳐 역전파.</td></tr>
+      <tr><td>Gradient Clipping</td><td>그래디언트 노름 제한. RNN 필수.</td></tr>
+      <tr><td>임베딩</td><td>정수 ID → 실수 벡터.</td></tr>
+      <tr><td>패딩</td><td>짧은 시퀀스에 0 추가하여 길이 통일.</td></tr>
+      <tr><td>Bidirectional</td><td>좌→우와 우→좌 모두 처리.</td></tr>
+      <tr><td>Teacher Forcing</td><td>학습 시 정답 토큰을 다음 입력으로(W12).</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🗒️ 이번 주 체크리스트</h2>
+  <ul>
+    <li>☐ RNN 식 $h_t = f(W_x x_t + W_h h_{t-1} + b)$를 적을 수 있다.</li>
+    <li>☐ LSTM의 세 게이트 이름과 역할을 안다.</li>
+    <li>☐ 장기 의존성 문제와 LSTM의 해결 방법을 안다.</li>
+    <li>☐ Gradient Clipping이 RNN에 필수인 이유를 안다.</li>
+    <li>☐ 5가지 적용 패턴(One-to-Many 등)을 구분할 수 있다.</li>
+    <li>☐ <code>nn.LSTM</code>의 입출력 모양을 안다.</li>
+  </ul>
+
+  <h2>🧭 한 줄 정리 — 이번 주의 빅 아이디어</h2>
+  <div class="tip"><p><strong>"RNN은 시간 축으로 펼친 신경망. LSTM은 셀 상태로 기억을 보호한다."</strong> 다음 주는 두 RNN을 묶어 번역기를 만들고, 어텐션이 그 위에 추가됩니다.</p></div>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>
@@ -497,7 +650,345 @@ class LSTMNet(nn.Module):
     <li><strong>Understanding LSTM Networks</strong> — Chris Olah, <a href="https://colah.github.io/posts/2015-08-Understanding-LSTMs/">colah.github.io</a>. 이 분야의 고전 글.</li>
     <li><strong>LSTM 원논문</strong> — Hochreiter·Schmidhuber(1997). 인내심을 가지고 보세요.</li>
     <li><strong>The Unreasonable Effectiveness of RNNs</strong> — Andrej Karpathy.</li>
+    <li><strong>GRU 원논문</strong> — Cho 외(2014).</li>
+    <li><strong>PyTorch RNN 튜토리얼</strong> — 공식 60-Minute Blitz.</li>
+    <li><strong>Awesome RNN</strong> — Github 리포지토리. 다양한 응용.</li>
   </ul>
+
+  <h2>🌟 응용 사례</h2>
+  <ul>
+    <li><strong>기계 번역</strong> — 트랜스포머 이전의 표준. seq2seq + attention.</li>
+    <li><strong>음성 인식</strong> — 시리·구글 어시스턴트의 LSTM 백본(현재는 트랜스포머).</li>
+    <li><strong>주가 예측</strong> — 시계열 패턴.</li>
+    <li><strong>이상 탐지</strong> — 센서 시계열의 비정상 패턴.</li>
+    <li><strong>음악 생성</strong> — 멜로디 시퀀스 생성.</li>
+    <li><strong>핸드라이팅 인식</strong> — 펜 좌표 시퀀스.</li>
+  </ul>
+
+  <h2>📌 부록 — RNN과 시계열 구조의 관계</h2>
+  <p>같은 RNN이 자연어와 시계열을 모두 다룰 수 있는 이유는 둘이 본질적으로 같은 모양이기 때문입니다 — <em>"이전 시점의 정보가 다음 시점에 영향을 준다"</em>. 단어든 주가든 센서값이든 RNN은 같은 골격으로 처리합니다.</p>
+
+  <h2>📌 부록 — 시계열 예측 표준 흐름</h2>
+  <ol>
+    <li>데이터 정리 — 시간 순서, 결측 처리.</li>
+    <li>표준화 — 학습 데이터 통계로만.</li>
+    <li>윈도우링 — 과거 N시점을 입력, 다음 시점이 라벨.</li>
+    <li>분할 — 시간 순서 보존(셔플 금지).</li>
+    <li>모델 — LSTM/GRU 또는 1D CNN.</li>
+    <li>예측 — 한 스텝 또는 다중 스텝.</li>
+    <li>평가 — RMSE, MAE, MAPE.</li>
+  </ol>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:24px">— 11주차 끝. 시간이 흐르는 데이터의 도구를 갖췄습니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">다음 주는 두 RNN을 묶고 어텐션을 추가합니다.</p>
+
+  <h2>📌 부록 — Stateful vs Stateless RNN</h2>
+  <ul>
+    <li><strong>Stateless</strong> — 매 배치마다 은닉 상태를 0으로 초기화. 표준.</li>
+    <li><strong>Stateful</strong> — 이전 배치의 마지막 은닉 상태를 다음 배치의 시작으로. 매우 긴 시퀀스(예: 책 한 권).</li>
+  </ul>
+
+  <h2>📌 부록 — Truncated BPTT 시각</h2>
+  <p>1000 시점 시퀀스를 50 시점씩 자른다고 하면:</p>
+  <ol>
+    <li>0~49 시점 forward + backward, 가중치 업데이트.</li>
+    <li>50번째 은닉 상태는 그래디언트 끊고 다음 청크로 전달.</li>
+    <li>50~99 시점 forward + backward.</li>
+    <li>… 반복.</li>
+  </ol>
+  <p>Backward는 50 시점만 거슬러 올라가니 기울기 소실/폭발 문제 완화. 그러나 50시점 이상의 의존성은 학습 신호가 약함.</p>
+
+  <h2>📌 부록 — RNN 출력 모양</h2>
+  <p>PyTorch <code>nn.LSTM</code>의 출력:</p>
+  <pre><code>output, (h_n, c_n) = lstm(input)
+# input  shape: (batch, seq_len, input_size)  (batch_first=True 기준)
+# output shape: (batch, seq_len, hidden_size * num_directions)
+# h_n    shape: (num_layers * num_directions, batch, hidden_size)
+# c_n    shape: 위와 같음</code></pre>
+  <p>분류면 <code>output[:, -1, :]</code> (마지막 시점) 또는 <code>h_n[-1]</code> (마지막 층) 사용. seq2seq 디코더로 넘길 때는 <code>h_n, c_n</code>을 그대로.</p>
+
+  <h2>🔚 마지막 한 마디</h2>
+  <p>RNN은 직접적으로는 트랜스포머에 자리를 양보했지만, 그 정신(시간 축의 정보 전달)은 트랜스포머의 positional encoding과 causal attention에 살아 있습니다. 이번 주가 W12·W13의 발판입니다.</p>
+
+  <h2>🌟 LSTM 시각 직관</h2>
+  <p>LSTM의 핵심을 한 그림으로 그리면:</p>
+  <ul>
+    <li>위쪽 — 셀 상태 $C$의 "고속도로". 거의 흔들림 없이 시간 방향으로 흐름.</li>
+    <li>아래쪽 — 입력 $x_t$가 들어오면 망각/입력 게이트가 $C$를 약간 갱신.</li>
+    <li>출력 — 셀 상태에 $\tanh$를 씌우고 출력 게이트로 마스크 → $h_t$.</li>
+  </ul>
+  <p>이 "고속도로" 비유가 LSTM이 100단계 너머도 기억하는 핵심 이유입니다. 기울기가 셀 상태 위로는 거의 흔들리지 않고 흐르니까요.</p>
+
+  <h2>🌟 RNN 학습 시 자주 만나는 이슈</h2>
+  <ol>
+    <li>NaN 손실 → 학습률 ÷10, gradient clipping 0.5로 강하게.</li>
+    <li>학습이 안 됨 → vanilla RNN을 LSTM으로 교체.</li>
+    <li>긴 시퀀스 메모리 부족 → Truncated BPTT, 시퀀스 길이 줄이기, batch_size ÷2.</li>
+    <li>가변 길이 미니배치 → <code>pack_padded_sequence</code> 사용.</li>
+    <li>예측이 단조롭다(음악·텍스트 생성) → 온도(temperature) 샘플링, beam search.</li>
+  </ol>
+
+  <h2>🌟 RNN의 진화 — 한 줄로</h2>
+  <p>1986 RNN → 1997 LSTM → 2014 GRU → 2014 Seq2Seq → 2014 Attention → 2017 Transformer (RNN 없음).</p>
+
+  <h2>📌 부록 — 시퀀스 데이터 전처리 표준</h2>
+  <ol>
+    <li><strong>토큰화(tokenization)</strong> — 문장 → 단어/서브워드 단위. WordPiece, BPE, SentencePiece.</li>
+    <li><strong>어휘 사전(vocab)</strong> — 토큰 → 정수 ID 매핑. 보통 자주 등장하는 30K~50K개.</li>
+    <li><strong>특수 토큰</strong> — &lt;PAD&gt;=0, &lt;UNK&gt;=1, &lt;BOS&gt;=2, &lt;EOS&gt;=3.</li>
+    <li><strong>패딩</strong> — 짧은 시퀀스에 PAD 추가하여 같은 길이로.</li>
+    <li><strong>임베딩</strong> — 정수 ID → 고차원 벡터.</li>
+  </ol>
+
+  <h2>📌 부록 — Seq2Seq 미리보기</h2>
+  <p>두 개의 RNN을 묶어 입력 시퀀스를 출력 시퀀스로 변환합니다.</p>
+  <ol>
+    <li><strong>인코더</strong> — 입력 문장을 한 시퀀스로 받아 마지막 은닉 상태를 "요약 벡터"로.</li>
+    <li><strong>디코더</strong> — 요약 벡터로 시작해 출력 시퀀스를 토큰 단위로 생성.</li>
+  </ol>
+  <p>한계: 한 벡터에 모든 입력 정보를 압축하면 긴 문장에서 정보 손실. → <strong>어텐션</strong>이 다음 주의 답.</p>
+
+  <h2>📌 부록 — Beam Search</h2>
+  <p>RNN으로 시퀀스를 생성할 때 매 시점 가장 확률 높은 토큰만 고르는 greedy 방식은 단조롭습니다. <strong>Beam Search</strong>는 매 시점 상위 K개 후보를 유지하며 트리 탐색 — 더 자연스러운 출력. 번역, 요약, 캡션 생성의 표준.</p>
+
+  <h2>📌 부록 — Char-level vs Word-level RNN</h2>
+  <ul>
+    <li><strong>문자 단위(char-level)</strong> — 알파벳 또는 한글 자모만 사용. 어휘 사전이 작음(50~5000). 오타에 강건. 하지만 시퀀스가 길어짐.</li>
+    <li><strong>단어 단위(word-level)</strong> — 의미 단위가 명확. 어휘 사전이 큼(30K+). 어휘 외 단어는 &lt;UNK&gt;로.</li>
+    <li><strong>서브워드(BPE/WordPiece)</strong> — 둘의 절충. 현대 NLP의 표준. "playing" → "play" + "##ing".</li>
+  </ul>
+
+  <h2>📌 부록 — 한국어 NLP 특수 처리</h2>
+  <p>한국어는 교착어라 형태소 분석이 중요합니다.</p>
+  <ul>
+    <li><strong>KoNLPy</strong> — 형태소 분석기 (Mecab, Okt, Komoran 등).</li>
+    <li><strong>Mecab</strong> — 가장 빠르고 정확. 표준.</li>
+    <li><strong>SentencePiece</strong> — 형태소 분석 없이 BPE 직접 학습.</li>
+    <li><strong>한국어 BERT</strong> — KcBERT, KoELECTRA 등.</li>
+  </ul>
+
+  <h2>📌 부록 — 시퀀스 데이터 표준 라이브러리</h2>
+  <ul>
+    <li><strong>torchtext</strong> — PyTorch의 NLP 도구.</li>
+    <li><strong>Hugging Face datasets</strong> — 거의 모든 공개 데이터셋.</li>
+    <li><strong>Hugging Face tokenizers</strong> — 빠른 BPE/WordPiece.</li>
+    <li><strong>spaCy</strong> — 영어 NLP의 표준.</li>
+    <li><strong>NLTK</strong> — 학술용, 다양한 도구.</li>
+  </ul>
+
+  <h2>📌 부록 — 임베딩의 직관</h2>
+  <p>"왕 - 남자 + 여자 = 여왕" 같은 유명한 word2vec 예시가 임베딩의 강력함을 보여줍니다. 정수 ID는 단어 사이 관계를 표현 못하지만, 임베딩 공간에서는 의미가 가까운 단어들이 가까이 모입니다.</p>
+  <ul>
+    <li><strong>Word2Vec (2013)</strong> — Mikolov. CBOW와 Skip-gram.</li>
+    <li><strong>GloVe (2014)</strong> — Stanford. 동시 등장 행렬 분해.</li>
+    <li><strong>FastText (2016)</strong> — Facebook. 서브워드 정보.</li>
+    <li><strong>BERT 임베딩 (2018)</strong> — 문맥 인식. 같은 단어도 문맥에 따라 다른 벡터.</li>
+  </ul>
+
+  <h2>📌 부록 — RNN 학습 시 메모리</h2>
+  <p>시퀀스 길이 T, 배치 B, 은닉 H일 때 메모리 ~ B × T × H. 길이 1000 시퀀스에 H=512면 한 배치에 수GB. 대처: (1) batch_size ÷2, (2) Truncated BPTT, (3) Gradient Checkpointing, (4) 시퀀스 길이 줄이기.</p>
+
+  <h2>📌 부록 — RNN 학습 모니터링</h2>
+  <ul>
+    <li>매 epoch 학습/검증 손실 기록 + 시각화.</li>
+    <li>Gradient norm 모니터링 — 폭발 신호 빠르게 감지.</li>
+    <li>은닉 상태 히스토그램 — saturated(±1 근처)면 학습 정체.</li>
+    <li>샘플 출력 — 텍스트 생성이라면 매 epoch 짧은 샘플 출력해 진화 확인.</li>
+  </ul>
+
+  <h2>📌 부록 — RNN 디버깅 흐름</h2>
+  <ol>
+    <li>입력 모양 출력해 (B, T, F) 확인.</li>
+    <li>RNN 출력 모양 확인.</li>
+    <li>작은 데이터(예: 시퀀스 5개)로 과적합 시도. 안 되면 모델 자체 버그.</li>
+    <li>Gradient norm 출력. 발산하면 clipping 강하게.</li>
+    <li>학습률 한 자릿수씩 조정.</li>
+    <li>Vanilla RNN이면 LSTM/GRU로 교체.</li>
+  </ol>
+
+  <h2>📌 부록 — 시퀀스 모델 평가 지표</h2>
+  <ul>
+    <li><strong>분류</strong> — Accuracy, F1.</li>
+    <li><strong>회귀(시계열)</strong> — RMSE, MAE, MAPE.</li>
+    <li><strong>번역/요약</strong> — BLEU, ROUGE, METEOR.</li>
+    <li><strong>언어 모델</strong> — Perplexity (낮을수록 좋음).</li>
+    <li><strong>생성 품질</strong> — 사람 평가가 가장 신뢰.</li>
+  </ul>
+
+  <h2>📌 부록 — 자가 학습 추가 문제</h2>
+  <ol>
+    <li>LSTM의 게이트 수와 GRU의 게이트 수 차이는?</li>
+    <li>긴 시퀀스(T=10000)에 일반 RNN을 쓰면 무엇이 문제인가?</li>
+    <li>Gradient Clipping의 표준값은?</li>
+    <li>임베딩의 차원은 어떻게 정하나?</li>
+    <li>Bidirectional RNN을 실시간 음성 인식에 쓸 수 있나?</li>
+  </ol>
+  <p style="font-size:13px;color:var(--muted)">정답 힌트: 1) LSTM 3개, GRU 2개. 2) BPTT 길이 폭발 + 기울기 소실. 3) clip_grad_norm_(model.parameters(), 1.0)이 표준. 4) 보통 vocab_size의 4승근 또는 64~512. 5) 안 됨. 미래 입력 필요.</p>
+
+  <h2>📌 부록 — RNN 응용 사례 자세히</h2>
+  <p><strong>음악 생성</strong>: MIDI 토큰을 시퀀스로 학습. Magenta 프로젝트(Google).<br>
+  <strong>핸드라이팅 합성</strong>: Graves의 2013 논문, 주어진 텍스트를 손글씨처럼 그리기.<br>
+  <strong>주가 예측</strong>: 과거 N일 가격 + 거래량 → 다음 날 예측. 단, 시계열 예측은 본질적 어려움.<br>
+  <strong>이상 탐지</strong>: 정상 패턴을 학습한 RNN의 예측 오차가 큰 시점이 이상.</p>
+
+  <h2>📌 부록 — 자기지도 사전학습</h2>
+  <p>BERT/GPT 같은 트랜스포머도 사실 RNN의 자기지도 학습 아이디어를 계승합니다. RNN-LM(언어 모델)이 "다음 단어 예측"으로 학습되며, 그 가중치를 다른 작업으로 옮김. ELMo(2018)가 그 RNN 시대의 결정판.</p>
+
+  <h2>📌 부록 — Skip-Connection in RNN</h2>
+  <p>ResNet의 잔차 연결을 RNN에 적용한 형태:</p>
+  $$ h_t = h_{t-1} + f(x_t, h_{t-1}) $$
+  <p>학습 신호가 시간 축으로 직접 전달되어 매우 긴 의존성에 도움. Highway Network의 RNN 버전.</p>
+
+  <h2>🔚 마지막 한 마디</h2>
+  <p>이번 주 RNN/LSTM은 트랜스포머 시대 이전의 표준이었고, 그 정신은 지금도 남아 있습니다. 시간 축의 정보 처리, 게이트의 정보 흐름 제어, BPTT의 어려움 — 이 직관들이 트랜스포머의 어텐션과 positional encoding을 이해하는 다리입니다. 다음 주 W12에서는 그 다리를 건너고, W13에서 트랜스포머 자체로 진입합니다.</p>
+
+  <h2>📌 부록 — Embedding 시각화</h2>
+  <p>학습된 임베딩을 t-SNE/UMAP으로 2D에 그려보면 "비슷한 의미의 단어들이 군집을 이룬다"는 사실이 한눈에 보입니다. TensorBoard의 Projector가 이를 인터랙티브로 제공.</p>
+
+  <h2>📌 부록 — RNN PyTorch 함수 비교</h2>
+  <pre><code>nn.RNN(input_size, hidden_size, ...)     # vanilla
+nn.LSTM(input_size, hidden_size, ...)    # 셀 상태 + 3 게이트
+nn.GRU(input_size, hidden_size, ...)     # 2 게이트
+# 옵션
+nn.LSTM(..., num_layers=2)               # 깊이
+nn.LSTM(..., bidirectional=True)         # 양방향
+nn.LSTM(..., dropout=0.3)                # 층 사이 드롭아웃</code></pre>
+
+  <h2>📌 부록 — RNN 학습이 안 될 때 단계별 진단</h2>
+  <ol>
+    <li>Vanilla RNN인가? → LSTM/GRU로 교체.</li>
+    <li>Gradient norm 출력해 폭발 확인. clip_grad_norm_ 1.0 시도.</li>
+    <li>학습률 1e-3 → 1e-4로 줄임.</li>
+    <li>시퀀스 길이 줄임(예: 1000 → 200).</li>
+    <li>입력 표준화 확인.</li>
+    <li>은닉 차원 키움.</li>
+    <li>Bidirectional 추가.</li>
+    <li>그래도 안 되면 → 데이터/모델 자체 문제 가능.</li>
+  </ol>
+
+  <h2>📌 부록 — 시퀀스 모델 비교 한 페이지</h2>
+  <table>
+    <thead><tr><th>모델</th><th>병렬화</th><th>장기 의존성</th><th>메모리</th></tr></thead>
+    <tbody>
+      <tr><td>RNN</td><td>×</td><td>약함</td><td>적음</td></tr>
+      <tr><td>LSTM/GRU</td><td>×</td><td>중간~좋음</td><td>중간</td></tr>
+      <tr><td>1D CNN</td><td>○</td><td>제한적(receptive field)</td><td>중간</td></tr>
+      <tr><td>Transformer</td><td>○</td><td>매우 좋음</td><td>$O(T^2)$ 큼</td></tr>
+    </tbody>
+  </table>
+  <p>병렬화 가능성이 트랜스포머 우세의 핵심 이유. 같은 GPU에서 RNN보다 100배 빠르게 학습 가능.</p>
+
+  <h2>📌 부록 — RNN 한 페이지 흐름도</h2>
+  <ol>
+    <li>토큰화 → 정수 ID 시퀀스.</li>
+    <li>패딩하여 같은 길이로.</li>
+    <li>임베딩으로 (B, T, embed) 텐서.</li>
+    <li>LSTM/GRU로 (B, T, hidden).</li>
+    <li>마지막 시점 또는 모든 시점 평균을 분류기에.</li>
+    <li>Cross Entropy 손실, Adam 옵티마이저.</li>
+    <li>Gradient Clipping 1.0.</li>
+    <li>매 epoch 검증 손실로 조기종료.</li>
+  </ol>
+
+  <h2>📌 부록 — 동시 작업 RNN</h2>
+  <p>한 RNN 위에 여러 head를 붙여 동시에 학습:</p>
+  <ul>
+    <li>감성 분류 (긍정/부정).</li>
+    <li>주제 분류 (정치/스포츠/연예).</li>
+    <li>품사 태깅 (각 단어별).</li>
+  </ul>
+  <p>같은 RNN backbone을 공유해 효율적. Multi-task learning.</p>
+
+  <h2>📌 부록 — 시계열 vs 자연어 RNN</h2>
+  <p>본질이 같지만 작은 차이:</p>
+  <ul>
+    <li>자연어 — 입력이 정수 ID, 임베딩 필요. 시퀀스 길이 가변.</li>
+    <li>시계열 — 입력이 실수 벡터, 임베딩 불필요. 시퀀스 길이 고정도 가능.</li>
+    <li>둘 다 LSTM/GRU 골격은 같음.</li>
+  </ul>
+
+  <h2>📌 부록 — RNN 학습률 스케줄링</h2>
+  <p>RNN은 옵티마이저에 민감합니다. 표준 권장:</p>
+  <ul>
+    <li>Adam, lr=1e-3로 시작.</li>
+    <li>5 epoch마다 검증 손실 안 줄면 lr ÷2 (ReduceLROnPlateau).</li>
+    <li>또는 cosine decay over 전체 학습.</li>
+  </ul>
+
+  <h2>📌 부록 — 문자 단위 RNN의 매력</h2>
+  <p>Karpathy의 char-rnn 데모(2015)는 셰익스피어 작품으로 학습된 RNN이 셰익스피어처럼 글을 쓰는 걸 보여줘서 충격을 줬습니다. 문자 50개 어휘만으로도 단어, 문법, 스타일을 학습한다는 점이 놀라움. 이 데모가 RNN 황금기의 상징.</p>
+
+  <h2>📌 부록 — 시퀀스 모델의 미래</h2>
+  <p>2024년 현재, 시퀀스 모델의 두 큰 흐름:</p>
+  <ul>
+    <li><strong>Transformer 계열</strong> — GPT-4, Claude, Gemini. LLM의 표준.</li>
+    <li><strong>State Space Models</strong> — Mamba, RWKV. RNN의 부활. 긴 시퀀스에 강함, 메모리 효율.</li>
+  </ul>
+  <p>RNN은 죽지 않았습니다. 다만 "얼마나 효율적인가"의 새 형태로 진화 중.</p>
+
+  <h2>📌 부록 — Mamba와 SSM 미리보기</h2>
+  <p>2023~2024년 등장한 Mamba는 트랜스포머의 $O(T^2)$ 어텐션 대신 선형 시간 $O(T)$로 시퀀스를 처리합니다. 핵심은 RNN의 정신을 살린 State Space Model. 매우 긴 시퀀스(수백만 토큰)에서 트랜스포머보다 효율적이고 정확. 강의 외 영역이지만, "RNN의 후예가 LLM의 미래"라는 흥미로운 흐름이 진행 중.</p>
+
+  <h2>📌 부록 — RWKV</h2>
+  <p>RWKV는 RNN 형식이지만 트랜스포머와 동등한 성능을 추구하는 모델. 추론 시 RNN처럼 동작해 메모리 효율이 압도적. 한국어 모델도 공개됨.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 끝. 다음 주에 봐요. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">예습 권장: 어텐션의 Q, K, V 직관을 미리 봐두면 W12가 쉽습니다.</p>
+  <h2>📌 부록 — 텍스트 분류 미니 프로젝트</h2>
+  <ol>
+    <li>네이버 영화 리뷰 데이터 (한국어, 약 200K).</li>
+    <li>토큰화: KoNLPy Mecab 또는 SentencePiece.</li>
+    <li>어휘 사전 구축 (상위 30K).</li>
+    <li>임베딩 (128차원) + Bi-LSTM(64).</li>
+    <li>분류 헤드 (긍정/부정).</li>
+    <li>Adam(1e-3), 10 epoch, batch 64.</li>
+    <li>정확도 ~85%+ 달성 가능.</li>
+  </ol>
+
+  <h2>📌 부록 — 시계열 미니 프로젝트</h2>
+  <ol>
+    <li>코스피 일별 종가 5년치.</li>
+    <li>표준화 (학습 기간 통계만).</li>
+    <li>윈도우 60일 → 다음 날 예측.</li>
+    <li>LSTM(32) → Linear(1).</li>
+    <li>MSE 손실, Adam.</li>
+    <li>주의: 주가 예측은 본질적으로 어려움. 예측 정확도 0%에 가까운 게 정상.</li>
+  </ol>
+
+  <h2>📌 부록 — RNN 학습률 진단</h2>
+  <p>RNN 학습이 너무 느리면:</p>
+  <ol>
+    <li>학습률을 ×3 키워본다.</li>
+    <li>Gradient norm 확인 — 너무 작으면 학습률 키워야.</li>
+    <li>은닉 차원을 키운다(예: 64 → 128).</li>
+    <li>층 수를 늘린다(1 → 2).</li>
+  </ol>
+  <p>너무 빠르면(불안정):</p>
+  <ol>
+    <li>학습률을 ÷10.</li>
+    <li>Gradient clipping 강하게(0.5).</li>
+    <li>Dropout 추가.</li>
+  </ol>
+
+  <h2>📌 부록 — 본 강의에서 RNN의 역할</h2>
+  <p>한 학기 흐름에서 RNN은 "시간 데이터의 첫 도입"이자 "트랜스포머로 가는 다리"입니다. 직접 RNN을 쓰는 일은 줄어들지만, 그 직관(시간 축 정보 흐름, 게이트, BPTT)은 트랜스포머의 모든 부품에 살아 있습니다. 이번 주를 가볍게 보지 말고, 직관을 단단히 잡아두세요.</p>
+
+  <h2>📌 부록 — 추천 학습 자료 한 줄 정리</h2>
+  <ul>
+    <li>입문 — Sung Kim Lec 12 (한국어).</li>
+    <li>직관 — Olah blog "Understanding LSTM".</li>
+    <li>코드 — PyTorch 공식 튜토리얼.</li>
+    <li>심화 — Goodfellow 10장.</li>
+    <li>최신 — Mamba/RWKV 블로그.</li>
+  </ul>
+
+  <h2>🎓 마무리</h2>
+  <p>11주차가 끝났습니다. 이제 한 학기에서 두 주만 남았습니다 — W12 (Seq2Seq, Attention)와 W13 (Transformer, LLM). 마지막 두 주가 가장 화려한 한 학기의 결정판이 됩니다. 이번 주 RNN의 직관을 잘 잡아두세요.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">읽어주셔서 감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
 
   <nav class="prevnext">
     <a href="10-cnn-transfer.html"><small>← 이전</small>W10. CNN 전이학습</a>

@@ -128,6 +128,397 @@
   <p>모든 안정 평형점 근처에서 작은 진동은 SHM이다. 임의 $U(x)$를 평형점에서 테일러 전개하면 이차 항이 지배 → 후크 법칙 모양.</p>
   <div class="tip">분자 진동 → 음파 → 전자기파 → 양자역학까지 모두 SHM의 옷을 입고 등장.</div>
 
+  <h2>🎮 인터랙티브 데모 1 — 스프링 진동 시뮬레이터</h2>
+  <p>스프링 상수 $k$, 질량 $m$, 진폭 $A$를 슬라이더로 조절하면서 <strong>$x(t)$·$v(t)$ 그래프</strong>와 <strong>운동에너지 ↔ 위치에너지 막대</strong>를 실시간으로 확인하세요. 식만 외워서는 절대 알 수 없는 직관 — "$k$를 4배로 하면 주기는 절반"이 슬라이더 한 번에 보입니다.</p>
+
+  <div class="demo">
+    <h4>스프링-질량 SHM 실시간 그래프</h4>
+    <p>왼쪽: 스프링과 질량의 시각화(평형점 = 회색 점선). 오른쪽 위: $x(t)$ (파랑) 와 $v(t)$(주황). 오른쪽 아래: KE(빨강), PE(초록) 막대. 두 막대의 합 = 총에너지 $\tfrac{1}{2}kA^2$로 일정.</p>
+    <canvas id="w6_spring_canvas" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>스프링 상수 $k$ <span class="val" id="w6_kV">20</span> N/m
+        <input type="range" id="w6_k" min="5" max="80" step="1" value="20"></label>
+      <label>질량 $m$ <span class="val" id="w6_mV">0.5</span> kg
+        <input type="range" id="w6_m" min="0.1" max="2.0" step="0.1" value="0.5"></label>
+      <label>진폭 $A$ <span class="val" id="w6_AV">0.4</span> m
+        <input type="range" id="w6_A" min="0.1" max="0.8" step="0.05" value="0.4"></label>
+      <label>속도 배율 <span class="val" id="w6_spdV">1.0</span>×
+        <input type="range" id="w6_spd" min="0.2" max="3.0" step="0.1" value="1.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$k$를 4배(예: 20→80) → 각진동수 $\omega = \sqrt{k/m}$가 2배 → 주기는 절반.</li>
+        <li>$m$을 4배 → 주기가 2배로 길어짐. ($\sqrt{m}$ 의존)</li>
+        <li>$A$를 바꿔도 <strong>주기는 변하지 않음</strong> — 진폭과 주기가 무관한 게 SHM의 신비.</li>
+        <li>평형점에서 KE 막대가 최대, 양 끝에서 PE 막대가 최대. 합은 항상 동일.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w6_spring_canvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t0=performance.now();
+    function getP(){
+      const k=+document.getElementById('w6_k').value;
+      const m=+document.getElementById('w6_m').value;
+      const A=+document.getElementById('w6_A').value;
+      const spd=+document.getElementById('w6_spd').value;
+      document.getElementById('w6_kV').textContent=k;
+      document.getElementById('w6_mV').textContent=m.toFixed(1);
+      document.getElementById('w6_AV').textContent=A.toFixed(2);
+      document.getElementById('w6_spdV').textContent=spd.toFixed(1);
+      return {k,m,A,spd,w:Math.sqrt(k/m)};
+    }
+    function drawSpring(x0,y0,x1,coils){
+      ctx.strokeStyle='#666';ctx.lineWidth=1.8;ctx.beginPath();
+      ctx.moveTo(x0,y0);
+      const total=x1-x0,seg=total/(coils*2+2);
+      ctx.lineTo(x0+seg,y0);
+      for(let i=0;i<coils;i++){
+        const xa=x0+seg+seg*2*i;
+        ctx.lineTo(xa+seg,y0-12);
+        ctx.lineTo(xa+seg*2,y0+12);
+      }
+      ctx.lineTo(x1,y0);
+      ctx.stroke();
+    }
+    function frame(now){
+      const p=getP();
+      const t=(now-t0)*0.001*p.spd;
+      const x=p.A*Math.cos(p.w*t);
+      const v=-p.A*p.w*Math.sin(p.w*t);
+      const T=2*Math.PI/p.w;
+      const E=0.5*p.k*p.A*p.A;
+      const PE=0.5*p.k*x*x;
+      const KE=E-PE;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Spring panel (left half top)
+      const lx=20,ly=70,lw=300,lh=120;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(lx,ly,lw,lh);
+      ctx.fillStyle='#444';ctx.font='bold 12px sans-serif';
+      ctx.fillText('스프링-질량',lx+8,ly-6);
+      const wallX=lx+25,blockY=ly+lh/2;
+      ctx.fillStyle='#888';ctx.fillRect(wallX-12,ly+12,12,lh-24);
+      const eqX=wallX+150;
+      ctx.strokeStyle='#bbb';ctx.setLineDash([4,4]);ctx.beginPath();
+      ctx.moveTo(eqX,ly+10);ctx.lineTo(eqX,ly+lh-10);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#999';ctx.font='10px sans-serif';
+      ctx.fillText('평형',eqX-10,ly+lh-2);
+      const pixPerM=120;
+      const blockX=eqX+x*pixPerM;
+      drawSpring(wallX,blockY,blockX-22,8);
+      ctx.fillStyle='#0b5fff';ctx.fillRect(blockX-22,blockY-22,44,44);
+      ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';
+      ctx.fillText('m',blockX-5,blockY+4);
+      // x(t), v(t) graph (right top)
+      const gx=340,gy=10,gw=290,gh=180;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(gx,gy,gw,gh);
+      ctx.fillStyle='#444';ctx.font='bold 12px sans-serif';
+      ctx.fillText('x(t) 파랑 / v(t) 주황',gx+8,gy+14);
+      const cx0=gx+10,cy0=gy+gh/2,cw=gw-20;
+      ctx.strokeStyle='#eef0f4';ctx.beginPath();
+      ctx.moveTo(cx0,cy0);ctx.lineTo(cx0+cw,cy0);ctx.stroke();
+      const TS=Math.max(2*T,4);
+      function drawCurve(fn,col,scale){
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+        for(let i=0;i<=cw;i++){
+          const tt=t-TS+(i/cw)*TS;
+          const yy=fn(tt)*scale;
+          const px=cx0+i,py=cy0-yy;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+      const xsc=(gh/2-8)/p.A;
+      const vsc=(gh/2-8)/(p.A*p.w+0.01);
+      drawCurve(tt=>p.A*Math.cos(p.w*tt),'#0b5fff',xsc);
+      drawCurve(tt=>-p.A*p.w*Math.sin(p.w*tt),'#ff8c00',vsc);
+      // Current marker
+      const px=cx0+cw;
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(px,cy0-x*xsc,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ff8c00';ctx.beginPath();ctx.arc(px,cy0-v*vsc,4,0,Math.PI*2);ctx.fill();
+      // Energy bars (bottom)
+      const bx=20,by=210,bw=600,bh=130;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(bx,by,bw,bh);
+      ctx.fillStyle='#444';ctx.font='bold 12px sans-serif';
+      ctx.fillText('에너지 분배 — 빨강 KE / 초록 PE / 합 = E_total',bx+8,by+14);
+      const barMaxH=bh-50;
+      const baseY=by+bh-15;
+      const w1=180,w2=180,w3=180,gap=15;
+      function bar(xx,frac,col,label,val){
+        const hh=barMaxH*frac;
+        ctx.fillStyle=col;ctx.fillRect(xx,baseY-hh,w1,hh);
+        ctx.strokeStyle='#222';ctx.strokeRect(xx,baseY-hh,w1,hh);
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(label+' = '+val.toFixed(3)+' J',xx+10,baseY+12);
+      }
+      bar(bx+15,KE/E,'#e74c3c','KE',KE);
+      bar(bx+15+w1+gap,PE/E,'#27ae60','PE',PE);
+      bar(bx+15+w1*2+gap*2,1,'#7b1fa2','E_total',E);
+      // Info box
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(20,20,200,42);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(20,20,200,42);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('ω = '+p.w.toFixed(2)+' rad/s',28,38);
+      ctx.fillText('T = '+T.toFixed(3)+' s, f = '+(1/T).toFixed(2)+' Hz',28,54);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
+
+  <h2>🎮 인터랙티브 데모 2 — 단진자(소진동)</h2>
+  <p>끈 길이 $L$과 초기 각도 $\theta_0$를 바꿔서 <strong>주기 $T = 2\pi\sqrt{L/g}$</strong>가 길이에만 의존함을 확인하세요. 또한 큰 각도(40°+)에서는 소진동 근사가 깨지면서 실제 주기가 약간 길어지는 것도 관찰할 수 있습니다.</p>
+
+  <div class="demo">
+    <h4>단진자 시뮬레이터 — "주기는 길이만"</h4>
+    <p>실제 비선형 운동방정식 $\ddot\theta + (g/L)\sin\theta = 0$을 수치적으로 풀어 그립니다. 주기는 한 사이클 측정값(노란색 텍스트)으로 표시.</p>
+    <canvas id="w6_pend_canvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>끈 길이 $L$ <span class="val" id="w6_LV">1.0</span> m
+        <input type="range" id="w6_L" min="0.2" max="2.5" step="0.05" value="1.0"></label>
+      <label>초기 각도 $\theta_0$ <span class="val" id="w6_th0V">15°</span>
+        <input type="range" id="w6_th0" min="3" max="60" step="1" value="15"></label>
+      <label>중력 $g$ <span class="val" id="w6_gV">9.8</span> m/s²
+        <input type="range" id="w6_g" min="1.6" max="20" step="0.1" value="9.8"></label>
+      <button id="w6_resetP" type="button">↺ 처음부터</button>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$L$을 4배 → 주기가 2배. (이론: $T = 2\pi\sqrt{L/g}$)</li>
+        <li>$g$를 1.6 (달)로 → 주기가 약 2.5배 길어짐. 달 위 진자는 매우 느림.</li>
+        <li>$\theta_0$를 5°와 50°로 비교 → 주기 차이가 약 5% 이상 (소진동 근사 한계).</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w6_pend_canvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let theta=0,omega=0,lastT=performance.now();
+    let zeroCross=[],measuredT=null;
+    function reset(){
+      const th0=+document.getElementById('w6_th0').value;
+      theta=th0*Math.PI/180;omega=0;
+      zeroCross=[];measuredT=null;lastT=performance.now();
+    }
+    document.getElementById('w6_resetP').addEventListener('click',reset);
+    document.getElementById('w6_th0').addEventListener('input',reset);
+    document.getElementById('w6_L').addEventListener('input',reset);
+    document.getElementById('w6_g').addEventListener('input',reset);
+    reset();
+    function frame(now){
+      const L=+document.getElementById('w6_L').value;
+      const g=+document.getElementById('w6_g').value;
+      const th0=+document.getElementById('w6_th0').value;
+      document.getElementById('w6_LV').textContent=L.toFixed(2);
+      document.getElementById('w6_th0V').textContent=th0+'°';
+      document.getElementById('w6_gV').textContent=g.toFixed(1);
+      let dt=(now-lastT)*0.001;lastT=now;
+      if(dt>0.05)dt=0.05;
+      const steps=20;
+      for(let s=0;s<steps;s++){
+        const ds=dt/steps;
+        const prevTheta=theta;
+        const a=-(g/L)*Math.sin(theta);
+        omega+=a*ds;theta+=omega*ds;
+        if(prevTheta>0&&theta<=0){
+          const ts=(now-(steps-1-s)*ds*1000)*0.001;
+          zeroCross.push(ts);
+          if(zeroCross.length>4)zeroCross.shift();
+          if(zeroCross.length>=3){
+            measuredT=zeroCross[zeroCross.length-1]-zeroCross[zeroCross.length-3];
+          }
+        }
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=W/2,oy=60;
+      const Lpix=Math.min(L*120,H-120);
+      const bx=ox+Lpix*Math.sin(theta),by=oy+Lpix*Math.cos(theta);
+      ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(ox-30,oy);ctx.lineTo(ox+30,oy);ctx.stroke();
+      ctx.strokeStyle='#888';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(bx,by);ctx.stroke();
+      ctx.strokeStyle='#cfd8e3';ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox,oy+Lpix);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(bx,by,16,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#222';ctx.stroke();
+      // Arc indicator
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(ox,oy,30,Math.PI/2,Math.PI/2+theta,theta<0);ctx.stroke();
+      // Info
+      const Tth=2*Math.PI*Math.sqrt(L/g);
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(15,H-90,260,80);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(15,H-90,260,80);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('이론 주기 (소진동) T = 2π√(L/g)',25,H-72);
+      ctx.fillText('  = '+Tth.toFixed(3)+' s',25,H-56);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('현재 각도 θ = '+(theta*180/Math.PI).toFixed(1)+'°',25,H-40);
+      ctx.fillStyle='#b8860b';
+      ctx.fillText('측정 주기 = '+(measuredT?measuredT.toFixed(3)+' s':'(측정 중...)'),25,H-22);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
+
+  <h2>🎮 인터랙티브 데모 3 — 감쇠진동 비교</h2>
+  <p>감쇠 계수 $b$를 조절하면서 <strong>저감쇠 / 임계감쇠 / 과감쇠</strong>가 어떻게 다른지 직접 확인하세요. 자동차 서스펜션은 임계감쇠 ($b = b_c = 2\sqrt{mk}$)로 설계됩니다 — 한 번 살짝 출렁이고 가장 빠르게 정지.</p>
+
+  <div class="demo">
+    <h4>감쇠 진동 — 세 가지 상황</h4>
+    <p>운동방정식 $m\ddot x + b\dot x + kx = 0$의 수치해. 임계 감쇠계수 $b_c = 2\sqrt{mk}$ 기준으로 비율 $\zeta = b/b_c$ 표기.</p>
+    <canvas id="w6_damp_canvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>감쇠계수 $b$ <span class="val" id="w6_bV">1.0</span> kg/s
+        <input type="range" id="w6_b" min="0" max="20" step="0.1" value="1.0"></label>
+      <label>스프링 $k$ <span class="val" id="w6_dkV">25</span> N/m
+        <input type="range" id="w6_dk" min="5" max="100" step="1" value="25"></label>
+      <label>질량 $m$ <span class="val" id="w6_dmV">1.0</span> kg
+        <input type="range" id="w6_dm" min="0.2" max="3.0" step="0.1" value="1.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$\zeta < 1$ (저감쇠): 진폭이 지수 함수 모양으로 줄며 흔들림.</li>
+        <li>$\zeta = 1$ (임계감쇠): 진동 없이 가장 빨리 평형으로 — 자동차·로봇 댐퍼 목표.</li>
+        <li>$\zeta > 1$ (과감쇠): 진동은 없지만 천천히 평형으로. 실외기 진동대 등.</li>
+        <li>$b=0$ (무감쇠): 영원히 진동. 비현실적.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w6_damp_canvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const b=+document.getElementById('w6_b').value;
+      const k=+document.getElementById('w6_dk').value;
+      const m=+document.getElementById('w6_dm').value;
+      document.getElementById('w6_bV').textContent=b.toFixed(1);
+      document.getElementById('w6_dkV').textContent=k;
+      document.getElementById('w6_dmV').textContent=m.toFixed(1);
+      const bc=2*Math.sqrt(m*k);
+      const zeta=b/bc;
+      const w0=Math.sqrt(k/m);
+      const TMAX=Math.max(6,4*2*Math.PI/w0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=44;
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(margin,H/2);ctx.lineTo(W-15,H/2);
+      ctx.moveTo(margin,15);ctx.lineTo(margin,H-25);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('t (s)',W-25,H/2+14);
+      ctx.fillText('x',margin-18,20);
+      // Numerical RK4
+      let x=1,v=0,t=0;const dt=TMAX/600;
+      const xs=[];const ts=[];
+      for(let i=0;i<=600;i++){
+        xs.push(x);ts.push(t);
+        function deriv(xx,vv){return [-(b/m)*vv-(k/m)*xx];}
+        const k1v=-(b/m)*v-(k/m)*x;const k1x=v;
+        const k2v=-(b/m)*(v+k1v*dt/2)-(k/m)*(x+k1x*dt/2);const k2x=v+k1v*dt/2;
+        const k3v=-(b/m)*(v+k2v*dt/2)-(k/m)*(x+k2x*dt/2);const k3x=v+k2v*dt/2;
+        const k4v=-(b/m)*(v+k3v*dt)-(k/m)*(x+k3x*dt);const k4x=v+k3v*dt;
+        v+=(k1v+2*k2v+2*k3v+k4v)*dt/6;
+        x+=(k1x+2*k2x+2*k3x+k4x)*dt/6;
+        t+=dt;
+      }
+      const xmax=Math.max(...xs.map(Math.abs),1);
+      const sc=(H/2-25)/xmax;
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.2;ctx.beginPath();
+      for(let i=0;i<xs.length;i++){
+        const px=margin+(ts[i]/TMAX)*(W-margin-15);
+        const py=H/2-xs[i]*sc;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // Envelope (only for underdamped)
+      if(zeta<1){
+        const wd=w0*Math.sqrt(1-zeta*zeta);
+        const gamma=b/(2*m);
+        ctx.strokeStyle='#ff8c00';ctx.lineWidth=1.4;ctx.setLineDash([4,4]);
+        ctx.beginPath();
+        for(let i=0;i<=200;i++){
+          const tt=TMAX*i/200,env=Math.exp(-gamma*tt);
+          const px=margin+(tt/TMAX)*(W-margin-15);
+          const py=H/2-env*sc;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+        ctx.beginPath();
+        for(let i=0;i<=200;i++){
+          const tt=TMAX*i/200,env=-Math.exp(-gamma*tt);
+          const px=margin+(tt/TMAX)*(W-margin-15);
+          const py=H/2-env*sc;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();ctx.setLineDash([]);
+      }
+      // Info
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(W-220,15,205,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,15,205,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('ω₀ = '+w0.toFixed(2)+' rad/s',W-210,32);
+      ctx.fillText('b_c (임계) = '+bc.toFixed(2)+' kg/s',W-210,50);
+      let regime='';
+      if(zeta<0.001)regime='무감쇠';
+      else if(zeta<1)regime='저감쇠';
+      else if(Math.abs(zeta-1)<0.05)regime='임계감쇠';
+      else regime='과감쇠';
+      ctx.fillStyle=zeta<1?'#0b5fff':(Math.abs(zeta-1)<0.05?'#27ae60':'#c62828');
+      ctx.fillText('ζ = '+zeta.toFixed(3)+' ('+regime+')',W-210,68);
+    }
+    ['w6_b','w6_dk','w6_dm'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>🪜 단계별 사고 과정 — 스프링 주기 $T=2\pi\sqrt{m/k}$ 5단계 유도</h2>
+  <p>식만 외우는 학생이 시험에서 막히는 진짜 이유는 "이 식이 어디서 나왔는지"가 머리에 없기 때문입니다. 다음 5단계를 한 번이라도 손으로 따라 해두면 평생 잊지 않습니다.</p>
+
+  <div class="note">
+    <strong>문제.</strong> 수평면 위 마찰 없는 책상에 질량 $m$인 블록이 스프링 상수 $k$인 스프링에 매달려 있다. 블록을 평형점에서 $A$만큼 옆으로 당겼다 놓을 때, 한 번 왕복하는 시간(주기) $T$를 구하시오.
+  </div>
+
+  <h3>1단계 — 어떤 힘이 작용하는가?</h3>
+  <p>마찰·공기저항 무시. 평형점에서 변위 $x$만큼 떨어지면 스프링이 <strong>되돌리는 방향으로</strong> 힘을 주는 것이 후크 법칙:</p>
+  $$ F = -k x $$
+  <p>음(-) 부호는 "변위와 반대 방향"이라는 뜻. $x>0$이면 $F<0$, $x<0$이면 $F>0$. 이 한 줄이 SHM의 모든 출발점.</p>
+
+  <h3>2단계 — 뉴턴 2법칙 대입</h3>
+  <p>$F = ma$이고 가속도는 위치의 2차 미분이므로:</p>
+  $$ m\frac{d^2 x}{dt^2} = -k x \quad\Longrightarrow\quad \ddot x = -\frac{k}{m}\, x $$
+  <p>"두 번 미분하면 자기 자신의 음수배"가 되는 함수가 답입니다. 이 패턴을 찾는 것이 다음 단계.</p>
+
+  <h3>3단계 — 사인을 시도해 본다(추측 후 검증)</h3>
+  <p>"두 번 미분해서 자기 자신의 -배"가 되는 가장 간단한 함수가 $\cos$이라는 사실은 알고 있죠? 그래서 시도:</p>
+  $$ x(t) = A\cos(\omega t) $$
+  <p>한 번 미분: $\dot x = -A\omega\sin(\omega t)$. 두 번 미분: $\ddot x = -A\omega^2\cos(\omega t) = -\omega^2 \cdot x(t)$.</p>
+  <p>이걸 2단계 식에 대입:</p>
+  $$ -\omega^2 x = -\frac{k}{m} x \quad\Longrightarrow\quad \omega^2 = \frac{k}{m} $$
+  <p><strong>각진동수가 자동으로 결정</strong>됩니다. $\omega = \sqrt{k/m}$.</p>
+
+  <h3>4단계 — 주기로 변환</h3>
+  <p>$\cos(\omega t)$가 한 사이클 도는 데 $\omega T = 2\pi$이어야 하므로:</p>
+  $$ T = \frac{2\pi}{\omega} = 2\pi\sqrt{\frac{m}{k}} $$
+  <p>주파수는 $f = 1/T = \dfrac{1}{2\pi}\sqrt{k/m}$.</p>
+
+  <h3>5단계 — 검증: 식이 합리적인가?</h3>
+  <ul>
+    <li><strong>차원:</strong> $\sqrt{\text{kg}/(\text{N/m})} = \sqrt{\text{kg}\cdot\text{m/N}} = \sqrt{\text{kg}\cdot\text{m}/(\text{kg}\cdot\text{m/s}^2)} = \sqrt{\text{s}^2} = \text{s}$. ✓</li>
+    <li><strong>극한:</strong> $k$ → ∞(매우 단단한 스프링) → $T$ → 0 (빠른 진동). ✓ <em>스프링이 단단할수록 빨리 흔들림.</em></li>
+    <li><strong>극한:</strong> $m$ → ∞ (매우 무거운 추) → $T$ → ∞ (느린 진동). ✓ <em>무거운 추는 느리게 흔들림.</em></li>
+    <li><strong>진폭 $A$ 의존성:</strong> 식에 $A$가 없음. → <strong>SHM의 신비: 큰 진폭이든 작은 진폭이든 같은 주기.</strong> 갈릴레오의 발견.</li>
+  </ul>
+  <div class="tip"><strong>5단계 사고법은 모든 물리 식 유도에 보편</strong> — ① 힘 식별 → ② 뉴턴 2법칙 → ③ 시험해 → ④ 주기·진동수 환산 → ⑤ 차원·극한 검증. 이 패턴을 한 번 익히면 진자, 물리진자, LC 회로까지 모두 같은 흐름.</div>
+
+  <h2>강의실 예제</h2>
+
   <h2>흔한 오개념</h2>
   <table>
     <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
@@ -198,7 +589,432 @@
     <li>(실험) Phyphox 가속도계로 본인 진자(주머니+끈) 주기 측정. 길이 바꿔 $T\propto\sqrt{L}$ 확인. A4 한 장.</li>
   </ol>
 
-  <div class="note"><strong>다음 주</strong> — 1–6주 전 범위 <strong>중간시험</strong>.</div>
+  <h2>✏️ 연습문제 — 집에서 풀어보기</h2>
+  <p>한 문제당 풀이 토글이 있습니다. 먼저 본인이 풀어보고, 막히면 풀이를 펼치세요. 중간시험 한 주 전에 다시 푸는 걸 추천합니다.</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 1</strong> (스프링 주기) — $k=200$ N/m, $m=0.5$ kg. 주기와 주파수는?</summary>
+    <p style="margin-top:10px">$\omega = \sqrt{200/0.5} = \sqrt{400} = 20$ rad/s. $T = 2\pi/20 \approx 0.314$ s. $f = 1/T \approx 3.18$ Hz.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 2</strong> (진자 주기) — 운동장 그네 줄 길이가 3.5 m. 주기는?</summary>
+    <p style="margin-top:10px">$T = 2\pi\sqrt{3.5/9.8} \approx 2\pi\sqrt{0.357} \approx 3.76$ s. <em>실제로 그네에 앉아 머리속으로 카운트해 보면 약 3~4초가 맞습니다.</em></p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 3</strong> (최대속도) — $A = 0.08$ m, $\omega = 12$ rad/s인 SHM. 평형점에서의 최대 속력과 최대 가속도?</summary>
+    <p style="margin-top:10px">$v_{\max} = A\omega = 0.96$ m/s (평형점에서). $a_{\max} = A\omega^2 = 11.52$ m/s² (양 끝에서). <strong>속도가 최대인 곳에서 가속도는 0, 가속도가 최대인 곳에서 속도는 0.</strong> 정반대.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 4</strong> (에너지 분배) — $A = 0.1$ m, $k = 50$ N/m, $m = 0.5$ kg. $x = 0.06$ m일 때 KE와 속력?</summary>
+    <p style="margin-top:10px">$E = \tfrac{1}{2}kA^2 = \tfrac{1}{2}(50)(0.01) = 0.25$ J. $U = \tfrac{1}{2}kx^2 = \tfrac{1}{2}(50)(0.0036) = 0.09$ J. $K = E - U = 0.16$ J. $v = \sqrt{2K/m} = \sqrt{0.64} = 0.8$ m/s.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 5</strong> (위상) — $x(t) = 0.05\sin(4\pi t + \pi/3)$ m. (a) 진폭, (b) 주기, (c) 초기 위치, (d) 초기 속도?</summary>
+    <p style="margin-top:10px">(a) $A = 0.05$ m. (b) $\omega = 4\pi$ → $T = 2\pi/(4\pi) = 0.5$ s. (c) $x(0) = 0.05\sin(\pi/3) = 0.05 \cdot (\sqrt{3}/2) \approx 0.0433$ m. (d) $v = 0.05 \cdot 4\pi \cdot \cos(\pi/3) = 0.2\pi \cdot 0.5 \approx 0.314$ m/s.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 6</strong> (감쇠 — 진폭 감소) — 어떤 감쇠 SHM에서 5초마다 진폭이 절반으로 줄었다. 감쇠계수 비 $\gamma = b/(2m)$는?</summary>
+    <p style="margin-top:10px">진폭이 $e^{-\gamma t}$로 감소하므로 $e^{-5\gamma} = 1/2$ → $5\gamma = \ln 2$ → $\gamma = \ln 2 / 5 \approx 0.139$ /s.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 7</strong> (임계 감쇠 설계) — $m = 1500$ kg 자동차에 $k = 60000$ N/m 스프링 4개. 한 휠당 임계감쇠 계수는?</summary>
+    <p style="margin-top:10px">한 휠이 부담하는 질량 $m_w = 1500/4 = 375$ kg. $b_c = 2\sqrt{m_w k} = 2\sqrt{375 \cdot 60000} = 2\sqrt{2.25 \times 10^7} \approx 9487$ kg/s = 약 9.5 kN·s/m. <em>실제 자동차 댐퍼는 보통 $\zeta \approx 0.2 \sim 0.4$로 약간 저감쇠 — 승차감과 안정성 절충.</em></p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 8</strong> (공명 정성) — 시속 60 km/h로 달릴 때 차가 강하게 흔들린다. 도로 요철 간격이 0.8 m라면 차의 고유 진동수는?</summary>
+    <p style="margin-top:10px">속도 60 km/h = 16.67 m/s. 요철 통과 주파수 = $16.67 / 0.8 \approx 20.8$ Hz. 차가 가장 흔들렸으니 <strong>차의 고유 진동수도 약 20.8 Hz</strong> (또는 그 약수). 실제 차량 본체는 1~2 Hz 정도라 이 시나리오는 비현실적이지만 공명 사고법 연습용.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 9</strong> (수직 스프링) — 천장에 매단 스프링 $k = 100$ N/m에 $m = 0.4$ kg을 달았다. (a) 평형 위치는 자연 길이에서 얼마나 내려가? (b) 추를 평형점에서 0.05 m 더 당겼다 놓을 때 주기는?</summary>
+    <p style="margin-top:10px">(a) $kx_0 = mg$ → $x_0 = mg/k = 0.4 \cdot 9.8 / 100 = 0.0392$ m ≈ 3.9 cm. (b) <strong>중력은 평형점만 옮길 뿐 주기에 영향 없음.</strong> $T = 2\pi\sqrt{0.4/100} \approx 0.397$ s. 수평 스프링과 동일한 식.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 10</strong> (단진자 길이 정하기) — 정확히 1초 간격으로 똑딱거리는 시계 진자(반주기 1초)를 만들려면 길이는?</summary>
+    <p style="margin-top:10px">한 주기 $T = 2$ s → $L = g(T/(2\pi))^2 = 9.8/(\pi^2) \approx 0.993$ m. 약 1 m. <strong>이것이 추시계의 표준 진자 길이</strong>. 옛날 vertical clock(grandfather clock)이 큰 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 11</strong> (SHM의 평균값) — 진폭 $A$인 SHM에서 한 주기 동안 (a) 평균 변위, (b) 평균 속도, (c) $|x|$의 평균, (d) $x^2$의 평균?</summary>
+    <p style="margin-top:10px">(a) 0 (대칭). (b) 0 (한 주기). (c) $2A/\pi \approx 0.637 A$. (d) $A^2/2$ (그래서 평균 PE는 $\tfrac{1}{2}k\cdot A^2/2 = \tfrac{1}{4}kA^2 = E/2$ — 평균 KE와 같음).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 12</strong> (위상 차이) — 두 SHM $x_1 = A\cos(\omega t)$와 $x_2 = A\cos(\omega t + \pi/2)$. 이 둘의 합 $x_1 + x_2$의 진폭과 위상은?</summary>
+    <p style="margin-top:10px">두 코사인의 합 공식: $x_1 + x_2 = A[\cos\omega t + \cos(\omega t + \pi/2)] = A\sqrt{2}\cos(\omega t + \pi/4)$. <strong>진폭 = $A\sqrt{2}$, 위상 = $\pi/4$.</strong> 90° 위상차의 두 동주파 진동을 합하면 같은 주파수의 진동이지만 진폭은 √2배. (W8 파동의 phasor 분석 도구.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ★</strong> (Q-factor) — 어느 진동계의 $\zeta = 0.05$. (a) Q = $1/(2\zeta)$ 정의로 Q값은? (b) 진폭이 1/$e$로 줄 때까지 걸리는 시간이 한 주기의 몇 배?</summary>
+    <p style="margin-top:10px">(a) $Q = 1/0.1 = 10$. (b) 감쇠시간 상수 $\tau = 1/\gamma = 2m/b = 1/(\zeta\omega_0)$. 한 주기 $T = 2\pi/\omega_0$. 비율 $\tau/T = 1/(2\pi\zeta) = Q/\pi \approx 3.18$. <strong>저Q 시스템은 몇 진동만에 사라지지만 고Q (수정 결정 Q ≈ 10⁵) 시스템은 수만 번 진동을 유지</strong> — 정밀 시계의 핵심 원리.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ★★</strong> (물리진자) — 길이 $L$인 균일한 막대(질량 $M$)를 한쪽 끝에서 매달아 흔든다. 작은 각도 진동의 주기는?</summary>
+    <p style="margin-top:10px">한 끝 축에 대한 관성모멘트 $I = \tfrac{1}{3}ML^2$. 무게중심까지 거리 $d = L/2$. 물리진자 식 $T = 2\pi\sqrt{I/(Mgd)} = 2\pi\sqrt{(L^2/3)/(g L/2)} = 2\pi\sqrt{2L/(3g)}$. <strong>같은 길이의 단순진자보다 √(2/3) ≈ 0.82배 짧은 주기.</strong> 즉 물리적인 막대는 같은 길이의 끈+점추보다 빨리 흔들림.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ★★★</strong> (강제진동 정상상태) — $m\ddot x + b\dot x + kx = F_0\cos(\omega_d t)$의 정상해 진폭이 $A(\omega_d) = F_0 / \sqrt{m^2(\omega_0^2 - \omega_d^2)^2 + b^2\omega_d^2}$. $\omega_d \to 0$과 $\omega_d \to \infty$의 극한 진폭은?</summary>
+    <p style="margin-top:10px">$\omega_d \to 0$: $A \to F_0/(m\omega_0^2) = F_0/k$ — <strong>정적인 힘이 만드는 변위(후크 법칙).</strong> 외력이 매우 천천히 변하면 시스템이 따라가며 매 순간 평형. $\omega_d \to \infty$: $A \to F_0/(m\omega_d^2) \to 0$ — <strong>너무 빠른 외력에 시스템 관성이 따라가지 못함.</strong> 공명($\omega_d \approx \omega_0$)에서 진폭이 가장 큼. 이 식이 라디오 동조, MRI, 광흡수까지 모두 설명.</p>
+  </details>
+
+  <h2>❓ 학생 단골 질문 (FAQ)</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q1.</strong> "단진동(SHM)"이라는 이름의 "단(simple)"이 정확히 뭘 뜻하나요?</summary>
+    <p style="margin-top:10px">"단(simple) = 사인 곡선 하나로 표현되는" 정도의 의미입니다. 후크 법칙 $F = -kx$가 정확히 성립할 때 운동이 단일 사인이 되어요. 진자도 작은 각도에서만 SHM이고, 큰 각도에선 사인 + 고조파 섞인 비단순 운동(타원적 진동)이 됩니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q2.</strong> 진폭이 커도 주기가 같다는 게 정말인가요? 직관적으로 큰 진폭이 더 멀리 가니 더 오래 걸릴 것 같은데.</summary>
+    <p style="margin-top:10px">"멀리 가지만 그만큼 더 빠르게" 가서 시간이 같아집니다. 큰 진폭에서는 양 끝이 더 멀지만 평형점 부근에서 속도도 더 큽니다($v_{\max} = A\omega$). 두 효과가 정확히 상쇄. 단, <strong>완벽한 후크 법칙</strong>이 성립할 때만. 단진자가 큰 각도에서 약간 느려지는 이유는 $\sin\theta \neq \theta$가 되어 후크 법칙이 깨지기 때문.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q3.</strong> 단진자에서 추의 무게는 정말 주기와 무관한가요? 무거우면 더 잘 떨어질 것 같은데.</summary>
+    <p style="margin-top:10px">예. 무거우면 중력도 크지만 관성($ma$의 $m$)도 같이 커지므로 정확히 상쇄됩니다. 자유낙하에서 무게 무관과 같은 이유. 1g와 10kg 진자가 같이 흔들리는 갈릴레오의 발견. 단, 끈 자체의 무게나 공기저항은 진짜 무게에 의존.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q4.</strong> 각진동수 $\omega$와 진동수 $f$, 주기 $T$가 자꾸 헷갈립니다.</summary>
+    <p style="margin-top:10px">$T$ [s] = 한 사이클 시간. $f$ [Hz] = 초당 사이클 수 = $1/T$. $\omega$ [rad/s] = 초당 라디안 = $2\pi f = 2\pi/T$. 식의 $\cos(\omega t)$에서 $\omega t$가 라디안이라 $2\pi$가 들어옴. <strong>외울 한 줄: $\omega = 2\pi f = 2\pi/T$.</strong></p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q5.</strong> 위상 $\phi$는 왜 필요한가요? 그냥 $\cos$ 대신 $\sin$ 쓰면 안 되나요?</summary>
+    <p style="margin-top:10px">$\sin = \cos(\theta - \pi/2)$이므로 둘은 위상 차이만 있을 뿐 같은 함수족입니다. 일반해 $A\cos(\omega t + \phi)$의 $\phi$가 <strong>두 초기조건</strong>(초기 위치 $x_0$, 초기 속도 $v_0$)을 받아냅니다. $A$와 $\phi$ 두 자유도가 있어야 운동방정식 (2차)의 두 초기조건을 정확히 표현 가능.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q6.</strong> SHM 문제에서 $\sin$인지 $\cos$인지 어떻게 정하나요?</summary>
+    <p style="margin-top:10px">초기조건으로 결정. $t=0$에서 최대 변위에 정지($v_0=0, x_0=A$)면 $A\cos(\omega t)$가 깔끔. $t=0$에서 평형점을 양의 방향 통과($x_0=0, v_0=A\omega$)면 $A\sin(\omega t)$가 깔끔. 어느 쪽이든 결과(주기·에너지)는 같습니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q7.</strong> 평형점에서 가속도 0, 양 끝에서 가속도 최대 — 직관적으로 이해 안 됩니다.</summary>
+    <p style="margin-top:10px">가속도 = 복원력 / 질량 = $-kx/m$. 평형점($x=0$)이면 복원력 0 → 가속도 0 (속도는 최대). 양 끝($x=\pm A$)이면 복원력이 가장 강해 가속도 최대(속도 0, 잠시 멈춤). <strong>속도와 가속도는 SHM에서 시간적으로 정반대(90° 위상차)</strong>.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q8.</strong> 수직으로 매달린 스프링도 주기가 같나요? 중력이 있어서 다를 것 같은데.</summary>
+    <p style="margin-top:10px">놀랍게도 같습니다. 중력은 평형점을 $x_0 = mg/k$만큼 아래로 옮길 뿐, 평형점 기준으로 변위 $x$를 측정하면 운동방정식이 정확히 $m\ddot x = -kx$가 됩니다. 중력이 사라진다고 봐도 됨. 따라서 $T = 2\pi\sqrt{m/k}$로 동일.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q9.</strong> 감쇠진동에서 $\zeta = b/b_c$의 의미는?</summary>
+    <p style="margin-top:10px">$\zeta$ (감쇠비)는 임계감쇠를 1로 정규화한 무차원 양. $\zeta < 1$ → 흔들리며 줄어듦, $\zeta = 1$ → 가장 빨리 정지, $\zeta > 1$ → 천천히 정지. 자동차 서스펜션은 $\zeta \approx 0.2 \sim 0.4$ (약간 저감쇠)로 설계 — 완전 임계는 너무 단단한 느낌.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q10.</strong> 공명이 나쁜 것만은 아닌가요? 라디오 같은 데서 좋게 쓰지 않나요?</summary>
+    <p style="margin-top:10px">맞습니다. 라디오 동조 회로는 공명을 이용해 한 주파수만 골라냄. MRI는 수소핵의 공명. 마이크로파 오븐은 물 분자 공명. 악기는 공명 강화기. <strong>공명은 도구이자 위협</strong> — 빌딩·다리 등 안전이 중요한 곳에서는 공명을 피하고, 신호 처리에서는 공명을 활용.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q11.</strong> SHM이 양자역학에 어떻게 등장한다는 건가요?</summary>
+    <p style="margin-top:10px">분자가 결합 길이 근처에서 진동하는 것이 양자 조화진동자. 에너지가 $E_n = \hbar\omega(n + 1/2)$로 양자화됩니다. 광자 자체도 전자기장의 양자화된 SHM 모드. 거의 모든 양자장 이론이 SHM을 출발점으로 삼아요. 4학년 양자역학에서 첫 정확해 풀이 모델로 등장.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q12.</strong> 진자 시계가 정확한 비결은?</summary>
+    <p style="margin-top:10px">(1) 작은 진폭 유지 → 소진동 근사 정확. (2) 임펄스(매 사이클 살짝 밀어줌)로 감쇠 보충 → 진폭 일정. (3) 온도 변화로 길이가 변하면 주기가 바뀌므로 invar 합금(저열팽창) 사용. 옛 시계는 단진자, 손목시계는 hairspring(작은 비틀림 진자), 디지털 시계는 수정(쿼츠) 결정 SHM.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q13.</strong> 타코마 다리 사고는 정확히 공명이었나요?</summary>
+    <p style="margin-top:10px">엄밀히 말하면 단순한 공명이 아니라 <strong>aeroelastic flutter(공탄성 플러터)</strong>입니다 — 바람과 다리 비틀림 운동의 자기강화 결합. 다만 결과적으로 다리 고유 모드가 폭발적으로 증폭된 건 같으니, 학부 수준에서는 "공명 사고"로 부릅니다. 이후 모든 장교량은 풍동 실험을 거치게 됐어요.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q14.</strong> 작은 각도 근사 $\sin\theta \approx \theta$는 몇 도까지 안전한가요?</summary>
+    <p style="margin-top:10px">5°에서 오차 0.1%, 10°에서 0.5%, 20°에서 약 2%, 30°에서 약 5%. 학부 실험에서는 <strong>10° 이내</strong>를 권장. 진자 시계도 진폭 5° 정도로 설계. 큰 각도 진자의 정확한 주기는 타원적분으로 구해지며 진폭이 클수록 길어집니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q15.</strong> 중간시험에 단진동이 어떻게 출제될까요?</summary>
+    <p style="margin-top:10px">전형적으로 (a) 주기·진동수 계산(공식 직접), (b) $x(t)$로부터 $v$, $a$ 미분 또는 최대값 산출, (c) 에너지 보존으로 어떤 위치에서의 속도, (d) 감쇠/공명의 정성적 구분. 본 강의안의 연습문제 1~6번이 거의 그대로 출제되는 유형.</p>
+  </details>
+
+  <h2>📝 자주 틀리는 계산 실수 BEST 10</h2>
+  <p>본인이 시험에서 답이 틀렸을 때 <em>먼저 의심해야 할 10가지</em>. 단진동에서 점수 잃는 가장 흔한 이유들:</p>
+
+  <table>
+    <thead><tr><th>실수</th><th>예시</th><th>예방법</th></tr></thead>
+    <tbody>
+      <tr><td>1. 단진자에서 $\sin\theta \approx \theta$ 잊음</td><td>$\theta = 60°$인데 $T = 2\pi\sqrt{L/g}$ 그대로</td><td>큰 각도면 소진동 근사가 안 됨 명시</td></tr>
+      <tr><td>2. 진폭과 변위 혼동</td><td>$v = A\omega$ 대신 $v = x\omega$로 적음</td><td>$A$는 최대 진폭 (상수), $x$는 시각마다 변하는 위치</td></tr>
+      <tr><td>3. $\omega$와 $f$ 혼용</td><td>주파수 5 Hz를 $\omega = 5$로 대입</td><td>$\omega = 2\pi f$이므로 5 Hz면 $\omega = 10\pi$</td></tr>
+      <tr><td>4. 각도 단위(rad vs deg)</td><td>위상 $\phi = 30$이면 30도? 30 rad?</td><td>위상은 항상 라디안. 시험 시 계산기 RAD 모드</td></tr>
+      <tr><td>5. 에너지 식의 진폭</td><td>$E = \tfrac{1}{2}kx^2$로 적음</td><td>총에너지는 $\tfrac{1}{2}kA^2$ — 양 끝에서의 PE</td></tr>
+      <tr><td>6. cm vs m</td><td>$A = 5$ cm을 5로 대입 → $E$가 1만 배</td><td>모든 길이는 m로 통일 후 대입</td></tr>
+      <tr><td>7. 수직 스프링에서 $g$ 추가</td><td>$T = 2\pi\sqrt{m/k} + g$ 같이 헛소리</td><td>수직도 같은 식. 중력은 평형점만 옮김</td></tr>
+      <tr><td>8. 임계감쇠 식 헷갈림</td><td>$b_c = \sqrt{mk}$로 적음 (계수 2 누락)</td><td>$b_c = 2\sqrt{mk}$ — "2"가 핵심</td></tr>
+      <tr><td>9. 평균 vs 최댓값</td><td>"한 주기 평균 변위"를 $A$로 답</td><td>한 주기 평균 변위는 0 (대칭)</td></tr>
+      <tr><td>10. 단위 누락</td><td>"3.14"라고만 적고 s 누락</td><td>주기는 s, 진동수는 Hz, 각진동수는 rad/s</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>한 줄 시험장 체크리스트</strong> — ① 각도 모드(RAD), ② 단위 통일(cm→m), ③ $\omega = 2\pi f$ 환산, ④ 진폭 vs 변위 구분, ⑤ 답에 단위. 이 5가지를 매 문제마다 확인하면 SHM 문제는 거의 다 맞습니다.
+  </div>
+
+  <h2>🧪 핸드폰으로 5분 실험 — Phyphox로 $g$ 추정</h2>
+  <p>본인 핸드폰의 가속도계와 끈 한 줄로 $g$를 0.1 m/s² 정밀도로 추정 가능합니다. 갈릴레오의 실험을 직접 따라하는 셈.</p>
+
+  <h3>실험 — 단진자로 중력가속도 측정 (5분)</h3>
+  <ol>
+    <li>끈(스마트폰 충전기 줄도 OK)에 무거운 물체(가방 자물쇠·열쇠 뭉치)를 매달아 천장이나 책상 모서리에 고정.</li>
+    <li>끈의 길이 $L$을 자로 측정 (못 추 무게중심까지). 예: $L = 0.85$ m.</li>
+    <li>핸드폰의 <a href="https://phyphox.org/">Phyphox</a> 앱에서 "Pendulum" 실험 또는 "Acoustic Stopwatch" 사용.</li>
+    <li>진자를 작은 각도(< 15°)로 놓아 <strong>10주기</strong>의 시간을 측정. 예: 18.6 s → $T = 1.86$ s.</li>
+    <li>$T = 2\pi\sqrt{L/g}$를 $g$에 대해 풀면 $g = 4\pi^2 L / T^2$.</li>
+    <li>대입: $g = 4\pi^2 (0.85) / (1.86)^2 \approx 9.69$ m/s². <strong>실제 값 9.81의 1.2% 이내!</strong></li>
+  </ol>
+  <p><em>오차 원인:</em> 끈 길이 측정 오차, 큰 각도 근사 깨짐, 끈 자체의 질량. 10주기를 측정하는 이유 — 한 주기씩 재면 시작·정지 클릭 오차가 ±0.2 s로 큰데, 10주기면 오차가 1/10로 줄어듦. <strong>측정 횟수 늘리기는 가장 싸고 효과적인 정밀도 향상 방법.</strong></p>
+  <p><em>심화:</em> 길이 $L$을 0.5 m, 0.85 m, 1.2 m로 바꿔 $T$ 측정 → $T^2$ vs $L$ 그래프를 그리면 직선이 나오고 그 기울기가 $4\pi^2/g$. 직선 회귀로 $g$를 더 정확히.</p>
+
+  <h2>🌍 다양한 진동의 실생활 데이터</h2>
+  <p>식을 풀 때 답이 합리적인지 판단하려면, 평소에 <em>실제 진동의 주기·주파수</em>를 머리에 두고 있는 게 큰 도움이 됩니다.</p>
+
+  <table>
+    <thead><tr><th>진동계</th><th>주기 / 주파수</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>벽시계 진자(추시계)</td><td>$T = 2$ s, $f = 0.5$ Hz</td><td>$L \approx 1$ m</td></tr>
+      <tr><td>손목시계 hairspring</td><td>$f \approx 4$ Hz (8박자/초)</td><td>스위스 시계 표준</td></tr>
+      <tr><td>쿼츠 시계 수정 결정</td><td>$f = 32768$ Hz = $2^{15}$</td><td>15번 분주로 1 Hz</td></tr>
+      <tr><td>그네 (운동장)</td><td>$T \approx 3 \sim 4$ s</td><td>$L \approx 2 \sim 4$ m</td></tr>
+      <tr><td>자동차 서스펜션</td><td>$f \approx 1 \sim 2$ Hz</td><td>$\zeta \approx 0.3$</td></tr>
+      <tr><td>지진(P파 vs S파)</td><td>$f \approx 0.1 \sim 10$ Hz</td><td>건물 고유진동수와 겹치면 위험</td></tr>
+      <tr><td>고층빌딩 1차 모드</td><td>$T \approx N/10$ s ($N$=층수)</td><td>30층 ≈ 3 s, 100층 ≈ 10 s</td></tr>
+      <tr><td>골든게이트 다리(횡)</td><td>$T \approx 18$ s</td><td>현수교 특성</td></tr>
+      <tr><td>타코마 다리(붕괴 직전)</td><td>$T \approx 5$ s, 진폭 ±9 m</td><td>1940년 영상 유명</td></tr>
+      <tr><td>음파 — 사람 가청</td><td>$20 \sim 20000$ Hz</td><td>나이 들수록 고주파 손실</td></tr>
+      <tr><td>중간 도(C4) 음표</td><td>$f = 261.6$ Hz</td><td>피아노 표준</td></tr>
+      <tr><td>분자 진동(O-H 결합)</td><td>$f \approx 10^{14}$ Hz</td><td>적외선 영역</td></tr>
+      <tr><td>원자 시계 (세슘)</td><td>$f = 9.192 \times 10^9$ Hz</td><td>1초 정의의 기준</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>활용</strong> — 시험에서 "어떤 진자의 주기가 0.001 s"라는 답이 나오면 사람 손목시계보다 훨씬 빠른 셈. 일상 진자에선 보통 1~3 s. 합리성 점검에 유용.</div>
+
+  <h2>🏟️ 실생활 응용 깊게 보기</h2>
+
+  <h3>응용 1 — 추시계의 정밀도 비결</h3>
+  <p>잘 만든 추시계는 한 달 ±5 s 이내 (100만 분의 1 정밀도). 비결:</p>
+  <ul>
+    <li>진자 길이 $L$이 온도에 따라 변함을 보정 → invar 합금($\alpha \approx 10^{-6}$/K).</li>
+    <li>진폭을 작게 유지(< 5°) → 소진동 근사 정확.</li>
+    <li>임펄스(escapement)로 감쇠 보충 → 진폭 일정.</li>
+  </ul>
+  <p>식: $\Delta T/T = \tfrac{1}{2}\Delta L/L$. 1 m 진자에서 1 mm 길이 오차 → 주기 0.05% 변동 → 하루 약 43 s 오차. 이 정도 정밀도가 17세기 항해의 경도 측정 문제를 해결한 동기.</p>
+
+  <h3>응용 2 — 자동차 서스펜션 — 임계감쇠를 향해</h3>
+  <p>스프링 + 댐퍼(쇼크 업소버) 조합. 설계 목표:</p>
+  <ul>
+    <li>충격 흡수: 스프링이 부드러워야 함 → 작은 $k$.</li>
+    <li>흔들림 빨리 멈춤: 댐퍼가 임계감쇠 근처 → $\zeta \approx 0.3 \sim 0.4$.</li>
+    <li>너무 부드러우면 멀미, 너무 단단하면 노면 충격 그대로 전달.</li>
+  </ul>
+  <p>고급 차량은 <strong>가변 댐퍼</strong>로 노면에 따라 $b$를 실시간 조절(자기유체학적 — MR 댐퍼). 5학년 메카트로닉스 강의 주제로 다시 등장.</p>
+
+  <h3>응용 3 — 빌딩 내진 설계와 동조 질량 댐퍼(TMD)</h3>
+  <p>지진과 빌딩의 고유진동수가 겹치면 공명 → 붕괴. 대책:</p>
+  <ul>
+    <li>고유진동수를 지진의 우세 주파수(0.5~5 Hz) 밖으로 설계.</li>
+    <li><strong>TMD (Tuned Mass Damper)</strong>: 빌딩 옥상에 큰 추를 매달아 빌딩과 반대 위상으로 흔들리게 함 → 진동 흡수.</li>
+    <li>대만 Taipei 101에 730톤 짜리 거대 추(직경 5.5 m). 관광 명소.</li>
+    <li>한국 롯데월드타워에도 약 800톤 TMD 설치.</li>
+  </ul>
+  <p>원리: 두 SHM의 결합. 메인 시스템 + 보조 진동자가 반대 위상으로 진동하면 외력 에너지가 보조 쪽으로 흘러가 메인이 정지. (4학년 진동학 — Vibration Absorber)</p>
+
+  <h3>응용 4 — Tacoma Narrows 다리 (1940 붕괴) ★</h3>
+  <p>개통 4개월 만에 바람(약 64 km/h)에 의해 비틀림 진동 → 진폭 ±9 m → 붕괴. 영상이 유튜브에 풍부.</p>
+  <ul>
+    <li>다리 비틀림 모드의 고유진동수 ≈ 0.2 Hz (5초 주기).</li>
+    <li>특정 풍속에서 와류 박리(Kármán vortex shedding)가 같은 주파수로 발생 → 자기강화 결합.</li>
+    <li>이후 모든 장교량은 <strong>풍동 실험</strong>으로 검증. 영국 Severn Bridge, 일본 Akashi-Kaikyō 등.</li>
+  </ul>
+  <p>학부 모든 토목·건축 학생이 첫 학기에 보는 영상. <strong>"공명을 우습게 보지 말 것"</strong>의 산 증거.</p>
+
+  <h3>응용 5 — MEMS 가속도계와 자이로 (스마트폰 안)</h3>
+  <p>핸드폰 화면 회전, 게임 모션 컨트롤, 자동차 에어백 트리거 — 모두 작은 SHM 시스템.</p>
+  <ul>
+    <li>실리콘 위에 100 μm 크기 스프링+추 식각.</li>
+    <li>가속도가 가해지면 추가 변위 → 정전 용량 변화 측정 → 가속도 환산.</li>
+    <li>자이로는 코리올리 힘으로 회전 검출. 같은 SHM 원리.</li>
+    <li>고유 주파수 수 kHz, 매우 작은 $\zeta$로 빠르게 응답.</li>
+  </ul>
+  <p>여러분의 핸드폰 안에 단진동 시스템이 6개 이상(3축 가속도 + 3축 자이로) 들어 있어요. 한 학기 SHM 공부가 그대로 산업 응용.</p>
+
+  <h2>📚 부록 — 다양한 진동계 주기 표</h2>
+  <p>SHM은 후크 법칙 형태($F \propto -x$)를 가진 시스템 어디에나 등장. 시스템마다 "$k$"와 "$m$"에 해당하는 양이 다를 뿐.</p>
+
+  <table>
+    <thead><tr><th>진동계</th><th>주기 $T$</th><th>"유효 $k$"</th><th>"유효 $m$"</th></tr></thead>
+    <tbody>
+      <tr><td>수평 스프링-질량</td><td>$2\pi\sqrt{m/k}$</td><td>$k$</td><td>$m$</td></tr>
+      <tr><td>수직 스프링-질량</td><td>$2\pi\sqrt{m/k}$</td><td>$k$</td><td>$m$</td></tr>
+      <tr><td>단순진자(짧은 끈)</td><td>$2\pi\sqrt{L/g}$</td><td>$mg/L$</td><td>$m$</td></tr>
+      <tr><td>물리진자(I, 거리 $d$)</td><td>$2\pi\sqrt{I/(mgd)}$</td><td>$mgd$</td><td>$I$ (관성모멘트)</td></tr>
+      <tr><td>비틀림 진자(상수 $\kappa$)</td><td>$2\pi\sqrt{I/\kappa}$</td><td>$\kappa$</td><td>$I$</td></tr>
+      <tr><td>U자관 액체 진동(길이 $\ell$)</td><td>$2\pi\sqrt{\ell/(2g)}$</td><td>$2\rho g A$</td><td>$\rho A \ell$</td></tr>
+      <tr><td>LC 회로(다음에 배움)</td><td>$2\pi\sqrt{LC}$</td><td>$1/C$</td><td>$L$ (인덕턴스)</td></tr>
+      <tr><td>분자 진동(이원자)</td><td>$2\pi\sqrt{\mu/k}$</td><td>결합력 $k$</td><td>환산질량 $\mu$</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>패턴</strong> — 모두 $T = 2\pi\sqrt{(\text{관성})/(\text{복원})}$의 형태. 어떤 새로운 시스템을 만나도 이 공식을 적용하면 주기를 바로 추정 가능.</div>
+
+  <h2>📐 SI 단위 빠른 참조 — 진동 분야</h2>
+
+  <table>
+    <thead><tr><th>양</th><th>SI 단위</th><th>외워둘 환산 / 의미</th></tr></thead>
+    <tbody>
+      <tr><td>주파수 $f$</td><td>Hz = $s^{-1}$</td><td>"초당 사이클 수". 1 Hz = 1번/s</td></tr>
+      <tr><td>각진동수 $\omega$</td><td>rad/s</td><td>$\omega = 2\pi f$. 1 Hz = $2\pi$ rad/s</td></tr>
+      <tr><td>주기 $T$</td><td>s</td><td>$T = 1/f$. 한 사이클 시간</td></tr>
+      <tr><td>위상 $\phi$</td><td>rad</td><td>"각도". 한 사이클 = $2\pi$ rad = $360°$</td></tr>
+      <tr><td>스프링 상수 $k$</td><td>N/m</td><td>"단위 변위당 복원력"</td></tr>
+      <tr><td>감쇠계수 $b$</td><td>kg/s = N·s/m</td><td>"속도당 감쇠력"</td></tr>
+      <tr><td>품질계수 $Q$</td><td>무차원</td><td>$Q = 1/(2\zeta)$. 좋은 진자 Q ≈ 100, 수정 Q ≈ $10^5$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>주파수 단위 환산 — 머릿속 수단</h3>
+  <ul>
+    <li><strong>Hz → rad/s: × $2\pi$</strong>. (예: 5 Hz → $10\pi \approx 31.4$ rad/s)</li>
+    <li><strong>rad/s → Hz: ÷ $2\pi$</strong>. (예: 100 rad/s → $100/(2\pi) \approx 15.9$ Hz)</li>
+    <li><strong>주기 1 s = 1 Hz = $2\pi$ rad/s</strong>. 항상 함께 떠올리는 3종 세트.</li>
+  </ul>
+
+  <h2>🗺️ 개념 지도 — 6주차가 어디로 이어지는가</h2>
+  <p>"단진동 한 번 배우면 끝"이 아닙니다. 한 학기와 4년 동안 SHM은 옷만 갈아입고 계속 등장합니다.</p>
+
+  <pre><code>             ┌── (W7) 중간시험      ──→ 1~6주 통합 평가
+             │
+             ├── (W8) 파동·음파      ──→ 시간+공간 SHM = 파동
+             │                              y(x,t) = A sin(kx − ωt)
+   W6 단진동 ┤
+   F = −kx   ├── (W12) LC 회로       ──→ 전기적 SHM
+   x = A cos │                              T = 2π√(LC)
+   (ωt + φ)  │
+             ├── (W13) AC 회로       ──→ 강제진동·공명의 전기 버전
+             │
+             └── (양자역학)          ──→ 양자 조화진동자
+                                         E_n = ℏω(n + 1/2)
+
+   더 멀리:
+     • 4학년 진동학 — 다자유도 SHM, 모드 해석
+     • 메카트로닉스 — MEMS 가속도계, 진동 액추에이터
+     • 자동제어 — 2차 시스템의 표준형(ζ, ωₙ)
+     • 신호처리 — 푸리에 변환(모든 신호를 SHM의 합으로)
+     • 자율주행 — 차량 동역학, 흔들림 제어
+     • 양자장이론 — 입자 = 장의 진동 모드</code></pre>
+
+  <p><strong>한 줄 결론</strong> — "<em>$F = -kx \Rightarrow x = A\cos(\omega t + \phi)$, $\omega = \sqrt{k/m}$</em>"라는 한 사슬이 향후 모든 진동·파동·양자역학의 뼈대. 이 한 줄이 자동으로 떠오르면 6주차는 마스터.</p>
+
+  <h2>🎯 한 페이지 요약 — 시험 직전 5분 노트</h2>
+  <div class="tip">
+    <h4 style="margin-top:0">절대 잊지 말 것</h4>
+    <ol>
+      <li><strong>SHM의 정의:</strong> 복원력 $\propto -x$ → $x(t) = A\cos(\omega t + \phi)$.</li>
+      <li><strong>각진동수:</strong> $\omega = \sqrt{k/m}$ (스프링), $\omega = \sqrt{g/L}$ (단진자).</li>
+      <li><strong>주기·진동수:</strong> $T = 2\pi/\omega$, $f = 1/T = \omega/(2\pi)$.</li>
+      <li><strong>속도·가속도:</strong> $v_{\max} = A\omega$ (평형점), $a_{\max} = A\omega^2$ (양 끝).</li>
+      <li><strong>총에너지:</strong> $E = \tfrac{1}{2}kA^2$ (진폭만 결정, 위치 무관).</li>
+      <li><strong>감쇠:</strong> 임계감쇠 $b_c = 2\sqrt{mk}$ → 가장 빠른 정지.</li>
+      <li><strong>공명:</strong> 외력 $\omega_d \approx \omega_0$일 때 진폭 폭증.</li>
+      <li><strong>주기는 진폭과 무관</strong> — SHM의 가장 신비로운 성질.</li>
+    </ol>
+  </div>
+
+  <h2>🎓 1분 미니퀴즈 — 5문항</h2>
+  <p>아래 5문항을 1분 안에 머릿속으로 답해 보고 토글로 확인. 4개 이상 맞으면 6주차 OK.</p>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 1.</strong> 스프링 상수를 4배로 하면 주기는 어떻게?</summary>
+    <p style="margin-top:8px">$T \propto 1/\sqrt{k}$이므로 절반(1/2배).</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 2.</strong> 진폭이 2배가 되면 총에너지는?</summary>
+    <p style="margin-top:8px">$E = \tfrac{1}{2}kA^2$이므로 4배. (진폭 제곱 비례)</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 3.</strong> 단진자에서 추가 5 g, 5 kg일 때 주기 비교?</summary>
+    <p style="margin-top:8px">같다. $T = 2\pi\sqrt{L/g}$에 질량이 없음. 길이만 결정.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 4.</strong> 임계 감쇠 계수는?</summary>
+    <p style="margin-top:8px">$b_c = 2\sqrt{mk}$. 진동 없이 가장 빠르게 멈추는 감쇠.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 5.</strong> 평형점에서의 가속도와 양 끝에서의 속도?</summary>
+    <p style="margin-top:8px">평형점: $a = 0$, $v = v_{\max}$. 양 끝: $a = a_{\max}$, $v = 0$. <strong>속도와 가속도는 서로 90° 위상차.</strong></p>
+  </details>
+
+  <h2>📖 더 깊이 — 참고자료</h2>
+  <ul>
+    <li><strong>Halliday, Resnick, Walker</strong>, <em>Fundamentals of Physics</em> 15장 (Oscillations). 그림과 예제가 풍부.</li>
+    <li><strong>Khan Academy 한국어 — 단진동/파동</strong> (무료): 영상 + 즉시 채점 문제.</li>
+    <li><strong>Walter Lewin MIT 8.01 Lecture 1.30</strong> — Driven Oscillations &amp; Resonance. 와인잔 깨기 시연 라이브.</li>
+    <li><strong>3Blue1Brown</strong>, <em>"Differential equations, a tourist's guide"</em> 시리즈 — SHM 미분방정식 시각화.</li>
+    <li><strong>Tacoma Narrows Bridge</strong> 영상 (YouTube): 1940년 원본 흑백 영상. 5분.</li>
+    <li><strong>Phyphox</strong> <a href="https://phyphox.org/">phyphox.org</a> — Pendulum 실험으로 본인 $g$ 측정.</li>
+    <li><strong>PhET Simulations</strong> <a href="https://phet.colorado.edu/">phet.colorado.edu</a> — Masses and Springs / Pendulum Lab 시뮬레이터.</li>
+  </ul>
+
+  <h2>📋 학습 체크리스트</h2>
+  <div class="tip">
+    중간시험(W7) 전에 다음을 모두 ✅ 표시할 수 있는지 확인하세요:
+    <ul style="list-style:none;padding-left:0">
+      <li>☐ 후크 법칙 $F = -kx$로부터 $\omega = \sqrt{k/m}$를 5단계로 유도할 수 있다.</li>
+      <li>☐ 주기·진동수·각진동수의 관계 ($T = 1/f = 2\pi/\omega$)를 자동으로 환산한다.</li>
+      <li>☐ $x(t)$가 주어지면 $v(t)$와 $a(t)$를 미분으로 쓸 수 있다.</li>
+      <li>☐ 평형점·양 끝에서의 속도·가속도 위치를 그림으로 설명할 수 있다.</li>
+      <li>☐ SHM 에너지 보존 $\tfrac{1}{2}kx^2 + \tfrac{1}{2}mv^2 = \tfrac{1}{2}kA^2$를 자유롭게 응용한다.</li>
+      <li>☐ 단진자 주기식이 길이만 결정함을 설명할 수 있다.</li>
+      <li>☐ 저감쇠/임계감쇠/과감쇠를 그래프로 구별할 수 있다.</li>
+      <li>☐ 공명 조건과 일상 사례(라디오, 다리, 와인잔)를 연결할 수 있다.</li>
+      <li>☐ 인터랙티브 데모 1, 2, 3을 직접 가지고 놀아봤다.</li>
+      <li>☐ 연습문제 12개 중 9개 이상을 풀이 없이 풀 수 있다.</li>
+      <li>☐ 1분 미니퀴즈 5문제를 모두 맞췄다.</li>
+      <li>☐ 본인 핸드폰으로 진자 실험을 해서 $g$ 추정값을 얻었다.</li>
+      <li>☐ 자주 틀리는 계산 실수 BEST 10을 한 번 읽어봤다.</li>
+    </ul>
+    하나라도 막히면 그 섹션으로 돌아가 다시 5분만 보세요. 1~6주를 통합한 W7 중간시험 직전에 큰 차이가 납니다.
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>학습 시간 가이드</strong> — 평균적인 학생이 본 페이지를 처음 끝까지 읽는 데 약 90분.
+    데모 3개와 연습문제 12개까지 모두 따라가면 약 3시간이 적정.
+    중간시험 1주 전에는 미니퀴즈 + 연습문제 + 시험 직전 5분 노트 위주로 1.5시간이면 복습 끝.
+  </div>
+
+  <h3>🩺 진단 트리 — 어디부터 시작해야 하지?</h3>
+  <div class="note">
+    <ul>
+      <li>"$F = -kx$가 왜 사인 곡선으로 풀리는지 모른다" → 1번 섹션 + 5단계 유도 다시.</li>
+      <li>"$\omega$, $f$, $T$가 매번 헷갈린다" → SI 단위 표 + Q4 + 미니퀴즈 1, 2.</li>
+      <li>"진자 주기식이 갑자기 튀어나왔다" → 2번 섹션 + 도입 훅 + Q3.</li>
+      <li>"에너지 분배 문제에서 막힘" → 데모 1의 막대 그래프 관찰 + 연습문제 4번.</li>
+      <li>"감쇠/공명이 정성적으로만 이해됨" → 데모 3 + 응용 4(타코마) 다시.</li>
+      <li>"위 모두 OK" → 도전 문제 ★, ★★, ★★★로 도전.</li>
+    </ul>
+  </div>
+
+  <div class="prevnext">
+    <a href="05-rotation.html"><small>← 이전</small>W5. 회전운동</a>
+    <a href="07-midterm.html" class="next"><small>다음 →</small>W7. 중간시험</a>
+  </div>
+
+  <div class="note"><strong>다음 주</strong> — 1–6주 전 범위 <strong>중간시험</strong>. 단진동은 거의 매번 출제되며, 본 강의안의 연습문제 1~6번이 변형되어 나오는 경우가 많습니다.</div>
 </main>
 
 <footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>

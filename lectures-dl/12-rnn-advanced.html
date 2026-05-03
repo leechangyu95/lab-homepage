@@ -456,8 +456,154 @@ class Attention(nn.Module):
     <li>빔 서치의 빔 크기를 너무 키우면 어떤 단점이 생기나요?</li>
   </ol>
 
+  <h2>📐 어텐션 손계산 — Q, K, V로 한 번 굴리기</h2>
+  <p>인코더 출력 3개(K, V), 디코더 한 시점 (Q). 모두 차원 4의 벡터.</p>
+  <ul>
+    <li>Q = (1, 0, 1, 0)</li>
+    <li>K_1 = (1, 0, 0, 0), V_1 = (1, 1, 1, 1)</li>
+    <li>K_2 = (1, 0, 1, 0), V_2 = (2, 2, 2, 2)</li>
+    <li>K_3 = (0, 0, 1, 1), V_3 = (3, 3, 3, 3)</li>
+  </ul>
+  <p><strong>1. 점수 계산.</strong> $s_i = Q \cdot K_i$.<br>
+  $s_1 = 1, s_2 = 2, s_3 = 1$.</p>
+  <p><strong>2. 스케일링.</strong> $\sqrt{d_k} = 2$로 나눔.<br>
+  $s = (0.5, 1.0, 0.5)$.</p>
+  <p><strong>3. softmax.</strong> $\alpha = \text{softmax}(s) = (0.245, 0.510, 0.245)$.</p>
+  <p><strong>4. 가중합.</strong> $\text{output} = \sum \alpha_i V_i = 0.245 \cdot (1,1,1,1) + 0.510 \cdot (2,2,2,2) + 0.245 \cdot (3,3,3,3) = (2.0, 2.0, 2.0, 2.0)$.</p>
+  <p>출력은 $V_2$에 가장 가까운 값입니다 — Q가 K_2와 가장 비슷했기 때문. 이게 어텐션의 본질: <em>"질의(Q)에 가장 비슷한 키(K)의 값(V)을 우선적으로 가져온다"</em>.</p>
+
+  <h2>🌐 어텐션의 직관 — 한 페이지</h2>
+  <p>"학생들이 시험에서 컨닝페이퍼를 어떻게 보는가"를 떠올리면 됩니다.</p>
+  <ul>
+    <li>Q (Query) — "지금 풀고 있는 문제".</li>
+    <li>K (Key) — 컨닝페이퍼에 있는 각 줄의 제목.</li>
+    <li>V (Value) — 그 줄의 본문.</li>
+    <li>점수 $Q \cdot K$ — Q와 K가 얼마나 비슷한가.</li>
+    <li>softmax — 가장 비슷한 줄에 큰 가중치.</li>
+    <li>가중합 — 그 줄들의 본문을 우선적으로 가져옴.</li>
+  </ul>
+  <p>그래서 어텐션을 "학습 가능한 룩업 테이블"이라고도 부릅니다.</p>
+
+  <h2>🎯 Bahdanau vs Luong 어텐션</h2>
+  <table>
+    <thead><tr><th>이름</th><th>점수 함수</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>Bahdanau (Additive)</td><td>$v^\top \tanh(W[Q; K])$</td><td>2015 첫 어텐션. 학습 가능 파라미터 많음.</td></tr>
+      <tr><td>Luong (Dot-Product)</td><td>$Q \cdot K$</td><td>더 단순, 더 빠름. 트랜스포머의 기반.</td></tr>
+      <tr><td>Scaled Dot-Product</td><td>$Q \cdot K / \sqrt{d}$</td><td>큰 차원에서 안정. 트랜스포머의 표준.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🌟 Self-Attention 미리보기</h2>
+  <p>Q, K, V가 모두 같은 시퀀스에서 나오면 <strong>Self-Attention</strong>. 한 시퀀스 내부의 모든 위치가 서로를 참조. 이게 트랜스포머의 핵심.</p>
+  <pre><code># Pseudo
+Q = X @ W_Q   # (T, d)
+K = X @ W_K
+V = X @ W_V
+A = softmax(Q @ K.T / sqrt(d))  # (T, T) 어텐션 행렬
+Y = A @ V                         # (T, d)</code></pre>
+  <p>$T \times T$ 어텐션 행렬이 모든 위치 쌍의 관계를 담음. 그래서 RNN처럼 시간 축으로 순차 처리할 필요가 없고 GPU 병렬화가 자유.</p>
+
+  <h2>🚦 Encoder-Decoder Attention vs Self-Attention</h2>
+  <ul>
+    <li><strong>Encoder-Decoder Attention</strong> — Q는 디코더에서, K/V는 인코더에서. 번역에서 디코더가 인코더 출력을 참조.</li>
+    <li><strong>Self-Attention</strong> — Q, K, V 모두 같은 시퀀스. 시퀀스 내부 관계 학습.</li>
+    <li><strong>Causal Self-Attention</strong> — 미래 토큰을 못 보게 마스크. GPT가 사용.</li>
+  </ul>
+
+  <h2>🎯 Beam Search 직관</h2>
+  <p>매 시점 가장 확률 높은 단어만 고르는 greedy는 단조롭고 함정에 빠지기 쉽습니다.</p>
+  <ul>
+    <li><strong>Greedy</strong> — 매 시점 top-1.</li>
+    <li><strong>Beam Search (k=3)</strong> — 매 시점 상위 3개 후보 트리 탐색.</li>
+    <li><strong>Sampling</strong> — 확률 분포에서 무작위 샘플. 다양성 ↑.</li>
+    <li><strong>Top-k Sampling</strong> — 상위 k개 중에서만 샘플.</li>
+    <li><strong>Top-p (Nucleus) Sampling</strong> — 누적 확률 p%까지의 후보에서.</li>
+    <li><strong>Temperature</strong> — softmax 분포의 날카로움 조절.</li>
+  </ul>
+
+  <h2>📝 연습문제</h2>
+
+  <div class="tip"><strong>연습 1.</strong> 영어 → 한국어 번역기에서 인코더 RNN과 디코더 RNN을 따로 쓰는 이유는?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>두 언어의 어휘·문법이 다르기 때문. 한 RNN이 두 언어를 동시에 모델링하기 어렵고, 인코더는 영어 이해, 디코더는 한국어 생성에 특화시키는 게 효율적. 또 입력과 출력 길이가 다를 수 있어 분리가 자연스러움.</p></details></div>
+
+  <div class="tip"><strong>연습 2.</strong> 어텐션 행렬의 한 행의 합은 얼마인가요? 왜?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>1. Softmax 결과이기 때문. 한 디코더 시점이 모든 인코더 위치에 분배할 가중치의 합이 1이 됨. "어디를 얼마나 볼지"의 확률 분포.</p></details></div>
+
+  <div class="tip"><strong>연습 3.</strong> $Q \cdot K$를 $\sqrt{d_k}$로 나누는 이유?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>$d_k$가 크면 $Q \cdot K$의 분산이 커져 softmax 입력이 매우 큰/작은 값이 됨. 그러면 softmax 출력이 거의 one-hot처럼 되어 그래디언트가 사라짐. $\sqrt{d_k}$로 나누면 분산이 정상화되어 학습 안정.</p></details></div>
+
+  <div class="tip"><strong>연습 4.</strong> 빔 서치의 빔 크기 k를 키우면 어떤 일이?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>장점: 더 다양한 후보 탐색, 더 자연스러운 출력. 단점: (1) 계산량 ×k, (2) k가 너무 크면 보수적이 되어 짧고 일반적인 문장 선호(length bias). 보통 k=4~10.</p></details></div>
+
+  <div class="tip"><strong>연습 5.</strong> Self-Attention의 시간 복잡도는?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>$O(T^2 \cdot d)$. T 위치쌍 모두 점수 계산. 시퀀스가 길면 폭발적. 그래서 long context LLM은 Sparse Attention, Linear Attention 같은 최적화 기법 사용.</p></details></div>
+
+  <h2>❓ FAQ</h2>
+  <div class="note"><strong>Q1. 어텐션과 RNN의 관계?</strong><br>
+  A. 어텐션은 RNN의 한계(고정 컨텍스트 벡터, 긴 의존성)를 보완하는 추가 모듈로 시작. 2017년 트랜스포머가 RNN을 완전 제거하고 어텐션만 남김.</div>
+  <div class="note"><strong>Q2. Q, K, V는 어디서 오나요?</strong><br>
+  A. 같은 입력 X에 세 개의 학습 가능한 행렬 W_Q, W_K, W_V를 곱해서 만듦. <code>Q = X @ W_Q</code> 등. 학습으로 자동 결정됨.</div>
+  <div class="note"><strong>Q3. Multi-Head Attention이 무엇?</strong><br>
+  A. 어텐션을 여러 개 동시에. 각 head가 다른 관계를 학습. 보통 8 또는 16 heads. 차원은 d/h씩 분배. W13에서 자세히.</div>
+  <div class="note"><strong>Q4. 어텐션은 해석 가능한가?</strong><br>
+  A. 어텐션 가중치 시각화로 "이 단어가 저 단어를 참조한다"는 해석 가능. 단, 가중치가 모델의 진짜 의사결정 근거인지는 논쟁 중.</div>
+  <div class="note"><strong>Q5. Cross-Attention과 Self-Attention의 차이?</strong><br>
+  A. Self는 Q, K, V가 같은 시퀀스. Cross는 Q는 한 시퀀스(예: 디코더), K/V는 다른 시퀀스(예: 인코더). 번역의 인코더-디코더 어텐션이 cross.</div>
+
   <h2>👀 다음 주 미리보기 — W13 Transformer & LLM</h2>
   <p>오늘 우리는 RNN+Attention이라는 구조를 봤습니다. 다음 주(마지막!) — 그 RNN조차 버리고 <strong>어텐션만으로</strong> 만든 새로운 신경망 <em>Transformer</em>를 만납니다. 그 위에서 BERT·GPT·ChatGPT가 어떻게 자랐는지, 그리고 우리 미래는 어디로 가는지 끝까지 따라갑니다.</p>
+
+  <h2>🌐 어텐션의 진화 — 한 페이지</h2>
+  <ol>
+    <li><strong>2014 Bahdanau Attention</strong> — Seq2Seq의 컨텍스트 한계 해결. Additive attention.</li>
+    <li><strong>2015 Luong Attention</strong> — Dot-product, 더 단순.</li>
+    <li><strong>2017 Self-Attention (Transformer)</strong> — RNN 제거.</li>
+    <li><strong>2017 Multi-Head Attention</strong> — 여러 어텐션 동시.</li>
+    <li><strong>2018 BERT</strong> — Self-Attention + 양방향 사전학습.</li>
+    <li><strong>2020 GPT-3</strong> — 1750억 파라미터, 인컨텍스트 학습.</li>
+    <li><strong>2022 Flash Attention</strong> — 메모리 효율 개선.</li>
+    <li><strong>2023 Mamba/SSM</strong> — 어텐션 대안 등장.</li>
+  </ol>
+
+  <h2>🎯 Attention 가중치 시각화</h2>
+  <p>학습된 어텐션 가중치를 히트맵으로 그리면 "어느 단어가 어느 단어에 주목하는지" 한눈에 보입니다. 번역에서 영어→한국어 단어 정렬을 어텐션이 자동으로 찾아낸다는 사실이 흥미로움.</p>
+
+  <h2>📚 미니 용어집</h2>
+  <table>
+    <thead><tr><th>용어</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>Seq2Seq</td><td>인코더-디코더 RNN.</td></tr>
+      <tr><td>Context Vector</td><td>인코더의 출력 요약.</td></tr>
+      <tr><td>Attention</td><td>매 시점 어디를 볼지 학습.</td></tr>
+      <tr><td>Q, K, V</td><td>Query, Key, Value 벡터.</td></tr>
+      <tr><td>Score</td><td>Q·K, 관련도.</td></tr>
+      <tr><td>Self-Attention</td><td>Q, K, V가 같은 시퀀스.</td></tr>
+      <tr><td>Cross-Attention</td><td>Q는 디코더, K/V는 인코더.</td></tr>
+      <tr><td>Multi-Head</td><td>여러 어텐션 동시.</td></tr>
+      <tr><td>Beam Search</td><td>상위 k 후보 트리 탐색.</td></tr>
+      <tr><td>Teacher Forcing</td><td>학습 시 정답 토큰을 다음 입력으로.</td></tr>
+      <tr><td>BLEU</td><td>번역 평가 지표.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🗒️ 이번 주 체크리스트</h2>
+  <ul>
+    <li>☐ Seq2Seq의 인코더-디코더 구조를 그릴 수 있다.</li>
+    <li>☐ 고정 컨텍스트 벡터의 한계를 안다.</li>
+    <li>☐ 어텐션의 4단계(점수→softmax→가중합)를 그릴 수 있다.</li>
+    <li>☐ Q, K, V의 역할을 한 줄로 설명할 수 있다.</li>
+    <li>☐ Self-Attention과 Cross-Attention의 차이를 안다.</li>
+    <li>☐ Beam Search의 직관을 안다.</li>
+  </ul>
+
+  <h2>🧭 한 줄 정리 — 이번 주의 빅 아이디어</h2>
+  <div class="tip"><p><strong>"어텐션은 학습 가능한 룩업 테이블이다."</strong> Q와 가장 비슷한 K의 V를 우선적으로 가져옴. 이 단순한 메커니즘이 RNN의 한계를 깨고, 다음 주 트랜스포머의 토대가 됩니다.</p></div>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>
@@ -465,7 +611,56 @@ class Attention(nn.Module):
     <li><strong>Neural Machine Translation by Jointly Learning to Align and Translate</strong> — Bahdanau 외(2015). 어텐션 원논문.</li>
     <li><strong>Visualizing Neural Machine Translation</strong> — Jay Alammar의 그림 강의.</li>
     <li><strong>Effective Approaches to Attention-based NMT</strong> — Luong 외(2015).</li>
+    <li><strong>Attention Is All You Need</strong> — Vaswani 외(2017). 트랜스포머 원논문.</li>
+    <li><strong>Illustrated Transformer</strong> — Jay Alammar의 그림.</li>
+    <li><strong>Annotated Transformer</strong> — Harvard NLP 코드 주석.</li>
   </ul>
+
+  <h2>🌟 응용 사례</h2>
+  <ul>
+    <li><strong>기계 번역</strong> — Google Translate. Seq2Seq + Attention의 가장 큰 성공.</li>
+    <li><strong>문서 요약</strong> — 긴 문서를 짧게.</li>
+    <li><strong>질의 응답</strong> — 문맥과 질문을 받아 답을 생성.</li>
+    <li><strong>이미지 캡션</strong> — CNN 인코더 + RNN 디코더 + Attention.</li>
+    <li><strong>음성→텍스트</strong> — 오디오 시퀀스를 텍스트로.</li>
+    <li><strong>코드 생성</strong> — 자연어 설명 → 코드.</li>
+  </ul>
+
+  <h2>📌 부록 — Teacher Forcing</h2>
+  <p>학습 시 디코더의 다음 입력을 모델 예측이 아니라 <em>정답</em>으로 사용. 학습이 안정되고 빠름. 단점: 추론 시에는 자기 예측을 입력으로 써야 해서 train-test 불일치(exposure bias).</p>
+  <p>완화책: <em>Scheduled Sampling</em> — 학습 후반에 점점 모델 예측을 입력으로 섞음.</p>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:24px">— 12주차 끝. 어텐션 시대로 진입했습니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">마지막 주차는 RNN 없이 어텐션만으로 만든 트랜스포머와 LLM.</p>
+
+  <h2>📌 부록 — BLEU 점수 직관</h2>
+  <p>번역 평가의 표준. 모델 출력과 참조 번역의 n-gram 일치 정도를 측정.</p>
+  <ul>
+    <li>BLEU-1: unigram (단어) 일치.</li>
+    <li>BLEU-4: 4-gram(연속 4단어) 일치까지.</li>
+    <li>0~100, 30+가 그럭저럭, 50+가 우수.</li>
+    <li>한국어는 어절 기반이라 BLEU가 약간 부정확. 형태소 단위 평가가 자주.</li>
+  </ul>
+
+  <h2>📌 부록 — Cross-Attention 시각</h2>
+  <p>인코더-디코더 어텐션의 가중치를 시각화하면 두 언어의 단어 정렬이 자연스럽게 발견됩니다.</p>
+  <pre><code>예시 (영→한):
+    안녕   하  세요  .
+The   [0.7, 0.2, 0.1, 0.0]
+hello [0.8, 0.1, 0.1, 0.0]
+.     [0.0, 0.0, 0.0, 1.0]</code></pre>
+  <p>학습 데이터에 정렬 정보를 주지 않았는데, 어텐션이 자동으로 발견한다는 점이 놀라움.</p>
+
+  <h2>📌 부록 — Pointer Network</h2>
+  <p>출력 토큰이 입력 시퀀스에 있는 토큰일 때(예: 요약, 질의응답), 어휘 사전 대신 어텐션 가중치를 직접 출력 분포로 사용. <em>Out-of-vocabulary 단어 처리 가능</em>.</p>
+
+  <h2>📌 부록 — Coverage Mechanism</h2>
+  <p>요약에서 같은 단어가 반복 출력되는 문제(repetition) 완화. 이미 어텐션이 본 위치를 추적해 다음 어텐션에 페널티.</p>
+
+  <h2>🔚 마지막 한 마디</h2>
+  <p>이번 주 어텐션은 단순한 추가 모듈처럼 보이지만, 다음 주 트랜스포머의 모든 것의 토대입니다. Q·K·V 패턴, softmax 정규화, 가중합 — 모두 트랜스포머에서 그대로. 한 번에 외우려 들지 말고, 손계산 한 번 굴려보세요.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
 
   <nav class="prevnext">
     <a href="11-rnn-lstm.html"><small>← 이전</small>W11. RNN/LSTM</a>

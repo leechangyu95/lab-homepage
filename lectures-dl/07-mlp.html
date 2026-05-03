@@ -600,8 +600,136 @@ print(clf.predict(X))   # [0 1 1 0]</code></pre>
     <li>이론상 1개 은닉층으로 모든 함수를 근사할 수 있는데, 왜 사람들은 여러 층을 쌓을까요?</li>
   </ol>
 
+  <h2>📐 단계별 워크쓰루 — 손으로 계산하는 작은 MLP</h2>
+  <p>입력 2, 은닉 2, 출력 1의 작은 MLP가 한 번 forward pass를 어떻게 하는지 손으로 따라가봅시다. 활성함수는 시그모이드.</p>
+  <p><strong>가중치.</strong> $W^{(1)} = \begin{pmatrix} 0.1 & 0.2 \\ 0.3 & 0.4 \end{pmatrix}$, $\mathbf b^{(1)} = (0.0, 0.0)$. $W^{(2)} = (0.5, 0.6)$, $b^{(2)} = 0$.</p>
+  <p><strong>입력.</strong> $\mathbf x = (1, 0)$.</p>
+  <p><strong>1층.</strong> $\mathbf z^{(1)} = W^{(1)} \mathbf x + \mathbf b^{(1)} = (0.1, 0.3)$. 활성: $\mathbf h = \sigma(\mathbf z^{(1)}) \approx (0.525, 0.574)$.</p>
+  <p><strong>2층.</strong> $z^{(2)} = W^{(2)} \mathbf h + b^{(2)} = 0.5 \cdot 0.525 + 0.6 \cdot 0.574 = 0.607$. 활성: $\hat y = \sigma(0.607) \approx 0.647$.</p>
+  <p>예측이 0.647이고 실제 라벨 $y = 1$이면 손실 $-\log 0.647 \approx 0.435$. 학습은 이 손실을 줄이도록 가중치를 조정합니다(다음 주 W8 역전파).</p>
+
+  <h2>🎨 활성함수 카탈로그</h2>
+  <table>
+    <thead><tr><th>이름</th><th>식</th><th>출력 범위</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>Sigmoid</td><td>$\frac{1}{1+e^{-z}}$</td><td>(0, 1)</td><td>출력층(이진 분류)에만. 은닉층에는 기울기 소실.</td></tr>
+      <tr><td>Tanh</td><td>$\frac{e^z - e^{-z}}{e^z + e^{-z}}$</td><td>(-1, 1)</td><td>중심이 0이라 학습이 시그모이드보다 좋음. 그래도 소실.</td></tr>
+      <tr><td>ReLU</td><td>$\max(0, z)$</td><td>[0, ∞)</td><td>현대 표준. 빠르고 깊이 쌓아도 살아남음. dying ReLU 문제 있음.</td></tr>
+      <tr><td>Leaky ReLU</td><td>$\max(\alpha z, z)$</td><td>(-∞, ∞)</td><td>음수 영역에 작은 기울기. dying ReLU 완화.</td></tr>
+      <tr><td>GELU</td><td>$z \Phi(z)$</td><td>(-∞, ∞)</td><td>BERT/GPT 등 현대 트랜스포머 표준.</td></tr>
+      <tr><td>Swish/SiLU</td><td>$z \sigma(z)$</td><td>(-∞, ∞)</td><td>EfficientNet 계열에서 사용.</td></tr>
+      <tr><td>Softmax</td><td>$\frac{e^{z_i}}{\sum e^{z_j}}$</td><td>(0, 1), 합=1</td><td>다중 분류 출력층 전용.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🌐 보편 근사 정리(Universal Approximation Theorem)</h2>
+  <p>1989년 Cybenko, 그리고 Hornik이 증명한 정리는 충격적입니다 — <strong>"은닉층이 1개여도, 뉴런 수만 충분하면 어떤 연속 함수든 임의 정밀도로 근사할 수 있다"</strong>. 즉 이론적으로 MLP는 거의 모든 함수를 표현할 능력이 있습니다.</p>
+  <p>그러면 왜 깊이 쌓을까요? 두 가지 이유.</p>
+  <ol>
+    <li><strong>표현 효율성</strong> — 같은 함수를 1층으로 표현하려면 지수적으로 많은 뉴런이 필요한 함수가 깊은 망에서는 다항적 뉴런으로 가능. "깊이가 너비보다 효율적"이라는 정리들이 있음.</li>
+    <li><strong>학습 가능성</strong> — 이론적으로 표현 가능 ≠ 경사하강으로 학습 가능. 깊이가 학습을 도와주는 경우가 많음.</li>
+  </ol>
+  <p>그래서 현대 신경망은 1층이 아니라 수십~수백 층입니다. 단, 깊어질수록 학습이 어려워지는 새 문제들(기울기 소실, 죽은 ReLU)이 생기고 — 그게 W8의 주제입니다.</p>
+
+  <h2>🛡️ 신경망 학습의 5가지 함정</h2>
+  <ol>
+    <li><strong>학습률 폭발</strong> — 너무 크면 손실이 발산. NaN. → 한 자릿수씩 줄이기.</li>
+    <li><strong>기울기 소실</strong> — 시그모이드/tanh를 깊이 쌓으면 기울기가 점점 작아져 학습 정지. → ReLU 사용.</li>
+    <li><strong>기울기 폭발</strong> — 가중치 초기화가 너무 크면 기울기가 폭발. → He/Xavier 초기화.</li>
+    <li><strong>과적합</strong> — 신경망은 매우 강력해 작은 데이터를 외움. → 드롭아웃, 정규화, 더 많은 데이터.</li>
+    <li><strong>죽은 ReLU</strong> — 뉴런이 항상 음수 입력만 받아 출력 0이 영원. → Leaky ReLU 또는 He 초기화.</li>
+  </ol>
+
+  <h2>📝 연습문제</h2>
+  <div class="tip"><strong>연습 1.</strong> XOR을 1개 은닉층(뉴런 2개)으로 풀 수 있는 이유를 한 줄로 설명하세요.
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>은닉층의 두 뉴런이 XOR을 풀기 좋은 두 직선(예: AND와 OR의 회피)을 만들고, 출력층이 그 둘을 비선형 결합. 활성함수의 비선형성이 결정적.</p></details></div>
+
+  <div class="tip"><strong>연습 2.</strong> 100개 입력, 50개 은닉(1층), 10개 출력의 MLP에서 학습 가능한 파라미터 수는?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>1층 가중치: 100×50 = 5000, 1층 편향: 50, 2층 가중치: 50×10 = 500, 2층 편향: 10. 총 5560개. 이 정도면 매우 작은 신경망. 현대 LLM은 수십억~수천억 파라미터.</p></details></div>
+
+  <div class="tip"><strong>연습 3.</strong> ReLU(z) = max(0, z)의 미분은?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>$z &gt; 0$이면 1, $z &lt; 0$이면 0. $z = 0$에서는 정의되지 않지만 보통 0으로 설정. 양수 영역에서 미분이 1이라 깊은 신경망에서도 기울기가 사라지지 않음.</p></details></div>
+
+  <div class="tip"><strong>연습 4.</strong> 활성함수 없이 5층 신경망을 쌓으면 어떻게 되나요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>여러 선형 변환의 합성은 결국 하나의 선형 변환과 동일. 5층이라도 1층 선형 모델과 표현력이 같음. 비선형 활성함수가 깊이의 본질.</p></details></div>
+
+  <div class="tip"><strong>연습 5.</strong> 회귀 문제의 출력층에는 어떤 활성함수를 쓸까요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>일반적으로 <strong>활성함수 없음(linear)</strong>. 출력이 임의의 실수일 수 있기 때문. 단, 양수만 가능한 회귀(가격 등)에는 ReLU나 softplus, 0~1 범위 회귀에는 시그모이드가 자연스러울 수 있음.</p></details></div>
+
+  <h2>❓ FAQ</h2>
+  <div class="note"><strong>Q1. 은닉층 수는 어떻게 정하나요?</strong><br>
+  A. 표 데이터: 1~3층이 보통 충분. 이미지: CNN으로 10~100층. 언어: 트랜스포머로 12~96층. 일반 규칙은 "처음에는 작게 시작해 점점 키운다"입니다.</div>
+  <div class="note"><strong>Q2. 뉴런 수는요?</strong><br>
+  A. 시작 휴리스틱 — 입력 차원과 출력 차원의 중간(예: 입력 100, 출력 10이면 은닉 64). 너무 많으면 과적합, 너무 적으면 과소적합.</div>
+  <div class="note"><strong>Q3. ReLU 외에는 안 써도 되나요?</strong><br>
+  A. 보통은 ReLU로 시작. 학습이 잘 안 되면 Leaky ReLU 또는 GELU 시도. 출력층은 작업에 따라(분류 시그모이드/소프트맥스, 회귀 linear).</div>
+  <div class="note"><strong>Q4. 가중치 초기화는 어떻게?</strong><br>
+  A. ReLU 사용 시 <strong>He 초기화</strong>(<code>kaiming_normal</code>), tanh/sigmoid 사용 시 <strong>Xavier/Glorot 초기화</strong>. PyTorch/Keras 기본값이 대부분 이미 적절.</div>
+  <div class="note"><strong>Q5. MLP를 이미지에 그대로 써도 되나요?</strong><br>
+  A. 가능하지만 비효율적. 28×28 이미지를 펼쳐 784차원 벡터로 만들면 위치 정보가 사라짐. CNN(W9)이 이미지를 위해 진화한 구조.</div>
+
   <h2>👀 다음 주 미리보기 — W8 심층신경망 & 역전파</h2>
   <p>오늘 우리는 "MLP가 학습되면 XOR을 푼다"는 것을 봤지만, <em>어떻게 학습되는지</em>는 자세히 다루지 않았습니다. 다음 주에는 그 비밀 — <strong>역전파(backpropagation)</strong>를 만납니다. 1986년 Hinton 그룹이 다층 신경망을 부활시킨 그 알고리즘. 그리고 깊은 망을 학습 가능하게 만든 ReLU·드롭아웃·배치정규화도 같이 봅니다.</p>
+
+  <h2>🌟 신경망 학습 흐름 — 미니배치 SGD의 표준 패턴</h2>
+  <p>실제 신경망을 학습할 때 매 epoch마다 다음을 반복합니다.</p>
+  <ol>
+    <li>학습 데이터를 섞는다(shuffle).</li>
+    <li>미니배치 크기(보통 32, 64, 128, 256)로 나눈다.</li>
+    <li>각 배치마다: 순전파(forward) → 손실 계산 → 역전파(backward) → 가중치 갱신.</li>
+    <li>한 epoch 끝나면 검증 셋으로 평가, 손실/정확도 기록.</li>
+    <li>여러 epoch 후 학습/검증 곡선이 평탄해지면 학습 종료.</li>
+  </ol>
+
+  <h2>🔬 활성함수 시각 비교 데모</h2>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 활성함수 모양 비교</h4>
+    <p>네 가지 활성함수를 동시에 그립니다. 각각의 출력 범위와 미분 가능 영역을 한눈에.</p>
+    <canvas id="actComp" width="640" height="320"></canvas>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('actComp');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const PL=50,PR=20,PT=20,PB=30;
+    const plotW=W-PL-PR,plotH=H-PT-PB;
+    function px(x){return PL+(x+5)/10*plotW;}
+    function py(y){return PT+plotH/2-y*plotH/4;}
+    ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(PL,py(0));ctx.lineTo(PL+plotW,py(0));ctx.moveTo(px(0),PT);ctx.lineTo(px(0),PT+plotH);ctx.stroke();
+    function plot(f,col,lab,labY){
+      ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){const z=-5+10*i/200;const v=f(z);if(i===0)ctx.moveTo(px(z),py(v));else ctx.lineTo(px(z),py(v));}
+      ctx.stroke();
+      ctx.fillStyle=col;ctx.font='13px sans-serif';ctx.fillText(lab,PL+10,labY);
+    }
+    plot(z=>1/(1+Math.exp(-z)),'#0b5fff','Sigmoid (0,1)',PT+15);
+    plot(z=>Math.tanh(z),'#2e7d32','Tanh (-1,1)',PT+30);
+    plot(z=>Math.max(0,z),'#ff8c00','ReLU [0,∞)',PT+45);
+    plot(z=>z>0?z:0.1*z,'#c62828','Leaky ReLU',PT+60);
+    ctx.fillStyle='#666';ctx.font='12px sans-serif';
+    ctx.fillText('z 축: -5에서 5, y 축은 시각화를 위해 스케일링',PL,H-10);
+  })();
+  </script>
+
+  <h2>🗒️ 이번 주 체크리스트</h2>
+  <ul>
+    <li>☐ 퍼셉트론과 로지스틱 회귀의 관계를 안다.</li>
+    <li>☐ XOR 문제와 해법을 그릴 수 있다.</li>
+    <li>☐ 비선형 활성함수가 왜 결정적인지 설명할 수 있다.</li>
+    <li>☐ ReLU, Sigmoid, Tanh의 출력 범위를 안다.</li>
+    <li>☐ 보편 근사 정리를 한 줄로 말할 수 있다.</li>
+    <li>☐ 신경망 학습의 5가지 함정을 들 수 있다.</li>
+  </ul>
+
+  <h2>🧭 한 줄 정리 — 이번 주의 빅 아이디어</h2>
+  <div class="tip"><p><strong>"비선형 활성함수가 깊이를 의미 있게 만든다."</strong> 활성함수 없이는 100층도 1층과 같다. ReLU 하나로 깊은 신경망 시대가 열렸고, 다음 주 역전파가 그 학습을 가능하게 합니다.</p></div>
 
   <h2>📖 더 깊이 공부하기</h2>
   <ul>
@@ -609,7 +737,258 @@ print(clf.predict(X))   # [0 1 1 0]</code></pre>
     <li><strong>Perceptrons</strong> — Minsky·Papert (1969). 신경망을 죽인 그 책.</li>
     <li><strong>Universal Approximation Theorem</strong> — 은닉층이 충분하면 어떤 함수든 근사 가능.</li>
     <li><strong>Goodfellow Deep Learning</strong>, 6장 — 활성함수 비교의 표준.</li>
+    <li><strong>3Blue1Brown — Neural Networks</strong> 4편. 이번 주 직관 형성에 압도적.</li>
+    <li><strong>Tensorflow Playground</strong> — <a href="https://playground.tensorflow.org/">playground.tensorflow.org</a>. 브라우저에서 신경망을 직접 굴림.</li>
   </ul>
+
+  <h2>🌐 응용 — 신경망 한 페이지로 푸는 작은 문제들</h2>
+  <ul>
+    <li><strong>패턴 분류</strong> — 손글씨 숫자 (28×28 → 784) 정도는 1~2층 MLP로 95% 이상.</li>
+    <li><strong>회귀</strong> — 작은 표 데이터의 비선형 회귀에 MLP가 쓸 만함.</li>
+    <li><strong>임베딩</strong> — 범주형 입력을 고차원 벡터로 매핑(다음 주 이후).</li>
+    <li><strong>강화학습</strong> — 알파고도 핵심은 MLP/CNN으로 가치 함수 근사.</li>
+  </ul>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:24px">— 7주차 끝. 신경망의 시대로 입장하셨습니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">다음 주는 가장 중요한 한 주가 될 수 있습니다 — 역전파.</p>
+  <h2>🧠 신경망의 학습 — "구슬을 굴리는 등산"</h2>
+  <p>신경망 학습을 가장 직관적으로 그리면 이렇습니다 — 매우 복잡한 손실 산맥에 구슬(파라미터 벡터)을 놓고, 작은 보폭으로 굴려 가장 낮은 골짜기를 찾아가는 과정. 산맥이 매우 복잡한 이유는 파라미터 차원이 수만~수십억이기 때문입니다.</p>
+  <p>회귀(W3)와 다른 점은 손실 곡면이 <strong>볼록하지 않다</strong>는 것 — 여러 지역 최솟값이 있을 수 있고, 어디서 출발하느냐와 보폭(학습률)에 따라 도달점이 달라집니다. 그래도 실전에서 거의 잘 작동하는 이유는 (1) 고차원에서는 진짜 안 좋은 지역 최소점이 드물고, (2) "충분히 좋은" 골짜기들이 많기 때문이라는 게 현재 합의입니다.</p>
+
+  <h2>🎲 신경망의 무작위성 — 같은 데이터, 다른 결과</h2>
+  <p>같은 코드를 두 번 돌려도 결과가 약간 다른 이유:</p>
+  <ul>
+    <li>가중치 초기화가 무작위 (난수).</li>
+    <li>미니배치 셔플이 무작위.</li>
+    <li>드롭아웃이 무작위.</li>
+    <li>GPU 부동소수점 연산이 비결정적일 수 있음.</li>
+  </ul>
+  <p>그래서 논문 결과를 재현하려면 <code>random_state</code>·<code>seed</code>를 모두 고정해야 하고, 그래도 GPU에서는 완전 재현이 어려운 경우가 있습니다. 실전에서는 <em>여러 번 돌려 평균과 표준편차</em>를 보고합니다.</p>
+
+  <h2>🌟 PyTorch로 본 MLP — 첫 코드</h2>
+  <pre><code>import torch
+import torch.nn as nn
+import torch.optim as optim
+
+class MLP(nn.Module):
+    def __init__(self, in_dim=2, hidden=4, out_dim=1):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, out_dim),
+            nn.Sigmoid()
+        )
+    def forward(self, x):
+        return self.net(x)
+
+# XOR 데이터
+X = torch.tensor([[0,0],[0,1],[1,0],[1,1]], dtype=torch.float32)
+y = torch.tensor([[0],[1],[1],[0]], dtype=torch.float32)
+
+model = MLP()
+opt = optim.Adam(model.parameters(), lr=0.05)
+loss_fn = nn.BCELoss()
+
+for epoch in range(2000):
+    yhat = model(X)
+    loss = loss_fn(yhat, y)
+    opt.zero_grad()
+    loss.backward()       # 역전파 한 줄!
+    opt.step()
+print((model(X) > 0.5).int().squeeze())   # → tensor([0, 1, 1, 0])</code></pre>
+  <p>위 30줄이 W7~W13 모든 신경망 코드의 표준 골격입니다. 모델 정의, 옵티마이저, 손실 함수, 학습 루프 — 이 네 덩어리만 기억하면 모든 신경망 코드를 읽을 수 있습니다.</p>
+
+  <h2>🔧 신경망 디버깅 체크리스트</h2>
+  <ol>
+    <li><strong>데이터의 모양·범위 확인</strong> — <code>X.shape</code>, <code>X.min()</code>, <code>X.max()</code>.</li>
+    <li><strong>표준화</strong> — 입력 평균 0, 표준편차 1로.</li>
+    <li><strong>학습률 탐색</strong> — 1e-1, 1e-2, 1e-3, 1e-4 중 손실이 안정적으로 감소하는 값.</li>
+    <li><strong>오버피팅 테스트</strong> — 일부러 작은 데이터(예: 100개)에 학습해 손실이 0에 가까워지는지 확인. 안 되면 모델 자체에 문제.</li>
+    <li><strong>배치 크기</strong> — 32, 64, 128, 256 비교. 너무 작으면 잡음, 너무 크면 일반화 약화.</li>
+    <li><strong>활성함수와 초기화</strong> — ReLU + He, Tanh + Xavier.</li>
+    <li><strong>학습 곡선 시각화</strong> — train/val 손실 둘 다. 벌어짐 = 과적합.</li>
+  </ol>
+
+  <h2>📚 미니 용어집</h2>
+  <table>
+    <thead><tr><th>용어</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>퍼셉트론</td><td>1958년 단일 뉴런 모델. 가중합 + 활성.</td></tr>
+      <tr><td>MLP</td><td>다층 퍼셉트론. 입력층 + 은닉층(들) + 출력층.</td></tr>
+      <tr><td>은닉층</td><td>입력과 출력 사이의 층. 표현력의 원천.</td></tr>
+      <tr><td>활성함수</td><td>뉴런 출력의 비선형 변환. ReLU, sigmoid 등.</td></tr>
+      <tr><td>완전연결(Dense, FC)</td><td>모든 뉴런이 다음 층의 모든 뉴런과 연결.</td></tr>
+      <tr><td>순전파(forward)</td><td>입력 → 출력 방향 계산.</td></tr>
+      <tr><td>역전파(backward)</td><td>손실 → 입력 방향 미분 전파(W8).</td></tr>
+      <tr><td>epoch</td><td>전체 데이터를 한 번씩 다 본 사이클.</td></tr>
+      <tr><td>배치 크기</td><td>한 번 업데이트에 쓰는 샘플 수.</td></tr>
+      <tr><td>드롭아웃</td><td>학습 중 일부 뉴런을 무작위로 끔. 과적합 방지.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🔬 신경망의 표현력 시각화 — 한 층 뉴런 1개부터 4개까지</h2>
+  <p>은닉층 뉴런 수가 늘어나면 어떤 모양의 결정 경계가 가능해질까요? 직관적으로:</p>
+  <ul>
+    <li><strong>뉴런 1개</strong> — 직선 한 개로 분리. 로지스틱 회귀와 동일.</li>
+    <li><strong>뉴런 2개</strong> — 두 직선의 교차로 4영역. XOR 같은 문제 해결.</li>
+    <li><strong>뉴런 3~5개</strong> — 다각형 모양 결정 경계.</li>
+    <li><strong>뉴런 10개+</strong> — 거의 임의 모양 곡선 가능.</li>
+  </ul>
+  <p>뉴런 1개 = 직선 1개라는 직관은 매우 유용합니다. 하나의 ReLU 뉴런은 "어떤 직선의 한쪽만 활성화"하는 스위치고, 여러 뉴런의 조합이 다각형/곡선 영역을 만듭니다.</p>
+
+  <h2>🧪 보너스 — 신경망 학습 시각화</h2>
+  <p>실제 신경망이 데이터를 어떻게 점점 학습하는지 보여주는 사이트가 두 개 있습니다.</p>
+  <ul>
+    <li><strong>Tensorflow Playground</strong> — <a href="https://playground.tensorflow.org/">playground.tensorflow.org</a>. 데이터·층·뉴런 수·활성함수 모두 슬라이더로. 매 epoch 결정 경계가 진화.</li>
+    <li><strong>ConvNetJS Demo</strong> — Stanford. CNN 데모지만 MLP도 포함. 브라우저에서 실시간 학습.</li>
+  </ul>
+  <p>강의안을 닫고 위 두 사이트를 한 번씩만 굴려 보면, 이번 주 모든 개념이 손에 잡힙니다.</p>
+
+  <h2>🌍 역사적 맥락 — 60년의 우여곡절</h2>
+  <ol>
+    <li><strong>1958</strong> — 로젠블랫의 퍼셉트론 발표. 뉴욕타임스 1면. "기계가 곧 의식을 가질 것"이라는 과장 보도까지.</li>
+    <li><strong>1969</strong> — 민스키·파퍼트의 책 <em>Perceptrons</em>이 XOR 한계를 증명. 첫 AI 겨울.</li>
+    <li><strong>1986</strong> — Rumelhart, Hinton, Williams가 역전파 알고리즘 대중화. 다층 신경망의 부활.</li>
+    <li><strong>1990년대</strong> — SVM이 등장하며 신경망은 다시 외면. "더 깔끔한 수학을 가진 모델"이라는 평.</li>
+    <li><strong>2006</strong> — Hinton이 deep belief net으로 깊은 망 학습 가능성 시사. "Deep Learning" 브랜드 시작.</li>
+    <li><strong>2012</strong> — AlexNet의 ImageNet 우승. 이미지 분류에서 인간을 앞서기 시작.</li>
+    <li><strong>2017</strong> — Transformer 등장. 신경망이 언어를 본격 다룸.</li>
+    <li><strong>2022</strong> — ChatGPT 출시. 신경망이 일반 대중의 일상으로.</li>
+  </ol>
+  <p>지금 당신이 배우는 MLP는 이 60년 여정의 시작점입니다. 여기서부터 W13까지가 한 학기에 그 여정을 압축한 것이고, 그 끝에서 ChatGPT가 어떻게 만들어지는지 손에 잡히게 됩니다.</p>
+
+  <h2>🎯 신경망 vs 고전 ML — 언제 어느 쪽?</h2>
+  <table>
+    <thead><tr><th>상황</th><th>추천</th></tr></thead>
+    <tbody>
+      <tr><td>표 데이터 + 1만~10만 샘플</td><td>LightGBM/XGBoost ≥ 신경망</td></tr>
+      <tr><td>표 데이터 + 100만+ 샘플</td><td>비등; 신경망 시도 가치</td></tr>
+      <tr><td>이미지/음성/텍스트</td><td>신경망 압승</td></tr>
+      <tr><td>해석성 필수</td><td>로지스틱 회귀 / 트리</td></tr>
+      <tr><td>실시간 추론(엣지)</td><td>경량 트리 또는 작은 신경망</td></tr>
+      <tr><td>모름</td><td>RF로 시작 → 신경망 비교</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🌟 자가 학습용 추가 문제</h2>
+  <ol>
+    <li>은닉층의 ReLU 뉴런 수가 N개일 때, 가능한 최대 영역(activation pattern) 수는 대략 얼마인가요?</li>
+    <li>완전연결층의 매트릭스 곱 모양: 입력 (배치, 100), 가중치 (100, 50)일 때 출력은?</li>
+    <li>분류 문제 출력층에 softmax를 쓰면 손실은 무엇이 자연스러운가?</li>
+    <li>학습률을 너무 작게 하면 어떤 일이 생길까?</li>
+    <li>드롭아웃 비율 0.5의 의미는?</li>
+  </ol>
+  <p style="font-size:13px;color:var(--muted)">정답 힌트: 1) $2^N$. 2) (배치, 50). 3) 크로스 엔트로피 (categorical CE). 4) 학습이 매우 느려짐, 또는 수렴 전에 epoch 소진. 5) 학습 중 매 forward에서 절반의 뉴런을 무작위로 끄기.</p>
+
+  <h2>🔁 한 페이지 흐름 — 신경망 학습의 표준 패턴</h2>
+  <ol>
+    <li>데이터 준비 → 표준화 → 분할.</li>
+    <li>모델 정의 (PyTorch <code>nn.Sequential</code> 또는 <code>nn.Module</code>).</li>
+    <li>옵티마이저(Adam) + 손실 함수 정의.</li>
+    <li>학습 루프: forward → loss → backward → step.</li>
+    <li>매 epoch 후 val 손실 측정, 개선 안 되면 조기종료.</li>
+    <li>최종 모델로 테스트 평가.</li>
+  </ol>
+
+  <h2>🎓 미니 프로젝트 — MLP로 손글씨 숫자 분류</h2>
+  <p>MNIST(28×28 손글씨 0~9)에 MLP를 적용해 끝까지 가는 프로젝트.</p>
+  <ol>
+    <li><strong>데이터 로드</strong> — <code>torchvision.datasets.MNIST</code> 또는 <code>sklearn.datasets.fetch_openml('mnist_784')</code>.</li>
+    <li><strong>전처리</strong> — 픽셀 0–255를 0–1로(스케일).</li>
+    <li><strong>모델</strong> — Linear(784, 128) → ReLU → Linear(128, 64) → ReLU → Linear(64, 10).</li>
+    <li><strong>손실</strong> — CrossEntropyLoss (소프트맥스 + NLL 합쳐진 것).</li>
+    <li><strong>옵티마이저</strong> — Adam(lr=1e-3).</li>
+    <li><strong>학습</strong> — 10 epoch, batch_size=64.</li>
+    <li><strong>평가</strong> — 테스트 정확도. 잘 짜면 97%+ 달성 가능.</li>
+  </ol>
+  <p>MLP만으로도 MNIST에서 매우 좋은 결과가 나옵니다. CNN(W9)으로 넘어가면 99%+가 되지만, "MLP로 충분히 좋은" 출발점입니다.</p>
+
+  <h2>🌐 산업 응용 — MLP의 자리</h2>
+  <p>"이미지는 CNN, 언어는 트랜스포머인데 MLP는 어디 쓰이나?"라는 질문을 자주 받습니다. 실제 답은:</p>
+  <ul>
+    <li><strong>표 데이터 회귀/분류</strong> — 작은~중간 규모.</li>
+    <li><strong>임베딩 변환층</strong> — 트랜스포머의 FFN(feed-forward) 부분이 사실 MLP.</li>
+    <li><strong>강화학습 가치 함수</strong> — 게임 AI, 로봇 제어.</li>
+    <li><strong>추천 시스템</strong> — 유저·아이템 임베딩 위에 MLP.</li>
+    <li><strong>출력 헤드</strong> — CNN/RNN의 마지막 분류기는 거의 항상 MLP.</li>
+  </ul>
+  <p>MLP는 사라진 게 아니라 <em>모든 신경망의 부품</em>으로 살아 있습니다. 이번 주 배운 게 W13의 트랜스포머에서도 그대로 쓰이는 이유입니다.</p>
+
+  <h2>📐 MLP의 파라미터 수 계산</h2>
+  <p>모델 크기를 가늠하는 가장 쉬운 방법은 파라미터 수입니다.</p>
+  <p>층 $i \to i+1$의 가중치 행렬은 $(\text{입력 차원}_i) \times (\text{출력 차원}_{i+1})$, 편향은 $(\text{출력 차원}_{i+1})$.</p>
+  <p>예: 784 → 128 → 64 → 10 MLP.</p>
+  <ul>
+    <li>1층: $784 \times 128 + 128 = 100\,480$</li>
+    <li>2층: $128 \times 64 + 64 = 8\,256$</li>
+    <li>3층: $64 \times 10 + 10 = 650$</li>
+    <li>총: $109\,386$ 파라미터</li>
+  </ul>
+  <p>약 11만 개. 현대 LLM의 파라미터 수가 100억~1000억 단위인 걸 생각하면, 우리가 다루는 첫 신경망은 정말 작습니다. 그러나 <em>구조의 본질</em>은 같고, 학기 후반의 거대 모델도 같은 골격에 살을 붙인 것입니다.</p>
+
+  <h2>🔬 신경망 시각화 도구 모음</h2>
+  <ul>
+    <li><strong>TensorFlow Playground</strong> — 학습 진행을 실시간으로.</li>
+    <li><strong>Netron</strong> — 학습된 모델의 구조를 시각화. <code>.pt</code>, <code>.onnx</code> 파일 지원.</li>
+    <li><strong>TensorBoard</strong> — PyTorch의 <code>SummaryWriter</code>와 함께. 학습 곡선·히스토그램.</li>
+    <li><strong>Weights &amp; Biases</strong> — 클라우드 기반 실험 추적.</li>
+  </ul>
+
+  <h2>📊 신경망의 일반화 — 왜 외우지 않고 학습되나?</h2>
+  <p>10만 개 파라미터로 6만 개 MNIST 훈련 샘플을 학습하면, 이론적으로 데이터를 완벽 외울 수 있어 보입니다. 그런데 실제로는 외우지 않고 일반화합니다 — 처음 본 손글씨에도 잘 작동합니다. 왜일까요?</p>
+  <p>이는 딥러닝 이론의 큰 미스터리이고, 부분적인 답들이 있습니다.</p>
+  <ul>
+    <li><strong>SGD의 암묵적 정규화</strong> — 미니배치 SGD가 단순한 솔루션을 선호합니다.</li>
+    <li><strong>드롭아웃·BatchNorm</strong> — 명시적 정규화 도구들.</li>
+    <li><strong>데이터 증강</strong> — 같은 이미지를 회전·확대하여 데이터 양을 인위적으로 늘림.</li>
+    <li><strong>Lottery Ticket Hypothesis</strong> — 큰 신경망 안에 잘 일반화하는 작은 부분망이 들어 있다는 가설.</li>
+  </ul>
+  <p>이 주제는 학기 외 영역이지만, 알아두면 좋은 큰 그림입니다.</p>
+
+  <h2>🧪 활성함수 선택 가이드</h2>
+  <table>
+    <thead><tr><th>위치</th><th>표준 활성</th></tr></thead>
+    <tbody>
+      <tr><td>은닉층 (일반)</td><td>ReLU</td></tr>
+      <tr><td>은닉층 (트랜스포머)</td><td>GELU</td></tr>
+      <tr><td>출력층 (이진 분류)</td><td>Sigmoid</td></tr>
+      <tr><td>출력층 (다중 분류)</td><td>Softmax</td></tr>
+      <tr><td>출력층 (회귀)</td><td>없음(linear)</td></tr>
+      <tr><td>출력층 (양수 회귀)</td><td>ReLU 또는 softplus</td></tr>
+      <tr><td>출력층 ([0,1] 회귀)</td><td>Sigmoid</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📌 마지막 한 마디</h2>
+  <p>이번 주는 한 학기에서 두 번째로 중요한 한 주입니다(첫째는 W3 회귀와 경사하강). MLP의 골격(층 + 비선형 + 출력 변환)을 손으로 그릴 수 있다면, 이후 등장하는 CNN·RNN·트랜스포머는 모두 이 골격에 특화된 구조를 더한 것일 뿐입니다.</p>
+  <p>다음 주 W8에서 만나는 <em>역전파</em>는 손계산으로는 다소 복잡하지만, PyTorch에서는 <code>loss.backward()</code> 한 줄입니다. 그 한 줄이 어떻게 동작하는지 직관적으로 이해하면, 신경망 디버깅이 훨씬 쉬워집니다.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">예습 권장: 미적분의 연쇄법칙(chain rule)을 한 번 복습하세요. W8 역전파의 수학적 토대입니다.</p>
+  <p style="font-size:12px;color:var(--muted)">또 한 가지: PyTorch가 처음이라면, 공식 60-Minute Blitz 튜토리얼을 30분만 따라하면 다음 주 코드가 훨씬 친근해집니다.</p>
+  <p style="font-size:12px;color:var(--muted)">읽어주셔서 감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+
+  <h2>📌 보너스 — 인공 뉴런 vs 생물학적 뉴런</h2>
+  <p>"인공 신경망은 진짜 뇌처럼 작동하는가?"는 흔한 질문입니다. 답은 "닮은 데도 있고 다른 데도 많다"입니다.</p>
+  <ul>
+    <li><strong>닮은 점</strong>: 입력의 가중합 + 활성 → 다음 뉴런으로. 깊이의 계층적 표현.</li>
+    <li><strong>다른 점</strong>: 생물 뉴런은 스파이크(이산), 시간 동역학, 화학적 시냅스, 가소성 학습. 인공 뉴런은 부동소수점(연속), 일괄 학습, 순방향만.</li>
+  </ul>
+  <p>그래서 "신경망"이라는 이름이 약간 과장이지만, 영감의 출처는 분명히 뇌과학입니다. 두 분야는 60년간 서로 영향을 주고받았습니다.</p>
+
+  <h2>🔚 마지막 정리</h2>
+  <p>퍼셉트론으로 시작해 MLP로 마무리한 이번 주는, 한 학기 후반의 모든 신경망 모델로 가는 다리입니다. 오늘 만든 토대 위에 다음 주부터 차례로 더 정교한 부품들을 얹습니다 — 역전파, 정규화, 드롭아웃, 컨볼루션, 어텐션, 트랜스포머. 모든 것은 결국 "비선형 활성을 가진 층의 합성"이라는 이번 주의 정의로 거슬러 올라갑니다.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 진짜로 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">한 마디만 더: "이론은 어렵지만 코드는 간단하다"가 신경망의 좋은 점입니다. PyTorch 30줄로 충분.</p>
+  <p style="font-size:12px;color:var(--muted)">또 한 마디: 막히면 lms 게시판으로.</p>
+  <p style="font-size:12px;color:var(--muted)">예습 권장: 다음 주 W8에서는 미적분의 연쇄법칙이 자주 등장합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">한 학기의 큰 분기점이 지나갔습니다. 절반 왔어요.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜로 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
 
   <nav class="prevnext">
     <a href="06-unsupervised.html"><small>← 이전</small>W6. 비지도학습</a>

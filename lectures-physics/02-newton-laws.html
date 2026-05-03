@@ -142,6 +142,163 @@
   $$ a = \frac{(m_2 - m_1)g}{m_1 + m_2} $$
   <p>두 질량이 같으면 가속도 0(정지). 차이가 클수록 빨라짐.</p>
 
+  <h2>인터랙티브 데모 — 경사면과 Atwood 🎮</h2>
+  <p>슬라이더로 각도·질량·마찰을 직접 바꾸며 가속도와 장력이 어떻게 결정되는지 확인하세요. 식의 의미가 한 번에 보입니다.</p>
+
+  <div class="demo">
+    <h4>🛷 경사면 위 블록 — 정지/미끄러짐의 임계각</h4>
+    <p>각도가 임계각 $\theta_c = \tan^{-1}\mu$를 넘는 순간 미끄러지기 시작합니다. 정지에서 미끄러짐으로 넘어가는 경계를 직접 찾아보세요.</p>
+    <canvas id="inclineDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>질량 $m$ <span class="val" id="inc_mV">5</span> kg
+        <input type="range" id="inc_m" min="1" max="20" step="1" value="5"></label>
+      <label>각도 $\theta$ <span class="val" id="inc_aV">25°</span>
+        <input type="range" id="inc_a" min="0" max="60" step="1" value="25"></label>
+      <label>마찰계수 $\mu$ <span class="val" id="inc_uV">0.30</span>
+        <input type="range" id="inc_u" min="0" max="1" step="0.02" value="0.3"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>가지고 놀 것</strong>
+      <ul>
+        <li>$\mu = 0.3$일 때 임계각은 $\tan^{-1}(0.3) \approx 16.7°$. 슬라이더로 확인.</li>
+        <li>각도를 0°로 → 가속도 0, 정지 (수평면).</li>
+        <li>$\mu = 0$ (마찰 없음) → 어떤 각도라도 미끄러짐, $a = g\sin\theta$.</li>
+        <li>각도를 늘려가며 정지→미끄러짐 전환 순간(빨강으로 바뀌는 지점) 확인.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('inclineDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const m=+document.getElementById('inc_m').value;
+      const ang=+document.getElementById('inc_a').value;
+      const mu=+document.getElementById('inc_u').value;
+      document.getElementById('inc_mV').textContent=m;
+      document.getElementById('inc_aV').textContent=ang+'°';
+      document.getElementById('inc_uV').textContent=mu.toFixed(2);
+      const g=9.8,rad=ang*Math.PI/180;
+      const N=m*g*Math.cos(rad),Fg=m*g*Math.sin(rad),fmax=mu*N;
+      let a,status,fric,col;
+      if(Fg<=fmax){a=0;status='정지 (정지마찰 충분)';fric=Fg;col='#2e7d32';}
+      else{a=g*(Math.sin(rad)-mu*Math.cos(rad));status='미끄러짐';fric=fmax;col='#c62828';}
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const baseY=H-40,baseX1=60,baseX2=W-30;
+      const len=baseX2-baseX1,topY=baseY-len*Math.tan(rad);
+      ctx.strokeStyle='#8d6e63';ctx.fillStyle='#d7ccc8';ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(baseX1,baseY);ctx.lineTo(baseX2,baseY);
+      ctx.lineTo(baseX2,topY);ctx.closePath();
+      ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(baseX2,baseY,40,Math.PI,Math.PI+rad,false);ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(ang+'°',baseX2-55,baseY-10);
+      const blkX=baseX1+len*0.35;
+      const blkY=baseY-len*0.35*Math.tan(rad);
+      const sz=36;
+      ctx.save();
+      ctx.translate(blkX,blkY);
+      ctx.rotate(-rad);
+      ctx.fillStyle='#0b5fff';ctx.fillRect(-sz/2,-sz,sz,sz);
+      ctx.strokeStyle='#0742b8';ctx.strokeRect(-sz/2,-sz,sz,sz);
+      ctx.fillStyle='#fff';ctx.font='12px sans-serif';
+      ctx.fillText(m+' kg',-14,-12);
+      ctx.restore();
+      const ix=15,iy=15,iw=240,ih=130;
+      ctx.fillStyle='rgba(255,255,255,0.96)';ctx.fillRect(ix,iy,iw,ih);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(ix,iy,iw,ih);
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      let y=iy+18;
+      ctx.fillText('수직항력 N = mg cosθ = '+N.toFixed(1)+' N',ix+10,y);y+=17;
+      ctx.fillText('중력 사면 성분 = mg sinθ = '+Fg.toFixed(1)+' N',ix+10,y);y+=17;
+      ctx.fillText('최대 정지마찰 μN = '+fmax.toFixed(1)+' N',ix+10,y);y+=17;
+      ctx.fillText('현재 마찰 = '+fric.toFixed(1)+' N',ix+10,y);y+=22;
+      ctx.fillStyle=col;ctx.font='bold 13px sans-serif';
+      ctx.fillText(status,ix+10,y);y+=18;
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText('가속도 a = '+a.toFixed(2)+' m/s²',ix+10,y);
+    }
+    ['inc_m','inc_a','inc_u'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <div class="demo">
+    <h4>⚖️ Atwood 기계 — 두 추의 가속도와 장력</h4>
+    <p>도르래 양쪽에 매달린 두 질량의 차이가 가속도를 결정합니다. 두 질량을 같게 만들면 가속도 0(정지).</p>
+    <canvas id="atwoodDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$m_1$ <span class="val" id="at_m1V">3</span> kg
+        <input type="range" id="at_m1" min="1" max="20" step="0.5" value="3"></label>
+      <label>$m_2$ <span class="val" id="at_m2V">5</span> kg
+        <input type="range" id="at_m2" min="1" max="20" step="0.5" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$m_1 = m_2$ → 가속도 0, 두 추가 정지.</li>
+        <li>$m_1 \ll m_2$ → 가속도가 $g$에 가까워짐 (한쪽이 자유낙하에 근사).</li>
+        <li>장력 $T = 2m_1m_2 g/(m_1+m_2)$ — 두 질량의 조화평균에 비례.</li>
+        <li>$m_1=m_2$일 때 $T = mg$, 즉 정지 상태에서 줄이 두 추의 무게를 그대로 받음.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('atwoodDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const m1=+document.getElementById('at_m1').value;
+      const m2=+document.getElementById('at_m2').value;
+      document.getElementById('at_m1V').textContent=m1;
+      document.getElementById('at_m2V').textContent=m2;
+      const g=9.8;
+      const a=Math.abs(m2-m1)*g/(m1+m2);
+      const T=2*m1*m2*g/(m1+m2);
+      const dir=m2>m1?'m₂ 하강 / m₁ 상승':m1>m2?'m₁ 하강 / m₂ 상승':'정지';
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const px=W/2,py=70;
+      ctx.strokeStyle='#666';ctx.fillStyle='#9e9e9e';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(px,py,22,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#000';ctx.beginPath();ctx.moveTo(px,py-32);ctx.lineTo(px,py-22);ctx.stroke();
+      ctx.fillStyle='#444';ctx.fillRect(px-30,py-42,60,10);
+      const sep=85;
+      const off=Math.min(50,Math.abs(m2-m1)*8);
+      const y1=py+100+(m1<m2?off:-off);
+      const y2=py+100+(m2<m1?off:-off);
+      ctx.strokeStyle='#333';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(px-22,py);ctx.lineTo(px-sep,y1);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(px+22,py);ctx.lineTo(px+sep,y2);ctx.stroke();
+      function box(cx,cy,m,c){
+        const sz=Math.min(54,28+m*1.4);
+        ctx.fillStyle=c;ctx.fillRect(cx-sz/2,cy,sz,sz);
+        ctx.strokeStyle='#333';ctx.strokeRect(cx-sz/2,cy,sz,sz);
+        ctx.fillStyle='#fff';ctx.font='13px sans-serif';
+        ctx.fillText(m+' kg',cx-19,cy+sz/2+4);
+      }
+      box(px-sep,y1,m1,'#0b5fff');
+      box(px+sep,y2,m2,'#ff8c00');
+      ctx.fillStyle='#222';ctx.font='bold 13px sans-serif';
+      ctx.fillText('m₁',px-sep-26,y1-6);
+      ctx.fillText('m₂',px+sep+12,y2-6);
+      const ix=15,iy=15,iw=200,ih=96;
+      ctx.fillStyle='rgba(255,255,255,0.96)';ctx.fillRect(ix,iy,iw,ih);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(ix,iy,iw,ih);
+      ctx.fillStyle='#444';ctx.font='13px sans-serif';
+      let y=iy+20;
+      ctx.fillText('가속도 a = '+a.toFixed(2)+' m/s²',ix+10,y);y+=18;
+      ctx.fillText('장력 T = '+T.toFixed(1)+' N',ix+10,y);y+=18;
+      ctx.fillText('m₁ 무게 = '+(m1*g).toFixed(1)+' N',ix+10,y);y+=22;
+      ctx.fillStyle='#7b1fa2';ctx.font='bold 12px sans-serif';
+      ctx.fillText(dir,ix+10,y);
+    }
+    ['at_m1','at_m2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
   <h2>5. 등속 원운동의 구심가속도</h2>
   <p>속력이 일정해도 방향이 변하면 가속도가 있다 → 힘이 있다.</p>
   $$ a_c = \frac{v^2}{r} = \omega^2 r $$
@@ -156,6 +313,109 @@
   <h3>데모 7 — 실에 매단 공 돌리기</h3>
   <p>머리 위로 빙빙 돌리다 실을 자르면 공은 <strong>접선 방향</strong>으로 날아간다(원심력 오개념 정정).</p>
   <div class="tip"><strong>"원심력"의 정체</strong> — 관성계에서는 없음. 회전 좌표계에서 느껴지는 가상력일 뿐. 진짜 힘은 항상 안쪽(구심력).</div>
+
+  <h3>인터랙티브 데모 — 원운동 + 실 자르기 ✂️</h3>
+  <p>아래 시뮬레이터에서 "실 자르기" 버튼을 눌러 보세요. 공은 정확히 그 순간의 <strong>접선 방향</strong>으로 직진합니다 — 1법칙(관성)의 자연스러운 결과.</p>
+
+  <div class="demo">
+    <h4>🌀 원운동 시뮬레이터</h4>
+    <p>줄의 길이와 회전 속도를 조절하고, 임의의 순간에 줄을 잘라 공의 운동을 관찰하세요. <strong>밖으로 튕겨나가지 않고 직선으로</strong> 날아가는 게 핵심.</p>
+    <canvas id="circDemo" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>회전 속력 $v$ <span class="val" id="cv">3.0</span> m/s
+        <input type="range" id="cvel" min="1" max="6" step="0.2" value="3"></label>
+      <label>실 길이 $r$ <span class="val" id="crv">1.0</span> m
+        <input type="range" id="cr" min="0.5" max="2" step="0.1" value="1"></label>
+      <button id="ccut">✂ 실 자르기</button>
+      <button id="creset" class="alt">↺ 다시 묶기</button>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰</strong>
+      <ul>
+        <li>실 자르는 순간, 공은 그 시점 <em>속도 방향</em>(접선)으로 등속 직선운동.</li>
+        <li>속력이 빠를수록 공이 더 빠르게 날아감 (운동에너지 보존, 다음 주).</li>
+        <li>"바깥쪽으로 튕겨나간다"는 흔한 오해와 달리, 사실은 <strong>그 순간 가던 방향</strong>으로.</li>
+        <li>원운동 중 장력 $T = mv^2/r$ — 우상단 패널 값을 속도/반경 바꾸며 확인.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('circDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const cx=W/2,cy=H/2;
+    let theta=0,cut=false,cutPos=null,cutVel=null,t0=Date.now();
+    function update(){
+      const v=+document.getElementById('cvel').value;
+      const r=+document.getElementById('cr').value;
+      document.getElementById('cv').textContent=v.toFixed(1);
+      document.getElementById('crv').textContent=r.toFixed(1);
+      const m=0.4;
+      const T=m*v*v/r;
+      const PX=80;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.arc(cx,cy,r*PX,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#666';ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();
+      if(!cut){
+        const dt=(Date.now()-t0)/1000;
+        theta=(v/r)*dt;
+        const bx=cx+r*PX*Math.cos(theta),by=cy+r*PX*Math.sin(theta);
+        ctx.strokeStyle='#8d6e63';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(bx,by);ctx.stroke();
+        const tx=-Math.sin(theta),ty=Math.cos(theta);
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+tx*40,by+ty*40);ctx.stroke();
+        ctx.fillStyle='#0b5fff';
+        const ang=Math.atan2(ty,tx);
+        ctx.beginPath();ctx.moveTo(bx+tx*40,by+ty*40);
+        ctx.lineTo(bx+tx*40-8*Math.cos(ang-0.4),by+ty*40-8*Math.sin(ang-0.4));
+        ctx.lineTo(bx+tx*40-8*Math.cos(ang+0.4),by+ty*40-8*Math.sin(ang+0.4));
+        ctx.closePath();ctx.fill();
+        ctx.fillStyle='#c62828';
+        ctx.beginPath();ctx.arc(bx,by,10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText('v',bx+tx*45,by+ty*45);
+      }else{
+        const dt=(Date.now()-t0)/1000;
+        const bx=cutPos.x+cutVel.x*dt*PX;
+        const by=cutPos.y+cutVel.y*dt*PX;
+        if(bx<0||bx>W||by<0||by>H){cut=false;t0=Date.now();return;}
+        ctx.strokeStyle='#bdbdbd';ctx.setLineDash([2,4]);
+        ctx.beginPath();ctx.moveTo(cutPos.x,cutPos.y);ctx.lineTo(bx,by);ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='#c62828';
+        ctx.beginPath();ctx.arc(bx,by,10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText('직선 운동 (관성)',bx+15,by);
+      }
+      const ix=15,iy=15,iw=200,ih=72;
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(ix,iy,iw,ih);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(ix,iy,iw,ih);
+      ctx.fillStyle='#444';ctx.font='13px sans-serif';
+      ctx.fillText('m = 0.4 kg (가정)',ix+10,iy+20);
+      ctx.fillText('구심가속도 a_c = '+(v*v/r).toFixed(2)+' m/s²',ix+10,iy+38);
+      ctx.fillText('장력 T = '+T.toFixed(2)+' N',ix+10,iy+56);
+    }
+    setInterval(update,30);
+    document.getElementById('ccut').addEventListener('click',()=>{
+      if(cut)return;
+      const v=+document.getElementById('cvel').value;
+      const r=+document.getElementById('cr').value;
+      const PX=80;
+      const bx=cx+r*PX*Math.cos(theta),by=cy+r*PX*Math.sin(theta);
+      const tx=-Math.sin(theta),ty=Math.cos(theta);
+      cutPos={x:bx,y:by};
+      cutVel={x:v*tx,y:v*ty};
+      cut=true;t0=Date.now();
+    });
+    document.getElementById('creset').addEventListener('click',()=>{
+      cut=false;t0=Date.now();theta=0;
+    });
+    update();
+  })();
+  </script>
 
   <h2>흔한 오개념</h2>
   <table>
@@ -211,6 +471,113 @@
   <div class="tip"><strong>예제 7 (Atwood).</strong> $m_1 = 4$ kg, $m_2 = 6$ kg 두 추가 도르래에 매달림. 가속도?<br>
   $a = (6-4)(9.8)/(10) = 1.96$ m/s². 무거운 쪽이 내려옴.</div>
 
+  <h2>예제를 한 번 더 — 단계별 사고 과정 🪜</h2>
+  <p>도르래 문제는 시험 단골이지만 학생들이 가장 자주 막히는 유형. 같은 문제를 <strong>5단계</strong>로 천천히 풀어봅시다.</p>
+
+  <div class="note">
+    <strong>예제 (다시 풀어보기).</strong> 책상 위 $m_1 = 3$ kg과 절벽에 매달린 $m_2 = 2$ kg이 도르래로 연결되어 있다. 책상 마찰 무시. 가속도와 장력을 구하시오.
+  </div>
+
+  <h3>1단계 — 두 물체 따로 FBD</h3>
+  <p>"한 번에 두 물체"는 절대 안 됨. 각각 따로.</p>
+  <ul>
+    <li><strong>$m_1$ (책상 위)</strong>: 중력 $m_1 g$↓, 수직항력 $N$↑, 장력 $T$ → (수평, 도르래 쪽).</li>
+    <li><strong>$m_2$ (매달림)</strong>: 중력 $m_2 g$↓, 장력 $T$↑.</li>
+  </ul>
+
+  <h3>2단계 — 좌표축 정하기 (방향이 핵심)</h3>
+  <p>도르래는 줄의 방향을 바꿔주는 역할. 두 물체에 <em>같은 가속도 크기 $a$</em>가 작용한다는 것을 일관되게 표현하려면:</p>
+  <ul>
+    <li>$m_1$: +x = 도르래 쪽 (장력이 잡아당기는 방향)</li>
+    <li>$m_2$: +y = 아래 방향 (떨어지는 방향)</li>
+  </ul>
+  <p>이렇게 잡으면 두 물체 모두 "+ 방향이 가속하는 방향"이라 부호가 일치.</p>
+
+  <h3>3단계 — 뉴턴 2법칙 두 개 세우기</h3>
+  $$ m_1: \quad T = m_1 a \quad\text{(수평, 마찰 무시)} $$
+  $$ m_2: \quad m_2 g - T = m_2 a \quad\text{(수직, +y 아래)} $$
+
+  <h3>4단계 — 두 식 더해서 $T$ 소거</h3>
+  $$ m_2 g = (m_1 + m_2) a \;\Longrightarrow\; a = \frac{m_2 g}{m_1 + m_2} = \frac{2 \times 9.8}{5} = 3.92\text{ m/s}^2 $$
+  $$ T = m_1 a = 3 \times 3.92 = 11.76 \text{ N} $$
+
+  <h3>5단계 — 답 검증</h3>
+  <ul>
+    <li><strong>극한 점검 1:</strong> $m_1 \to 0$ → $a \to g$ ✓ (자유낙하).</li>
+    <li><strong>극한 점검 2:</strong> $m_1 \to \infty$ → $a \to 0$ ✓ ($m_1$이 너무 무거워 못 끌어당김).</li>
+    <li><strong>장력의 합리성:</strong> $T = 11.76$ N < $m_2 g = 19.6$ N. 만약 정지였다면 $T = m_2 g$지만, 가속 중이므로 작아야 함. ✓</li>
+    <li><strong>단위:</strong> $a$는 m/s², $T$는 N. ✓</li>
+  </ul>
+  <div class="tip"><strong>핵심 포인트</strong> — 도르래 문제는 "두 물체에 같은 $|a|$, 같은 $|T|$"라는 두 제약에 두 물체의 뉴턴식을 세우는 것. <em>방향(+/-)</em>만 일관되게 잡으면 자동.</div>
+
+  <h2>연습문제 — 집에서 풀어보기 ✏️</h2>
+  <p>토글로 풀이를 가립니다. 본인이 먼저 풀어보고 막히면 펼치세요.</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 1</strong> (수평면 + 외력) — 8 kg 블록을 수평면에서 30 N으로 민다. $\mu_k = 0.25$. 가속도?</summary>
+    <p style="margin-top:10px">$N = mg = 78.4$ N. $f_k = 0.25 \times 78.4 = 19.6$ N. $a = (30 - 19.6)/8 = 1.3$ m/s².</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 2</strong> (경사면 마찰) — 20° 경사면 위 4 kg 블록이 정지해 있다. 정지마찰계수의 최솟값은?</summary>
+    <p style="margin-top:10px">$\mu_s \ge \tan 20° \approx 0.364$. 이보다 작으면 미끄러짐.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 3</strong> (엘리베이터) — 60 kg 사람이 엘리베이터에서 위로 3 m/s² 가속. 체중계 눈금?</summary>
+    <p style="margin-top:10px">$N = m(g+a) = 60(9.8+3) = 768$ N. 평소 588 N보다 30% 무거워 보임. 체중계가 kg 표시면 $N/g \approx 78$ kg.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 4</strong> (Atwood) — $m_1 = 5$ kg, $m_2 = 8$ kg. 가속도와 장력은?</summary>
+    <p style="margin-top:10px">$a = (8-5)(9.8)/13 \approx 2.26$ m/s². $T = 2(5)(8)(9.8)/13 \approx 60.3$ N. 또는 $m_1$의 식 $T - m_1 g = m_1 a$ → $T = 5(9.8 + 2.26) = 60.3$ N. 같음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 5</strong> (원운동) — 80 cm 실에 매단 0.4 kg 공이 3 m/s로 수평 원운동. 실의 장력?</summary>
+    <p style="margin-top:10px">$T = mv^2/r = 0.4 \times 9 / 0.8 = 4.5$ N. 실이 끊어지지 않으려면 이 이상의 인장강도가 필요.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 6</strong> (3법칙 식별) — 책이 책상 위에 있을 때 책의 중력의 반작용은?</summary>
+    <p style="margin-top:10px"><strong>지구가 책에 작용하는 중력의 반작용 = 책이 지구에 작용하는 중력</strong>. 보통 학생들이 "수직항력"이라 답하지만 틀림. 수직항력은 책상이 책에 작용하는 별개의 힘.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 7</strong> (책상 + 절벽 도르래 + 마찰) — 책상 위 $m_1 = 4$ kg, 마찰 $\mu_k = 0.2$, 매달린 $m_2 = 3$ kg. 가속도?</summary>
+    <p style="margin-top:10px">$m_1$: $T - \mu_k m_1 g = m_1 a$. $m_2$: $m_2 g - T = m_2 a$. 더하면 $m_2 g - \mu_k m_1 g = (m_1+m_2)a$. $a = (3 \times 9.8 - 0.2 \times 4 \times 9.8)/7 = (29.4 - 7.84)/7 \approx 3.08$ m/s².</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 8</strong> (커브 한계 속도) — 곡률 반경 80 m, $\mu_s = 0.7$인 도로. 미끄러지지 않을 최대 속도?</summary>
+    <p style="margin-top:10px">$v_{max} = \sqrt{\mu_s g r} = \sqrt{0.7 \times 9.8 \times 80} \approx 23.4$ m/s ≈ 84 km/h. 비 오는 날엔 $\mu_s$ 절반 → $v_{max} \approx 60$ km/h.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 9</strong> (자유낙하 무중력) — 70 kg 사람이 자유낙하 중인 엘리베이터에 있을 때 체중계 눈금은?</summary>
+    <p style="margin-top:10px">$a = -g$이므로 $N = m(g - g) = 0$ N. 체중계는 0을 가리킴 — 무중력 상태. 이게 NASA의 무중력 훈련 비행기(Vomit Comet)의 원리.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 10</strong> (수직 원운동) — 1 m 줄에 매단 2 kg 공을 수직 원운동시킨다. 최고점에서 줄이 풀리지 않을 최소 속도?</summary>
+    <p style="margin-top:10px">최고점에서 $T + mg = mv^2/r$. $T = 0$이 최소 조건 → $v_{min} = \sqrt{gr} = \sqrt{9.8} \approx 3.13$ m/s. 이보다 느리면 공이 떨어짐.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 11</strong> (두 블록 밀기) — 6 kg, 4 kg 두 블록이 붙어 있고 6 kg을 30 N으로 민다(마찰 무시). 두 블록 사이에 작용하는 힘은?</summary>
+    <p style="margin-top:10px">전체 가속도 $a = 30/10 = 3$ m/s². 4 kg에 작용하는 힘 = $4 \times 3 = 12$ N (이게 6 kg이 4 kg에 미는 힘). 3법칙: 4 kg이 6 kg을 12 N으로 미는 반작용.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 12</strong> (경사면 + 마찰 + 외력) — 20° 경사 위 5 kg 블록을 사면 위쪽으로 25 N으로 민다. $\mu_k = 0.15$. 가속도?</summary>
+    <p style="margin-top:10px">$N = mg\cos 20° \approx 46.0$ N. $f_k = 0.15 \times 46.0 \approx 6.9$ N (운동방향 반대). $mg\sin 20° \approx 16.8$ N. 사면 따라 위쪽 +로 잡으면 $a = (25 - 16.8 - 6.9)/5 \approx 0.26$ m/s². <em>아주 천천히 위로 가속.</em></p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐</strong> — Atwood에서 $m_1 = m_2 = 3$ kg일 때 한쪽 추가 부드럽게 5 N의 외부 힘으로 잠시 당겨졌다 떼어졌다. 그 후 두 추는?</summary>
+    <p style="margin-top:10px">외력이 사라지는 순간 두 추의 질량이 같으므로 가속도는 0이지만 <em>외력 동안 얻은 속도는 보존</em>. 등속으로 계속 움직임. 1법칙(관성)의 명확한 예.</p>
+  </details>
+
   <h2>자기 점검 ✅</h2>
   <div class="note">
     <ol>
@@ -234,6 +601,283 @@
     </tbody>
   </table>
 
+  <h2>📚 부록 — 자주 쓰는 마찰계수 표</h2>
+  <p>실제 시험 문제에서 마찰계수가 주어지지 않으면 다음 표의 대표값을 사용해도 무방.</p>
+
+  <table>
+    <thead><tr><th>표면 조합</th><th>$\mu_s$ (정지)</th><th>$\mu_k$ (운동)</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>고무 - 마른 콘크리트</td><td>1.0</td><td>0.7</td><td>자동차 타이어 마른 노면</td></tr>
+      <tr><td>고무 - 젖은 콘크리트</td><td>0.7</td><td>0.5</td><td>비 오는 날 (!)</td></tr>
+      <tr><td>강철 - 강철 (마른)</td><td>0.74</td><td>0.57</td><td>금속 가공</td></tr>
+      <tr><td>강철 - 강철 (윤활)</td><td>0.16</td><td>0.06</td><td>오일 코팅</td></tr>
+      <tr><td>나무 - 나무</td><td>0.4</td><td>0.2</td><td>가구 슬라이드</td></tr>
+      <tr><td>유리 - 유리</td><td>0.94</td><td>0.4</td><td>의외로 높음</td></tr>
+      <tr><td>테플론 - 테플론</td><td>0.04</td><td>0.04</td><td>최저 마찰의 대표</td></tr>
+      <tr><td>얼음 - 얼음 (0°C)</td><td>0.10</td><td>0.03</td><td>스케이트의 원리</td></tr>
+      <tr><td>스키 왁스 - 눈</td><td>0.10</td><td>0.04</td><td>스키 시즌</td></tr>
+      <tr><td>관절 (인체)</td><td>0.01</td><td>0.003</td><td>인체 관절액의 효과</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>관찰</strong> — $\mu_k$가 $\mu_s$보다 30~50% 작은 게 보통. 그래서 "정지 → 미끄러짐 전환"이 갑자기 일어남(임계각 넘으면 갑자기 빨라짐).</div>
+
+  <h2>📐 SI 단위 빠른 참조 — 힘·질량·가속도</h2>
+  <table>
+    <thead><tr><th>양</th><th>SI 단위</th><th>흔한 환산</th></tr></thead>
+    <tbody>
+      <tr><td>질량 $m$</td><td>kg</td><td>1 g = 0.001 kg, 1 톤 = 1000 kg</td></tr>
+      <tr><td>힘 $F$</td><td>N (= kg·m/s²)</td><td>1 kgf = 9.8 N (kg중)</td></tr>
+      <tr><td>가속도 $a$</td><td>m/s²</td><td>1 g = 9.8 m/s²</td></tr>
+      <tr><td>중량(무게) $W$</td><td>N</td><td>$W = mg$. "체중 60 kg" → 무게 588 N</td></tr>
+      <tr><td>장력 $T$</td><td>N</td><td>줄·케이블의 인장 응력</td></tr>
+    </tbody>
+  </table>
+
+  <h3>차원 점검 — 식이 맞는지 확인</h3>
+  <ul>
+    <li>$F = ma$ → N = kg·(m/s²) ✓</li>
+    <li>$T = mv^2/r$ → kg·(m/s)²/m = kg·m/s² = N ✓</li>
+    <li>$\mu = f/N$ → N/N = 무차원 ✓ (마찰계수는 단위 없음!)</li>
+    <li>$mg\sin\theta$ → kg·(m/s²)·(무차원) = N ✓</li>
+  </ul>
+
+  <h2>📝 자주 틀리는 계산 실수 BEST 10</h2>
+  <table>
+    <thead><tr><th>실수</th><th>예시</th><th>예방법</th></tr></thead>
+    <tbody>
+      <tr><td>1. 작용/반작용을 같은 물체에 적용</td><td>"중력 = 수직항력"으로 착각해 작용-반작용 쌍이라 답함</td><td>3법칙 쌍은 반드시 <strong>다른 물체 사이</strong></td></tr>
+      <tr><td>2. 경사면에서 $\sin$/$\cos$ 헷갈림</td><td>중력 사면 성분에 $\cos\theta$ 사용</td><td>$\theta = 0$이면 수평면 → 사면 성분 0 → $\sin$가 사면, $\cos$가 수직</td></tr>
+      <tr><td>3. 정지마찰을 $\mu_s N$로 무조건 대입</td><td>외력이 작아도 $f_s = \mu_s N$로 계산</td><td>$f_s$는 외력에 따라 변함, 최댓값만 $\mu_s N$</td></tr>
+      <tr><td>4. 도르래에서 두 가속도를 다르게</td><td>줄이 안 늘어나도 $a_1 \ne a_2$로 식 세움</td><td>고정 도르래는 항상 $|a_1| = |a_2|$</td></tr>
+      <tr><td>5. 줄의 양 끝 장력이 다름</td><td>"$T_1$과 $T_2$"로 두 변수</td><td>질량 없는 줄·마찰 없는 도르래: 한 변수 $T$로 통일</td></tr>
+      <tr><td>6. 무게 = 중력 = mg를 N(수직항력)으로 답</td><td>"엘리베이터에서 무게가 변한다"</td><td>무게(중력) $W = mg$는 항상 일정. 변하는 건 $N$</td></tr>
+      <tr><td>7. 원심력을 진짜 힘처럼 처리</td><td>FBD에 원심력 화살표</td><td>FBD에는 진짜 힘만. 원심력은 회전계의 가상력</td></tr>
+      <tr><td>8. 단위 N과 kg 혼동</td><td>"무게 60 kg" → 60 N로 식</td><td>kg는 질량, N는 힘. 무게 N = $mg$. 60 kg 사람 무게 = 588 N</td></tr>
+      <tr><td>9. $g$의 부호</td><td>+y 위로 잡고 $a = +g$ 사용</td><td>좌표축 정한 후 중력 부호를 일관되게</td></tr>
+      <tr><td>10. 두 물체를 한 시스템으로 처리하는 시점</td><td>FBD 안 그리고 바로 "$F = (m_1+m_2)a$"</td><td>물체 사이 힘 묻는 문제는 반드시 따로 FBD</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>한 줄 시험장 체크리스트</strong> — ① FBD 5단계, ② 좌표축 명시, ③ 한 물체에 한 식, ④ 작용/반작용은 다른 물체, ⑤ 답에 단위. 5가지를 매 문제마다.
+  </div>
+
+  <h2>❓ 학생 단골 질문 (FAQ)</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q1.</strong> "관성"이 정확히 뭔가요? 1법칙 설명에 자꾸 나오는데.</summary>
+    <p style="margin-top:10px">관성 = "운동 상태를 유지하려는 성질". 정량적으로는 <strong>질량</strong>이 관성의 척도입니다. 무거운 물체는 속도를 바꾸기 어렵고(관성↑), 가벼운 물체는 쉽게 움직임. 1법칙은 외력 없을 때 이 성질이 그대로 발현됨을 말함.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q2.</strong> 작용과 반작용은 같은 크기인데 왜 두 물체가 같이 움직이지 않나요?</summary>
+    <p style="margin-top:10px">두 힘이 <strong>다른 물체</strong>에 작용하기 때문. 사람이 벽을 밀면 사람도 같은 크기로 벽이 밀어내지만, 사람은 가속하고 벽은 거의 안 움직임 — 질량이 매우 다르기 때문. $a = F/m$이라 무거운 쪽 가속도가 작음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q3.</strong> 정지마찰과 운동마찰은 왜 다른가요?</summary>
+    <p style="margin-top:10px">표면 거시적·미시적 접촉 때문. 정지 상태에서는 두 표면의 분자가 충분히 결합·맞물리지만, 일단 미끄러지기 시작하면 결합이 깨져 있어 마찰력이 줄어듭니다. 그래서 보통 $\mu_k < \mu_s$. <em>처음 미는 게 어렵고 한 번 움직이면 쉬운</em> 일상 경험과 일치.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q4.</strong> 엘리베이터 자유낙하면 정말 무중력처럼 느낄까요?</summary>
+    <p style="margin-top:10px">예. 사람과 엘리베이터가 같은 $g$로 떨어지므로 사람이 엘리베이터 바닥을 누르지 못함 → 수직항력 $N = 0$. NASA의 무중력 훈련기 "Vomit Comet"이 이 원리로 짧게(20~30초) 무중력 환경을 만듭니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q5.</strong> 원심력은 왜 가상력인가요?</summary>
+    <p style="margin-top:10px">관성계(가속하지 않는 좌표계)에서는 진짜 힘이 아닌, 회전 좌표계에서 등장하는 가짜 힘이기 때문. 회전 의자 위에서 컵이 옆으로 밀려나는 느낌은 실제로는 컵이 직선으로 가려는 관성과 의자가 회전하기 때문에 생기는 상대적 효과. 진짜 힘(구심력)은 항상 안쪽으로.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q6.</strong> FBD 그릴 때 어떤 힘을 적어야 하나요?</summary>
+    <p style="margin-top:10px"><strong>물체에 직접 닿는 다른 것이 미는/당기는 힘</strong>만 적습니다. 중력은 멀리서도 작용하니 무조건 1개 추가. 닿지 않는 것의 힘(예: 원심력)은 안 됨. "닿은 횟수 + 1(중력)"이 보통 화살표 개수.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q7.</strong> 도르래 문제에서 줄이 늘어나면 가정이 바뀌나요?</summary>
+    <p style="margin-top:10px">예. 줄이 탄성을 가지면 두 물체의 가속도가 달라지고, 줄의 길이 변화도 운동방정식에 들어감 — 훨씬 어려워짐. 학부 기초에서는 거의 항상 "이상적인 줄"(질량 0, 늘어나지 않음) 가정.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q8.</strong> 경사면 마찰 문제에서 좌표축을 사면을 따라 잡는 이유?</summary>
+    <p style="margin-top:10px">사면을 따라 잡으면 운동 방향이 한 축, 수직항력·중력 사면 수직 성분이 다른 축이 되어 계산이 분리됩니다. 수평/수직 좌표로 잡으면 모든 힘이 두 축에 분포되어 식이 더 복잡. <em>축은 운동 방향에 맞추는 게 정답.</em></p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q9.</strong> 무게 vs 질량 — 정말 매번 따져야 하나요?</summary>
+    <p style="margin-top:10px">엔지니어링에서는 항상 따져야 합니다. 질량은 어디서나 같지만, 무게(중력)는 행성에 따라 다릅니다. 달에서 60 kg 사람의 무게는 약 98 N (지구의 1/6), 화성에서는 222 N. 우주공학·항공공학에선 결정적.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q10.</strong> $F = ma$의 $a$는 그 순간의 가속도인가, 평균인가?</summary>
+    <p style="margin-top:10px"><strong>그 순간의 순간 가속도</strong>입니다. $\vec F$도 그 순간의 합력. 시간에 따라 $\vec F$가 변하면 $\vec a$도 매 순간 변함. 충돌처럼 짧은 시간이면 평균적인 $\bar F = m\Delta v/\Delta t$ 형태로 다루기도 합니다(W4 충격량).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q11.</strong> 정지·운동 마찰계수는 어디서 구하나요?</summary>
+    <p style="margin-top:10px">실험으로 측정합니다. 위 데모 6의 경사판 방법이 가장 쉬움. 표면별 대표값: 고무-콘크리트 약 1.0, 강철-강철 약 0.7, 나무-나무 0.4, 얼음-얼음 0.03. 실제 값은 상태(습기·먼지)에 매우 민감.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q12.</strong> "구심력"과 "구심가속도" 차이?</summary>
+    <p style="margin-top:10px">구심가속도 = 운동학적 양, $a_c = v^2/r$. 구심력 = 그 가속도를 만드는 진짜 힘, $F_c = ma_c$. <strong>구심력이라는 별개의 힘은 없음</strong> — 줄의 장력, 마찰력, 중력 등 어떤 힘이든 그 역할을 할 수 있음. "구심"은 방향을 표시할 뿐.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q13.</strong> 등속 원운동 중 왜 "운동의 변화 = 가속도"가 있나요? 속력은 안 변하잖아요.</summary>
+    <p style="margin-top:10px">속도는 벡터(크기 + 방향)이므로 <em>방향만 변해도</em> 속도가 변하는 것. 가속도 = 속도 변화율이라 0이 아닙니다. 속력(스칼라)만 일정한 것.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q14.</strong> 1법칙은 사실 2법칙의 특수한 경우 아닌가요?</summary>
+    <p style="margin-top:10px">$F = 0$이면 $a = 0$이라 형식적으로는 그렇게 보입니다. 하지만 1법칙의 진짜 의미는 "<strong>관성계라는 기준틀이 존재한다</strong>"는 선언입니다. 가속하는 좌표계에서는 외력이 없어도 가속도가 보일 수 있어요. 1법칙은 어떤 좌표계에서 2법칙을 적용해야 하는지를 알려줍니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q15.</strong> 다음 주(에너지)는 이번 주와 어떻게 다른가요?</summary>
+    <p style="margin-top:10px">같은 운동을 <em>다른 관점</em>으로 분석. 뉴턴 법칙은 매 순간 힘을 추적하는 "미시적" 방법, 에너지 보존은 시작과 끝만 보면 되는 "거시적" 방법. 어떤 문제는 한쪽이 압도적으로 쉬움 → 두 도구를 모두 갖추는 게 핵심.</p>
+  </details>
+
+  <h2>🧪 핸드폰으로 5분 실험 — 직접 측정</h2>
+
+  <h3>실험 A — 경사판으로 정지마찰계수 측정 (3분)</h3>
+  <ol>
+    <li>책·핸드폰 케이스 등 측정 대상을 평평한 판(공책 등) 위에 놓는다.</li>
+    <li>판을 천천히 한쪽 끝부터 들어 올린다.</li>
+    <li>물체가 막 미끄러지기 시작하는 순간의 각도 $\theta_c$를 측정 (각도기 또는 핸드폰 수준기 앱).</li>
+    <li>$\mu_s = \tan\theta_c$. 표면별로 비교 (책, 종이, 천 등).</li>
+  </ol>
+  <p><em>예상값:</em> 책-책상 약 0.3 (17°), 운동화-아스팔트 약 1.0 (45°).</p>
+
+  <h3>실험 B — Phyphox로 엘리베이터 가속도 (3분)</h3>
+  <ol>
+    <li>핸드폰에 <a href="https://phyphox.org/">Phyphox</a> 앱 설치.</li>
+    <li>"Acceleration without g" 선택.</li>
+    <li>엘리베이터에서 출발/도착 직후 가속도 측정 → 그래프로 저장.</li>
+    <li>출발 직후 $a > 0$ (위로 가속), 도착 직전 $a < 0$ (위로 감속). 본인 무게 변화 환산.</li>
+  </ol>
+
+  <h3>실험 C — 줄에 매단 가방 회전 (실외, 5분)</h3>
+  <ol>
+    <li>가벼운 책가방에 줄을 매고 머리 위로 천천히 회전 (안전한 야외에서!).</li>
+    <li>회전 속도가 빠를수록 줄을 강하게 잡아당기는 느낌 → 장력 $T = mv^2/r$.</li>
+    <li>속도를 두 배로 올리면 장력은 4배. 직접 체감.</li>
+  </ol>
+
+  <h2>🌍 일상 속의 뉴턴 법칙 — 실측 데이터</h2>
+  <table>
+    <thead><tr><th>상황</th><th>힘 또는 가속도</th><th>설명</th></tr></thead>
+    <tbody>
+      <tr><td>걷는 사람의 발이 받는 힘</td><td>약 1.0~1.5 mg</td><td>한 발만으로 몸 전체를 지탱</td></tr>
+      <tr><td>달리기 착지 충격</td><td>약 3~5 mg</td><td>관절에 큰 부담 — 쿠션 신발의 이유</td></tr>
+      <tr><td>자동차 풀가속</td><td>3~5 m/s²</td><td>시트가 등을 미는 힘 = 약 0.4 mg</td></tr>
+      <tr><td>자동차 급브레이크</td><td>~8 m/s²</td><td>안전벨트 장력 = 0.8 mg</td></tr>
+      <tr><td>자동차 사고 (50 km/h → 0)</td><td>50~100 m/s²</td><td>에어백·안전벨트 없으면 치명상</td></tr>
+      <tr><td>아폴로 발사 시 우주비행사</td><td>~3 g (29 m/s²)</td><td>훈련된 인간의 한계 근처</td></tr>
+      <tr><td>롤러코스터 탑승</td><td>최대 4~5 g</td><td>짧게는 견딜 수 있음</td></tr>
+      <tr><td>총알 발사 시 공이 받는 힘</td><td>10⁴~10⁵ N</td><td>수ms 동안의 거대한 힘</td></tr>
+      <tr><td>비행기 착륙시 가속도</td><td>0.3 g</td><td>승객 거의 못 느낌</td></tr>
+      <tr><td>국제우주정거장 자유낙하</td><td>$g_{eff} \approx 0$</td><td>중력은 있지만 같이 떨어지는 중</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>1 g = 9.8 m/s²</strong>. 우리 몸이 평소 1 g를 받음. 0 g (무중력)와 5 g (롤러코스터 정점) 사이가 일상의 범위.</div>
+
+  <h2>🏟️ 실생활 응용 깊게 보기</h2>
+
+  <h3>응용 1 — 안전벨트가 생명을 살리는 물리</h3>
+  <p>50 km/h(13.9 m/s)로 달리는 차가 0.1 s 만에 정지. 70 kg 사람:</p>
+  <ul>
+    <li>가속도 $a = 13.9/0.1 = 139$ m/s² ≈ 14 g.</li>
+    <li>몸에 작용하는 힘 $F = 70 \times 139 = 9{,}730$ N ≈ 1톤짜리 차에 깔린 압력.</li>
+    <li>안전벨트가 정지 시간을 0.5 s로 늘리면 → $a$ 1/5 → 힘 1/5 → 부상 가능성 급감.</li>
+  </ul>
+
+  <h3>응용 2 — 헬멧과 충격 흡수</h3>
+  <p>같은 원리로 헬멧 내부의 EPS 폼이 충돌 시간을 늘림 → 머리에 가해지는 평균 힘 감소. $F\Delta t = m\Delta v$ (충격량) — 다음 주 W4의 핵심.</p>
+
+  <h3>응용 3 — 자율주행과 뉴턴 법칙</h3>
+  <p>자율주행차의 제어기는 매 순간 차량의 운동방정식 $m\ddot x = F_{drive} - F_{drag} - mg\sin\alpha$를 풀어 다음 토크/스로틀을 결정합니다. 학부에 배운 $F = ma$가 그대로 쓰임. 4학년 자동제어·MPC 강의에서 더 깊이.</p>
+
+  <h3>응용 4 — 곡선 도로의 뱅크(경사) 각</h3>
+  <p>고속도로 코너에 노면이 안쪽으로 기울어진 이유는 마찰 없이도 차량이 안전히 코너링하도록 하기 위함입니다. 경사각 $\theta$로 기울인 노면, 반경 $r$, 속도 $v$:</p>
+  $$ \tan\theta = \frac{v^2}{rg} $$
+  <p>예: 반경 200 m 코너에서 30 m/s(108 km/h)로 코너링하려면 $\tan\theta = 900/(200 \times 9.8) \approx 0.46$ → $\theta \approx 24.6°$. F1 트랙의 뱅크가 이 정도.</p>
+
+  <h3>응용 5 — 우주정거장 인공중력</h3>
+  <p>회전하는 원통형 우주정거장 안 사람이 느끼는 "중력"은 실제로는 원통이 사람을 안쪽으로 미는 수직항력. 반경 100 m 원통이 1 g 인공중력을 만들려면:</p>
+  $$ a_c = \omega^2 r = g \;\Longrightarrow\; \omega = \sqrt{g/r} \approx 0.31 \text{ rad/s} $$
+  <p>주기 $T = 2\pi/\omega \approx 20$ s — 영화 「2001 스페이스 오디세이」, 「인터스텔라」의 우주선 회전 속도가 이런 원리.</p>
+
+  <h2>🪜 응용 — 정적 평형의 고전: 벽에 기댄 사다리</h2>
+  <p>$m = 20$ kg, 길이 $L = 5$ m 사다리가 매끄러운 벽에 기대 있다. 사다리와 바닥 사이 마찰계수 $\mu_s = 0.4$. 사다리가 미끄러지지 않을 최소 각도는?</p>
+
+  <div class="note">
+    <strong>풀이 단계</strong>
+    <ol>
+      <li><strong>FBD:</strong> 무게 $mg$ (사다리 중앙), 벽 수직항력 $N_w$ (수평, 벽에서 멀어지는 방향), 바닥 수직항력 $N_f$ (위), 바닥 마찰 $f$ (벽 쪽).</li>
+      <li><strong>힘 평형:</strong> 수직 $N_f = mg$, 수평 $f = N_w$.</li>
+      <li><strong>토크 평형 (바닥 닿는 점 기준):</strong> $N_w \cdot L\sin\theta = mg \cdot (L/2)\cos\theta$ → $N_w = (mg/2)\cot\theta$.</li>
+      <li><strong>미끄러지지 않을 조건:</strong> $f \le \mu_s N_f$ → $(mg/2)\cot\theta \le \mu_s mg$ → $\cot\theta \le 2\mu_s = 0.8$ → $\tan\theta \ge 1.25$ → $\theta \ge 51.3°$.</li>
+    </ol>
+  </div>
+  <div class="tip">사다리 사용 시 벽과 약 75° 각도(거의 수직)를 권하는 이유. 마찰계수가 작으면 더 가파르게 세워야 안전.</div>
+
+  <h2>✏️ 직접 그려보기 — FBD 연습 5개</h2>
+  <p>다음 상황에 대해 자유물체도를 그리고 힘을 적어 보세요. 답은 토글로.</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>FBD 1.</strong> 사람이 가만히 서 있다.</summary>
+    <p style="margin-top:10px">중력 $mg$ ↓, 바닥 수직항력 $N$ ↑. 두 힘이 같은 크기 반대 방향 → 합력 0, 가속도 0.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>FBD 2.</strong> 천장에 매단 추가 정지해 있다.</summary>
+    <p style="margin-top:10px">중력 $mg$ ↓, 줄의 장력 $T$ ↑. $T = mg$.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>FBD 3.</strong> 책상 위 책을 손이 수평으로 5 N으로 민다 (마찰 있음).</summary>
+    <p style="margin-top:10px">중력 ↓, 수직항력 ↑, 미는 힘 → (수평), 마찰력 ← (반대 수평). 마찰이 5 N 이상이면 정지, 미만이면 운동.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>FBD 4.</strong> 천장에서 줄에 매달린 30° 진자가 옆으로 기운 채 멈춰 있다.</summary>
+    <p style="margin-top:10px">중력 $mg$ ↓, 줄의 장력 $T$ (줄 따라 위 + 안쪽). 외부 손이 잡고 있다는 가정 (정지 = 진자가 멈췄다는 뜻). 손의 힘은 수평 안쪽으로 $mg\tan 30°$.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>FBD 5.</strong> 자유낙하 중인 엘리베이터 안 사람.</summary>
+    <p style="margin-top:10px">중력 $mg$ ↓ 만. 수직항력 $N = 0$ — 사람이 바닥을 누르지 못함. 무중력처럼 느낌. 작용/반작용을 강조하면: 지구가 사람에게 중력 / 사람이 지구에게 중력. 두 힘 모두 존재.</p>
+  </details>
+
+  <h2>📌 학기 종합 — 뉴턴 법칙이 모든 동역학의 뼈대</h2>
+  <p>이번 주에 익힌 도구가 학기 후반에 어떻게 발전하는지:</p>
+  <table>
+    <thead><tr><th>주차</th><th>이번 주 도구가 이렇게 변형됨</th></tr></thead>
+    <tbody>
+      <tr><td>W3 (일·에너지)</td><td>$F$를 거리로 적분 → 일 $W$. 같은 운동을 시간 대신 위치로 본다.</td></tr>
+      <tr><td>W4 (운동량·충격량)</td><td>$F$를 시간으로 적분 → 충격량 $J$. 충돌 문제에 결정적.</td></tr>
+      <tr><td>W5 (회전)</td><td>$F = ma$ → $\tau = I\alpha$. 직선 ↔ 회전이 1:1 대응.</td></tr>
+      <tr><td>W6 (단진동)</td><td>$F = -kx$ → 사인 운동. 진동·진자 모두 이 식의 해.</td></tr>
+      <tr><td>W12 (회로)</td><td>전하의 운동도 $qE = ma$. 전기장이 가속도를 결정.</td></tr>
+      <tr><td>W13 (자기력)</td><td>$F = qv \times B$. 원운동의 변형 — 사이클로트론.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🛠️ 추가 도전 — FBD 손에 익히기</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 1 ⭐</strong> — 트럭 짐칸 위에 박스가 있다. 트럭이 $a$로 가속할 때 박스가 미끄러지지 않을 조건은?</summary>
+    <p style="margin-top:10px">박스에 작용하는 수평 힘은 트럭과의 마찰만. 박스가 트럭과 같이 가속하려면 $f \le \mu_s mg$여야 함. 즉 $ma \le \mu_s mg$ → $a \le \mu_s g$. 마찰계수 0.5라면 트럭 가속 한계 4.9 m/s². 그 이상으로 급가속하면 박스가 짐칸 위에서 뒤로 미끄러짐.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 2 ⭐⭐</strong> — Atwood에서 줄에 추가 질량 $m_3$을 m₁ 쪽 중간에 끼우면 가속도와 장력이 어떻게 변하나?</summary>
+    <p style="margin-top:10px">$m_1$ 쪽 효과 질량이 $m_1 + m_3$로 늘어남. $a = (m_2 - m_1 - m_3)g/(m_1+m_2+m_3)$. $m_3$가 충분히 크면 $m_1$ 쪽이 더 무거워져 부호가 반전 → 가속 방향이 바뀜. 줄의 윗부분과 아랫부분 장력이 다름 (중간에 매단 추가 질량 때문).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 3 ⭐⭐⭐</strong> — "원뿔 진자" — 줄에 매단 공이 수평 원을 그리며 회전. 줄의 길이 $L$, 줄과 수직선 사이 각도 $\theta$. 회전 주기는?</summary>
+    <p style="margin-top:10px">FBD: 장력 $T$ (줄 따라 위쪽), 중력 $mg$ (아래). 수직 평형: $T\cos\theta = mg$. 수평 = 구심력: $T\sin\theta = mv^2/r$, $r = L\sin\theta$. 두 식 나누기: $\tan\theta = v^2/(rg)$. 또 $v = 2\pi r/T_{period}$ 대입 정리하면 $T_{period} = 2\pi\sqrt{L\cos\theta/g}$. <em>각도가 클수록 빠르게 회전.</em></p>
+  </details>
+
   <h2>과제 2</h2>
   <ol>
     <li>(개념) 엘리베이터가 위로 가속할 때 체중계 눈금은? FBD와 함께 설명.</li>
@@ -242,6 +886,113 @@
   </ol>
 
   <div class="note"><strong>다음 주 미리보기</strong> — 같은 현상을 <strong>에너지</strong> 관점으로. "공이 떨어질 때 빨라지는 이유"를 위치에너지 ↔ 운동에너지로.</div>
+
+  <h2>🗺️ 개념 지도 — 2주차가 어디로 이어지는가</h2>
+  <pre><code>             ┌── (W3) 일·에너지       ──→ 같은 운동, 적분된 시각
+             │
+   W2 뉴턴법칙├── (W4) 운동량·충격량   ──→ F = dp/dt 의 시간 적분
+   (FBD/F=ma/├── (W5) 회전·토크        ──→ τ = Iα (직선↔회전 1:1 대응)
+   3법칙)    │
+             ├── (W6) 단진동 (스프링)  ──→ F = -kx → 사인 운동
+             │
+             └── (W12) 회로            ──→ 전하의 운동도 F=qE/qvB로 결정
+
+   더 멀리:
+     • 자율주행 종방향 모델: m·dv/dt = F_throttle - F_drag → MPC 입력
+     • 로봇 매니퓰레이터: τ = M(q)q̈ + C(q,q̇)q̇ + g(q) (오늘 식의 일반화)
+     • 게임 물리 엔진(Box2D, Bullet): 객체별 F=ma를 매 프레임 통합</code></pre>
+
+  <p><strong>한 줄 결론</strong> — 이번 주의 자유물체도 + $F = ma$는 14주 모든 동역학의 출발점입니다. 그림 5단계가 손에 익으면 80% 끝.</p>
+
+  <h2>🎯 한 페이지 요약 — 시험 직전 5분 노트</h2>
+  <div class="tip">
+    <h4 style="margin-top:0">절대 잊지 말 것</h4>
+    <ol>
+      <li><strong>1법칙:</strong> 외력 0 → 운동 상태 유지. (관성)</li>
+      <li><strong>2법칙:</strong> $\vec F_{net} = m\vec a$. <em>합력</em>이 가속도를 결정.</li>
+      <li><strong>3법칙:</strong> 작용/반작용은 <em>다른 물체</em>에 작용 → 상쇄 안 됨.</li>
+      <li><strong>FBD 5단계:</strong> ① 물체 ② 닿는 것 ③ 화살표 + 중력 ④ 좌표축 ⑤ 분해.</li>
+      <li><strong>경사면:</strong> 중력 사면 성분 $mg\sin\theta$, 수직 성분 $mg\cos\theta$. 임계각 $\tan^{-1}\mu$.</li>
+      <li><strong>도르래:</strong> 두 물체 같은 $|a|$, 같은 $|T|$. 각자 FBD → 두 식 연립.</li>
+      <li><strong>엘리베이터:</strong> $N = m(g + a)$, 자유낙하 시 $N = 0$.</li>
+      <li><strong>원운동:</strong> $a_c = v^2/r$, 중심 방향. 구심력은 별개 힘이 아님 (역할).</li>
+    </ol>
+  </div>
+
+  <h2>🎓 1분 미니퀴즈 — 5문항</h2>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 1.</strong> 등속으로 직선을 가는 자동차에 작용하는 합력은?</summary>
+    <p style="margin-top:8px">0. 가속도 0이므로 (1법칙). 추진력과 마찰이 정확히 상쇄.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 2.</strong> 30° 경사면 위 마찰 없는 5 kg 블록의 가속도는?</summary>
+    <p style="margin-top:8px">$a = g\sin 30° = 4.9$ m/s². 사면 따라 아래.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 3.</strong> 사람이 벽을 100 N으로 민다. 벽이 사람에게 작용하는 힘은?</summary>
+    <p style="margin-top:8px">100 N (3법칙). 크기는 같고 방향만 반대.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 4.</strong> 60 kg 사람이 위로 2 m/s²로 가속하는 엘리베이터에 있다. 체중계 눈금은?</summary>
+    <p style="margin-top:8px">$N = 60(9.8 + 2) = 708$ N. 평소 588 N보다 약 20 % 무거움.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 5.</strong> 1 m 줄에 매단 0.5 kg 공이 4 m/s로 수평 회전. 줄의 장력?</summary>
+    <p style="margin-top:8px">$T = mv^2/r = 0.5 \times 16 / 1 = 8$ N.</p>
+  </details>
+
+  <h2>📖 더 깊이 — 참고자료</h2>
+  <ul>
+    <li><strong>Halliday, Resnick, Walker</strong>, <em>Fundamentals of Physics</em> — 5장(뉴턴법칙), 6장(마찰·원운동).</li>
+    <li><strong>Khan Academy 한국어 — 뉴턴 운동 법칙</strong>: 영상 + 즉시 채점.</li>
+    <li><strong>Walter Lewin MIT 8.01 Lecture 6, 7, 8</strong>: 마찰·도르래 라이브 시연.</li>
+    <li><strong>Veritasium</strong> YouTube — "Misconceptions About Force": 1법칙 오해 정정 영상.</li>
+    <li><strong>Phyphox</strong> <a href="https://phyphox.org/">phyphox.org</a>: 엘리베이터 가속도 측정 (실험 B).</li>
+  </ul>
+
+  <h2>📋 학습 체크리스트</h2>
+  <div class="tip">
+    이번 주 끝나기 전에 다음을 ✅ 표시할 수 있는지 확인하세요:
+    <ul style="list-style:none;padding-left:0">
+      <li>☐ 임의의 상황에서 FBD 5단계를 그릴 수 있다.</li>
+      <li>☐ 작용/반작용 쌍을 한 문장으로 설명할 수 있다 ("A가 B에게 → B가 A에게").</li>
+      <li>☐ 경사면 중력 분해 ($mg\sin\theta$, $mg\cos\theta$)를 도형으로 유도할 수 있다.</li>
+      <li>☐ 도르래 + 두 물체 문제를 두 개의 뉴턴식으로 세울 수 있다.</li>
+      <li>☐ 엘리베이터에서 체중계 눈금이 변하는 이유를 FBD로 설명할 수 있다.</li>
+      <li>☐ 정지마찰 vs 운동마찰 사용 시점을 구분할 수 있다.</li>
+      <li>☐ 등속 원운동의 가속도가 $v^2/r$임을 도형으로 설명할 수 있다.</li>
+      <li>☐ 인터랙티브 데모(경사면·Atwood)를 직접 가지고 놀아봤다.</li>
+      <li>☐ 연습문제 12개 중 8개 이상을 풀이 없이 풀 수 있다.</li>
+      <li>☐ 1분 미니퀴즈 5문제를 모두 맞췄다.</li>
+      <li>☐ 자주 틀리는 계산 실수 BEST 10을 한 번 읽어봤다.</li>
+    </ul>
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>학습 시간 가이드</strong> — 본 페이지 첫 통독 약 90분.
+    데모 + 연습문제 풀이까지 약 3시간.
+    시험 1주 전 복습 (미니퀴즈 + 5분 노트 + 핵심 연습문제) 약 1.5시간.
+  </div>
+
+  <div class="warn" style="margin-top:18px">
+    <strong>막힐 때 우선순위 — 진단 트리</strong>
+    <ol>
+      <li>FBD가 안 그려진다
+        → 데모 3 + FBD 5단계 + "✏️ 직접 그려보기" 5개 다시.</li>
+      <li>경사면이 헷갈린다
+        → 인터랙티브 데모 (경사면) + 단계별 사고 과정 다시.</li>
+      <li>도르래에서 가속도/장력 부호가 틀린다
+        → 단계별 사고 과정 1~5단계 + Atwood 데모.</li>
+      <li>원운동 개념(원심력 vs 구심력) 헷갈림
+        → 인터랙티브 데모 (원운동 + 실 자르기) 직접 조작.</li>
+    </ol>
+    이 순서대로 1시간 투자하면 거의 모든 막힘이 해소됩니다.
+  </div>
+
+  <div class="prevnext">
+    <a href="01-kinematics.html"><small>← 이전</small>W1. 운동학</a>
+    <a href="03-energy-conservation.html" class="next"><small>다음 →</small>W3. 에너지 보존</a>
+  </div>
 </main>
 
 <footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
