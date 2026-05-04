@@ -660,7 +660,335 @@ hello [0.8, 0.1, 0.1, 0.0]
   <h2>🔚 마지막 한 마디</h2>
   <p>이번 주 어텐션은 단순한 추가 모듈처럼 보이지만, 다음 주 트랜스포머의 모든 것의 토대입니다. Q·K·V 패턴, softmax 정규화, 가중합 — 모두 트랜스포머에서 그대로. 한 번에 외우려 들지 말고, 손계산 한 번 굴려보세요.</p>
 
+  <h2>🌟 보너스 — Seq2Seq PyTorch 풀 코드</h2>
+  <pre><code>import torch
+import torch.nn as nn
+
+class Encoder(nn.Module):
+    def __init__(self, vocab, emb=128, hid=256):
+        super().__init__()
+        self.emb = nn.Embedding(vocab, emb)
+        self.gru = nn.GRU(emb, hid, batch_first=True, bidirectional=True)
+        self.proj = nn.Linear(hid*2, hid)
+    def forward(self, x):
+        e = self.emb(x)
+        out, h = self.gru(e)
+        return out, self.proj(torch.cat([h[0], h[1]], -1)).unsqueeze(0)
+
+class Attention(nn.Module):
+    def __init__(self, hid):
+        super().__init__()
+        self.W = nn.Linear(hid*3, hid)
+        self.v = nn.Linear(hid, 1, bias=False)
+    def forward(self, dec_h, enc_outs):
+        T = enc_outs.size(1)
+        h = dec_h.permute(1, 0, 2).repeat(1, T, 1)
+        scores = self.v(torch.tanh(self.W(torch.cat([h, enc_outs], -1)))).squeeze(-1)
+        alpha = torch.softmax(scores, dim=1)
+        ctx = (alpha.unsqueeze(-1) * enc_outs).sum(1)
+        return ctx, alpha
+
+class Decoder(nn.Module):
+    def __init__(self, vocab, emb=128, hid=256):
+        super().__init__()
+        self.emb = nn.Embedding(vocab, emb)
+        self.attn = Attention(hid)
+        self.gru = nn.GRU(emb + hid*2, hid, batch_first=True)
+        self.fc = nn.Linear(hid*3, vocab)
+    def forward(self, y_prev, h_prev, enc_outs):
+        e = self.emb(y_prev)
+        ctx, alpha = self.attn(h_prev, enc_outs)
+        gru_in = torch.cat([e, ctx.unsqueeze(1)], -1)
+        out, h = self.gru(gru_in, h_prev)
+        return self.fc(torch.cat([out.squeeze(1), ctx], -1)), h, alpha</code></pre>
+
+  <h2>🎓 미니 프로젝트 — 영-한 작은 번역기</h2>
+  <ol>
+    <li>데이터 — 한영 병렬 코퍼스(예: AI Hub 한영 데이터).</li>
+    <li>토큰화 — SentencePiece BPE.</li>
+    <li>모델 — Bi-GRU 인코더 + GRU 디코더 + Bahdanau 어텐션.</li>
+    <li>손실 — Cross Entropy with PAD ignore.</li>
+    <li>학습 — Teacher Forcing, Adam(1e-3), 20 epoch.</li>
+    <li>평가 — BLEU 점수.</li>
+    <li>추론 — Beam Search(k=5).</li>
+  </ol>
+  <p>이 한 프로젝트가 W11~W13의 모든 개념을 통합합니다. 시간이 허락하면 도전.</p>
+
+  <h2>📌 부록 — Cross-Entropy with Padding</h2>
+  <pre><code># PAD 토큰을 손실 계산에서 제외
+loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+
+# 또는 마스크로 직접
+mask = (target != PAD_IDX).float()
+loss = -(log_probs * one_hot * mask.unsqueeze(-1)).sum() / mask.sum()</code></pre>
+
+  <h2>📌 부록 — Self-Attention 깊이 들어가기</h2>
+  <p>Self-Attention의 시간 복잡도는 시퀀스 길이 T에 대해 $O(T^2 d)$. 이는 두 가지를 의미합니다.</p>
+  <ul>
+    <li><strong>장점</strong> — 모든 위치 쌍 직접 비교, 거리 무관 의존성.</li>
+    <li><strong>단점</strong> — 시퀀스가 길면 폭발(예: T=10000이면 1억 연산).</li>
+  </ul>
+  <p>긴 시퀀스 해법:</p>
+  <ul>
+    <li><strong>Sparse Attention</strong> — 일부 위치만 참조 (Longformer, BigBird).</li>
+    <li><strong>Linear Attention</strong> — 시간 $O(T)$로 근사 (Performer, Linformer).</li>
+    <li><strong>Sliding Window</strong> — 가까운 K 토큰만 (Mistral).</li>
+    <li><strong>Hierarchical</strong> — 청크 단위 처리 후 통합.</li>
+  </ul>
+
+  <h2>🌟 응용 — 음성 인식의 Seq2Seq</h2>
+  <p>Listen-Attend-Spell (LAS) 모델: 오디오 스펙트로그램을 인코딩하고, 텍스트를 디코더로 생성. 어텐션이 "지금 듣고 있는 시점"을 찾음. Apple Siri의 초창기 방식.</p>
+
+  <h2>📌 부록 — Copy Mechanism</h2>
+  <p>요약에서 입력에 있는 단어를 그대로 복사하고 싶을 때(고유명사, 숫자). Pointer Network와 결합한 Copy Generator 모델이 표준. <em>"Apple"이라는 단어는 어휘 사전에 없어도 입력에서 그대로 가져온다</em>는 능력.</p>
+
+  <h2>📌 부록 — Length Normalization</h2>
+  <p>Beam Search의 점수는 보통 $\log P(\text{문장})$의 합. 그런데 길이가 길수록 합이 작아지므로 짧은 문장 선호. 보정:</p>
+  $$ \text{score} = \frac{\log P(\text{문장})}{|\text{문장}|^\alpha} $$
+  <p>$\alpha$가 클수록 긴 문장 선호. 보통 $\alpha = 0.6 \sim 1.0$.</p>
+
+  <h2>📌 부록 — Coverage Loss</h2>
+  <p>요약에서 같은 어텐션이 계속 등장하면 같은 단어 반복. 어텐션 누적치(coverage)를 추적해 그쪽에 페널티:</p>
+  $$ \text{cov\_loss}_t = \sum_i \min(a_i^t, \text{cov}_i^{t-1}) $$
+
+  <h2>📌 부록 — 평가 지표 한 페이지</h2>
+  <ul>
+    <li><strong>Perplexity</strong> — 언어 모델용. $\exp(-\frac{1}{N}\sum \log p)$. 낮을수록 좋음.</li>
+    <li><strong>BLEU</strong> — 번역 표준. n-gram precision.</li>
+    <li><strong>ROUGE</strong> — 요약 표준. n-gram recall.</li>
+    <li><strong>METEOR</strong> — 동의어 등 고려.</li>
+    <li><strong>BERTScore</strong> — BERT 임베딩 기반 의미 유사도.</li>
+    <li><strong>Human Evaluation</strong> — 가장 신뢰. 비싸지만 표준.</li>
+  </ul>
+
+  <h2>🎯 자가 학습 추가 문제</h2>
+  <ol>
+    <li>인코더와 디코더의 은닉 차원이 달라도 어텐션이 작동하나?</li>
+    <li>Bi-Encoder + Uni-Decoder 구조의 의미는?</li>
+    <li>Teacher Forcing의 단점과 완화?</li>
+    <li>Beam Search의 빔 크기를 1로 하면 어떤 알고리즘?</li>
+    <li>Self-Attention과 RNN의 가장 큰 차이?</li>
+  </ol>
+  <p style="font-size:13px;color:var(--muted)">정답 힌트: 1) Q·K 차원 맞추는 projection 행렬 추가. 2) 인코더는 양방향, 디코더는 인과적(미래 못봄). 3) Exposure bias. Scheduled Sampling 또는 RL로 완화. 4) Greedy decoding. 5) 병렬화 가능 + 거리 무관 의존성.</p>
+
+  <h2>🌟 어텐션 헤드 시각화</h2>
+  <p>다중 헤드 어텐션에서 각 헤드가 다른 패턴을 학습합니다.</p>
+  <ul>
+    <li>Head 1 — 인접 단어 관계.</li>
+    <li>Head 2 — 주어-동사 관계.</li>
+    <li>Head 3 — 동사-목적어.</li>
+    <li>Head 4 — 문장 시작 토큰에 모두 주의.</li>
+    <li>… 학습으로 자동 발생.</li>
+  </ul>
+
+  <h2>📌 부록 — 다중 GPU 학습 시 시퀀스 처리</h2>
+  <p>긴 시퀀스 모델은 메모리 부족이 흔함. 대처:</p>
+  <ul>
+    <li><strong>Pipeline Parallelism</strong> — 층을 GPU에 나눔.</li>
+    <li><strong>Tensor Parallelism</strong> — 한 층의 행렬을 GPU에 나눔.</li>
+    <li><strong>Sequence Parallelism</strong> — 시퀀스 자체를 나눔.</li>
+    <li><strong>Gradient Checkpointing</strong> — 메모리 ↔ 계산 트레이드.</li>
+  </ul>
+
+  <h2>📌 부록 — 어텐션의 한계</h2>
+  <ul>
+    <li>$O(T^2)$ 메모리/계산 — 긴 컨텍스트에 부담.</li>
+    <li>Position 정보 부족 — Positional Encoding이 별도 필요.</li>
+    <li>해석성 한계 — 가중치가 진짜 결정 근거인지 논쟁.</li>
+    <li>학습이 어려움 — 대량 데이터 필요.</li>
+  </ul>
+
+  <h2>📌 부록 — 작은 트랜스포머 손계산</h2>
+  <p>입력 토큰 3개, 차원 4, 1 헤드.</p>
+  <ol>
+    <li>토큰 임베딩 (3, 4).</li>
+    <li>+ Positional Encoding (3, 4).</li>
+    <li>Q, K, V = X @ W_Q, X @ W_K, X @ W_V → 모두 (3, 4).</li>
+    <li>Attention 점수 = Q @ K^T → (3, 3).</li>
+    <li>Softmax → (3, 3) 확률 행렬.</li>
+    <li>Output = Attn @ V → (3, 4).</li>
+    <li>Residual + LayerNorm.</li>
+    <li>FFN (Linear → ReLU → Linear).</li>
+    <li>Residual + LayerNorm → 최종 출력.</li>
+  </ol>
+
+  <h2>🌟 어텐션과 그래프 신경망의 관계</h2>
+  <p>Self-Attention은 본질이 그래프 신경망과 같습니다 — "각 노드가 다른 모든 노드의 정보를 가중합으로 받음". Self-Attention은 완전 그래프 위의 GNN이고, Sparse Attention은 부분 그래프 위의 GNN. 두 분야가 점점 가까워지는 추세.</p>
+
+  <h2>🎓 마무리 한 마디</h2>
+  <p>이번 주 어텐션은 한 학기에서 가장 중요한 개념일 수 있습니다. RNN의 한계를 풀고, 트랜스포머의 토대가 되며, 모든 LLM의 심장입니다. 다음 주 마지막 W13에서 이 어텐션이 어떻게 GPT/BERT/ChatGPT로 진화했는지 봅니다.</p>
+
+  <h2>📌 부록 — Layer Normalization vs Batch Normalization</h2>
+  <p>RNN과 트랜스포머에서는 BatchNorm 대신 LayerNorm을 씁니다. 차이:</p>
+  <ul>
+    <li><strong>BatchNorm</strong> — 배치 차원으로 정규화. 시퀀스 길이가 가변이면 통계가 일관되지 않음.</li>
+    <li><strong>LayerNorm</strong> — 한 샘플의 특성 차원으로 정규화. 시퀀스 길이/배치 크기 무관.</li>
+  </ul>
+
+  <h2>📌 부록 — Residual Connection in Attention</h2>
+  <p>트랜스포머 블록의 표준 패턴:</p>
+  <pre><code>def block(x):
+    x = x + Attention(LayerNorm(x))    # Pre-LN 스타일
+    x = x + FFN(LayerNorm(x))
+    return x</code></pre>
+  <p>잔차 연결이 깊은 트랜스포머(96층 GPT-3 등)의 학습을 가능하게 합니다.</p>
+
+  <h2>📌 부록 — 어텐션 변형들</h2>
+  <ul>
+    <li><strong>Additive (Bahdanau)</strong> — $\text{tanh}(W[Q;K])$.</li>
+    <li><strong>Dot-Product (Luong)</strong> — $Q \cdot K$.</li>
+    <li><strong>Scaled Dot-Product</strong> — $Q \cdot K / \sqrt{d}$. 트랜스포머 표준.</li>
+    <li><strong>General</strong> — $Q^\top W K$. 학습 가능한 행렬 추가.</li>
+    <li><strong>Multi-Head</strong> — h개의 어텐션 동시.</li>
+    <li><strong>Cross-Attention</strong> — Q/K/V가 다른 시퀀스.</li>
+    <li><strong>Local/Window Attention</strong> — 가까운 토큰만.</li>
+    <li><strong>Sparse Attention</strong> — 패턴 기반 선택.</li>
+  </ul>
+
+  <h2>📌 부록 — 어텐션 마스킹</h2>
+  <p>특정 위치에 어텐션이 가지 못하게 하려면:</p>
+  <ul>
+    <li><strong>Padding Mask</strong> — PAD 토큰 위치에 어텐션 못 가게.</li>
+    <li><strong>Causal Mask</strong> — 미래 위치에 못 가게(GPT, 디코더).</li>
+    <li>구현: 마스크 위치의 점수를 $-\infty$로 → softmax에서 0.</li>
+  </ul>
+
+  <h2>📌 부록 — Positional Encoding</h2>
+  <p>Self-Attention은 토큰의 순서를 모릅니다(셔플해도 같은 결과). 그래서 위치 정보를 별도로 더해줘야 합니다.</p>
+  <ul>
+    <li><strong>Sinusoidal (원논문)</strong> — sin/cos 함수로 고정 패턴.</li>
+    <li><strong>Learned</strong> — 위치마다 학습 가능한 벡터.</li>
+    <li><strong>Relative (T5)</strong> — 절대 위치 대신 상대 거리.</li>
+    <li><strong>RoPE (LLaMA)</strong> — 회전 행렬 기반. 최근 표준.</li>
+    <li><strong>ALiBi</strong> — 거리에 따른 페널티. 외삽 강함.</li>
+  </ul>
+
+  <h2>📌 부록 — 어텐션과 집중력의 비유</h2>
+  <p>"어텐션"이라는 이름이 직관적인 이유는 사람의 주의 집중을 닮았기 때문입니다.</p>
+  <ul>
+    <li>"이 문제 풀 때 어떤 정보를 주목하지?" — Q.</li>
+    <li>"가진 정보들의 제목" — K.</li>
+    <li>"제목에 해당하는 본문" — V.</li>
+    <li>"제목 비교 → 본문 우선순위" — 어텐션.</li>
+  </ul>
+  <p>그래서 어텐션 가중치를 시각화하면 "사람이 어디를 주목할지"와 비슷한 패턴이 자주 나옵니다.</p>
+
+  <h2>📌 부록 — Decoder의 Causal Mask</h2>
+  <p>GPT 같은 자기회귀 디코더는 다음 토큰을 생성할 때 <em>미래 토큰을 보면 안 됨</em>(컨닝). 그래서 어텐션 점수의 상삼각 부분을 $-\infty$로 마스킹.</p>
+  <pre><code>mask = torch.triu(torch.ones(T, T), diagonal=1).bool()
+scores.masked_fill_(mask, float('-inf'))
+attn = torch.softmax(scores, dim=-1)</code></pre>
+
+  <h2>📌 부록 — Multi-Head Attention의 동작</h2>
+  <p>한 어텐션을 여러 번(h=8 등) 동시에 수행합니다.</p>
+  <pre><code>def multi_head_attention(X, W_Q, W_K, W_V, W_O, h=8):
+    B, T, d = X.shape
+    d_h = d // h
+    Q = X @ W_Q  # (B, T, d)
+    K = X @ W_K
+    V = X @ W_V
+    # 헤드로 분할
+    Q = Q.view(B, T, h, d_h).transpose(1, 2)  # (B, h, T, d_h)
+    K = K.view(B, T, h, d_h).transpose(1, 2)
+    V = V.view(B, T, h, d_h).transpose(1, 2)
+    # 어텐션 (B, h, T, T)
+    A = torch.softmax(Q @ K.transpose(-2, -1) / math.sqrt(d_h), dim=-1)
+    Y = A @ V                                  # (B, h, T, d_h)
+    # 헤드 결합
+    Y = Y.transpose(1, 2).contiguous().view(B, T, d)
+    return Y @ W_O</code></pre>
+
+  <h2>📌 부록 — Encoder-Decoder vs Decoder-only</h2>
+  <table>
+    <thead><tr><th>구조</th><th>예시</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td>Encoder-Decoder</td><td>T5, BART</td><td>번역, 요약</td></tr>
+      <tr><td>Encoder-only</td><td>BERT</td><td>분류, 임베딩</td></tr>
+      <tr><td>Decoder-only</td><td>GPT, LLaMA, Claude</td><td>생성, 대화</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📌 부록 — 어텐션 학습이 안 될 때</h2>
+  <ol>
+    <li>스케일링 $\sqrt{d_k}$ 빠뜨렸는지 확인.</li>
+    <li>마스킹이 제대로 적용됐는지(softmax 후 마스크된 위치가 0).</li>
+    <li>학습률이 너무 큰지 (트랜스포머는 1e-4 ~ 3e-4가 보통).</li>
+    <li>Warmup 빠뜨렸는지 (트랜스포머는 warmup 거의 필수).</li>
+  </ol>
+
+  <h2>📌 부록 — Sampling 전략 비교</h2>
+  <table>
+    <thead><tr><th>방법</th><th>특징</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td>Greedy</td><td>매 시점 top-1</td><td>결정적, 단조로움</td></tr>
+      <tr><td>Beam Search</td><td>top-k 트리</td><td>번역, 요약</td></tr>
+      <tr><td>Random Sampling</td><td>분포에서 추출</td><td>창의적 생성</td></tr>
+      <tr><td>Top-k Sampling</td><td>상위 k개에서</td><td>균형</td></tr>
+      <tr><td>Top-p (Nucleus)</td><td>누적 확률 p%</td><td>적응적, GPT 표준</td></tr>
+      <tr><td>Temperature</td><td>분포 조절</td><td>다양성 제어</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📌 부록 — 학습률 Warmup의 중요성</h2>
+  <p>트랜스포머는 학습 초기에 학습률을 0에서 점점 키워야 안정. 갑자기 큰 lr로 시작하면 가중치가 망가짐.</p>
+  <pre><code>def get_lr(step, warmup=4000, d=512):
+    return min(step**(-0.5), step * warmup**(-1.5)) * d**(-0.5)</code></pre>
+  <p>"Attention Is All You Need" 원논문의 표준 스케줄.</p>
+
+  <h2>🌟 마지막 한 마디</h2>
+  <p>이번 주 어텐션 메커니즘이 다음 주 트랜스포머의 80%를 차지합니다. Q·K·V·softmax·가중합 — 이 5단어가 핵심이고, 다음 주는 이걸 더 정교하게 조립한 것일 뿐입니다. 자신감을 가지세요.</p>
+
+  <h2>📌 부록 — 어텐션 시각화 도구</h2>
+  <ul>
+    <li><strong>BertViz</strong> — 트랜스포머 어텐션 시각화. 한 줄 설치.</li>
+    <li><strong>Tensor2Tensor</strong> — Google의 어텐션 시각화 데모.</li>
+    <li><strong>Hugging Face attention output</strong> — <code>output_attentions=True</code>로 가중치 출력.</li>
+  </ul>
+
+  <h2>📌 부록 — 어텐션 학습의 비결</h2>
+  <ol>
+    <li>충분히 큰 데이터 (작은 데이터에서는 RNN이 더 안정).</li>
+    <li>Warmup이 있는 학습률 스케줄.</li>
+    <li>AdamW 옵티마이저 + weight decay 0.01~0.1.</li>
+    <li>Gradient Clipping 1.0.</li>
+    <li>적절한 dropout (0.1).</li>
+    <li>Layer Normalization.</li>
+  </ol>
+
+  <h2>🎓 한 학기 회고 (이번 주까지)</h2>
+  <p>W1 KNN으로 시작해 12주가 흘렀습니다. 우리는 이미 — 데이터 다루기, 회귀, 분류, 군집화, 신경망, 역전파, CNN, 전이학습, RNN, 어텐션을 거쳤습니다. 다음 주 마지막 W13에서 트랜스포머와 LLM으로 마무리합니다.</p>
+
+  <h2>📌 부록 — 어텐션 응용 기술</h2>
+  <ul>
+    <li><strong>Image Captioning</strong> — CNN 인코더 + RNN 디코더 + Attention. 이미지의 어느 영역을 보고 단어를 생성하는지 시각화 가능.</li>
+    <li><strong>Speech Recognition</strong> — 오디오 시퀀스를 인코딩 + 텍스트 디코딩 + Attention.</li>
+    <li><strong>Visual Question Answering</strong> — 이미지와 질문을 받아 답 생성. 두 입력에 대한 cross-attention.</li>
+    <li><strong>Memory Networks</strong> — 외부 메모리에 어텐션. 질의응답에 사용.</li>
+  </ul>
+
+  <h2>📌 부록 — 한 줄 정리</h2>
+  <p>"Seq2Seq + Attention"이 한 줄짜리 답입니다. 인코더-디코더 RNN에 어텐션 가중치 한 층을 더하면 번역기가 됩니다.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 끝. 다음 주에 마지막 만남이에요. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">예습 권장: Jay Alammar의 "Illustrated Transformer" 한 번 훑고 다음 주 오세요.</p>
+  <h2>📌 부록 — Hugging Face로 5줄 번역</h2>
+  <pre><code>from transformers import pipeline
+translator = pipeline('translation_en_to_ko')
+print(translator('Hello, how are you?')[0]['translation_text'])
+# → "안녕하세요, 어떻게 지내세요?"</code></pre>
+  <p>이 다섯 줄이 한 학기 분량의 직접 구현 결과입니다. 라이브러리 활용을 두려워하지 마세요 — 내부를 이해하는 것이 더 중요합니다.</p>
+
+  <h2>📌 부록 — 읽어주셔서 감사합니다</h2>
+  <p>이번 주는 어렵지만 가장 보람 있는 주의 하나일 수 있습니다. 어텐션이 손에 잡히면 다음 주 트랜스포머가 자연스럽게 따라옵니다.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">한 마디 더: 어텐션은 단지 가중합입니다. 복잡해 보이지만 본질은 단순.</p>
+  <p style="font-size:12px;color:var(--muted)">또 한 마디: Q·K·V를 어디서 가져오는지에 따라 모델이 달라짐.</p>
+  <p style="font-size:12px;color:var(--muted)">읽어주셔서 감사합니다. 🌊</p>
   <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말로 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
 
   <nav class="prevnext">
     <a href="11-rnn-lstm.html"><small>← 이전</small>W11. RNN/LSTM</a>

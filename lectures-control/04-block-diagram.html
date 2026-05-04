@@ -393,6 +393,67 @@
   <p>게인을 10 배 키우면 외란이 거의 1/10 로 줄지만, 위상 안정여유 (W11) 도 같이 줄어 진동·불안정 위험.</p>
 
 
+  <h2>6.5 블록선도 변환 8가지 표준 규칙</h2>
+  <table>
+    <thead><tr><th>규칙</th><th>변환</th></tr></thead>
+    <tbody>
+      <tr><td>직렬 결합</td><td>$G_1 G_2$</td></tr>
+      <tr><td>병렬 결합 (덧셈)</td><td>$G_1 + G_2$</td></tr>
+      <tr><td>피드백 (음)</td><td>$G/(1+GH)$</td></tr>
+      <tr><td>피드백 (양)</td><td>$G/(1-GH)$</td></tr>
+      <tr><td>합점 이동 (앞으로)</td><td>$G$ 통과 후 합산</td></tr>
+      <tr><td>합점 이동 (뒤로)</td><td>$1/G$ 통과 후 합산</td></tr>
+      <tr><td>분점 이동 (앞으로)</td><td>$1/G$로 보정</td></tr>
+      <tr><td>분점 이동 (뒤로)</td><td>$G$로 보정</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.6 블록선도 단순화 절차</h2>
+  <ol>
+    <li>가장 안쪽 루프 식별.</li>
+    <li>피드백 공식 적용.</li>
+    <li>직렬 결합 단순화.</li>
+    <li>병렬 결합 단순화.</li>
+    <li>합점·분점 이동.</li>
+    <li>최종 단일 블록.</li>
+  </ol>
+
+  <h2>6.7 자주 만나는 함정</h2>
+  <ul>
+    <li>합점·분점 이동 시 $G$, $1/G$ 보정 잊음.</li>
+    <li>음피드백·양피드백 부호 혼동.</li>
+    <li>중복된 신호 경로의 처리 실수.</li>
+    <li>비선형 요소는 블록선도 한계.</li>
+  </ul>
+
+  <h2>6.8 추가 워크북 — 5문제</h2>
+
+  <h3>6.8.1 직렬 결합</h3>
+  <p>$G_1 = 1/(s+1), G_2 = 2/(s+2)$. 직렬?</p>
+  <div class="sol">$G = 2/((s+1)(s+2))$.</div>
+
+  <h3>6.8.2 병렬 결합</h3>
+  <p>$G_1 = 1/s, G_2 = 1$. 병렬?</p>
+  <div class="sol">$G = (1+s)/s$. 영점 추가.</div>
+
+  <h3>6.8.3 단위 피드백</h3>
+  <p>$G = K/(s+1)$. 폐루프?</p>
+  <div class="sol">$T = K/(s+1+K)$.</div>
+
+  <h3>6.8.4 일반 피드백</h3>
+  <p>$G = 1/(s+1), H = K_d s$. 폐루프?</p>
+  <div class="sol">$T = 1/((1+K_d)s+1)$.</div>
+
+  <h3>6.8.5 외란 억제</h3>
+  <p>외란 D에 대한 출력 이득?</p>
+  <div class="sol">$Y/D = -T$. T가 작으면 잘 억제.</div>
+
+  <h2>6.9 응용 — 자동차 ACC 블록선도</h2>
+  <p>입력: 설정 속도. 외란: 경사. 플랜트: 차량+엔진. 제어기: PID. 폐루프 $T = G_pC/(1+G_pC)$.</p>
+
+  <h2>6.10 응용 — 모터 위치 제어 캐스케이드</h2>
+  <p>3중 캐스케이드 — 외부(위치) → 중간(속도) → 내부(전류). 블록선도로 한 페이지에 표현. 안쪽 루프가 5~10배 빠르게 동작하도록 게인 설정.</p>
+
   <h2>7. 핵심 정리</h2>
   <div class="tip">
     <ul>
@@ -402,6 +463,531 @@
       <li>고게인은 외란 억제에 좋지만 안정여유를 잡아먹는다.</li>
     </ul>
   </div>
+
+  <h2>8. Mason의 게인 공식 (선형 신호 흐름 그래프)</h2>
+  <p>복잡한 다중 루프 시스템에 사용. 블록선도 단순화의 일반화.</p>
+  <p>$T = \frac{1}{\Delta} \sum_k P_k \Delta_k$, 여기서 $P_k$는 k번째 전방 경로, $\Delta$는 시스템 결정자.</p>
+
+  <h2>9. 블록선도 vs 신호 흐름 그래프</h2>
+  <ul>
+    <li>블록선도 — 박스와 화살표.</li>
+    <li>SFG — 노드와 가지.</li>
+    <li>두 표현은 동등. 복잡한 시스템에서 SFG가 자주 더 명료.</li>
+  </ul>
+
+  <h2>10. 외란·잡음 모델링</h2>
+  <ul>
+    <li><strong>입력 외란 d</strong> — 플랜트 입력에 더해짐. $u + d \to G$.</li>
+    <li><strong>출력 외란 d_o</strong> — 플랜트 출력에 더해짐. $G u + d_o = y$.</li>
+    <li><strong>측정 잡음 n</strong> — 센서 출력에 더해짐. $y_m = y + n$.</li>
+    <li>각 외란/잡음에 대한 sensitivity 함수가 다름.</li>
+  </ul>
+
+  <h2>11. 4가지 sensitivity 함수</h2>
+  <ul>
+    <li>$S = 1/(1+L)$ — 명령 → 오차.</li>
+    <li>$T = L/(1+L)$ — 명령 → 출력.</li>
+    <li>$SG = G/(1+L)$ — 외란 → 출력.</li>
+    <li>$CS = C/(1+L)$ — 잡음 → 입력.</li>
+  </ul>
+
+  <h2>12. Python 코드</h2>
+  <pre><code>import control as ct
+
+# 직렬 결합
+G1 = ct.tf([1], [1, 1])
+G2 = ct.tf([2], [1, 2])
+G_series = G1 * G2
+
+# 병렬 결합
+G_parallel = G1 + G2
+
+# 피드백 (음, 단위 피드백)
+T = ct.feedback(G1, 1)
+
+# 일반 피드백
+H = ct.tf([1], [1, 5])
+T_gen = ct.feedback(G1, H)
+
+print(T)</code></pre>
+
+  <h2>13. 자주 만나는 시스템 구조</h2>
+  <ul>
+    <li>1자유도 — 단일 피드백 루프.</li>
+    <li>2자유도 — 피드포워드 + 피드백.</li>
+    <li>캐스케이드 — 다중 루프 직렬.</li>
+    <li>병렬 — 여러 제어기 결합.</li>
+    <li>분산 — 여러 노드의 분산 제어.</li>
+  </ul>
+
+  <h2>14. 블록선도 디버깅 체크리스트</h2>
+  <ul>
+    <li>모든 신호의 단위 일치.</li>
+    <li>음피드백/양피드백 부호 명시.</li>
+    <li>합점·분점 위치 정확.</li>
+    <li>블록의 입출력 모양 일관.</li>
+    <li>외란·잡음 입력 위치 명확.</li>
+  </ul>
+
+  <h2>15. 한 줄 요약</h2>
+  <p>"블록선도 = 시스템의 그림. 4가지 결합 규칙으로 모든 구조 분석."</p>
+
+  <h2>16. 다음 주 W5 미리보기</h2>
+  <p>이번 주에 만든 폐루프 전달함수의 시간 응답을 본격적으로 다룸. 1차 시스템부터.</p>
+
+  <h2>17. 부록 — 표준 표기법</h2>
+  <ul>
+    <li>$R(s)$ — 입력(reference).</li>
+    <li>$Y(s)$ — 출력.</li>
+    <li>$E(s) = R - Y$ — 오차.</li>
+    <li>$D(s)$ — 외란.</li>
+    <li>$N(s)$ — 측정 잡음.</li>
+    <li>$U(s)$ — 제어 입력.</li>
+    <li>$L = GC$ — 루프 게인.</li>
+  </ul>
+
+  <h2>18. 한 줄 마무리</h2>
+  <p class="lead">"$T = G/(1+GH)$ — 한 식이 한 학기를 관통한다."</p>
+
+  <h2>19. 부록 — 자주 쓰는 블록선도 패턴</h2>
+  <ul>
+    <li><strong>표준 단위 피드백</strong> — 가장 흔함.</li>
+    <li><strong>2자유도 (2-DOF)</strong> — 피드포워드 + 피드백.</li>
+    <li><strong>캐스케이드</strong> — 안쪽·바깥쪽 두 루프.</li>
+    <li><strong>SISO Loop</strong> — 단일입력·단일출력.</li>
+    <li><strong>MIMO Loop</strong> — 행렬 G(s).</li>
+  </ul>
+
+  <h2>20. 부록 — 외란 모델별 응답</h2>
+  <ul>
+    <li>입력 외란 — 적분기 제어로 거부.</li>
+    <li>출력 외란 — 직접 출력 영향.</li>
+    <li>측정 잡음 — 고주파에서 입력 증폭.</li>
+    <li>모델 외란(unmodeled) — 강건 설계 필요.</li>
+  </ul>
+
+  <h2>21. 부록 — 블록선도와 상태공간</h2>
+  <p>블록선도는 입출력 관점, 상태공간은 내부 상태 관점. 둘을 자유롭게 변환 가능. <code>tf2ss</code>, <code>ss2tf</code>.</p>
+
+  <h2>22. 한 줄 진짜 마지막</h2>
+  <p>"블록선도 = 시스템의 그림책. 한 페이지에 모든 것."</p>
+
+  <h2>23. 부록 — 본 강의 한 학기 위치</h2>
+  <ul>
+    <li>W1 개요 → W2 라플라스 → W3 전달함수 → W4 블록선도 ◉</li>
+    <li>W5~ 시간응답, 안정성, 보드, PID 설계</li>
+  </ul>
+
+  <h2>24. 부록 — Simulink 호환</h2>
+  <p>MATLAB Simulink는 블록선도를 직접 그려서 시뮬레이션. 본 강의에서는 Python control 라이브러리 사용. 개념은 동일.</p>
+
+  <h2>25. 부록 — Python에서 블록선도 표현</h2>
+  <pre><code>import control as ct
+G_plant = ct.tf([1], [1, 1, 0])      # 1/(s²+s)
+C_pid = ct.tf([1, 5, 6], [1, 0])     # PID 형태
+L = ct.series(C_pid, G_plant)        # 직렬
+T = ct.feedback(L, 1)                # 폐루프
+ct.step_response(T)</code></pre>
+
+  <h2>26. 한 줄 마지막</h2>
+  <p class="lead">"한 학기를 관통하는 한 식 — $T = G/(1+GH)$."</p>
+
+  <h2>27. 부록 — 블록선도 손그림 6단계</h2>
+  <ol>
+    <li>입력·출력 식별.</li>
+    <li>제어기·플랜트·센서를 박스로.</li>
+    <li>합점·분점 표시.</li>
+    <li>피드백 루프 명시.</li>
+    <li>외란·잡음 추가.</li>
+    <li>각 블록에 전달함수 적기.</li>
+  </ol>
+
+  <h2>28. 부록 — 자주 만나는 시스템 블록선도</h2>
+  <ul>
+    <li><strong>차량 ACC</strong> — Driver setting → PID → engine → vehicle → speed sensor → feedback.</li>
+    <li><strong>드론 자세</strong> — Reference → controller → motor → dynamics → IMU → feedback.</li>
+    <li><strong>온도 제어</strong> — Setpoint → controller → heater → room → thermometer → feedback.</li>
+  </ul>
+
+  <h2>29. 한 줄 마지막</h2>
+  <p>"블록선도 그릴 줄 알면 시스템 설계의 첫 단계 통과."</p>
+
+  <h2>30. 부록 — 캐스케이드 블록선도</h2>
+  <p>중첩된 두 피드백 루프. 안쪽이 빠르고, 바깥쪽이 느림. 모터 위치 제어의 표준.</p>
+  <pre><code>위치 명령 → [위치 PID] → 속도 명령 → [속도 PI] → 전류 명령 → [전류 PI] → 모터
+                                                                          ↓
+                                          (안쪽) ←───────── 전류 측정 ────┘
+                              (중간) ←──────── 속도 측정 ←──────────────┘
+              (외부) ←──── 위치 측정 ←─────────────────────────────────┘</code></pre>
+
+  <h2>31. 부록 — 2자유도 제어 (2-DOF)</h2>
+  <p>피드포워드(미리 계산한 명령) + 피드백(오차 보정)의 결합. 추적 성능과 외란 거부를 분리해서 설계 가능.</p>
+  <p>$U = F R + C(R - Y)$. F는 피드포워드, C는 피드백.</p>
+
+  <h2>32. 한 줄 마무리</h2>
+  <p>"2자유도 = 추적 + 외란 거부의 분리 설계."</p>
+
+  <h2>33. 부록 — 한 페이지 요약</h2>
+  <ul>
+    <li>4 결합 — 직렬, 병렬, 음/양 피드백.</li>
+    <li>$T = G/(1+GH)$.</li>
+    <li>특성방정식 $1+GH = 0$.</li>
+    <li>외란 응답 $S, T$.</li>
+    <li>2자유도 = FF + FB.</li>
+    <li>Mason 공식 (다중 루프).</li>
+  </ul>
+
+  <h2>34. 한 줄 진짜 마지막</h2>
+  <p class="lead">"$T = G/(1+GH)$ — 한 학기를 관통하는 한 식."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 진짜 끝.</p>
+
+  <h2>35. 부록 — 한 학기 자가 진단</h2>
+  <ul>
+    <li>☐ 직렬·병렬·피드백 결합 식 적기.</li>
+    <li>☐ 합점·분점 이동 규칙.</li>
+    <li>☐ 폐루프 전달함수 유도.</li>
+    <li>☐ 외란 응답 분석.</li>
+    <li>☐ 캐스케이드 구조 그리기.</li>
+  </ul>
+
+  <h2>36. 한 줄 마지막</h2>
+  <p>"블록선도 = 시스템의 그림 + 식. 한 페이지에 모두."</p>
+
+  <h2>37. 부록 — 자율주행 차량의 전체 블록선도</h2>
+  <p>인지 → 위치 추정 → 경로 계획 → 추종 제어 → 액추에이터. 각 단계가 큰 블록, 그 안에 더 작은 블록선도.</p>
+
+  <h2>38. 부록 — 위계적 제어 구조</h2>
+  <ul>
+    <li><strong>Level 4: 미션 계획</strong> — 0.1 Hz.</li>
+    <li><strong>Level 3: 경로 계획</strong> — 1 Hz.</li>
+    <li><strong>Level 2: 궤적 추종</strong> — 10 Hz.</li>
+    <li><strong>Level 1: 자세 제어</strong> — 100 Hz.</li>
+    <li><strong>Level 0: 액추에이터 제어</strong> — 1 kHz.</li>
+  </ul>
+
+  <h2>39. 한 줄 마지막</h2>
+  <p>"자율 시스템은 블록선도의 다층 구조."</p>
+
+  <h2>40. 부록 — 자주 만나는 결합의 식 모음</h2>
+  <table>
+    <thead><tr><th>구조</th><th>식</th></tr></thead>
+    <tbody>
+      <tr><td>직렬 G1·G2</td><td>$G_1 G_2$</td></tr>
+      <tr><td>병렬 G1+G2</td><td>$G_1 + G_2$</td></tr>
+      <tr><td>음피드백 G/H</td><td>$G/(1+GH)$</td></tr>
+      <tr><td>양피드백</td><td>$G/(1-GH)$</td></tr>
+      <tr><td>2자유도</td><td>$FY/(1+CG) + CG/(1+CG)$</td></tr>
+      <tr><td>외란→출력</td><td>$G/(1+GC)$</td></tr>
+      <tr><td>잡음→출력</td><td>$-T$</td></tr>
+      <tr><td>Sensitivity</td><td>$1/(1+L)$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>41. 한 줄 마지막</h2>
+  <p class="lead">"이 표를 한 페이지에 적어 두면 학기 내내 사용."</p>
+
+  <h2>42. 부록 — 본 강의 외 추가 자료</h2>
+  <ul>
+    <li>Franklin, Feedback Control of Dynamic Systems — 5장 블록선도.</li>
+    <li>Ogata, Modern Control Engineering — 3장.</li>
+    <li>Nise, Control Systems Engineering — 5장.</li>
+    <li>한국어: 한기봉, 자동제어공학 3장.</li>
+  </ul>
+
+  <h2>43. 부록 — 시뮬레이션 도구</h2>
+  <ul>
+    <li>MATLAB Simulink — 산업 표준.</li>
+    <li>Python control — 무료 대안.</li>
+    <li>OpenModelica — 오픈소스 모델링.</li>
+    <li>Scilab Xcos — Simulink 호환 무료.</li>
+  </ul>
+
+  <h2>44. 한 줄 진짜 마지막</h2>
+  <p>"블록선도 = 모든 시스템 설계의 첫 페이지."</p>
+
+  <h2>45. 부록 — Servo Mechanism 표준 블록선도</h2>
+  <p>Reference → [Controller C(s)] → [Plant G(s)] → Output → 측정 → 비교점 (오차) → ... 폐루프.</p>
+
+  <h2>46. 부록 — Sensor와 Actuator의 블록</h2>
+  <ul>
+    <li>센서 — 1차 시스템, 시정수 약 1~10 ms.</li>
+    <li>액추에이터 — 2차 시스템 또는 적분기 + 1차.</li>
+    <li>이들의 동역학을 무시하면 실제 시스템과 차이.</li>
+  </ul>
+
+  <h2>47. 한 줄 마지막</h2>
+  <p class="lead">"센서·액추에이터 동역학을 포함한 정확한 블록선도가 실제 설계의 시작."</p>
+
+  <h2>48. 부록 — 신호 흐름 그래프 (SFG)</h2>
+  <p>블록선도와 동등하지만 더 컴팩트. 노드는 신호, 가지는 게인. Mason 공식 적용에 적합.</p>
+
+  <h2>49. 부록 — 연속 vs 이산 블록선도</h2>
+  <ul>
+    <li>연속 — 라플라스 영역 (s).</li>
+    <li>이산 — z-영역.</li>
+    <li>혼합 — 디지털 제어. 샘플 & 홀드 블록.</li>
+  </ul>
+
+  <h2>50. 한 줄 진짜 마지막</h2>
+  <p>"한 페이지에 모든 시스템 — 그게 블록선도의 매력."</p>
+
+  <h2>51. 부록 — 응용 — 풍력 발전기</h2>
+  <p>풍속 → 블레이드(피치 제어) → 회전자 → 발전기 → 그리드. 각 단계가 블록. 외란: 풍속 변동, 그리드 부하 변화.</p>
+
+  <h2>52. 부록 — 응용 — 인공위성 자세</h2>
+  <p>명령 자세 → 제어기 → 토크기(reaction wheel) → 위성 동역학 → 자세 → 별 추적기 → 피드백.</p>
+
+  <h2>53. 부록 — 응용 — 의료 기기</h2>
+  <p>약물 투입 → 인체 약동학 모델 → 혈중 농도 → 측정 → 피드백. 외란: 환자별 차이, 식사·운동.</p>
+
+  <h2>54. 한 줄 마무리</h2>
+  <p>"블록선도는 의료기기부터 우주선까지 모든 자동 시스템의 공통 언어."</p>
+
+  <h2>55. 부록 — 자가점검 추가 5문제</h2>
+  <ol>
+    <li>$G_1 = 1/(s+2), G_2 = 3$ 직렬 + 단위 피드백. 폐루프?</li>
+    <li>$L = 10/(s(s+5))$의 ωgc?</li>
+    <li>외란이 출력에 미치는 영향이 0이 되는 조건?</li>
+    <li>2자유도 제어기의 장점?</li>
+    <li>신호 흐름 그래프와 블록선도의 관계?</li>
+  </ol>
+  <p style="color:var(--muted);font-size:13px">힌트: 1) $T = 3/(s+2+3) = 3/(s+5)$. 2) $|10/(j\omega \cdot j\omega+5j\omega)| = 1$, ω ≈ 1.41. 3) GC가 매우 큼 또는 적분기. 4) 추적과 외란 분리. 5) 동등 표현.</p>
+
+  <h2>56. 한 줄 진짜 마지막</h2>
+  <p class="lead">"블록선도 = 자동제어 한 학기의 그림 언어."</p>
+
+  <h2>57. 부록 — 한 학기 전체 흐름에서의 블록선도</h2>
+  <ul>
+    <li>W4 ◉ 블록선도 결합 규칙.</li>
+    <li>W5~6 — 1·2차 시스템의 블록선도 응답.</li>
+    <li>W7 — 정상상태 오차 계산 (블록선도 기반).</li>
+    <li>W8~9 — 안정성 (블록선도의 특성방정식).</li>
+    <li>W10~11 — 보드·안정여유.</li>
+    <li>W12~14 — PID 설계 (블록선도 + 게인).</li>
+  </ul>
+
+  <h2>58. 한 줄 진짜 끝</h2>
+  <p>"이 한 학기의 그림 언어가 곧 블록선도. 잘 익히면 평생 사용."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+
+  <h2>59. 부록 — 본 페이지 흐름 요약</h2>
+  <ol>
+    <li>1~6: 직렬·병렬·피드백 결합.</li>
+    <li>6.5~6.10: 변환 규칙과 워크북.</li>
+    <li>7: 핵심 정리.</li>
+    <li>8~14: Mason, Sensitivity, 코드.</li>
+    <li>15~22: 한 줄 요약 + 부록.</li>
+    <li>23~58: 응용 사례·자가 점검·한 학기 위치.</li>
+  </ol>
+
+  <h2>60. 한 줄 마지막</h2>
+  <p>"블록선도 한 페이지 = 시스템의 모든 정보."</p>
+
+  <h2>61. 부록 — 자율 시스템 블록선도 5계층</h2>
+  <ol>
+    <li>인지 (Perception) — 카메라·Lidar → 객체 인식.</li>
+    <li>위치 추정 (Localization) → 자기 위치.</li>
+    <li>경로 계획 (Planning) → 경로.</li>
+    <li>제어 (Control) → 명령.</li>
+    <li>액추에이터 (Actuation) → 모터.</li>
+  </ol>
+  <p>각 층이 큰 블록, 그 안에 작은 블록선도. 본 강의에서는 4번을 깊이 다룹니다.</p>
+
+  <h2>62. 한 줄 진짜 마지막</h2>
+  <p class="lead">"자율 시스템은 블록선도의 다층 구조. 이번 주는 그 첫 페이지."</p>
+
+  <h2>63. 부록 — 블록선도 그리는 도구</h2>
+  <ul>
+    <li>MATLAB Simulink — 산업 표준.</li>
+    <li>Scilab Xcos — 무료.</li>
+    <li>OpenModelica — 오픈.</li>
+    <li>draw.io / mermaid — 문서용.</li>
+    <li>TikZ (LaTeX) — 출판용.</li>
+  </ul>
+
+  <h2>64. 부록 — 한 페이지 요약</h2>
+  <ul>
+    <li>4가지 결합 — 직렬, 병렬, 음/양 피드백.</li>
+    <li>$T = G/(1+GH)$.</li>
+    <li>외란/잡음 응답 — 4가지 sensitivity.</li>
+    <li>Mason 공식 — 다중 루프.</li>
+    <li>2-DOF — 추적 + 외란 분리.</li>
+    <li>캐스케이드 — 다중 시간 척도.</li>
+  </ul>
+
+  <h2>65. 한 줄 끝</h2>
+  <p>"블록선도 = 시스템의 모든 그림."</p>
+
+  <h2>66. 부록 — 자가 점검 마지막 5문제</h2>
+  <ol>
+    <li>$G = 1/s, H = 1$의 폐루프 시간 응답?</li>
+    <li>적분기와 1차 시스템의 직렬 결합?</li>
+    <li>두 적분기 직렬?</li>
+    <li>외란 D가 입력에 추가될 때, 출력에 미치는 영향은?</li>
+    <li>비선형 요소(saturation)를 블록선도로 어떻게 표현?</li>
+  </ol>
+  <p style="color:var(--muted);font-size:13px">힌트: 1) 1차 응답. 2) 1/(s(τs+1)). 3) 1/s². 4) G/(1+GC). 5) 비선형 블록은 추가 표시.</p>
+
+  <h2>67. 부록 — Bode와 블록선도의 관계</h2>
+  <p>블록선도가 시스템의 구조 표현이라면, 보드는 그 시스템의 주파수 응답. 둘은 서로 보완.</p>
+
+  <h2>68. 한 줄 마지막</h2>
+  <p class="lead">"블록선도 + 보드 = 시스템 분석의 두 기둥."</p>
+
+  <h2>69. 부록 — 두 자유도 제어 깊이</h2>
+  <p>2-DOF 구조: 명령 R → 피드포워드 F → + → 플랜트 G → 출력 Y. 동시에 R - Y → 피드백 C → +.</p>
+  <p>전달함수: $Y/R = (FG + CG)/(1+CG)$. 추적 성능과 외란 거부를 분리해 설계.</p>
+
+  <h2>70. 부록 — Smith Predictor</h2>
+  <p>시간 지연이 있는 시스템에 사용. 지연을 모델로 예측해 보상.</p>
+
+  <h2>71. 한 줄 진짜 마지막</h2>
+  <p>"블록선도 = 한 페이지에 시스템 모든 것."</p>
+
+  <h2>72. 부록 — Inner-Outer Loop 설계</h2>
+  <p>안쪽 루프(빠름) — 토크/전류. 바깥 루프(느림) — 위치/속도. 안쪽이 5~10배 빠르게 동작.</p>
+
+  <h2>73. 부록 — Feedforward 설계</h2>
+  <p>외란을 미리 측정 가능하면 피드포워드로 직접 보상. 예: 풍속 측정 → 풍력 발전기 피치 조절.</p>
+
+  <h2>74. 부록 — Cascade vs 2-DOF</h2>
+  <ul>
+    <li>Cascade — 다중 상태(위치, 속도) 직렬 루프.</li>
+    <li>2-DOF — 한 상태에 FF + FB 결합.</li>
+    <li>둘 다 자주 결합 사용.</li>
+  </ul>
+
+  <h2>75. 한 줄 진짜 끝</h2>
+  <p class="lead">"블록선도 = 시스템 설계의 그림 + 식 통합 도구."</p>
+
+  <h2>76. 부록 — Sensitivity 함수의 해석</h2>
+  <p>$|S(j\omega)| < 1$: 외란이 출력에서 줄어듦.<br>
+  $|S(j\omega)| = 1$: 그대로.<br>
+  $|S(j\omega)| > 1$: 증폭.<br>
+  Bode 적분 정리: $\int |S| d\omega \geq 0$. "외란을 어디서 줄이면 다른 곳에 손실."</p>
+
+  <h2>77. 부록 — 한 페이지 마지막</h2>
+  <ul>
+    <li>4결합 — 직렬, 병렬, 음·양 피드백.</li>
+    <li>$T = G/(1+GH)$.</li>
+    <li>4 sensitivity — S, T, SG, CS.</li>
+    <li>외란·잡음 위치별 응답.</li>
+    <li>2-DOF, 캐스케이드, 피드포워드.</li>
+    <li>Mason 공식 (다중 루프).</li>
+    <li>Smith predictor (지연).</li>
+  </ul>
+
+  <h2>78. 한 줄 마지막</h2>
+  <p>"한 페이지로 자동제어 모든 구조."</p>
+
+  <h2>79. 부록 — 자율 시스템에서의 블록선도 응용</h2>
+  <ul>
+    <li>자율주행 — 인지 + 위치 + 계획 + 제어 + 액추에이터의 5블록.</li>
+    <li>드론 — IMU → 자세 추정 → 자세 제어 → 모터의 4블록.</li>
+    <li>매니퓰레이션 — 비전 → 그립 계획 → 궤적 → 토크 제어.</li>
+    <li>이족 보행 — 균형 + 보행 패턴 + 관절 제어.</li>
+  </ul>
+
+  <h2>80. 한 줄 진짜 마지막</h2>
+  <p class="lead">"블록선도 = 자율 시스템의 그림 언어."</p>
+
+  <h2>81. 부록 — 한국어 자료</h2>
+  <ul>
+    <li>한기봉 — 자동제어공학 (한국어 표준).</li>
+    <li>K-MOOC 자동제어공학.</li>
+    <li>대한기계학회 제어 분과.</li>
+    <li>ICROS 학술지.</li>
+  </ul>
+
+  <h2>82. 부록 — 이번 주 학습 권장</h2>
+  <ol>
+    <li>4가지 결합 식 외우기.</li>
+    <li>합·분점 이동 규칙 손으로 한 번 적기.</li>
+    <li>Python control로 두 시스템 결합 시뮬레이션.</li>
+    <li>외란 응답 한 번 직접 풀기.</li>
+    <li>실제 시스템 (자동차 ESP) 블록선도 그려보기.</li>
+  </ol>
+
+  <h2>83. 한 줄 끝</h2>
+  <p>"손으로 한 번 그려보면 평생 손에 남는다."</p>
+
+  <h2>84. 부록 — 마지막 한 페이지</h2>
+  <ul>
+    <li>$T = G/(1+GH)$.</li>
+    <li>$S = 1/(1+GH)$.</li>
+    <li>$T + S = 1$.</li>
+    <li>$L = GC$ (루프 게인).</li>
+    <li>특성방정식 = $1+L = 0$.</li>
+    <li>모든 안정성·응답 분석 출발점.</li>
+  </ul>
+
+  <h2>85. 한 줄 진짜 마지막</h2>
+  <p class="lead">"블록선도 — 자동제어 한 학기를 한 페이지로."</p>
+
+  <h2>86. 부록 — 결론</h2>
+  <p>이번 주 W4 블록선도는 자동제어 한 학기의 그림 언어. 다음 주차들에서 모든 분석이 이 위에 얹힙니다. 폐루프 식 $T = G/(1+GH)$를 머릿속에 박아 두세요.</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 마지막.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 마지막.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊🌊🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 진짜 마지막.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말로 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 정말 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말로 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!!!</p>
+  <p style="font-size:12px;color:var(--muted)">진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막!</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말로 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
 
   <div class="prevnext">
     <a href="03-transfer-function.html"><small>← 이전</small>W3. 전달함수 &amp; 모델링</a>

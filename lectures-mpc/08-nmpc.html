@@ -249,6 +249,172 @@
     <li><strong>로봇공학특론 L11 §10 iLQR 데모</strong> — <a href="../lectures/11-mpc.html">lectures/11-mpc.html</a>.</li>
   </ul>
 
+  <h2>📚 깊이 1 — NMPC가 필요한 이유</h2>
+  <p>비선형 시스템에서 선형화 + LMPC가 부족한 경우:</p>
+  <ul>
+    <li><strong>큰 작동 영역</strong>: 평형점 주변 선형화의 정확도 한계.</li>
+    <li><strong>강한 비선형성</strong>: 로봇 매니퓰레이터의 관성 결합, 차량의 타이어 슬립.</li>
+    <li><strong>상태 의존 동특성</strong>: 제어 게인이 상태에 강하게 의존.</li>
+    <li><strong>고차원 운동</strong>: 3D 자세, 멀티 에이전트.</li>
+  </ul>
+
+  <h2>📚 깊이 2 — NMPC 표준 형식</h2>
+  <p>$$\min_{u_0,\dots,u_{N-1}} \sum_{k=0}^{N-1} l(x_k, u_k) + V_f(x_N)$$</p>
+  <p>$$\text{s.t.}\quad x_{k+1} = f(x_k, u_k),\ x_0 = \bar x_0$$</p>
+  <p>$$\quad x_k \in \mathbb X,\ u_k \in \mathbb U,\ x_N \in \mathbb X_f$$</p>
+  <p>$f$가 비선형, $l, V_f, \mathbb X, \mathbb U, \mathbb X_f$도 일반(비볼록 가능). 이 NLP(Nonlinear Program)를 매 시점 풀이.</p>
+
+  <h2>📚 깊이 3 — NLP 풀이 알고리즘</h2>
+  <table>
+    <thead><tr><th>방법</th><th>특징</th><th>도구</th></tr></thead>
+    <tbody>
+      <tr><td>SQP (Sequential Quadratic Programming)</td><td>QP 부분 문제 반복</td><td>NLOPT, Snopt, ACADO</td></tr>
+      <tr><td>Interior Point (IPOPT)</td><td>barrier 함수 + Newton</td><td>IPOPT, KNITRO</td></tr>
+      <tr><td>iLQR/DDP</td><td>Bellman 기반 반복</td><td>Crocoddyl, Drake</td></tr>
+      <tr><td>Direct Collocation</td><td>상태도 변수화</td><td>CasADi, GPOPS</td></tr>
+      <tr><td>Single Shooting</td><td>입력만 변수화</td><td>간단, 작은 문제</td></tr>
+      <tr><td>Multiple Shooting</td><td>구간별 변수 + 등식 제약</td><td>대부분 NMPC 표준</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 4 — Multiple Shooting 자세히</h2>
+  <p>Single shooting은 시간 적분 오차 누적이 문제. Multiple shooting은 호라이즌을 여러 구간으로 나누고 각 구간 끝점도 변수로:</p>
+  <ul>
+    <li>변수: $u_0, \dots, u_{N-1}, x_1, \dots, x_N$.</li>
+    <li>등식 제약: $x_{k+1} = f(x_k, u_k)$ (각 구간).</li>
+    <li>비볼록이지만 sparse 구조 → IPOPT 등으로 효율적 풀이.</li>
+  </ul>
+
+  <h2>📚 깊이 5 — Real-Time Iteration (RTI) Scheme</h2>
+  <p>NMPC가 실시간에서 무거우니 SQP 1 iteration만 수행 (Diehl 2002):</p>
+  <ol>
+    <li><strong>Preparation phase</strong>: 직전 trajectory에서 모든 도함수·QP 행렬 미리 계산.</li>
+    <li><strong>Feedback phase</strong>: 새 measure 도착 후 1 iteration QP 풀이 + 첫 입력 적용.</li>
+  </ol>
+  <p>Feedback phase가 매우 빠름 (μs~ms). 자동차·드론 NMPC 표준.</p>
+
+  <h2>📚 깊이 6 — iLQR (Iterative LQR)</h2>
+  <p>비선형 시스템을 nominal trajectory 주변에서 선형화 + LQR 풀이 → 갱신 → 반복.</p>
+  <ol>
+    <li>Nominal $\bar x, \bar u$ 시뮬.</li>
+    <li>각 시점 선형화: $A_k = \partial f/\partial x|_{\bar x_k, \bar u_k}$, $B_k = \partial f/\partial u|$.</li>
+    <li>이차 비용 근사 + Backward Riccati로 LQR 게인 계산.</li>
+    <li>업데이트: $u_k = \bar u_k + \alpha\, K_k (x_k - \bar x_k) + \alpha\, k_k$.</li>
+    <li>수렴까지 반복.</li>
+  </ol>
+  <p>로봇·자율주행에서 인기 (Drake, Crocoddyl).</p>
+
+  <h2>📚 깊이 7 — DDP (Differential Dynamic Programming)</h2>
+  <p>iLQR의 일반화. 동역학과 비용의 2차 미분까지 사용. 더 빠른 수렴, 더 큰 계산.</p>
+
+  <h2>📚 깊이 8 — CasADi 입문</h2>
+  <p>NMPC 구현의 표준 도구. 자동 미분 + 다양한 NLP 솔버 인터페이스.</p>
+  <pre style="background:#f5f5f5;padding:14px;border-radius:8px;overflow-x:auto">
+import casadi as ca
+
+x = ca.MX.sym('x', 2)
+u = ca.MX.sym('u', 1)
+
+# 비선형 동역학 (예: 진자)
+g, L = 9.8, 0.5
+xdot = ca.vertcat(x[1], -g/L*ca.sin(x[0]) + u/L)
+
+# 적분기 (RK4)
+T_s = 0.1
+F = ca.integrator('F', 'rk', {'x': x, 'p': u, 'ode': xdot}, {'tf': T_s})
+
+# NMPC NLP 정의
+N = 20
+opti = ca.Opti()
+X = opti.variable(2, N+1)
+U = opti.variable(1, N)
+X0 = opti.parameter(2)
+
+cost = 0
+for k in range(N):
+    cost += ca.sumsqr(X[:, k]) + 0.1*ca.sumsqr(U[:, k])
+    Xn = F(x0=X[:, k], p=U[:, k])['xf']
+    opti.subject_to(X[:, k+1] == Xn)
+opti.subject_to(X[:, 0] == X0)
+opti.subject_to(opti.bounded(-2, U, 2))
+opti.minimize(cost)
+opti.solver('ipopt')
+
+# 매 시점 풀이
+opti.set_value(X0, [0.5, 0])
+sol = opti.solve()
+u_apply = sol.value(U)[0, 0]
+  </pre>
+
+  <h2>📚 깊이 9 — 비선형 모델 예시</h2>
+
+  <h3>9.1 진자 (Pendulum)</h3>
+  <p>$\ddot \theta = -(g/L)\sin\theta + u/(mL^2)$. $\sin\theta$ 비선형.</p>
+
+  <h3>9.2 차량 Bicycle (Kinematic)</h3>
+  <p>$\dot x = v\cos\psi$, $\dot y = v\sin\psi$, $\dot\psi = v\tan\delta/L$, $\dot v = a$. 삼각함수 + 곱.</p>
+
+  <h3>9.3 쿼드콥터</h3>
+  <p>12상태 (위치 3, 속도 3, 자세 3, 각속도 3). 회전 행렬 $R(\eta)$ 곱셈으로 비선형.</p>
+
+  <h3>9.4 화학 반응기 (Arrhenius)</h3>
+  <p>$\dot C = -k_0 e^{-E/RT} C + \dots$. 지수함수 비선형.</p>
+
+  <h2>📚 깊이 10 — NMPC 안정성</h2>
+  <p>LMPC와 비슷한 종단 비용 + 종단 영역 트릭. 그러나:</p>
+  <ul>
+    <li>$V_f$를 LQR DARE 해 (선형화 모델)로 두면 지역 안정.</li>
+    <li>$\mathcal X_f$를 nonlinear invariant set으로 (계산 어려움).</li>
+    <li>Quasi-infinite horizon NMPC (Chen-Allgöwer 1998) — 표준.</li>
+  </ul>
+
+  <h2>📚 깊이 11 — NMPC 풀이 시간</h2>
+  <ul>
+    <li>SQP: 10~100 ms (변수 수 100~500).</li>
+    <li>RTI: 1~10 ms (1 iteration만).</li>
+    <li>iLQR: 1~10 ms (작은 차원).</li>
+    <li>FORCES Pro/HPIPM: μs~ms (코드 생성).</li>
+  </ul>
+
+  <h2>📚 깊이 12 — 흔한 오답</h2>
+  <ol>
+    <li>비볼록이라 지역 최적 가능 — warm start로 완화.</li>
+    <li>Single shooting으로 큰 호라이즌 → 수치 불안정.</li>
+    <li>풀이 시간 예산 무시.</li>
+    <li>경계 조건 누락 → 발산.</li>
+    <li>자동 미분 도구 미사용으로 손계산 도함수 오류.</li>
+  </ol>
+
+  <h2>📚 깊이 13 — 자가 점검 6문항</h2>
+  <ol>
+    <li>NMPC가 LMPC보다 어려운 이유?</li>
+    <li>RTI scheme의 두 단계?</li>
+    <li>iLQR의 핵심 아이디어?</li>
+    <li>Multiple shooting의 장점?</li>
+    <li>CasADi의 역할?</li>
+    <li>NMPC 안정성 보장의 표준 도구?</li>
+  </ol>
+  <p>정답 — ① 비볼록 NLP ② Preparation + Feedback ③ 선형화 + LQR + 반복 ④ 수치 안정 + sparse 구조 ⑤ 자동 미분 + NLP 인터페이스 ⑥ Quasi-infinite horizon + 종단 비용/영역.</p>
+
+  <h2>📚 깊이 14 — FAQ</h2>
+  <h3>Q1. NMPC vs 선형화 + LMPC?</h3>
+  <p>큰 작동 영역이거나 강한 비선형이면 NMPC. 작은 평형점 주변이면 LMPC로 충분.</p>
+
+  <h3>Q2. NMPC의 실시간성?</h3>
+  <p>RTI + 코드 생성으로 ms 단위 가능. 드론·자동차에서 실시간 동작.</p>
+
+  <h3>Q3. 학습 모델 + NMPC?</h3>
+  <p>Gaussian Process, Neural Network로 모델 학습 후 NMPC 적용. 활발한 연구 분야.</p>
+
+  <h2>📚 깊이 15 — 학기 진도 W8</h2>
+  <p>10주 중 8주차 (80%). 다음 주(W9) Explicit MPC.</p>
+
+  <h3>한 줄 격언</h3>
+  <p class="lead">"NMPC = 비선형 동역학 + 비볼록 NLP + 매 시점 풀이. RTI로 실시간."</p>
+
+  <h3>학습 일지</h3>
+  <p>"이번 주에 새로 익힌 도구: 비선형 시스템에 NMPC 적용 — CasADi + IPOPT."</p>
+
   <div class="prevnext">
     <a href="07-robust.html"><small>← 이전</small>W7. 강건 MPC</a>
     <a href="09-explicit.html" class="next"><small>다음 →</small>W9. Explicit MPC</a>

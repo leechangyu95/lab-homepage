@@ -235,6 +235,224 @@ print("u_0 =", u.value[0,0])
     </ul>
   </div>
 
+  <h2>📚 깊이 1 — CFTOC를 직관으로</h2>
+  <p>CFTOC = Constrained Finite-Time Optimal Control. LQR에 두 가지 제한을 추가한 것:</p>
+  <ol>
+    <li><strong>유한 호라이즌</strong> $N$ — 무한 대신 N 스텝까지 보고 비용 계산.</li>
+    <li><strong>제약</strong> — 입력·상태에 명시적 한계.</li>
+  </ol>
+  <p>이 두 변화로 닫힌 해(Riccati)가 사라지고, 매 시점 <strong>QP(이차 계획법)</strong>를 풀어야 합니다.</p>
+
+  <h3>표준 CFTOC 형식</h3>
+  <p>$$\min_{u_0, \dots, u_{N-1}} \sum_{k=0}^{N-1}\big(x_k^TQx_k + u_k^TRu_k\big) + x_N^T P_f x_N$$</p>
+  <p>$$\text{s.t.}\quad x_{k+1} = Ax_k + Bu_k,\ x_0 = \bar x_0$$</p>
+  <p>$$\quad x_k \in \mathbb{X},\ u_k \in \mathbb{U},\ x_N \in \mathbb{X}_f$$</p>
+
+  <h2>📚 깊이 2 — QP 표준 형식 변환</h2>
+  <p>CFTOC는 적절한 변수 묶음으로 표준 QP로 변환됩니다.</p>
+  <p>$$\min_z \frac{1}{2} z^T H z + q^T z \quad\text{s.t.}\quad A_{\text{ineq}} z \le b_{\text{ineq}},\ A_{\text{eq}} z = b_{\text{eq}}$$</p>
+  <p>두 가지 표현 방법:</p>
+
+  <h3>2.1 Sparse 형식 (decision variables = 모든 $x_k$ + $u_k$)</h3>
+  <ul>
+    <li>$z = [x_0^T, u_0^T, x_1^T, u_1^T, \dots, x_N^T]^T$.</li>
+    <li>등식 제약: 동역학 $x_{k+1} = Ax_k + Bu_k$ 명시.</li>
+    <li>차원 큼 ($n+m$ × $N$). 그러나 행렬 sparse → 빠른 풀이 가능.</li>
+    <li>대규모 NMPC 표준 (CasADi).</li>
+  </ul>
+
+  <h3>2.2 Condensed 형식 (decision variables = $u_0, \dots, u_{N-1}$만)</h3>
+  <ul>
+    <li>$z = [u_0^T, \dots, u_{N-1}^T]^T$.</li>
+    <li>$x_k$를 $z$의 함수로 명시적 표현 후 비용·제약에 대입.</li>
+    <li>차원 작음 ($mN$). 행렬 dense.</li>
+    <li>작은 차원 + 짧은 호라이즌에 효율 (드론, 자동차).</li>
+  </ul>
+
+  <h2>📚 깊이 3 — Condensed 형식 유도 단계별</h2>
+  <p>$x_{k+1} = Ax_k + Bu_k$에서:</p>
+  <p>$$x_k = A^k x_0 + \sum_{i=0}^{k-1} A^{k-1-i} B u_i$$</p>
+  <p>벡터 표현:</p>
+  <p>$$\begin{pmatrix}x_1 \\ x_2 \\ \vdots \\ x_N\end{pmatrix} = \underbrace{\begin{pmatrix}A \\ A^2 \\ \vdots \\ A^N\end{pmatrix}}_{\Phi} x_0 + \underbrace{\begin{pmatrix} B &amp; 0 &amp; \cdots \\ AB &amp; B &amp; \cdots \\ \vdots &amp; &amp; \ddots \\ A^{N-1}B &amp; A^{N-2}B &amp; \cdots\end{pmatrix}}_{\Gamma} \begin{pmatrix}u_0 \\ u_1 \\ \vdots \\ u_{N-1}\end{pmatrix}$$</p>
+  <p>비용도 $u$만의 이차형으로 환원: $J = \frac{1}{2}u^T H u + q^T(x_0) u + \text{const}$.</p>
+
+  <h2>📚 깊이 4 — KKT 조건과 QP 해의 구조</h2>
+  <p>QP의 최적해는 Karush–Kuhn–Tucker 조건을 만족합니다.</p>
+  <ol>
+    <li><strong>Stationarity</strong>: $\nabla_z L = Hz + q + A_{\text{ineq}}^T \mu + A_{\text{eq}}^T \lambda = 0$.</li>
+    <li><strong>Primal feasibility</strong>: $A_{\text{ineq}}z \le b_{\text{ineq}}$, $A_{\text{eq}}z = b_{\text{eq}}$.</li>
+    <li><strong>Dual feasibility</strong>: $\mu \ge 0$.</li>
+    <li><strong>Complementary slackness</strong>: $\mu_i (A_{\text{ineq},i}z - b_i) = 0$.</li>
+  </ol>
+  <p>활성 제약 집합(active set)이 결정되면 KKT가 선형 시스템 → 빠른 풀이.</p>
+
+  <h2>📚 깊이 5 — QP 솔버 종류</h2>
+  <table>
+    <thead><tr><th>솔버</th><th>알고리즘</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>quadprog (MATLAB)</td><td>Active Set / IPM</td><td>표준</td></tr>
+      <tr><td>OSQP</td><td>ADMM</td><td>임베디드 친화. C 코드 생성.</td></tr>
+      <tr><td>qpOASES</td><td>Active Set</td><td>실시간 NMPC 사용</td></tr>
+      <tr><td>HPIPM</td><td>Interior Point</td><td>MPC 전용 고속</td></tr>
+      <tr><td>FORCES Pro</td><td>Interior Point</td><td>임베디드 코드 생성 상용</td></tr>
+      <tr><td>CVXPY/cvxopt</td><td>다양</td><td>학습용</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 6 — 단계별 예제 — 1차원 CFTOC</h2>
+  <p>$x_{k+1} = x_k + u_k$, $|u_k| \le 1$, $N = 3$, $Q = 1, R = 0.1, P_f = 1$, $x_0 = 5$.</p>
+
+  <div class="sol">
+    <strong>풀이</strong><br>
+    <em>제약 무시 시 (LQR 닫힌 해)</em>: $u_0 = -K x_0 \approx -3.1$, 제약 $|u| \le 1$ 위반.<br>
+    <em>제약 활성</em>: 첫 단계 $u_0 = -1$, $x_1 = 4$. 그 후 다시 풀이 $u_1 = -1, x_2 = 3$, $u_2$는 $P_f$에 따라 결정 (작은 페널티이면 다시 −1).<br>
+    <em>관찰</em>: 닫힌 해가 사라지고 active set이 결정한 직선 부분 + 자유 부분의 조합. 이게 explicit MPC의 piecewise-affine 구조의 본질.
+  </div>
+
+  <h2>📚 깊이 7 — 제약 종류와 표현</h2>
+  <ul>
+    <li><strong>입력 박스 제약</strong>: $u_{\min} \le u_k \le u_{\max}$. 가장 흔함.</li>
+    <li><strong>상태 박스 제약</strong>: $x_{\min} \le x_k \le x_{\max}$. 안전 영역.</li>
+    <li><strong>출력 제약</strong>: $y_{\min} \le Cx_k \le y_{\max}$. 측정 변수 제한.</li>
+    <li><strong>입력 변화율 제약</strong>: $|u_k - u_{k-1}| \le \Delta u_{\max}$. 액추에이터 슬류율.</li>
+    <li><strong>다면체 제약</strong>: $A_x x \le b_x$. 일반.</li>
+    <li><strong>이차 제약</strong>: $x^TP_x x \le 1$. SOCP/QCQP가 됨 (QP보다 무거움).</li>
+  </ul>
+
+  <h2>📚 깊이 8 — Hard vs Soft 제약</h2>
+  <p>Hard 제약은 절대 위반 안 됨. 그러나 외란이나 모델 오차로 실현불가능(infeasible)이 발생하면 풀이 실패.</p>
+  <p>Soft 제약 도입 — slack 변수 $\epsilon \ge 0$:</p>
+  <p>$$x_k \le x_{\max} + \epsilon_k,\quad \min \dots + \rho \|\epsilon\|^2$$</p>
+  <p>큰 페널티 $\rho$로 가능한 한 제약 만족. 절대 위반 불가능한 입력 제약은 hard, 안전 영역은 soft가 일반.</p>
+
+  <h2>📚 깊이 9 — Feasibility 분석</h2>
+  <ul>
+    <li><strong>Recursive feasibility</strong>: 한 번 feasible이면 계속 feasible. 종단 제약 + 종단 제어 invariant set으로 보장.</li>
+    <li><strong>Domain of attraction</strong>: feasible 초기 상태들의 집합. 호라이즌 $N$ 클수록 커짐.</li>
+    <li><strong>Maximal control invariant set</strong>: 어떤 입력으로든 무한히 안전 영역에 머물 수 있는 상태들.</li>
+  </ul>
+
+  <h2>📚 깊이 10 — 수치 예제 — Python으로 CFTOC</h2>
+  <pre style="background:#f5f5f5;padding:14px;border-radius:8px;overflow-x:auto">
+import numpy as np
+import cvxpy as cp
+
+A = np.array([[1, 0.1], [0, 1]])
+B = np.array([[0], [0.1]])
+N = 10
+Q = np.eye(2)
+R = np.array([[0.1]])
+Pf = 10*Q  # 종단 비용
+x0 = np.array([1.0, 0])
+
+# Decision variables
+x = cp.Variable((2, N+1))
+u = cp.Variable((1, N))
+
+cost = 0
+constraints = [x[:, 0] == x0]
+for k in range(N):
+    cost += cp.quad_form(x[:, k], Q) + cp.quad_form(u[:, k], R)
+    constraints += [x[:, k+1] == A @ x[:, k] + B @ u[:, k]]
+    constraints += [cp.abs(u[:, k]) &lt;= 1]   # 입력 제약
+cost += cp.quad_form(x[:, N], Pf)
+
+prob = cp.Problem(cp.Minimize(cost), constraints)
+prob.solve()
+print("Optimal u:", u.value[:, 0])  # 첫 입력만 적용
+  </pre>
+
+  <h2>📚 깊이 11 — 종단 비용 $P_f$ 선택</h2>
+  <ul>
+    <li><strong>$P_f = 0$</strong>: 종단 가치 무시. 안정성 위험.</li>
+    <li><strong>$P_f = Q$</strong>: 단순. 종단점도 stage cost와 동일.</li>
+    <li><strong>$P_f = $ DARE 해</strong>: 무한 호라이즌 cost-to-go 근사. 안정성 보장 표준.</li>
+    <li><strong>$P_f$ + 종단 제약</strong>: 더 강한 안정성 (W6에서).</li>
+  </ul>
+
+  <h2>📚 깊이 12 — 호라이즌 $N$ 선택 가이드</h2>
+  <table>
+    <thead><tr><th>$N$</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>짧음 (5~10)</td><td>빠른 계산</td><td>근시안적, infeasibility</td></tr>
+      <tr><td>중간 (20~50)</td><td>균형</td><td>표준 선택</td></tr>
+      <tr><td>김 (100+)</td><td>장기 최적</td><td>계산량↑, 모델 오차 누적</td></tr>
+    </tbody>
+  </table>
+  <p>경험적으로 $N \cdot T_s \approx$ 시스템 정착시간 1~2배.</p>
+
+  <h2>📚 깊이 13 — Quadratic Programming 풀이 시간 추정</h2>
+  <p>변수 수 $n_v$, 제약 수 $n_c$:</p>
+  <ul>
+    <li>Active Set (qpOASES): $O(n_v^2)$, 활성 제약 수 변화에 따라.</li>
+    <li>Interior Point (HPIPM): $O(n_v^3)$ per iteration, ~10 iteration.</li>
+    <li>ADMM (OSQP): $O(n_v^2)$ per iteration, 100+ iteration.</li>
+  </ul>
+  <p>$n_v = 100$ 정도면 ms 단위. $n_v = 1000$이면 100ms~1s.</p>
+
+  <h2>📚 깊이 14 — Warm Start</h2>
+  <p>매 시점 QP 풀이 시 이전 해를 초기값으로 사용 (warm start). 활성 제약 변화 적으면 1~2 iteration으로 수렴. MPC 실시간성의 핵심.</p>
+
+  <h2>📚 깊이 15 — CFTOC vs MPC vs LQR</h2>
+  <table>
+    <thead><tr><th></th><th>LQR</th><th>CFTOC (한 번)</th><th>MPC (반복)</th></tr></thead>
+    <tbody>
+      <tr><td>호라이즌</td><td>$\infty$</td><td>$N$</td><td>$N$, 매 시점 갱신</td></tr>
+      <tr><td>제약</td><td>없음</td><td>있음</td><td>있음</td></tr>
+      <tr><td>해</td><td>닫힌 해</td><td>QP</td><td>QP, 매 시점</td></tr>
+      <tr><td>풀이</td><td>오프라인</td><td>온라인 한 번</td><td>온라인 매 시점</td></tr>
+      <tr><td>피드백</td><td>$u = -Kx$</td><td>없음 (open loop)</td><td>있음 (closed loop)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 16 — 흔한 오답</h2>
+  <ol>
+    <li>유한 호라이즌 끝의 비용을 종단 비용 없이 0으로 끝냄.</li>
+    <li>Hard 제약만 사용해서 자주 infeasible.</li>
+    <li>Soft 페널티 $\rho$가 너무 작아 제약 위반 빈번.</li>
+    <li>Warm start 미사용으로 풀이 시간 낭비.</li>
+    <li>Condensed 형식을 큰 차원에서 사용 (sparse가 빠름).</li>
+  </ol>
+
+  <h2>📚 깊이 17 — 자가 점검 7문항</h2>
+  <ol>
+    <li>CFTOC와 LQR의 두 차이?</li>
+    <li>QP 표준형은?</li>
+    <li>Sparse vs Condensed 형식 선택 기준?</li>
+    <li>KKT 조건 4가지?</li>
+    <li>Hard vs Soft 제약 차이?</li>
+    <li>종단 비용을 LQR DARE 해로 두는 이유?</li>
+    <li>Warm start의 효과?</li>
+  </ol>
+  <p>정답 — ① 유한 호라이즌, 명시적 제약 ② $\min \frac12 z^THz + q^Tz$ s.t. $Az \le b$ ③ 큰 차원 → sparse, 작은 차원 → condensed ④ Stationarity, Primal feas, Dual feas, Complementary slackness ⑤ 절대 위반 vs 위반 허용 ⑥ 무한 호라이즌 cost-to-go 근사, 안정성 보장 ⑦ 1~2 iteration으로 수렴.</p>
+
+  <h2>📚 깊이 18 — FAQ</h2>
+  <h3>Q1. 왜 매 시점 풀이? 한 번이면 안 되나?</h3>
+  <p>모델 오차·외란 보정. Open-loop CFTOC를 적용하면 오차가 누적됨. 매 시점 measure → 풀이 → 첫 입력만 적용으로 closed-loop.</p>
+
+  <h3>Q2. infeasibility 발생 시 대응?</h3>
+  <p>Soft 제약 도입, 직전 해 재사용, fail-safe 모드.</p>
+
+  <h3>Q3. QP 해가 LQR 해와 같을 때?</h3>
+  <p>제약 비활성 영역에서. 그러므로 MPC = "제약 활성 시 LQR + 보정".</p>
+
+  <h2>📚 깊이 19 — 응용 사례</h2>
+  <ul>
+    <li>드론 자세 — N = 10~20, 모터 RPM 제약.</li>
+    <li>차량 LKAS — N = 30, 조향각·가속도 제약.</li>
+    <li>화학 공정 — N = 30~60, 농도·온도 안전 제약.</li>
+    <li>HVAC — N = 96 (15분 단위 24h), 온도·전력 제약.</li>
+  </ul>
+
+  <h2>📚 깊이 20 — 학기 진도 W4</h2>
+  <p>10주 중 4주차 (40%). 이번 주가 진짜 MPC의 시작 — QP 정형화. 다음 주(W5) 후퇴지평으로 closed-loop 완성.</p>
+
+  <h3>한 줄 격언</h3>
+  <p class="lead">"제약 추가 → 닫힌 해 사라짐 → QP. 매 시점 풀이가 진짜 MPC."</p>
+
+  <h3>학습 일지</h3>
+  <p>"이번 주에 새로 익힌 도구: CFTOC를 QP 표준형으로 변환하는 절차."</p>
+
   <div class="prevnext">
     <a href="03-lqr.html"><small>← 이전</small>W3. LQR</a>
     <a href="05-receding-horizon.html" class="next"><small>다음 →</small>W5. 수신지평선 MPC</a>

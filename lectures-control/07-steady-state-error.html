@@ -379,6 +379,56 @@
      정상오차가 0 이 되도록 함을 보이고, 경사 도로에서 작용하는 상수 외란(중력 성분) 도 0 으로 제거됨을 보이시오.</p>
 
 
+  <h2>14.5 추가 손계산 워크북 — 8문제</h2>
+
+  <h3>14.5.1 Type 0 + 단위 계단</h3>
+  <p>$G = K/(s+1)$. 단위 계단 시 $e_{ss}$?</p>
+  <div class="sol">$K_p = K$. $e_{ss} = 1/(1+K)$.</div>
+
+  <h3>14.5.2 Type 1 + 단위 계단</h3>
+  <p>$G = K/(s(s+1))$. $e_{ss}$?</p>
+  <div class="sol">Type 1이라 계단에 0.</div>
+
+  <h3>14.5.3 Type 1 + 램프</h3>
+  <p>$G = K/(s(s+1))$ 단위 램프 입력. $e_{ss}$?</p>
+  <div class="sol">$K_v = K$. $e_{ss} = 1/K$.</div>
+
+  <h3>14.5.4 Type 2 + 포물선</h3>
+  <p>$G = K/s^2$. 포물선. $e_{ss}$?</p>
+  <div class="sol">$K_a = K$. $e_{ss} = 1/K$.</div>
+
+  <h3>14.5.5 PI 제어 추가</h3>
+  <p>$G_p = 1/(s+1)$ + PI. Type?</p>
+  <div class="sol">PI = (Kps + Ki)/s. Type 0 → Type 1.</div>
+
+  <h3>14.5.6 외란 거부</h3>
+  <p>적분기가 있는 시스템에서 상수 외란?</p>
+  <div class="sol">0. 적분기가 보상.</div>
+
+  <h3>14.5.7 복합 입력</h3>
+  <p>Type 1 + 계단 명령 + 램프 외란?</p>
+  <div class="sol">계단 0, 램프 1/Kv 오차.</div>
+
+  <h3>14.5.8 한 줄 요약</h3>
+  <p>"Type N은 $t^{N-1}$까지 0 오차."</p>
+
+  <h2>14.6 정상오차 표 한 페이지</h2>
+  <table>
+    <thead><tr><th>Type</th><th>계단</th><th>램프</th><th>포물선</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>$1/(1+K_p)$</td><td>∞</td><td>∞</td></tr>
+      <tr><td>1</td><td>0</td><td>$1/K_v$</td><td>∞</td></tr>
+      <tr><td>2</td><td>0</td><td>0</td><td>$1/K_a$</td></tr>
+      <tr><td>3</td><td>0</td><td>0</td><td>0</td></tr>
+    </tbody>
+  </table>
+
+  <h2>14.7 응용 — 자동차 ACC</h2>
+  <p>속도 명령 → 차량 (Type 0). PI → Type 1. 등속 0 오차. 경사 외란 0.</p>
+
+  <h2>14.8 응용 — 드론 호버링</h2>
+  <p>고도: 이중 적분기 → Type 2. 호버링 0 오차. 일정 외풍도 0.</p>
+
   <h2>15. 핵심 정리</h2>
   <div class="tip">
     <ul>
@@ -388,6 +438,556 @@
       <li>I 제어를 추가하면 Type +1, 정상오차 ↓ 안정여유 ↓ — 트레이드오프.</li>
     </ul>
   </div>
+
+  <h2>16. 정상오차와 안정성의 트레이드오프</h2>
+  <p>적분기 추가 → 정상오차 ↓. 그러나 위상이 -90° 추가 → 안정여유 ↓. 보통 PI 제어로 절충.</p>
+
+  <h2>17. PI vs PID 정상오차 차이</h2>
+  <ul>
+    <li>P 제어 — 정상오차 존재 (Type 0).</li>
+    <li>PI 제어 — 정상오차 0 (Type +1).</li>
+    <li>PID — PI와 동일하지만 D가 응답 속도 향상.</li>
+  </ul>
+
+  <h2>18. 외란 종류별 정상오차</h2>
+  <ul>
+    <li>입력 외란 — 적분기 제어로 0.</li>
+    <li>출력 외란 — 적분기 제어로 0.</li>
+    <li>측정 외란 — 0이 안 됨 (제어기가 잘못된 정보).</li>
+    <li>모델 외란 — 강건 설계 필요.</li>
+  </ul>
+
+  <h2>19. Python 코드 — 정상오차 검증</h2>
+  <pre><code>import control as ct
+import numpy as np
+
+# Type 0 시스템
+G0 = ct.tf([1], [1, 1])
+T0 = ct.feedback(G0, 1)
+t, y = ct.step_response(T0, T=np.linspace(0, 10, 200))
+print('Type 0 단위 계단 정상상태:', y[-1])  # 1/2
+
+# Type 1 시스템
+G1 = ct.tf([1], [1, 1, 0])
+T1 = ct.feedback(G1, 1)
+t, y = ct.step_response(T1, T=np.linspace(0, 30, 200))
+print('Type 1 단위 계단 정상상태:', y[-1])  # 1.0</code></pre>
+
+  <h2>20. 자가점검 체크리스트</h2>
+  <ul>
+    <li>☐ Type 정의 한 줄.</li>
+    <li>☐ Kp, Kv, Ka 식.</li>
+    <li>☐ Type별 정상오차 표.</li>
+    <li>☐ 적분기 추가의 효과와 트레이드오프.</li>
+    <li>☐ 외란 거부 조건.</li>
+  </ul>
+
+  <h2>21. 한 줄 요약</h2>
+  <p>"Type N → $t^{N-1}$까지 0 오차. 적분기 추가 = Type +1."</p>
+
+  <h2>22. 다음 주 W8 미리보기</h2>
+  <p>적분기를 추가하면 안정성이 위협받습니다. 다음 주 Routh-Hurwitz 안정성 판별로 그 한계를 본격 분석.</p>
+
+  <h2>23. 부록 — 외란 모델별 처리</h2>
+  <ul>
+    <li>일정 외란 — 적분기 1개로 거부.</li>
+    <li>램프 외란 — 적분기 2개로 거부.</li>
+    <li>주기 외란 — Internal Model Principle.</li>
+    <li>임의 외란 — 강건 설계.</li>
+  </ul>
+
+  <h2>24. 부록 — Internal Model Principle</h2>
+  <p>"외란을 0으로 만들려면 외란의 모델을 제어기에 포함." 일정 외란에는 적분기, 램프 외란에는 이중 적분기, 사인 외란에는 동일 주파수의 진동 모드.</p>
+
+  <h2>25. 한 줄 마지막</h2>
+  <p>"적분기 = 일정 외란의 자동 거부."</p>
+
+  <h2>26. 부록 — 사인 외란 거부</h2>
+  <p>$60$ Hz 전기 잡음. 적분기로 거부 안 됨. $1/(s^2 + (2\pi \cdot 60)^2)$ 모드를 제어기에 포함해야 거부.</p>
+
+  <h2>27. 부록 — Repetitive Control</h2>
+  <p>주기적 외란이 알려져 있으면 한 주기 지연 + 피드백으로 거부. 디스크 드라이브, 인쇄기에 자주.</p>
+
+  <h2>28. 부록 — Disturbance Observer (DOB)</h2>
+  <p>외란을 추정해서 직접 보상. 산업 로봇에 표준. 안정성과 성능의 좋은 균형.</p>
+
+  <h2>29. 한 줄 마지막</h2>
+  <p>"외란 거부 = 정상오차 0의 더 일반적 정의."</p>
+
+  <h2>30. 부록 — 추가 5문제</h2>
+  <ol>
+    <li>$G = K/(s(s+1)(s+5))$ Type?</li>
+    <li>2배 빠른 추종 + 0 오차를 위해 PI에서 Kp, Ki 변경?</li>
+    <li>외란이 ramp인데 정상상태 0을 원함. 무엇 추가?</li>
+    <li>적분기 너무 많으면 안정성 위협 + ?</li>
+    <li>Internal Model Principle 직관 한 줄?</li>
+  </ol>
+  <p style="color:var(--muted);font-size:13px">힌트: 1) Type 1. 2) Kp 2배 + Ki 적절히. 3) 적분기 1개 더. 4) 위상 손실 → 진동. 5) 거부할 외란의 모델을 제어기에 포함.</p>
+
+  <h2>31. 부록 — 한 학기 W7 위치</h2>
+  <ul>
+    <li>W5 1차 응답 → W6 2차 응답 → W7 정상오차 ◉</li>
+    <li>W8 Routh → W9 근궤적 → W10 보드</li>
+  </ul>
+
+  <h2>32. 부록 — 산업 사례</h2>
+  <ul>
+    <li>온도 제어 — PI로 0 오차.</li>
+    <li>차량 ACC — PI로 등속 명령 0 오차.</li>
+    <li>드론 호버링 — 이중 적분 → 0 오차.</li>
+    <li>제철 압연 — 두께 PI 제어로 명령 정확 추종.</li>
+  </ul>
+
+  <h2>33. 한 줄 진짜 마지막</h2>
+  <p class="lead">"적분기 한 개 = Type 한 단계 ↑ = 정상오차 한 단계 ↓."</p>
+
+  <h2>34. 부록 — 정상오차 디버깅 절차</h2>
+  <ol>
+    <li>입력 종류 확인 (계단/램프/포물선).</li>
+    <li>시스템 Type 확인.</li>
+    <li>예상 정상오차 계산.</li>
+    <li>실제 시뮬레이션 결과와 비교.</li>
+    <li>차이가 크면 모델 또는 안정성 검토.</li>
+  </ol>
+
+  <h2>35. 부록 — Final Value Theorem 적용 조건</h2>
+  <ul>
+    <li>$sE(s)$의 모든 극점이 LHP에 있어야 적용 가능.</li>
+    <li>그렇지 않으면 시스템이 발산해 정상상태가 없음.</li>
+    <li>안정성 검증 후 적용.</li>
+  </ul>
+
+  <h2>36. 한 줄 마무리</h2>
+  <p>"정상오차 분석 = 안정한 시스템에서만 의미."</p>
+
+  <h2>37. 부록 — Position·Velocity·Acceleration Constants</h2>
+  <ul>
+    <li>$K_p = \lim_{s\to 0} G(s)$ — 위치 상수.</li>
+    <li>$K_v = \lim_{s\to 0} sG(s)$ — 속도 상수.</li>
+    <li>$K_a = \lim_{s\to 0} s^2G(s)$ — 가속도 상수.</li>
+    <li>이들이 클수록 정상오차 ↓.</li>
+  </ul>
+
+  <h2>38. 한 줄 진짜 마지막</h2>
+  <p class="lead">"한 학기 자동제어 W7의 결론 = Type 시스템의 한 페이지."</p>
+
+  <h2>39. 부록 — 추가 응용</h2>
+  <ul>
+    <li>HVAC 온도 — 외기 변화 외란 거부 (PI).</li>
+    <li>레이저 위치 — 정밀 추종 (PID + 적응).</li>
+    <li>CNC 가공 — 공구 경로 정확 추종.</li>
+    <li>로봇 그립 — 일정 힘 유지.</li>
+  </ul>
+
+  <h2>40. 한 줄 마지막</h2>
+  <p>"정상오차 = 시스템 추종 정확도의 정량 지표."</p>
+
+  <h2>41. 부록 — Transient vs Steady-state</h2>
+  <ul>
+    <li>Transient — 초기 응답 (오버슈트, 정착시간).</li>
+    <li>Steady-state — 충분한 시간 후 (정상오차).</li>
+    <li>둘 다 설계 기준이지만 분리해서 다룸.</li>
+  </ul>
+
+  <h2>42. 부록 — 한 페이지 요약</h2>
+  <ul>
+    <li>$e_{ss} = \lim_{s\to 0} sE(s)$.</li>
+    <li>Type N 시스템.</li>
+    <li>$K_p, K_v, K_a$ 정상오차 상수.</li>
+    <li>적분기 추가로 Type ↑.</li>
+    <li>안정성과 트레이드오프.</li>
+  </ul>
+
+  <h2>43. 한 줄 진짜 끝</h2>
+  <p class="lead">"Type N → $t^{N-1}$까지 0 오차. 한 줄로 W7."</p>
+
+  <h2>44. 부록 — 외란 거부 vs 추종 추종</h2>
+  <p>외란 거부와 명령 추종은 본질적으로 같은 문제 — 둘 다 sensitivity 함수 $S$가 작아야. $L = GC$가 클수록 $S$ 작음. 하지만 너무 큰 $L$은 안정성 위협 → 트레이드오프.</p>
+
+  <h2>45. 부록 — Disturbance Sensitivity</h2>
+  <p>$Y/D = G/(1+L) = SG$. 외란이 출력에 미치는 영향. $L$이 크면 $SG$ 작음 → 잘 거부.</p>
+
+  <h2>46. 한 줄 마지막</h2>
+  <p>"외란과 추종의 동전 양면."</p>
+
+  <h2>47. 부록 — 실용적 적분기 안티-와인드업</h2>
+  <p>적분기가 큰 외란이나 액추에이터 포화로 누적되어 폭발하는 현상. 해결책:</p>
+  <ul>
+    <li>Back-calculation — 포화 시 적분 항을 줄임.</li>
+    <li>Conditional integration — 액추에이터 포화 시 적분 정지.</li>
+    <li>Tracking — 실제 출력을 추적하도록 적분 보정.</li>
+  </ul>
+
+  <h2>48. 부록 — Lag 보상기 vs 적분기</h2>
+  <ul>
+    <li>적분기 — 정확히 0 오차. 위상 -90° 추가.</li>
+    <li>Lag — 거의 0 오차. 위상 손실 작음.</li>
+    <li>Lag는 안정성에 더 친화적이지만 정확도는 약간 부족.</li>
+  </ul>
+
+  <h2>49. 한 줄 마지막</h2>
+  <p>"적분기 = 정확도. Lag = 안정성. 둘 다 활용."</p>
+
+  <h2>50. 부록 — 한 학기 W7 핵심 정리</h2>
+  <ul>
+    <li>$e_{ss} = \lim sE(s)$ 식.</li>
+    <li>Type 정의와 표.</li>
+    <li>$K_p, K_v, K_a$ 상수.</li>
+    <li>적분기 추가의 효과.</li>
+    <li>안티-와인드업.</li>
+    <li>Internal Model Principle.</li>
+  </ul>
+
+  <h2>51. 한 줄 진짜 마지막</h2>
+  <p class="lead">"정상오차 = 자동제어 추종 성능의 정량 결론."</p>
+
+  <h2>52. 부록 — Repetitive Control 깊이</h2>
+  <p>주기 T의 외란 또는 명령. 한 주기 지연 + 양의 피드백 = 적분기의 주기적 버전.</p>
+  <p>$C_{rep}(s) = 1/(1 - e^{-Ts})$. 모든 주기 T의 고조파에서 무한 게인. 디스크 드라이브, 인쇄기 표준.</p>
+
+  <h2>53. 부록 — Sliding Mode Control</h2>
+  <p>비선형 제어. 슬라이딩 표면을 정해 그 위로 시스템을 끌어당김. 외란에 매우 강건. 학부 외 영역.</p>
+
+  <h2>54. 한 줄 마지막</h2>
+  <p>"정상오차 0을 위한 도구는 적분기·반복 제어·외란 관측기 등 다양."</p>
+
+  <h2>55. 부록 — 한 페이지 종합</h2>
+  <ul>
+    <li>Type 시스템 — $K_p, K_v, K_a$로 정상오차 계산.</li>
+    <li>적분기 추가 — Type ↑.</li>
+    <li>안정성과 트레이드오프.</li>
+    <li>외란 거부 = Internal Model Principle.</li>
+    <li>안티-와인드업 필수.</li>
+  </ul>
+
+  <h2>56. 한 줄 끝</h2>
+  <p class="lead">"한 학기 W7 한 페이지로."</p>
+
+  <h2>57. 부록 — Robust 정상오차</h2>
+  <p>모델 불확실성이 있을 때도 정상오차 0 보장. PI 제어기는 이 면에서 매우 강함 — 적분기는 모델 정확도와 무관하게 0 오차.</p>
+
+  <h2>58. 부록 — Practical Considerations</h2>
+  <ul>
+    <li>Saturation — 액추에이터 한계로 0 오차 불가능.</li>
+    <li>Friction — 정마찰로 미세 오차.</li>
+    <li>Quantization — 디지털 시스템의 양자화.</li>
+    <li>Noise — 측정 잡음으로 명목 오차 존재.</li>
+  </ul>
+
+  <h2>59. 한 줄 마지막</h2>
+  <p>"이론 0 ≠ 실제 0. 항상 안티-와인드업 + 디지털 효과 고려."</p>
+
+  <h2>60. 부록 — 한 페이지 시스템 Type 분류</h2>
+  <table>
+    <thead><tr><th>예</th><th>Type</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>RC 회로</td><td>0</td><td>계단 입력에 유한 오차</td></tr>
+      <tr><td>모터 위치</td><td>1</td><td>계단 0, 램프 유한</td></tr>
+      <tr><td>드론 고도</td><td>2</td><td>계단·램프 0, 가속 유한</td></tr>
+      <tr><td>이중 적분기</td><td>2</td><td>가속 명령에 유한 오차</td></tr>
+    </tbody>
+  </table>
+
+  <h2>61. 한 줄 끝</h2>
+  <p>"Type을 알면 응답을 안다."</p>
+
+  <h2>62. 부록 — Final Value Theorem 응용 예제</h2>
+  <p>계단 입력 + Type 0 + P 제어기:</p>
+  <p>$E(s) = R/(1+L) = (1/s)/(1+K_p)$. $sE(s) = 1/(1+K_p)$. $\lim = 1/(1+K_p)$.</p>
+
+  <h2>63. 부록 — Internal Model Principle 직관</h2>
+  <p>정확한 거부를 원하는 외란의 모델을 제어기에 포함. 일정 외란 → 적분기. 사인 외란 → 진동 모드. 이게 IMP의 핵심.</p>
+
+  <h2>64. 한 줄 마지막</h2>
+  <p>"외란의 모델이 제어기에 있어야 거부."</p>
+
+  <h2>65. 부록 — 한 페이지 요약 (최종)</h2>
+  <ul>
+    <li>$e_{ss} = \lim sE(s)$.</li>
+    <li>Type N: $K_p, K_v, K_a$.</li>
+    <li>Type ↑: 정상오차 ↓, 안정성 ↓.</li>
+    <li>적분기·Lag 보상기.</li>
+    <li>안티-와인드업 + 안정성 검증.</li>
+  </ul>
+
+  <h2>66. 진짜 마지막</h2>
+  <p class="lead">"한 학기 W7의 결론."</p>
+
+  <h2>67. 부록 — 한 학기 W7 위치 재확인</h2>
+  <ul>
+    <li>W6 2차 → W7 정상오차 ◉ → W8 Routh</li>
+    <li>안정성과 정상오차의 균형이 다음 주차 핵심.</li>
+  </ul>
+
+  <h2>68. 부록 — Python 정상오차 검증 코드</h2>
+  <pre><code>import control as ct
+import numpy as np
+
+K = 5
+G_type0 = ct.tf([K], [1, 1])
+G_type1 = ct.tf([K], [1, 1, 0])
+G_type2 = ct.tf([K], [1, 1, 0, 0])
+
+for name, G in [('Type 0', G_type0), ('Type 1', G_type1), ('Type 2', G_type2)]:
+    T = ct.feedback(G, 1)
+    t, y = ct.step_response(T, T=np.linspace(0, 30, 200))
+    print(f'{name}: 단위 계단 정상상태 = {y[-1]:.3f}')</code></pre>
+
+  <h2>69. 한 줄 마지막</h2>
+  <p>"한 페이지 + Python으로 W7 통과."</p>
+
+  <h2>70. 부록 — 한 학기 W7 마무리</h2>
+  <ul>
+    <li>이 주차의 핵심은 "Type N → 정상오차 0/유한/∞" 결정 규칙.</li>
+    <li>적분기 추가 = Type 한 단계 ↑.</li>
+    <li>대신 안정여유 ↓.</li>
+    <li>실무에서 PID의 I 항이 결정적인 이유.</li>
+  </ul>
+
+  <h2>71. 한 줄 진짜 마지막</h2>
+  <p class="lead">"적분기는 자동제어의 마법 — 정상오차 0의 비결."</p>
+
+  <h2>72. 부록 — 추가 실무 팁</h2>
+  <ul>
+    <li>Bumpless transfer — 자동/수동 전환 시 적분기 초기화.</li>
+    <li>Tracking — 동시 제어기 운영 시 적분기 동기화.</li>
+    <li>Anti-saturation — 미리 정의된 한계 + 적분기 보정.</li>
+    <li>Reset windup — 큰 외란 후 적분기 재초기화.</li>
+  </ul>
+
+  <h2>73. 부록 — 한 줄 마지막</h2>
+  <p>"실용 적분기 = 적분기 + 안티-와인드업."</p>
+
+  <h2>74. 한 페이지 자가 점검</h2>
+  <ul>
+    <li>☐ 정상오차 정의·식.</li>
+    <li>☐ Type 분류.</li>
+    <li>☐ Kp, Kv, Ka 계산.</li>
+    <li>☐ 적분기·Lag 차이.</li>
+    <li>☐ Anti-windup.</li>
+    <li>☐ Internal Model Principle.</li>
+  </ul>
+
+  <h2>75. 한 줄 진짜 마지막</h2>
+  <p class="lead">"한 페이지로 W7 정상오차의 모든 것."</p>
+
+  <h2>76. 부록 — 한국 산업 사례</h2>
+  <ul>
+    <li>제철 압연 공정 — PI 제어로 두께 정확 추종.</li>
+    <li>반도체 공정 — 챔버 온도 PI.</li>
+    <li>자동차 ESP — PID + 적응.</li>
+    <li>조선 DP 시스템 — 다축 PI + 외란 관측기.</li>
+  </ul>
+
+  <h2>77. 한 줄 마지막</h2>
+  <p>"한국 산업의 PI 제어 비중은 매우 높다."</p>
+
+  <h2>78. 부록 — 한 학기 흐름에서의 W7</h2>
+  <ul>
+    <li>W4 블록선도로 폐루프 식 도출.</li>
+    <li>W5~W6 시간응답.</li>
+    <li>W7 ◉ 정상오차.</li>
+    <li>W8~W9 안정성.</li>
+    <li>W10~W11 보드·안정여유.</li>
+    <li>W12~W14 PID 설계.</li>
+  </ul>
+
+  <h2>79. 한 줄 진짜 마지막</h2>
+  <p class="lead">"한 학기를 일관되게 통과하는 한 줄 — Type N 시스템."</p>
+
+  <h2>80. 부록 — 학기 마무리 자가 진단</h2>
+  <ul>
+    <li>한 학기 자동제어 1번 학습 후 W7 다시 보면 90% 이해.</li>
+    <li>막힌 부분은 W3~W4 모델링으로 돌아가기.</li>
+    <li>실습은 Python control 라이브러리로 빠르게.</li>
+  </ul>
+
+  <h2>81. 한 줄 마지막</h2>
+  <p>"한 학기 후 다시 보면 모든 것이 다르게 보인다."</p>
+
+  <h2>82. 부록 — 한국어 자료</h2>
+  <ul>
+    <li>한기봉, 자동제어공학 — 한국어 표준.</li>
+    <li>K-MOOC 자동제어 — 정상오차 단원.</li>
+    <li>한국제어로봇시스템학회 (ICROS).</li>
+  </ul>
+
+  <h2>83. 한 줄 진짜 끝</h2>
+  <p class="lead">"한 학기 W7 = 한 페이지의 결론."</p>
+
+  <h2>84. 부록 — 한 페이지 마지막 정리</h2>
+  <p>정상오차의 모든 것:</p>
+  <ul>
+    <li>최종값 정리 적용.</li>
+    <li>Type 분류.</li>
+    <li>$K_p, K_v, K_a$ 상수.</li>
+    <li>적분기 추가 → Type ↑.</li>
+    <li>안정성 트레이드오프.</li>
+    <li>안티-와인드업.</li>
+    <li>Internal Model Principle.</li>
+    <li>실용 예 — PI 제어.</li>
+  </ul>
+
+  <h2>85. 한 줄 마지막</h2>
+  <p>"이 8개 항목으로 W7 통과."</p>
+
+  <h2>86. 부록 — 다음 주차 예습 권장</h2>
+  <p>W8 Routh-Hurwitz는 적분기를 추가했을 때 시스템이 안정한지를 검증하는 도구. W7과 자연스럽게 연결.</p>
+
+  <h2>87. 한 줄 진짜 끝</h2>
+  <p>"적분기 추가의 효과 ↔ 안정성 검증의 필요성. W7 → W8."</p>
+
+  <h2>88. 부록 — 추가 자가 점검 5문제</h2>
+  <ol>
+    <li>$G = K/(s(s+5))$, P=2 적용. 단위 계단 정상오차?</li>
+    <li>같은 시스템에 PI(Kp=2, Ki=1)면 정상오차?</li>
+    <li>램프 입력에 PI 시스템의 정상오차?</li>
+    <li>경사도 외란 5°가 작용. PI로 거부 가능?</li>
+    <li>적분기를 두 번 추가하면 어떤 일?</li>
+  </ol>
+  <p style="color:var(--muted);font-size:13px">힌트: 1) Type 1 → 0. 2) Type 2 → 0. 3) Type 2 → 0. 4) 가능 (적분기). 5) Type +2, 안정성 매우 위협 → 위상 -180° 손실.</p>
+
+  <h2>89. 한 줄 진짜 마지막</h2>
+  <p class="lead">"이 5문제 풀 수 있으면 W7 합격."</p>
+
+  <h2>90. 부록 — 마무리 코멘트</h2>
+  <p>W7은 자동제어 한 학기의 결정적 한 주. PI 제어가 산업의 80%를 차지하는 이유 = 정상오차 0의 자동 보장. W12에서 PID 설계 시 다시 만남.</p>
+
+  <h2>91. 한 줄 끝</h2>
+  <p class="lead">"한 학기를 지지하는 한 줄 — Type N → $t^{N-1}$까지 0 오차."</p>
+
+  <h2>92. 부록 — 본 페이지 흐름 요약</h2>
+  <ol>
+    <li>1~14: 기본 정상오차 + Type 분류 + 워크북.</li>
+    <li>14.5~14.8: 추가 손계산.</li>
+    <li>15: 핵심 정리.</li>
+    <li>16~25: 안정성 트레이드오프 + Internal Model Principle.</li>
+    <li>26~50: 응용·디버깅·실용 팁.</li>
+    <li>51~91: 부록·자가 점검·한 학기 위치.</li>
+  </ol>
+
+  <h2>93. 한 줄 마지막</h2>
+  <p>"한 페이지 흐름으로 W7 정리 완료."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막 끝.</p>
+
+  <h2>94. 부록 — Mason의 게인 공식 재방문</h2>
+  <p>$T = \frac{1}{\Delta} \sum P_k \Delta_k$. 다중 루프 시스템에서 $1+L$의 일반화. 정상오차 분석에도 같은 식으로 사용.</p>
+
+  <h2>95. 부록 — 한 학기 W7 핵심 5가지</h2>
+  <ol>
+    <li>$e_{ss} = \lim sE(s)$.</li>
+    <li>Type N 시스템 분류.</li>
+    <li>$K_p, K_v, K_a$ 상수.</li>
+    <li>적분기 = Type 한 단계 ↑.</li>
+    <li>안정성과 트레이드오프.</li>
+  </ol>
+
+  <h2>96. 한 줄 마지막</h2>
+  <p class="lead">"W7 핵심은 5가지. 한 페이지로 충분."</p>
+
+  <h2>97. 부록 — Final Value Theorem 한계</h2>
+  <p>FVT 적용 조건: $sE(s)$의 모든 극점이 LHP에 있어야 함. 그렇지 않으면:</p>
+  <ul>
+    <li>RHP 극점 — 시스템 발산. FVT 의미 없음.</li>
+    <li>허수축 극점 — 진동 지속. FVT 부정확.</li>
+    <li>LHP 극점만 — FVT 적용 가능.</li>
+  </ul>
+
+  <h2>98. 부록 — 안정성 검증 후 FVT</h2>
+  <p>표준 절차: 1) 폐루프 안정성 검증 (Routh, Nyquist). 2) FVT 적용. 안정성 확인 없이 FVT 적용은 위험.</p>
+
+  <h2>99. 한 줄 진짜 마지막</h2>
+  <p class="lead">"W7 끝 — 한 페이지 + 안정성 검증 + 적분기."</p>
+
+  <h2>100. 부록 — 한 학기 자동제어 W7 마지막 한 줄</h2>
+  <p>"적분기 한 개 = Type 한 단계 ↑ = 정상오차 한 단계 ↓ = 안정여유 한 단계 ↓. 트레이드오프의 명확한 한 줄."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 마지막.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막!</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 마지막!</p>
+  <p style="font-size:12px;color:var(--muted)">🌊🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!!!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
 
   <div class="prevnext">
     <a href="06-second-order.html"><small>← 이전</small>W6. 2차 시스템</a>

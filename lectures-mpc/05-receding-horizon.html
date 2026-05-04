@@ -208,6 +208,195 @@
     </ul>
   </div>
 
+  <h2>📚 깊이 1 — 수신지평선 원리</h2>
+  <p>Receding Horizon Control(RHC)의 4단계는 매 샘플 시점에서 반복됩니다.</p>
+  <ol>
+    <li><strong>측정/추정</strong>: $x_k$ 획득.</li>
+    <li><strong>최적화</strong>: $N$ 스텝 CFTOC 풀이 → $u_0^*, u_1^*, \dots, u_{N-1}^*$.</li>
+    <li><strong>적용</strong>: 첫 입력 $u_0^*$만 시스템에 인가.</li>
+    <li><strong>전진</strong>: $k \to k+1$, 다시 1로.</li>
+  </ol>
+  <p>이 반복이 RHC를 <strong>open-loop CFTOC와 다른 closed-loop 제어기</strong>로 만듭니다.</p>
+
+  <h2>📚 깊이 2 — 친절 비유</h2>
+  <ul>
+    <li><strong>GPS 내비게이션</strong> — 전체 경로 미리 계산, 한 골목씩 따라가다 다시 계획.</li>
+    <li><strong>요리</strong> — 5단계 레시피 보고 다음 한 단계만 실행, 완료 후 다시 5단계 계획.</li>
+    <li><strong>체스</strong> — 다음 5수 시뮬, 첫 수만 두고 상대 수 본 후 다시 5수 시뮬.</li>
+  </ul>
+
+  <h2>📚 깊이 3 — 왜 첫 입력만 적용?</h2>
+  <p>이론적으로 $N$개 모두 적용하면 open-loop CFTOC가 됩니다. 그러나:</p>
+  <ul>
+    <li>모델 오차·외란 보정 — 매 시점 measure 후 재최적화로 누적 오차 방지.</li>
+    <li>적응성 — 외부 환경 변화에 즉시 대응.</li>
+    <li>안정성 — 닫힌 루프 피드백으로 강건성 확보.</li>
+  </ul>
+  <p>대가: 매 시점 QP 풀이 (계산량 증가).</p>
+
+  <h2>📚 깊이 4 — Open-loop vs Closed-loop 시뮬 비교</h2>
+  <table>
+    <thead><tr><th></th><th>Open-loop</th><th>Closed-loop (RHC)</th></tr></thead>
+    <tbody>
+      <tr><td>풀이 횟수</td><td>1번</td><td>매 샘플</td></tr>
+      <tr><td>모델 오차 영향</td><td>누적</td><td>매 시점 보정</td></tr>
+      <tr><td>외란 영향</td><td>발산 가능</td><td>억제</td></tr>
+      <tr><td>안정성</td><td>약함</td><td>강함</td></tr>
+      <tr><td>계산량</td><td>적음</td><td>많음</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 5 — Receding Horizon의 특수 성질</h2>
+
+  <h3>5.1 시간 불변성 (Time-Invariant)</h3>
+  <p>CFTOC가 시간 불변이면 매 시점 풀이도 같은 형태. 게인이 시간 가변이지 않고 상태에만 의존하는 함수 $u_0^*(x_k)$ — 이게 implicit MPC.</p>
+
+  <h3>5.2 PWA 구조</h3>
+  <p>$u_0^*(x)$는 piecewise-affine (조각 선형) 함수. 활성 제약 집합에 따라 영역이 나뉨. 명시적으로 미리 계산하면 explicit MPC (W9).</p>
+
+  <h3>5.3 Region of Attraction</h3>
+  <p>RHC가 안정적으로 동작하는 초기 상태 영역. 종단 제약 + Lyapunov 분석으로 결정.</p>
+
+  <h2>📚 깊이 6 — Recursive Feasibility 보장 트릭</h2>
+  <p>한 번 feasible이면 다음 시점에도 feasible해야 함 (안정성의 전제). 표준 트릭:</p>
+  <ol>
+    <li><strong>종단 제약</strong> $x_N \in \mathcal X_f$, 여기서 $\mathcal X_f$는 control invariant set.</li>
+    <li><strong>종단 제어</strong> $K_f$ (보통 LQR 게인) — $\mathcal X_f$에서 안정.</li>
+    <li><strong>shifted solution</strong> — 이전 해의 첫 입력 제외 + 종단에 $K_f x_N$ 추가 → 다음 시점에서도 feasible.</li>
+  </ol>
+
+  <h2>📚 깊이 7 — 안정성과의 연결</h2>
+  <p>다음 주(W6)에서 자세히. 짧게:</p>
+  <ul>
+    <li>최적 비용 $V^*(x_k)$가 Lyapunov 함수 → $V^*(x_{k+1}) \le V^*(x_k) - l(x_k, u_k^*)$.</li>
+    <li>$l$이 양정값이면 $V^* \to 0$ → $x_k \to 0$.</li>
+    <li>이 결과가 종단 비용 $V_f \ge V^{LQR}$를 요구.</li>
+  </ul>
+
+  <h2>📚 깊이 8 — 실시간 구현 고려사항</h2>
+  <ul>
+    <li><strong>실시간 시간 예산</strong>: 한 샘플 시간 내 풀이 완료 필요.</li>
+    <li><strong>Warm start</strong>: 이전 해를 초기값으로 — 1~2 iteration 수렴.</li>
+    <li><strong>Suboptimal 풀이</strong>: 시간 부족 시 정확한 최적해 대신 근접해 사용.</li>
+    <li><strong>Anytime 알고리즘</strong>: 어느 시점이든 사용 가능한 해를 반환.</li>
+  </ul>
+
+  <h2>📚 깊이 9 — 단계별 예제 — 1차원 RHC</h2>
+  <p>$x_{k+1} = x_k + u_k$, $|u| \le 1$, $N = 5$, $Q = 1, R = 0.1$, $x_0 = 5$.</p>
+  <div class="sol">
+    <strong>풀이</strong><br>
+    <em>시점 0</em>: 풀이 → $u_0^* = -1$ (제약). 적용 → $x_1 = 4$.<br>
+    <em>시점 1</em>: 풀이 → $u_0^* = -1$. 적용 → $x_2 = 3$.<br>
+    <em>시점 2</em>: 같은 패턴. $x_3 = 2$.<br>
+    <em>시점 3</em>: $u_0^*$ 자유 영역으로 진입. $u_0^* \approx -1.5$로 풀이되지만 제약으로 $u = -1$.<br>
+    <em>시점 4</em>: $x_4 = 1$. 자유 LQR 영역 $u_0^* \approx -0.6$.<br>
+    <em>시점 5+</em>: $x \to 0$ 수렴.
+  </div>
+
+  <h2>📚 깊이 10 — Python 구현 (do-mpc 스타일)</h2>
+  <pre style="background:#f5f5f5;padding:14px;border-radius:8px;overflow-x:auto">
+import numpy as np
+import cvxpy as cp
+
+A, B = np.array([[1, 0.1], [0, 1]]), np.array([[0], [0.1]])
+N, Q, R = 10, np.eye(2), np.array([[0.1]])
+
+def mpc_step(x_now):
+    x = cp.Variable((2, N+1))
+    u = cp.Variable((1, N))
+    cost, cons = 0, [x[:, 0] == x_now]
+    for k in range(N):
+        cost += cp.quad_form(x[:, k], Q) + cp.quad_form(u[:, k], R)
+        cons += [x[:, k+1] == A @ x[:, k] + B @ u[:, k]]
+        cons += [cp.abs(u[:, k]) &lt;= 1]
+    prob = cp.Problem(cp.Minimize(cost), cons)
+    prob.solve()
+    return u.value[:, 0]   # 첫 입력만
+
+# Closed-loop 시뮬
+x = np.array([1.0, 0])
+xs, us = [], []
+for k in range(50):
+    u = mpc_step(x)
+    x = A @ x + B @ u
+    xs.append(x); us.append(u)
+  </pre>
+
+  <h2>📚 깊이 11 — Suboptimal MPC</h2>
+  <p>실시간 시간 예산이 부족할 때 정확한 최적해 대신 근접해 사용:</p>
+  <ul>
+    <li><strong>고정 iteration 수</strong>: IPM/ADMM 1~5 iter.</li>
+    <li><strong>Warm start + 1 iteration</strong>: 가장 흔함.</li>
+    <li><strong>Real-time iteration (RTI)</strong>: NMPC에서 SQP 1 iter.</li>
+  </ul>
+  <p>Suboptimal 해도 안정성 보장 가능 (Diehl 등의 연구).</p>
+
+  <h2>📚 깊이 12 — Reference Tracking RHC</h2>
+  <p>참조 신호 추종 시:</p>
+  <ul>
+    <li>변환 $\tilde x = x - x_{ref}$로 0 추종 문제로 환원.</li>
+    <li>또는 비용에 $(x_k - x_{ref})^TQ(\cdot)$ 직접.</li>
+    <li>$x_{ref}$가 변하면 시간 가변 RHC.</li>
+  </ul>
+
+  <h2>📚 깊이 13 — Disturbance Rejection RHC</h2>
+  <p>외란 모델 + 칼만 옵저버로 외란 추정 → MPC가 보상.</p>
+  <ul>
+    <li>입력 외란 $u_{actual} = u + d_u$ → $\hat d_u$ 추정 후 보상.</li>
+    <li>출력 외란 $y_{measured} = Cx + d_y$ → 적분 외란 모델로 처리.</li>
+  </ul>
+
+  <h2>📚 깊이 14 — RHC vs Pre-computed Trajectory</h2>
+  <table>
+    <thead><tr><th>접근</th><th>RHC</th><th>Pre-computed</th></tr></thead>
+    <tbody>
+      <tr><td>풀이</td><td>온라인 매 시점</td><td>오프라인 한 번</td></tr>
+      <tr><td>적응성</td><td>높음</td><td>없음</td></tr>
+      <tr><td>강건성</td><td>높음</td><td>낮음</td></tr>
+      <tr><td>계산량</td><td>온라인 부담</td><td>온라인 0</td></tr>
+      <tr><td>적용</td><td>실시간 제어</td><td>잘 알려진 환경</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 15 — 흔한 오답</h2>
+  <ol>
+    <li>Open-loop CFTOC를 closed-loop로 오해.</li>
+    <li>매 시점 풀이 시간 예산 무시.</li>
+    <li>Warm start 미사용.</li>
+    <li>Recursive feasibility 분석 누락.</li>
+    <li>종단 비용 부적절 설정.</li>
+  </ol>
+
+  <h2>📚 깊이 16 — 자가 점검 6문항</h2>
+  <ol>
+    <li>RHC 4단계?</li>
+    <li>왜 첫 입력만 적용?</li>
+    <li>Recursive feasibility 보장 트릭?</li>
+    <li>Warm start의 효과?</li>
+    <li>Suboptimal MPC가 안정 가능한 조건?</li>
+    <li>Open-loop CFTOC vs RHC 핵심 차이?</li>
+  </ol>
+  <p>정답 — ① 측정→풀이→첫 입력 적용→전진 ② 모델 오차·외란 보정 ③ 종단 제약 + 종단 제어 + shifted solution ④ 1~2 iter 수렴 ⑤ 비용 함수가 Lyapunov ⑥ Closed-loop 피드백.</p>
+
+  <h2>📚 깊이 17 — FAQ</h2>
+  <h3>Q1. 왜 첫 입력 외 나머지는 버리나?</h3>
+  <p>다음 시점에 새 measure로 재최적화하므로 직전 풀이의 미래 입력은 어차피 갱신됨.</p>
+
+  <h3>Q2. 매 시점 같은 풀이를 반복하면 비효율?</h3>
+  <p>Warm start로 1~2 iter 만에 수렴하므로 첫 풀이만큼 무겁지 않음.</p>
+
+  <h3>Q3. 첫 입력 + 두 번째까지 적용하면?</h3>
+  <p>가능하지만 closed-loop 적응성 줄어듦. 일반적으로 첫 입력만 권장.</p>
+
+  <h2>📚 깊이 18 — 학기 진도 W5</h2>
+  <p>10주 중 5주차 (50%). 절반 통과. 다음 주(W6) 안정성 분석.</p>
+
+  <h3>한 줄 격언</h3>
+  <p class="lead">"수신지평선 = 미래를 보고 결정하지만 매 순간 다시 본다. 이게 closed-loop MPC의 본질."</p>
+
+  <h3>학습 일지</h3>
+  <p>"이번 주에 새로 익힌 도구: 첫 입력만 적용 + 매 시점 재최적화 = closed-loop adaptation."</p>
+
   <div class="prevnext">
     <a href="04-cftoc.html"><small>← 이전</small>W4. CFTOC와 QP</a>
     <a href="06-stability.html" class="next"><small>다음 →</small>W6. 안정성과 가용성</a>

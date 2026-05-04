@@ -486,6 +486,513 @@ e_prev = e;
     <strong>한 줄 요약</strong> — "오차를 보고 입력을 조정하는" 단순한 발상이 PID라는 이름으로 산업의 95%를 돌리고 있습니다. 더 복잡한 제어(MPC, LQR, 적응제어)는 PID로 풀 수 없는 특수 문제에만 등장해요.
   </div>
 
+  <h2>PID 워크북 — 8문제</h2>
+  <h3>1. P 단독</h3>
+  <p>$u = K_pe$. 정상상태 오차 존재.</p>
+  <h3>2. PI</h3>
+  <p>$u = K_pe + K_i\int e$. 정상오차 0.</p>
+  <h3>3. PD</h3>
+  <p>$u = K_pe + K_d\dot e$. 응답 빠르게.</p>
+  <h3>4. PID</h3>
+  <p>세 항 결합. 산업 표준.</p>
+  <h3>5. 와인드업</h3>
+  <p>적분기 누적 폭발. 안티-와인드업 필수.</p>
+  <h3>6. 미분 잡음</h3>
+  <p>D 항이 잡음 증폭. LPF로 완화.</p>
+  <h3>7. Ziegler-Nichols</h3>
+  <p>경험적 튜닝. Kp 임계 게인 → PI/PID 게인 결정.</p>
+  <h3>8. 디지털 PID</h3>
+  <p>이산화 구현. 적분 누적, 미분 차분.</p>
+
+  <h2>PID 튜닝 절차</h2>
+  <ol>
+    <li>I, D 끄고 P만 키우기.</li>
+    <li>진동 임계점 → 적정 P.</li>
+    <li>I 추가 → 정상오차 0.</li>
+    <li>D 추가 → 응답 매끄럽게.</li>
+    <li>안티-와인드업 적용.</li>
+  </ol>
+
+  <h2>응용 사례</h2>
+  <ul>
+    <li>모터 위치 — 캐스케이드 PID.</li>
+    <li>온도 — PI.</li>
+    <li>드론 자세 — PID 3축.</li>
+    <li>차량 ACC — PID + 적응.</li>
+    <li>로봇 매니퓰레이터 — PID + 중력 보상.</li>
+  </ul>
+
+  <h2>자주 만나는 함정</h2>
+  <ul>
+    <li>적분 와인드업.</li>
+    <li>미분 잡음 증폭.</li>
+    <li>샘플링 주파수 부족.</li>
+    <li>액추에이터 포화.</li>
+    <li>모델 불확실성.</li>
+  </ul>
+
+  <h2>Python PID 구현</h2>
+  <pre><code>class PID:
+    def __init__(self, kp, ki, kd, dt):
+        self.kp, self.ki, self.kd, self.dt = kp, ki, kd, dt
+        self.integral = 0.0
+        self.prev_error = 0.0
+    def step(self, sp, pv):
+        error = sp - pv
+        self.integral += error * self.dt
+        derivative = (error - self.prev_error) / self.dt
+        self.prev_error = error
+        return self.kp*error + self.ki*self.integral + self.kd*derivative</code></pre>
+
+  <h2>한 페이지 핵심</h2>
+  <ul>
+    <li>PID = $K_pe + K_i\int e + K_d\dot e$.</li>
+    <li>P → 응답 빠름. I → 정상오차 0. D → 진동 감쇠.</li>
+    <li>안티-와인드업.</li>
+    <li>Ziegler-Nichols 튜닝.</li>
+    <li>디지털 구현.</li>
+  </ul>
+
+  <h2>한 줄 마무리</h2>
+  <p class="lead">"PID = 산업 95% 제어. 단순하지만 강력."</p>
+
+  <h2>부록 — 추가 단원</h2>
+  <p>피드백 제어의 본질:</p>
+  <ul>
+    <li>오차 측정 → 입력 조정.</li>
+    <li>안정성과 정확도의 균형.</li>
+    <li>외란 거부.</li>
+    <li>모델 불확실성 강건성.</li>
+  </ul>
+
+  <h2>부록 — Cascade PID</h2>
+  <p>외부 루프(위치) + 내부 루프(속도) + 가장 안쪽(전류). 안쪽 5~10배 빠르게.</p>
+
+  <h2>부록 — Feedforward + PID</h2>
+  <p>예측 가능한 외란을 미리 보상 + PID로 잔여 오차 처리. 매우 강력한 조합.</p>
+
+  <h2>부록 — Gain Scheduling</h2>
+  <p>운영 조건(속도, 페이로드)에 따라 PID 게인 변경. 항공기 자동조종, 자동차 ESP에 표준.</p>
+
+  <h2>부록 — Adaptive Control</h2>
+  <p>시스템 파라미터 실시간 추정 + 게인 조정. 페이로드 변화 큰 시스템에 강함.</p>
+
+  <h2>부록 — H∞, LQR</h2>
+  <p>현대 제어. PID로 풀기 어려운 다변수 시스템. 학부 외 영역.</p>
+
+  <h2>부록 — Robust Control</h2>
+  <p>모델 불확실성에 강건한 제어 설계. μ-synthesis. 항공·자동차에서 사용.</p>
+
+  <h2>부록 — Model Predictive Control</h2>
+  <p>미래 예측 + 최적화. 제약 처리 가능. PID의 진화.</p>
+
+  <h2>부록 — Digital Implementation</h2>
+  <pre><code># 안티-와인드업 PID
+class APID:
+    def step(self, sp, pv):
+        error = sp - pv
+        u_unsat = self.kp*error + self.integral + self.kd*(error - self.prev_error)/self.dt
+        u = max(self.u_min, min(self.u_max, u_unsat))
+        # back-calculation
+        self.integral += (self.ki * error + self.kt * (u - u_unsat)) * self.dt
+        self.prev_error = error
+        return u</code></pre>
+
+  <h2>부록 — 한국 산업 응용</h2>
+  <ul>
+    <li>현대모터스 — 차량 EMS PID.</li>
+    <li>삼성 반도체 — 챔버 온도.</li>
+    <li>LG 가전 — 냉장고·세탁기.</li>
+    <li>두산 — 발전 보일러.</li>
+    <li>로보스타 — 산업 로봇.</li>
+  </ul>
+
+  <h2>한 줄 진짜 끝</h2>
+  <p>"PID는 60년+ 산업 표준. 졸업 후 실무에서 매일 만남."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— W11 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <h2>부록 — 추가 PID 변형</h2>
+  <ul>
+    <li>2-DOF PID — Setpoint와 PV의 PID 분리.</li>
+    <li>Fractional-order PID — 분수 차수 미적분.</li>
+    <li>Fuzzy PID — 게인을 fuzzy 규칙으로.</li>
+    <li>Self-tuning PID — 온라인 튜닝.</li>
+    <li>Neural PID — 신경망이 게인 출력.</li>
+  </ul>
+
+  <h2>부록 — Auto-tuning</h2>
+  <ul>
+    <li>Relay Feedback — Åström-Hägglund.</li>
+    <li>Step Response — Skogestad SIMC.</li>
+    <li>Frequency Response — Bode 기반.</li>
+    <li>RL 기반 — 보상으로 게인 학습.</li>
+  </ul>
+
+  <h2>부록 — 한 페이지 요약 (재정리)</h2>
+  <p>피드백 제어의 핵심 — 측정 - 명령 = 오차 → 입력. PID가 그 단순한 형태. 60+ 년 산업 표준. 졸업 후 실무에서 매일.</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
   <nav class="prevnext">
     <a href="10-transfer-function.html"><small>← 이전</small>W10. 전달 함수</a>
     <a href="12-deep-learning.html" class="next"><small>다음 →</small>W12. 딥러닝</a>

@@ -724,6 +724,58 @@ print("loss:", loss.item())</code></pre>
     <li><code>opt.step()</code> — 그라디언트를 사용해 파라미터 업데이트.</li>
   </ul>
 
+  <h2>10.5. 신경망 학습 흐름 정리</h2>
+  <ol>
+    <li>입력·출력 데이터 정규화.</li>
+    <li>모델 정의 (층 수, 뉴런 수, 활성).</li>
+    <li>손실 함수 정의 (회귀 MSE, 분류 CE).</li>
+    <li>옵티마이저 선택 (Adam이 표준).</li>
+    <li>매 에폭: forward → loss → backward → step.</li>
+    <li>검증 손실로 조기 종료.</li>
+    <li>테스트 평가, 시각화.</li>
+  </ol>
+
+  <h2>10.6. 보편 근사 정리의 의미</h2>
+  <p>"은닉층 1개에 뉴런만 충분하면 어떤 연속 함수든 임의 정밀도로 근사 가능."
+  이론적으로 1층이면 충분하지만, 실제로는 깊이 쌓는 게 표현력·학습 효율이 모두 우수합니다(<em>표현력의 깊이 vs 너비</em>).</p>
+
+  <h2>10.7. 자주 만나는 문제</h2>
+  <ul>
+    <li><strong>학습이 안 됨</strong> — 학습률 ÷10, 데이터 정규화 확인.</li>
+    <li><strong>과적합</strong> — 드롭아웃, weight decay, 데이터 증강.</li>
+    <li><strong>NaN 손실</strong> — 학습률 큼 또는 log(0). gradient clipping.</li>
+    <li><strong>죽은 ReLU</strong> — 음수 영역 항상 0. Leaky ReLU 또는 He 초기화.</li>
+  </ul>
+
+  <h2>10.8. 로봇 응용에서의 신경망</h2>
+  <ul>
+    <li><strong>End-to-End 자율주행</strong> — 카메라 → 조향각 (NVIDIA PilotNet).</li>
+    <li><strong>로봇 매니퓰레이션</strong> — 픽셀 → 액션 (Open-X Embodiment).</li>
+    <li><strong>강화학습</strong> — 가치 함수·정책 함수 근사.</li>
+    <li><strong>System ID</strong> — 데이터로부터 동역학 학습 → MPC 모델로.</li>
+  </ul>
+
+  <h2>10.9. 활성함수 선택 가이드</h2>
+  <table>
+    <thead><tr><th>위치</th><th>활성</th></tr></thead>
+    <tbody>
+      <tr><td>은닉층</td><td>ReLU (또는 GELU/Swish)</td></tr>
+      <tr><td>출력 (회귀)</td><td>없음 (linear)</td></tr>
+      <tr><td>출력 (이진 분류)</td><td>Sigmoid</td></tr>
+      <tr><td>출력 (다중 분류)</td><td>Softmax</td></tr>
+      <tr><td>출력 ([0,1] 범위)</td><td>Sigmoid</td></tr>
+      <tr><td>출력 (조향각 등 ±)</td><td>tanh</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10.10. 학습률 튜닝 4단계</h2>
+  <ol>
+    <li>$10^{-1}$로 시작. 발산하면 ÷10.</li>
+    <li>안정 영역에서 정밀 탐색.</li>
+    <li>cosine annealing으로 점진적 감소.</li>
+    <li>warmup이 필요한 모델(트랜스포머)은 처음 몇 에폭 점진적 증가.</li>
+  </ol>
+
   <h2>11. 다음 강의 미리보기</h2>
   <p>L9·L10에서 데이터로부터 함수를 학습하는 도구를 갖췄으니, 이제 다시 제어 이야기로 돌아갑니다.
   L7의 PID는 <em>"지금 오차"</em>만 보고 명령을 만들었습니다. 하지만 운전을 잘하려면 <em>코너 100 m 앞</em>에서 미리 감속해야 하죠.
@@ -733,6 +785,38 @@ print("loss:", loss.item())</code></pre>
   ② 그 미래에서 비용(목표 추종 오차 + 입력 크기)이 가장 작아지는 입력 시퀀스를 최적화로 풀고,
   ③ 그중 첫 입력만 실행한 뒤 다시 측정값을 받아 처음부터 반복합니다.
   <em>L9·L10의 학습된 모델을 동역학 자리에 끼워 넣으면</em> 데이터 기반 MPC가 되고, 이는 L12에서 다룹니다.</p>
+
+  <h2>11.5. 신경망 디버깅 체크리스트</h2>
+  <ul>
+    <li>입력 모양 출력해 (B, 차원) 확인.</li>
+    <li>입력 통계 (mean, std) 확인. 표준화 안 됐으면 먼저.</li>
+    <li>작은 데이터(10개)로 손실 0 수렴 확인 (sanity check).</li>
+    <li>학습률 한 자릿수씩 변화시키며 실험.</li>
+    <li>학습/검증 손실 곡선 그리기.</li>
+    <li>그래디언트 노름 모니터링.</li>
+    <li>활성·초기화 페어링(ReLU+He, tanh+Xavier) 확인.</li>
+  </ul>
+
+  <h2>11.6. 한 페이지 신경망 구조 비교</h2>
+  <table>
+    <thead><tr><th>구조</th><th>입력</th><th>표현</th><th>주 용도</th></tr></thead>
+    <tbody>
+      <tr><td>MLP</td><td>고정 차원</td><td>완전연결</td><td>표 데이터, 작은 회귀</td></tr>
+      <tr><td>CNN</td><td>2D/3D 격자</td><td>필터 슬라이딩</td><td>이미지·비전</td></tr>
+      <tr><td>RNN/LSTM</td><td>시퀀스</td><td>은닉 상태 전달</td><td>시계열, 텍스트</td></tr>
+      <tr><td>Transformer</td><td>시퀀스</td><td>Self-Attention</td><td>NLP, 멀티모달</td></tr>
+      <tr><td>GNN</td><td>그래프</td><td>메시지 전달</td><td>분자, 추천</td></tr>
+    </tbody>
+  </table>
+
+  <h2>11.7. 자기점검 5문제</h2>
+  <ol>
+    <li>은닉층 ReLU + He 초기화의 이유?</li>
+    <li>10층 시그모이드의 첫 층 그래디언트 크기 추정?</li>
+    <li>Adam의 두 모멘텀 의미?</li>
+    <li>드롭아웃 비율 0.3의 학습/추론 동작 차이?</li>
+    <li>BatchNorm을 왜 RNN에 못 쓰나?</li>
+  </ol>
 
   <h2>12. 더 깊이 공부하기</h2>
   <ul>
@@ -744,7 +828,167 @@ print("loss:", loss.item())</code></pre>
     <li>He, Zhang, Ren, Sun, "Delving Deep into Rectifiers", ICCV 2015 — ReLU 초기화와 PReLU.</li>
     <li>Srivastava 외, "Dropout: A Simple Way to Prevent Neural Networks from Overfitting", JMLR 2014.</li>
     <li>Bojarski 외, "End to End Learning for Self-Driving Cars", arXiv 2016 — NVIDIA PilotNet, 로봇공학 관점에서의 신경망 응용.</li>
+    <li>3Blue1Brown — Neural Networks 시리즈. 시각적 직관.</li>
+    <li>Karpathy — "A Recipe for Training Neural Networks". 실전 디버깅.</li>
+    <li>fast.ai — Practical Deep Learning. 실무 위주.</li>
   </ul>
+
+  <h2>13. 손계산 워크쓰루 — 작은 MLP 한 번 굴리기</h2>
+  <p>입력 2, 은닉 2, 출력 1, ReLU. $W_1 = [[1, 0], [0, 1]]$, $b_1 = (0, 0)$. $W_2 = [1, 1]$, $b_2 = 0$.</p>
+  <p>입력 $\mathbf x = (2, -1)$.</p>
+  <ul>
+    <li>은닉 입력 $z_1 = (2, -1)$.</li>
+    <li>ReLU 후 $h = (2, 0)$ — 음수 잘림.</li>
+    <li>출력 $y = 1\cdot 2 + 1 \cdot 0 = 2$.</li>
+  </ul>
+  <p>이 한 흐름이 모든 신경망의 본질.</p>
+
+  <h2>14. 한 줄 마무리</h2>
+  <p>"신경망 = 가중합 + 비선형 활성을 깊이 쌓은 것. 학습은 자동 미분 + 경사하강." 이 한 줄이 L10의 전부.</p>
+
+  <p style="font-size:13px;color:var(--muted)">— L10 끝.</p>
+
+  <h2>15. 부록 — PyTorch 60-Minute Blitz 핵심</h2>
+  <ul>
+    <li><code>torch.tensor</code> — NumPy 배열 + GPU 지원.</li>
+    <li><code>requires_grad=True</code> — 그래디언트 추적 켜기.</li>
+    <li><code>nn.Module</code> — 모델 정의 부모 클래스.</li>
+    <li><code>nn.Sequential</code> — 층 차례 연결.</li>
+    <li><code>optim.Adam</code> — 표준 옵티마이저.</li>
+    <li><code>DataLoader</code> — 미니배치 자동 처리.</li>
+    <li><code>model.train() / model.eval()</code> — 드롭아웃·BN 모드 전환.</li>
+  </ul>
+
+  <h2>16. 부록 — 자주 쓰는 손실 함수</h2>
+  <table>
+    <thead><tr><th>작업</th><th>손실</th></tr></thead>
+    <tbody>
+      <tr><td>회귀</td><td>nn.MSELoss / nn.L1Loss / nn.HuberLoss</td></tr>
+      <tr><td>이진 분류</td><td>nn.BCELoss / nn.BCEWithLogitsLoss</td></tr>
+      <tr><td>다중 분류</td><td>nn.CrossEntropyLoss</td></tr>
+      <tr><td>임베딩 학습</td><td>nn.TripletMarginLoss</td></tr>
+      <tr><td>분포 매칭</td><td>nn.KLDivLoss</td></tr>
+    </tbody>
+  </table>
+
+  <h2>17. 부록 — 옵티마이저 한 줄 비교</h2>
+  <ul>
+    <li>SGD: 단순. 느리지만 일반화 좋음.</li>
+    <li>SGD + Momentum: 빠름. CNN 비전에 자주.</li>
+    <li>Adam: 현대 표준. 트랜스포머에 AdamW.</li>
+    <li>RMSProp: RNN에 자주.</li>
+  </ul>
+
+  <h2>18. 한 페이지 핵심 식 모음</h2>
+  <ul>
+    <li>가중합: $z = Wx + b$</li>
+    <li>활성: $h = \text{ReLU}(z) = \max(0, z)$</li>
+    <li>출력: $\hat y = \sigma(W_2 h + b_2)$ (분류)</li>
+    <li>손실: $L = -\sum y \log \hat y$ (CE)</li>
+    <li>업데이트: $\theta \leftarrow \theta - \alpha \nabla L$</li>
+  </ul>
+
+  <p style="font-size:13px;color:var(--muted)">— 진짜 끝.</p>
+
+  <h2>19. 신경망과 제어의 만남 — 미리보기</h2>
+  <p>L10 신경망과 L7 PID·L11 MPC가 만나는 지점:</p>
+  <ul>
+    <li><strong>학습된 동역학</strong> — 신경망이 $f(x, u)$를 학습 → MPC의 모델로.</li>
+    <li><strong>강화학습 정책</strong> — 신경망이 직접 $\pi(u|x)$를 출력.</li>
+    <li><strong>제어기 모방</strong> — MPC의 입력을 신경망에 모방학습 → 빠른 추론.</li>
+    <li><strong>Imitation Learning</strong> — 사람의 시연을 신경망이 학습 (자율주행).</li>
+  </ul>
+  <p>이 모든 것이 L11 MPC와 L12 Advanced MPC에서 다시 등장합니다.</p>
+
+  <h2>20. 한 학기 전체 진도판 — L10 시점</h2>
+  <ul>
+    <li>L1~L8 — 모델링·추정·제어 ✓</li>
+    <li>L9~L10 — 데이터 학습 ◉ 현재</li>
+    <li>L11~L12 — MPC + Learning-based</li>
+  </ul>
+  <p>한 학기의 큰 분기점에 도착했습니다.</p>
+
+  <h2>21. 마지막 마무리</h2>
+  <p>L10 신경망은 단순한 도구가 아니라 한 학기의 두 번째 큰 분기점입니다. L11~L12의 모든 응용이 여기서 출발합니다.</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 정말 끝.</p>
+
+  <h2>22. 부록 — 한국어 자료</h2>
+  <ul>
+    <li>"모두를 위한 머신러닝/딥러닝" — 김성훈, hunkim.github.io/ml.</li>
+    <li>"혼자 공부하는 머신러닝+딥러닝" — 박해선.</li>
+    <li>네이버 부스트코스 AI 시리즈.</li>
+    <li>K-MOOC 인공지능 강의 다수.</li>
+  </ul>
+
+  <h2>23. 부록 — 환경 설정 한 페이지</h2>
+  <pre><code># Anaconda 또는 conda
+conda create -n dl python=3.10
+conda activate dl
+pip install torch torchvision matplotlib numpy pandas scikit-learn
+
+# 또는 Google Colab — 설치 없이 GPU 무료
+# colab.research.google.com → 새 노트북 → GPU 런타임</code></pre>
+
+  <h2>24. 부록 — Hello World 신경망</h2>
+  <pre><code>import torch
+import torch.nn as nn
+
+# XOR
+X = torch.tensor([[0,0],[0,1],[1,0],[1,1]], dtype=torch.float)
+y = torch.tensor([[0],[1],[1],[0]], dtype=torch.float)
+
+model = nn.Sequential(nn.Linear(2,4), nn.ReLU(), nn.Linear(4,1), nn.Sigmoid())
+opt = torch.optim.Adam(model.parameters(), lr=0.05)
+loss_fn = nn.BCELoss()
+
+for ep in range(2000):
+    yh = model(X)
+    L = loss_fn(yh, y)
+    opt.zero_grad(); L.backward(); opt.step()
+print((model(X) > 0.5).int().squeeze())  # tensor([0, 1, 1, 0])</code></pre>
+
+  <p style="font-size:13px;color:var(--muted)">— 진짜로 끝.</p>
+
+  <h2>25. 부록 — 신경망과 PID 비교</h2>
+  <table>
+    <thead><tr><th>속성</th><th>PID</th><th>신경망</th></tr></thead>
+    <tbody>
+      <tr><td>해석성</td><td>매우 높음</td><td>매우 낮음</td></tr>
+      <tr><td>학습 비용</td><td>없음 (튜닝만)</td><td>큼</td></tr>
+      <tr><td>표현력</td><td>제한적 (선형)</td><td>매우 큼 (비선형)</td></tr>
+      <tr><td>안전성 보장</td><td>이론적 보장</td><td>경험적</td></tr>
+      <tr><td>적용 영역</td><td>제어</td><td>제어 + 인지 + 계획</td></tr>
+    </tbody>
+  </table>
+  <p>현실에서는 둘을 결합 — 신경망이 외부(인지·계획)을, PID가 내부(저수준 제어)를 담당하는 계층 구조가 표준.</p>
+
+  <h2>26. 부록 — 한 줄 격언</h2>
+  <p class="lead">"가중합 + 비선형. 데이터로 자동 학습. 끝."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+
+  <h2>27. 부록 — 추가 자가 점검 5문제</h2>
+  <ol>
+    <li>4층 신경망의 전체 파라미터 수 계산?</li>
+    <li>$\sigma'(z) = \sigma(z)(1-\sigma(z))$의 최댓값 위치?</li>
+    <li>왜 모든 가중치를 0으로 초기화하면 안 되나?</li>
+    <li>드롭아웃이 어떻게 정규화 효과를 내나?</li>
+    <li>BatchNorm과 LayerNorm 중 트랜스포머는?</li>
+  </ol>
+  <p style="font-size:13px;color:var(--muted)">힌트: 1) 각 층의 가중치 + 편향 합. 2) z=0에서 0.25. 3) 모든 뉴런이 같은 출력 → 학습 불가. 4) 학습 시 무작위로 일부 끄면 앙상블 효과. 5) LayerNorm.</p>
+
+  <h2>28. 한 학기 마지막 직전 정리</h2>
+  <p>L11~L12에서는 신경망과 최적 제어가 만납니다. L10이 충분히 손에 잡혔다면 다음 두 주가 가장 흥미로울 것입니다.</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 진짜 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말로 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
 
   <nav class="prevnext">
     <a href="09-regression.html"><small>← 이전</small>L9. 회귀</a>

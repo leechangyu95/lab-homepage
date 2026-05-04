@@ -236,6 +236,152 @@
     </ul>
   </div>
 
+  <h2>📚 깊이 1 — 견실 MPC가 필요한 이유</h2>
+  <p>Nominal MPC는 정확한 모델을 가정합니다. 현실에서는:</p>
+  <ul>
+    <li><strong>모델 오차</strong>: 시스템 식별의 한계.</li>
+    <li><strong>외란</strong>: 바람, 부하 변동, 노면 마찰.</li>
+    <li><strong>측정 노이즈</strong>: 센서 부정확성.</li>
+    <li><strong>파라미터 변동</strong>: 질량 변화, 온도 의존성.</li>
+  </ul>
+  <p>견실 MPC는 이 모든 불확실성을 명시적으로 처리합니다.</p>
+
+  <h2>📚 깊이 2 — 불확실성 모델링</h2>
+  <p>$$x_{k+1} = Ax_k + Bu_k + Ed_k,\quad d_k \in \mathcal D$$</p>
+  <ul>
+    <li>$\mathcal D$ = 유계 집합 (보통 박스 $|d| \le d_{\max}$).</li>
+    <li>또는 다면체 $\mathcal D = \{d : Ad \le b\}$.</li>
+    <li>또는 확률적 $d \sim \mathcal N(0, \Sigma)$ (Stochastic MPC).</li>
+  </ul>
+
+  <h2>📚 깊이 3 — Min-Max MPC</h2>
+  <p>최악의 외란에 대해 비용 최소화:</p>
+  <p>$$\min_{u} \max_{d \in \mathcal D} J(x, u, d)$$</p>
+  <p>이론적으로 강건성 가장 강함. 그러나:</p>
+  <ul>
+    <li>비볼록 → 풀이 매우 무거움.</li>
+    <li>매우 보수적 (모든 worst case 대비).</li>
+  </ul>
+  <p>실용 한계로 인해 널리 사용되지 않음. 다른 접근이 표준.</p>
+
+  <h2>📚 깊이 4 — Tube MPC</h2>
+  <p>Mayne 등(2005)이 제안한 표준 견실 MPC. 명목 시스템 + 외란 보정.</p>
+
+  <h3>4.1 핵심 아이디어</h3>
+  <ol>
+    <li>Nominal trajectory $\bar x$ 풀이 (외란 없는 가정).</li>
+    <li>실제 시스템 $x$는 $\bar x$ 주변의 "tube" 안에 있음을 보장: $x - \bar x \in \mathcal Z$.</li>
+    <li>적용 입력: $u = \bar u + K(x - \bar x)$. 첫 항은 nominal MPC, 두 번째 항은 외란 보정 피드백.</li>
+  </ol>
+
+  <h3>4.2 Tube 집합 $\mathcal Z$</h3>
+  <p>오차 $e = x - \bar x$의 동역학:</p>
+  <p>$$e_{k+1} = (A + BK) e_k + E d_k$$</p>
+  <p>$\mathcal Z$ = $A + BK$의 minimal Robust Positively Invariant (mRPI) set. 외란 $d \in \mathcal D$가 어떻게 들어오든 $e \in \mathcal Z$ 유지.</p>
+
+  <h3>4.3 조이는 제약 (Tightened Constraints)</h3>
+  <p>실제 제약 $\mathbb X, \mathbb U$를 nominal trajectory에서 보수적으로 줄임:</p>
+  <p>$$\bar x \in \mathbb X \ominus \mathcal Z,\quad \bar u \in \mathbb U \ominus K\mathcal Z$$</p>
+  <p>$\ominus$ = Pontryagin difference. 실제 $x, u$가 원래 제약 만족하도록 nominal에 마진.</p>
+
+  <h2>📚 깊이 5 — 단계별 예제 — Tube MPC</h2>
+  <p>$x_{k+1} = x_k + u_k + d_k$, $|d| \le 0.1$, $|u| \le 1$, $|x| \le 5$.</p>
+
+  <div class="sol">
+    <strong>풀이</strong><br>
+    1. $K = -0.5$ 선택 → $A_K = 0.5$.<br>
+    2. mRPI: $|e| \le 0.1/(1-0.5) = 0.2$.<br>
+    3. Tightened: $|\bar x| \le 5 - 0.2 = 4.8$, $|\bar u| \le 1 - 0.5 \cdot 0.2 = 0.9$.<br>
+    4. Nominal MPC 풀이.<br>
+    5. 실제 입력: $u = \bar u + K(x - \bar x)$.
+  </div>
+
+  <h2>📚 깊이 6 — Constraint Tightening</h2>
+  <p>호라이즌에서 외란 누적 → 제약을 시간에 따라 다르게 조이는 더 정교한 방법:</p>
+  <p>$$\mathbb X_k = \mathbb X \ominus \mathcal Z_k,\ \mathcal Z_k = \bigoplus_{i=0}^{k-1} A_K^i E\mathcal D$$</p>
+  <p>$k$가 클수록 $\mathcal Z_k$ 큼 → 더 보수적 제약.</p>
+
+  <h2>📚 깊이 7 — Stochastic MPC (SMPC)</h2>
+  <p>외란이 확률 분포 → "확률적으로" 제약 만족.</p>
+  <p>$$\Pr\{x_k \in \mathbb X\} \ge 1 - \epsilon$$</p>
+  <p>$\epsilon$ = 허용 위반 확률 (예: 5%). Hard tube보다 덜 보수적.</p>
+
+  <h2>📚 깊이 8 — Scenario MPC</h2>
+  <p>외란의 다수 시나리오 샘플링 → 모든 시나리오에서 제약 만족하는 풀이. 확률적 보장 (Calafiore-Campi).</p>
+
+  <h2>📚 깊이 9 — 명목 MPC + 외란 옵저버</h2>
+  <p>가장 실용적 접근. 외란을 옵저버로 추정 → 명목 MPC가 보상.</p>
+  <p>$$\hat x_{k+1} = A\hat x_k + Bu_k + E\hat d_k + L(y_k - C\hat x_k)$$</p>
+  <ul>
+    <li>$\hat d_k$ = 외란 추정.</li>
+    <li>적분 외란 모델로 정상상태 오차 0.</li>
+    <li>이론적 보장은 약하지만 실용적으로 산업 표준.</li>
+  </ul>
+
+  <h2>📚 깊이 10 — Robust MPC vs Adaptive MPC</h2>
+  <table>
+    <thead><tr><th></th><th>Robust MPC</th><th>Adaptive MPC</th></tr></thead>
+    <tbody>
+      <tr><td>가정</td><td>고정 불확실성 집합</td><td>온라인 모델 식별</td></tr>
+      <tr><td>보수성</td><td>높음 (worst case)</td><td>낮음 (학습)</td></tr>
+      <tr><td>계산</td><td>중간</td><td>높음 (식별 + MPC)</td></tr>
+      <tr><td>복잡도</td><td>중간</td><td>높음</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 11 — Learning-based Robust MPC</h2>
+  <p>2010년대 이후 활발한 연구:</p>
+  <ul>
+    <li>Gaussian Process로 모델 오차 학습.</li>
+    <li>Neural Network로 비선형 모델 추정.</li>
+    <li>Bayesian Optimization으로 hyperparameter 튜닝.</li>
+    <li>Reinforcement Learning과 융합.</li>
+  </ul>
+
+  <h2>📚 깊이 12 — Input-to-State Stability (ISS)</h2>
+  <p>외란이 있어도 점근 안정 대신 ISS:</p>
+  <p>$$\|x_k\| \le \beta(\|x_0\|, k) + \gamma(\|d\|_\infty)$$</p>
+  <p>외란 한계가 작으면 상태도 작은 영역에 머묾. 견실 MPC의 표준 안정 개념.</p>
+
+  <h2>📚 깊이 13 — 흔한 오답</h2>
+  <ol>
+    <li>외란 무시하고 nominal MPC만 사용.</li>
+    <li>Tube 너무 크게 → 매우 보수적.</li>
+    <li>Tube 너무 작게 → 제약 위반.</li>
+    <li>$K$ 선택 기준 모호 (보통 LQR 게인).</li>
+    <li>Tightening 미적용 → 실제 제약 위반.</li>
+  </ol>
+
+  <h2>📚 깊이 14 — 자가 점검 6문항</h2>
+  <ol>
+    <li>견실 MPC가 필요한 이유?</li>
+    <li>Min-Max MPC의 한계?</li>
+    <li>Tube MPC의 핵심 아이디어?</li>
+    <li>mRPI의 의미?</li>
+    <li>적분 외란 모델의 효과?</li>
+    <li>SMPC와 RMPC 차이?</li>
+  </ol>
+  <p>정답 — ① 모델 오차·외란·노이즈 ② 비볼록·매우 보수적 ③ Nominal + 외란 보정 ④ 외란이 어떻게 들어와도 머무는 최소 invariant set ⑤ 정상상태 오차 0 ⑥ Stochastic vs deterministic 외란 모델.</p>
+
+  <h2>📚 깊이 15 — FAQ</h2>
+  <h3>Q1. 견실 MPC가 항상 필요?</h3>
+  <p>아닙니다. 모델 정확하면 nominal MPC + 외란 옵저버로 충분. 안전 critical 시스템에서는 견실 MPC 필수.</p>
+
+  <h3>Q2. Tube MPC 구현 어렵나?</h3>
+  <p>mRPI 계산이 복잡. MPT toolbox로 자동화. 작은 차원 시스템에 적합.</p>
+
+  <h3>Q3. Stochastic MPC 실제 사용?</h3>
+  <p>금융, 에너지 시장에서 활용. 산업 제어는 아직 보수적.</p>
+
+  <h2>📚 깊이 16 — 학기 진도 W7</h2>
+  <p>10주 중 7주차 (70%). 다음 주(W8) 비선형 MPC.</p>
+
+  <h3>한 줄 격언</h3>
+  <p class="lead">"견실 MPC = 명목 MPC + 외란 보정 + 조이는 제약. Tube가 표준."</p>
+
+  <h3>학습 일지</h3>
+  <p>"이번 주에 새로 익힌 도구: 외란 → tube → tightened constraints → 안전한 실제 제약 만족."</p>
+
   <div class="prevnext">
     <a href="06-stability.html"><small>← 이전</small>W6. 안정성과 가용성</a>
     <a href="08-nmpc.html" class="next"><small>다음 →</small>W8. 비선형 MPC</a>

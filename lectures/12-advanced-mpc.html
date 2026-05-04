@@ -696,6 +696,39 @@
   $$ \min \;\sum \|x_i - x_\text{ref}\|_Q^2 + \|u_i\|_R^2 \quad \text{s.t.}\quad h_j(x_{i+1}) \ge (1-\gamma)\, h_j(x_i),\;\forall i, j $$
   <p>SAIL 연구실의 대표 변형 중 하나가 <strong>TC-CBF (Turning Circle CBF)</strong>로, 차량의 회전 반경 한계까지 고려해 비현실적으로 급격한 회피를 방지합니다. 자율수상선(ASV)의 경우 조류와 관성이 커서 고전 CBF가 쉽게 실현불가능(infeasible)해지는데, TC-CBF는 회피 반경을 기구학적으로 일관되게 잡아 이 문제를 해결합니다.</p>
 
+  <h2>12.5 MPC 변형 한 페이지 비교</h2>
+  <table>
+    <thead><tr><th>이름</th><th>핵심</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>Linear MPC</td><td>QP</td><td>빠름·이론 명확</td><td>비선형 시스템 한계</td></tr>
+      <tr><td>NMPC</td><td>NLP</td><td>강한 비선형 처리</td><td>실시간 어려움</td></tr>
+      <tr><td>Explicit MPC</td><td>오프라인 영역</td><td>μs 단위 추론</td><td>차원 폭발</td></tr>
+      <tr><td>Robust (Tube) MPC</td><td>외란 튜브</td><td>안정성 보장</td><td>보수적</td></tr>
+      <tr><td>Stochastic MPC</td><td>확률 제약</td><td>덜 보수적</td><td>이론 복잡</td></tr>
+      <tr><td>Economic MPC</td><td>비용 자체 최소화</td><td>실용적</td><td>안정성 증명 어려움</td></tr>
+      <tr><td>MPPI</td><td>샘플링 기반</td><td>비미분 가능 비용</td><td>샘플 수 많음</td></tr>
+      <tr><td>Learning-based MPC</td><td>모델/잔차 학습</td><td>적응적</td><td>안전성 고민</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12.6 실시간 MPC 구현 팁</h2>
+  <ul>
+    <li><strong>Warm Start</strong> — 직전 해를 다음 반복 초기값으로. 수렴 속도 5~10배.</li>
+    <li><strong>Real-Time Iteration</strong> — 한 번의 SQP 스텝만으로 종료.</li>
+    <li><strong>코드 생성</strong> — acados/CasADi가 C 코드 자동 생성. 임베디드 적용.</li>
+    <li><strong>예측 horizon 단축</strong> — N=20 → 10으로 줄여 계산량 1/2.</li>
+    <li><strong>희소성 활용</strong> — 시간 인덱스에 따른 sparse Hessian.</li>
+  </ul>
+
+  <h2>12.7 MPC 비용 함수 설계 가이드</h2>
+  <ul>
+    <li><strong>추적 오차</strong> — $\|x - x_{ref}\|_Q^2$. Q가 클수록 추종 우선.</li>
+    <li><strong>입력 크기</strong> — $\|u\|_R^2$. R 크면 부드러움 우선.</li>
+    <li><strong>입력 변화율</strong> — $\|u_k - u_{k-1}\|_S^2$. 액추에이터 마모 감소.</li>
+    <li><strong>종단 비용</strong> — $\|x_N - x_{ref}\|_P^2$. 안정성 보장에 결정적.</li>
+    <li><strong>슬랙 변수</strong> — 제약 위반 허용 + 큰 페널티. 실현불가능 회피.</li>
+  </ul>
+
   <h2>13. 정리: 어디까지 왔나</h2>
   <ul>
     <li><strong>L1–L3</strong> — 로봇을 수학으로 묘사하는 법 (동역학, 상태공간)</li>
@@ -717,6 +750,27 @@
     <strong>다음 단계 추천</strong> — ① <a href="../path-planning.html">경로계획·추종</a> 강의에서 더 다양한 알고리즘을 보고, ② <a href="../mpc.html">모델예측제어</a> 강의로 MPC를 한 번 더 정리, ③ PythonRobotics 코드를 직접 돌려 보세요.
   </div>
 
+  <h2>13.5 학기 마무리 — 자기점검</h2>
+  <ul>
+    <li>☐ MPC의 receding horizon 의미 설명 가능?</li>
+    <li>☐ Tube MPC가 왜 강건한가?</li>
+    <li>☐ MPPI와 NMPC의 차이?</li>
+    <li>☐ CBF가 왜 필수가 됐나?</li>
+    <li>☐ Learning-based MPC의 두 가지 방식?</li>
+  </ul>
+
+  <h2>13.6 졸업 프로젝트 아이디어</h2>
+  <ol>
+    <li>차량 차선 추종 MPC + Stanley 비교.</li>
+    <li>드론 자세 NMPC.</li>
+    <li>매니퓰레이터 최소 시간 경로.</li>
+    <li>공정 제어 Economic MPC.</li>
+    <li>강화학습으로 학습한 잔차 + MPC.</li>
+  </ol>
+
+  <h2>13.7 한 줄 마무리</h2>
+  <p>"MPC는 미래를 보면서 안전하게 운전하는 알고리즘이다. PID는 지금만 본다." 이 차이가 자율주행 시대에 MPC가 표준이 된 이유.</p>
+
   <h2>📖 더 읽어볼 자료</h2>
   <ul>
     <li>Jones, Borrelli, Morari, <em>Model Predictive Control — Part I: Introduction</em>, ETH 강의노트 2015. 본 강의의 응용 예시와 구조적 설명이 이 슬라이드에 크게 빚지고 있습니다.</li>
@@ -733,7 +787,208 @@
     <li>Williams, Drews, Goldfain, Rehg, Theodorou, "Aggressive driving with model predictive path integral control", ICRA 2016 — MPPI의 자율주행 응용.</li>
     <li>Brunton, Budišić, Kaiser, Kutz, "Modern Koopman Theory for Dynamical Systems", SIAM Review 2022 — Koopman 이론 리뷰.</li>
     <li><a href="../publications.html">SAIL Publications</a> — 본 강의의 토대가 된 우리 연구실 논문들</li>
+    <li>Borrelli, Bemporad, Morari, <em>Predictive Control for Linear and Hybrid Systems</em>, Cambridge 2017 — 전체 표준 교과서.</li>
+    <li>Rawlings, Mayne, Diehl, <em>Model Predictive Control: Theory, Computation, and Design</em>, Nob Hill 2017 — 무료 PDF.</li>
   </ul>
+
+  <h2>14. 부록 — MPC PyTorch 통합 흐름</h2>
+  <pre><code># 학습된 신경망 동역학 + MPC
+class LearnedDynamics(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(state_dim + input_dim, 64), nn.ReLU(),
+            nn.Linear(64, 64), nn.ReLU(),
+            nn.Linear(64, state_dim)
+        )
+    def forward(self, x, u):
+        return x + self.net(torch.cat([x, u], -1))  # 잔차 학습
+
+# MPC 비용
+def mpc_cost(x_seq, u_seq, x_ref):
+    Q = torch.diag(torch.tensor([10.0, 10.0, 1.0]))
+    R = torch.eye(input_dim) * 0.1
+    cost = 0
+    for k in range(N):
+        cost += (x_seq[k] - x_ref).T @ Q @ (x_seq[k] - x_ref)
+        cost += u_seq[k].T @ R @ u_seq[k]
+    return cost</code></pre>
+
+  <h2>15. 부록 — 한국어 MPC 자료</h2>
+  <ul>
+    <li>"Model Predictive Control" — 한국 통계청 강의자료 (정확한 한국어 번역).</li>
+    <li>SAIL Lab GitHub — TC-CBF, ASV MPC 오픈소스 (있다면).</li>
+    <li>대한기계학회 MPC 워크숍 자료.</li>
+  </ul>
+
+  <h2>16. 부록 — 한 학기 종합 한 페이지</h2>
+  <ul>
+    <li>L1 시스템 입문 → L2 동역학 → L3 상태공간</li>
+    <li>L4 1D 칼만 → L5 2D 칼만</li>
+    <li>L6 경로계획 → L7 PID/Pure Pursuit/Stanley</li>
+    <li>L8 안전 제어(CBF) → L9 회귀 → L10 신경망</li>
+    <li>L11 MPC → L12 고급 MPC</li>
+  </ul>
+
+  <p style="font-size:13px;color:var(--muted)">— L12 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">한 학기 마지막 강의입니다. 수고하셨습니다. 🌊</p>
+
+  <h2>17. 부록 — Tube MPC 직관</h2>
+  <p>외란이 있으면 시스템 상태가 명목 궤적 주위에서 "튜브" 모양으로 분포. Tube MPC는 명목 궤적을 튜브 안쪽에서 충분히 떨어뜨려 모든 외란 상황에서 제약 만족 보장.</p>
+  <ul>
+    <li>명목 궤적 — 외란 없을 때의 이상적 궤적.</li>
+    <li>튜브 — 외란 범위 내 가능한 모든 실제 궤적.</li>
+    <li>Constraint tightening — 제약을 명목 궤적 기준으로 보수적으로.</li>
+  </ul>
+
+  <h2>18. 부록 — MPPI 알고리즘 의사코드</h2>
+  <pre><code>def mppi(x0, u_prev, K=1000, N=20, sigma=1.0):
+    """
+    K: 샘플링한 궤적 수
+    N: 예측 horizon
+    sigma: 입력 잡음 표준편차
+    """
+    samples = []
+    for k in range(K):
+        # 잡음 추가한 입력 시퀀스
+        noise = sigma * torch.randn(N, input_dim)
+        u_seq = u_prev + noise
+        # 궤적 시뮬레이션
+        x_seq = simulate(x0, u_seq)
+        # 비용 계산
+        cost = trajectory_cost(x_seq, u_seq)
+        samples.append((cost, u_seq))
+    # 가중치 = exp(-cost / lambda)
+    weights = softmax(-costs / lambda_)
+    # 가중 평균 입력
+    return weighted_avg(weights, [u for _, u in samples])</code></pre>
+
+  <h2>19. 부록 — Koopman 연산자 한 줄</h2>
+  <p>비선형 동역학을 더 큰 차원의 선형 시스템으로 끌어올리는 변환. $\Psi(x_{k+1}) = K \Psi(x_k)$. K는 무한 차원 선형 연산자. 실용적으로는 $\Psi$를 사전 정의된 기저 또는 신경망으로 학습.</p>
+
+  <h2>20. 진짜 마지막</h2>
+  <p>"미래를 보고 안전하게 — 그게 MPC의 한 줄 정의."</p>
+
+  <h2>21. 부록 — MPC vs LQR 비교</h2>
+  <table>
+    <thead><tr><th>속성</th><th>LQR</th><th>MPC</th></tr></thead>
+    <tbody>
+      <tr><td>상태 제약</td><td>없음</td><td>있음</td></tr>
+      <tr><td>입력 제약</td><td>없음</td><td>있음</td></tr>
+      <tr><td>비선형성</td><td>제한적</td><td>가능 (NMPC)</td></tr>
+      <tr><td>실시간 성능</td><td>매우 빠름 (정해진 K)</td><td>느림 (매 스텝 최적화)</td></tr>
+      <tr><td>수학</td><td>Riccati 방정식</td><td>QP/NLP</td></tr>
+    </tbody>
+  </table>
+
+  <h2>22. 부록 — 학기 회고</h2>
+  <p>L1에서 KNN(고전 ML 비유)으로 시작해서 지금 L12까지 왔습니다. 이 학기의 진짜 수확은 모델 이름이 아니라 <em>"감지·추정·계획·제어를 어떻게 한 시스템에 묶을 수 있는가"</em>의 구조적 사고입니다.</p>
+
+  <h2>23. 졸업 후 다음 단계</h2>
+  <ul>
+    <li>강화학습 강의 (RL 기초 → 심층 RL).</li>
+    <li>로봇 조작/매니퓰레이션.</li>
+    <li>SLAM (Simultaneous Localization and Mapping).</li>
+    <li>비전·인지 (Object Detection, Segmentation).</li>
+    <li>실제 로봇 빌드 (TurtleBot, ROS).</li>
+  </ul>
+
+  <h2>24. 한 마디</h2>
+  <p class="lead">"한 학기를 끝낸 여러분은 이미 자율 시스템의 기본 골격을 손에 쥔 엔지니어입니다."</p>
+
+  <h2>25. 부록 — Robust MPC와 Stochastic MPC의 한 줄 차이</h2>
+  <ul>
+    <li><strong>Robust MPC</strong> — "외란 최악의 경우에 대비." 보수적이지만 안전 보장.</li>
+    <li><strong>Stochastic MPC</strong> — "외란이 확률 분포로." 확률적 제약(<em>chance constraint</em>) 사용. 덜 보수적.</li>
+  </ul>
+
+  <h2>26. 부록 — Economic MPC vs 추적 MPC</h2>
+  <ul>
+    <li><strong>추적 MPC</strong> — 비용 = 추적 오차 + 입력 크기. 가장 흔함.</li>
+    <li><strong>Economic MPC</strong> — 비용 = 사업적 이익(예: 에너지 비용 직접) 최소화. 산업·에너지 시스템에.</li>
+  </ul>
+
+  <h2>27. 부록 — Adaptive MPC 한 줄</h2>
+  <p>모델 파라미터를 실시간으로 추정하면서 MPC 적용. 시스템이 변하는 환경(로봇 페이로드 변화, 항공기 외력)에 강함.</p>
+
+  <h2>28. 부록 — 자기회귀 모델 + MPC</h2>
+  <p>대량 시계열 데이터로 학습한 LSTM/Transformer를 동역학 모델로 사용하는 최근 접근. 안전성 보장은 별도 분석 필요.</p>
+
+  <h2>29. 한 학기 진짜 마지막</h2>
+  <p>L1에서 지금까지 일관되게 본 두 단어 — <strong>"모델"</strong>과 <strong>"최적화"</strong>. MPC는 이 둘이 가장 명확히 만나는 곳입니다.</p>
+
+  <h2>30. 부록 — Hierarchical MPC</h2>
+  <p>긴 horizon은 위 레이어(저주파, 거시), 짧은 horizon은 아래 레이어(고주파, 미시)로 나누어 동시에 운영. 자율주행에서 "전역 경로 + 지역 회피"가 그 예.</p>
+
+  <h2>31. 부록 — Distributed MPC</h2>
+  <p>여러 로봇이 협력하면서 각자 MPC를 풀고 정보를 교환. 군집 비행, 다중 로봇 매니퓰레이션에.</p>
+
+  <h2>32. 부록 — MPC와 Reinforcement Learning</h2>
+  <ul>
+    <li><strong>차이</strong> — MPC는 모델로 미래 시뮬레이션. RL은 보상으로 정책 학습.</li>
+    <li><strong>결합 1</strong> — RL로 학습한 정책을 MPC의 warm start로.</li>
+    <li><strong>결합 2</strong> — MPC를 RL의 expert로 사용 (imitation).</li>
+    <li><strong>결합 3</strong> — RL이 MPC의 비용 함수를 학습.</li>
+  </ul>
+
+  <h2>33. 한 학기 끝</h2>
+  <p>SAIL 강의를 함께 해 주셔서 감사합니다.</p>
+
+  <h2>34. 부록 — Implicit MPC vs Explicit MPC</h2>
+  <ul>
+    <li><strong>Implicit</strong> — 매 시간 스텝마다 최적화 풀이. 표준.</li>
+    <li><strong>Explicit</strong> — 가능한 모든 상태에 대해 최적 입력을 미리 계산해 룩업 테이블로. μs 단위 추론.</li>
+  </ul>
+  <p>Explicit는 차원이 작을 때(보통 4~6 상태)만 실용적. 자율주행처럼 차원이 크면 implicit이 표준.</p>
+
+  <h2>35. 부록 — MPC 안정성 보장</h2>
+  <p>일반적 MPC는 안정성을 자동으로 보장하지 않습니다. 표준 보장 기법:</p>
+  <ol>
+    <li><strong>종단 비용 + 종단 집합</strong> — 마지막 상태가 안정 영역 내에 있도록.</li>
+    <li><strong>Lyapunov 함수</strong> — 비용 함수가 단조 감소.</li>
+    <li><strong>Sufficiently long horizon</strong> — 대안.</li>
+  </ol>
+
+  <h2>36. 부록 — 한 줄 격언</h2>
+  <p class="lead">"미래를 예측하고, 제약을 만족시키며, 비용을 최소화 — 이게 MPC의 3박자."</p>
+
+  <h2>37. 부록 — Cost Tuning 4단계</h2>
+  <ol>
+    <li>Q와 R 모두 단위 행렬로 시작.</li>
+    <li>추적 부족하면 Q 키움.</li>
+    <li>입력 진동하면 R 키움.</li>
+    <li>액추에이터 미세 진동하면 입력 변화율 항 추가.</li>
+  </ol>
+
+  <h2>38. 부록 — 시뮬레이터에서 MPC 디버깅</h2>
+  <ul>
+    <li>비용 곡선 시간에 따라 시각화.</li>
+    <li>예측 horizon 끝의 상태 모니터링.</li>
+    <li>제약 활성 여부 매 스텝 기록.</li>
+    <li>Solver 수렴 횟수와 시간 측정.</li>
+  </ul>
+
+  <h2>39. 부록 — MPC 산업 적용 예</h2>
+  <ul>
+    <li>화학 공정 — 30년+ 표준.</li>
+    <li>자율주행 — Tesla, Waymo의 종방향·횡방향.</li>
+    <li>드론 — 정밀 비행.</li>
+    <li>HVAC — 에너지 비용 최적화.</li>
+    <li>조선·해양 — DP(Dynamic Positioning).</li>
+  </ul>
+
+  <p style="font-size:13px;color:var(--muted)">— 정말 끝.</p>
+
+  <h2>40. 한 학기 진짜 마지막</h2>
+  <p>"공부하는 시점에 어렵게 느껴지는 것이 시간이 지나면 가장 명료한 도구가 됩니다. 화이팅!"</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말로 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
 
   <nav class="prevnext">
     <a href="11-mpc.html"><small>← 이전</small>L11. MPC</a>

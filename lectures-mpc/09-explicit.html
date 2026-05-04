@@ -233,6 +233,153 @@
     <li><strong>Predictive Control for Linear and Hybrid Systems</strong> — Borrelli·Bemporad·Morari, 2017. 6, 11장.</li>
   </ul>
 
+  <h2>📚 깊이 1 — Explicit MPC가 등장한 이유</h2>
+  <p>온라인 QP 풀이가 무거운 응용 (μs 단위 임베디드, 전력변환기 등)에서는 매 시점 풀이가 비현실적. Explicit MPC는 이를 해결합니다.</p>
+  <ul>
+    <li><strong>오프라인</strong>: 모든 가능한 상태에 대한 최적 입력을 미리 계산.</li>
+    <li><strong>온라인</strong>: 현재 상태가 어느 영역에 속하는지 lookup → 미리 저장된 affine 함수 평가.</li>
+    <li><strong>풀이 시간</strong>: ns~μs (lookup + 곱셈만).</li>
+  </ul>
+
+  <h2>📚 깊이 2 — Multi-Parametric Quadratic Programming (mpQP)</h2>
+  <p>QP의 비용·제약이 파라미터 $x$에 affine하게 의존:</p>
+  <p>$$\min_z \frac{1}{2}z^THz + x^TFz \quad\text{s.t.}\quad Gz \le W + Sx$$</p>
+  <p>이 문제의 최적해 $z^*(x)$는:</p>
+  <ul>
+    <li>상태 공간을 다면체 영역(critical region)으로 분할.</li>
+    <li>각 영역 안에서 $z^*(x) = K_i x + k_i$ (조각 affine).</li>
+    <li>비용 $V^*(x)$는 조각 이차형 (PWQ).</li>
+  </ul>
+  <p>이게 explicit MPC의 핵심.</p>
+
+  <h2>📚 깊이 3 — 친절 비유</h2>
+  <p>Explicit MPC = 메뉴판. 매번 주방에서 새로 요리(QP 풀이)하는 대신, 모든 손님 유형(상태)에 대한 답을 미리 메뉴판에 적어둠. 손님 오면 어느 유형인지 보고 그대로 서빙(lookup).</p>
+
+  <h2>📚 깊이 4 — Critical Region (CR)</h2>
+  <p>같은 active constraint set을 갖는 상태들의 집합. $x$가 이 영역 안에 있으면 동일한 affine 게인 사용.</p>
+  <ul>
+    <li>각 CR은 다면체 (선형 부등식의 교집합).</li>
+    <li>CR들이 상태 공간을 분할 (서로 겹치지 않고 합집합 = feasible region).</li>
+    <li>CR 수가 게인의 다양성을 결정.</li>
+  </ul>
+
+  <h2>📚 깊이 5 — CR 수의 폭발</h2>
+  <p>일반적으로 CR 수는 호라이즌 $N$, 제약 수, 상태 차원에 지수적으로 증가.</p>
+  <table>
+    <thead><tr><th>$N$</th><th>$n_x$</th><th>$n_u$</th><th>CR 수 (대략)</th></tr></thead>
+    <tbody>
+      <tr><td>3</td><td>2</td><td>1</td><td>10~30</td></tr>
+      <tr><td>5</td><td>2</td><td>1</td><td>50~200</td></tr>
+      <tr><td>10</td><td>4</td><td>2</td><td>1000~10000</td></tr>
+      <tr><td>20</td><td>6</td><td>3</td><td>$10^5+$ (메모리 한계)</td></tr>
+    </tbody>
+  </table>
+  <p>이게 explicit MPC의 한계. 작은 차원 + 짧은 호라이즌에 적합.</p>
+
+  <h2>📚 깊이 6 — 단계별 예제 — 1차원 explicit MPC</h2>
+  <p>$x_{k+1} = x_k + u_k$, $|u| \le 1$, $N = 1$, $Q = R = 1$.</p>
+  <div class="sol">
+    Unconstrained: $u^*(x) = -K x$ where $K$ from LQR ≈ 0.618.<br>
+    제약 $|u| \le 1$:
+    <ul>
+      <li>$x \le -1/K$: $u^* = +1$ (상한).</li>
+      <li>$-1/K \le x \le 1/K$: $u^* = -Kx$ (자유).</li>
+      <li>$x \ge 1/K$: $u^* = -1$ (하한).</li>
+    </ul>
+    3개 CR. 각 영역 안에서 affine 함수.
+  </div>
+
+  <h2>📚 깊이 7 — 온라인 평가 알고리즘</h2>
+  <ol>
+    <li>현재 상태 $x$ 측정.</li>
+    <li>$x$가 어느 CR에 속하는지 결정 (binary tree, 직접 검색 등).</li>
+    <li>해당 영역의 affine 함수 $u = K_i x + k_i$ 평가.</li>
+    <li>적용.</li>
+  </ol>
+
+  <h2>📚 깊이 8 — Lookup 알고리즘</h2>
+  <ul>
+    <li><strong>Sequential search</strong>: 모든 CR 순차 점검. $O(N_{CR})$.</li>
+    <li><strong>Binary search tree</strong>: 미리 구축. $O(\log N_{CR})$.</li>
+    <li><strong>Kd-tree</strong>: 공간 분할.</li>
+    <li><strong>Hash 기반</strong>: 그리드 + lookup.</li>
+  </ul>
+
+  <h2>📚 깊이 9 — Explicit MPC 도구</h2>
+  <ul>
+    <li><strong>MPT (Multi-Parametric Toolbox)</strong> — MATLAB, 표준.</li>
+    <li><strong>MPCT (Model Predictive Control Toolbox)</strong> — MATLAB.</li>
+    <li><strong>POP (Parametric Optimization Package)</strong>.</li>
+  </ul>
+
+  <h2>📚 깊이 10 — Implicit vs Explicit 비교</h2>
+  <table>
+    <thead><tr><th></th><th>Implicit (online QP)</th><th>Explicit</th></tr></thead>
+    <tbody>
+      <tr><td>오프라인 계산</td><td>없음</td><td>QP solver mapping</td></tr>
+      <tr><td>온라인 시간</td><td>ms</td><td>μs~ns</td></tr>
+      <tr><td>메모리</td><td>적음</td><td>큼 (CR 저장)</td></tr>
+      <tr><td>차원 한계</td><td>중간 (100+ 변수)</td><td>작음 (10~20 변수)</td></tr>
+      <tr><td>유연성</td><td>제약/모델 변경 쉬움</td><td>다시 계산 필요</td></tr>
+      <tr><td>수치 안정성</td><td>iter 수렴</td><td>고정 평가</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 11 — Approximate Explicit MPC</h2>
+  <p>큰 차원에서도 Explicit를 가능하게 하는 방법:</p>
+  <ul>
+    <li>NN(Neural Network)로 $u^*(x)$ 함수 근사.</li>
+    <li>피드포워드 네트워크가 PWA 함수 표현 가능 (ReLU).</li>
+    <li>최근 deep learning 접근.</li>
+    <li>이론적 안정성·feasibility 보장은 추가 작업 필요.</li>
+  </ul>
+
+  <h2>📚 깊이 12 — 응용</h2>
+  <ul>
+    <li>전력 변환기 (FCS-MPC) — 100kHz 가능.</li>
+    <li>모터 드라이브.</li>
+    <li>드론 자세 (작은 모델).</li>
+    <li>기타 μs 단위 응용.</li>
+  </ul>
+
+  <h2>📚 깊이 13 — 흔한 오답</h2>
+  <ol>
+    <li>큰 차원 시스템에 Explicit 적용 → 메모리 폭발.</li>
+    <li>CR 검색 알고리즘 미적용 → 평가 시간 증가.</li>
+    <li>온도·파라미터 변동 무시 → 다시 계산 필요.</li>
+    <li>Soft 제약 처리 누락.</li>
+  </ol>
+
+  <h2>📚 깊이 14 — 자가 점검 6문항</h2>
+  <ol>
+    <li>Explicit MPC가 implicit보다 빠른 이유?</li>
+    <li>Critical Region이란?</li>
+    <li>$u^*(x)$의 형태?</li>
+    <li>CR 수가 폭발하는 요인?</li>
+    <li>Explicit의 메모리 한계?</li>
+    <li>Approximate Explicit의 핵심 도구?</li>
+  </ol>
+  <p>정답 — ① 오프라인 미리 계산 + 온라인 lookup ② 같은 active set의 상태 영역 ③ 조각 affine ④ 호라이즌·차원·제약 수에 지수 ⑤ MB~GB ⑥ NN 근사.</p>
+
+  <h2>📚 깊이 15 — FAQ</h2>
+  <h3>Q1. Explicit이 항상 좋은 선택?</h3>
+  <p>아니요. 차원 작고 빠른 응답 필요할 때만. 차원 크면 implicit + warm start.</p>
+
+  <h3>Q2. CR 수를 줄이는 방법?</h3>
+  <p>호라이즌 단축, 제약 단순화, 차원 축소.</p>
+
+  <h3>Q3. NN이 Explicit MPC를 대체?</h3>
+  <p>일부 응용에서 가능. 그러나 안정성 보장은 활발한 연구 분야.</p>
+
+  <h2>📚 깊이 16 — 학기 진도 W9</h2>
+  <p>10주 중 9주차 (90%). 다음 주(W10) 마지막 단원 — 실시간 구현.</p>
+
+  <h3>한 줄 격언</h3>
+  <p class="lead">"Explicit MPC = 메뉴판 미리 작성. CR 분할 + 조각 affine. 작은 차원 + 빠른 응답."</p>
+
+  <h3>학습 일지</h3>
+  <p>"이번 주에 새로 익힌 도구: mpQP의 PWA 해 → lookup table → ns 단위 풀이."</p>
+
   <div class="prevnext">
     <a href="08-nmpc.html"><small>← 이전</small>W8. 비선형 MPC</a>
     <a href="10-implementation.html" class="next"><small>다음 →</small>W10. 실시간 구현</a>

@@ -256,6 +256,142 @@
     </ul>
   </div>
 
+  <h2>📚 깊이 1 — 안정성의 의미</h2>
+  <p>MPC가 "안정"이라 함은 닫힌 루프 시스템 $x_{k+1} = Ax_k + Bu_0^*(x_k)$의 점근 안정성을 의미합니다. 즉 $x_k \to 0$ (또는 reference로).</p>
+  <ul>
+    <li><strong>Lyapunov 안정</strong>: $\|x_k\|$가 영구히 작은 영역 안.</li>
+    <li><strong>점근 안정</strong>: $x_k \to x^*$.</li>
+    <li><strong>지수 안정</strong>: $\|x_k\| \le c\rho^k\|x_0\|$, $0 \le \rho &lt; 1$.</li>
+  </ul>
+
+  <h2>📚 깊이 2 — Recursive Feasibility</h2>
+  <p>안정성의 전제. 한 시점 feasible이면 다음 시점도 feasible해야 함.</p>
+  <p><strong>증명 트릭 (shifted solution)</strong>: 시점 $k$의 최적해 $u_0^*, u_1^*, \dots, u_{N-1}^*$, $x_N^*$. 시점 $k+1$의 후보 입력:</p>
+  <p>$$\tilde u = (u_1^*, u_2^*, \dots, u_{N-1}^*, K_f x_N^*)$$</p>
+  <p>마지막을 종단 제어 $K_f$로 채움. $\mathcal X_f$가 $K_f$에 대해 control invariant이면 끝점도 $\mathcal X_f$ 안 → 다음 시점 feasible.</p>
+
+  <h2>📚 깊이 3 — Lyapunov 안정성 증명</h2>
+  <p>최적 비용 함수 $V^*(x)$를 Lyapunov 함수 후보로 사용.</p>
+  <p>$$V^*(x_{k+1}) - V^*(x_k) \le \tilde J - V^*(x_k)$$</p>
+  <p>여기서 $\tilde J$는 shifted solution의 비용. 계산해보면:</p>
+  <p>$$\tilde J = V^*(x_k) - l(x_k, u_0^*) - V_f(x_N^*) + l(x_N^*, K_f x_N^*) + V_f(A_K x_N^*)$$</p>
+  <p>여기서 $A_K = A - BK_f$. 안정성 조건:</p>
+  <p>$$V_f(A_K x) - V_f(x) + l(x, K_f x) \le 0,\ \forall x \in \mathcal X_f$$</p>
+  <p>즉 종단 비용 + 종단 제어가 $\mathcal X_f$ 안에서 자체로 Lyapunov 함수가 되어야 함. 보통 $V_f = $ LQR DARE 해, $K_f = $ LQR 게인이면 자동 만족.</p>
+
+  <h2>📚 깊이 4 — 안정성 보장 4단계 표준 트릭</h2>
+  <ol>
+    <li><strong>종단 비용</strong> $V_f(x) = x^TP_fx$, $P_f$ = LQR DARE 해.</li>
+    <li><strong>종단 제어</strong> $K_f$ = LQR 게인 (옵션).</li>
+    <li><strong>종단 제약</strong> $x_N \in \mathcal X_f$, $\mathcal X_f$ = invariant set 또는 origin.</li>
+    <li><strong>가관측 가정</strong> — Lyapunov 함수 양정값 보장.</li>
+  </ol>
+
+  <h2>📚 깊이 5 — 종단 제약이 없는 경우 (Quasi-Infinite Horizon)</h2>
+  <p>종단 제약 $x_N \in \mathcal X_f$를 강제하면 feasibility 영역(domain of attraction)이 줄어듦. 종단 제약 없이도 안정 보장 방법:</p>
+  <ul>
+    <li>호라이즌 $N$을 충분히 길게.</li>
+    <li>$V_f$를 충분히 크게.</li>
+    <li>Chen-Allgöwer 1998 — Quasi-infinite horizon NMPC.</li>
+  </ul>
+
+  <h2>📚 깊이 6 — Domain of Attraction</h2>
+  <p>MPC가 안정적으로 동작하는 초기 상태들의 집합. 종단 제약 → 시작점에서 N 스텝 안에 $\mathcal X_f$ 도달 가능한 상태. 호라이즌이 클수록 영역 큼.</p>
+
+  <h2>📚 깊이 7 — Stability vs Performance Trade-off</h2>
+  <ul>
+    <li><strong>큰 $V_f$</strong>: 안정성 강화, 보수적 제어.</li>
+    <li><strong>작은 $V_f$</strong>: 적극적 제어, 안정성 약함.</li>
+    <li><strong>긴 $N$</strong>: 안정성 + 성능 모두 좋음, 계산량↑.</li>
+    <li><strong>짧은 $N$</strong>: 빠른 계산, 안정성 위험.</li>
+  </ul>
+
+  <h2>📚 깊이 8 — Suboptimal MPC의 안정성</h2>
+  <p>실시간 시간 부족으로 정확한 최적해 대신 근사해 사용해도 안정 가능?</p>
+  <p>핵심 조건: 다음 부등식 만족하는 근사해 $\tilde u$:</p>
+  <p>$$V(x_{k+1}, \tilde u) - V(x_k, u^*_{k-1}) \le -l(x_k, \tilde u_0)$$</p>
+  <p>즉 비용이 stage cost만큼 감소. Diehl, Findeisen 등의 연구로 RTI(Real-Time Iteration)도 안정 가능.</p>
+
+  <h2>📚 깊이 9 — 종단 영역 $\mathcal X_f$ 계산</h2>
+  <p>일반적인 방법:</p>
+  <ol>
+    <li>LQR 닫힌 루프 $A_K = A - BK_f$ 안정 확인.</li>
+    <li>Lyapunov 부등식 $A_K^T P A_K - P \prec 0$ 만족 $P$ 계산 (또는 DARE 해).</li>
+    <li>$\mathcal X_f = \{x : x^TPx \le \alpha\}$ ellipsoidal invariant set.</li>
+    <li>$\alpha$를 입력·상태 제약 만족하도록 결정.</li>
+  </ol>
+
+  <h2>📚 깊이 10 — Maximal Positively Invariant Set</h2>
+  <p>$K_f$ 사용 시 무한히 안전 영역에 머물 수 있는 최대 상태 집합. MPT(Multi-Parametric Toolbox)로 자동 계산.</p>
+
+  <h2>📚 깊이 11 — 안정성과 모델 오차</h2>
+  <p>Nominal MPC의 안정성 증명은 정확한 모델 가정. 모델 오차가 있으면:</p>
+  <ul>
+    <li>점근 안정 → 한정 영역 안에서 진동 (Input-to-State Stability, ISS).</li>
+    <li>외란 한계가 클수록 한정 영역 큼.</li>
+    <li>견실 MPC (W7)에서 명시적 처리.</li>
+  </ul>
+
+  <h2>📚 깊이 12 — Tracking 안정성</h2>
+  <p>정상상태 추종 시 안정성:</p>
+  <ul>
+    <li>참조점 $(x_{ref}, u_{ref})$가 평형점 ($Ax_{ref} + Bu_{ref} = x_{ref}$).</li>
+    <li>$\tilde x = x - x_{ref}$로 변환 후 표준 분석.</li>
+    <li>참조 변경 시 transient 안정 분석은 더 복잡.</li>
+  </ul>
+
+  <h2>📚 깊이 13 — Soft 제약과 안정성</h2>
+  <p>Soft 제약 도입 시 infeasibility는 사라지지만 안정성 분석은 추가 주의 필요. 큰 페널티 $\rho$로 hard 제약 근사 → 안정성 보존.</p>
+
+  <h2>📚 깊이 14 — 안정성 인증의 표준 정리 (Mayne 등 2000)</h2>
+  <p>다음 4조건 만족 시 RHC 점근 안정 + recursive feasible:</p>
+  <ol>
+    <li>$\mathcal X_f \subseteq \mathbb X$ (안전 영역 포함).</li>
+    <li>$K_f x \in \mathbb U$ for $x \in \mathcal X_f$ (입력 제약 만족).</li>
+    <li>$A_K \mathcal X_f \subseteq \mathcal X_f$ ($\mathcal X_f$ 정positive invariant).</li>
+    <li>$V_f(A_K x) - V_f(x) + l(x, K_f x) \le 0\ \forall x \in \mathcal X_f$ (Lyapunov 감소).</li>
+  </ol>
+  <p>이게 MPC 안정성 이론의 핵심 정리.</p>
+
+  <h2>📚 깊이 15 — 흔한 오답</h2>
+  <ol>
+    <li>종단 비용 무시 → 짧은 호라이즌에서 불안정.</li>
+    <li>종단 제약 미설정 → recursive feasibility 깨짐.</li>
+    <li>$P_f$를 임의로 잡음 (LQR DARE 해 권장).</li>
+    <li>가관측 조건 미확인.</li>
+    <li>Soft 제약의 페널티 너무 작아 제약 위반.</li>
+  </ol>
+
+  <h2>📚 깊이 16 — 자가 점검 6문항</h2>
+  <ol>
+    <li>Recursive feasibility 보장 트릭?</li>
+    <li>Lyapunov 함수 후보로 가장 흔한 선택?</li>
+    <li>안정성 보장 4표준 트릭?</li>
+    <li>$P_f$의 표준 선택?</li>
+    <li>Suboptimal MPC가 안정 가능한 조건?</li>
+    <li>Domain of attraction이 호라이즌과의 관계?</li>
+  </ol>
+  <p>정답 — ① shifted solution + 종단 제약 ② 최적 비용 $V^*$ ③ 종단 비용·제어·제약·가관측 ④ LQR DARE 해 ⑤ 비용 함수가 stage cost만큼 감소 ⑥ $N$ 클수록 영역 큼.</p>
+
+  <h2>📚 깊이 17 — FAQ</h2>
+  <h3>Q1. 종단 제약 없이도 안정 가능?</h3>
+  <p>Quasi-infinite horizon (Chen-Allgöwer)으로 가능. 호라이즌 길게 + 큰 $V_f$.</p>
+
+  <h3>Q2. Soft 제약은 안정성 깨나?</h3>
+  <p>아닙니다. 큰 페널티이면 hard 제약 근사. 단 분석은 더 정교.</p>
+
+  <h3>Q3. 비선형 MPC는?</h3>
+  <p>같은 원리이지만 종단 영역 계산이 어려움. NMPC 안정성 이론은 더 복잡 (W8).</p>
+
+  <h2>📚 깊이 18 — 학기 진도 W6</h2>
+  <p>10주 중 6주차 (60%). 다음 주(W7) 견실 MPC.</p>
+
+  <h3>한 줄 격언</h3>
+  <p class="lead">"안정성 = 종단 비용 + 종단 제약 + Lyapunov. 4조건이 표준 보장 정리."</p>
+
+  <h3>학습 일지</h3>
+  <p>"이번 주에 새로 익힌 도구: $V^*$가 Lyapunov 함수임을 증명하는 shifted solution 트릭."</p>
+
   <div class="prevnext">
     <a href="05-receding-horizon.html"><small>← 이전</small>W5. 수신지평선 MPC</a>
     <a href="07-robust.html" class="next"><small>다음 →</small>W7. 강건 MPC</a>

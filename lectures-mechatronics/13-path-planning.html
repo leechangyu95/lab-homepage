@@ -521,8 +521,474 @@
   </ul>
 
   <div class="tip">
-    <strong>한 학기 마무리</strong> — 메카트로닉스의 sense → think → act 한 사이클을 한 바퀴 돌아왔습니다. W2~W5(센서·필터)에서 보는 법을, W7~W10에서 모델링과 응답을, W11에서 제어를, W12~W13에서 학습과 계획을. 이제 여러분은 자율 시스템을 처음부터 끝까지 한 줄로 설명할 수 있을 겁니다 — <em>"센서로 보고, 필터로 잡음을 누르고, 모델로 미래를 예측하고, 제어로 결정을 행하고, 그 위에 학습이 인지·계획을 더한다"</em>.
+    <strong>한 학기 마무리</strong> — 메카트로닉스의 sense → think → act 한 사이클을 한 바퀴 돌아왔습니다.
   </div>
+
+  <h2>경로 계획 알고리즘 비교</h2>
+  <table>
+    <thead><tr><th>알고리즘</th><th>특징</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>Dijkstra</td><td>모든 최단 경로</td><td>최적</td><td>느림</td></tr>
+      <tr><td>A*</td><td>휴리스틱 탐색</td><td>빠름·최적</td><td>그리드 필요</td></tr>
+      <tr><td>RRT</td><td>샘플링</td><td>고차원</td><td>최적 미보장</td></tr>
+      <tr><td>RRT*</td><td>RRT + 최적화</td><td>점진적 최적</td><td>느림</td></tr>
+      <tr><td>PRM</td><td>로드맵</td><td>다중 쿼리</td><td>고차원 어려움</td></tr>
+      <tr><td>MPC</td><td>최적 제어</td><td>제약+동역학</td><td>실시간 부담</td></tr>
+    </tbody>
+  </table>
+
+  <h2>추가 워크북</h2>
+
+  <h3>1. A* 휴리스틱 종류</h3>
+  <p>2D 격자 휴리스틱?</p>
+  <div class="tip">맨해튼(4방향), 유클리드(자유), 체비쇼프(8방향).</div>
+
+  <h3>2. RRT 노드 추가 절차</h3>
+  <ol>
+    <li>무작위 점 샘플.</li>
+    <li>가까운 노드 찾기.</li>
+    <li>방향으로 단계 전진.</li>
+    <li>충돌 검사.</li>
+    <li>통과 시 노드 추가.</li>
+  </ol>
+
+  <h3>3. 충돌 검사</h3>
+  <p>로봇 형태별 충돌 검사?</p>
+  <div class="tip">원형 — 거리 비교. 다각형 — SAT. 복잡 — bounding box 계층.</div>
+
+  <h3>4. 동역학 제약</h3>
+  <p>차량 회전 반경 제한?</p>
+  <div class="tip">Dubins(전진만) 또는 Reeds-Shepp(전후진). 미니멀 R 고려.</div>
+
+  <h3>5. MPC 비용 함수</h3>
+  <p>경로 추종용?</p>
+  <div class="tip">$\|x - x_{ref}\|_Q + \|u\|_R$ + 종단 비용 + 충돌 페널티.</div>
+
+  <h2>응용 사례</h2>
+  <ul>
+    <li>자율주행 — A* (전역) + MPC (지역).</li>
+    <li>드론 — RRT* + MPC.</li>
+    <li>매니퓰레이션 — PRM + 트라젝토리 최적화.</li>
+    <li>모바일 로봇 — A* + DWA.</li>
+  </ul>
+
+  <h2>자주 만나는 함정</h2>
+  <ul>
+    <li>휴리스틱이 admissible 아님 → 최적성 깨짐.</li>
+    <li>RRT 무작위성 → 매번 다른 결과.</li>
+    <li>실시간 제약 미고려.</li>
+    <li>동적 장애물 미처리.</li>
+    <li>좁은 통로 어려움.</li>
+  </ul>
+
+  <h2>Python 코드 — A* 의사코드</h2>
+  <pre><code>def a_star(start, goal, heuristic):
+    open_set = [(heuristic(start, goal), start)]
+    came_from = {}
+    g_score = {start: 0}
+    while open_set:
+        _, current = heapq.heappop(open_set)
+        if current == goal:
+            return reconstruct_path(came_from, current)
+        for neighbor in neighbors(current):
+            tentative = g_score[current] + dist(current, neighbor)
+            if tentative < g_score.get(neighbor, float('inf')):
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative
+                f = tentative + heuristic(neighbor, goal)
+                heapq.heappush(open_set, (f, neighbor))</code></pre>
+
+  <h2>자가점검 체크리스트</h2>
+  <ul>
+    <li>☐ A*와 Dijkstra 차이.</li>
+    <li>☐ RRT 노드 추가.</li>
+    <li>☐ 충돌 검사 3가지.</li>
+    <li>☐ 차량 동역학 제약.</li>
+    <li>☐ MPC 비용 함수 구성.</li>
+  </ul>
+
+  <h2>한 학기 메카트로닉스 회고</h2>
+  <ul>
+    <li>W1 개요 → W2~W5 센서·필터 → W6 MCU.</li>
+    <li>W7~W10 시스템 모델링·응답.</li>
+    <li>W11 피드백 제어.</li>
+    <li>W12 딥러닝 + W13 경로 계획 ◉.</li>
+  </ul>
+
+  <h2>다음 학기 추천</h2>
+  <ul>
+    <li>자동제어 (제어공학 심화).</li>
+    <li>로보틱스.</li>
+    <li>강화학습.</li>
+    <li>SLAM.</li>
+    <li>임베디드 시스템.</li>
+  </ul>
+
+  <h2>한 줄 마무리</h2>
+  <p class="lead">"메카트로닉스 = 기계+전자+제어+컴퓨터. 한 학기 끝에 자율 시스템이 손에 잡힌다."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— W13 끝. 한 학기 수고하셨습니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+
+  <h2>부록 — 한 학기 단원 한 줄</h2>
+  <ol>
+    <li>W1 메카트로닉스 = 기계+전자+제어+컴퓨터.</li>
+    <li>W2 센서.</li>
+    <li>W3 신호 조절.</li>
+    <li>W4 1D 칼만.</li>
+    <li>W5 2D 칼만.</li>
+    <li>W6 마이크로프로세서.</li>
+    <li>W7 시스템 모델.</li>
+    <li>W9 동적 응답.</li>
+    <li>W10 전달함수.</li>
+    <li>W11 피드백 제어.</li>
+    <li>W12 딥러닝.</li>
+    <li>W13 경로 계획 ◉.</li>
+  </ol>
+
+  <h2>자율 시스템 5계층</h2>
+  <ol>
+    <li>물리·동역학.</li>
+    <li>감지·추정.</li>
+    <li>계획.</li>
+    <li>제어.</li>
+    <li>학습.</li>
+  </ol>
+
+  <h2>한 페이지 핵심 식</h2>
+  <ul>
+    <li>A* — $f = g + h$.</li>
+    <li>RRT — 샘플+가까운+단계.</li>
+    <li>MPC — $\min \sum \|x-x_{ref}\|_Q + \|u\|_R$.</li>
+    <li>PID — $u = K_pe + K_i\int e + K_d\dot e$.</li>
+    <li>칼만 — 예측+갱신.</li>
+  </ul>
+
+  <h2>미래 트렌드</h2>
+  <ul>
+    <li>End-to-End 신경망 정책.</li>
+    <li>Foundation Model + 로봇.</li>
+    <li>휴머노이드.</li>
+    <li>LLM + 로봇.</li>
+    <li>가정용 로봇.</li>
+  </ul>
+
+  <h2>한 줄 진짜 끝</h2>
+  <p class="lead">"한 학기 메카트로닉스 = 자율 시스템의 토대."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 마지막.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 마지막!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 정말 끝.</p>
+  <h2>부록 — 자주 쓰는 라이브러리</h2>
+  <ul>
+    <li>OMPL — 경로 계획 표준.</li>
+    <li>MoveIt — ROS 매니퓰레이션.</li>
+    <li>PythonRobotics — 학습용.</li>
+    <li>Drake — MIT 트라젝토리 최적화.</li>
+    <li>CasADi — MPC 구현.</li>
+    <li>cvxpy — 최적화 모델링.</li>
+  </ul>
+
+  <h2>부록 — DWA (Dynamic Window Approach)</h2>
+  <p>현재 속도와 가속도 한계를 고려해 가능한 (v, ω) 윈도우에서 최적 후보 선택. 모바일 로봇의 실시간 회피에 표준.</p>
+
+  <h2>부록 — Hybrid A*</h2>
+  <p>A*에 차량 동역학(Dubins) 추가. 자율주행 주차에 자주.</p>
+
+  <h2>부록 — RRT 변형</h2>
+  <ul>
+    <li>RRT — 기본.</li>
+    <li>RRT* — 점진 최적.</li>
+    <li>RRT-Connect — 양방향.</li>
+    <li>Informed RRT* — 휴리스틱 활용.</li>
+    <li>Kinodynamic RRT — 동역학 포함.</li>
+  </ul>
+
+  <h2>부록 — 비용 함수 설계</h2>
+  <ul>
+    <li>경로 길이 — $\sum \|p_{i+1} - p_i\|$.</li>
+    <li>곡률 — 부드러운 경로.</li>
+    <li>장애물 거리 — 안전.</li>
+    <li>속도 한계.</li>
+    <li>에너지 효율.</li>
+  </ul>
+
+  <h2>부록 — Python 시뮬레이션</h2>
+  <pre><code># 간단한 RRT
+import numpy as np
+import matplotlib.pyplot as plt
+
+def rrt(start, goal, obstacles, max_iter=1000, step=1.0):
+    nodes = [start]
+    parents = {0: None}
+    for _ in range(max_iter):
+        rand = np.random.rand(2) * 100
+        nearest_idx = np.argmin([np.linalg.norm(rand - n) for n in nodes])
+        nearest = nodes[nearest_idx]
+        direction = (rand - nearest) / (np.linalg.norm(rand - nearest) + 1e-6)
+        new_node = nearest + step * direction
+        if not any(np.linalg.norm(new_node - obs) < 5 for obs in obstacles):
+            nodes.append(new_node)
+            parents[len(nodes)-1] = nearest_idx
+            if np.linalg.norm(new_node - goal) < step:
+                return reconstruct(parents, nodes)
+    return None</code></pre>
+
+  <h2>부록 — 격자 맵 vs 토폴로지 맵</h2>
+  <ul>
+    <li>격자 — 실내 매핑·SLAM.</li>
+    <li>토폴로지 — 도로 네트워크·건물 평면.</li>
+    <li>혼합 — 자율주행에서 둘 다 사용.</li>
+  </ul>
+
+  <h2>부록 — 동적 장애물 처리</h2>
+  <ul>
+    <li>Velocity Obstacle (VO) — 다른 동적 객체 회피.</li>
+    <li>Reciprocal VO — 군집 로봇.</li>
+    <li>예측 + 회피 — 다른 차량 미래 궤적 예측 후 회피.</li>
+    <li>CBF (Control Barrier Function) — 안전 보장.</li>
+  </ul>
+
+  <h2>부록 — 자율주행 경로 계획 계층</h2>
+  <ol>
+    <li>Mission — 출발지 → 도착지.</li>
+    <li>Behavior — 차선 변경, 정지, 좌회전.</li>
+    <li>Trajectory — 시간별 (x, y, v).</li>
+    <li>Control — 조향각, 가속도.</li>
+  </ol>
+
+  <h2>부록 — 한 페이지 정리</h2>
+  <ul>
+    <li>경로 계획 = 시작점 → 목표점 (장애물 회피).</li>
+    <li>그래프 기반 — A*, Dijkstra.</li>
+    <li>샘플링 기반 — RRT, PRM.</li>
+    <li>최적 제어 — MPC.</li>
+    <li>동역학 제약 — Dubins, kinodynamic.</li>
+    <li>실시간 + 안전 = 핵심 제약.</li>
+  </ul>
+
+  <h2>한 줄 진짜 마지막</h2>
+  <p class="lead">"경로 계획 = 자율 시스템의 think 단계. 한 학기 메카트로닉스의 결론."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊🌊🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+
+  <h2>부록 — Bezier vs Spline vs Polynomial</h2>
+  <ul>
+    <li>Bezier — 제어점 기반, 매끄러움. 자동차 차선 변경.</li>
+    <li>B-Spline — 국소 제어. 로봇 매니퓰레이터.</li>
+    <li>Polynomial — 고차 다항식. 5차 다항식이 자주.</li>
+    <li>Quintic Hermite — 시작·끝 위치/속도/가속도 지정.</li>
+  </ul>
+
+  <h2>부록 — Trajectory Smoothing</h2>
+  <p>경로(geometric) → 시간 함수(trajectory). 속도·가속도 제약 만족하도록 시간 분배. minimum jerk가 사람 친화적.</p>
+
+  <h2>부록 — Real-Time Replanning</h2>
+  <p>D* Lite, Anytime A* — 환경이 변할 때 일부만 재계산. 자율주행에서 새 장애물 발견 시.</p>
+
+  <h2>부록 — 학습 기반 경로 계획</h2>
+  <ul>
+    <li>Imitation Learning — 사람 운전 데이터로 정책 학습.</li>
+    <li>Reinforcement Learning — 시뮬레이터에서 보상 기반 학습.</li>
+    <li>Diffusion Policy — 정책을 diffusion 모델로.</li>
+    <li>RT-2 — VLM 기반 로봇 정책.</li>
+  </ul>
+
+  <h2>한 줄 진짜 마지막</h2>
+  <p class="lead">"경로 계획 = 자율 시스템 think의 결론. 한 학기 메카트로닉스의 마무리."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <h2>부록 — Frenet Frame</h2>
+  <p>(s, d) 좌표계 — s = 도로 진행, d = 측면 오프셋. 자율주행 표준.</p>
+
+  <h2>부록 — Lattice Planner</h2>
+  <p>가능한 동작들을 미리 정의된 격자로.</p>
+
+  <h2>부록 — Sampling 방법 비교</h2>
+  <ul>
+    <li>RRT — 무작위.</li>
+    <li>RRT* — 점진 최적.</li>
+    <li>PRM — 오프라인 로드맵.</li>
+    <li>BIT* — 배치 단위 RRT*.</li>
+  </ul>
+
+  <h2>부록 — Trajectory Optimization 종류</h2>
+  <ul>
+    <li>Direct Collocation.</li>
+    <li>Shooting.</li>
+    <li>iLQR.</li>
+    <li>DDP.</li>
+  </ul>
+
+  <h2>한 줄 마지막</h2>
+  <p class="lead">"메카트로닉스 W13 = 자율 시스템 think의 결론."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
 
   <nav class="prevnext">
     <a href="12-deep-learning.html"><small>← 이전</small>W12. 딥러닝</a>

@@ -547,6 +547,539 @@
   </ul>
 
   <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="04-particle-curvilinear-nt.html">← W4</a> · <a href="../dynamics.html">강의 목록</a> · <a href="06-particle-kinetics.html">W6 입자 운동역학 →</a></p>
+
+  <!-- ============================================================ -->
+  <!-- 보강 섹션: 친절한 설명·자가점검·SVG·사례·FAQ                 -->
+  <!-- ============================================================ -->
+
+  <hr style="margin:60px 0 40px 0;border:0;border-top:2px dashed #c7d2fe">
+  <h2 style="color:#0b5fff">보강편 — 더 천천히, 더 친절하게</h2>
+  <p class="lead">상대 운동·종속 운동을 처음 접하는 학생을 위한 보강 자료입니다. 비유, 단계별 풀이, 자가 점검을 모았습니다. "왜 이 식이 이렇게 생겼지?"가 풀리는 순간 동역학이 갑자기 쉬워집니다.</p>
+
+  <div class="toc" style="background:#f0f7ff;border:1px solid #c7d2fe;border-radius:8px;padding:16px 20px;margin:20px 0">
+    <strong>이 보강편의 목차</strong>
+    <ol style="margin:8px 0 0 20px">
+      <li>비유로 이해하기 — 기차 안 사람, 줄로 묶인 두 친구</li>
+      <li>식 한 줄을 천천히 — $v_{A/B} = v_A - v_B$의 의미</li>
+      <li>그림으로 보는 상대속도 (SVG)</li>
+      <li>단계별 예제 7개 (강 도하·바람·도르래)</li>
+      <li>종속 운동 — 줄 길이 식의 정석 유도</li>
+      <li>자가 점검 10문항</li>
+      <li>흔한 오답 8가지 — 왜 틀리는가</li>
+      <li>로봇·차량 응용 (AGV, 군집비행, 회전좌표계)</li>
+      <li>용어 사전 + 식 모음표</li>
+      <li>FAQ + 학습 일지</li>
+    </ol>
+  </div>
+
+  <!-- ====== A. 비유 ====== -->
+  <h2>A. 비유로 이해하기 — 일상 장면으로 잡아 두는 직관</h2>
+
+  <h3>A-1. 상대 운동 = "기차 안 사람 vs 밖에서 본 사람"</h3>
+  <p>플랫폼에 서 있는 친구가 있다고 합시다. 그 옆을 시속 60 km로 기차가 지나가고, 기차 안에서 친구가 손을 흔들어 줍니다.</p>
+  <ul>
+    <li><strong>밖에서 본 친구</strong> — "기차 안 친구는 60 km/h로 사라지는 중"</li>
+    <li><strong>기차 안 친구</strong> — "플랫폼 친구는 60 km/h로 멀어지는 중 (반대 방향)"</li>
+  </ul>
+  <p>둘 다 옳습니다. 같은 사건을 다른 좌표계에서 본 것뿐입니다. 이때 "내가 본 너의 속도"를 수식으로 적은 게 바로 $\mathbf{v}_{B/A}$입니다.</p>
+
+  <div class="tip" style="background:#fef9e7;border-left:4px solid #f1c40f;padding:12px 16px;margin:12px 0">
+    <strong>핵심 한 줄</strong> — 상대속도란 <em>"내가 정지해 있다고 가정했을 때, 상대가 어떻게 움직이는가"</em>를 묻는 것입니다.
+  </div>
+
+  <h3>A-2. 종속 운동 = "줄로 묶인 두 친구"</h3>
+  <p>두 친구가 한 줄에 묶여 있다고 상상해 보세요. 한 명이 1 m 다가가면 다른 한 명도 1 m 다가가야 줄 길이가 유지됩니다. 이게 가장 단순한 <strong>구속(constraint)</strong>입니다.</p>
+  <p>도르래가 끼어들면? 한 명이 1 m 당기면, 도르래를 거친 줄 때문에 다른 쪽은 0.5 m 또는 2 m 움직입니다. <strong>줄의 총 길이는 변하지 않는다</strong>는 단순한 사실에서 시작해 모든 식이 유도됩니다.</p>
+
+  <div class="note" style="background:#eef9f1;border-left:4px solid #28a745;padding:12px 16px;margin:12px 0">
+    <strong>도르래는 "비율 변환기"</strong>다. 손에 가하는 힘은 줄어들지만 당겨야 하는 거리가 늘어난다. 일(=힘×거리)은 변하지 않는다.
+  </div>
+
+  <h3>A-3. 두 비유의 공통점 — "보존되는 것"을 찾자</h3>
+  <p>상대 운동이든 종속 운동이든, 결국 두 좌표계 사이에 <strong>보존되는 양</strong>이 있다는 점이 공통입니다.</p>
+  <ul>
+    <li>상대 운동 — <em>가속도</em>가 두 관성계에서 같음 (갈릴레이 변환)</li>
+    <li>종속 운동 — <em>줄 길이</em>가 시간에 무관하게 일정</li>
+  </ul>
+  <p>보존되는 양이 보이면, 식 한 줄을 적고 양변을 미분하면 곧 속도·가속도 관계가 떨어집니다. 이게 동역학의 표준 절차입니다.</p>
+
+  <!-- ====== B. 식의 의미 ====== -->
+  <h2>B. 식 한 줄을 아주 천천히 — $\mathbf{v}_{A/B} = \mathbf{v}_A - \mathbf{v}_B$</h2>
+
+  <h3>B-1. 왜 "뺄셈"인가</h3>
+  <p>$B$가 본 $A$의 속도란, $B$의 시점에서 $A$가 얼마나 빠르게 자기에게서 멀어지거나 가까워지는가입니다. $B$가 멈춰 있다고 보려면 $B$의 운동을 "빼서" $A$만 남기면 됩니다.</p>
+  $$ \underbrace{\mathbf{v}_{A/B}}_{B\text{가 본 }A} = \underbrace{\mathbf{v}_A}_{지면\text{ 기준 }A} - \underbrace{\mathbf{v}_B}_{지면\text{ 기준 }B} $$
+  <p>지면 기준에서 $A$가 80, $B$가 60이라면 $B$가 본 $A$는 +20. $A$는 천천히 앞서가는 것처럼 보입니다.</p>
+
+  <h3>B-2. 첨자 약분 트릭 — 식이 자동으로 풀린다</h3>
+  <p>$\mathbf{r}_{B/A}$의 첨자를 마치 분수처럼 다루면 식이 외워지지 않아도 자동 정렬됩니다.</p>
+  $$ \mathbf{r}_{C/A} \;=\; \mathbf{r}_{C/B} \;+\; \mathbf{r}_{B/A} $$
+  <p>오른쪽: $C/B$의 분모와 $B/A$의 분자가 $B$로 약분 → 결과는 $C/A$. 마치 $\frac{C}{B}\cdot\frac{B}{A}=\frac{C}{A}$처럼 외우면 편합니다(엄밀한 분수 연산은 아니지만 기억 도구).</p>
+
+  <h3>B-3. 부호 규칙 — 어느 쪽을 양으로 잡을지</h3>
+  <p>1차원에서는 양의 방향을 한 번 고르고 끝까지 일관되게 사용해야 합니다. 보통은 다음을 권장합니다.</p>
+  <ul>
+    <li>수평 운동 — 오른쪽(동쪽)을 +</li>
+    <li>수직 운동 — 위쪽을 + (단, 자유낙하 문제는 아래를 +로 잡으면 식이 깔끔할 때도 있음 — 한 번 고르고 끝까지)</li>
+    <li>도르래 — 줄을 따라 흐르는 한 방향을 +로 (보통 추가 내려가는 방향)</li>
+  </ul>
+
+  <div class="warn" style="background:#fff3cd;border-left:4px solid #f0ad4e;padding:12px 16px;margin:12px 0">
+    <strong>가장 많은 실수</strong> — 풀이 도중 부호 규칙을 바꾸는 것. 모든 식이 갑자기 부호 오류로 무너집니다. 풀이 첫 줄에 "오른쪽이 +" 같은 명시 한 줄을 써 두세요.
+  </div>
+
+  <!-- ====== C. SVG 그림 ====== -->
+  <h2>C. 그림으로 잡아 두기 — SVG 다이어그램</h2>
+
+  <h3>C-1. 강 위의 배 — 속도 벡터 합성</h3>
+  <svg viewBox="0 0 560 280" width="100%" style="max-width:560px;background:#fafbfc;border:1px solid #e0e0e0;border-radius:8px">
+    <text x="20" y="22" fill="#333" font-size="13" font-weight="bold">강 도하 — 배 속도 + 강물 속도 = 지면 기준 속도</text>
+    <!-- river -->
+    <rect x="40" y="60" width="480" height="160" fill="#cfe8ff" opacity="0.6"/>
+    <text x="50" y="80" fill="#0b5fff" font-size="11">강 (동쪽으로 흐름)</text>
+    <!-- start point -->
+    <circle cx="100" cy="200" r="5" fill="#222"/>
+    <text x="80" y="225" fill="#333" font-size="11">출발 (남쪽 강기슭)</text>
+    <!-- boat velocity (north) -->
+    <line x1="100" y1="200" x2="100" y2="100" stroke="#28a745" stroke-width="3"
+          marker-end="url(#arrG2)"/>
+    <text x="105" y="155" fill="#28a745" font-size="12">v_배/물 (북쪽)</text>
+    <!-- river velocity (east) -->
+    <line x1="100" y1="100" x2="220" y2="100" stroke="#c62828" stroke-width="3"
+          marker-end="url(#arrR2)"/>
+    <text x="135" y="95" fill="#c62828" font-size="12">v_물/지면 (동)</text>
+    <!-- resultant -->
+    <line x1="100" y1="200" x2="220" y2="100" stroke="#0b5fff" stroke-width="3"
+          stroke-dasharray="4,3" marker-end="url(#arrB2)"/>
+    <text x="170" y="170" fill="#0b5fff" font-size="12" font-weight="bold">v_배/지면 (합)</text>
+    <!-- arrival -->
+    <circle cx="220" cy="100" r="5" fill="#222"/>
+    <text x="225" y="105" fill="#333" font-size="11">도착 지점</text>
+    <defs>
+      <marker id="arrG2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#28a745"/>
+      </marker>
+      <marker id="arrR2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#c62828"/>
+      </marker>
+      <marker id="arrB2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#0b5fff"/>
+      </marker>
+    </defs>
+  </svg>
+  <p style="font-size:13px;color:#555">배는 정수속도(=물에 대한 속도)로 북쪽을 향했지만, 강물에 떠밀려 비스듬히 동북쪽으로 도착합니다. 합 벡터의 길이가 곧 지면 기준 속력.</p>
+
+  <h3>C-2. 도르래 1단 — 줄 길이 식</h3>
+  <svg viewBox="0 0 480 280" width="100%" style="max-width:480px;background:#fafbfc;border:1px solid #e0e0e0;border-radius:8px">
+    <text x="20" y="22" fill="#333" font-size="13" font-weight="bold">단순 도르래 — 한쪽이 내려가면 반대쪽은 같은 속도로 올라감</text>
+    <!-- ceiling -->
+    <line x1="100" y1="50" x2="380" y2="50" stroke="#444" stroke-width="3"/>
+    <line x1="100" y1="50" x2="120" y2="40" stroke="#444"/>
+    <line x1="130" y1="50" x2="150" y2="40" stroke="#444"/>
+    <line x1="160" y1="50" x2="180" y2="50" stroke="#444"/>
+    <line x1="350" y1="50" x2="370" y2="40" stroke="#444"/>
+    <!-- pulley -->
+    <circle cx="240" cy="80" r="20" fill="none" stroke="#0b5fff" stroke-width="3"/>
+    <circle cx="240" cy="80" r="3" fill="#0b5fff"/>
+    <line x1="240" y1="60" x2="240" y2="50" stroke="#444" stroke-width="2"/>
+    <!-- ropes -->
+    <line x1="220" y1="80" x2="180" y2="200" stroke="#222" stroke-width="2"/>
+    <line x1="260" y1="80" x2="300" y2="200" stroke="#222" stroke-width="2"/>
+    <!-- block A (left, going down) -->
+    <rect x="160" y="200" width="40" height="40" fill="#28a745"/>
+    <text x="174" y="225" fill="white" font-size="14" font-weight="bold">A</text>
+    <line x1="180" y1="245" x2="180" y2="265" stroke="#28a745" stroke-width="3" marker-end="url(#arrG3)"/>
+    <text x="155" y="265" fill="#28a745" font-size="11">v_A↓</text>
+    <!-- block B (right, going up) -->
+    <rect x="280" y="200" width="40" height="40" fill="#c62828"/>
+    <text x="294" y="225" fill="white" font-size="14" font-weight="bold">B</text>
+    <line x1="300" y1="200" x2="300" y2="180" stroke="#c62828" stroke-width="3" marker-end="url(#arrR3)"/>
+    <text x="305" y="180" fill="#c62828" font-size="11">v_B↑</text>
+    <!-- annotation -->
+    <text x="20" y="265" fill="#555" font-size="11">줄 길이 식: s_A + s_B = L  →  v_A = -v_B  (한쪽이 내려간 만큼 반대쪽 올라감)</text>
+    <defs>
+      <marker id="arrG3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#28a745"/>
+      </marker>
+      <marker id="arrR3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#c62828"/>
+      </marker>
+    </defs>
+  </svg>
+
+  <h3>C-3. 도르래 2단 (움직 도르래) — 비율 1:2</h3>
+  <svg viewBox="0 0 480 320" width="100%" style="max-width:480px;background:#fafbfc;border:1px solid #e0e0e0;border-radius:8px">
+    <text x="20" y="22" fill="#333" font-size="13" font-weight="bold">움직이는 도르래 — 손은 2배 당기고, 추는 절반만 올라감</text>
+    <!-- ceiling -->
+    <line x1="80" y1="50" x2="400" y2="50" stroke="#444" stroke-width="3"/>
+    <line x1="80" y1="50" x2="100" y2="40" stroke="#444"/>
+    <line x1="120" y1="50" x2="140" y2="40" stroke="#444"/>
+    <line x1="200" y1="50" x2="220" y2="40" stroke="#444"/>
+    <line x1="320" y1="50" x2="340" y2="40" stroke="#444"/>
+    <!-- fixed pulley -->
+    <circle cx="350" cy="80" r="18" fill="none" stroke="#0b5fff" stroke-width="3"/>
+    <line x1="350" y1="62" x2="350" y2="50" stroke="#444" stroke-width="2"/>
+    <text x="370" y="80" fill="#0b5fff" font-size="11">고정</text>
+    <!-- moving pulley -->
+    <circle cx="200" cy="200" r="20" fill="none" stroke="#28a745" stroke-width="3"/>
+    <text x="225" y="200" fill="#28a745" font-size="11">움직임</text>
+    <!-- rope from ceiling to moving pulley (left side) -->
+    <line x1="180" y1="200" x2="180" y2="50" stroke="#222" stroke-width="2"/>
+    <!-- rope from moving pulley to fixed pulley -->
+    <line x1="220" y1="200" x2="332" y2="80" stroke="#222" stroke-width="2"/>
+    <!-- rope from fixed pulley down (free end) -->
+    <line x1="368" y1="80" x2="420" y2="240" stroke="#222" stroke-width="2"/>
+    <!-- hand (free end) -->
+    <circle cx="420" cy="240" r="8" fill="#f0ad4e"/>
+    <text x="430" y="245" fill="#f0ad4e" font-size="11">손 (자유단)</text>
+    <line x1="420" y1="248" x2="420" y2="280" stroke="#f0ad4e" stroke-width="3" marker-end="url(#arrY4)"/>
+    <text x="430" y="270" fill="#f0ad4e" font-size="11">1 m 당김</text>
+    <!-- weight -->
+    <line x1="200" y1="220" x2="200" y2="250" stroke="#222" stroke-width="2"/>
+    <rect x="180" y="250" width="40" height="40" fill="#c62828"/>
+    <text x="195" y="275" fill="white" font-size="14" font-weight="bold">W</text>
+    <line x1="160" y1="275" x2="140" y2="275" stroke="#c62828" stroke-width="3" marker-end="url(#arrR4)"/>
+    <text x="100" y="275" fill="#c62828" font-size="11">0.5 m 올라감</text>
+    <defs>
+      <marker id="arrY4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#f0ad4e"/>
+      </marker>
+      <marker id="arrR4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#c62828"/>
+      </marker>
+    </defs>
+  </svg>
+  <p style="font-size:13px;color:#555">자유단의 변위가 추 변위의 2배. 줄 길이 식: $s_{\text{자유}} + 2 s_{\text{추}} = L$. 미분하면 $v_{\text{자유}} = -2 v_{\text{추}}$.</p>
+
+  <!-- ====== D. 단계별 예제 ====== -->
+  <h2>D. 단계별 예제 — 풀이 과정 그대로 따라하기</h2>
+
+  <h3>예제 D-1. 두 자전거의 접근</h3>
+  <div class="ex" style="background:#f8f9fa;border-left:4px solid #0b5fff;padding:12px 16px;margin:12px 0">
+    <strong>문제</strong> — 자전거 A는 동쪽으로 5 m/s, B는 서쪽으로 3 m/s. 두 사람이 처음 80 m 떨어져 마주 본다. 만나는 데 걸리는 시간은?
+  </div>
+  <div class="sol" style="background:#eef9f1;border-left:4px solid #28a745;padding:12px 16px;margin:12px 0">
+    <strong>풀이</strong>
+    <ol>
+      <li>양의 방향: 동쪽을 +. A의 속도: $+5$, B의 속도: $-3$.</li>
+      <li>B가 본 A의 속도: $v_{A/B} = v_A - v_B = 5 - (-3) = 8$ m/s.</li>
+      <li>B는 자기 자리에서 보면 A가 8 m/s로 다가옴. 80 m 거리.</li>
+      <li>$t = 80/8 = 10$ s. <strong>10초 후 만남.</strong></li>
+    </ol>
+  </div>
+
+  <h3>예제 D-2. 비행기 + 측풍 (지면 속도 계산)</h3>
+  <div class="ex" style="background:#f8f9fa;border-left:4px solid #0b5fff;padding:12px 16px;margin:12px 0">
+    <strong>문제</strong> — 비행기가 정북으로 250 km/h(공기 기준)로 비행. 바람이 동쪽으로 60 km/h. 지면에서 본 비행기의 속도와 방향은?
+  </div>
+  <div class="sol" style="background:#eef9f1;border-left:4px solid #28a745;padding:12px 16px;margin:12px 0">
+    <strong>풀이</strong>
+    <ol>
+      <li>$\mathbf{v}_{\text{비행기/지면}} = \mathbf{v}_{\text{비행기/공기}} + \mathbf{v}_{\text{공기/지면}}$.</li>
+      <li>북쪽 성분: 250, 동쪽 성분: 60.</li>
+      <li>속력: $\sqrt{250^2 + 60^2} = \sqrt{62500 + 3600} = \sqrt{66100} \approx 257.1$ km/h.</li>
+      <li>방향: 정북에서 동쪽으로 $\arctan(60/250) = \arctan(0.24) \approx 13.5°$.</li>
+      <li>지면에서 본 비행기는 <strong>약 257 km/h, 북북동 방향</strong>.</li>
+    </ol>
+  </div>
+
+  <h3>예제 D-3. 측풍 보정 — 지면에서 정북으로 가려면?</h3>
+  <div class="ex" style="background:#f8f9fa;border-left:4px solid #0b5fff;padding:12px 16px;margin:12px 0">
+    <strong>문제</strong> — 같은 비행기와 측풍. 지면에서 정북으로만 진행하려면 비행기 머리를 어느 방향으로 돌려야 하나?
+  </div>
+  <div class="sol" style="background:#eef9f1;border-left:4px solid #28a745;padding:12px 16px;margin:12px 0">
+    <strong>풀이</strong>
+    <ol>
+      <li>지면 속도의 동서 성분이 0이어야 함.</li>
+      <li>비행기 머리 각도 $\alpha$를 정북에서 서쪽으로 잡으면 비행기/공기 속도의 동서 성분 = $-250 \sin\alpha$.</li>
+      <li>이게 측풍 +60을 상쇄해야 함: $-250\sin\alpha + 60 = 0 \Rightarrow \sin\alpha = 0.24$.</li>
+      <li>$\alpha = \arcsin(0.24) \approx 13.9°$ (정북에서 서쪽으로).</li>
+      <li>지면에서 본 북쪽 속력: $250 \cos 13.9° \approx 242.7$ km/h.</li>
+    </ol>
+    <p style="margin-top:8px"><strong>해석</strong> — 옆바람이 셀수록 비행기 머리를 더 많이 틀어야 하고, 지면 진행 속도는 줄어듭니다. 이게 비행 시간이 측풍에 따라 달라지는 이유입니다.</p>
+  </div>
+
+  <h3>예제 D-4. 도르래 1단 — 두 추의 속도 관계</h3>
+  <div class="ex" style="background:#f8f9fa;border-left:4px solid #0b5fff;padding:12px 16px;margin:12px 0">
+    <strong>문제</strong> — 천장에 매달린 단순 도르래. 한쪽 추 A가 0.6 m/s로 내려간다. 반대쪽 추 B의 속도는?
+  </div>
+  <div class="sol" style="background:#eef9f1;border-left:4px solid #28a745;padding:12px 16px;margin:12px 0">
+    <strong>풀이</strong>
+    <ol>
+      <li>줄 길이 식: $s_A + s_B = L$ (도르래 반쪽 둘레는 일정 → 무시).</li>
+      <li>시간 미분: $\dot s_A + \dot s_B = 0 \Rightarrow v_A + v_B = 0$.</li>
+      <li>$v_A = +0.6$ (아래)이면 $v_B = -0.6$ (위).</li>
+      <li><strong>B는 0.6 m/s로 위쪽으로 올라간다.</strong></li>
+    </ol>
+  </div>
+
+  <h3>예제 D-5. 움직 도르래 1개 — 비율 2:1</h3>
+  <div class="ex" style="background:#f8f9fa;border-left:4px solid #0b5fff;padding:12px 16px;margin:12px 0">
+    <strong>문제</strong> — 천장에 고정 도르래 1개와 움직 도르래 1개가 매달려 있다. 자유단을 0.4 m/s로 아래로 당긴다. 추(움직 도르래에 매달림)는 얼마나 빠르게 올라가는가?
+  </div>
+  <div class="sol" style="background:#eef9f1;border-left:4px solid #28a745;padding:12px 16px;margin:12px 0">
+    <strong>풀이</strong>
+    <ol>
+      <li>좌표: 천장에서 자유단까지 길이 $s_F$, 천장에서 추까지 길이 $s_W$. 양의 방향은 아래로.</li>
+      <li>줄 길이 식: $s_F + 2 s_W = L$ (추가 매달린 도르래는 줄이 두 가닥으로 지지).</li>
+      <li>미분: $\dot s_F + 2 \dot s_W = 0 \Rightarrow v_F + 2 v_W = 0$.</li>
+      <li>$v_F = +0.4$ (아래)이면 $v_W = -0.2$ (위).</li>
+      <li><strong>추는 0.2 m/s로 올라간다.</strong> 손이 당긴 속도의 절반.</li>
+    </ol>
+  </div>
+
+  <h3>예제 D-6. 두 블록 + 하나의 도르래 (V자형)</h3>
+  <div class="ex" style="background:#f8f9fa;border-left:4px solid #0b5fff;padding:12px 16px;margin:12px 0">
+    <strong>문제</strong> — 수평 면에 블록 A가 놓이고, 줄이 천장 도르래를 지나 블록 B(아래로 매달림)에 연결된다. A가 오른쪽으로 1.0 m/s로 움직인다. B의 속도는?
+  </div>
+  <div class="sol" style="background:#eef9f1;border-left:4px solid #28a745;padding:12px 16px;margin:12px 0">
+    <strong>풀이</strong>
+    <ol>
+      <li>도르래에서 A까지 거리 $s_A$, 도르래에서 B까지 길이 $s_B$. 합이 줄 길이 $L$.</li>
+      <li>$s_A + s_B = L$. 미분: $\dot s_A + \dot s_B = 0$.</li>
+      <li>A가 도르래에서 멀어지면 $\dot s_A > 0$, 따라서 $\dot s_B < 0$ → B는 도르래로 가까워짐(=올라감).</li>
+      <li>$v_B = -1.0$ m/s (위쪽). <strong>B는 1 m/s로 올라간다.</strong></li>
+    </ol>
+    <p style="margin-top:8px"><strong>주의</strong> — A가 도르래 바로 아래에 있을 때만 단순합. 비스듬할 때는 줄의 각도가 바뀌므로 코사인 보정이 필요. ($\dot s_A = v_A \cos\theta$)</p>
+  </div>
+
+  <h3>예제 D-7. 컨베이어 위의 사람</h3>
+  <div class="ex" style="background:#f8f9fa;border-left:4px solid #0b5fff;padding:12px 16px;margin:12px 0">
+    <strong>문제</strong> — 공항에서 무빙워크가 1.2 m/s로 움직인다. 사람이 무빙워크 위에서 0.8 m/s로 걷는다. 지면에서 본 사람의 속도는?
+  </div>
+  <div class="sol" style="background:#eef9f1;border-left:4px solid #28a745;padding:12px 16px;margin:12px 0">
+    <strong>풀이</strong>
+    <ol>
+      <li>$\mathbf{v}_{\text{사람/지면}} = \mathbf{v}_{\text{사람/벨트}} + \mathbf{v}_{\text{벨트/지면}} = 0.8 + 1.2 = 2.0$ m/s.</li>
+      <li>사람이 무빙워크 진행 반대로 걸으면 $-0.8 + 1.2 = +0.4$ m/s (느리게 앞으로).</li>
+    </ol>
+  </div>
+
+  <!-- ====== E. 종속 운동 유도 ====== -->
+  <h2>E. 종속 운동 — 줄 길이 식의 정석 유도</h2>
+
+  <h3>E-1. 절차 5단계</h3>
+  <ol>
+    <li><strong>좌표축 설정</strong> — 모든 블록의 위치를 같은 기준점(보통 천장)에서 측정. 양의 방향을 명시.</li>
+    <li><strong>줄을 따라 걷기</strong> — 줄을 한쪽 끝에서 시작해 도르래를 거쳐 반대쪽 끝까지 따라가며 길이를 합산.</li>
+    <li><strong>도르래 반쪽 둘레는 무시</strong> (상수). 변하는 길이만 식에 적음.</li>
+    <li><strong>줄 길이는 일정</strong>: 합 = $L$ (상수)로 둠.</li>
+    <li><strong>시간 미분 1회</strong> → 속도 관계, <strong>2회</strong> → 가속도 관계.</li>
+  </ol>
+
+  <h3>E-2. 예시 — 두 줄, 두 도르래 시스템</h3>
+  <p>위에서 아래로: 천장 → 고정 도르래 P1 → 움직 도르래 P2 → 천장 고정점. P2 아래에 추 W. 자유단은 P1을 통해 손에 들림.</p>
+  <ul>
+    <li>줄 1: P1을 통과 → $s_F$ (자유단, 아래로 +) + $s_{P2}$ (P2 깊이) = $L_1$.</li>
+    <li>줄 2: 천장 → P2 → 천장. 두 가닥 길이 합 = $2 s_{P2}$ = $L_2$ (사실 P2 위치만 결정).</li>
+    <li>실제로 P2가 곧 추 W의 위치. $s_W = s_{P2}$.</li>
+    <li>위 식 정리: $s_F + 2 s_W = L$ (상수 합쳐서). 미분 $\Rightarrow v_F + 2 v_W = 0$.</li>
+  </ul>
+  <p>비율이 1:2가 나오는 이유는 P2를 지지하는 줄이 <strong>두 가닥</strong>이기 때문. 가닥 수 = $n$이면 일반화: $v_F + n v_W = 0$.</p>
+
+  <h3>E-3. 가속도 관계</h3>
+  <p>속도 식을 한 번 더 미분:</p>
+  $$ a_F + n\, a_W = 0 $$
+  <p>이 관계가 W6 운동역학에서 뉴턴 법칙과 결합되어 두 미지수($T$, $a$)를 풀 때 사용됩니다. 예컨대 추가 자유낙하 가속도보다 작게 떨어지려면 $T > 0$이어야 하므로 자유단에 가하는 힘에 하한이 생깁니다.</p>
+
+  <!-- ====== F. 자가 점검 ====== -->
+  <h2>F. 자가 점검 10문항 — 답은 접어 두고 풀어 보세요</h2>
+
+  <ol>
+    <li>플랫폼에 정지한 사람이 본 기차 속도가 80 km/h일 때, 기차 안 사람이 본 플랫폼 사람의 속도는?<br>
+        <em>답: -80 km/h (반대 방향).</em></li>
+    <li>강물 1 m/s, 배(물 기준) 2 m/s. 배가 강물에 수직으로 항해하면 지면 기준 속력은? <br>
+        <em>답: $\sqrt{1+4}=\sqrt 5\approx 2.24$ m/s.</em></li>
+    <li>비행기 250 km/h(공기 기준) 정북, 측풍 동쪽 70 km/h. 지면에서 본 비행기 속력?<br>
+        <em>답: $\sqrt{250^2+70^2}\approx 259.6$ km/h.</em></li>
+    <li>도르래 1단(고정 도르래 1개). A가 0.5 m/s로 내려가면 B 속도는?<br>
+        <em>답: 0.5 m/s 위로.</em></li>
+    <li>움직 도르래 1개. 자유단을 1 m/s로 당기면 추 속도는?<br>
+        <em>답: 0.5 m/s 위로.</em></li>
+    <li>두 차가 같은 방향, A는 60 km/h, B는 90 km/h. B가 본 A의 속도는?<br>
+        <em>답: -30 km/h (B가 보면 A는 뒤로 멀어짐).</em></li>
+    <li>두 차가 정면 충돌 코스. A는 동쪽 70, B는 서쪽 50. A가 본 B의 속도는?<br>
+        <em>답: -120 km/h (A의 시점에서 B는 매우 빠르게 다가옴).</em></li>
+    <li>자유단을 2 m 당긴 도르래 시스템. 추가 0.5 m 올라갔다면 가닥 수 $n$은?<br>
+        <em>답: $n = 2/0.5 = 4$ 가닥.</em></li>
+    <li>지면 좌표계와 등속으로 움직이는 좌표계, 두 좌표계의 가속도는 같을까 다를까?<br>
+        <em>답: 같다 (갈릴레이 변환에서 가속도 보존).</em></li>
+    <li>회전 좌표계(예: 메리고라운드 위)에서 본 직선 운동은 어떻게 보일까?<br>
+        <em>답: 휘어 보임. 코리올리 효과로 곡선 궤적이 나타남.</em></li>
+  </ol>
+
+  <div class="tip" style="background:#fef9e7;border-left:4px solid #f1c40f;padding:12px 16px;margin:16px 0">
+    <strong>채점 가이드</strong> — 8개 이상 맞췄다면 통과. 5개 이하라면 A·B 절을 다시 한 번 천천히 읽어 보세요.
+  </div>
+
+  <!-- ====== G. 흔한 오답 ====== -->
+  <h2>G. 흔한 오답 — 왜 자꾸 틀리는가</h2>
+
+  <h3>G-1. "절대속도"와 "상대속도"의 혼동</h3>
+  <p>"비행기 속도가 250 km/h다"라는 문장은 사실 모호합니다. 공기 기준인지, 지면 기준인지 명시가 필요합니다. 항공에서는 TAS(true airspeed, 공기 기준)와 GS(ground speed, 지면 기준)을 구분해서 부릅니다. 문제 풀 때 한 줄을 미리 적어 두세요 — "이 속도는 ○○ 기준".</p>
+
+  <h3>G-2. 도르래 줄 길이 식을 안 적고 "직관"으로 풀기</h3>
+  <p>"자유단을 1 m 당기면 추는 1 m 올라간다"라고 짐작하기 쉽지만, 움직 도르래가 끼면 비율이 바뀝니다. 줄 길이 식 한 줄을 먼저 적고 미분하는 습관이 결정적입니다.</p>
+
+  <h3>G-3. 부호를 풀이 도중 바꿈</h3>
+  <p>"위쪽이 +"라고 시작했다가 중간에 "추가 내려가니까 +0.5 m"라고 적으면 식이 무너집니다. 처음 정한 규칙대로, 내려가는 양은 -로 일관 표기하세요.</p>
+
+  <h3>G-4. 벡터 합성을 스칼라 합으로</h3>
+  <p>"비행기 250, 측풍 60 → 지면 속도 310"은 틀립니다. 벡터의 방향이 다르면 피타고라스(또는 코사인 법칙)로 결합해야 합니다.</p>
+
+  <h3>G-5. 회전 좌표계도 관성계라고 가정</h3>
+  <p>회전하는 좌표계는 비관성계입니다. 그 안에서 뉴턴 법칙을 그대로 쓰면 가짜 힘(원심력·코리올리)이 나타납니다. 학부 동역학 표준 문제는 거의 다 관성계로 풀지만, 자전·터빈·헬리콥터 로터 등 실무에서는 비관성계 항이 필수입니다.</p>
+
+  <h3>G-6. "상대 가속도가 0이면 두 물체 정지"라는 착각</h3>
+  <p>가속도가 같다는 것은 속도 차가 일정하게 유지된다는 의미일 뿐입니다. 두 차가 나란히 같은 속도로 달리면 상대속도는 0이지만, 상대 가속도가 0인 더 일반적 경우(같은 가속도)도 정지를 의미하지 않습니다.</p>
+
+  <h3>G-7. 도르래에서 도르래 자체의 운동을 잊음</h3>
+  <p>움직 도르래가 0.2 m 올라가면, 그 도르래에 매달린 추도 0.2 m 올라갑니다. 도르래를 단순히 "방향을 바꾸는 장치"로만 생각하면 식이 빠집니다.</p>
+
+  <h3>G-8. 줄의 각도 변화 무시</h3>
+  <p>블록이 도르래 바로 아래에 있지 않을 때, 블록이 옆으로 움직이면 줄의 각도가 변합니다. 줄 길이의 변화율은 $\dot s = v\cos\theta$(블록 속도의 줄 방향 성분)로 보정해야 합니다. 단순한 직관($\dot s = v$)은 각도 0인 특수 경우만 옳습니다.</p>
+
+  <!-- ====== H. 응용 ====== -->
+  <h2>H. 로봇·차량·항공 응용</h2>
+
+  <h3>H-1. AGV (자율주행 물류 로봇) 충돌 회피</h3>
+  <p>창고 안에서 여러 AGV가 동시에 이동할 때, 각 로봇은 자신과 모든 이웃 로봇 사이의 <strong>상대속도 벡터</strong>를 매 100 ms마다 계산합니다. 상대속도가 충돌 코스를 향하면(=두 로봇의 직선이 만남), 한 쪽이 감속하거나 우회 경로를 선택합니다.</p>
+  <p>핵심 식: $\mathbf{v}_{B/A} = \mathbf{v}_B - \mathbf{v}_A$가 $\mathbf{r}_{B/A}$ 방향으로 음이면(=가까워짐), 충돌 시각 = 거리 / 접근 속력. 이 값이 임계치 이하면 회피 동작 시작.</p>
+
+  <h3>H-2. 군집 비행 (Swarm UAV)</h3>
+  <p>드론 군집이 V자 대형이나 격자 대형을 유지하려면, 각 드론이 자신의 이웃에 대한 상대 위치·속도를 일정하게 유지해야 합니다. 제어식의 핵심은 다음과 같습니다.</p>
+  $$ \mathbf{u}_i = -k_p (\mathbf{r}_{i/j} - \mathbf{r}_{i/j}^*) - k_d \mathbf{v}_{i/j} $$
+  <p>여기서 $\mathbf{r}_{i/j}^*$는 원하는 상대 위치(예: 옆 드론으로부터 5 m 동쪽). 상대운동 식이 그대로 제어 입력의 기초가 됩니다.</p>
+
+  <h3>H-3. 회전 좌표계 — 차량의 IMU 측정</h3>
+  <p>자동차에 부착된 IMU(관성 측정 장치)는 차량 좌표계에서 가속도와 각속도를 측정합니다. 차량이 회전하면 IMU 좌표계는 비관성계가 되어, 직선 가속이 아니어도 회전에 의한 항이 나타납니다. 자율주행 알고리즘은 이 항들을 보정해 지면 좌표계의 운동을 추정합니다.</p>
+
+  <h3>H-4. 크레인 — 종속 운동의 실제 사례</h3>
+  <p>건설 현장의 크레인 후크는 와이어 시스템의 도르래 비율에 따라 들어올리는 속도가 결정됩니다. 6:1 도르래 시스템이면 와인치가 6 m 줄을 감을 때 후크는 1 m만 올라갑니다. 대신 같은 모터 토크로 6배 무거운 짐을 들어올릴 수 있습니다.</p>
+
+  <h3>H-5. 엘리베이터 — 평형추가 있는 도르래 시스템</h3>
+  <p>대부분 엘리베이터는 단순 도르래(=객실:평형추 = 1:1)지만, 고층 빌딩의 일부는 더 복잡한 비율을 사용합니다. 평형추는 객실의 정적 무게를 상쇄해, 모터는 화물 무게에 대한 일만 하면 됩니다(에너지 효율 향상). 종속 운동 식은 객실 속도와 평형추 속도의 관계를 정확히 결정합니다.</p>
+
+  <h3>H-6. 우주 도킹 — 접근 속도의 정밀 제어</h3>
+  <p>우주왕복선이 ISS와 도킹할 때, 두 우주선의 <strong>상대속도</strong>가 핵심입니다. 절대속도는 둘 다 시속 27,000 km이지만, 상대속도가 0.1 m/s 이내가 되어야 안전 도킹. 모든 추진 명령은 상대속도 벡터를 기반으로 계산됩니다.</p>
+
+  <!-- ====== I. 용어 사전 + 식 모음표 ====== -->
+  <h2>I. 용어 사전</h2>
+  <table style="border-collapse:collapse;width:100%;font-size:14px">
+    <thead>
+      <tr style="background:#f0f7ff">
+        <th style="border:1px solid #c7d2fe;padding:8px;text-align:left">용어</th>
+        <th style="border:1px solid #c7d2fe;padding:8px;text-align:left">정의</th>
+        <th style="border:1px solid #c7d2fe;padding:8px;text-align:left">기호 / 예</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">관성계</td><td style="border:1px solid #c7d2fe;padding:8px">가속하지 않는 (정지 또는 등속) 좌표계. 뉴턴 1·2법칙이 직접 성립.</td><td style="border:1px solid #c7d2fe;padding:8px">지면, 등속 기차</td></tr>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">비관성계</td><td style="border:1px solid #c7d2fe;padding:8px">가속하거나 회전하는 좌표계. 가짜 힘이 등장.</td><td style="border:1px solid #c7d2fe;padding:8px">메리고라운드, 가속 엘리베이터</td></tr>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">상대 위치</td><td style="border:1px solid #c7d2fe;padding:8px">한 관찰자에서 본 다른 물체의 위치 벡터.</td><td style="border:1px solid #c7d2fe;padding:8px">$\mathbf{r}_{B/A}$</td></tr>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">상대 속도</td><td style="border:1px solid #c7d2fe;padding:8px">상대 위치의 시간 미분. 관찰자가 정지로 가정.</td><td style="border:1px solid #c7d2fe;padding:8px">$\mathbf{v}_{B/A}=\mathbf{v}_B-\mathbf{v}_A$</td></tr>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">갈릴레이 변환</td><td style="border:1px solid #c7d2fe;padding:8px">두 관성계 사이의 좌표 변환. 가속도가 보존됨.</td><td style="border:1px solid #c7d2fe;padding:8px">$\mathbf{v}'=\mathbf{v}-\mathbf{V}$</td></tr>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">종속 운동</td><td style="border:1px solid #c7d2fe;padding:8px">두 물체의 운동이 줄·기어 등으로 구속되어 독립적이지 않음.</td><td style="border:1px solid #c7d2fe;padding:8px">도르래, 크레인</td></tr>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">구속(constraint)</td><td style="border:1px solid #c7d2fe;padding:8px">물체 운동의 자유도를 줄이는 기하학적 조건.</td><td style="border:1px solid #c7d2fe;padding:8px">줄 길이 일정, 면 위 운동</td></tr>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">움직 도르래</td><td style="border:1px solid #c7d2fe;padding:8px">자기 자신도 위치가 변하는 도르래. 추와 함께 이동.</td><td style="border:1px solid #c7d2fe;padding:8px">기계적 이득 2배</td></tr>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">기계적 이득</td><td style="border:1px solid #c7d2fe;padding:8px">출력 힘 / 입력 힘. 도르래 가닥 수와 같음(이상적).</td><td style="border:1px solid #c7d2fe;padding:8px">2:1, 4:1</td></tr>
+      <tr><td style="border:1px solid #c7d2fe;padding:8px">코리올리 가속도</td><td style="border:1px solid #c7d2fe;padding:8px">회전 좌표계에서 운동 물체에 나타나는 가짜 가속도.</td><td style="border:1px solid #c7d2fe;padding:8px">$2\boldsymbol\Omega\times\mathbf{v}'$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>J. 식 모음표</h2>
+  <table style="border-collapse:collapse;width:100%;font-size:14px">
+    <thead>
+      <tr style="background:#fef9e7">
+        <th style="border:1px solid #f1c40f;padding:8px;text-align:left">상황</th>
+        <th style="border:1px solid #f1c40f;padding:8px;text-align:left">식</th>
+        <th style="border:1px solid #f1c40f;padding:8px;text-align:left">메모</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">상대 위치</td><td style="border:1px solid #f1c40f;padding:8px">$\mathbf{r}_{B/A}=\mathbf{r}_B-\mathbf{r}_A$</td><td style="border:1px solid #f1c40f;padding:8px">슬래시 뒤가 관찰자</td></tr>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">상대 속도</td><td style="border:1px solid #f1c40f;padding:8px">$\mathbf{v}_{B/A}=\mathbf{v}_B-\mathbf{v}_A$</td><td style="border:1px solid #f1c40f;padding:8px">위치 미분</td></tr>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">상대 가속도</td><td style="border:1px solid #f1c40f;padding:8px">$\mathbf{a}_{B/A}=\mathbf{a}_B-\mathbf{a}_A$</td><td style="border:1px solid #f1c40f;padding:8px">관성계 가정</td></tr>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">체인 룰</td><td style="border:1px solid #f1c40f;padding:8px">$\mathbf{v}_{C/A}=\mathbf{v}_{C/B}+\mathbf{v}_{B/A}$</td><td style="border:1px solid #f1c40f;padding:8px">첨자 약분</td></tr>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">갈릴레이 변환</td><td style="border:1px solid #f1c40f;padding:8px">$\mathbf{v}'=\mathbf{v}-\mathbf{V}$</td><td style="border:1px solid #f1c40f;padding:8px">관성계만</td></tr>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">도르래 1단</td><td style="border:1px solid #f1c40f;padding:8px">$s_A+s_B=L$, $v_A+v_B=0$</td><td style="border:1px solid #f1c40f;padding:8px">단순 매달림</td></tr>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">움직 도르래</td><td style="border:1px solid #f1c40f;padding:8px">$s_F+2s_W=L$, $v_F+2v_W=0$</td><td style="border:1px solid #f1c40f;padding:8px">가닥 2개</td></tr>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">일반 도르래</td><td style="border:1px solid #f1c40f;padding:8px">$v_F+n\,v_W=0$</td><td style="border:1px solid #f1c40f;padding:8px">$n$ = 가닥 수</td></tr>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">강 도하 시간</td><td style="border:1px solid #f1c40f;padding:8px">$t = W / v_y$</td><td style="border:1px solid #f1c40f;padding:8px">$v_y$ = 강 횡단 성분</td></tr>
+      <tr><td style="border:1px solid #f1c40f;padding:8px">표류 거리</td><td style="border:1px solid #f1c40f;padding:8px">$d = v_{\text{물}}\cdot t$</td><td style="border:1px solid #f1c40f;padding:8px">하류 방향</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ====== K. FAQ ====== -->
+  <h2>K. FAQ — 자주 묻는 질문</h2>
+
+  <details style="margin:8px 0;border:1px solid #ddd;border-radius:6px;padding:8px 12px">
+    <summary style="cursor:pointer;font-weight:bold">Q1. "내가 본 너"와 "네가 본 나"는 부호만 다르나요?</summary>
+    <p>네. $\mathbf{v}_{A/B} = -\mathbf{v}_{B/A}$. 두 관찰자는 서로 정확히 반대 방향의 같은 속력으로 멀어지는(또는 가까워지는) 것으로 봅니다.</p>
+  </details>
+
+  <details style="margin:8px 0;border:1px solid #ddd;border-radius:6px;padding:8px 12px">
+    <summary style="cursor:pointer;font-weight:bold">Q2. 강 도하 문제에서 "물에 대한 속도"와 "강가에 대한 속도"가 헷갈립니다.</summary>
+    <p>배가 노를 젓는 행위가 만들어 내는 속도가 "물에 대한 속도"입니다. 물 자체가 흐르므로 강가에서 보면 두 속도가 합쳐져 보입니다. 노를 정지하면 물에 대한 속도는 0이지만 강가에서는 물과 같은 속도로 흘러갑니다.</p>
+  </details>
+
+  <details style="margin:8px 0;border:1px solid #ddd;border-radius:6px;padding:8px 12px">
+    <summary style="cursor:pointer;font-weight:bold">Q3. 도르래 가닥 수를 어떻게 세나요?</summary>
+    <p>움직 도르래(또는 추가 매달린 도르래)를 들어 올리는 데 사용된 줄의 수를 셉니다. 줄을 손으로 짚어 가며 도르래에서 위로 올라가는 모든 가닥을 세면 됩니다. 자유단으로 가는 가닥은 추 위치를 지지하지 않으므로 셈에서 제외.</p>
+  </details>
+
+  <details style="margin:8px 0;border:1px solid #ddd;border-radius:6px;padding:8px 12px">
+    <summary style="cursor:pointer;font-weight:bold">Q4. 도르래로 일을 절약할 수 있나요?</summary>
+    <p>아니요. 힘이 줄어드는 만큼 거리가 늘어나서 일($W = F \cdot d$)은 같습니다. 다만 약한 힘으로도 무거운 물건을 들 수 있게 해 주므로 인간/모터의 한계를 우회하는 도구입니다.</p>
+  </details>
+
+  <details style="margin:8px 0;border:1px solid #ddd;border-radius:6px;padding:8px 12px">
+    <summary style="cursor:pointer;font-weight:bold">Q5. 회전 좌표계에서 왜 "가짜 힘"이 등장하나요?</summary>
+    <p>뉴턴 법칙은 관성계에서만 직접 성립합니다. 비관성계에서 같은 형태($F=ma$)를 유지하려면 좌표계의 가속을 보정하는 항이 추가로 필요한데, 이게 가짜 힘(원심력·코리올리·관성력)입니다. 자세한 건 W12에서 다룹니다.</p>
+  </details>
+
+  <details style="margin:8px 0;border:1px solid #ddd;border-radius:6px;padding:8px 12px">
+    <summary style="cursor:pointer;font-weight:bold">Q6. "기차 안 사람이 동전을 위로 던졌을 때, 동전은 정확히 손에 떨어진다"는 정말인가요?</summary>
+    <p>네, 단 기차가 등속(=관성계)일 때만. 기차가 가속 중이면 동전은 뒤(가속 반대)로 떨어지고, 기차가 회전하면 곡선으로 흐릅니다.</p>
+  </details>
+
+  <details style="margin:8px 0;border:1px solid #ddd;border-radius:6px;padding:8px 12px">
+    <summary style="cursor:pointer;font-weight:bold">Q7. 비행기는 왜 측풍에 머리를 비스듬히 향하나요?</summary>
+    <p>지면에서 본 진행 방향을 원하는 방향으로 유지하려면, 측풍에 의한 옆 표류를 상쇄하도록 비행기 자체 진로(공기 기준)를 비스듬히 잡아야 합니다. 이걸 "crab angle(게걸음 각)"이라고 부릅니다. 착륙 직전에는 활주로 정렬을 위해 자세를 풀어 줍니다(decrab).</p>
+  </details>
+
+  <details style="margin:8px 0;border:1px solid #ddd;border-radius:6px;padding:8px 12px">
+    <summary style="cursor:pointer;font-weight:bold">Q8. 종속 운동에서 가속도 식은 어디에 쓰이나요?</summary>
+    <p>W6 운동역학에서 뉴턴 2법칙과 결합됩니다. 두 블록의 가속도와 줄 장력 $T$를 동시에 풀어야 하는 시스템에서, 종속 식 $a_1 = -n a_2$가 있어야 미지수가 닫힙니다.</p>
+  </details>
+
+  <!-- ====== L. 학습 일지 ====== -->
+  <h2>L. 학습 일지 — 다음 칸에 직접 써 보세요</h2>
+  <div style="background:#f8f9fa;border:1px dashed #aaa;padding:16px;border-radius:8px">
+    <p><strong>오늘 배운 것 한 줄로</strong>: __________________________________________________</p>
+    <p><strong>가장 헷갈린 부분</strong>: __________________________________________________</p>
+    <p><strong>해결한 방법(또는 미해결)</strong>: __________________________________________________</p>
+    <p><strong>실생활 예 1가지</strong>: __________________________________________________</p>
+    <p><strong>다음 주(W6) 예습 질문 1가지</strong>: __________________________________________________</p>
+  </div>
+
+  <div class="hl" style="background:#fef9e7;border-left:4px solid #f1c40f;padding:12px 16px;margin:20px 0">
+    <strong>마무리 한 마디</strong> — 상대 운동은 "관점 바꾸기"입니다. 관찰자가 정지해 있다고 가정하면 식이 단순해집니다. 종속 운동은 "보존되는 것 찾기"입니다. 줄 길이 한 줄을 적고 양변을 미분하면 모든 답이 나옵니다. 이 두 가지 습관만 잡아 두면 W6 운동역학에서 마주칠 모든 도르래 문제가 풀립니다.
+  </div>
+
+  <h2>M. 추가 연습 문제 — 풀이 없이 답만</h2>
+  <ol>
+    <li>두 차가 같은 방향, A는 90 km/h, B는 70 km/h. A가 본 B의 속도? <em>(답: -20 km/h)</em></li>
+    <li>강 80 m, 강물 2 m/s, 배 3 m/s. 강에 수직으로 항해 시 표류 거리? <em>(답: 53.3 m)</em></li>
+    <li>위 문제에서 정면 도착하려면 배 머리를 몇 도 기울여야? <em>(답: $\arcsin(2/3)\approx 41.8°$)</em></li>
+    <li>고정 도르래 1개 + 움직 도르래 1개 + 추. 자유단을 0.6 m/s로 당기면 추 속도? <em>(답: 0.3 m/s 위)</em></li>
+    <li>가닥 4개 도르래. 추 1000 N을 들어올리려면 손에 가하는 최소 힘? <em>(답: 250 N, 마찰 무시)</em></li>
+    <li>위 문제에서 추를 1 m 올리려면 손은 몇 m 당겨야? <em>(답: 4 m)</em></li>
+    <li>비행기 300 km/h(공기) 정북, 측풍 동 100. 지면 속도 크기? <em>(답: $\sqrt{300^2+100^2}\approx 316.2$ km/h)</em></li>
+    <li>동일 비행기, 지면에서 정북으로 가려면 비행 머리 각도? <em>(답: $\arcsin(100/300)\approx 19.5°$ 서쪽)</em></li>
+  </ol>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:30px;text-align:center">— 보강편 끝 —</p>
 </main>
 
 <footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>

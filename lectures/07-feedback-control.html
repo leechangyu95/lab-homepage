@@ -891,6 +891,34 @@ u = pid.step(ref=1.0, y=current_y)</code></pre>
 
   <p><strong>비교</strong>: Pure Pursuit은 부드럽지만 코너에서 안쪽으로 깎입니다(컷팅). Stanley는 횡오차에 직접 반응해 더 정확하지만 잡음에 민감합니다. 둘 다 PythonRobotics에 50줄 이내의 짧은 파이썬 코드로 구현돼 있습니다.</p>
 
+  <h2>9.5 PID 튜닝 절차 — 실전 4단계</h2>
+  <ol>
+    <li><strong>I, D 끄기, P만 키우기</strong> — 진동이 시작될 때까지 P를 증가. 진동 직전이 임계점.</li>
+    <li><strong>I 추가</strong> — 정상상태 오차를 0으로 만들 정도로 I를 천천히 증가.</li>
+    <li><strong>D 추가</strong> — 오버슈트가 크면 D로 감쇠. 단, 측정 잡음 증폭 주의.</li>
+    <li><strong>저역통과 필터</strong> — D 항 앞에 LPF($\tau$ 보통 0.01~0.1s)를 끼워 잡음 완화.</li>
+  </ol>
+
+  <h2>9.6 Pure Pursuit과 Stanley 한 페이지 비교</h2>
+  <table>
+    <thead><tr><th>속성</th><th>Pure Pursuit</th><th>Stanley</th></tr></thead>
+    <tbody>
+      <tr><td>핵심 변수</td><td>전방 주시 거리 $L_d$</td><td>횡오차 $e$ + 헤딩 오차</td></tr>
+      <tr><td>저속</td><td>좋음 (안정)</td><td>매우 좋음 (DARPA 우승)</td></tr>
+      <tr><td>고속</td><td>매우 좋음 (부드러움)</td><td>잡음 민감</td></tr>
+      <tr><td>코너 컷팅</td><td>있음 (안쪽으로)</td><td>적음</td></tr>
+      <tr><td>구현 난이도</td><td>매우 쉬움</td><td>쉬움</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9.7 자주 만나는 함정</h2>
+  <ul>
+    <li><strong>적분 와인드업</strong> — 액추에이터 포화 시 I 항 누적 폭발. <em>Anti-windup</em>(integral clamping) 필수.</li>
+    <li><strong>유도된 미분(Derivative kick)</strong> — Setpoint 급변 시 D가 점프. <em>Derivative on PV</em>(measured)로 회피.</li>
+    <li><strong>샘플링 시간</strong> — 너무 느리면 D가 무의미. 시정수의 1/10 이하.</li>
+    <li><strong>측정 잡음</strong> — D 게인 클수록 증폭. 칼만 또는 LPF로 사전 필터링.</li>
+  </ul>
+
   <h2>10. 다음 강의 미리보기</h2>
   <p>지금까지 다룬 PID·Pure Pursuit·Stanley는 "경로를 잘 따라가는 것"이 목표였습니다.
   하지만 자율 시스템은 한 가지 더 어려운 요구가 있습니다 — <strong>"절대 부딪히지 않을 것."</strong></p>
@@ -898,6 +926,60 @@ u = pid.step(ref=1.0, y=current_y)</code></pre>
   ① 선박·항공기에서 표준인 시야각 추종(LOS) 유도 알고리즘과,
   ② 어떤 제어기가 만들어 낸 입력이라도 충돌 가능성이 있으면 "안전하게" 잘라 주는 CBF 안전 필터를 배웁니다.
   CBF는 PID 위에든 MPC 위에든 얹어 쓸 수 있는 추가 안전 장치예요.</p>
+
+  <h2>10.5 PID 디지털 구현</h2>
+  <pre><code># 이산 시간 PID (간단 버전)
+class PID:
+    def __init__(self, kp, ki, kd, dt, u_min=-1, u_max=1):
+        self.kp, self.ki, self.kd = kp, ki, kd
+        self.dt = dt
+        self.u_min, self.u_max = u_min, u_max
+        self.integral = 0.0
+        self.prev_error = 0.0
+
+    def step(self, setpoint, measurement):
+        error = setpoint - measurement
+        self.integral += error * self.dt
+        derivative = (error - self.prev_error) / self.dt
+        u = self.kp*error + self.ki*self.integral + self.kd*derivative
+        u = max(self.u_min, min(self.u_max, u))   # 포화 + 와인드업 방지
+        self.prev_error = error
+        return u</code></pre>
+
+  <h2>10.6 한 줄 요약</h2>
+  <p>"PID = 비례·적분·미분 세 항의 가중합. 튜닝은 P→I→D 순서로." 이게 60년간 산업의 80%를 지탱해온 알고리즘의 본질.</p>
+
+  <h2>10.7 한 학기 흐름에서의 위치</h2>
+  <p>L7 PID/Pure Pursuit/Stanley는 "고전 제어"의 정점이고, L8에서 안전성(CBF), L11~L12에서 최적 제어(MPC)로 진화합니다.
+  PID는 단순하지만, 더 복잡한 제어기들도 PID와 비교 평가하는 게 표준입니다.</p>
+
+  <h2>10.8 한 페이지 자기점검</h2>
+  <ul>
+    <li>☐ P 게인이 너무 크면 어떤 일이 생기는가?</li>
+    <li>☐ 적분 와인드업이 무엇이고 어떻게 막는가?</li>
+    <li>☐ Pure Pursuit의 전방 주시 거리가 너무 작으면?</li>
+    <li>☐ Stanley의 횡오차 이득의 의미는?</li>
+    <li>☐ 이산화 시 dt가 너무 크면 무엇이 망가지는가?</li>
+  </ul>
+
+  <h2>10.9 산업 응용 사례</h2>
+  <ul>
+    <li><strong>온도 제어</strong> — 화학 공정·HVAC에서 PID가 90%+ 점유.</li>
+    <li><strong>모터 제어</strong> — 위치·속도·전류 캐스케이드 PID.</li>
+    <li><strong>드론 자세</strong> — Roll/Pitch/Yaw 각각 PID, 30년 표준.</li>
+    <li><strong>자동차 ACC</strong> — 종방향 거리·속도 PID.</li>
+    <li><strong>차선 유지</strong> — Stanley/Pure Pursuit + PID.</li>
+  </ul>
+
+  <p style="font-size:13px;color:var(--muted)">— L7 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">다음 L8은 안전 제어와 CBF.</p>
+  <p style="font-size:12px;color:var(--muted)">예습 권장: PythonRobotics의 PathTracking 코드 한 번 훑어보기.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">읽어주셔서 감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
 
   <h2>11. 더 깊이 공부하기</h2>
   <ul>

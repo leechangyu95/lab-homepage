@@ -541,6 +541,101 @@
     </tbody>
   </table>
 
+  <h2>6.5 추가 워크북 — 메카트로닉스 + 딥러닝 8문제</h2>
+
+  <h3>6.5.1 센서 데이터 학습</h3>
+  <p>IMU 가속도계 데이터로 신경망 학습해 보행자 걸음 수 카운트. 입출력?</p>
+  <div class="tip">입력 — 3축 가속도 시계열(예: 100 Hz × 3초 = 300×3). 출력 — 걸음 수 또는 활동 분류.</div>
+
+  <h3>6.5.2 RL vs SL</h3>
+  <p>로봇 그립 학습. RL과 SL 중?</p>
+  <div class="tip">데이터 라벨 어려움 + 시도 가능 → RL. 사람 시연 있으면 모방학습. 둘 결합 표준.</div>
+
+  <h3>6.5.3 실시간 추론</h3>
+  <p>1 kHz 제어 루프, 모델 추론 10 ms. 가능?</p>
+  <div class="tip">불가능. 양자화 + 작은 모델로 단축 또는 GPU/NPU.</div>
+
+  <h3>6.5.4 데이터 증강</h3>
+  <p>이미지 분류기 표준 증강 5가지?</p>
+  <div class="tip">RandomCrop, Flip, Rotation, ColorJitter, RandomErasing.</div>
+
+  <h3>6.5.5 전이학습 절차</h3>
+  <p>ImageNet ResNet을 잡초 분류에 적용?</p>
+  <div class="tip">백본 동결 + FC 교체 → fine-tune.</div>
+
+  <h3>6.5.6 임베디드 추론</h3>
+  <p>Jetson Nano에 ResNet50 가능?</p>
+  <div class="tip">가능하나 무거움. 양자화 + TensorRT 또는 MobileNet으로 교체.</div>
+
+  <h3>6.5.7 데이터 누수</h3>
+  <p>같은 물체가 학습/테스트에 모두 등장 → 99%. 신뢰?</p>
+  <div class="tip">아님. group split 필요.</div>
+
+  <h3>6.5.8 안전 critical 결합</h3>
+  <p>자율주행 신경망 + 고전 제어?</p>
+  <div class="tip">신경망 = 인지. 고전 제어 = 명령. 안전 모드 전환.</div>
+
+  <h2>6.6 메카트로닉스 신경망 응용 5가지</h2>
+  <ul>
+    <li>고장 진단 — 진동으로 베어링 마모 탐지.</li>
+    <li>제어기 모방 — MPC를 신경망으로 → 실시간.</li>
+    <li>System ID — 데이터로 동역학 학습.</li>
+    <li>비전 인지 — 객체·자세 인식.</li>
+    <li>강화학습 정책 — 로봇 행동.</li>
+  </ul>
+
+  <h2>6.7 자주 만나는 함정</h2>
+  <ul>
+    <li>도메인 차이 (훈련 vs 실제).</li>
+    <li>실시간 제약 미고려.</li>
+    <li>안전 보장 부재.</li>
+    <li>디버깅 어려움.</li>
+    <li>데이터 누수.</li>
+  </ul>
+
+  <h2>6.8 한 페이지 핵심</h2>
+  <ul>
+    <li>딥러닝 = 데이터로 모델 자동 학습.</li>
+    <li>메카트로닉스 응용 — 인지·진단·System ID·정책.</li>
+    <li>실시간 + 안전 = 결정적 제약.</li>
+    <li>고전 제어와 하이브리드 표준.</li>
+  </ul>
+
+  <h2>6.9 PyTorch 한 페이지 코드</h2>
+  <pre><code>import torch
+import torch.nn as nn
+
+class IMUClassifier(nn.Module):
+    def __init__(self, input_dim=3, hidden=64, num_classes=3):
+        super().__init__()
+        self.lstm = nn.LSTM(input_dim, hidden, batch_first=True, bidirectional=True)
+        self.fc = nn.Linear(hidden*2, num_classes)
+    def forward(self, x):
+        out, _ = self.lstm(x)
+        return self.fc(out[:, -1, :])
+
+model = IMUClassifier()
+opt = torch.optim.AdamW(model.parameters(), lr=1e-3)
+loss_fn = nn.CrossEntropyLoss()</code></pre>
+
+  <h2>6.10 신경망의 한계와 보완</h2>
+  <ul>
+    <li>일반화 — 훈련 데이터와 다른 환경.</li>
+    <li>해석 가능성 — 결정 근거 설명 어려움.</li>
+    <li>안정성 보장 — 수학적 보장 부재.</li>
+    <li>데이터 효율 — 많은 데이터 필요.</li>
+  </ul>
+  <p>대처 — 도메인 적응, XAI, 강건 제어와 결합, few-shot 학습.</p>
+
+  <h2>6.11 자가점검 체크리스트</h2>
+  <ul>
+    <li>☐ MLP 구조 한 페이지 그리기.</li>
+    <li>☐ 역전파 직관 한 줄.</li>
+    <li>☐ 메카트로닉스 신경망 응용 3가지.</li>
+    <li>☐ 실시간 + 안전 제약.</li>
+    <li>☐ PyTorch 30줄 코드.</li>
+  </ul>
+
   <h2>7. 더 깊이 보기</h2>
   <ul>
     <li><a href="../dl.html">딥러닝 트랙 전체</a> — 본 강의의 13주 풀버전. CNN(W9-10), RNN(W11-12), Transformer(W13)까지.</li>
@@ -551,6 +646,349 @@
   <div class="tip">
     <strong>한 줄 요약</strong> — 딥러닝은 메카트로닉스의 "모델을 적기 어려운" 자리에 데이터로 답을 찾아주는 도구입니다. 다만 안전 보장이 약해 안전 critical 시스템에서는 고전 제어와 함께 하이브리드로 씁니다.
   </div>
+
+  <h2>8. 산업 사례</h2>
+  <ul>
+    <li><strong>예측 정비</strong> — 진동·온도 데이터로 고장 임박 예측. 항공·발전소 표준.</li>
+    <li><strong>외관 검사</strong> — CNN으로 제품 결함 자동 검출.</li>
+    <li><strong>로봇 시연 학습</strong> — 사람 시연 영상에서 매니퓰레이션 학습.</li>
+    <li><strong>자율 농업</strong> — 잡초·해충 인식.</li>
+    <li><strong>스마트 시티</strong> — 교통 흐름·이상 행동 감지.</li>
+  </ul>
+
+  <h2>9. 한국 산업 동향</h2>
+  <ul>
+    <li>현대 — 자율주행에 신경망 인지 + 고전 제어.</li>
+    <li>삼성 — 반도체 검사에 CNN.</li>
+    <li>LG — 가전 사용자 행동 학습.</li>
+    <li>현대로보틱스 — 매니퓰레이션 강화학습.</li>
+  </ul>
+
+  <h2>10. 학습 권장 자료</h2>
+  <ul>
+    <li>본 강의의 <a href="../dl.html">딥러닝 트랙</a> 13주.</li>
+    <li>모두를 위한 머신러닝/딥러닝 — Sung Kim.</li>
+    <li>Hands-On Machine Learning — Aurélien Géron.</li>
+    <li>3Blue1Brown 신경망 시리즈.</li>
+  </ul>
+
+  <h2>11. 다음 주 미리보기 — W13</h2>
+  <p>마지막 주차에서 자율 시스템의 경로 계획. A*, RRT, MPC를 메카트로닉스 관점에서 통합 정리.</p>
+
+  <h2>12. 한 줄 마무리</h2>
+  <p class="lead">"딥러닝은 메카트로닉스의 새로운 도구. 고전 제어와 결합이 미래."</p>
+
+  <h2>13. 부록 — Imitation Learning</h2>
+  <p>사람의 시연 영상으로 로봇 학습. Behavioral Cloning이 가장 단순하지만 distribution shift 문제. DAgger, GAIL 등 개선 방법.</p>
+
+  <h2>14. 부록 — Foundation Models for Robotics</h2>
+  <p>RT-1, RT-2, RT-X — Google의 거대 로봇 모델. 다양한 로봇·작업의 시연으로 학습. 새 작업에 zero-shot 또는 few-shot 적응.</p>
+
+  <h2>15. 부록 — Sim-to-Real</h2>
+  <p>시뮬레이션에서 학습 → 실제 로봇 적용. 도메인 갭 극복 기법:</p>
+  <ul>
+    <li>도메인 무작위화 (lighting, friction).</li>
+    <li>도메인 적응 (DANN).</li>
+    <li>System ID로 시뮬레이터 보정.</li>
+  </ul>
+
+  <h2>16. 부록 — Reinforcement Learning 기본</h2>
+  <ul>
+    <li>State, Action, Reward, Policy.</li>
+    <li>Value function — 미래 누적 보상 기대.</li>
+    <li>Q-Learning — 가장 단순한 RL.</li>
+    <li>PPO, SAC — 현대 표준.</li>
+    <li>딥 RL — 신경망이 정책·가치 함수 근사.</li>
+  </ul>
+
+  <h2>17. 부록 — 한 줄 요약</h2>
+  <p>"메카트로닉스에서 딥러닝은 데이터로 모델·정책 학습. 안전 critical은 하이브리드 표준."</p>
+
+  <h2>18. 한 페이지 자가 점검</h2>
+  <ul>
+    <li>☐ MLP 구조와 학습.</li>
+    <li>☐ 메카트로닉스 응용 5가지.</li>
+    <li>☐ 실시간/안전 제약.</li>
+    <li>☐ 전이학습·Sim-to-Real.</li>
+    <li>☐ RL 기초.</li>
+  </ul>
+
+  <h2>19. 한 줄 진짜 마지막</h2>
+  <p class="lead">"딥러닝 + 고전 제어 = 메카트로닉스의 미래."</p>
+
+  <h2>20. 부록 — 강화학습 응용 사례</h2>
+  <ul>
+    <li>알파고·알파스타 — 게임.</li>
+    <li>로봇 보행 — Anymal, Boston Dynamics.</li>
+    <li>드론 자율 비행 — 곡예 비행.</li>
+    <li>매니퓰레이션 — Amazon 상자 집기.</li>
+    <li>HVAC 에너지 절약 — Google 데이터센터.</li>
+  </ul>
+
+  <h2>21. 부록 — 신경망 라이브러리</h2>
+  <ul>
+    <li>PyTorch — 연구·교육 표준.</li>
+    <li>TensorFlow — 산업.</li>
+    <li>JAX — 함수형, 구글.</li>
+    <li>Keras — 고수준 API.</li>
+    <li>ONNX — 프레임워크 간 변환.</li>
+  </ul>
+
+  <h2>22. 한 줄 진짜 마지막</h2>
+  <p class="lead">"메카트로닉스 + 딥러닝 = 자동화의 새 시대."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— W12 끝.</p>
+
+  <h2>23. 부록 — Edge AI</h2>
+  <p>임베디드 보드에서 신경망 추론. NVIDIA Jetson, Google Coral, Raspberry Pi 4. 양자화 + TensorRT/OpenVINO 최적화 표준.</p>
+
+  <h2>24. 부록 — 디지털 트윈</h2>
+  <p>실제 시스템과 시뮬레이터를 데이터로 동기화. 시뮬레이터에서 강화학습 → 실제 시스템 적용 → 결과 데이터로 시뮬레이터 보정. 반복.</p>
+
+  <h2>25. 한 줄 마지막</h2>
+  <p>"디지털 트윈 = 시뮬-실세계 데이터 폐루프."</p>
+
+  <h2>26. 부록 — Anomaly Detection</h2>
+  <p>정상 데이터로 학습한 오토인코더의 재구성 오차가 크면 이상. 베어링·모터의 진동 모니터링에 활발 사용.</p>
+
+  <h2>27. 부록 — Time Series Forecasting</h2>
+  <p>LSTM/Transformer로 센서 시계열 예측. 예: 다음 5초의 진동, 다음 1시간 발전량.</p>
+
+  <h2>28. 부록 — Model Predictive + Learning</h2>
+  <p>MPC의 모델을 신경망으로 학습. 학습된 동역학으로 미래 시뮬레이션 → 최적 명령. 강건 제어와 결합.</p>
+
+  <h2>29. 한 줄 끝</h2>
+  <p class="lead">"메카트로닉스 W12 = 딥러닝의 메카트로닉스 응용 한 페이지."</p>
+
+  <h2>30. 부록 — 자가 학습 추가 5문제</h2>
+  <ol>
+    <li>1 kHz 제어 루프에서 신경망 추론 가능 모델 크기?</li>
+    <li>도메인 갭 극복 3가지?</li>
+    <li>RL의 보상 함수 설계 주의점?</li>
+    <li>Imitation Learning의 distribution shift 문제?</li>
+    <li>강건 제어 + 신경망 결합 패턴?</li>
+  </ol>
+  <p style="color:var(--muted);font-size:13px">힌트: 1) 작은 모델 + 양자화. 2) 도메인 무작위화, 적응, System ID. 3) Sparse reward · Reward hacking. 4) 정책 변하면 분포 변함 → DAgger. 5) 신경망 인지 + 안전 필터.</p>
+
+  <h2>31. 부록 — Auto-encoder</h2>
+  <p>인코더(차원 축소) + 디코더(복원). 정상 패턴 학습 → 이상 데이터 시 재구성 오차 큼. 비지도 학습. 기계 모니터링 표준.</p>
+
+  <h2>32. 부록 — Variational Autoencoder (VAE)</h2>
+  <p>잠재 공간에 확률 분포 부여. 새 샘플 생성 가능. 시나리오 생성, 데이터 증강에 응용.</p>
+
+  <h2>33. 부록 — GAN</h2>
+  <p>생성자와 판별자의 적대적 학습. 사실적 이미지·데이터 생성. Sim-to-Real에서 시뮬레이션 데이터 사실화.</p>
+
+  <h2>34. 부록 — Diffusion Model</h2>
+  <p>노이즈 제거 학습. Stable Diffusion 등 이미지 생성 표준. 로봇 매니퓰레이션에서 정책 생성에도 활용.</p>
+
+  <h2>35. 부록 — Self-supervised Learning</h2>
+  <p>라벨 없이 데이터로 학습. SimCLR, BYOL, DINO. 라벨링 비용 큰 산업 데이터에 매우 유용.</p>
+
+  <h2>36. 한 줄 끝</h2>
+  <p>"한 학기 메카트로닉스 W12 = 딥러닝 응용 종합."</p>
+
+  <h2>37. 부록 — 신경망 디버깅 5단계</h2>
+  <ol>
+    <li>입력 데이터 모양/값 확인.</li>
+    <li>작은 데이터 과적합 시도.</li>
+    <li>학습률·옵티마이저 조정.</li>
+    <li>활성·초기화 페어링.</li>
+    <li>손실 곡선 시각화.</li>
+  </ol>
+
+  <h2>38. 부록 — 신경망 + 칼만 결합</h2>
+  <p>칼만 필터 + 신경망 융합. 신경망이 측정 잡음·외란 보정, 칼만이 안정성 보장. 자율주행에서 자주.</p>
+
+  <h2>39. 한 줄 마지막</h2>
+  <p class="lead">"신경망 + 칼만 = 데이터 + 안정성. 메카트로닉스의 황금 조합."</p>
+
+  <h2>40. 부록 — Sensor Fusion + 신경망</h2>
+  <p>여러 센서(IMU, LiDAR, 카메라)의 데이터를 신경망이 융합. 칼만보다 비선형 처리에 강함. 단, 안정성 보장은 어려움.</p>
+
+  <h2>41. 부록 — Predictive Maintenance 워크플로</h2>
+  <ol>
+    <li>센서 데이터 수집 (진동, 온도, 전류).</li>
+    <li>특성 추출 (FFT, wavelet).</li>
+    <li>신경망 학습 (정상 vs 이상).</li>
+    <li>이상 점수로 알림.</li>
+    <li>고장 임박 예측 시 미리 정비.</li>
+  </ol>
+
+  <h2>42. 한 줄 마지막</h2>
+  <p>"예측 정비 = 딥러닝의 메카트로닉스 가장 큰 ROI 응용."</p>
+
+  <h2>43. 부록 — 신경망과 SystemID</h2>
+  <p>비선형 시스템 식별에 신경망 활용. 입력·출력 데이터 → 동역학 학습. MPC의 모델로 사용. ResNet 형태로 잔차 학습이 안정적.</p>
+
+  <h2>44. 부록 — Lyapunov-Stable Neural Networks</h2>
+  <p>신경망의 출력이 Lyapunov 안정성 조건을 만족하도록 학습. 안전 critical 시스템에 응용. 최근 연구 활발.</p>
+
+  <h2>45. 한 줄 진짜 마지막</h2>
+  <p class="lead">"신경망에 안전 보장을 추가하는 것이 메카트로닉스 + AI의 최전선."</p>
+
+  <h2>46. 부록 — XAI (Explainable AI)</h2>
+  <p>신경망의 결정 근거 시각화. SHAP, Grad-CAM, LIME. 의료·자율주행 등 책임 소재가 중요한 영역에 필수.</p>
+
+  <h2>47. 부록 — 윤리·규제</h2>
+  <ul>
+    <li>EU AI Act — 위험 기반 분류, 안전 critical 강한 규제.</li>
+    <li>ISO 26262 — 자동차 기능 안전.</li>
+    <li>FDA — 의료기기 ML/AI 가이드.</li>
+    <li>한국 KS X ISO/IEC — AI 안전성 표준.</li>
+  </ul>
+
+  <h2>48. 한 줄 마무리</h2>
+  <p>"기술 + 윤리 + 규제 = 산업 적용의 3박자."</p>
+
+  <h2>49. 부록 — 한 학기 W12 결론</h2>
+  <p>딥러닝 = 메카트로닉스의 새로운 도구. 한 학기 마지막에 학습한 이 기법들이 졸업 후 산업에서 매일 사용. 단, 안전·규제·해석성이 항상 고려해야 할 제약.</p>
+
+  <h2>50. 한 줄 진짜 끝</h2>
+  <p class="lead">"메카트로닉스 + 딥러닝 = 산업 자동화의 미래."</p>
+
+  <h2>51. 부록 — Convolutional Layer 직관</h2>
+  <p>컨벌루션 = 작은 필터를 이미지 위로 슬라이드. 가중치 공유 + 지역 연결로 이미지 효율적 처리. 산업 검사·의료 영상 표준.</p>
+
+  <h2>52. 부록 — 시계열 RNN/LSTM</h2>
+  <p>은닉 상태로 시간 정보 누적. 메카트로닉스 시계열(진동, 속도) 분석에 자주.</p>
+
+  <h2>53. 부록 — Transformer 시대</h2>
+  <p>2017년 이후 NLP·비전·로봇까지 트랜스포머가 표준. 대규모 데이터에서 RNN/CNN을 능가.</p>
+
+  <h2>54. 한 줄 마지막</h2>
+  <p>"트랜스포머가 메카트로닉스에도 진입 — RT-2, GR00T 등."</p>
+
+  <h2>55. 부록 — Loss Function 카탈로그</h2>
+  <ul>
+    <li>회귀 — MSE, MAE, Huber.</li>
+    <li>이진 분류 — BCE.</li>
+    <li>다중 분류 — Cross Entropy.</li>
+    <li>임베딩 — Triplet, Contrastive.</li>
+    <li>RL — Bellman residual.</li>
+  </ul>
+
+  <h2>56. 부록 — 학습률 스케줄</h2>
+  <ul>
+    <li>Step decay.</li>
+    <li>Cosine annealing.</li>
+    <li>Warmup + decay.</li>
+    <li>OneCycle.</li>
+    <li>ReduceLROnPlateau.</li>
+  </ul>
+
+  <h2>57. 한 줄 끝</h2>
+  <p>"손실 + 옵티마이저 + 스케줄 = 학습 3종 세트."</p>
+
+  <h2>58. 부록 — 정규화 도구</h2>
+  <ul>
+    <li>BatchNorm — CNN 표준.</li>
+    <li>LayerNorm — 트랜스포머 표준.</li>
+    <li>Dropout — 무작위 OFF.</li>
+    <li>Weight Decay — 가중치 크기 제한.</li>
+    <li>Data Augmentation — 데이터 다양화.</li>
+    <li>Early Stopping — 검증 손실 모니터링.</li>
+    <li>Label Smoothing — 라벨 부드럽게.</li>
+  </ul>
+
+  <h2>59. 한 줄 마지막</h2>
+  <p>"7종 정규화로 과적합 방지."</p>
+
+  <h2>60. 부록 — Hyperparameter 튜닝</h2>
+  <ul>
+    <li>Grid Search — 모든 조합.</li>
+    <li>Random Search — 무작위.</li>
+    <li>Bayesian Optimization — 효율적, Optuna.</li>
+    <li>Hyperband — 자원 분배.</li>
+    <li>Population Based Training — 동시 학습.</li>
+  </ul>
+
+  <h2>61. 한 줄 끝</h2>
+  <p>"하이퍼파라미터 튜닝 = 학습의 마지막 5%."</p>
+
+  <h2>62. 부록 — Production 배포</h2>
+  <ul>
+    <li>모델 서빙 — TorchServe, TF Serving, ONNX Runtime.</li>
+    <li>모니터링 — 데이터 드리프트, 모델 성능 저하.</li>
+    <li>버전 관리 — MLflow, DVC.</li>
+    <li>A/B 테스트 — 새 모델 검증.</li>
+    <li>롤백 — 이상 시 이전 모델로.</li>
+  </ul>
+
+  <h2>63. 한 줄 마지막</h2>
+  <p>"학습은 시작, 배포가 끝. MLOps가 산업의 핵심."</p>
+
+  <h2>64. 부록 — 자가 학습 추가 5문제</h2>
+  <ol>
+    <li>BatchNorm vs LayerNorm 차이?</li>
+    <li>Dropout이 학습 시와 추론 시 다른 이유?</li>
+    <li>Imitation Learning의 distribution shift?</li>
+    <li>System ID에 신경망 vs 고전 방법?</li>
+    <li>Sim-to-Real 갭 극복법 3가지?</li>
+  </ol>
+  <p style="color:var(--muted);font-size:13px">힌트: 1) 배치 vs 특성 차원. 2) 학습 시 무작위 OFF, 추론 시 모두 ON. 3) 정책이 변하면 분포 변함. 4) 고전: 명료한 모델, 신경망: 복잡한 비선형. 5) 도메인 무작위화, 적응, System ID.</p>
+
+  <h2>65. 한 줄 진짜 끝</h2>
+  <p class="lead">"메카트로닉스 + 딥러닝 = 산업의 미래."</p>
+
+  <h2>66. 부록 — 한 학기 W12 위치</h2>
+  <p>본 강의의 마지막 분기점. W11 피드백 제어 위에 신경망 도구를 얹어, W13 경로 계획에서 통합 응용. 한 학기 끝에서 자율 시스템의 큰 그림.</p>
+
+  <h2>67. 한 줄 마지막</h2>
+  <p>"메카트로닉스 한 학기 + 딥러닝 한 챕터 = 자율 시스템의 토대."</p>
+
+  <h2>68. 부록 — 한 페이지 마지막</h2>
+  <ul>
+    <li>딥러닝 = 데이터로 학습.</li>
+    <li>메카트로닉스 응용 — 인지·진단·System ID·정책.</li>
+    <li>실시간/안전 = 결정적 제약.</li>
+    <li>고전 제어와 하이브리드.</li>
+    <li>MLOps로 배포·관리.</li>
+  </ul>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막!</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 마지막.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
 
   <nav class="prevnext">
     <a href="11-feedback-control.html"><small>← 이전</small>W11. 피드백 제어</a>

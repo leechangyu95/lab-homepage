@@ -513,6 +513,129 @@ print(tok.decode(out[0]))</code></pre>
 
   <p style="margin-top:18px;font-size:15px"><strong>고생 많으셨습니다.</strong> 한 학기 동안 손으로 굴린 모든 데모와 디버깅이 여러분의 진짜 자산입니다. 앞으로 어떤 새 모델이 나와도 — 결국 우리가 본 것들의 변주일 뿐이라는 사실, 그것을 안다는 자신감이 가장 큰 선물이길 바랍니다.</p>
 
+  <h2>📐 트랜스포머 블록 손계산 — 한 페이지로</h2>
+  <p>입력 시퀀스 길이 T=3, 차원 d=4. 한 트랜스포머 인코더 블록의 동작:</p>
+  <ol>
+    <li><strong>입력</strong> X = [x_1, x_2, x_3], 각 4차원.</li>
+    <li><strong>+ Positional Encoding</strong> — 위치 정보 더함.</li>
+    <li><strong>Multi-Head Self-Attention</strong> — Q, K, V 계산 → softmax(QK^T/√d)V → (3, 4).</li>
+    <li><strong>+ Residual</strong> — X에 더함.</li>
+    <li><strong>LayerNorm</strong> — 정규화.</li>
+    <li><strong>FFN</strong> — Linear(4→16) → ReLU → Linear(16→4).</li>
+    <li><strong>+ Residual</strong> — 한 번 더.</li>
+    <li><strong>LayerNorm</strong> — 출력 (3, 4).</li>
+  </ol>
+  <p>이 한 블록을 6~96번 쌓으면 트랜스포머. GPT-3는 96 블록.</p>
+
+  <h2>🌐 BERT vs GPT — 같은 부품, 다른 활용</h2>
+  <table>
+    <thead><tr><th></th><th>BERT</th><th>GPT</th></tr></thead>
+    <tbody>
+      <tr><td>구조</td><td>인코더만</td><td>디코더만</td></tr>
+      <tr><td>어텐션</td><td>양방향</td><td>인과적(미래 못봄)</td></tr>
+      <tr><td>학습 목표</td><td>마스킹된 토큰 복원</td><td>다음 토큰 예측</td></tr>
+      <tr><td>용도</td><td>이해(분류, NER)</td><td>생성(대화, 작문)</td></tr>
+      <tr><td>크기</td><td>110M~340M</td><td>117M~175B</td></tr>
+      <tr><td>출시</td><td>2018 Google</td><td>2018+ OpenAI</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🚀 LLM 진화 한 페이지</h2>
+  <ol>
+    <li><strong>2018 GPT-1</strong> — 117M, 12 블록. 사전학습 + fine-tune 패러다임.</li>
+    <li><strong>2018 BERT</strong> — 340M. 양방향 인코더.</li>
+    <li><strong>2019 GPT-2</strong> — 1.5B. zero-shot 능력.</li>
+    <li><strong>2020 GPT-3</strong> — 175B. few-shot in-context 학습.</li>
+    <li><strong>2022 ChatGPT</strong> — RLHF로 정렬.</li>
+    <li><strong>2023 GPT-4, Claude, Gemini</strong> — 멀티모달, 도구 사용.</li>
+    <li><strong>2024 LLaMA, Mistral 오픈 모델</strong> — 누구나 fine-tune 가능.</li>
+  </ol>
+
+  <h2>🎯 In-Context Learning</h2>
+  <p>GPT-3 이후 LLM의 놀라운 능력. 학습 없이 프롬프트의 예시 몇 개만 보고 새 작업을 수행.</p>
+  <pre><code>프롬프트:
+영어→한국어:
+hello → 안녕하세요
+goodbye → 안녕히 가세요
+thank you → ?
+
+GPT 출력: 감사합니다</code></pre>
+  <p>가중치 업데이트가 전혀 없는데 새 작업을 학습한 것처럼 동작. 이게 LLM이 "범용 도구"로 쓰이는 이유.</p>
+
+  <h2>🌟 Prompt Engineering — 새로운 기술</h2>
+  <ul>
+    <li><strong>Zero-shot</strong> — 예시 없이 작업 설명만.</li>
+    <li><strong>Few-shot</strong> — 예시 2~5개와 작업.</li>
+    <li><strong>Chain-of-Thought</strong> — "단계별로 생각해보자". 추론 능력 향상.</li>
+    <li><strong>Self-Consistency</strong> — 여러 답을 생성하고 다수결.</li>
+    <li><strong>ReAct</strong> — Reasoning + Acting. 도구 사용.</li>
+  </ul>
+
+  <h2>🛠️ RLHF — 인간 피드백 강화학습</h2>
+  <p>ChatGPT의 비밀. 세 단계:</p>
+  <ol>
+    <li><strong>SFT (Supervised Fine-Tuning)</strong> — 사람이 쓴 좋은 답으로 fine-tune.</li>
+    <li><strong>Reward Model</strong> — 사람이 답 두 개 비교한 데이터로 보상 모델 학습.</li>
+    <li><strong>RL</strong> — PPO로 보상 모델을 maximize하도록 LLM 추가 학습.</li>
+  </ol>
+  <p>이 세 단계가 GPT-3(1750억) 같은 raw 모델을 ChatGPT처럼 도움이 되고 안전한 모델로 바꿉니다.</p>
+
+  <h2>📝 연습문제</h2>
+
+  <div class="tip"><strong>연습 1.</strong> 시퀀스 길이 T=1024, 차원 d=768일 때 self-attention의 메모리 사용량은?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>$T \times T = 1024^2 = $ 약 100만 셀, FP32면 4MB(한 헤드당). 12 헤드면 48MB(한 층당). 12층이면 576MB. 이게 한 입력의 어텐션 메모리. 배치까지 곱하면 GB 단위.</p></details></div>
+
+  <div class="tip"><strong>연습 2.</strong> Positional Encoding이 필요한 이유?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>Self-Attention은 토큰 순서를 모름(순열 불변). 셔플해도 같은 결과. 그러나 언어는 순서가 매우 중요. → 위치 정보를 임베딩에 더해줘야 함.</p></details></div>
+
+  <div class="tip"><strong>연습 3.</strong> Multi-Head Attention에서 헤드 수 8, 차원 512면 각 헤드의 차원은?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>512 / 8 = 64. 각 헤드가 64차원에서 어텐션 수행. 결과를 concat해서 다시 512차원. 총 파라미터 수는 single head 512차원과 같지만 표현력은 더 풍부.</p></details></div>
+
+  <div class="tip"><strong>연습 4.</strong> GPT의 Causal Mask가 BERT의 마스크와 어떻게 다른가?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>BERT — 임의의 위치 15%를 [MASK]로 바꾸고 복원 학습. 양방향 어텐션 가능. GPT — 항상 다음 토큰 예측. 미래 토큰을 못 보는 인과적 마스크. 학습 목표가 다름.</p></details></div>
+
+  <div class="tip"><strong>연습 5.</strong> Temperature를 0.1로 하면? 2.0으로 하면?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>0.1 — 거의 greedy. 결정적, 단조로움, 사실에 충실. 2.0 — 매우 다양함, 창의적이지만 헛소리 가능성 ↑. 보통 0.7~1.0이 균형.</p></details></div>
+
+  <h2>❓ FAQ</h2>
+  <div class="note"><strong>Q1. 왜 트랜스포머가 RNN을 이겼나요?</strong><br>
+  A. (1) 병렬화 — RNN은 순차적, 트랜스포머는 한 번에. GPU 효율 100배. (2) 거리 무관 의존성. (3) 사전학습 효과. (4) 큰 데이터에서 잘 스케일.</div>
+  <div class="note"><strong>Q2. ChatGPT는 어떻게 만들어졌나?</strong><br>
+  A. GPT-3.5 base → SFT (사람이 쓴 답) → RLHF (사람 선호 학습 + PPO 미세조정). 핵심은 사람의 피드백을 학습 신호로.</div>
+  <div class="note"><strong>Q3. LLM이 환각(hallucination)하는 이유?</strong><br>
+  A. LLM은 "다음 단어 확률"을 학습할 뿐 진실을 학습하지 않음. 그럴듯한 패턴이면 사실 여부 무관 생성. RAG, 도구 사용으로 완화.</div>
+  <div class="note"><strong>Q4. GPT-4는 GPT-3보다 얼마나 큰가?</strong><br>
+  A. OpenAI 비공개. 추정 1조 파라미터(MoE). 그러나 단순 스케일이 아니라 학습 데이터·정렬 품질 차이가 큼.</div>
+  <div class="note"><strong>Q5. 한국어 LLM은?</strong><br>
+  A. KoGPT(카카오), HyperCLOVA(네이버), Polyglot-Ko(EleutherAI), KULLM(고려대) 등. 한국어 성능은 GPT-4가 여전히 우수.</div>
+
+  <h2>🌟 LLM 응용 사례</h2>
+  <ul>
+    <li><strong>대화 AI</strong> — ChatGPT, Claude, Gemini.</li>
+    <li><strong>코드 생성</strong> — GitHub Copilot, Codex.</li>
+    <li><strong>번역</strong> — 인간 수준에 가까움.</li>
+    <li><strong>요약</strong> — 논문, 회의록 자동 요약.</li>
+    <li><strong>검색</strong> — Perplexity, Bing Chat. 답변 + 출처.</li>
+    <li><strong>교육</strong> — 개인화 튜터.</li>
+    <li><strong>자동화</strong> — 이메일 작성, 일정 관리.</li>
+    <li><strong>창작</strong> — 소설, 시나리오, 광고 카피.</li>
+  </ul>
+
+  <h2>🛡️ LLM 안전성 — 알아둘 5가지 위험</h2>
+  <ol>
+    <li><strong>환각(Hallucination)</strong> — 사실이 아닌 그럴듯한 답.</li>
+    <li><strong>편향(Bias)</strong> — 학습 데이터의 사회적 편향 학습.</li>
+    <li><strong>프라이버시</strong> — 학습 데이터 외설.</li>
+    <li><strong>오용</strong> — 가짜 뉴스 대량 생성, 사이버 공격.</li>
+    <li><strong>일자리 영향</strong> — 일부 직업 자동화.</li>
+  </ol>
+  <p>좋은 엔지니어는 도구를 쓸 수 있을 뿐 아니라 그 한계와 위험을 안다.</p>
+
   <h2>📖 더 깊이 공부하기</h2>
   <ul>
     <li><strong>Attention Is All You Need</strong> — Vaswani 외(2017). 트랜스포머 원논문.</li>
@@ -520,7 +643,352 @@ print(tok.decode(out[0]))</code></pre>
     <li><strong>BERT</strong> — Devlin 외(2018). <strong>GPT-3</strong> — Brown 외(2020).</li>
     <li><strong>Hugging Face Course</strong> — <a href="https://huggingface.co/course">huggingface.co/course</a>. 실습 위주.</li>
     <li><strong>Andrej Karpathy "Let's build GPT"</strong> — 유튜브. 처음부터 GPT를 만드는 영상.</li>
+    <li><strong>The Annotated Transformer</strong> — Harvard NLP. 코드 주석.</li>
+    <li><strong>3Blue1Brown — But what is a GPT?</strong> 시각 직관.</li>
+    <li><strong>Sebastian Raschka — LLM scratch</strong>. 책으로도.</li>
+    <li><strong>nanoGPT</strong> — Karpathy의 작은 GPT 구현. 300줄.</li>
   </ul>
+
+  <h2>📚 미니 용어집</h2>
+  <table>
+    <thead><tr><th>용어</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>Transformer</td><td>RNN 없이 어텐션만으로 만든 신경망.</td></tr>
+      <tr><td>Self-Attention</td><td>한 시퀀스 내 모든 위치 쌍의 관계.</td></tr>
+      <tr><td>Multi-Head</td><td>여러 어텐션 동시.</td></tr>
+      <tr><td>Positional Encoding</td><td>위치 정보 주입.</td></tr>
+      <tr><td>FFN (Feed-Forward Net)</td><td>각 위치별 MLP.</td></tr>
+      <tr><td>LayerNorm</td><td>샘플 단위 정규화.</td></tr>
+      <tr><td>BERT</td><td>인코더 기반, 양방향.</td></tr>
+      <tr><td>GPT</td><td>디코더 기반, 인과적.</td></tr>
+      <tr><td>RLHF</td><td>인간 피드백 강화학습.</td></tr>
+      <tr><td>In-context Learning</td><td>프롬프트 예시로 학습 효과.</td></tr>
+      <tr><td>Hallucination</td><td>사실이 아닌 그럴듯한 답.</td></tr>
+      <tr><td>RAG</td><td>검색 + 생성. 환각 완화.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🗒️ 마지막 체크리스트</h2>
+  <ul>
+    <li>☐ 트랜스포머 블록의 6단계를 그릴 수 있다.</li>
+    <li>☐ Self-Attention의 식과 동작을 안다.</li>
+    <li>☐ BERT vs GPT의 차이를 안다.</li>
+    <li>☐ Multi-Head Attention의 직관을 안다.</li>
+    <li>☐ RLHF의 3단계를 안다.</li>
+    <li>☐ In-context Learning의 직관을 안다.</li>
+    <li>☐ Hugging Face로 LLM을 호출할 수 있다.</li>
+  </ul>
+
+  <h2>🧭 한 학기 정리 — 큰 그림</h2>
+  <div class="tip"><p><strong>"AI ⊃ ML ⊃ DL이고, DL의 정점이 트랜스포머와 LLM."</strong> KNN으로 시작한 한 학기의 흐름이 모두 한 곳으로 수렴합니다 — 학습 가능한 표현 + 손실 최소화. 이름이 어떻게 바뀌어도 이 뼈대는 그대로입니다.</p></div>
+
+  <h2>🎓 졸업 후 추천 진로</h2>
+  <ul>
+    <li><strong>ML 엔지니어</strong> — 모델 개발 및 배포. 산업의 핵심.</li>
+    <li><strong>데이터 사이언티스트</strong> — 데이터 분석 + 모델링.</li>
+    <li><strong>AI 연구원</strong> — 새 모델 연구. 대학원 또는 연구소.</li>
+    <li><strong>MLOps</strong> — 모델 배포·운영 인프라.</li>
+    <li><strong>응용 AI</strong> — 의료·금융·로보틱스 등 도메인 특화.</li>
+    <li><strong>AI 안전</strong> — 정렬, 해석성, 위험 평가.</li>
+  </ul>
+
+  <h2>🌟 LLM Fine-tuning 방법</h2>
+  <ul>
+    <li><strong>Full Fine-tuning</strong> — 모든 파라미터 학습. 비용 큼.</li>
+    <li><strong>LoRA (Low-Rank Adaptation)</strong> — 작은 행렬만 추가 학습. 메모리 1/10.</li>
+    <li><strong>QLoRA</strong> — 4-bit 양자화 + LoRA. GPU 1대로 70B 모델 학습.</li>
+    <li><strong>Prefix/Prompt Tuning</strong> — 입력 앞에 학습 가능한 토큰만.</li>
+    <li><strong>Adapter</strong> — 작은 모듈을 층 사이 추가.</li>
+  </ul>
+
+  <h2>🌟 RAG (Retrieval-Augmented Generation)</h2>
+  <p>LLM의 환각을 줄이는 표준 패턴.</p>
+  <ol>
+    <li>사용자 질문을 임베딩.</li>
+    <li>벡터 DB에서 관련 문서 검색.</li>
+    <li>검색된 문서를 프롬프트에 넣어 LLM에 질의.</li>
+    <li>LLM이 문서 기반으로 답변.</li>
+  </ol>
+  <p>장점: 최신 정보 반영, 출처 제공, 환각 ↓. 도구: LangChain, LlamaIndex, Pinecone.</p>
+
+  <h2>🌟 멀티모달 모델 — CLIP, GPT-4V, LLaVA</h2>
+  <ul>
+    <li><strong>CLIP (2021)</strong> — 이미지와 텍스트를 같은 임베딩 공간에. zero-shot 분류.</li>
+    <li><strong>Stable Diffusion (2022)</strong> — 텍스트 → 이미지 생성. CLIP + Diffusion.</li>
+    <li><strong>GPT-4V/Gemini Vision</strong> — 이미지 이해 + 대화.</li>
+    <li><strong>LLaVA</strong> — 오픈소스 비전-언어 LLM.</li>
+  </ul>
+
+  <h2>🛡️ AI 윤리 다섯 원칙</h2>
+  <ol>
+    <li><strong>공정성</strong> — 인종·성별·계층에 편향되지 않게.</li>
+    <li><strong>투명성</strong> — 모델이 어떻게 결정했는지 설명 가능.</li>
+    <li><strong>프라이버시</strong> — 학습 데이터·사용 데이터 보호.</li>
+    <li><strong>안전성</strong> — 악용 방지.</li>
+    <li><strong>책임</strong> — 잘못된 결정의 책임 주체 명확.</li>
+  </ol>
+
+  <h2>🎓 한 학기 회고 — KNN에서 LLM까지</h2>
+  <p>13주 전 우리는 도미와 빙어를 길이와 무게로 구분하는 KNN으로 시작했습니다. 오늘 우리는 GPT-3, ChatGPT, BERT의 내부 구조를 손으로 그릴 수 있게 됐습니다. 이 거리는 단지 "13주의 학습"이 아니라 "70년 AI 역사의 압축"입니다.</p>
+  <p>매 주차의 모델이 다음 주차의 부품이 되고, 그 부품이 또 다음 주차의 더 큰 부품이 되는 — 누적의 마법을 경험했습니다.</p>
+
+  <h2>🌐 한 학기 모델 가족도</h2>
+  <ul>
+    <li>W1: KNN — 거리 기반.</li>
+    <li>W3: 선형 회귀 → 경사하강.</li>
+    <li>W4: 로지스틱 회귀 → 소프트맥스.</li>
+    <li>W5: SVM, 트리, 랜덤포레스트 — 고전 ML.</li>
+    <li>W6: 비지도 — K-means, PCA.</li>
+    <li>W7: MLP — 비선형 활성.</li>
+    <li>W8: 역전파 — 학습의 엔진.</li>
+    <li>W9-10: CNN — 이미지.</li>
+    <li>W11: RNN/LSTM — 시간.</li>
+    <li>W12: Seq2Seq + Attention.</li>
+    <li>W13: Transformer + LLM — 정점.</li>
+  </ul>
+
+  <h2>🛠️ 졸업 프로젝트 아이디어</h2>
+  <ol>
+    <li>한국어 감성 분석 챗봇 (BERT fine-tune).</li>
+    <li>의료 X-ray 분류 (ResNet 전이학습).</li>
+    <li>주가 시계열 예측 (LSTM).</li>
+    <li>이미지 캡션 생성 (CNN + RNN + Attention).</li>
+    <li>나만의 작은 GPT (nanoGPT 따라하기).</li>
+    <li>RAG 기반 학과 FAQ 봇.</li>
+    <li>YOLO로 실시간 객체 탐지.</li>
+    <li>강화학습으로 게임 AI.</li>
+  </ol>
+
+  <h2>📌 부록 — Transformer Pseudo-Code</h2>
+  <pre><code>def transformer_block(x):
+    # Pre-LN 스타일 (현대 표준)
+    a = MultiHeadAttention(LayerNorm(x))
+    x = x + Dropout(a)
+    f = FFN(LayerNorm(x))      # Linear → GELU → Linear
+    x = x + Dropout(f)
+    return x
+
+def transformer(tokens):
+    x = Embedding(tokens) + PositionalEncoding(len(tokens))
+    for _ in range(N):
+        x = transformer_block(x)
+    return LayerNorm(x)
+
+def gpt_generate(prompt, max_tokens):
+    tokens = tokenize(prompt)
+    for _ in range(max_tokens):
+        h = transformer(tokens)            # (T, d)
+        logits = h[-1] @ W_out              # (vocab,)
+        next_token = sample(softmax(logits / temperature))
+        tokens.append(next_token)
+        if next_token == EOS: break
+    return detokenize(tokens)</code></pre>
+
+  <h2>📌 부록 — LLM 효율 기술</h2>
+  <ul>
+    <li><strong>Flash Attention</strong> — IO-aware 어텐션. 메모리 효율.</li>
+    <li><strong>KV Cache</strong> — 추론 시 K, V 재사용.</li>
+    <li><strong>Speculative Decoding</strong> — 작은 모델로 후보 생성, 큰 모델로 검증.</li>
+    <li><strong>Quantization (INT8/INT4)</strong> — 메모리 1/4~1/8.</li>
+    <li><strong>Pruning</strong> — 불필요한 가중치 제거.</li>
+    <li><strong>Distillation</strong> — 큰 모델 → 작은 모델.</li>
+  </ul>
+
+  <h2>📌 부록 — 한국어 LLM 생태계</h2>
+  <ul>
+    <li><strong>HyperCLOVA X</strong> — 네이버. 한국어 특화 거대 모델.</li>
+    <li><strong>KoGPT</strong> — 카카오 브레인.</li>
+    <li><strong>Polyglot-Ko</strong> — EleutherAI. 12.8B.</li>
+    <li><strong>SOLAR</strong> — Upstage. 오픈소스 우수.</li>
+    <li><strong>Gemma-Ko</strong> — Google Gemma 한국어 fine-tune.</li>
+    <li><strong>Qwen-Ko, LLaMA-Ko</strong> — 오픈 모델 한국어 fine-tune.</li>
+  </ul>
+
+  <h2>🌟 마지막 한 마디</h2>
+  <p>한 학기 동안 만난 모든 모델의 본질은 두 가지였습니다 — <em>"좋은 표현을 만든다"</em>와 <em>"손실을 최소화한다"</em>. KNN의 거리, 회귀의 직선, MLP의 은닉층, CNN의 필터, RNN의 게이트, 트랜스포머의 어텐션, 모두 이 두 임무를 다른 형태로 수행해 왔습니다.</p>
+  <p>앞으로 어떤 새 모델이 나와도 — Diffusion, Mamba, MoE — 모두 같은 두 임무의 새 형태일 뿐입니다. 그 사실을 안다는 것이 한 학기의 가장 큰 선물입니다.</p>
+
+  <h2>📌 부록 — LLM 평가 지표</h2>
+  <ul>
+    <li><strong>Perplexity</strong> — 학습 시 표준. 낮을수록 좋음.</li>
+    <li><strong>HellaSwag</strong> — 상식 추론.</li>
+    <li><strong>MMLU</strong> — 다분야 지식 (57개 분야).</li>
+    <li><strong>HumanEval</strong> — 코드 생성.</li>
+    <li><strong>GSM8K</strong> — 수학 문제.</li>
+    <li><strong>BIG-Bench</strong> — 200+ 다양한 작업.</li>
+    <li><strong>MT-Bench, AlpacaEval</strong> — 대화 품질 (LLM-as-judge).</li>
+    <li><strong>Chatbot Arena (Elo)</strong> — 사람 직접 비교.</li>
+  </ul>
+
+  <h2>📌 부록 — Open-Source vs Closed LLM</h2>
+  <table>
+    <thead><tr><th>특징</th><th>Closed (GPT-4 등)</th><th>Open (LLaMA 등)</th></tr></thead>
+    <tbody>
+      <tr><td>성능</td><td>최고 수준</td><td>경쟁력 있음</td></tr>
+      <tr><td>비용</td><td>API 호출당</td><td>자체 호스팅</td></tr>
+      <tr><td>커스터마이즈</td><td>제한적</td><td>완전 자유</td></tr>
+      <tr><td>프라이버시</td><td>데이터 전송 위험</td><td>로컬 가능</td></tr>
+      <tr><td>책임</td><td>제공사</td><td>사용자</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📌 부록 — LLM 학습 비용</h2>
+  <ul>
+    <li>GPT-3 (175B) — 학습 비용 약 460만 달러 (2020년).</li>
+    <li>LLaMA-2 (70B) — 학습 비용 약 200만 달러.</li>
+    <li>GPT-4 — 추정 1억 달러+.</li>
+    <li>오픈소스 LoRA fine-tune — 100~1000달러로 가능.</li>
+  </ul>
+  <p>그래서 처음부터 학습하지 않고 사전학습된 오픈 모델을 fine-tune하는 게 표준.</p>
+
+  <h2>📌 부록 — Transformer를 이해하는 가장 좋은 방법</h2>
+  <p>Karpathy의 "Let's build GPT from scratch" 영상(2시간)을 따라하며 직접 구현. 200줄 코드로 작은 GPT를 처음부터 만들면 모든 부품이 머릿속에 정렬됩니다. 본 강의 끝에 강력 추천하는 한 가지.</p>
+
+  <h2>📌 부록 — Diffusion Model 미리보기 (강의 외)</h2>
+  <p>이미지 생성의 새로운 표준. Stable Diffusion, DALL·E의 기반.</p>
+  <ol>
+    <li>Forward — 이미지에 점차 가우시안 잡음을 더해 완전 잡음으로.</li>
+    <li>Reverse — 학습된 신경망(보통 U-Net)이 잡음을 단계적으로 제거.</li>
+    <li>학습 — 각 단계에서 잡음을 예측하도록.</li>
+    <li>생성 — 잡음에서 시작해 학습된 모델로 단계적 복원.</li>
+  </ol>
+  <p>Transformer와 별개의 가족이지만, 최근 DiT (Diffusion Transformer)로 결합되며 멀티모달 생성의 표준이 되어 가는 중.</p>
+
+  <h2>📌 부록 — Mixture of Experts (MoE)</h2>
+  <p>여러 작은 트랜스포머(전문가)를 두고, 입력마다 일부만 활성화. GPT-4, Mixtral의 추정 구조.</p>
+  <ul>
+    <li>장점 — 같은 계산량으로 더 큰 파라미터(전문성).</li>
+    <li>단점 — 학습 어려움, 메모리 큼.</li>
+  </ul>
+
+  <h2>📌 부록 — 강화학습과 LLM</h2>
+  <ul>
+    <li><strong>RLHF</strong> — 사람 선호로 정렬.</li>
+    <li><strong>RLAIF</strong> — AI 피드백으로 RLHF 자동화.</li>
+    <li><strong>DPO (Direct Preference Optimization)</strong> — 보상 모델 없이 직접 선호 학습.</li>
+    <li><strong>PPO</strong> — 강화학습 표준 알고리즘.</li>
+  </ul>
+
+  <h2>📌 부록 — 에이전트 (Agent)</h2>
+  <p>LLM이 도구(검색, 계산, 코드 실행)를 사용하는 패러다임.</p>
+  <ul>
+    <li><strong>ReAct</strong> — Reason + Act 반복.</li>
+    <li><strong>Tool Use</strong> — 함수 호출 능력.</li>
+    <li><strong>AutoGPT, BabyAGI</strong> — 자율 에이전트 실험.</li>
+    <li><strong>LangChain, LangGraph</strong> — 에이전트 구축 프레임워크.</li>
+  </ul>
+
+  <h2>📌 부록 — LLM Inference 옵션</h2>
+  <ul>
+    <li><strong>OpenAI API</strong> — GPT-4. 가장 쉬움, 비용 발생.</li>
+    <li><strong>Anthropic Claude API</strong> — 긴 컨텍스트, 안전.</li>
+    <li><strong>Hugging Face Inference</strong> — 오픈 모델 클라우드.</li>
+    <li><strong>Ollama</strong> — 로컬 LLM 실행. 무료.</li>
+    <li><strong>vLLM</strong> — 고성능 inference 서버.</li>
+    <li><strong>llama.cpp</strong> — CPU에서도 실행 가능.</li>
+  </ul>
+
+  <h2>📌 부록 — Vector DB</h2>
+  <p>RAG의 핵심 부품. 임베딩 벡터를 저장하고 빠른 검색.</p>
+  <ul>
+    <li><strong>Pinecone</strong> — 클라우드 표준.</li>
+    <li><strong>Weaviate, Qdrant</strong> — 오픈소스.</li>
+    <li><strong>FAISS</strong> — Facebook. 로컬, 빠름.</li>
+    <li><strong>Chroma</strong> — 임베디드, 가벼움.</li>
+  </ul>
+
+  <h2>📌 부록 — Tokenization 깊이</h2>
+  <ul>
+    <li><strong>BPE (Byte Pair Encoding)</strong> — GPT, LLaMA 표준.</li>
+    <li><strong>WordPiece</strong> — BERT.</li>
+    <li><strong>SentencePiece</strong> — Google. 언어 무관.</li>
+    <li><strong>tiktoken</strong> — OpenAI 토크나이저 (Python).</li>
+  </ul>
+
+  <h2>📌 부록 — LLM의 한계와 보완</h2>
+  <ul>
+    <li><strong>지식 cutoff</strong> — 학습 시점 이후 모름. → RAG로 보완.</li>
+    <li><strong>수학 약함</strong> — 계산기 도구 사용으로 보완.</li>
+    <li><strong>긴 컨텍스트 약함</strong> — Long Context 모델, RAG로.</li>
+    <li><strong>다국어 불균등</strong> — 영어 외에 약함. 한국어 fine-tune.</li>
+    <li><strong>최신 사건</strong> — Web search 도구.</li>
+  </ul>
+
+  <h2>📌 부록 — Prompt Engineering 패턴</h2>
+  <ul>
+    <li><strong>Role Prompting</strong> — "당신은 전문 의사입니다…"</li>
+    <li><strong>Few-Shot</strong> — 예시 2~5개.</li>
+    <li><strong>Chain-of-Thought</strong> — "단계별로 생각해보세요."</li>
+    <li><strong>Self-Consistency</strong> — 여러 답 + 다수결.</li>
+    <li><strong>Tree of Thoughts</strong> — 탐색 트리.</li>
+    <li><strong>Format Specification</strong> — "JSON 형식으로 답하세요."</li>
+    <li><strong>Constraint</strong> — "100자 이내로."</li>
+  </ul>
+
+  <h2>📌 부록 — LLM Hallucination 예방 5가지</h2>
+  <ol>
+    <li>RAG로 외부 지식 주입.</li>
+    <li>"모르면 모른다고 답하라" 명시.</li>
+    <li>출처 인용 요구.</li>
+    <li>Self-consistency 다수결.</li>
+    <li>도구 사용 (계산기, 검색).</li>
+  </ol>
+
+  <h2>📌 부록 — 한 학기를 한 줄로</h2>
+  <p>"AI는 데이터로부터 좋은 표현을 학습하고, 그 표현으로 손실을 최소화한다." 이 한 문장이 한 학기 13주의 응축입니다.</p>
+
+  <h2>📌 부록 — 마지막 자가 학습 추가 문제</h2>
+  <ol>
+    <li>Self-Attention과 Cross-Attention의 차이?</li>
+    <li>BERT의 [MASK] 토큰의 역할?</li>
+    <li>GPT-3가 GPT-2보다 100배 큰데 학습 시간은 몇 배?</li>
+    <li>RLHF에서 Reward Model의 입력과 출력?</li>
+    <li>RAG와 Fine-tuning 중 어느 것이 최신 정보 반영에 적합?</li>
+  </ol>
+  <p style="font-size:13px;color:var(--muted)">정답 힌트: 1) Self는 같은 시퀀스, Cross는 다른 시퀀스. 2) 양방향 컨텍스트로부터 [MASK] 단어 예측 학습. 3) 약 10~30배(파라미터 수와 데이터 양 모두 영향). 4) 입력=프롬프트+답, 출력=점수. 5) RAG (fine-tuning은 학습 시점 정보로 고정).</p>
+
+  <h2>📌 부록 — Future of AI</h2>
+  <p>한 학기 강의가 끝나는 시점에서 AI의 다음 5년을 예측해 봅니다(2024년 시점).</p>
+  <ul>
+    <li><strong>더 큰 모델</strong> — 1조+ 파라미터 모델 일반화.</li>
+    <li><strong>멀티모달 통합</strong> — 텍스트·이미지·음성·영상 한 모델.</li>
+    <li><strong>더 긴 컨텍스트</strong> — 100만 토큰 이상 문맥.</li>
+    <li><strong>에이전트</strong> — 자율적으로 도구 사용·계획.</li>
+    <li><strong>온디바이스</strong> — 스마트폰에서 7B 모델.</li>
+    <li><strong>특화 모델</strong> — 의료·법률·과학에 특화.</li>
+    <li><strong>안전과 정렬</strong> — 핵심 연구 영역.</li>
+  </ul>
+
+  <h2>🎓 마지막 메시지</h2>
+  <p>한 학기 동안 함께 한 13주의 여정이 끝났습니다. 처음 도미와 빙어를 KNN으로 분류하던 1주차에서, 마지막 ChatGPT의 내부 구조를 그릴 수 있는 13주차까지, 여러분은 1950년대부터 2024년까지의 AI 진화를 손으로 따라간 셈입니다.</p>
+  <p>이 강의의 진짜 목적은 "최신 모델을 외우는 것"이 아니라 "<em>새 모델이 나와도 그 본질을 빠르게 이해할 수 있는 안목</em>"이었습니다. 그 안목을 손에 넣었다면, 강의의 목적은 달성된 것입니다.</p>
+  <p>앞으로의 여정에서 막히는 순간이 있다면, 이 강의안을 다시 펼쳐 보세요. 그리고 무엇보다 — <em>손으로 코드를 굴려보세요</em>. 모든 학습은 손에서 일어납니다.</p>
+  <p>감사했습니다. 모두 좋은 엔지니어가 되시길 바랍니다.</p>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:24px">— 13주 끝. 한 학기 수고하셨습니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대학교 기계공학전공</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊 한 학기 동안 함께해 주셔서 감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <h2>📌 부록 — Cheat Sheet (한 페이지 요약)</h2>
+  <ul>
+    <li>W1 KNN: 가까운 K명 다수결.</li>
+    <li>W2 데이터: 표준화·분할·누수 방지.</li>
+    <li>W3 회귀: $\hat y = wx + b$, MSE, 경사하강.</li>
+    <li>W4 로지스틱: 시그모이드 + 크로스엔트로피.</li>
+    <li>W5 분류: KNN·SVM·트리·RF.</li>
+    <li>W6 비지도: K-means·DBSCAN·PCA.</li>
+    <li>W7 MLP: 비선형 활성, 보편 근사.</li>
+    <li>W8 역전파: 연쇄법칙. ReLU·BN·Adam.</li>
+    <li>W9 CNN: 필터 슬라이딩·가중치 공유.</li>
+    <li>W10 전이학습: 사전학습 + fine-tune.</li>
+    <li>W11 RNN/LSTM: 시간 축, 게이트.</li>
+    <li>W12 Seq2Seq + Attention: Q·K·V.</li>
+    <li>W13 Transformer + LLM: Self-Attention·BERT·GPT·RLHF.</li>
+  </ul>
+
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
 
   <nav class="prevnext">
     <a href="12-rnn-advanced.html"><small>← 이전</small>W12. Seq2Seq</a>

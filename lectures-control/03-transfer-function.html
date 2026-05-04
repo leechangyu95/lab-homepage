@@ -583,6 +583,67 @@ plt.tight_layout(); plt.show()</code></pre>
      적분기 1개 (각도) + 1차 시정수 (모터 + 관성).</p>
 
 
+  <h2>7-I. 추가 워크북 — 손계산 8문제</h2>
+
+  <h3>7-I.1 RC 회로의 전달함수</h3>
+  <p>저항 $R$, 커패시터 $C$, 입력 전압 $V_{in}$, 출력 전압 $V_C$. 전달함수?</p>
+  <div class="sol">$V_{in} = iR + V_C$, $i = C\dot V_C$. 라플라스: $V_{in}(s) = RCsV_C(s) + V_C(s)$. $G(s) = 1/(RCs + 1)$. 시정수 $\tau = RC$.</div>
+
+  <h3>7-I.2 MSD 시스템</h3>
+  <p>질량-스프링-댐퍼 시스템. 전달함수?</p>
+  <div class="sol">$m\ddot x + b\dot x + kx = f$. $G(s) = 1/(ms^2 + bs + k)$.</div>
+
+  <h3>7-I.3 두 RC 직렬</h3>
+  <p>RC 두 개 직렬. 전달함수?</p>
+  <div class="sol">부하 효과 없으면 $1/((R_1C_1s+1)(R_2C_2s+1))$. 부하 있으면 단순 곱이 아님 — 임피던스 분압.</div>
+
+  <h3>7-I.4 DC 모터 각속도 출력</h3>
+  <p>입력 전압 $V$, 출력 $\omega$. $L \ll R$ 가정 시 1차 근사 결과는?</p>
+  <div class="sol">$G(s) = K_t/(R(Js+b) + K_tK_e) = K/(\tau s + 1)$.</div>
+
+  <h3>7-I.5 적분기 + 1차</h3>
+  <p>$G(s) = 1/(s(s+2))$. 단위 계단 입력 응답이 정상상태로 가는가?</p>
+  <div class="sol">적분기가 있으면 단위 계단 응답은 발산. 정상상태 없음.</div>
+
+  <h3>7-I.6 전달함수에서 미분방정식</h3>
+  <p>$G(s) = (s+1)/(s^2 + 4s + 3)$. 미분방정식?</p>
+  <div class="sol">$\ddot y + 4\dot y + 3y = \dot u + u$.</div>
+
+  <h3>7-I.7 폐루프 전달함수</h3>
+  <p>전방 $G$, 단위 피드백. 폐루프?</p>
+  <div class="sol">$T = G/(1+G)$.</div>
+
+  <h3>7-I.8 시정수 vs 대역폭</h3>
+  <p>$\tau = 0.1$ s. 대역폭은?</p>
+  <div class="sol">$\omega_{BW} = 1/\tau = 10$ rad/s ≈ 1.59 Hz.</div>
+
+  <h2>7-J. 자주 만나는 함정</h2>
+  <ul>
+    <li><strong>초기조건 무시</strong> — 라플라스에서 $f(0)$ 빠지면 답 달라짐.</li>
+    <li><strong>분자 차수 ≥ 분모</strong> — 비인과적. 실제 시스템엔 없음.</li>
+    <li><strong>RHP 영점</strong> — 비최소 위상. 초기 반대 응답.</li>
+    <li><strong>적분기 누적</strong> — 외란이 영원히 누적.</li>
+  </ul>
+
+  <h2>7-K. 모델링 표준 흐름</h2>
+  <ol>
+    <li>물리 법칙 (F=ma, KVL, 열전달).</li>
+    <li>미분방정식 작성.</li>
+    <li>초기조건 0 가정.</li>
+    <li>라플라스 변환.</li>
+    <li>$G(s) = Y(s)/U(s)$ 정리.</li>
+    <li>극점·영점·DC 게인 분석.</li>
+    <li>응답 (계단·임펄스·주파수) 예측.</li>
+  </ol>
+
+  <h2>7-L. 응용 — 한국 산업 사례 추가</h2>
+  <ul>
+    <li><strong>제철 공정</strong> — 압연기 두께 제어. 시정수 0.5~2초.</li>
+    <li><strong>반도체 공정</strong> — 챔버 온도 제어. 시정수 수~수십초.</li>
+    <li><strong>조선소 DP</strong> — 동적 위치 유지. 다축 MIMO 시스템.</li>
+    <li><strong>화학 반응기</strong> — pH 제어. 비선형성 큼.</li>
+  </ul>
+
   <h2>8. 핵심 정리</h2>
   <div class="tip">
     <ul>
@@ -592,6 +653,341 @@ plt.tight_layout(); plt.show()</code></pre>
       <li>RC = 1차, MSD = 2차, DC 모터(각도) = 적분기 + 1차 = 사실상 2차 시스템.</li>
     </ul>
   </div>
+
+  <h2>9. 자가점검 체크리스트</h2>
+  <ul>
+    <li>☐ RC 전달함수 5초 안에 적기.</li>
+    <li>☐ MSD 전달함수 5초 안에 적기.</li>
+    <li>☐ 1차 시스템의 시정수 의미.</li>
+    <li>☐ 2차 시스템의 $\zeta, \omega_n$ 추출.</li>
+    <li>☐ 폐루프 전달함수 $G/(1+GH)$ 유도.</li>
+    <li>☐ 극점 위치만 보고 응답 정성 예측.</li>
+  </ul>
+
+  <h2>10. 한 줄 요약</h2>
+  <p>"전달함수 = 라플라스 영역에서 본 시스템의 입출력 관계. 분모 차수가 시스템 차수, 극점이 응답 결정."</p>
+
+  <h2>11. 다음 주 미리보기 — W4 블록선도</h2>
+  <p>전달함수가 한 시스템의 모델이라면, 블록선도는 여러 시스템을 조합하는 도구입니다. 직렬·병렬·피드백 결합 규칙을 익히면 복잡한 시스템도 한 페이지에 그릴 수 있습니다.</p>
+
+  <h2>12. 부록 — Python으로 전달함수</h2>
+  <pre><code>import control as ct
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1차 시스템: 1/(s+2)
+G = ct.tf([1], [1, 2])
+
+# 단위 계단 응답
+t, y = ct.step_response(G, T=np.linspace(0, 5, 200))
+plt.plot(t, y); plt.grid(); plt.xlabel('t [s]'); plt.ylabel('y(t)')
+plt.title('Step response of 1/(s+2)'); plt.show()
+
+# 보드 선도
+ct.bode_plot(G); plt.show()</code></pre>
+
+  <h2>13. 부록 — 자주 쓰는 전달함수 카탈로그</h2>
+  <table>
+    <thead><tr><th>이름</th><th>전달함수</th><th>응용</th></tr></thead>
+    <tbody>
+      <tr><td>1차 지연</td><td>$1/(\tau s + 1)$</td><td>RC, 1차 열 시스템</td></tr>
+      <tr><td>2차 진동</td><td>$\omega_n^2/(s^2 + 2\zeta\omega_n s + \omega_n^2)$</td><td>MSD, 진자</td></tr>
+      <tr><td>적분기</td><td>$1/s$</td><td>위치 = $\int$속도</td></tr>
+      <tr><td>미분기</td><td>$s$</td><td>속도 = $d$위치/$dt$</td></tr>
+      <tr><td>지연 시간</td><td>$e^{-Ts}$</td><td>전송·운반 지연</td></tr>
+      <tr><td>리드-래그</td><td>$(s+z)/(s+p)$</td><td>위상 보상기</td></tr>
+    </tbody>
+  </table>
+
+  <h2>14. 한 페이지 흐름</h2>
+  <ol>
+    <li>물리 모델 → 미분방정식.</li>
+    <li>라플라스 변환 + 초기조건 0.</li>
+    <li>전달함수 정리.</li>
+    <li>극점·영점 분석.</li>
+    <li>응답 시뮬레이션 (Python control 라이브러리).</li>
+    <li>설계 (다음 주차 이후).</li>
+  </ol>
+
+  <p style="font-size:13px;color:var(--muted)">— W3 끝.</p>
+
+  <h2>15. 부록 — 영점이 응답에 미치는 영향</h2>
+  <p>분자에 영점이 있으면 응답 모양이 달라집니다.</p>
+  <ul>
+    <li><strong>LHP 영점</strong> — 응답이 빨라짐(미분 효과).</li>
+    <li><strong>RHP 영점</strong> — 비최소 위상. 초기 반대 방향으로 응답 후 회복. 빠른 추종 어려움.</li>
+    <li><strong>원점 영점</strong> — DC 게인 0. 외란 거부 효과.</li>
+  </ul>
+
+  <h2>16. 부록 — 전달함수와 임펄스 응답</h2>
+  <p>전달함수는 임펄스 응답의 라플라스 변환과 같습니다. $G(s) = \mathcal L\{g(t)\}$. 따라서 $g(t)$를 알면 $G(s)$를 알고, 그 반대도 같습니다.</p>
+
+  <h2>17. 부록 — 연습 5문제</h2>
+  <ol>
+    <li>$G(s) = 5/(s+5)$의 시정수와 DC 게인?</li>
+    <li>$G(s) = 1/(s^2 + 2s + 1)$의 $\zeta, \omega_n$?</li>
+    <li>$G(s) = (s+2)/(s^2+3s+2)$의 극점·영점?</li>
+    <li>적분기 $1/s$에 단위 계단 입력의 응답?</li>
+    <li>$G(s) = 1/((s+1)(s+10))$의 지배 시정수?</li>
+  </ol>
+  <p style="color:var(--muted);font-size:13px">힌트: 1) τ=0.2s, K=1. 2) ζ=1, ω_n=1 (임계감쇠). 3) 영점 -2, 극점 -1, -2 (영극상쇄!). 4) y(t) = t (램프). 5) 1초 (느린 극점이 지배).</p>
+
+  <h2>18. 부록 — 영점 추가 8문제</h2>
+
+  <h3>18.1 평행축 정리 응용</h3>
+  <p>균질 막대 길이 $L$ 한 끝에 대한 관성모멘트?</p>
+  <div class="sol">$I_O = I_G + md^2 = (1/12)mL^2 + m(L/2)^2 = (1/3)mL^2$.</div>
+
+  <h3>18.2 두 시정수 시스템</h3>
+  <p>$G(s) = 1/((s+1)(s+10))$. 단위 계단 응답의 정상상태?</p>
+  <div class="sol">최종값 정리: $\lim_{s\to 0} sG(s)/s = 1/10 = 0.1$.</div>
+
+  <h3>18.3 폐루프 안정 조건</h3>
+  <p>$G(s) = K/(s+1)$, 단위 피드백. 폐루프 극점은?</p>
+  <div class="sol">$T = K/(s+1+K)$. 극점 $s = -(1+K)$. $K > -1$이면 안정. $K \geq 0$이면 더 빠른 응답.</div>
+
+  <h3>18.4 임펄스 응답 해석</h3>
+  <p>$G(s) = 5/(s+5)$의 임펄스 응답?</p>
+  <div class="sol">$g(t) = 5e^{-5t}$. $t=0$에서 5, 0.2초에 약 1.84.</div>
+
+  <h3>18.5 영점-극점 상쇄</h3>
+  <p>$G(s) = (s+1)/((s+1)(s+2)) = 1/(s+2)$. 정확한가?</p>
+  <div class="sol">수학적으로는 같지만, 실제 시스템에서는 약간의 모델 오차로 (s+1)이 정확히 상쇄되지 않음. 안정한 상쇄(LHP 영점-극점)는 OK, 불안정한 상쇄는 위험.</div>
+
+  <h3>18.6 단위 계단 vs 임펄스</h3>
+  <p>1차 시스템 $G = 1/(s+1)$의 단위 계단과 임펄스 응답 비교?</p>
+  <div class="sol">계단: $y_s = 1 - e^{-t}$. 임펄스: $y_i = e^{-t}$. $y_s$를 미분하면 $y_i$.</div>
+
+  <h3>18.7 상태공간 → 전달함수</h3>
+  <p>$\dot x = ax + bu$, $y = cx$의 전달함수?</p>
+  <div class="sol">라플라스: $sX = aX + bU$, $X = bU/(s-a)$, $Y = cX = bcU/(s-a)$. $G(s) = bc/(s-a)$.</div>
+
+  <h3>18.8 공학적 직관</h3>
+  <p>왜 RC 회로가 1차 시스템인가?</p>
+  <div class="sol">에너지 저장 요소가 한 개(C)이기 때문. 일반적으로 시스템 차수 = 독립 에너지 저장 요소 수.</div>
+
+  <h2>19. 한 페이지 정리 표</h2>
+  <table>
+    <thead><tr><th>물리계</th><th>차수</th><th>전달함수 형태</th></tr></thead>
+    <tbody>
+      <tr><td>RC 저역통과</td><td>1</td><td>$1/(\tau s + 1)$</td></tr>
+      <tr><td>RL 고역통과</td><td>1</td><td>$\tau s/(\tau s + 1)$</td></tr>
+      <tr><td>RLC 직렬</td><td>2</td><td>$\omega_n^2/(s^2 + 2\zeta\omega_n s + \omega_n^2)$</td></tr>
+      <tr><td>MSD</td><td>2</td><td>같음</td></tr>
+      <tr><td>DC 모터(속도)</td><td>2</td><td>1차 근사 시 1차</td></tr>
+      <tr><td>DC 모터(위치)</td><td>3</td><td>적분기 + 2차</td></tr>
+    </tbody>
+  </table>
+
+  <h2>20. 한 줄 요약</h2>
+  <p>"미분방정식의 라플라스 변환 = 전달함수. 입력→출력 관계의 표준 표현."</p>
+
+  <h2>21. 부록 — 시스템 식별(System ID)</h2>
+  <p>실제 시스템의 전달함수를 데이터로부터 추정하는 방법:</p>
+  <ul>
+    <li><strong>계단 응답 시험</strong> — 입력 계단을 가하고 응답 측정. 1차면 $\tau$, 2차면 $\zeta, \omega_n$ 추출.</li>
+    <li><strong>주파수 응답 시험</strong> — 다양한 주파수 사인파 입력, 보드 선도 직접 측정.</li>
+    <li><strong>최소제곱 적합</strong> — 입출력 데이터에 모델 파라미터 fit.</li>
+    <li><strong>회색상자 모델</strong> — 물리 구조 + 파라미터 추정.</li>
+    <li><strong>흑상자 모델</strong> — 데이터로 파라미터 통째로 추정.</li>
+  </ul>
+
+  <h2>22. 부록 — 모델 검증</h2>
+  <ol>
+    <li>학습 데이터에 fit 후 적합도 (R²) 측정.</li>
+    <li>새 데이터(검증 셋)로 예측 성능 확인.</li>
+    <li>잔차 분석 — 패턴 없는 백색잡음 같으면 OK.</li>
+    <li>물리적 타당성 검토 — 시정수가 합리적인 범위인가?</li>
+  </ol>
+
+  <h2>23. 부록 — 비선형 시스템 선형화</h2>
+  <p>실제 시스템은 거의 항상 비선형. 운영점 주위에서 테일러 1차 전개로 선형화:</p>
+  $$ \dot x \approx f(x_0, u_0) + \frac{\partial f}{\partial x}\bigg|_0 \delta x + \frac{\partial f}{\partial u}\bigg|_0 \delta u $$
+  <p>이 선형화 모델로 설계한 제어기는 운영점 근처에서만 유효. 운영점이 변하면 게인 스케줄링 또는 적응 제어.</p>
+
+  <h2>24. 부록 — Python control 라이브러리 한 페이지</h2>
+  <pre><code>import control as ct
+
+# 전달함수 정의
+G = ct.tf([1, 2], [1, 4, 5])  # (s+2)/(s²+4s+5)
+
+# 응답 시뮬레이션
+t, y = ct.step_response(G)
+t, y = ct.impulse_response(G)
+ct.bode_plot(G)
+ct.nyquist_plot(G)
+ct.root_locus(G)
+
+# 폐루프
+T = ct.feedback(G, 1)  # 단위 피드백
+
+# 상태공간 변환
+ss = ct.tf2ss(G)
+G2 = ct.ss2tf(ss)
+
+# 안정성
+poles = ct.poles(G)
+zeros = ct.zeros(G)</code></pre>
+
+  <h2>25. 부록 — 추가 자가 점검 5문제</h2>
+  <ol>
+    <li>$G(s) = (s-1)/(s+2)$의 비최소 위상 특징 설명.</li>
+    <li>$G(s) = K/(s(s+a))$의 단위 계단 정상상태 오차?</li>
+    <li>전달함수의 차원(unit) 확인은 어떻게?</li>
+    <li>두 전달함수를 직렬 연결한 결과의 차수는?</li>
+    <li>피드백 시스템에서 분모 $1+GH$가 0이 되면?</li>
+  </ol>
+  <p style="color:var(--muted);font-size:13px">힌트: 1) RHP 영점 → 초기 반대 응답. 2) 적분기 있어 0. 3) DC 게인의 단위 = 출력단위/입력단위. 4) 차수의 합. 5) 폐루프 극점 → 안정성 문제.</p>
+
+  <h2>26. 부록 — 한국어 자료</h2>
+  <ul>
+    <li>이종찬·한기봉 등 — <em>자동제어공학</em> (한국어 표준 교과서).</li>
+    <li>K-MOOC "자동제어공학 입문".</li>
+    <li>한국제어로봇시스템학회 (ICROS) 학술지.</li>
+  </ul>
+
+  <h2>27. 한 학기 흐름</h2>
+  <ul>
+    <li>W1 개요 → W2 라플라스 → W3 전달함수 ◉</li>
+    <li>W4 블록선도 → W5~W6 시간 응답 → W7 정상상태</li>
+    <li>W8~W9 안정성 → W10 보드 → W11 안정도 여유</li>
+    <li>W12~W14 PID 설계와 응용</li>
+  </ul>
+
+  <h2>28. 한 줄 마무리</h2>
+  <p>"전달함수 = 시스템의 DNA. 한 함수에 모든 정보가 들어 있다."</p>
+
+  <h2>29. 부록 — MIMO 시스템</h2>
+  <p>입력·출력이 여러 개인 다입력 다출력 시스템. 각 입출력 쌍마다 전달함수가 있어 행렬 형태:</p>
+  $$ \mathbf G(s) = \begin{bmatrix} G_{11} & G_{12} \\ G_{21} & G_{22} \end{bmatrix} $$
+  <p>대각 요소는 직접 영향, 비대각 요소는 결합 효과. MIMO 제어 설계는 학기 후반 또는 대학원 과목.</p>
+
+  <h2>30. 부록 — 이산 시간 전달함수</h2>
+  <p>샘플링된 디지털 시스템은 z-변환 사용. $G(z) = Y(z)/U(z)$. s-평면 단위원 안이 안정.</p>
+  <ul>
+    <li>$z = e^{sT_s}$ — s-z 매핑.</li>
+    <li>Tustin 변환: $s = (2/T)(z-1)/(z+1)$.</li>
+    <li>임펄스 불변 변환, ZOH 등.</li>
+  </ul>
+
+  <h2>31. 부록 — 자주 헷갈리는 용어</h2>
+  <ul>
+    <li><strong>차수(order)</strong> — 분모 다항식 차수.</li>
+    <li><strong>type</strong> — 분모의 원점 극점 수 (적분기 수).</li>
+    <li><strong>DC 게인</strong> — $G(0)$ (적분기 없으면).</li>
+    <li><strong>대역폭</strong> — $|G(j\omega)| = -3$ dB 되는 주파수.</li>
+    <li><strong>위상 여유</strong> — 안정도 측정. 다음 주차.</li>
+  </ul>
+
+  <h2>32. 한 페이지 핵심 식</h2>
+  <ul>
+    <li>$G(s) = Y(s)/U(s)$</li>
+    <li>$T = G/(1+GH)$ (단위 피드백 $H=1$)</li>
+    <li>최종값 정리: $\lim_{s\to 0} sY(s)$</li>
+    <li>1차 시스템 시정수: $\tau$</li>
+    <li>2차 시스템: $\zeta, \omega_n$</li>
+  </ul>
+
+  <h2>33. 부록 — 모델 단순화 기법</h2>
+  <ul>
+    <li><strong>지배 극점 근사</strong> — 가장 느린 극점만 남기고 나머지 무시.</li>
+    <li><strong>영극 상쇄</strong> — 가까운 극점·영점 쌍 제거.</li>
+    <li><strong>잔차 균형 절단</strong> — 입출력 영향이 작은 모드 제거.</li>
+    <li><strong>모델 차수 축소</strong> — 시스템 식별 시 RMSE와 차수의 균형.</li>
+  </ul>
+
+  <h2>34. 부록 — 차수와 응답의 관계</h2>
+  <ul>
+    <li>1차 — 단조 증가/감소.</li>
+    <li>2차 (저감쇠) — 진동.</li>
+    <li>2차 (과감쇠) — 단조 + 더 느림.</li>
+    <li>3차 이상 — 다양한 모양. 지배 극점 분석.</li>
+  </ul>
+
+  <h2>35. 한 줄 마무리 (진짜)</h2>
+  <p>"라플라스 도구로 시간을 떠나 s 영역에서 시스템을 본다 — 그게 W3의 전부."</p>
+
+  <h2>36. 부록 — 응용 사례 한 페이지 더</h2>
+  <ul>
+    <li><strong>HVAC (냉난방)</strong> — 1차 + 시간 지연. $G(s) = K e^{-Ts}/(\tau s + 1)$.</li>
+    <li><strong>증류탑</strong> — 다중 시정수의 직렬. 매우 느림.</li>
+    <li><strong>전력 그리드 주파수</strong> — 발전기 회전 관성 + 부하 외란. 2차에 가까움.</li>
+    <li><strong>제어봉(원자로)</strong> — 점도학적으로 매우 빠른 1차.</li>
+    <li><strong>로켓 조종</strong> — 공력 + 추력 벡터링. 비선형성 큼.</li>
+  </ul>
+
+  <h2>37. 부록 — 한 학기 W3 자가 점검 점수표</h2>
+  <ul>
+    <li>RC, MSD 전달함수 5초 (10점)</li>
+    <li>1차/2차 응답 그림 (15점)</li>
+    <li>최종값 정리 응용 (15점)</li>
+    <li>폐루프 유도 (15점)</li>
+    <li>Python 시뮬레이션 (15점)</li>
+    <li>물리 → 모델 → 응답 흐름 설명 (30점)</li>
+  </ul>
+
+  <h2>38. 마지막 한 줄</h2>
+  <p class="lead">"전달함수로 시스템을 본다는 것은 — 시간이라는 강을 떠나 s 영역의 산에서 내려다본다는 의미."</p>
+
+  <h2>39. 부록 — Frequency vs Time Domain</h2>
+  <table>
+    <thead><tr><th>관점</th><th>시간 영역</th><th>주파수 영역(s)</th></tr></thead>
+    <tbody>
+      <tr><td>표현</td><td>$y(t)$</td><td>$Y(s)$</td></tr>
+      <tr><td>도구</td><td>미분방정식</td><td>대수 방정식</td></tr>
+      <tr><td>안정성</td><td>발산 여부</td><td>극점 위치</td></tr>
+      <tr><td>응답</td><td>시뮬레이션</td><td>역변환</td></tr>
+      <tr><td>설계</td><td>오버슈트, 정착시간</td><td>대역폭, 위상여유</td></tr>
+    </tbody>
+  </table>
+
+  <h2>40. 부록 — Python 보너스</h2>
+  <pre><code># 두 시스템 비교
+G1 = ct.tf([1], [1, 1])      # 1차
+G2 = ct.tf([1], [1, 0.5, 1]) # 2차
+
+# 같은 그림에 응답 비교
+import numpy as np
+import matplotlib.pyplot as plt
+t = np.linspace(0, 10, 200)
+_, y1 = ct.step_response(G1, t)
+_, y2 = ct.step_response(G2, t)
+plt.plot(t, y1, label='1st order'); plt.plot(t, y2, label='2nd order')
+plt.legend(); plt.grid(); plt.show()</code></pre>
+
+  <p style="font-size:13px;color:var(--muted)">— 진짜 진짜 끝.</p>
+
+  <h2>41. 부록 — Pade 근사로 시간 지연 처리</h2>
+  <p>지연 시간 $e^{-Ts}$는 무한 차수라 다루기 어려움. Pade 근사로 유리함수로 대체:</p>
+  $$ e^{-Ts} \approx \frac{1 - Ts/2}{1 + Ts/2} \quad (\text{1차 Pade}) $$
+  <p>높은 차수 Pade는 더 정확하지만 RHP 영점이 추가됨에 주의.</p>
+
+  <h2>42. 부록 — 본 강의 한 줄 요약</h2>
+  <p>"라플라스 + 전달함수 = 자동제어 강의의 출발 도구. 다음 주차들은 이 도구로 분석·설계하는 학기."</p>
+
+  <h2>43. 마지막 한 페이지</h2>
+  <ul>
+    <li>전달함수의 정의·구조·해석.</li>
+    <li>표준 1차·2차 형태.</li>
+    <li>극점·영점·DC 게인.</li>
+    <li>응답 (계단·임펄스·주파수).</li>
+    <li>Python control 라이브러리.</li>
+    <li>응용 — 자동차·풍력·로봇·HVAC.</li>
+  </ul>
+
+  <h2>44. 진짜 마지막</h2>
+  <p>다음 주는 이 모델들을 블록선도로 조합하는 법. 복잡한 시스템도 부품 조합으로.</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">정말 끝.</p>
 
   <div class="prevnext">
     <a href="02-laplace.html"><small>← 이전</small>W2. 라플라스 변환</a>

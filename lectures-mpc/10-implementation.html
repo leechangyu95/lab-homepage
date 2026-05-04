@@ -298,6 +298,182 @@ solver = AcadosOcpSolver(ocp, json_file='mpc.json')
     <li><strong>Reinforcement Learning vs MPC</strong> — RL은 모델 없이도 학습, MPC는 모델 활용. 현재 활발한 비교 연구.</li>
   </ul>
 
+  <h2>📚 깊이 1 — 실시간 임베디드 MPC의 도전</h2>
+  <p>이론적 MPC를 실제 시스템에 올릴 때 마주치는 문제들:</p>
+  <ul>
+    <li><strong>샘플링 시간 한계</strong>: 모터 드라이브 100 μs, 드론 1 ms.</li>
+    <li><strong>메모리 한계</strong>: MCU에 KB~MB.</li>
+    <li><strong>고정소수점 vs 부동소수점</strong>: 저가 MCU 고정소수점만.</li>
+    <li><strong>코드 신뢰성</strong>: 안전 critical 요구사항.</li>
+    <li><strong>최악 시간 보장</strong>: WCET (Worst Case Execution Time).</li>
+  </ul>
+
+  <h2>📚 깊이 2 — QP 솔버 비교 — 실시간 관점</h2>
+  <table>
+    <thead><tr><th>솔버</th><th>알고리즘</th><th>특징</th><th>임베디드</th></tr></thead>
+    <tbody>
+      <tr><td>OSQP</td><td>ADMM</td><td>warm start 강함, BSD 라이선스</td><td>★★★ (C 코드 생성)</td></tr>
+      <tr><td>qpOASES</td><td>Active Set</td><td>WCET 분석 가능</td><td>★★★</td></tr>
+      <tr><td>HPIPM</td><td>IPM</td><td>MPC 전용 sparse</td><td>★★★</td></tr>
+      <tr><td>FORCES Pro</td><td>IPM (코드 생성)</td><td>상용, ASIL 인증</td><td>★★★ 산업급</td></tr>
+      <tr><td>ACADO</td><td>RTI + qpOASES</td><td>NMPC 표준</td><td>★★★</td></tr>
+      <tr><td>CVXGEN</td><td>코드 생성</td><td>작은 문제에 최적</td><td>★★ 작은 차원</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 3 — Code Generation 워크플로</h2>
+  <ol>
+    <li>오프라인 - 도구(CVXGEN, FORCES Pro, OSQP, ACADO)로 C 코드 생성.</li>
+    <li>임베디드 컴파일 - ARM Cortex-M, DSP, FPGA에 통합.</li>
+    <li>온라인 - 매 샘플 측정 → 솔버 호출 → 첫 입력 적용.</li>
+    <li>WCET 측정 → 시간 예산 안 들어맞으면 호라이즌 단축 또는 솔버 변경.</li>
+  </ol>
+
+  <h2>📚 깊이 4 — Warm Start 전략</h2>
+  <p>매 시점 풀이 시 이전 해를 초기값으로 사용. 활성 제약 변화가 작으면 1~5 iter 수렴.</p>
+  <ul>
+    <li><strong>Primal warm start</strong>: 이전 $z^*$를 한 스텝 shift.</li>
+    <li><strong>Dual warm start</strong>: dual 변수도 shift.</li>
+    <li><strong>Active set warm start</strong>: 이전 active set으로 시작.</li>
+  </ul>
+
+  <h2>📚 깊이 5 — Real-Time Iteration (RTI)</h2>
+  <p>NMPC에서 SQP 1 iter만 (Diehl 2002):</p>
+  <ol>
+    <li><strong>Preparation</strong>: 직전 해에서 도함수·QP 행렬 준비.</li>
+    <li><strong>Feedback</strong>: 새 measure 후 1 iter QP 풀이 + 첫 입력 적용.</li>
+  </ol>
+  <p>Feedback이 매우 빠름 (μs~ms 단위). 자율주행, 드론에서 표준.</p>
+
+  <h2>📚 깊이 6 — 안전·신뢰성 (Safety-Critical)</h2>
+  <ul>
+    <li><strong>Fallback controller</strong>: MPC 실패 시 백업 제어기 (PID, LQR).</li>
+    <li><strong>Watchdog timer</strong>: 풀이 시간 초과 감지.</li>
+    <li><strong>Sanity check</strong>: 출력 범위 검증.</li>
+    <li><strong>인증</strong>: ISO 26262 (자동차), DO-178C (항공).</li>
+  </ul>
+
+  <h2>📚 깊이 7 — 컴퓨팅 하드웨어별 특성</h2>
+  <table>
+    <thead><tr><th>플랫폼</th><th>속도</th><th>적합 응용</th></tr></thead>
+    <tbody>
+      <tr><td>x86 PC</td><td>GHz</td><td>개발·시뮬</td></tr>
+      <tr><td>ARM Cortex-A (e.g., RasPi)</td><td>1~2 GHz</td><td>로봇, 드론</td></tr>
+      <tr><td>ARM Cortex-M7</td><td>200~600 MHz</td><td>자동차 ECU</td></tr>
+      <tr><td>FPGA</td><td>병렬 처리</td><td>전력변환기 (μs)</td></tr>
+      <tr><td>ASIC</td><td>최고 성능</td><td>대량 생산</td></tr>
+      <tr><td>DSP (TI C2000)</td><td>~200 MHz, 부동소수점</td><td>전력 제어</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 8 — Profiling 및 최적화 단계</h2>
+  <ol>
+    <li>코드 베이스라인 시간 측정.</li>
+    <li>핫스팟 식별 (보통 행렬 곱, 선형 풀이).</li>
+    <li>BLAS 사용 (CMSIS DSP, Eigen).</li>
+    <li>고정소수점 변환 (필요 시).</li>
+    <li>SIMD/벡터화 활용.</li>
+    <li>호라이즌·차원 단축으로 본질적 감소.</li>
+  </ol>
+
+  <h2>📚 깊이 9 — 시뮬 → HIL → 실차 단계</h2>
+  <ol>
+    <li><strong>MIL (Model-in-the-Loop)</strong>: PC 시뮬, 모델만.</li>
+    <li><strong>SIL (Software-in-the-Loop)</strong>: 코드 + 모델, 같은 PC.</li>
+    <li><strong>PIL (Processor-in-the-Loop)</strong>: 임베디드 코드 + PC 모델.</li>
+    <li><strong>HIL (Hardware-in-the-Loop)</strong>: 임베디드 + 실시간 모델 시뮬.</li>
+    <li><strong>Vehicle/Robot test</strong>: 실차 테스트.</li>
+  </ol>
+
+  <h2>📚 깊이 10 — 디버깅·모니터링</h2>
+  <ul>
+    <li>로깅: 매 시점 $x_k, u_k, J^*, $ 풀이 시간.</li>
+    <li>시각화: 호라이즌 trajectory, 활성 제약, 비용 추이.</li>
+    <li>이상 감지: infeasibility, 시간 초과, 발산.</li>
+  </ul>
+
+  <h2>📚 깊이 11 — 산업 적용 사례</h2>
+  <ul>
+    <li><strong>Honeywell Profit Controller</strong> (1970~) — 산업 표준 MPC.</li>
+    <li><strong>ABB Predict&amp;Control</strong> — 화학 공정.</li>
+    <li><strong>Tesla Autopilot</strong> — 차선 추종 MPC.</li>
+    <li><strong>SpaceX Falcon 9 착륙</strong> — convex opt 기반 trajectory.</li>
+    <li><strong>Boston Dynamics</strong> — Atlas/Spot 보행.</li>
+  </ul>
+
+  <h2>📚 깊이 12 — 한 학기 완주 — 종합 정리</h2>
+  <ul>
+    <li>W1 — 개요. 4단계 절차.</li>
+    <li>W2 — 이산 상태공간.</li>
+    <li>W3 — LQR (무한 호라이즌, 닫힌 해).</li>
+    <li>W4 — CFTOC + QP.</li>
+    <li>W5 — 후퇴지평 (closed-loop).</li>
+    <li>W6 — 안정성.</li>
+    <li>W7 — 견실 MPC.</li>
+    <li>W8 — NMPC.</li>
+    <li>W9 — Explicit MPC.</li>
+    <li><strong>W10 — 구현·임베디드.</strong></li>
+  </ul>
+
+  <h2>📚 깊이 13 — 학기 후 추천 학습</h2>
+  <ul>
+    <li><strong>대학원 연구</strong> — Robust/Stochastic/Learning-based MPC.</li>
+    <li><strong>산업 기술</strong> — FORCES Pro 트레이닝, 양산 코드 생성.</li>
+    <li><strong>관련 분야</strong> — 강화학습, 적응제어, $H_\infty$.</li>
+  </ul>
+
+  <h2>📚 깊이 14 — 흔한 오답</h2>
+  <ol>
+    <li>이론과 구현의 차이 무시.</li>
+    <li>WCET 측정 누락.</li>
+    <li>Warm start 미사용.</li>
+    <li>Fallback 없음.</li>
+    <li>이상 상황 미감지.</li>
+  </ol>
+
+  <h2>📚 깊이 15 — 자가 점검 6문항</h2>
+  <ol>
+    <li>임베디드 MPC의 4대 도전?</li>
+    <li>QP 솔버 종류 3개?</li>
+    <li>RTI scheme의 이점?</li>
+    <li>HIL의 의미?</li>
+    <li>Fallback controller의 역할?</li>
+    <li>WCET가 중요한 이유?</li>
+  </ol>
+  <p>정답 — ① 시간·메모리·신뢰성·인증 ② OSQP, qpOASES, HPIPM ③ μs~ms 단위 풀이 ④ 임베디드 + 실시간 모델 시뮬 ⑤ MPC 실패 시 안전 제어 ⑥ 실시간 보장.</p>
+
+  <h2>📚 깊이 16 — FAQ</h2>
+  <h3>Q1. MPC를 처음 임베디드에 올릴 때 어디부터?</h3>
+  <p>OSQP + 코드 생성. C 코드가 깨끗하고 실시간 적합.</p>
+
+  <h3>Q2. NMPC 임베디드?</h3>
+  <p>ACADO + RTI + qpOASES. 자동차·드론 양산 표준.</p>
+
+  <h3>Q3. 산업 인증?</h3>
+  <p>FORCES Pro, dSPACE, Mathworks Embedded Coder가 ISO 26262/DO-178C 인증 도구.</p>
+
+  <h2>📚 깊이 17 — 학기 마무리 메시지</h2>
+  <p class="lead">한 학기 동안 MPC의 이론에서 구현까지 한 바퀴 돌았습니다. 다음은 직접 구현·연구를 통해 깊이 익히는 단계. 산업·연구·대학원 어디서든 MPC가 무기가 됩니다.</p>
+
+  <h3>한 학기 핵심 카드</h3>
+  <div class="hl">
+    <strong>MPC 4단계</strong>: 측정 → 예측 → 최적화 → 첫 입력 적용<br>
+    <strong>이산 상태공간</strong>: $x_{k+1} = Ax_k + Bu_k$<br>
+    <strong>LQR</strong>: $u = -Kx$, DARE<br>
+    <strong>CFTOC</strong>: $\min \sum x^TQx + u^TRu + V_f(x_N)$<br>
+    <strong>안정성</strong>: 종단 비용 + 제약 + Lyapunov<br>
+    <strong>견실</strong>: tube + tightening<br>
+    <strong>NMPC</strong>: SQP/IPM, RTI<br>
+    <strong>Explicit</strong>: PWA, lookup<br>
+    <strong>구현</strong>: 코드 생성, warm start, RTI
+  </div>
+
+  <h3>한 줄 격언</h3>
+  <p class="lead">"MPC는 도구가 아니라 사고 방식 — 미래를 보고 매 순간 다시 결정한다."</p>
+
+  <h3>학습 일지 마지막</h3>
+  <p>"한 학기 동안 MPC의 큰 그림을 손에 잡았다. 이제 응용·구현·연구로 한 발 더."</p>
+
   <div class="prevnext">
     <a href="09-explicit.html"><small>← 이전</small>W9. Explicit MPC</a>
     <a href="../mpc.html" class="next"><small>다음 →</small>강의 목록으로</a>
