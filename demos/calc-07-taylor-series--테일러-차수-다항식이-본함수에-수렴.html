@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 테일러 차수 ↑ — 다항식이 본함수에 수렴 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 테일러 차수 ↑ — 다항식이 본함수에 수렴</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/07-taylor-series.html">Week 7. 테일러 급수</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 테일러 차수 ↑ — 다항식이 본함수에 수렴</h4>
+    <p>함수와 차수 $N$을 골라 보세요. $N$이 커질수록 다항식 근사가 본함수에 가까워지는 모습이 한 화면에 들어옵니다.
+    $1/(1-x)$ 같이 수렴 반경이 1인 함수에서는 $|x| < 1$ 영역에서만 수렴이 일어남을 확인하세요.</p>
+    <canvas id="ts" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="tsFn">
+          <option value="sin" selected>sin x</option>
+          <option value="cos">cos x</option>
+          <option value="exp">eˣ</option>
+          <option value="geom">1/(1−x)</option>
+          <option value="ln">ln(1+x)</option>
+        </select>
+      </label>
+      <label>차수 N <span class="val" id="tsNV">3</span><input type="range" id="tsN" min="1" max="20" value="3"></label>
+    </div>
+    <p id="tsInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ts'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function setup(){
+      const m=document.getElementById('tsFn').value;
+      if(m==='sin'){
+        return{f:Math.sin,coef:k=>{if(k%2===0)return 0;const sign=(((k-1)/2)%2===0)?1:-1;return sign/factorial(k);},xR:[-7,7],yR:[-1.6,1.6],roc:'∞'};
+      }
+      if(m==='cos'){
+        return{f:Math.cos,coef:k=>{if(k%2===1)return 0;const sign=((k/2)%2===0)?1:-1;return sign/factorial(k);},xR:[-7,7],yR:[-1.6,1.6],roc:'∞'};
+      }
+      if(m==='exp'){
+        return{f:Math.exp,coef:k=>1/factorial(k),xR:[-3,3],yR:[-1,8],roc:'∞'};
+      }
+      if(m==='geom'){
+        return{f:v=>1/(1-v),coef:k=>1,xR:[-1.5,1.5],yR:[-4,4],roc:'1'};
+      }
+      // ln(1+x)
+      return{f:v=>v>-1?Math.log(1+v):NaN,coef:k=>k===0?0:(((k-1)%2===0?1:-1)/k),xR:[-1.2,1.5],yR:[-3,1.5],roc:'1'};
+    }
+    function factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
+    function loop(){
+      const N=+document.getElementById('tsN').value;
+      document.getElementById('tsNV').textContent=N;
+      const S=setup();
+      const xR=S.xR,yR=S.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // function
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){
+        const yv=S.f(v);if(!isFinite(yv)||yv<yR[0]||yv>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // taylor
+      const coefs=[];for(let k=0;k<=N;k++)coefs.push(S.coef(k));
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.setLineDash([6,4]);x.beginPath();
+      first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){
+        let p=0,xpow=1;for(let k=0;k<=N;k++){p+=coefs[k]*xpow;xpow*=v;}
+        if(p<yR[0]||p>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(p));first=false;}else x.lineTo(px(v),py(p));
+      }
+      x.stroke();x.setLineDash([]);
+      // legend
+      x.fillStyle='#0b5fff';x.fillRect(M.l+10,M.t+10,16,3);x.fillStyle='#222';x.font='12px sans-serif';x.fillText('본함수 f(x)',M.l+30,M.t+15);
+      x.fillStyle='#f57c00';x.fillRect(M.l+120,M.t+10,16,3);x.fillStyle='#222';x.fillText('테일러 T'+N+'(x)',M.l+140,M.t+15);
+      // info: error at sample points
+      const samples=[xR[0]+0.3*(xR[1]-xR[0]),xR[0]+0.7*(xR[1]-xR[0]),xR[1]*0.95];
+      const errs=samples.map(v=>{
+        const fv=S.f(v);if(!isFinite(fv))return null;
+        let p=0,xpow=1;for(let k=0;k<=N;k++){p+=coefs[k]*xpow;xpow*=v;}
+        return{v,e:Math.abs(p-fv)};
+      }).filter(x=>x);
+      const info='수렴 반경: '+S.roc+'    ·    오차 |f − T'+N+'|  '+errs.map(o=>'@x='+o.v.toFixed(2)+': '+o.e.toExponential(2)).join('   ');
+      document.getElementById('tsInfo').textContent=info;
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 비용 표면 위의 경사하강 궤적 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 비용 표면 위의 경사하강 궤적</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/03-regression-1.html">Week 3. 회귀 1: 선형회귀와 경사하강법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비용 표면 위의 경사하강 궤적</h4>
+    <p>색이 진할수록 비용이 작은 지점입니다. 시작 위치에서 경사하강이 어떻게 골짜기로 내려가는지 보세요.</p>
+    <canvas id="surfCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="surfRun">궤적 그리기</button>
+      <label>학습률 <span class="val" id="lrsV">0.02</span><input type="range" id="lrs" min="0.005" max="0.1" step="0.001" value="0.02"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('surfCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[];
+    for(let i=0;i<25;i++){const x=Math.random()*8;data.push({x,y:1.8*x+0.5+(Math.random()-0.5)*1.5});}
+    function J(w,b){let s=0;data.forEach(d=>{const e=w*d.x+b-d.y;s+=e*e;});return s/data.length;}
+    const wmin=-1,wmax=4,bmin=-4,bmax=4;
+    const toPx=w=>(w-wmin)/(wmax-wmin)*W;
+    const toPy=b=>H-(b-bmin)/(bmax-bmin)*H;
+    function bg(){
+      const img=ctx.createImageData(W,H);
+      let mn=Infinity,mx=-Infinity;const cache=new Float32Array(W*H);
+      for(let j=0;j<H;j+=2)for(let i=0;i<W;i+=2){
+        const w=wmin+i/W*(wmax-wmin),b=bmax-j/H*(bmax-bmin);
+        const v=Math.log(1+J(w,b));cache[j*W+i]=v;if(v<mn)mn=v;if(v>mx)mx=v;
+      }
+      for(let j=0;j<H;j+=2)for(let i=0;i<W;i+=2){
+        const v=(cache[j*W+i]-mn)/(mx-mn);
+        const r=255-Math.floor(v*200),g=255-Math.floor(v*180),bb=255-Math.floor(v*100);
+        for(let dj=0;dj<2;dj++)for(let di=0;di<2;di++){
+          const k=((j+dj)*W+(i+di))*4;img.data[k]=r;img.data[k+1]=g;img.data[k+2]=bb;img.data[k+3]=255;
+        }
+      }
+      ctx.putImageData(img,0,0);
+    }
+    function run(){
+      bg();
+      const lr=+document.getElementById('lrs').value;
+      document.getElementById('lrsV').textContent=lr.toFixed(3);
+      let w=-0.5,b=3.5;
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(toPx(w),toPy(b));
+      for(let k=0;k<200;k++){
+        let dw=0,db=0;data.forEach(d=>{const e=w*d.x+b-d.y;dw+=e*d.x;db+=e;});
+        dw*=2/data.length;db*=2/data.length;
+        w-=lr*dw;b-=lr*db;
+        ctx.lineTo(toPx(w),toPy(b));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#000';ctx.font='12px sans-serif';ctx.fillText('w →',W-30,H-5);ctx.fillText('↑b',5,15);
+    }
+    document.getElementById('surfRun').onclick=run;
+    document.getElementById('lrs').addEventListener('input',()=>{document.getElementById('lrsV').textContent=(+document.getElementById('lrs').value).toFixed(3);});
+    bg();
+  })();
+  </script>
+</main>
+</body>
+</html>

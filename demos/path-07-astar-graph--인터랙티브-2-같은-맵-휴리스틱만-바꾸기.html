@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브 #2 — 같은 맵, 휴리스틱만 바꾸기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브 #2 — 같은 맵, 휴리스틱만 바꾸기</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/07-astar-graph.html">Week 7. A* 알고리즘 — &quot;나침반을 가진 탐색자&quot;</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브 #2 — 같은 맵, 휴리스틱만 바꾸기</h4>
+    <p>휴리스틱이 강할수록 (= 실제값에 가까울수록) 탐색 영역이 좁아집니다. 같은 시작/목표/장애물 환경에서
+    Zero(=Dijkstra), Manhattan, Euclidean, Chebyshev 네 가지를 동시에 실행해 <strong>방문 노드 수</strong>를
+    한눈에 비교하세요.</p>
+    <canvas id="grid2" width="640" height="400"></canvas>
+    <div class="controls">
+      <button id="run2">4가지 동시 실행</button>
+      <button id="seed2" class="alt">장애물 무작위 재생성</button>
+      <span id="stat2" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('grid2'),x=c.getContext('2d');
+    const W=32,H=20,SZ=20;
+    let grid=Array.from({length:H},()=>Array(W).fill(0));
+    const start=[2,10], goal=[29,10];
+    function gen(){
+      grid=Array.from({length:H},()=>Array(W).fill(0));
+      for(let i=0;i<35;i++){
+        const cx=2+Math.floor(Math.random()*(W-4));
+        const cy=2+Math.floor(Math.random()*(H-4));
+        const r=1+Math.floor(Math.random()*2);
+        for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+          const nx=cx+dx,ny=cy+dy;
+          if(nx<=0||nx>=W-1||ny<=0||ny>=H-1)continue;
+          if(Math.abs(nx-start[0])+Math.abs(ny-start[1])<3)continue;
+          if(Math.abs(nx-goal[0])+Math.abs(ny-goal[1])<3)continue;
+          grid[ny][nx]=1;
+        }
+      }
+      draw([]);
+    }
+    function search(htype){
+      const heur=([a,b],[c2,d])=>{
+        const dx=Math.abs(a-c2),dy=Math.abs(b-d);
+        if(htype==='zero')return 0;
+        if(htype==='man')return dx+dy;
+        if(htype==='che')return Math.max(dx,dy);
+        return Math.hypot(dx,dy);
+      };
+      const open=[{p:start,g:0,f:heur(start,goal),parent:null}];
+      const gs={};gs[start[1]*W+start[0]]=0;
+      const visited=new Set();
+      let pathOut=[];
+      while(open.length){
+        open.sort((a,b)=>a.f-b.f);
+        const cur=open.shift();
+        const k=cur.p[1]*W+cur.p[0];
+        if(visited.has(k))continue;
+        visited.add(k);
+        if(cur.p[0]==goal[0]&&cur.p[1]==goal[1]){
+          let n=cur;while(n){pathOut.push(n.p);n=n.parent;}pathOut.reverse();break;
+        }
+        for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+          const nx=cur.p[0]+dx,ny=cur.p[1]+dy;
+          if(nx<0||ny<0||nx>=W||ny>=H||grid[ny][nx])continue;
+          const ng=cur.g+Math.hypot(dx,dy);
+          const kk=ny*W+nx;
+          if(gs[kk]!==undefined&&ng>=gs[kk])continue;
+          gs[kk]=ng;
+          open.push({p:[nx,ny],g:ng,f:ng+heur([nx,ny],goal),parent:cur});
+        }
+      }
+      return {visited,path:pathOut};
+    }
+    function drawPanel(px,py,title,result,color){
+      x.strokeStyle='#ccc';x.strokeRect(px,py,310,190);
+      x.fillStyle='#fafbfc';x.fillRect(px+1,py+1,308,188);
+      const sz=9;
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        const k=i*W+j;
+        if(grid[i][j])x.fillStyle='#444';
+        else if(result.visited.has(k))x.fillStyle=color;
+        else x.fillStyle='#fff';
+        x.fillRect(px+5+j*sz,py+15+i*sz,sz-0.5,sz-0.5);
+      }
+      x.strokeStyle='#0b5fff';x.lineWidth=1.8;x.beginPath();
+      result.path.forEach((p,i)=>{const xx=px+5+p[0]*sz+sz/2,yy=py+15+p[1]*sz+sz/2;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#2e7d32';x.fillRect(px+5+start[0]*sz,py+15+start[1]*sz,sz,sz);
+      x.fillStyle='#c62828';x.fillRect(px+5+goal[0]*sz,py+15+goal[1]*sz,sz,sz);
+      x.fillStyle='#222';x.font='bold 12px sans-serif';
+      x.fillText(title+' — 방문 '+result.visited.size,px+5,py+12);
+    }
+    function draw(results){
+      x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+      if(!results||!results.length){
+        x.fillStyle='#888';x.font='13px sans-serif';
+        x.fillText('"4가지 동시 실행" 버튼을 누르세요',180,200);
+        return;
+      }
+      drawPanel(5,5,'Zero (=Dijkstra)',results[0],'#ffd180');
+      drawPanel(325,5,'Manhattan',results[1],'#a5d6a7');
+      drawPanel(5,205,'Euclidean',results[2],'#90caf9');
+      drawPanel(325,205,'Chebyshev',results[3],'#ce93d8');
+    }
+    document.getElementById('run2').onclick=()=>{
+      const r=[search('zero'),search('man'),search('euc'),search('che')];
+      draw(r);
+      document.getElementById('stat2').textContent='방문 노드: Zero '+r[0].visited.size+' · Man '+r[1].visited.size+' · Euc '+r[2].visited.size+' · Che '+r[3].visited.size;
+    };
+    document.getElementById('seed2').onclick=gen;
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

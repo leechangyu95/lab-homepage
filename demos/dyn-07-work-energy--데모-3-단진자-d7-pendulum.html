@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>데모 3: 단진자 (d7-pendulum) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">데모 3: 단진자 (d7-pendulum)</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/07-work-energy.html">Week 7. 일과 에너지</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>데모 3: 단진자 (d7-pendulum)</h4>
+    <p>줄 길이 $L$과 마찰계수를 조정하며 KE·PE 막대를 관찰. $\theta$가 작을 때 $T = 2\pi\sqrt{L/g}$ 주기 공식 확인.</p>
+    <canvas id="d7p" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>줄 길이 L (m) <span class="val" id="d7pLV">1.5</span><input type="range" id="d7pL" min="0.5" max="3" step="0.1" value="1.5"></label>
+      <label>초기 각도 θ₀ (°) <span class="val" id="d7pTV">40</span><input type="range" id="d7pT" min="5" max="85" step="1" value="40"></label>
+      <label>감쇠 c <span class="val" id="d7pCV">0</span><input type="range" id="d7pC" min="0" max="0.5" step="0.01" value="0"></label>
+      <button id="d7pReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d7p'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['d7pL','d7pT','d7pC'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    const m=1,g=9.81;
+    let th=0.7,om=0;
+    function reset(){th=+sl('d7pT').value*Math.PI/180;om=0;}
+    sl('d7pReset').onclick=reset;
+    ks.forEach(k=>sl(k).addEventListener('change',reset));
+    reset();
+    function loop(){
+      const L=+sl('d7pL').value,cd=+sl('d7pC').value,dt=0.025;
+      const a=-(g/L)*Math.sin(th)-cd*om;
+      om+=a*dt;th+=om*dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320,cy=60,scale=80;
+      const bx=cx+L*scale*Math.sin(th),by=cy+L*scale*Math.cos(th);
+      x.strokeStyle='#888';x.lineWidth=1;x.beginPath();x.moveTo(cx-50,cy);x.lineTo(cx+50,cy);x.stroke();
+      x.strokeStyle='#333';x.lineWidth=2;x.beginPath();x.moveTo(cx,cy);x.lineTo(bx,by);x.stroke();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(bx,by,16,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // bars
+      const v=L*om;
+      const T=0.5*m*v*v;
+      const h=L*(1-Math.cos(th));
+      const V=m*g*h;
+      const E=T+V;
+      const E0=m*g*L*(1-Math.cos(+sl('d7pT').value*Math.PI/180));
+      function bar(idx,val,col,label){
+        const fx=20+idx*50,fy0=320,fy1=80;
+        const h=Math.min(val/E0,1.05)*(fy0-fy1);
+        x.fillStyle='#eee';x.fillRect(fx,fy1,40,fy0-fy1);
+        x.fillStyle=col;x.fillRect(fx,fy0-h,40,h);
+        x.strokeStyle='#333';x.strokeRect(fx,fy1,40,fy0-fy1);
+        x.fillStyle='#333';x.font='10px sans-serif';x.textAlign='center';
+        x.fillText(label,fx+20,fy0+12);
+        x.fillText(val.toFixed(2),fx+20,fy0+24);
+      }
+      bar(0,T,'#0b5fff','KE');
+      bar(1,V,'#2e7d32','PE');
+      bar(2,E,'#888','합');
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('θ = '+(th*180/Math.PI).toFixed(1)+'°',440,160);
+      x.fillText('ω = '+om.toFixed(2)+' rad/s',440,180);
+      x.fillText('주기(소진폭) T = 2π√(L/g) = '+(2*Math.PI*Math.sqrt(L/g)).toFixed(2)+' s',440,200);
+      x.fillText('감쇠 c='+cd.toFixed(2)+' → 진폭 점차 감소',440,220);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

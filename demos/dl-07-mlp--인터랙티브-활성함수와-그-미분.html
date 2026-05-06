@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 활성함수와 그 미분 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 활성함수와 그 미분</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/07-mlp.html">Week 7. 퍼셉트론과 다층 신경망(MLP)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 활성함수와 그 미분</h4>
+    <p>함수를 골라 모양과 미분(점선)을 봅니다. ReLU의 단순함이 왜 딥러닝을 살렸는지 느껴보세요.</p>
+    <canvas id="actCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="actSel">
+          <option value="sig">Sigmoid</option>
+          <option value="tanh">tanh</option>
+          <option value="relu">ReLU</option>
+          <option value="lrelu">Leaky ReLU</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('actCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const xmin=-5,xmax=5,ymin=-1.2,ymax=1.2;
+    const toPx=x=>30+(x-xmin)/(xmax-xmin)*(W-50);
+    const toPy=y=>H/2-y*((H-40)/(ymax-ymin));
+    function f(t,x){
+      if(t==='sig'){const s=1/(1+Math.exp(-x));return [s*2-1,2*s*(1-s)];}
+      if(t==='tanh'){const s=Math.tanh(x);return [s,1-s*s];}
+      if(t==='relu'){return [Math.max(0,x)/3,x>0?0.33:0];}
+      if(t==='lrelu'){const v=x>0?x:0.1*x;return [v/3,x>0?0.33:0.033];}
+    }
+    function draw(){
+      const t=document.getElementById('actSel').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(30,H/2);ctx.lineTo(W-20,H/2);ctx.moveTo(toPx(0),20);ctx.lineTo(toPx(0),H-20);ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){const x=xmin+(xmax-xmin)*i/200;const v=f(t,x)[0];if(i===0)ctx.moveTo(toPx(x),toPy(v));else ctx.lineTo(toPx(x),toPy(v));}
+      ctx.stroke();
+      ctx.strokeStyle='#ff8c00';ctx.setLineDash([4,4]);ctx.beginPath();
+      for(let i=0;i<=200;i++){const x=xmin+(xmax-xmin)*i/200;const v=f(t,x)[1];if(i===0)ctx.moveTo(toPx(x),toPy(v));else ctx.lineTo(toPx(x),toPy(v));}
+      ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';ctx.fillText('함수',W-100,30);
+      ctx.fillStyle='#ff8c00';ctx.fillText('미분(점선)',W-100,48);
+    }
+    document.getElementById('actSel').onchange=draw;
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

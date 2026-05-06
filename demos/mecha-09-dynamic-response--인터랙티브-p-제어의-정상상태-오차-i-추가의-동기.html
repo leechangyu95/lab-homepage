@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: P 제어의 정상상태 오차 — I 추가의 동기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: P 제어의 정상상태 오차 — I 추가의 동기</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/09-dynamic-response.html">Week 9. 동적 응답 — 1차·2차 시스템의 시간 응답</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: P 제어의 정상상태 오차 — I 추가의 동기</h4>
+    <p>1차 플랜트 $1/(\tau s+1)$에 P 제어만 적용하면, 이득 $K_p$를 키워도 오차가 완전히 0이 되지 않습니다(분수만 줄어들 뿐). I항을 켜면 누적 오차가 컨트롤러를 강제로 더 밀어붙여 결국 출력이 정확히 목표에 도달해요. 이게 W11 PID의 출발점입니다.</p>
+    <canvas id="ssErrDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>P 이득 Kp <span class="val" id="ssKpV">2</span><input type="range" id="ssKp" min="0.5" max="20" step="0.1" value="2"></label>
+      <label>I 이득 Ki <span class="val" id="ssKiV">0</span><input type="range" id="ssKi" min="0" max="10" step="0.1" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ssErrDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const Kp=+document.getElementById('ssKp').value;
+      const Ki=+document.getElementById('ssKi').value;
+      document.getElementById('ssKpV').textContent=Kp.toFixed(1);
+      document.getElementById('ssKiV').textContent=Ki.toFixed(1);
+      // simulate: dy/dt = (-y + u)/tau,  u = Kp*e + Ki*∫e
+      const tau=0.5, dt=0.01, T=10, ref=1;
+      let y=0, integ=0;
+      const data=[];
+      for(let i=0;i<T/dt;i++){
+        const e=ref-y;
+        integ += e*dt;
+        const u=Kp*e + Ki*integ;
+        y += dt*(-y+u)/tau;
+        data.push({t:i*dt,y,e});
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=55,oy=H-40,w=W-80,h=H-70;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      function py(v){return oy-v/1.5*h;}
+      // ref
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(ox,py(1));ctx.lineTo(ox+w,py(1));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';ctx.fillText('목표 r = 1',ox+w-90,py(1)-4);
+      // response
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      data.forEach((d,i)=>{const xx=ox+d.t/T*w,yy=py(Math.max(0,d.y));if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+      ctx.stroke();
+      // final value & error
+      const yFinal=data[data.length-1].y;
+      const err=1-yFinal;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`정상상태 출력 y∞ = ${yFinal.toFixed(3)},  오차 ess = ${err.toFixed(3)}`,ox,22);
+      ctx.fillStyle=Math.abs(err)<0.01?'#2e7d32':'#c62828';
+      ctx.fillText(Math.abs(err)<0.01?'✓ 오차 ≈ 0 (I항 효과)':`⚠ 오차 = ${(err*100).toFixed(1)}% 남음`,ox+340,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('Type 0 플랜트 1/(0.5s+1) + P/PI 제어',ox,oy+22);
+      // theoretical Kp limit for P-only: y∞ = Kp/(1+Kp)
+      if(Ki<0.01){
+        ctx.fillStyle='#888';ctx.font='11px sans-serif';
+        ctx.fillText(`이론치 (Ki=0): y∞ = Kp/(1+Kp) = ${(Kp/(1+Kp)).toFixed(3)}`,ox+200,oy+22);
+      }
+    }
+    document.getElementById('ssKp').addEventListener('input',draw);
+    document.getElementById('ssKi').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

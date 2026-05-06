@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 사다리가 미끄러진다 — IC 찾기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 사다리가 미끄러진다 — IC 찾기</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/10-rigid-kinematics-2.html">Week 10. 강체의 평면 운동학 — 일반 평면운동과 순간중심</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 사다리가 미끄러진다 — IC 찾기</h4>
+    <p>벽에 기댄 사다리의 위쪽이 벽을 따라 아래로, 아래쪽이 바닥을 따라 옆으로 미끄러집니다. 두 점의 속도 방향이 정해져 있으니 각 방향에 수직선을 그으면 두 선이 만나는 곳이 <strong>IC</strong>입니다(빨간 점). 사다리의 모든 점은 그 순간 IC를 중심으로 회전합니다.</p>
+    <canvas id="ladC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>각도 θ (°) <span class="val" id="ldAV">60</span><input type="range" id="ldA" min="10" max="80" step="1" value="60"></label>
+      <label>각속도 ω <span class="val" id="ldWV">0.4</span><input type="range" id="ldW" min="-1" max="1" step="0.05" value="0.4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ladC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['ldA','ldW'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const th=+sl('ldA').value*Math.PI/180,w=+sl('ldW').value;
+      const L=240;
+      const ox=120,oy=320;  // floor-wall corner
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // wall and floor
+      x.fillStyle='#888';x.fillRect(ox-12,40,12,oy-40);x.fillRect(ox,oy,c.width-ox,12);
+      // ladder endpoints
+      const A={x:ox,y:oy-L*Math.sin(th)};  // on wall
+      const B={x:ox+L*Math.cos(th),y:oy};  // on floor
+      // velocities: A moves down (vertical), B moves right (horizontal)
+      // v_A = -L cosθ ω (down=negative, but we'll show direction)
+      const vA={x:0,y:L*Math.cos(th)*w};  // y positive = down on canvas
+      const vB={x:L*Math.sin(th)*w,y:0};
+      // IC at intersection of perpendiculars to v_A and v_B
+      // perpendicular to v_A (which is vertical) is horizontal at A's height
+      // perpendicular to v_B (which is horizontal) is vertical at B's x
+      const IC={x:B.x,y:A.y};
+      // ladder
+      x.strokeStyle='#8b6f47';x.lineWidth=8;x.beginPath();x.moveTo(A.x,A.y);x.lineTo(B.x,B.y);x.stroke();
+      x.strokeStyle='#3a2a14';x.lineWidth=1;x.stroke();
+      // perpendiculars (dashed)
+      x.strokeStyle='#999';x.setLineDash([4,4]);
+      x.beginPath();x.moveTo(A.x,A.y);x.lineTo(IC.x,IC.y);x.stroke();
+      x.beginPath();x.moveTo(B.x,B.y);x.lineTo(IC.x,IC.y);x.stroke();
+      x.setLineDash([]);
+      // IC point
+      x.fillStyle='#c62828';x.beginPath();x.arc(IC.x,IC.y,7,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.font='bold 13px sans-serif';x.fillText('IC',IC.x+10,IC.y-6);
+      // velocity arrows
+      const sc=80;
+      function arrow(p,vec,col){
+        const px=p.x+vec.x*sc,py=p.y+vec.y*sc;
+        x.strokeStyle=col;x.lineWidth=2.5;
+        x.beginPath();x.moveTo(p.x,p.y);x.lineTo(px,py);
+        const a=Math.atan2(py-p.y,px-p.x);
+        x.lineTo(px-Math.cos(a)*8-Math.sin(a)*4,py-Math.sin(a)*8+Math.cos(a)*4);
+        x.moveTo(px,py);x.lineTo(px-Math.cos(a)*8+Math.sin(a)*4,py-Math.sin(a)*8-Math.cos(a)*4);
+        x.stroke();
+      }
+      arrow(A,vA,'#0b5fff');
+      arrow(B,vB,'#2e7d32');
+      // midpoint
+      const M={x:(A.x+B.x)/2,y:(A.y+B.y)/2};
+      // velocity of midpoint = ω × r from IC
+      const dx=M.x-IC.x,dy=M.y-IC.y;
+      const vM={x:-dy*w/L*L,y:dx*w/L*L};
+      arrow(M,{x:vM.x/L,y:vM.y/L},'#9e35b8');
+      // points
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(A.x,A.y,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(B.x,B.y,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#9e35b8';x.beginPath();x.arc(M.x,M.y,5,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('A (벽)',A.x-32,A.y+4);
+      x.fillStyle='#2e7d32';x.fillText('B (바닥)',B.x-22,B.y-10);
+      x.fillStyle='#9e35b8';x.fillText('M (중점)',M.x+8,M.y+4);
+      // info
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('두 점의 속도 방향에 수직선 → 만나는 점이 IC',20,25);
+      x.fillText('IC에서 멀수록 속도가 크다 (v = r_IC · ω)',20,43);
+      x.fillText('각도 θ가 0에 가까워질수록 IC가 사다리에서 멀어짐 → 각속도 같아도 속도 폭증',20,61);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

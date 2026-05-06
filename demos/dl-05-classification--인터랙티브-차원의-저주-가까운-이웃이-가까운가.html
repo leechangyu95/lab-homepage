@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 차원의 저주 — 가까운 이웃이 가까운가? — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 차원의 저주 — 가까운 이웃이 가까운가?</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/05-classification.html">Week 5. 분류 알고리즘 — KNN, SVM, 결정트리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 차원의 저주 — 가까운 이웃이 가까운가?</h4>
+    <p>$d$차원 단위 입방체 안에 1000개의 점을 무작위로 뿌리고, 한 점에서 <strong>가장 가까운 이웃과 가장 먼 이웃 사이의 거리 비</strong>를 봅니다. $d$가 커질수록 그 비율이 1로 수렴합니다 — "가장 가까운 점"의 의미가 사라지는 순간이에요.</p>
+    <canvas id="cod" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>차원 $d$ <span class="val" id="codDV">2</span><input type="range" id="codD" min="1" max="100" step="1" value="2"></label>
+      <button id="codRun">다시 샘플</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cod');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const history=[];
+    function run(){
+      const d=+document.getElementById('codD').value;
+      document.getElementById('codDV').textContent=d;
+      const N=400;
+      const pts=[];for(let i=0;i<N;i++){const p=[];for(let k=0;k<d;k++)p.push(Math.random());pts.push(p);}
+      let totalRatio=0,n=0;
+      for(let i=0;i<60;i++){
+        let mn=Infinity,mx=0;
+        for(let j=0;j<N;j++){if(i===j)continue;
+          let s=0;for(let k=0;k<d;k++){const a=pts[i][k]-pts[j][k];s+=a*a;}
+          const dist=Math.sqrt(s);
+          if(dist<mn)mn=dist;
+          if(dist>mx)mx=dist;
+        }
+        totalRatio+=mn/mx;n++;
+      }
+      const avgRatio=totalRatio/n;
+      history.push({d,r:avgRatio});if(history.length>40)history.shift();
+      draw(avgRatio);
+    }
+    function draw(r){
+      const d=+document.getElementById('codD').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      for(let i=0;i<=10;i++){const y=20+i*(H-50)/10;ctx.moveTo(50,y);ctx.lineTo(W-20,y);}
+      ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let i=0;i<=5;i++){const y=20+i*(H-50)/5;ctx.fillText((1-i*0.2).toFixed(1),20,y+3);}
+      ctx.fillText('d→',W-30,H-10);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      history.forEach((h,i)=>{
+        const x=50+(h.d/100)*(W-70);
+        const y=20+(1-h.r)*(H-50);
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();
+      const x=50+(d/100)*(W-70),y=20+(1-r)*(H-50);ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('d='+d+': 최근접/최원접 거리 비 = '+r.toFixed(3),60,H-10);
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText(r>0.85?'⚠ 이웃의 의미가 거의 없음':r>0.6?'⚠ 거리 정보가 약해지는 중':'✓ 거리 척도가 의미 있음',W-260,20);
+    }
+    document.getElementById('codD').addEventListener('input',run);
+    document.getElementById('codRun').addEventListener('click',run);
+    run();
+  })();
+  </script>
+</main>
+</body>
+</html>

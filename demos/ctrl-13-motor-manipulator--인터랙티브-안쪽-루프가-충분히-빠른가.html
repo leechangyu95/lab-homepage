@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 안쪽 루프가 충분히 빠른가? — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 안쪽 루프가 충분히 빠른가?</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/13-motor-manipulator.html">Week 13. PID 응용 ① — DC 모터 &amp; 로봇 팔</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 안쪽 루프가 충분히 빠른가?</h4>
+    <p>안쪽 속도 루프 대역폭을 바꿔가며 외부 위치 루프가 어떻게 영향받는지 확인합니다. 시정수 분리가 5배 미만이면 진동.</p>
+    <canvas id="c13ts" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>위치 Kp <span class="val" id="c13tsKpV">3</span><input type="range" id="c13tsKp" min="0.5" max="15" step="0.1" value="3"></label>
+      <label>속도 루프 대역폭 비율 <span class="val" id="c13tsRV">5</span><input type="range" id="c13tsR" min="1" max="20" step="0.5" value="5"></label>
+      <button id="c13tsRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c13ts'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c13tsKpV').textContent=(+$('c13tsKp').value).toFixed(2);$('c13tsRV').textContent=(+$('c13tsR').value).toFixed(1);};
+    ['c13tsKp','c13tsR'].forEach(id=>$(id).oninput=upd);
+    let resetFlag=false; $('c13tsRst').onclick=()=>resetFlag=true;
+    let th=0, om=0, hist=[], rHist=[];
+    function loop(){
+      if(resetFlag){th=0;om=0;hist=[];rHist=[];resetFlag=false;}
+      const Kp=+$('c13tsKp').value, ratio=+$('c13tsR').value;
+      const dt=0.005, ref=1.0;
+      // outer position loop bandwidth = Kp ; inner velocity time constant = 1/(Kp*ratio)
+      const tauVel = 1/(Kp*ratio);
+      // inner: omega tracks omega_cmd with first-order
+      const om_cmd = Kp*(ref-th);
+      om += dt/(tauVel+dt) * (om_cmd - om);
+      th += om*dt;
+      hist.push(th); rHist.push(ref);
+      if(hist.length>800){hist.shift();rHist.shift();}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40, oy=240, w=560, h=180;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,oy-h*0.5);x.lineTo(ox+w,oy-h*0.5);x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((v,i)=>{const xx=ox+i*w/800, yy=oy-Math.max(-1,Math.min(2,v))*h*0.5;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('파랑 = 위치 θ,  빨강 = 목표 1.0',ox,oy+18);
+      x.fillText('위치 루프 시정수 = 1/Kp = '+(1/Kp).toFixed(3)+' s,  속도 루프 시정수 = '+tauVel.toFixed(4)+' s',ox,oy+34);
+      x.fillStyle=ratio<5?'#c62828':'#2e7d32';
+      x.fillText(ratio<5?'분리 비율 부족 (<5×) — 진동 위험':'분리 비율 적정 (≥5×)',ox,oy+52);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

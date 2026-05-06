@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 가중치 $Q/R$ 비율의 효과 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 가중치 $Q/R$ 비율의 효과</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/01-intro.html">Week 1. MPC 입문</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 가중치 $Q/R$ 비율의 효과</h4>
+    <p>같은 1차 시스템을 같은 호라이즌으로 제어하지만 $Q/R$ 비율을 바꿉니다. 비율이 크면 빨리 가지만 입력이 거칠고, 작으면 부드럽지만 느려요.</p>
+    <canvas id="qr" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$\log_{10}(Q/R)$ <span class="val" id="qrRV">1.0</span><input type="range" id="qrR" min="-2" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('qr');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function sim(QR){
+      let x=0;const xs=[],us=[];const dt=0.1,T=60,r=5,uMax=10,N=15;
+      for(let k=0;k<T;k++){
+        let bestU=0,bestC=Infinity;
+        for(let ug=-100;ug<=100;ug++){
+          const u=ug/100*uMax;let xp=x,cost=0;
+          for(let i=0;i<N;i++){xp+=dt*(-xp+u);cost+=QR*(xp-r)*(xp-r)+u*u;}
+          if(cost<bestC){bestC=cost;bestU=u;}
+        }
+        x+=dt*(-x+bestU);
+        xs.push(x);us.push(bestU);
+      }
+      return {xs,us};
+    }
+    function draw(){
+      const lr=+document.getElementById('qrR').value;
+      const QR=Math.pow(10,lr);
+      document.getElementById('qrRV').textContent=lr.toFixed(1);
+      const T=60,r=5;
+      const s=sim(QR);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const tH=180;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();ctx.moveTo(40,30);ctx.lineTo(W-20,30);ctx.moveTo(40,tH);ctx.lineTo(W-20,tH);ctx.moveTo(40,30);ctx.lineTo(40,tH);ctx.stroke();
+      const refY=tH-(r/8)*(tH-30);
+      ctx.strokeStyle='#999';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(40,refY);ctx.lineTo(W-20,refY);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.fillText('x(t), 목표=5',12,40);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      s.xs.forEach((v,i)=>{const x=40+(i/(T-1))*(W-60);const y=tH-(v/8)*(tH-30);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      // u plot
+      const uTop=200,uBot=H-30;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();ctx.moveTo(40,uTop);ctx.lineTo(W-20,uTop);ctx.moveTo(40,uBot);ctx.lineTo(W-20,uBot);ctx.moveTo(40,uTop);ctx.lineTo(40,uBot);ctx.stroke();
+      const mid=(uTop+uBot)/2,uH=(uBot-uTop)/2;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,mid);ctx.lineTo(W-20,mid);ctx.stroke();
+      ctx.fillStyle='#666';ctx.fillText('u(t)',12,210);
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;ctx.beginPath();
+      s.us.forEach((v,i)=>{const x=40+(i/(T-1))*(W-60);const y=mid-(v/10)*uH*0.9;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`Q/R = ${QR.toFixed(2)} ${lr>1.5?'(빠름·거칠음)':lr<0?'(부드러움·느림)':'(균형)'}`,12,22);
+    }
+    document.getElementById('qrR').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

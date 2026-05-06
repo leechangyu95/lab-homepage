@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 속도 적분 → 위치 — FTC를 시각으로 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 속도 적분 → 위치 — FTC를 시각으로</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/10-definite-integral-ftc.html">Week 10. 정적분·미적분학 기본정리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 속도 적분 → 위치 — FTC를 시각으로</h4>
+    <p>파란 곡선이 속도 $v(t)$, 채워진 영역이 그 시점까지의 적분 면적, 빨간 곡선이 위치 $s(t) = \int_0^t v$. 면적이 바로 위치라는 게 한눈에 보입니다.</p>
+    <canvas id="vp" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>속도 패턴
+        <select id="vpV">
+          <option value="const" selected>등속 v = 2</option>
+          <option value="lin">선형 가속 v = t</option>
+          <option value="sin">사인 v = 2 sin(t)</option>
+          <option value="brake">가속→감속</option>
+        </select>
+      </label>
+      <label>현재 시간 t <span class="val" id="vpTV">3.00</span><input type="range" id="vpT" min="0" max="6" step="0.05" value="3"></label>
+    </div>
+    <p id="vpInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vp'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:60,r:20,t:30,b:30};
+    const Tmax=6;
+    function v(t){
+      const m=document.getElementById('vpV').value;
+      if(m==='const')return 2;
+      if(m==='lin')return t;
+      if(m==='sin')return 2*Math.sin(t);
+      // brake: 0..2 accel, 2..4 const, 4..6 decel
+      if(t<2)return t;
+      if(t<4)return 2;
+      return 2-(t-4);
+    }
+    function loop(){
+      const tc=+document.getElementById('vpT').value;
+      document.getElementById('vpTV').textContent=tc.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // top panel: v(t)
+      const Tx0=M.l,Tx1=W-M.r,Ty0=M.t,Ty1=180;
+      x.strokeStyle='#ddd';x.strokeRect(Tx0,Ty0,Tx1-Tx0,Ty1-Ty0);
+      // bottom panel: s(t) = integral of v
+      const Bx0=M.l,Bx1=W-M.r,By0=200,By1=H-M.b;
+      x.strokeStyle='#ddd';x.strokeRect(Bx0,By0,Bx1-Bx0,By1-By0);
+      function pxT(t){return Tx0+t/Tmax*(Tx1-Tx0);}
+      function pxB(t){return Bx0+t/Tmax*(Bx1-Bx0);}
+      // y-scales
+      let vmax=0,smax=0,sval=0;
+      const N=300;const dt=Tmax/N;
+      const ss=[0];const vs=[];
+      for(let i=0;i<=N;i++){
+        const t=i*dt;const vv=v(t);vs.push(vv);
+        if(Math.abs(vv)>vmax)vmax=Math.abs(vv);
+      }
+      for(let i=1;i<=N;i++){
+        const t=i*dt;ss.push(ss[i-1]+v(t-dt/2)*dt);
+      }
+      smax=Math.max(...ss.map(Math.abs));
+      vmax=Math.max(vmax,1);smax=Math.max(smax,1);
+      function pyT(vv){return(Ty0+Ty1)/2 - vv/vmax*((Ty1-Ty0)/2-12);}
+      function pyB(ss){return(By0+By1)/2 - ss/smax*((By1-By0)/2-12);}
+      // axes
+      x.strokeStyle='#999';
+      x.beginPath();x.moveTo(Tx0,(Ty0+Ty1)/2);x.lineTo(Tx1,(Ty0+Ty1)/2);x.stroke();
+      x.beginPath();x.moveTo(Bx0,(By0+By1)/2);x.lineTo(Bx1,(By0+By1)/2);x.stroke();
+      // shade integral up to tc
+      x.fillStyle='rgba(11,95,255,0.25)';
+      x.beginPath();x.moveTo(Tx0,(Ty0+Ty1)/2);
+      for(let i=0;i<=N;i++){const t=i*dt;if(t>tc)break;x.lineTo(pxT(t),pyT(vs[i]));}
+      x.lineTo(pxT(tc),(Ty0+Ty1)/2);x.closePath();x.fill();
+      // velocity curve
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=N;i++){const t=i*dt;i?x.lineTo(pxT(t),pyT(vs[i])):x.moveTo(pxT(t),pyT(vs[i]));}
+      x.stroke();
+      // position curve
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=N;i++){const t=i*dt;i?x.lineTo(pxB(t),pyB(ss[i])):x.moveTo(pxB(t),pyB(ss[i]));}
+      x.stroke();
+      // current cursor on both panels
+      const idx=Math.min(N,Math.round(tc/dt));sval=ss[idx];
+      x.strokeStyle='rgba(0,0,0,0.4)';x.setLineDash([3,3]);
+      x.beginPath();x.moveTo(pxT(tc),Ty0);x.lineTo(pxT(tc),Ty1);x.stroke();
+      x.beginPath();x.moveTo(pxB(tc),By0);x.lineTo(pxB(tc),By1);x.stroke();
+      x.setLineDash([]);
+      x.fillStyle='#c62828';x.beginPath();x.arc(pxB(tc),pyB(sval),4,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('속도 v(t)',Tx0+10,Ty0+18);
+      x.fillText('위치 s(t) = ∫₀ᵗ v(τ) dτ',Bx0+10,By0+18);
+      x.fillStyle='#0742b8';x.font='12px Consolas,monospace';
+      x.fillText('v('+tc.toFixed(2)+') = '+v(tc).toFixed(3)+'    ·    s('+tc.toFixed(2)+') = '+sval.toFixed(3),Tx0+10,Ty1-8);
+      document.getElementById('vpInfo').textContent='속도 곡선 아래 색칠된 면적이 정확히 위치값. FTC Part 1: s\'(t) = v(t).';
+    }
+    loop();
+    document.getElementById('vpV').onchange=loop;
+    document.getElementById('vpT').oninput=loop;
+  })();
+  </script>
+</main>
+</body>
+</html>

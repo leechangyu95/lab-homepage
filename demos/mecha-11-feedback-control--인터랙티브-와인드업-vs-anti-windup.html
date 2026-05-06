@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 와인드업 vs Anti-Windup — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 와인드업 vs Anti-Windup</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/11-feedback-control.html">Week 11. 피드백 제어 — PID로 시작하는 제어공학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 와인드업 vs Anti-Windup</h4>
+    <p>큰 스텝을 입력하면 P+I 컨트롤러가 매우 큰 명령을 만드는데, 액추에이터 한계가 ±$u_{max}$로 잘립니다. 그동안에도 적분은 계속 누적 — <strong>안정점에 도달한 후에도 적분이 너무 커서 한참을 오버슈트</strong>합니다. Anti-windup을 켜면 포화 시 적분을 멈춰 이를 막아요.</p>
+    <canvas id="awDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>액추에이터 한계 u_max <span class="val" id="awUV">2</span><input type="range" id="awU" min="0.5" max="10" step="0.5" value="2"></label>
+      <label>Kp <span class="val" id="awKpV">3</span><input type="range" id="awKp" min="0.5" max="10" step="0.1" value="3"></label>
+      <label>Ki <span class="val" id="awKiV">5</span><input type="range" id="awKi" min="0" max="10" step="0.1" value="5"></label>
+      <label><input type="checkbox" id="awEn" checked> Anti-windup 켜기</label>
+      <button id="awRst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🔴 와인드업 발생 (anti-windup 끔) &nbsp; 🔵 anti-windup 적용 &nbsp; 🟢 목표</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('awDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function simulate(awEn){
+      const Kp=+document.getElementById('awKp').value;
+      const Ki=+document.getElementById('awKi').value;
+      const umax=+document.getElementById('awU').value;
+      const dt=0.02, T=10, tau=0.5, ref=5; // big setpoint
+      let y=0, integ=0;
+      const data=[];
+      for(let i=0;i<T/dt;i++){
+        const e=ref-y;
+        integ += e*dt;
+        let u = Kp*e + Ki*integ;
+        const uSat = Math.max(-umax, Math.min(umax, u));
+        if(awEn && Math.abs(u-uSat)>1e-6){
+          // back-calc anti-windup: undo the part that got saturated
+          integ -= e*dt;
+        }
+        y += dt*(-y + uSat)/tau;
+        data.push({t:i*dt, y, u:uSat, integ});
+      }
+      return data;
+    }
+    function draw(){
+      const Kp=+document.getElementById('awKp').value;
+      const Ki=+document.getElementById('awKi').value;
+      const umax=+document.getElementById('awU').value;
+      const aw=document.getElementById('awEn').checked;
+      ['awU','awKp','awKi'].forEach(id=>document.getElementById(id+'V').textContent=(+document.getElementById(id).value).toFixed(1));
+      const dataNo=simulate(false);
+      const dataAw=simulate(true);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-40,w=W-70,h=H-70,T=10;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      const ymax=8;
+      function py(v){return oy-v/ymax*h;}
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      ctx.moveTo(ox,py(5));ctx.lineTo(ox+w,py(5));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';ctx.fillText('r = 5',ox+w-40,py(5)-4);
+      // without aw
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();
+      dataNo.forEach((d,i)=>{const xx=ox+d.t/T*w,yy=py(Math.max(-1,Math.min(ymax,d.y)));if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+      ctx.stroke();
+      // with aw (highlight if checkbox on)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=aw?3:2;ctx.beginPath();
+      dataAw.forEach((d,i)=>{const xx=ox+d.t/T*w,yy=py(Math.max(-1,Math.min(ymax,d.y)));if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+      ctx.stroke();
+      // labels
+      const yFinNo=dataNo[dataNo.length-1].y;
+      const yFinAw=dataAw[dataAw.length-1].y;
+      const overshootNo = Math.max(...dataNo.map(d=>d.y));
+      const overshootAw = Math.max(...dataAw.map(d=>d.y));
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`u_max = ${umax.toFixed(1)} (액추에이터 한계)`,ox,22);
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText(`AW 끔: 최대 = ${overshootNo.toFixed(2)} (큰 오버슈트)`,ox+220,22);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText(`AW 켬: 최대 = ${overshootAw.toFixed(2)}`,ox+450,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 →',W-50,oy+22);
+    }
+    ['awU','awKp','awKi','awEn'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    document.getElementById('awRst').onclick=draw;
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

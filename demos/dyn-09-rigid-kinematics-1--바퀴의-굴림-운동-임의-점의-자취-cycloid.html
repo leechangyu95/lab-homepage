@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 바퀴의 굴림 운동 — 임의 점의 자취 (cycloid) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 바퀴의 굴림 운동 — 임의 점의 자취 (cycloid)</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/09-rigid-kinematics-1.html">Week 9. 강체의 평면 운동학 — 병진과 고정축 회전</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 바퀴의 굴림 운동 — 임의 점의 자취 (cycloid)</h4>
+    <p>바퀴가 굴러갈 때 가장자리의 한 점이 그리는 자취 (cycloid 곡선) 와, 중심에서 거리 $r$ 의 점들이 그리는 다른 자취들.</p>
+    <canvas id="d9RollDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>회전 각 (도) <span class="val" id="d9thV">90</span><input type="range" id="d9th" min="0" max="720" step="5" value="90"></label>
+      <label>점 위치 비율 r/R <span class="val" id="d9rV">1.0</span><input type="range" id="d9r" min="0" max="1.5" step="0.1" value="1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d9RollDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const thMax=+document.getElementById('d9th').value*Math.PI/180;
+      const rRatio=+document.getElementById('d9r').value;
+      ['d9th','d9r'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const R=40,oy=H-50;
+      ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(W-20,oy);ctx.stroke();
+      // trace
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let t=0;t<=thMax;t+=0.05){
+        const cx=40+R*t,cy=oy-R;
+        const px=cx-R*rRatio*Math.sin(t),py=cy+R*rRatio*Math.cos(t);
+        if(t===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // current wheel
+      const cx=40+R*thMax,cy=oy-R;
+      ctx.strokeStyle='#cf1322';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx,cy,R,0,2*Math.PI);ctx.stroke();
+      // current point
+      const px=cx-R*rRatio*Math.sin(thMax),py=cy+R*rRatio*Math.cos(thMax);
+      ctx.fillStyle='#cf1322';
+      ctx.beginPath();ctx.arc(px,py,5,0,2*Math.PI);ctx.fill();
+      ctx.strokeStyle='#cf1322';
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();
+      // labels
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      let label='접촉점 (cycloid)';
+      if(rRatio<0.99) label='바퀴 안 (curtate cycloid)';
+      else if(rRatio>1.01) label='바퀴 밖 (prolate cycloid)';
+      ctx.fillText('자취: '+label,30,30);
+      ctx.fillText('각도 = '+(thMax*180/Math.PI).toFixed(0)+'°, 진행 거리 = '+(R*thMax).toFixed(1)+' (= R·θ, 굴림조건)',30,50);
+    }
+    ['d9th','d9r'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

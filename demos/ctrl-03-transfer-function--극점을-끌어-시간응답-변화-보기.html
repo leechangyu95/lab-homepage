@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 극점을 끌어 시간응답 변화 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 극점을 끌어 시간응답 변화 보기</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/03-transfer-function.html">Week 3. 전달함수 &amp; 시스템 모델링</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 극점을 끌어 시간응답 변화 보기</h4>
+    <p>2차 시스템의 두 극점을 슬라이더로 변경하면 임펄스/스텝 응답이 어떻게 변하는지 실시간 확인.</p>
+    <canvas id="c3PoleDemo" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>극점 실수부 σ <span class="val" id="c3sigV">-1.0</span><input type="range" id="c3sig" min="-3" max="0.5" step="0.1" value="-1.0"></label>
+      <label>극점 허수부 ω <span class="val" id="c3wV">2.0</span><input type="range" id="c3w" min="0" max="5" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c3PoleDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const sig=+document.getElementById('c3sig').value;
+      const w=+document.getElementById('c3w').value;
+      document.getElementById('c3sigV').textContent=sig.toFixed(1);
+      document.getElementById('c3wV').textContent=w.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Left half: s-plane
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      const ox=80,oy=H/2,scale=40;
+      ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(280,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      ctx.fillStyle='#888';ctx.fillText('s-평면',30,30);
+      ctx.fillText('Re',270,oy-5);ctx.fillText('Im',ox+5,40);
+      // stable region shading
+      ctx.fillStyle='rgba(46,125,50,0.08)';ctx.fillRect(20,30,ox-20,H-60);
+      ctx.fillStyle='rgba(207,19,34,0.08)';ctx.fillRect(ox,30,280-ox,H-60);
+      // pole markers
+      const px=ox+sig*scale,py=oy-w*scale,py2=oy+w*scale;
+      ctx.strokeStyle='#cf1322';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(px-6,py-6);ctx.lineTo(px+6,py+6);ctx.moveTo(px-6,py+6);ctx.lineTo(px+6,py-6);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(px-6,py2-6);ctx.lineTo(px+6,py2+6);ctx.moveTo(px-6,py2+6);ctx.lineTo(px+6,py2-6);ctx.stroke();
+      // Right half: time response
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('스텝 응답',360,30);
+      const tox=320,toy=H-50,tw=W-340,th=H-80;
+      ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(tox,toy);ctx.lineTo(tox+tw,toy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(tox,40);ctx.lineTo(tox,toy);ctx.stroke();
+      // 1 line
+      ctx.strokeStyle='#bbb';ctx.setLineDash([3,3]);
+      const oneY=toy-(th-30)*0.5;
+      ctx.beginPath();ctx.moveTo(tox,oneY);ctx.lineTo(tox+tw,oneY);ctx.stroke();ctx.setLineDash([]);
+      // simulate y'' + 2|sig|y' + (sig^2+w^2)y = (sig^2+w^2)·1 (if want unit step gain 1)
+      // Actually: poles at sigma ± jw → y'' - 2σy' + (σ^2+w^2)y = (σ^2+w^2)·u
+      const wn2=sig*sig+w*w;
+      let y=0,yd=0;const dt=0.02,N=400;
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<N;i++){
+        const t=i*dt;
+        const ydd=-(-2*sig)*yd-wn2*y+wn2;
+        yd+=ydd*dt;y+=yd*dt;
+        const x=tox+t/(N*dt)*tw,yp=toy-(y/2)*th*0.5;
+        if(i===0)ctx.moveTo(x,yp);else ctx.lineTo(x,yp);
+      }
+      ctx.stroke();
+      // verdict
+      ctx.fillStyle='#222';ctx.font='12px Consolas,monospace';
+      ctx.fillText(`극점 = ${sig.toFixed(1)} ± ${w.toFixed(1)}j`,tox,55);
+      let verdict;
+      if(sig<-0.05) verdict=w>0.1?'안정 (감쇠진동)':'안정 (지수감쇠)';
+      else if(sig>0.05) verdict='불안정 (발산)';
+      else verdict='마진 안정 (등진폭 진동)';
+      ctx.fillStyle=sig<-0.05?'#2e7d32':(sig>0.05?'#cf1322':'#fa8c16');
+      ctx.fillText(verdict,tox,75);
+    }
+    ['c3sig','c3w'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

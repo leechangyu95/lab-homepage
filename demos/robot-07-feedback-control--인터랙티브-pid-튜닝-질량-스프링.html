@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: PID 튜닝 (질량-스프링) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: PID 튜닝 (질량-스프링)</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/07-feedback-control.html">Lecture 7. 피드백 제어 (PID)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: PID 튜닝 (질량-스프링)</h4>
+    <p>목표 위치(빨강 점선)로 질량(파랑)을 움직입니다. PID 게인을 조절하며 응답을 비교해보세요.</p>
+    <canvas id="pid" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="kpV">5</span><input type="range" id="kp" min="0" max="50" step="0.5" value="5"></label>
+      <label>Ki <span class="val" id="kiV">0</span><input type="range" id="ki" min="0" max="20" step="0.1" value="0"></label>
+      <label>Kd <span class="val" id="kdV">2</span><input type="range" id="kd" min="0" max="20" step="0.1" value="2"></label>
+      <button id="step">목표 변경</button>
+      <button id="rst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pid'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{['kp','ki','kd'].forEach(k=>sl(k+'V').textContent=sl(k).value);};
+    ['kp','ki','kd'].forEach(k=>sl(k).oninput=upd);
+    let y=0,yd=0,iE=0,prevE=0,ref=3,hist=[];
+    sl('rst').onclick=()=>{y=0;yd=0;iE=0;prevE=0;hist=[];};
+    sl('step').onclick=()=>{ref=ref>0?-3:3;};
+    function loop(){
+      const Kp=+sl('kp').value,Ki=+sl('ki').value,Kd=+sl('kd').value;
+      const dt=0.03,m=1,k=2,c2=0.3;
+      const e=ref-y; iE+=e*dt; const dE=(e-prevE)/dt; prevE=e;
+      const u=Kp*e+Ki*iE+Kd*dE;
+      const ydd=(u-k*y-c2*yd)/m;
+      yd+=ydd*dt; y+=yd*dt;
+      hist.push({y,ref}); if(hist.length>300)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // top: physical view
+      x.fillStyle='#999';x.fillRect(40,40,8,80);
+      const px=140+y*40;
+      x.strokeStyle='#666';x.lineWidth=2;x.beginPath();x.moveTo(48,80);
+      for(let i=0;i<10;i++)x.lineTo(48+(px-48)*i/10,80+(i%2?-8:8));
+      x.lineTo(px,80);x.stroke();
+      x.fillStyle='#0b5fff';x.fillRect(px-15,60,30,40);
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      x.moveTo(140+ref*40,30);x.lineTo(140+ref*40,110);x.stroke();x.setLineDash([]);
+      // bottom: response plot
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(0,220);x.lineTo(c.width,220);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=220-h.ref*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=220-h.y*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('응답 y(t)',10,300);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

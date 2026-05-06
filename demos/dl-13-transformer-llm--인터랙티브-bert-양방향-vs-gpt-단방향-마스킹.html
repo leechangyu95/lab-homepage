@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: BERT (양방향) vs GPT (단방향) 마스킹 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: BERT (양방향) vs GPT (단방향) 마스킹</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/13-transformer-llm.html">Week 13. Transformer와 LLM</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: BERT (양방향) vs GPT (단방향) 마스킹</h4>
+    <p>두 모델이 어텐션을 칠 때 어떤 위치를 볼 수 있는지 보세요. <strong>BERT</strong>는 [MASK]된 위치를 빼고 모든 곳을 봅니다. <strong>GPT</strong>는 인과 마스크(causal mask)로 자기 이전 위치만 봅니다 — 그래서 다음 단어 예측이 가능해요.</p>
+    <canvas id="bgMask" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>모델 <select id="bgM">
+        <option value="bert">BERT (양방향)</option>
+        <option value="gpt">GPT (단방향)</option>
+      </select></label>
+      <label>관찰 위치 <span class="val" id="bgPV">3</span><input type="range" id="bgP" min="0" max="7" step="1" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bgMask');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const m=document.getElementById('bgM').value;
+      const p=+document.getElementById('bgP').value;
+      document.getElementById('bgPV').textContent=p;
+      const tokens=['The','cat','sat','on','the','mat','today','.'];
+      const N=8;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cell=64;
+      for(let j=0;j<N;j++)for(let i=0;i<N;i++){
+        let allowed;
+        if(m==='gpt')allowed=i<=j;
+        else allowed=true;
+        const x=80+i*cell,y=40+j*cell;
+        ctx.fillStyle=allowed?'#cce5ff':'#ddd';
+        if(j===p&&allowed)ctx.fillStyle='#ff8c00';
+        if(j===p&&i===p)ctx.fillStyle='#c62828';
+        ctx.fillRect(x,y,cell-2,cell-2);
+        ctx.strokeStyle='#999';ctx.strokeRect(x,y,cell-2,cell-2);
+        ctx.fillStyle=allowed?'#222':'#aaa';
+        ctx.font='10px sans-serif';
+        ctx.fillText(tokens[i],x+8,y+30);
+        ctx.font='9px sans-serif';
+        ctx.fillText('q='+j+' k='+i,x+8,y+45);
+      }
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('K (참조)',80,30);
+      ctx.save();ctx.translate(20,200);ctx.rotate(-Math.PI/2);ctx.fillText('Q (현재)',0,0);ctx.restore();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const allowed=m==='gpt'?p+1:N;
+      ctx.fillText(`${tokens[p]} 위치(${p}번)에서 볼 수 있는 토큰: ${allowed}/${N}`,80,H-10);
+      ctx.fillStyle='#c62828';ctx.fillText('🟥 자기 자신',300,H-10);
+      ctx.fillStyle='#ff8c00';ctx.fillText('🟧 현재 행',430,H-10);
+      ctx.fillStyle='#999';ctx.fillText('⬜ 가려진 위치',520,H-10);
+    }
+    document.getElementById('bgM').addEventListener('change',draw);
+    document.getElementById('bgP').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

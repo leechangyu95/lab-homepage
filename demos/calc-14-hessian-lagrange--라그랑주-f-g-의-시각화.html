@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 라그랑주 — ∇f ∥ ∇g 의 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 라그랑주 — ∇f ∥ ∇g 의 시각화</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/14-hessian-lagrange.html">Week 14. 헤시안 &amp; 라그랑주 승수법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 라그랑주 — ∇f ∥ ∇g 의 시각화</h4>
+    <p>제약 $g(x,y) = c$ 위를 따라 점이 이동. 그라디언트 두 벡터가 평행할 때 = 라그랑주 임계점. 두 벡터의 방향각이 일치(또는 180° 반대)인 순간을 찾으세요.</p>
+    <canvas id="lg" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>최적화 문제
+        <select id="lgP">
+          <option value="circle" selected>단위원 위 x+y 최대</option>
+          <option value="ellipse">x²+4y²=4 위 xy 최대</option>
+          <option value="line">x+y=4 위 x²+y² 최소</option>
+        </select>
+      </label>
+      <label>매개변수 t <span class="val" id="lgTV">0.50</span><input type="range" id="lgT" min="0" max="6.28" step="0.02" value="0.5"></label>
+    </div>
+    <p id="lgInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lg'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:60,r:20,t:30,b:30};
+    function setup(){
+      const m=document.getElementById('lgP').value;
+      if(m==='circle'){
+        return{
+          point:t=>({x:Math.cos(t),y:Math.sin(t)}),
+          gradF:p=>[1,1],
+          gradG:p=>[2*p.x,2*p.y],
+          fEval:p=>p.x+p.y,
+          xR:[-2,2],yR:[-2,2],
+          cdraw:t=>{return{x:Math.cos(t),y:Math.sin(t)};},
+          tRange:[0,2*Math.PI],
+          desc:'f = x+y, 제약: x²+y²=1. 답: x=y=1/√2'
+        };
+      }
+      if(m==='ellipse'){
+        return{
+          point:t=>({x:2*Math.cos(t),y:Math.sin(t)}),
+          gradF:p=>[p.y,p.x],
+          gradG:p=>[2*p.x,8*p.y],
+          fEval:p=>p.x*p.y,
+          xR:[-3,3],yR:[-2,2],
+          tRange:[0,2*Math.PI],
+          desc:'f = xy, 제약: x²+4y²=4. 답: x=√2, y=1/√2 등'
+        };
+      }
+      return{
+        point:t=>({x:t,y:4-t}),
+        gradF:p=>[2*p.x,2*p.y],
+        gradG:p=>[1,1],
+        fEval:p=>p.x*p.x+p.y*p.y,
+        xR:[-1,5],yR:[-1,5],
+        tRange:[0,4],
+        desc:'f = x²+y², 제약: x+y=4. 답: x=y=2'
+      };
+    }
+    function loop(){
+      const t=+document.getElementById('lgT').value;
+      document.getElementById('lgTV').textContent=t.toFixed(2);
+      const S=setup();
+      const xR=S.xR,yR=S.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // f level curves (gray contours)
+      const fCur=S.fEval(S.point((t-S.tRange[0])%(S.tRange[1]-S.tRange[0])+S.tRange[0]));
+      // sample contour levels
+      const cell=12;
+      for(let i=M.l;i<W-M.r;i+=cell){
+        for(let j=M.t;j<H-M.b;j+=cell){
+          const xv=xR[0]+(i-M.l)/(W-M.l-M.r)*(xR[1]-xR[0]);
+          const yv=yR[0]+(H-M.b-j)/(H-M.t-M.b)*(yR[1]-yR[0]);
+          const fv=S.fEval({x:xv,y:yv});
+          // map to color
+          const hue=Math.atan2(yv,xv);
+          const t01=(fv-(-5))/15;
+          const r=Math.floor(40+t01*200),g=Math.floor(140-t01*100),b=Math.floor(255-t01*200);
+          x.fillStyle=`rgba(${r},${g},${b},0.5)`;
+          x.fillRect(i,j,cell,cell);
+        }
+      }
+      // constraint curve
+      x.strokeStyle='#fff';x.lineWidth=2.5;x.beginPath();
+      const N=200;
+      for(let i=0;i<=N;i++){
+        const tt=S.tRange[0]+i/N*(S.tRange[1]-S.tRange[0]);
+        const p=S.point(tt);
+        if(i===0)x.moveTo(px(p.x),py(p.y));else x.lineTo(px(p.x),py(p.y));
+      }
+      x.stroke();
+      // current point
+      const p=S.point(t);
+      const gF=S.gradF(p),gG=S.gradG(p);
+      // normalize for display
+      const sF=0.6/Math.hypot(gF[0],gF[1])*0.5,sG=0.6/Math.hypot(gG[0],gG[1])*0.5;
+      // arrow drawing
+      function arrow(x0,y0,vx,vy,col){
+        const X1=x0+vx,Y1=y0+vy;
+        x.strokeStyle=col;x.fillStyle=col;x.lineWidth=2.5;
+        x.beginPath();x.moveTo(px(x0),py(y0));x.lineTo(px(X1),py(Y1));x.stroke();
+        const ang=Math.atan2(py(Y1)-py(y0),px(X1)-px(x0));
+        x.beginPath();
+        x.moveTo(px(X1),py(Y1));
+        x.lineTo(px(X1)-9*Math.cos(ang-0.4),py(Y1)-9*Math.sin(ang-0.4));
+        x.lineTo(px(X1)-9*Math.cos(ang+0.4),py(Y1)-9*Math.sin(ang+0.4));
+        x.closePath();x.fill();
+      }
+      arrow(p.x,p.y,gF[0]*sF,gF[1]*sF,'#c62828');
+      arrow(p.x,p.y,gG[0]*sG,gG[1]*sG,'#0b5fff');
+      x.fillStyle='#222';x.beginPath();x.arc(px(p.x),py(p.y),5,0,Math.PI*2);x.fill();
+      // angle between
+      const dot=(gF[0]*gG[0]+gF[1]*gG[1])/(Math.hypot(gF[0],gF[1])*Math.hypot(gG[0],gG[1]));
+      const ang=Math.acos(Math.max(-1,Math.min(1,dot)))*180/Math.PI;
+      const aligned=(Math.abs(ang)<5||Math.abs(ang-180)<5);
+      // legend
+      x.fillStyle='#c62828';x.fillRect(M.l+10,M.t-22,16,3);x.fillStyle='#222';x.font='12px sans-serif';x.fillText('∇f (목적함수 그라디언트)',M.l+30,M.t-18);
+      x.fillStyle='#0b5fff';x.fillRect(M.l+200,M.t-22,16,3);x.fillStyle='#222';x.fillText('∇g (제약 그라디언트)',M.l+220,M.t-18);
+      x.fillStyle='#fff';x.fillText('흰선: 제약 곡선',M.l+10,M.t+15);
+      // info
+      document.getElementById('lgInfo').textContent=S.desc+'   ·   현재 점: ('+p.x.toFixed(2)+', '+p.y.toFixed(2)+')   f='+S.fEval(p).toFixed(3)+'   ·   ∇f∠∇g 각도: '+ang.toFixed(1)+'° '+(aligned?'★ 평행 (라그랑주 점 근처!)':'');
+    }
+    loop();
+    document.getElementById('lgP').onchange=loop;
+    document.getElementById('lgT').oninput=loop;
+  })();
+  </script>
+</main>
+</body>
+</html>

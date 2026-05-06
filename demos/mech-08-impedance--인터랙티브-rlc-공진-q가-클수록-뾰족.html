@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: RLC 공진 — Q가 클수록 뾰족 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: RLC 공진 — Q가 클수록 뾰족</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/08-impedance.html">Week 8. 임피던스 — AC용 옴의 법칙</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: RLC 공진 — Q가 클수록 뾰족</h4>
+    <p>RLC 직렬에서 전류 진폭 $|I(\omega)| = |V|/|Z(\omega)|$를 그립니다. $\omega_0 = 1/\sqrt{LC}$에서 봉우리가 형성되고, $R$이 작아질수록 $Q = \omega_0 L/R$이 커져 봉우리가 날카로워집니다.</p>
+    <canvas id="resCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="resRV">10</span> Ω<input type="range" id="resR" min="1" max="100" step="1" value="10"></label>
+      <label>L <span class="val" id="resLV">1.0</span> mH<input type="range" id="resL" min="0.1" max="10" step="0.1" value="1"></label>
+      <label>C <span class="val" id="resCV">1.0</span> μF<input type="range" id="resC" min="0.1" max="10" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('resCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const R=+document.getElementById('resR').value;
+      const L=+document.getElementById('resL').value*1e-3;
+      const Cv=+document.getElementById('resC').value*1e-6;
+      document.getElementById('resRV').textContent=R;
+      document.getElementById('resLV').textContent=(L*1000).toFixed(1);
+      document.getElementById('resCV').textContent=(Cv*1e6).toFixed(1);
+      const w0=1/Math.sqrt(L*Cv);
+      const Q=w0*L/R;
+      const wmin=w0/10,wmax=w0*10;
+      const Vp=1;
+      const Imax=Vp/R;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(w){return 60+(Math.log10(w/wmin))/Math.log10(wmax/wmin)*(W-90);}
+      function y(i){return H-50-(i/(Imax*1.05))*(H-90);}
+      ctx.strokeStyle='#ddd';
+      for(let p=-1;p<=1;p++){const w=w0*Math.pow(10,p);ctx.beginPath();ctx.moveTo(x(w),y(0));ctx.lineTo(x(w),y(Imax));ctx.stroke();}
+      ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo(x(wmin),y(0));ctx.lineTo(x(wmax),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(wmin),y(0));ctx.lineTo(x(wmin),y(Imax));ctx.stroke();
+      // Curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lw=Math.log10(wmin);lw<=Math.log10(wmax);lw+=0.01){
+        const w=Math.pow(10,lw);
+        const X=w*L-1/(w*Cv);
+        const Z=Math.sqrt(R*R+X*X);
+        const I=Vp/Z;
+        if(lw===Math.log10(wmin))ctx.moveTo(x(w),y(I));else ctx.lineTo(x(w),y(I));
+      }
+      ctx.stroke();
+      // Mark w0
+      ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(x(w0),y(0));ctx.lineTo(x(w0),y(Imax));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`ω₀ = 1/√(LC) = ${w0.toFixed(0)} rad/s ≈ ${(w0/2/Math.PI).toFixed(0)} Hz`,40,30);
+      ctx.fillText(`Q = ω₀L/R = ${Q.toFixed(2)} (클수록 뾰족)`,40,52);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('각주파수 ω (log, ω₀ 기준 ±1decade)',W/2-110,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('|I(ω)|',-15,0);ctx.restore();
+    }
+    ['resR','resL','resC'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

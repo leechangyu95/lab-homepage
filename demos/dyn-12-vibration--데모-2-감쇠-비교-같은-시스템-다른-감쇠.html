@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 감쇠 비교 — 같은 시스템, 다른 감쇠 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 감쇠 비교 — 같은 시스템, 다른 감쇠</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/12-vibration.html">Week 12. 진동 입문</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 감쇠 비교 — 같은 시스템, 다른 감쇠</h4>
+    <p>같은 $\omega_n$을 가진 세 시스템에 같은 초기 조건. <strong>감쇠비 $\zeta$만</strong> 다릅니다. 부족·임계·과 감쇠가 어떻게 다르게 평형으로 돌아가는지 시간 응답으로 봅니다. 자동제어 1·2차 시스템에서 그대로 나오는 그림.</p>
+    <canvas id="dampC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>고유진동수 ω_n <span class="val" id="dpWV">3</span><input type="range" id="dpW" min="1" max="6" step="0.1" value="3"></label>
+      <button id="dpReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dampC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    sl('dpW').oninput=()=>sl('dpWV').textContent=sl('dpW').value;
+    let sys=[],t=0;
+    function reset(){
+      sys=[
+        {z:0.1,col:'#0b5fff',label:'ζ=0.1 (부족 감쇠)',x:1,v:0},
+        {z:1.0,col:'#2e7d32',label:'ζ=1.0 (임계 감쇠)',x:1,v:0},
+        {z:2.0,col:'#c62828',label:'ζ=2.0 (과 감쇠)',x:1,v:0}
+      ];
+      t=0;history=sys.map(()=>[]);
+    }
+    sl('dpReset').onclick=reset;
+    sl('dpW').addEventListener('input',reset);
+    let history;
+    reset();
+    function loop(){
+      const wn=+sl('dpW').value,dt=0.02;
+      sys.forEach((s,i)=>{
+        const a=-2*s.z*wn*s.v-wn*wn*s.x;
+        s.v+=a*dt;s.x+=s.v*dt;
+        history[i].push(s.x);if(history[i].length>500)history[i].shift();
+      });
+      t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const gL=20,gR=620,gT=40,gB=300;
+      x.strokeStyle='#d0d4d9';x.strokeRect(gL,gT,gR-gL,gB-gT);
+      // axes
+      const zeroY=(gT+gB)/2;
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.moveTo(gL,zeroY);x.lineTo(gR,zeroY);x.stroke();x.setLineDash([]);
+      sys.forEach((s,i)=>{
+        x.strokeStyle=s.col;x.lineWidth=1.8;x.beginPath();
+        history[i].forEach((xv,j)=>{
+          const px=gL+(j/history[0].length)*(gR-gL);
+          const py=zeroY-xv*((gB-gT)/2-8);
+          if(j===0)x.moveTo(px,py);else x.lineTo(px,py);
+        });
+        x.stroke();
+        // legend
+        x.fillStyle=s.col;x.fillRect(40+i*200,320,12,12);
+        x.fillStyle='#333';x.font='12px sans-serif';x.textAlign='left';x.fillText(s.label,58+i*200,330);
+      });
+      x.fillStyle='#444';x.font='12px Consolas,monospace';
+      x.fillText('ẍ + 2ζω_n ẋ + ω_n² x = 0,    ω_n = '+wn.toFixed(2)+' rad/s',20,30);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

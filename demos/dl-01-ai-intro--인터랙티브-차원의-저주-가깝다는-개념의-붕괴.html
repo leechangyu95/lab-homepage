@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 차원의 저주 — &quot;가깝다&quot;는 개념의 붕괴 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 차원의 저주 — &quot;가깝다&quot;는 개념의 붕괴</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/01-ai-intro.html">Week 1. AI의 세계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 차원의 저주 — "가깝다"는 개념의 붕괴</h4>
+    <p>차원 d를 늘려가며 1000개의 무작위 점에서 "가장 가까운 점까지의 거리"와 "가장 먼 점까지의 거리"의 비율(<em>min/max</em>)을 측정합니다. 1에 가까울수록 모든 점이 거의 같은 거리로 보여 KNN이 제 기능을 못 합니다.</p>
+    <canvas id="cod" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>차원 d <span class="val" id="cdV">2</span><input type="range" id="cd" min="1" max="100" step="1" value="2"></label>
+      <button id="codRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cod');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const N=200;
+    const HISTORY=[];
+    let seed=1;
+    function rand(){seed=(seed*9301+49297)%233280;return seed/233280;}
+    function measure(d){
+      // generate N points in [0,1]^d, compute ratio min/max of distances from a query point
+      const pts=[];
+      for(let i=0;i<N;i++){const p=[];for(let j=0;j<d;j++)p.push(rand());pts.push(p);}
+      const q=[];for(let j=0;j<d;j++)q.push(rand());
+      let mn=Infinity,mx=0;
+      for(const p of pts){let s=0;for(let j=0;j<d;j++){const t=p[j]-q[j];s+=t*t;}const r=Math.sqrt(s);if(r<mn)mn=r;if(r>mx)mx=r;}
+      return {ratio:mn/mx,mn,mx};
+    }
+    function draw(){
+      const d=+document.getElementById('cd').value;
+      document.getElementById('cdV').textContent=d;
+      const r=measure(d);
+      HISTORY.push({d,ratio:r.ratio});
+      if(HISTORY.length>500)HISTORY.shift();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // axes
+      const PL=50,PR=20,PT=30,PB=40;
+      const plotW=W-PL-PR,plotH=H-PT-PB;
+      ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+plotH);ctx.lineTo(PL+plotW,PT+plotH);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('차원 d',PL+plotW/2-20,H-12);
+      ctx.save();ctx.translate(14,PT+plotH/2+30);ctx.rotate(-Math.PI/2);ctx.fillText('min거리 / max거리',0,0);ctx.restore();
+      // y ticks 0..1
+      for(let v=0;v<=1.0001;v+=0.2){
+        const y=PT+plotH*(1-v);
+        ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+plotW,y);ctx.stroke();
+        ctx.fillStyle='#888';ctx.fillText(v.toFixed(1),PL-30,y+4);
+      }
+      // x ticks
+      for(const xv of [1,20,40,60,80,100]){
+        const x=PL+plotW*(xv-1)/99;
+        ctx.fillStyle='#888';ctx.fillText(xv,x-6,PT+plotH+18);
+      }
+      // theoretical curve: ratio shrinks with d (rough heuristic)
+      // plot data
+      ctx.fillStyle='#0b5fff';
+      HISTORY.forEach(h=>{
+        const x=PL+plotW*(h.d-1)/99;
+        const y=PT+plotH*(1-h.ratio);
+        ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();
+      });
+      // current
+      const xc=PL+plotW*(d-1)/99;
+      const yc=PT+plotH*(1-r.ratio);
+      ctx.fillStyle='#ff8c00';ctx.beginPath();ctx.arc(xc,yc,6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`d=${d}: min/max = ${r.ratio.toFixed(3)} (min ${r.mn.toFixed(2)}, max ${r.mx.toFixed(2)})`,PL,20);
+    }
+    document.getElementById('cd').addEventListener('input',draw);
+    document.getElementById('codRegen').addEventListener('click',()=>{HISTORY.length=0;seed=Math.floor(Math.random()*1e6)+1;draw();});
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

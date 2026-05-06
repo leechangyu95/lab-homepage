@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: RRT 트리 자라기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: RRT 트리 자라기</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: RRT 트리 자라기</h4>
+    <p><a href="https://github.com/AtsushiSakai/PythonRobotics/tree/master/PathPlanning/RRT">PythonRobotics RRT</a> 알고리즘의 시각화입니다. <strong>Step</strong>을 누르면 트리가 한 노드씩 자랍니다.</p>
+    <canvas id="rrt" width="640" height="380"></canvas>
+    <div class="controls">
+      <button id="rrtStep">+10 노드</button>
+      <button id="rrtAuto">자동 진행</button>
+      <button id="rrtRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rrt'),x=c.getContext('2d');
+    const obs=[{x:200,y:120,r:35},{x:340,y:240,r:45},{x:460,y:120,r:30},{x:300,y:60,r:25},{x:520,y:280,r:35}];
+    const start=[40,40],goal=[600,340];
+    let tree=[],running=false,found=false,goalNode=null;
+    function init(){tree=[{p:start,parent:null}];found=false;goalNode=null;}
+    init();
+    function collide(p){return obs.some(o=>(o.x-p[0])**2+(o.y-p[1])**2<o.r*o.r);}
+    function lineCol(a,b){const N=10;for(let i=0;i<=N;i++){const p=[a[0]+(b[0]-a[0])*i/N,a[1]+(b[1]-a[1])*i/N];if(collide(p))return true;}return false;}
+    function step(){
+      if(found)return;
+      const q=[Math.random()<0.1?goal[0]:Math.random()*c.width,Math.random()<0.1?goal[1]:Math.random()*c.height];
+      let bi=0,bd=Infinity;
+      tree.forEach((n,i)=>{const d=(n.p[0]-q[0])**2+(n.p[1]-q[1])**2;if(d<bd){bd=d;bi=i;}});
+      const near=tree[bi];const dx=q[0]-near.p[0],dy=q[1]-near.p[1];const dist=Math.hypot(dx,dy);
+      const STEP=20;const np=[near.p[0]+dx/dist*STEP,near.p[1]+dy/dist*STEP];
+      if(lineCol(near.p,np))return;
+      const nn={p:np,parent:bi};tree.push(nn);
+      if(Math.hypot(np[0]-goal[0],np[1]-goal[1])<25){found=true;goalNode=tree.length-1;}
+    }
+    document.getElementById('rrtStep').onclick=()=>{for(let i=0;i<10;i++)step();};
+    document.getElementById('rrtAuto').onclick=()=>{running=!running;};
+    document.getElementById('rrtRst').onclick=init;
+    function loop(){
+      if(running)step();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#9eb9ff';x.lineWidth=1;
+      tree.forEach(n=>{if(n.parent!=null){const p=tree[n.parent].p;x.beginPath();x.moveTo(p[0],p[1]);x.lineTo(n.p[0],n.p[1]);x.stroke();}});
+      tree.forEach(n=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(n.p[0],n.p[1],2,0,Math.PI*2);x.fill();});
+      if(found&&goalNode!=null){
+        x.strokeStyle='#ff8c00';x.lineWidth=3;x.beginPath();
+        let cur=goalNode;while(cur!=null){const p=tree[cur].p;x.lineTo(p[0],p[1]);cur=tree[cur].parent;}
+        x.stroke();
+      }
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0],start[1],8,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0],goal[1],10,0,Math.PI*2);x.fill();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('노드 수: '+tree.length+(found?' · 경로 발견 ✓':''),12,370);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

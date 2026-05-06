@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W2. 데이터 핸들링 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html" class="active">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 2. 데이터 핸들링</h1>
+  <p class="lead">모델보다 데이터가 먼저입니다. NumPy와 pandas로 데이터를 만지고, 표준화하고, 학습/테스트로 나누는 기본기를 닦습니다.</p>
+
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>왜 데이터를 먼저 봐야 하는가</li>
+    <li>NumPy 배열의 사고방식</li>
+    <li>pandas DataFrame 핵심 연산</li>
+    <li>표준화와 정규화 — 스케일이 왜 중요한가</li>
+    <li>학습/검증/테스트 분할과 데이터 누수</li>
+  </ol></div>
+
+  <h2>0. 이번 주의 문제의식</h2>
+  <p>지난 주 <a href="01-ai-intro.html">W1</a>에서 KNN을 배우며 두 개의 함정을 봤습니다 — "스케일이 다르면 큰 숫자가 거리를 지배한다", "차원이 너무 많으면 가깝다는 개념이 무너진다". 이번 주는 그 첫 번째 함정을 진짜로 해결하는 주입니다.</p>
+  <p>딥러닝 강의에서 "모델" 이야기만 기대했다가 2주차에 판다스와 표준화를 만나면 살짝 김이 샐 수 있습니다. 하지만 현업 데이터 과학자들이 입을 모아 하는 말이 있습니다 — <em>"나는 하루 근무 시간의 70% 이상을 데이터를 씻고 정렬하는 데 쓴다."</em> 화려한 모델보다 "지루한" 데이터 정리가 성능을 더 크게 좌우합니다.</p>
+  <p>이번 주의 목표는 셋입니다. ① 데이터를 머릿속에 <strong>"배열의 모양"</strong>으로 그리는 법, ② <strong>스케일을 맞추는 법</strong>과 왜 맞춰야 하는지, ③ <strong>학습/검증/테스트를 나누면서 정보 누수를 막는 법</strong>. 이 세 가지만 잡아도 이후 모든 주차에서 디버깅 시간이 반으로 줄어듭니다.</p>
+
+  <h2>1. 데이터를 먼저 봐야 하는 이유</h2>
+  <p>실무 머신러닝의 80%는 데이터 정리이고 20%만이 모델링이라는 말이 있습니다. 조금 과장이지만 핵심은 맞습니다 — 아무리 좋은 모델도 더러운 데이터 위에서는 더러운 결과를 냅니다. 이 사실을 다들 한 줄로 외우는데, "Garbage In, Garbage Out"입니다.</p>
+  <p>그렇다면 데이터를 "본다"는 건 뭘까요? 막연히 눈으로 훑는 게 아니라, 코드를 짜기 전에 항상 다음 네 가지를 점검하는 습관을 말합니다.</p>
+  <ul>
+    <li><strong>각 컬럼의 단위와 범위</strong>는 어떤가? (cm? kg? 0~1?)</li>
+    <li><strong>결측치(NaN)</strong>는 얼마나 있는가? 어떻게 채울 것인가?</li>
+    <li><strong>이상치(outlier)</strong>가 분포를 망가뜨리고 있지는 않은가?</li>
+    <li><strong>클래스 불균형</strong>은 없는가? (예: 사기 거래가 전체의 0.1%뿐일 수도)</li>
+  </ul>
+  <div class="tip"><strong>초보자가 자주 오해하는 것.</strong> "일단 모델을 돌려보고 성능이 나쁘면 그때 데이터를 보자"는 접근은 거의 항상 시간 낭비로 끝납니다. 데이터를 안 본 상태에서 모델이 나쁘게 나오면, 원인이 모델 구조인지·하이퍼파라미터인지·데이터 품질인지 구분할 수 없습니다. 먼저 10분이라도 <code>df.describe()</code>, <code>df.isnull().sum()</code>, 각 컬럼의 히스토그램을 그려 보는 게 훨씬 빠릅니다.</div>
+
+  <h3>1.1 "이상치"는 항상 제거해야 하는가</h3>
+  <p>그렇지 않습니다. 이상치는 세 종류로 나눌 수 있습니다. ① 센서 고장이나 입력 실수로 생긴 <em>진짜 오류</em>는 제거 또는 수정, ② 꼬리가 긴 분포에서 자연스럽게 나타나는 <em>극단값</em>은 보존(오히려 중요 정보), ③ <em>희귀하지만 의미 있는 사건</em>(사기, 결함)은 그 자체가 예측 대상이니 절대 버리면 안 됩니다. "3σ 밖의 점을 자동으로 지운다" 같은 규칙을 맹목적으로 적용하지 마세요.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 이상치가 평균·중앙값을 어떻게 흔드는가</h4>
+    <p>같은 데이터에 이상치 한두 개를 추가해 보세요. <strong>평균</strong>은 이상치에 끌려가지만 <strong>중앙값</strong>은 거의 움직이지 않습니다. 그래서 강건 통계(robust statistics)는 중앙값과 IQR을 선호해요.</p>
+    <canvas id="outDet" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>이상치 위치 <span class="val" id="oxV">15</span><input type="range" id="ox" min="0" max="30" step="0.5" value="15"></label>
+      <label>이상치 개수 <span class="val" id="onV">1</span><input type="range" id="on" min="0" max="10" step="1" value="1"></label>
+      <button id="oRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('outDet');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let base=[];
+    function gen(){
+      base=[];
+      for(let i=0;i<30;i++){
+        const u=Math.random(),v=Math.random();
+        const z=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+        base.push(5+z*1.2);
+      }
+      draw();
+    }
+    function draw(){
+      const ox=+document.getElementById('ox').value;
+      const on=+document.getElementById('on').value;
+      document.getElementById('oxV').textContent=ox.toFixed(1);
+      document.getElementById('onV').textContent=on;
+      const data=[...base];for(let i=0;i<on;i++)data.push(ox);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const lx=40,rx=W-20,y0=180;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(lx,y0);ctx.lineTo(rx,y0);ctx.stroke();
+      const rng=30;
+      // ticks
+      ctx.fillStyle='#888';ctx.font='11px sans-serif';
+      for(let v=0;v<=rng;v+=5){const x=lx+v/rng*(rx-lx);ctx.beginPath();ctx.moveTo(x,y0-3);ctx.lineTo(x,y0+3);ctx.stroke();ctx.fillText(v,x-5,y0+18);}
+      // points
+      data.forEach((v,i)=>{
+        const x=lx+v/rng*(rx-lx);
+        const isOut=i>=base.length;
+        ctx.fillStyle=isOut?'#c62828':'#0b5fff';
+        ctx.beginPath();ctx.arc(x,y0-15,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.stroke();
+      });
+      const sorted=[...data].sort((a,b)=>a-b);
+      const mean=data.reduce((a,b)=>a+b,0)/data.length;
+      const median=sorted.length%2?sorted[(sorted.length-1)/2]:(sorted[sorted.length/2-1]+sorted[sorted.length/2])/2;
+      const meanX=lx+mean/rng*(rx-lx),medX=lx+median/rng*(rx-lx);
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(meanX,40);ctx.lineTo(meanX,y0+20);ctx.stroke();
+      ctx.strokeStyle='#2e7d32';ctx.beginPath();ctx.moveTo(medX,40);ctx.lineTo(medX,y0+20);ctx.stroke();
+      ctx.fillStyle='#ff8c00';ctx.font='13px sans-serif';
+      ctx.fillText(`평균 = ${mean.toFixed(2)}`,meanX-30,30);
+      ctx.fillStyle='#2e7d32';
+      ctx.fillText(`중앙값 = ${median.toFixed(2)}`,medX-40,55);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`정상 데이터 ${base.length}개 + 이상치 ${on}개 (위치 ${ox.toFixed(1)})`,12,255);
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(160,250,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#666';ctx.fillText('정상',170,255);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(220,250,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#666';ctx.fillText('이상치',230,255);
+    }
+    document.getElementById('ox').addEventListener('input',draw);
+    document.getElementById('on').addEventListener('input',draw);
+    document.getElementById('oRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <h2>2. NumPy — 벡터화 사고</h2>
+  <p>NumPy는 파이썬 리스트를 단순히 빠르게 만든 게 아니라 <strong>완전히 다른 사고방식</strong>을 강요합니다. 루프(<code>for</code>)를 도는 대신 <em>배열 전체에 한 번에 연산을 적용</em>합니다. 처음에는 어색하지만 이게 머신러닝 코드의 표준 어법입니다.</p>
+  <pre><code>import numpy as np
+
+x = np.array([1, 2, 3, 4, 5])
+y = x ** 2 + 1            # [2, 5, 10, 17, 26]   ← 모든 원소에 동시에 적용!
+print(x.mean(), x.std())  # 3.0  1.414</code></pre>
+  <p>위 코드의 핵심은 <code>x ** 2 + 1</code>이 다섯 개의 숫자에 동시에 일어난다는 점입니다. 만약 일반 파이썬 리스트였다면 <code>for i in range(5): y.append(x[i]**2 + 1)</code> 라고 써야 했죠. 짧은 데다 빠르고, 무엇보다 행렬·텐서 연산을 그대로 흉내낼 수 있어 이후 모든 모델 코드가 이 어법으로 작성됩니다.</p>
+
+  <p>다차원 배열의 <strong>모양(shape)</strong>을 머릿속에서 그릴 수 있어야 합니다. 모양은 "축마다 몇 개"인지를 튜플로 적은 것입니다.</p>
+  <table>
+    <thead><tr><th>예시</th><th>shape</th><th>해석</th></tr></thead>
+    <tbody>
+      <tr><td>흑백 이미지 1장 (28×28)</td><td>(28, 28)</td><td>가로 28, 세로 28 픽셀</td></tr>
+      <tr><td>흑백 이미지 100장</td><td>(100, 28, 28)</td><td>장 수 × 가로 × 세로</td></tr>
+      <tr><td>컬러 이미지 100장</td><td>(100, 28, 28, 3)</td><td>+ RGB 3채널</td></tr>
+      <tr><td>표 데이터 1000행 5열</td><td>(1000, 5)</td><td>샘플 수 × 특성 수</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>모양 디버깅 1순위 습관.</strong> 코드가 안 돌아가면 <code>print(X.shape)</code>부터 찍어보세요. 머신러닝 버그의 절반 이상이 "모양이 안 맞아서" 생깁니다.</div>
+
+  <h3>2.1 벡터화는 왜 그렇게 빠른가</h3>
+  <p>파이썬 루프가 $10^6$번 도는 데 몇 초가 걸리지만, 같은 크기의 NumPy 연산은 수십 밀리초 안에 끝납니다. 이유는 두 가지입니다. 첫째, NumPy의 연산은 내부적으로 C/Fortran으로 구현돼 있어서 인터프리터 오버헤드가 없습니다. 둘째, SIMD(한 명령으로 여러 데이터 처리) CPU 명령어를 활용해 한 사이클에 여러 곱셈을 동시에 수행합니다. 이는 <a href="09-cnn-basics.html">CNN의 합성곱</a>과 <a href="07-mlp.html">MLP의 행렬곱</a>이 GPU에서 수백 배 더 빨라지는 원리의 축소판이기도 합니다.</p>
+
+  <h3>2.2 브로드캐스팅(broadcasting)</h3>
+  <p>NumPy에서 가장 헷갈리면서도 가장 강력한 기능입니다. 모양이 다른 두 배열을 연산할 때 작은 쪽이 "자동으로 늘어나서" 큰 쪽에 맞춰집니다. 예:</p>
+  <pre><code>X = np.array([[1,2,3],[4,5,6]])   # (2, 3)
+mu = np.array([1, 1, 1])          # (3,)
+X - mu                            # (2, 3) — mu가 각 행에 빼짐</code></pre>
+  <p>표준화를 한 줄로 쓸 수 있는 것도 브로드캐스팅 덕분입니다: <code>(X - X.mean(0)) / X.std(0)</code>. 초보자가 자주 겪는 버그는 $(N,)$ 과 $(N,1)$을 혼동하는 것입니다. 전자는 1차원 벡터, 후자는 2차원 열벡터로 브로드캐스팅 결과가 완전히 달라집니다. 헷갈릴 때는 <code>reshape(-1,1)</code>로 명시해 주세요.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 브로드캐스팅 모양 시각화</h4>
+    <p>두 배열의 모양을 골라서 NumPy가 어떻게 자동으로 늘리는지 봅니다. 끝부터 비교해서 (a) 같거나 (b) 한쪽이 1이면 ✅, 둘 다 아니면 ❌ 에러.</p>
+    <canvas id="bcast" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>A 모양 <select id="bcA">
+        <option value="3,4">(3, 4)</option>
+        <option value="1,4">(1, 4)</option>
+        <option value="3,1">(3, 1)</option>
+        <option value="4">(4,)</option>
+        <option value="2,3,4" selected>(2, 3, 4)</option>
+        <option value="1,3,1">(1, 3, 1)</option>
+      </select></label>
+      <label>B 모양 <select id="bcB">
+        <option value="4" selected>(4,)</option>
+        <option value="3,4">(3, 4)</option>
+        <option value="3,1">(3, 1)</option>
+        <option value="1,4">(1, 4)</option>
+        <option value="2,1,4">(2, 1, 4)</option>
+        <option value="2,3,1">(2, 3, 1)</option>
+      </select></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bcast');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function pad(arr,n){return Array(n-arr.length).fill(1).concat(arr);}
+    function draw(){
+      const A=document.getElementById('bcA').value.split(',').map(Number);
+      const B=document.getElementById('bcB').value.split(',').map(Number);
+      const n=Math.max(A.length,B.length);
+      const Ap=pad(A,n),Bp=pad(B,n);
+      let ok=true,result=[];
+      for(let i=0;i<n;i++){
+        if(Ap[i]===Bp[i]||Ap[i]===1||Bp[i]===1)result.push(Math.max(Ap[i],Bp[i]));
+        else{ok=false;result.push('?');}
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#222';ctx.font='14px monospace';
+      const cell=70,startX=120,row=80;
+      ctx.fillText('A',60,row+12);
+      Ap.forEach((v,i)=>{
+        const realI=i-(Ap.length-A.length);
+        ctx.fillStyle=realI<0?'#999':'#0b5fff';
+        ctx.font='14px monospace';
+        ctx.fillText(realI<0?'(1)':v,startX+i*cell,row+12);
+      });
+      ctx.fillStyle='#222';ctx.fillText('B',60,row+50);
+      Bp.forEach((v,i)=>{
+        const realI=i-(Bp.length-B.length);
+        ctx.fillStyle=realI<0?'#999':'#ff8c00';
+        ctx.fillText(realI<0?'(1)':v,startX+i*cell,row+50);
+      });
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(60,row+62);ctx.lineTo(startX+(n-1)*cell+30,row+62);ctx.stroke();
+      ctx.fillStyle='#222';ctx.fillText('=',60,row+90);
+      result.forEach((v,i)=>{
+        ctx.fillStyle=v==='?'?'#c62828':'#2e7d32';
+        ctx.font='bold 14px monospace';
+        ctx.fillText(v,startX+i*cell,row+90);
+      });
+      // verdict
+      ctx.fillStyle=ok?'#2e7d32':'#c62828';
+      ctx.font='bold 18px sans-serif';
+      ctx.fillText(ok?`✅ 결과 모양: (${result.join(', ')})`:`❌ 호환되지 않음 — 차원이 안 맞아요`,60,200);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('규칙: 끝에서부터 비교해 같거나 한쪽이 1이면 OK. 짧은 배열은 앞에 1을 채움.',60,235);
+      ctx.fillText('파랑 = A의 실제 차원, 회색 = 자동 추가된 1, 주황 = B의 실제 차원',60,255);
+    }
+    document.getElementById('bcA').addEventListener('change',draw);
+    document.getElementById('bcB').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+
+  <h3>2.3 슬라이싱과 인덱싱 — 처음 배우는 사람이 가장 막히는 곳</h3>
+  <p>NumPy 배열에서 원하는 값만 꺼내는 방법이 여러 가지라 헷갈립니다. 한 번에 정리해 둡시다.</p>
+  <pre><code>X = np.array([[10,20,30,40],
+              [50,60,70,80],
+              [90,100,110,120]])    # shape (3, 4)
+
+X[0]            # 0번 행 — [10,20,30,40]   shape (4,)
+X[:, 0]         # 0번 열 — [10,50,90]      shape (3,)
+X[1, 2]         # 1행 2열 한 값 — 70
+X[:2, 1:3]      # 0~1행, 1~2열의 부분 행렬 — [[20,30],[60,70]]
+X[X > 50]       # 50보다 큰 원소만 — [60,70,80,90,100,110,120]
+X[[0,2], :]     # 0번과 2번 행만 fancy 인덱싱
+</code></pre>
+  <ul>
+    <li><strong>콜론(<code>:</code>)</strong>은 "그 축의 전체"를 의미합니다. <code>X[:, 0]</code>는 "모든 행의 0번 열".</li>
+    <li><strong><code>a:b</code></strong>는 "a부터 b 직전까지"입니다. <code>X[:2]</code>는 0번과 1번 행만.</li>
+    <li><strong>불리언 인덱싱</strong> — <code>X > 50</code>은 <code>True</code>/<code>False</code> 배열을 만들고, 그것으로 인덱싱하면 조건 만족 원소만 뽑힙니다.</li>
+    <li><strong>fancy 인덱싱</strong> — 인덱스 리스트를 넣으면 그 순서대로 행/열을 꺼냅니다.</li>
+  </ul>
+
+  <div class="warn"><strong>가장 흔한 함정 — 뷰(view) vs 사본(copy).</strong> <code>X[:2, 1:3]</code> 같은 슬라이싱은 <em>원본을 가리키는 뷰</em>입니다. 슬라이스에 값을 대입하면 원본도 바뀝니다. <code>X[X > 50]</code> 같은 불리언/fancy 인덱싱은 <em>새 배열(사본)</em>입니다. 헷갈리면 <code>.copy()</code>로 명시하세요.</div>
+
+  <h3>2.4 자주 쓰는 NumPy 함수 10개</h3>
+  <p>한 학기 동안 90% 이상의 상황에서 쓰는 함수만 추렸습니다. 이름과 용도만 익혀두면 충분합니다.</p>
+  <table>
+    <thead><tr><th>함수</th><th>한 줄 의미</th><th>예</th></tr></thead>
+    <tbody>
+      <tr><td><code>np.zeros / ones / arange / linspace</code></td><td>특정 모양의 배열을 만든다</td><td><code>np.zeros((3,4))</code></td></tr>
+      <tr><td><code>X.reshape(...)</code></td><td>모양을 바꾼다(원소 수는 같아야)</td><td><code>X.reshape(2, -1)</code></td></tr>
+      <tr><td><code>X.mean(axis), X.std(axis)</code></td><td>축을 따라 평균·표준편차</td><td><code>X.mean(axis=0)</code> = 열별 평균</td></tr>
+      <tr><td><code>X.sum / max / min / argmax</code></td><td>합·최대·최소·최댓값 인덱스</td><td><code>X.argmax(axis=1)</code></td></tr>
+      <tr><td><code>np.dot(A, B) / A @ B</code></td><td>행렬곱</td><td><code>X @ W + b</code> ← 신경망 한 줄</td></tr>
+      <tr><td><code>np.concatenate / vstack / hstack</code></td><td>배열을 이어 붙임</td><td><code>np.vstack([X1, X2])</code></td></tr>
+      <tr><td><code>np.where(조건, a, b)</code></td><td>조건이 참이면 a, 아니면 b</td><td><code>np.where(y &gt; 0, 1, -1)</code></td></tr>
+      <tr><td><code>np.unique(X, return_counts)</code></td><td>고유값과 빈도</td><td>클래스 빈도 확인</td></tr>
+      <tr><td><code>np.random.randn(...)</code></td><td>표준정규 난수</td><td>가중치 초기화에 자주</td></tr>
+      <tr><td><code>np.linalg.norm / inv / eig</code></td><td>벡터 길이·역행렬·고윳값</td><td>거리 계산·PCA</td></tr>
+    </tbody>
+  </table>
+  <p>이 표는 시험에 나오라고 만든 게 아닙니다. 막혔을 때 "아, 그거 분명 NumPy에 한 줄짜리가 있었지"라고 떠올려 검색해 들어가는 단서로 쓰세요. 한 학기 끝에는 머슬 메모리로 손에서 흘러나옵니다.</p>
+
+  <h2>3. pandas — 표 데이터의 엑셀</h2>
+  <p>pandas의 <code>DataFrame</code>은 한마디로 <strong>"코드로 다루는 엑셀"</strong>입니다. 각 컬럼에 이름이 붙어 있어서 인덱스 번호가 아닌 이름으로 데이터에 접근할 수 있습니다. 머신러닝의 입력 데이터는 거의 다 이 모양입니다.</p>
+  <pre><code>import pandas as pd
+
+df = pd.read_csv('fish.csv')      # CSV 파일을 표로 불러오기
+df.head()                          # 위 5줄 미리보기
+df.describe()                      # 평균/표준편차/사분위 등 통계 요약
+df[df['weight'] > 500]             # weight 컬럼이 500보다 큰 행만 필터
+df.groupby('species').mean()       # 종(species)별로 평균 집계</code></pre>
+  <p>각 줄을 한 줄씩 풀면 — <code>head()</code>는 데이터의 "맛보기", <code>describe()</code>는 "건강검진"(평균·표준편차 한 번에), 대괄호 필터는 "엑셀의 자동 필터", <code>groupby</code>는 "엑셀의 피벗 테이블"이라고 생각하면 직관이 잡힙니다.</p>
+  <div class="tip"><strong>처음 데이터를 받았을 때 외워둘 4종 세트.</strong> <code>df.head()</code> → <code>df.shape</code> → <code>df.describe()</code> → <code>df.isnull().sum()</code>. 이 네 줄이면 "이 데이터가 어떤 모양이고, 무슨 단위이고, 결측치가 어디 있는지" 60초 안에 파악됩니다.</div>
+
+  <h3>3.1 결측치(NaN) 처리 — 실세계 데이터의 90%는 비어 있다</h3>
+  <p>교과서 데이터셋은 깔끔하지만, 실세계 데이터는 거의 항상 빈칸이 있습니다. "측정 실패", "응답 거부", "센서 고장", "시스템 오류" — 이유는 다양하고 우리는 빈칸을 처리해야만 모델에 넣을 수 있습니다.</p>
+  <pre><code>df.isnull().sum()                  # 컬럼별 NaN 개수
+df.dropna()                        # NaN이 있는 행을 통째로 제거 — 가장 단순
+df.dropna(subset=['weight'])       # 특정 컬럼의 NaN만 제거
+df.fillna(0)                       # 0으로 채우기 — 종종 위험
+df['weight'].fillna(df['weight'].median())  # 중앙값으로 대체
+df.fillna(method='ffill')          # 직전 값으로 채우기 (시계열에 유용)</code></pre>
+  <p>"<em>그냥 NaN 행을 다 날리면 안 되나요?</em>"라는 질문이 자주 나옵니다. 가능하지만 데이터의 30%가 NaN이면 30% 손실은 너무 큽니다. 또한 NaN이 무작위로 있는 게 아니라 <strong>특정 패턴</strong>(예: 고소득자가 응답을 거부)이라면, 행 제거가 통계 자체를 왜곡합니다.</p>
+  <table>
+    <thead><tr><th>상황</th><th>권장 처리</th><th>주의</th></tr></thead>
+    <tbody>
+      <tr><td>NaN이 5% 미만 + 무작위</td><td>그냥 dropna</td><td>—</td></tr>
+      <tr><td>수치형, 정규분포</td><td>평균 대체 (mean)</td><td>분산이 작아짐</td></tr>
+      <tr><td>수치형, 분포 비대칭</td><td>중앙값 대체 (median)</td><td>이상치에 강함</td></tr>
+      <tr><td>범주형</td><td>최빈값(mode) 또는 "Unknown"</td><td>—</td></tr>
+      <tr><td>시계열</td><td>직전값(ffill) 또는 보간</td><td>미래 정보 누수 주의</td></tr>
+      <tr><td>NaN 자체가 신호</td><td>"is_missing" 더미 컬럼 추가</td><td>가장 안전</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>실전 팁.</strong> 결측 처리에서 가장 안전한 패턴은 "원본 컬럼은 채우면서, <em>NaN 여부를 나타내는 새 더미 컬럼</em>을 추가"하는 것입니다. 모델이 "이 값은 채워진 것"이라는 정보까지 학습할 수 있습니다.</div>
+
+  <h3>3.2 범주형 변수 인코딩 — 문자열은 그대로 못 쓴다</h3>
+  <p>"남성/여성", "서울/부산/대구", "Apple/Samsung" 같은 문자열을 모델에 그대로 넣을 수 없습니다. 숫자로 바꿔야 하고, 두 가지 표준 방법이 있습니다.</p>
+  <pre><code># 방법 1: Label Encoding — 정수로 매핑
+from sklearn.preprocessing import LabelEncoder
+le = LabelEncoder()
+df['city_code'] = le.fit_transform(df['city'])
+# 서울→0, 부산→1, 대구→2
+
+# 방법 2: One-Hot Encoding — 컬럼을 펼침
+df_oh = pd.get_dummies(df, columns=['city'])
+# city_서울, city_부산, city_대구 세 개의 0/1 컬럼이 생김</code></pre>
+  <p>둘의 차이가 핵심입니다. Label Encoding은 "서울=0 &lt; 부산=1 &lt; 대구=2"라는 <em>크기 관계</em>를 모델에게 암시합니다. 이게 의미가 있을 때(예: "초등 &lt; 중등 &lt; 고등")는 좋지만, 도시처럼 순서가 없을 때는 잘못된 정보입니다. 그럴 땐 One-Hot이 안전합니다.</p>
+  <ul>
+    <li><strong>트리 기반 모델</strong>(랜덤포레스트, XGBoost) — Label Encoding으로도 잘 작동.</li>
+    <li><strong>거리 기반 / 선형 모델 / 신경망</strong> — One-Hot이 거의 항상 안전.</li>
+    <li><strong>고차원 범주(예: 우편번호 1만 개)</strong> — One-Hot은 폭발하므로 임베딩(<a href="13-transformer-llm.html">W13</a>)이나 빈도 인코딩 사용.</li>
+  </ul>
+
+  <h2>4. 표준화와 정규화 — 스케일의 힘</h2>
+  <p>"길이는 30cm, 무게는 600g". 두 컬럼의 숫자 크기가 너무 다르면 거리 기반 모델(KNN, K-means)은 큰 숫자에만 영향을 받습니다. 그래서 모든 컬럼을 비슷한 스케일로 맞춰주는 게 필수입니다.</p>
+
+  <h3>4.1 수치적으로 무슨 일이 벌어지는가</h3>
+  <p>길이와 무게의 예를 수치적으로 끝까지 따라가 봅시다. 두 점 A=(30cm, 600g), B=(31cm, 650g) 사이의 유클리드 거리를 계산하면</p>
+  $$ d = \sqrt{(31-30)^2 + (650-600)^2} = \sqrt{1 + 2500} \approx 50.01 $$
+  <p>보다시피 거리의 99.98%가 "무게 차이"에서 옵니다. 길이 차이(1cm)는 사실상 무시됩니다. 이것이 바로 KNN이나 K-means가 스케일에 극도로 민감한 이유입니다. 같은 두 점을 표준화(예: 길이 σ=5cm, 무게 σ=100g 가정)한 뒤에는</p>
+  $$ d = \sqrt{(1/5)^2 + (50/100)^2} = \sqrt{0.04 + 0.25} \approx 0.54 $$
+  <p>이제 길이와 무게가 거리에 비슷한 비중으로 기여합니다. <a href="05-classification.html">KNN</a>, <a href="06-unsupervised.html">K-means/PCA</a> 같은 모델은 표준화가 사실상 필수이고, <a href="03-regression-1.html">경사하강법</a>으로 학습하는 선형 회귀·로지스틱 회귀·신경망도 표준화를 안 하면 학습률 튜닝이 악몽이 됩니다.</p>
+
+  <h3>4.2 왜 경사하강법은 스케일에 민감한가</h3>
+  <p>한 변수의 스케일이 훨씬 크면 손실 함수의 등고선이 길쭉한 타원이 됩니다. 경사하강법은 등고선에 수직으로 움직이므로, 길쭉한 골짜기에서 좌우로 지그재그 진동하며 천천히 내려갑니다. 모든 변수를 같은 스케일로 맞춰서 등고선을 "동그란 원"에 가깝게 만들면 한 방향으로 곧장 내려갈 수 있습니다. 이는 <a href="08-dnn-backprop.html">W8의 배치 정규화</a>가 층 내부에서도 같은 일을 하는 이유와 정확히 같습니다.</p>
+
+
+  <p><strong>표준화(standardization)</strong> — 평균 0, 표준편차 1로:</p>
+  $$ z = \frac{x - \mu}{\sigma} $$
+
+  <p><strong>정규화(min-max)</strong> — 0과 1 사이로:</p>
+  $$ x' = \frac{x - x_{\min}}{x_{\max} - x_{\min}} $$
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 원본 vs 표준화</h4>
+    <p>왼쪽은 원본 데이터, 오른쪽은 표준화한 데이터입니다. 두 컬럼의 스케일이 다를 때 표준화가 어떻게 데이터를 "둥글게" 만드는지 확인하세요.</p>
+    <canvas id="stdCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>X 스케일 <span class="val" id="sxV">3</span><input type="range" id="sx" min="1" max="6" step="0.1" value="3"></label>
+      <label>Y 스케일 <span class="val" id="syV">1</span><input type="range" id="sy" min="0.2" max="3" step="0.1" value="1"></label>
+      <button id="regenStd">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('stdCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let raw=[];
+    function gen(){
+      raw=[];
+      for(let i=0;i<60;i++){
+        const u=Math.random(),v=Math.random();
+        const z0=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+        const z1=Math.sqrt(-2*Math.log(u))*Math.sin(2*Math.PI*v);
+        raw.push({x:z0,y:z1});
+      }
+      draw();
+    }
+    function draw(){
+      const sx=+document.getElementById('sx').value,sy=+document.getElementById('sy').value;
+      document.getElementById('sxV').textContent=sx.toFixed(1);
+      document.getElementById('syV').textContent=sy.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ccc';ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();
+      const data=raw.map(p=>({x:p.x*sx+5,y:p.y*sy+2}));
+      const xs=data.map(p=>p.x),ys=data.map(p=>p.y);
+      const xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);
+      ctx.fillStyle='#0b5fff';
+      data.forEach(p=>{
+        const px=20+((p.x-xmin)/(xmax-xmin+1e-9))*(W/2-40);
+        const py=20+((p.y-ymin)/(ymax-ymin+1e-9))*(H-40);
+        ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
+      });
+      const mx=xs.reduce((a,b)=>a+b)/xs.length,my=ys.reduce((a,b)=>a+b)/ys.length;
+      const sxs=Math.sqrt(xs.reduce((a,b)=>a+(b-mx)*(b-mx),0)/xs.length);
+      const sys=Math.sqrt(ys.reduce((a,b)=>a+(b-my)*(b-my),0)/ys.length);
+      const z=data.map(p=>({x:(p.x-mx)/sxs,y:(p.y-my)/sys}));
+      ctx.fillStyle='#ff8c00';
+      const cx=3*W/4,cy=H/2,sc=40;
+      z.forEach(p=>{ctx.beginPath();ctx.arc(cx+p.x*sc,cy+p.y*sc,3,0,Math.PI*2);ctx.fill();});
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('원본 데이터',20,15);ctx.fillText('표준화 (μ=0, σ=1)',W/2+20,15);
+    }
+    ['sx','sy'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    document.getElementById('regenStd').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <div class="tip"><strong>주의!</strong> 표준화 파라미터(평균, 표준편차)는 <em>학습 데이터에서만</em> 계산해야 합니다. 그렇지 않으면 테스트 데이터의 정보가 학습으로 새어 들어가는 <em>데이터 누수(data leakage)</em>가 발생합니다.</div>
+
+  <p><strong>왜 테스트는 <code>fit_transform</code>이 아니라 <code>transform</code>만 써야 할까?</strong> 테스트 데이터는 "본 적 없는 미래 데이터"의 대역(代役)입니다. 실제 배포 환경에서는 새 샘플 한 건만 들어오는데, 그 한 건만으로 평균/표준편차를 다시 구할 수는 없죠. 그래서 학습 시점에 측정한 통계를 그대로 적용해야 평가 결과가 "실제 배포 시 성능"과 일치합니다. 학습+테스트를 합쳐서 표준화하면 테스트 데이터의 평균이 학습에 새어들어, 검증 정확도가 비현실적으로 높게 나옵니다 — 그리고 실제 배포 후에 성능이 뚝 떨어집니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 데이터 누수의 함정</h4>
+    <p>"테스트 데이터에는 학습보다 평균이 다른 분포"가 들어오는 상황을 시뮬레이션합니다. (A) 학습+테스트를 통째로 표준화한 경우, (B) 학습으로만 표준화한 경우의 테스트 분류 정확도를 비교합니다. (A)는 <em>거짓 안도</em>를 줍니다 — 보고된 정확도와 실제 정확도가 다릅니다.</p>
+    <canvas id="leak" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>테스트 분포 이동 <span class="val" id="lkSV">2.0</span><input type="range" id="lkS" min="0" max="5" step="0.1" value="2.0"></label>
+      <button id="lkRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('leak');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let train=[],test=[];
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(){
+      train=[];test=[];
+      // train: class0 ~N(2,1), class1 ~N(6,1)
+      for(let i=0;i<60;i++)train.push({x:2+gauss(),c:0});
+      for(let i=0;i<60;i++)train.push({x:6+gauss(),c:1});
+      // test: shifted by shift, same class separation
+      const shift=+document.getElementById('lkS').value;
+      for(let i=0;i<30;i++)test.push({x:2+shift+gauss(),c:0});
+      for(let i=0;i<30;i++)test.push({x:6+shift+gauss(),c:1});
+      draw();
+    }
+    function classify(point,thresh){return point<thresh?0:1;}
+    function draw(){
+      const shift=+document.getElementById('lkS').value;
+      document.getElementById('lkSV').textContent=shift.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Method A: standardize using train+test combined statistics
+      const allX_A=[...train.map(p=>p.x),...test.map(p=>p.x)];
+      const muA=allX_A.reduce((a,b)=>a+b,0)/allX_A.length;
+      const sdA=Math.sqrt(allX_A.reduce((a,b)=>a+(b-muA)**2,0)/allX_A.length);
+      // Method B: standardize using train statistics
+      const trX=train.map(p=>p.x);
+      const muB=trX.reduce((a,b)=>a+b,0)/trX.length;
+      const sdB=Math.sqrt(trX.reduce((a,b)=>a+(b-muB)**2,0)/trX.length);
+      // Train a simple threshold classifier on standardized train (method A and B)
+      // Threshold = midpoint of standardized class means
+      function trainAcc(mu,sd){
+        const z=train.map(p=>({z:(p.x-mu)/sd,c:p.c}));
+        const m0=z.filter(p=>p.c===0).reduce((a,b)=>a+b.z,0)/(z.filter(p=>p.c===0).length);
+        const m1=z.filter(p=>p.c===1).reduce((a,b)=>a+b.z,0)/(z.filter(p=>p.c===1).length);
+        const thr=(m0+m1)/2;
+        return {thr,m0,m1};
+      }
+      function testAcc(mu,sd,thr){
+        let ok=0;
+        test.forEach(p=>{const z=(p.x-mu)/sd;const pred=z<thr?0:1;if(pred===p.c)ok++;});
+        return ok/test.length;
+      }
+      const {thr:thrA}=trainAcc(muA,sdA);
+      const {thr:thrB}=trainAcc(muB,sdB);
+      const accA=testAcc(muA,sdA,thrA);
+      const accB=testAcc(muB,sdB,thrB);
+      // training-set self-accuracy under each method (this is the "보고된" accuracy if we look at train+test commingled)
+      const reportedA=(()=>{
+        // simulate: what if we accidentally evaluated on (test standardized using train+test stats) — reports inflated train-like split
+        let ok=0;test.forEach(p=>{const z=(p.x-muA)/sdA;const pred=z<thrA?0:1;if(pred===p.c)ok++;});
+        return ok/test.length;
+      })();
+      // bars: A reported (cheating), B real
+      const PL=40,PT=30,plotH=H-PT-50;
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText('테스트 분포 이동 = '+shift.toFixed(1)+' (학습 평균에서 떨어진 정도)',PL,20);
+      const bars=[
+        {lab:'(A) 누수: train+test로 표준화',v:accA,col:'#c62828'},
+        {lab:'(B) 정직: train으로만 표준화',v:accB,col:'#0b5fff'},
+      ];
+      const bw=200,gap=80;
+      bars.forEach((b,i)=>{
+        const x=PL+i*(bw+gap);
+        const h=plotH*b.v;
+        const y=PT+plotH-h;
+        ctx.fillStyle=b.col;ctx.fillRect(x,y,bw,h);
+        ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';
+        ctx.fillText((b.v*100).toFixed(1)+'%',x+bw/2-25,y+24);
+        ctx.fillStyle='#333';ctx.font='12px sans-serif';
+        ctx.fillText(b.lab,x,PT+plotH+18);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('정확도 차이 = '+((accA-accB)*100).toFixed(1)+'%p — 누수가 결과를 왜곡합니다',PL,PT+plotH+38);
+    }
+    document.getElementById('lkS').addEventListener('input',gen);
+    document.getElementById('lkRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <p>슬라이더로 "테스트 분포 이동"을 키워보세요. 이동이 0일 때(=배포 환경이 학습 환경과 같을 때)는 두 방법이 거의 같은 정확도를 보이지만, 이동이 커질수록 (A) 누수 방법이 (B) 정직 방법보다 비현실적으로 높은 점수를 냅니다. 실제 운영에서는 (B)의 점수가 진짜 성능에 가깝고, (A)의 점수는 "이미 답을 본 시험"이라 신뢰할 수 없습니다. <strong>scikit-learn에서는 항상 <code>scaler.fit(X_train)</code> 다음 <code>scaler.transform(X_test)</code></strong> 순서를 지키세요.</p>
+
+  <h2>5. 학습/검증/테스트 분할</h2>
+  <p>모델이 새 데이터에 잘 작동하는지 알려면, 학습에 쓰지 않은 데이터로 평가해야 합니다. 보통 다음과 같이 나눕니다.</p>
+  <ul>
+    <li><strong>학습(train)</strong> — 60~80%. 모델 파라미터를 맞추는 데 씁니다.</li>
+    <li><strong>검증(validation)</strong> — 10~20%. 하이퍼파라미터를 고르고 과적합을 감시합니다.</li>
+    <li><strong>테스트(test)</strong> — 10~20%. 최종 성능 보고용. <em>딱 한 번만</em> 봅니다.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 학습/테스트 분할 시각화</h4>
+    <p>슬라이더로 테스트 비율을 바꾸고 셔플을 누르면, 데이터가 어떻게 두 그룹으로 나뉘는지 보입니다.</p>
+    <canvas id="splitCanvas" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>테스트 비율 <span class="val" id="trV">0.2</span><input type="range" id="tr" min="0.1" max="0.5" step="0.05" value="0.2"></label>
+      <button id="shuf">셔플</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('splitCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const N=80;let order=[];
+    function shuffle(){order=Array.from({length:N},(_,i)=>i).sort(()=>Math.random()-0.5);draw();}
+    function draw(){
+      const tr=+document.getElementById('tr').value;
+      document.getElementById('trV').textContent=tr.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cols=20,cs=(W-40)/cols,rs=(H-40)/(N/cols);
+      const cut=Math.floor(N*(1-tr));
+      order.forEach((idx,k)=>{
+        const r=Math.floor(k/cols),cc=k%cols;
+        ctx.fillStyle=k<cut?'#0b5fff':'#ff8c00';
+        ctx.fillRect(20+cc*cs,20+r*rs,cs-2,rs-2);
+      });
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`학습 ${cut}개`,20,15);ctx.fillText(`테스트 ${N-cut}개`,W-100,15);
+    }
+    document.getElementById('tr').addEventListener('input',draw);
+    document.getElementById('shuf').addEventListener('click',shuffle);
+    shuffle();
+  })();
+  </script>
+
+  <p>분류 문제에서 클래스 비율이 유지되도록 나누는 것을 <strong>층화 추출(stratified split)</strong>이라고 합니다.</p>
+
+  <h3>5.1 K-fold 교차검증 — 한 번 분할로는 부족할 때</h3>
+  <p>데이터가 적으면 <em>한 번 분할의 운</em>에 점수가 크게 흔들립니다. 운 좋게 쉬운 샘플이 테스트에 몰리면 좋게 보이고, 반대면 나쁘게 보이죠. 이를 막는 표준 도구가 <strong>K-fold 교차검증</strong>입니다.</p>
+  <ol>
+    <li>데이터를 K조각(보통 5)으로 나눈다.</li>
+    <li>1번째 조각을 테스트, 나머지 4를 학습 → 점수 1.</li>
+    <li>2번째 조각을 테스트, 나머지를 학습 → 점수 2.</li>
+    <li>… K번 반복.</li>
+    <li>K개의 점수의 <em>평균과 표준편차</em>를 보고 모델을 평가.</li>
+  </ol>
+  <pre><code>from sklearn.model_selection import cross_val_score
+from sklearn.neighbors import KNeighborsClassifier
+
+scores = cross_val_score(KNeighborsClassifier(5), X, y, cv=5)
+print(scores.mean(), scores.std())   # 평균과 흔들림</code></pre>
+  <p>왜 평균만이 아니라 표준편차도 봐야 할까요? "평균 0.85, 표준편차 0.03"인 모델이 "평균 0.86, 표준편차 0.10"인 모델보다 거의 항상 더 신뢰할 만합니다. 후자는 운에 따라 0.76~0.96을 오르내리는 변덕스러운 모델입니다. <strong>안정성도 성능의 일부</strong>입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 5-fold 교차검증 시각화</h4>
+    <p>같은 데이터를 5조각으로 나눠 매 회차마다 어느 조각이 테스트로 쓰이는지 봅니다. 5번의 학습이 일어나고 각 회차마다 다른 정확도가 나옵니다.</p>
+    <canvas id="kfold" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>K (fold 수) <span class="val" id="kfV">5</span><input type="range" id="kf" min="3" max="10" step="1" value="5"></label>
+      <label>현재 fold <span class="val" id="curV">1</span><input type="range" id="cur" min="1" max="5" step="1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kfold');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const K=+document.getElementById('kf').value;
+      const curEl=document.getElementById('cur');
+      curEl.max=K;
+      let cur=Math.min(+curEl.value,K);curEl.value=cur;
+      document.getElementById('kfV').textContent=K;
+      document.getElementById('curV').textContent=cur;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const N=50,cellW=(W-100)/N;
+      const fold=Array.from({length:N},(_,i)=>Math.floor(i*K/N)+1);
+      for(let r=0;r<K;r++){
+        const y=30+r*40;
+        ctx.fillStyle='#333';ctx.font='13px sans-serif';
+        ctx.fillText(`회차 ${r+1}`,10,y+18);
+        for(let i=0;i<N;i++){
+          const isTest=(fold[i]===r+1);
+          ctx.fillStyle=isTest?'#ff8c00':'#0b5fff';
+          ctx.fillRect(80+i*cellW,y,cellW-1,28);
+        }
+        // simulated accuracy for this fold
+        const acc=0.78+0.10*Math.sin(r*0.7+1)+0.02;
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(`acc ${(acc*100).toFixed(1)}%`,80+N*cellW+8,y+18);
+      }
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('파랑 = 학습, 주황 = 테스트',10,H-10);
+    }
+    document.getElementById('kf').addEventListener('input',draw);
+    document.getElementById('cur').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h3>5.2 시계열 데이터의 분할 — 셔플하면 안 된다</h3>
+  <p>주식 가격, 날씨, 매출처럼 시간 순서가 있는 데이터는 <strong>절대 무작위로 셔플하면 안 됩니다</strong>. 미래 데이터로 학습하고 과거 데이터로 테스트하면 점수가 비현실적으로 좋게 나옵니다(예: "내일 가격을 학습한 모델이 어제 가격을 잘 맞춘다"). 이를 <em>look-ahead 누수</em>라고 합니다.</p>
+  <ul>
+    <li><strong>고정 분할</strong>: 1~10월 학습 / 11~12월 테스트.</li>
+    <li><strong>롤링 분할(walk-forward)</strong>: 1월 학습→2월 테스트, 2월까지 학습→3월 테스트, …</li>
+    <li>scikit-learn에서는 <code>TimeSeriesSplit</code> 사용.</li>
+  </ul>
+  <div class="warn"><strong>한 학기 내내 잊지 마세요.</strong> 데이터를 분할할 때 <em>"내가 배포 환경에서 만나게 될 미래 샘플"</em>을 흉내내는 게 분할의 목적입니다. 시계열을 셔플하면 그 흉내가 깨집니다.</div>
+
+  <h2>6. 히스토그램 — 분포를 한눈에</h2>
+  <p>한 컬럼의 값들이 어떻게 퍼져 있는지 보려면 히스토그램이 가장 빠릅니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 히스토그램 빈 수</h4>
+    <p>같은 데이터도 빈(bin)을 몇 개로 나누느냐에 따라 모양이 달라집니다. 너무 적으면 거칠고, 너무 많으면 잡음이 보입니다.</p>
+    <canvas id="histCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>빈 수 <span class="val" id="bnV">15</span><input type="range" id="bn" min="5" max="40" step="1" value="15"></label>
+      <button id="histRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('histCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let data=[];
+    function gen(){
+      data=[];
+      for(let i=0;i<400;i++){
+        const u=Math.random(),v=Math.random();
+        const z=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+        data.push(z);
+      }
+      draw();
+    }
+    function draw(){
+      const B=+document.getElementById('bn').value;
+      document.getElementById('bnV').textContent=B;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const mn=-3,mx=3,bw=(mx-mn)/B;
+      const bins=new Array(B).fill(0);
+      data.forEach(d=>{const b=Math.min(B-1,Math.max(0,Math.floor((d-mn)/bw)));bins[b]++;});
+      const peak=Math.max(...bins);
+      bins.forEach((v,i)=>{
+        const x=20+i*((W-40)/B),y=H-30-(v/peak)*(H-60);
+        ctx.fillStyle='#0b5fff';
+        ctx.fillRect(x,y,(W-40)/B-2,H-30-y);
+      });
+      ctx.strokeStyle='#333';ctx.beginPath();ctx.moveTo(20,H-30);ctx.lineTo(W-20,H-30);ctx.stroke();
+    }
+    document.getElementById('bn').addEventListener('input',draw);
+    document.getElementById('histRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <h2>6.5 시각화로 보는 분포 차이 — 4가지 가짜 정규분포</h2>
+  <p>"평균과 표준편차가 같으면 분포도 비슷할까?"라는 직관은 종종 틀립니다. 통계학자 앤스컴(Anscombe, 1973)이 보여준 유명한 예처럼, 같은 통계값을 가진 데이터도 눈으로 보면 완전히 다른 모양이 될 수 있습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 같은 평균·표준편차, 다른 분포</h4>
+    <p>네 분포 모두 평균 0, 표준편차 1로 정규화했지만 모양은 완전히 다릅니다. <strong>요약 통계만 보지 말고 항상 그림으로 보세요</strong>는 이번 주의 핵심 메시지입니다.</p>
+    <canvas id="distComp" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>분포 종류
+      <select id="distType">
+        <option value="normal" selected>정규분포</option>
+        <option value="uniform">균등분포</option>
+        <option value="bimodal">이봉(쌍봉)분포</option>
+        <option value="skewed">치우친 분포</option>
+      </select></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('distComp');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(type){
+      const N=400;let data=[];
+      if(type==='normal'){for(let i=0;i<N;i++)data.push(gauss());}
+      else if(type==='uniform'){for(let i=0;i<N;i++)data.push((Math.random()-0.5)*2*Math.sqrt(3));}
+      else if(type==='bimodal'){for(let i=0;i<N;i++){data.push(gauss()*0.5+(Math.random()<0.5?-1:1));}}
+      else{for(let i=0;i<N;i++){const u=Math.random();data.push(-Math.log(1-u)-1);}}
+      // standardize
+      const mu=data.reduce((a,b)=>a+b,0)/data.length;
+      const sd=Math.sqrt(data.reduce((a,b)=>a+(b-mu)**2,0)/data.length);
+      return data.map(x=>(x-mu)/sd);
+    }
+    function draw(){
+      const type=document.getElementById('distType').value;
+      const data=gen(type);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const PL=40,PR=20,PT=30,PB=40;
+      const plotW=W-PL-PR,plotH=H-PT-PB;
+      const mn=-3.5,mx=3.5,B=40,bw=(mx-mn)/B;
+      const bins=new Array(B).fill(0);
+      data.forEach(d=>{const i=Math.min(B-1,Math.max(0,Math.floor((d-mn)/bw)));bins[i]++;});
+      const peak=Math.max(...bins);
+      ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(PL,PT+plotH);ctx.lineTo(PL+plotW,PT+plotH);ctx.stroke();
+      bins.forEach((v,i)=>{
+        const x=PL+i*plotW/B;const h=(v/peak)*plotH;
+        ctx.fillStyle='#0b5fff';
+        ctx.fillRect(x,PT+plotH-h,plotW/B-1,h);
+      });
+      const sum=data.reduce((a,b)=>a+b,0);const n=data.length;
+      const mu=sum/n,sd=Math.sqrt(data.reduce((a,b)=>a+(b-mu)**2,0)/n);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`표준화 후: 평균 ${mu.toFixed(2)}, 표준편차 ${sd.toFixed(2)}`,PL,20);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('표준화로 평균/표준편차는 같아지지만 모양은 그대로! 모델 성능에 큰 차이를 만듭니다',PL,H-12);
+    }
+    document.getElementById('distType').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>7. 코드 예제</h2>
+  <pre><code>import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+df = pd.read_csv('fish.csv')
+X = df[['length','weight']].values
+y = df['species'].values
+
+X_tr, X_te, y_tr, y_te = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42)
+
+scaler = StandardScaler()
+X_tr_s = scaler.fit_transform(X_tr)   # fit은 학습 데이터로만
+X_te_s = scaler.transform(X_te)       # 테스트는 transform만</code></pre>
+
+  <h2>✅ 오늘의 핵심 3가지</h2>
+  <div class="tip">
+    <ol style="margin:6px 0">
+      <li><strong>모양(shape)부터 보자.</strong> NumPy/pandas 코드의 첫 디버깅 도구는 <code>print(X.shape)</code>. 모양이 맞지 않으면 어떤 모델도 돌지 않습니다.</li>
+      <li><strong>스케일이 다르면 표준화하자.</strong> KNN·K-means·경사하강법 모두가 이 한 줄에 의존합니다. <code>(x - μ) / σ</code>.</li>
+      <li><strong>표준화 통계는 학습 데이터에서만 구한다.</strong> 테스트는 <code>fit_transform</code>이 아니라 <code>transform</code>만. 그래야 데이터 누수를 막을 수 있습니다.</li>
+    </ol>
+  </div>
+
+  <h2>🤔 자가 점검 — 다음 주 가기 전에</h2>
+  <ol>
+    <li>흑백 이미지 200장(32×32 픽셀)의 NumPy 배열 모양은 무엇일까요?</li>
+    <li>키(cm), 몸무게(kg), 나이(년) 세 컬럼을 그대로 KNN에 넣으면 어떤 일이 생길까요? 어떻게 고치죠?</li>
+    <li>표준화에서 <code>fit_transform</code>과 <code>transform</code>은 어디에 각각 써야 하나요? 그 이유는?</li>
+    <li>데이터 누수(data leakage)를 한 문장으로 설명할 수 있나요?</li>
+  </ol>
+
+  <h2>📝 연습문제 — 손으로 풀어보기</h2>
+
+  <div class="tip"><strong>연습 1.</strong> 다음 데이터의 평균과 표준편차를 구해 표준화하세요. <code>x = [10, 20, 30, 40, 50]</code>.
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>평균 μ = (10+20+30+40+50)/5 = <strong>30</strong>.<br>
+  분산 = ((-20)² + (-10)² + 0 + 10² + 20²)/5 = (400+100+0+100+400)/5 = 200.<br>
+  표준편차 σ = √200 ≈ <strong>14.14</strong>.<br>
+  표준화: z = (x − 30) / 14.14 ≈ <strong>[−1.41, −0.71, 0, 0.71, 1.41]</strong>.<br>
+  검증: 평균 ≈ 0, 표준편차 ≈ 1 ✅</p></details></div>
+
+  <div class="tip"><strong>연습 2.</strong> 다음 NumPy 코드의 출력 모양은? <code>X = np.zeros((5, 3, 2)); Y = X.reshape(5, -1)</code>
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>원본 원소 수 = 5 × 3 × 2 = 30. <code>reshape(5, -1)</code>은 5행을 고정하고 나머지를 자동 계산하므로 30 ÷ 5 = 6열. 결과 shape = <strong>(5, 6)</strong>. 이런 reshape는 신경망 입력 평탄화(flatten)에 자주 등장합니다.</p></details></div>
+
+  <div class="tip"><strong>연습 3.</strong> 학습 데이터로만 표준화해야 한다고 배웠습니다. 그러면 새로 들어온 단일 샘플 한 건만 예측할 때는 어떻게 표준화해야 할까요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>학습 시 측정한 평균·표준편차를 <em>그대로 저장해 두고</em> 새 샘플에 적용합니다. 즉 <code>scaler.fit(X_train)</code>으로 만든 scaler 객체를 디스크에 저장(<code>joblib.dump</code>)하고, 배포된 환경에서 <code>scaler.transform(new_x)</code>만 호출. 새 샘플 한 건만 가지고 평균을 다시 구하지 않습니다 — 한 건의 평균은 그 값 자체이고 표준편차는 0이라 의미가 없으니까요.</p></details></div>
+
+  <div class="tip"><strong>연습 4.</strong> 어떤 데이터셋의 클래스 비율이 0이 950개, 1이 50개입니다. <code>train_test_split(test_size=0.2)</code>를 그냥 호출했을 때 발생할 수 있는 문제와 해결책은?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p><strong>문제.</strong> 무작위 분할이라 운이 나쁘면 테스트 셋(200개)에 클래스 1이 거의 없을 수 있고, 평가가 무의미해집니다.<br>
+  <strong>해결.</strong> <code>stratify=y</code>를 주면 학습/테스트 양쪽 모두에 클래스 비율(95:5)이 그대로 유지됩니다. 분류 문제에서는 거의 항상 <code>stratify=y</code>를 켜는 게 좋습니다.</p></details></div>
+
+  <div class="tip"><strong>연습 5.</strong> 다음 두 코드의 결과가 다른 이유를 설명하세요.<br>
+  (a) <code>scaler.fit_transform(np.concatenate([X_train, X_test]))</code><br>
+  (b) <code>scaler.fit(X_train); scaler.transform(X_test)</code>
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>(a)는 학습 데이터와 테스트 데이터를 합쳐서 평균/표준편차를 구하므로, 테스트 데이터의 통계가 학습 결과에 새어듭니다 — <em>데이터 누수</em>. 검증 점수가 비현실적으로 높게 나오고 실제 배포에서는 무너집니다.<br>
+  (b)는 학습 통계만 사용하고 그것을 테스트에 그대로 적용하므로, 실제 배포 환경(미지의 미래 샘플)을 정확히 흉내냅니다. 이게 표준 절차입니다.</p></details></div>
+
+  <h2>❓ FAQ — 데이터 핸들링에서 자주 받는 질문</h2>
+  <div class="note"><strong>Q1. pandas와 NumPy 중 무엇을 먼저 배워야 하나요?</strong><br>
+  A. NumPy가 먼저입니다. pandas의 내부도 NumPy로 만들어져 있고, 결국 모델에 넣을 때는 <code>df.values</code>로 NumPy 배열로 꺼냅니다. 그러나 둘을 동시에 익혀도 무방합니다 — 이번 주 강의안이 정확히 그 순서입니다.</div>
+  <div class="note"><strong>Q2. 표준화와 정규화 중 어느 것을 써야 하나요?</strong><br>
+  A. <em>분포가 정규분포에 가까우면 표준화</em>(StandardScaler), <em>경계가 명확한 데이터(이미지 픽셀 0–255 등)면 min-max 정규화</em>가 자연스럽습니다. 신경망에서는 보통 표준화를, CNN의 이미지에서는 [0,1] 범위 또는 ImageNet 평균/표준편차로 정규화합니다.</div>
+  <div class="note"><strong>Q3. 결측치를 평균으로 채우면 분산이 작아진다고 했는데, 그게 왜 문제인가요?</strong><br>
+  A. 평균값 한 점으로 채우면 그 위치에 데이터가 인위적으로 몰립니다. 표준편차·상관관계 같은 통계량이 왜곡되고, 다운스트림 모델이 "이 컬럼은 변동이 작다"고 잘못 학습합니다. 그래서 다중 대치(multiple imputation)나 KNN 대치 같은 더 정교한 방법이 있고, 간단한 우회로는 위에서 언급한 "is_missing 더미 컬럼" 추가입니다.</div>
+  <div class="note"><strong>Q4. 데이터셋이 너무 커서 메모리에 안 올라옵니다. 어떻게 하죠?</strong><br>
+  A. (1) <code>pd.read_csv(..., chunksize=10000)</code>로 청크 단위 처리, (2) <code>dtype</code>을 명시해 메모리 줄이기(<code>int64</code> → <code>int32</code> 등), (3) Dask·Polars 같은 분산 라이브러리, (4) DB로 옮겨 SQL로 미리 집계 후 가져오기. 데이터 사이언티스트의 "큰 데이터" 첫 번째 무기는 sampling — 처음에는 1%만 읽고 파이프라인을 짠 뒤 마지막에 풀 데이터로 돌립니다.</div>
+  <div class="note"><strong>Q5. 표준화를 했는데 모델 성능이 더 나빠졌어요. 정상인가요?</strong><br>
+  A. 트리 기반 모델(랜덤포레스트, XGBoost)은 표준화에 사실상 무관합니다 — 분기는 임계값 기반이지 거리 기반이 아니라서요. 표준화로 성능이 떨어졌다면 (a) 트리 모델이라 표준화가 무의미했거나 (b) 표준화 후 정보가 사라지는 컬럼(예: 거의 상수 컬럼)이 있었거나 (c) 검증 점수의 자연스러운 변동 안에 있는 것입니다. 항상 cross-validation으로 통계적으로 의미 있는 차이인지 확인하세요.</div>
+
+  <h2>🛠️ 미니 프로젝트 — 직접 데이터 다루기</h2>
+  <p>이번 주 내용을 진짜 자기 것으로 만드는 가장 빠른 길은 한 데이터셋을 끝까지 만져보는 것입니다. 1시간 분량의 과제를 제안합니다.</p>
+  <ol>
+    <li><strong>데이터 선택</strong> — Kaggle의 <em>Titanic</em>, <em>House Prices</em>, 또는 sklearn의 <code>load_breast_cancer</code> 같은 익숙한 데이터셋. CSV가 좋습니다.</li>
+    <li><strong>탐색적 분석(EDA)</strong> — <code>df.head()</code>, <code>df.describe()</code>, <code>df.isnull().sum()</code>, 각 수치 컬럼의 히스토그램, 분류라면 클래스 분포.</li>
+    <li><strong>전처리</strong> — 결측치 처리(평균/중앙값/모드), 범주형 인코딩(One-Hot), 표준화.</li>
+    <li><strong>분할</strong> — <code>train_test_split</code>으로 8:2, <code>stratify</code>까지.</li>
+    <li><strong>간단 모델</strong> — KNN(K=5)로 분류 또는 회귀. 학습/테스트 정확도(또는 RMSE) 보고.</li>
+    <li><strong>표준화 전후 비교</strong> — 전·후 두 가지로 정확도를 측정. 표를 그려 결과 정리.</li>
+  </ol>
+  <p>이 6단계가 모든 머신러닝 파이프라인의 표준 골격입니다. 한 번 끝까지 굴려봐야 다음 주부터 모델 자체에 집중할 수 있습니다. 이 과제에서 막힌 부분이 있다면 그게 가장 좋은 학습 포인트입니다.</p>
+
+  <h2>👀 다음 주 미리보기 — W3 선형회귀</h2>
+  <p>지금까지 우리는 <em>데이터를 다듬는 법</em>을 배웠습니다. 다음 주에는 그 다듬은 데이터로 <strong>"직선을 그어 미래를 예측"</strong>하는 가장 단순한 모델, 선형회귀를 만납니다. 거기서 처음으로 "<em>학습</em>이 뭔지" 손으로 만져보고, 손실 함수와 경사하강법이라는 두 가지 핵심 도구가 등장합니다.</p>
+
+  <h2>📚 미니 용어집</h2>
+  <table>
+    <thead><tr><th>용어</th><th>의미</th><th>혼동 주의</th></tr></thead>
+    <tbody>
+      <tr><td>shape</td><td>다차원 배열의 각 축 크기</td><td>1D <code>(N,)</code> ≠ 2D <code>(N,1)</code></td></tr>
+      <tr><td>broadcasting</td><td>모양이 다른 배열 자동 정렬</td><td>"끝에서부터 비교" 규칙 외울 것</td></tr>
+      <tr><td>dtype</td><td>원소 타입 (float32, int64 …)</td><td>딥러닝은 보통 float32 권장</td></tr>
+      <tr><td>view vs copy</td><td>슬라이싱은 뷰, fancy 인덱싱은 사본</td><td>의도치 않은 원본 수정 방지</td></tr>
+      <tr><td>NaN</td><td>결측치 (Not a Number)</td><td>비교 연산 시 항상 False</td></tr>
+      <tr><td>One-Hot Encoding</td><td>범주를 0/1 컬럼으로 펼침</td><td>고차원 범주에서 폭발 주의</td></tr>
+      <tr><td>표준화 vs 정규화</td><td>μ=0,σ=1 / [0,1]</td><td>이름이 종종 뒤바뀌어 쓰임</td></tr>
+      <tr><td>data leakage</td><td>테스트 정보가 학습으로 새는 현상</td><td>가장 흔한 함정</td></tr>
+      <tr><td>stratify</td><td>분할 시 클래스 비율 유지</td><td>분류에서 거의 항상 사용</td></tr>
+      <tr><td>K-fold CV</td><td>K번 분할로 점수의 평균·분산 측정</td><td>시계열에선 사용 금지(셔플)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🔬 데이터 누수의 실제 사례 — 실수로 점수 99% 만드는 법</h2>
+  <p>"누수가 위험하다"는 말은 막연하므로, 실제 보고서에서 본 사례를 셋만 짚어둡니다. 모두 똑똑한 사람들이 저지른 실수입니다.</p>
+  <ol>
+    <li><strong>의료 영상의 환자 ID 누수.</strong> 한 환자의 X-ray 여러 장이 학습/테스트에 모두 들어갔다. 모델은 "병변"이 아니라 "이 환자 특유의 자세·해상도"를 외워 정확도 98%를 보였다. 환자 단위로 분할(<em>group split</em>) 했어야 했음.</li>
+    <li><strong>주가 예측의 미래 통계.</strong> 학습 데이터의 평균을 "전체 기간"으로 계산해 표준화. → 미래 평균이 학습 시점의 표준화에 새어들어, 백테스트 점수가 70%였지만 실제 운영에서는 50%(랜덤 수준).</li>
+    <li><strong>고객 이탈 예측의 라벨 누수.</strong> "탈퇴 사유" 컬럼이 피처에 포함됨. 이 컬럼은 탈퇴 후에야 채워지는 값이라 학습 시에는 라벨을 알려주는 거나 마찬가지. 모델이 "탈퇴 사유가 있으면 탈퇴"라고 학습해 정확도 99% — 배포 시 그 컬럼은 비어 있음.</li>
+  </ol>
+  <p>패턴은 동일합니다 — <em>예측 시점에 알 수 없는 정보</em>가 학습에 포함됨. 이 한 문장을 매주 자문하세요. 데이터 누수는 화려한 모델보다 더 흔한 성능 신화의 원인입니다.</p>
+
+  <h2>🛡️ 강건 통계 — 이상치에 휘둘리지 않는 도구들</h2>
+  <p>이상치가 있을 가능성이 높은 데이터에서는 평균·표준편차 대신 <strong>중앙값과 IQR</strong>(사분위 범위)을 쓰는 게 안전합니다. scikit-learn에는 <code>RobustScaler</code>가 있어 이를 자동화합니다.</p>
+  <pre><code>from sklearn.preprocessing import RobustScaler
+rs = RobustScaler()        # (x - median) / IQR
+X_robust = rs.fit_transform(X_train)</code></pre>
+  <p>표준화·정규화·강건 스케일링의 차이를 표로 정리합니다.</p>
+  <table>
+    <thead><tr><th>방법</th><th>식</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>StandardScaler</td><td>(x − μ) / σ</td><td>가장 일반적, 정규분포에 적합</td><td>이상치에 민감</td></tr>
+      <tr><td>MinMaxScaler</td><td>(x − min) / (max − min)</td><td>[0,1] 고정, 신경망 입력에 자주</td><td>이상치 한 점이 전체를 압축</td></tr>
+      <tr><td>RobustScaler</td><td>(x − median) / IQR</td><td>이상치에 강함</td><td>분포가 정규에 가까울 때 정보 손실</td></tr>
+      <tr><td>Normalizer (L2)</td><td>x / ‖x‖</td><td>벡터 길이를 1로 (방향만)</td><td>크기 정보 소실</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🌟 보너스 — 자주 만나는 데이터 형태와 처리법</h2>
+  <p>실제 프로젝트에서 만나는 다양한 데이터 형태와 표준적인 처리 흐름을 짧게 정리합니다.</p>
+  <table>
+    <thead><tr><th>데이터 형태</th><th>예시</th><th>표준 처리</th></tr></thead>
+    <tbody>
+      <tr><td>표(tabular) 수치</td><td>나이·키·소득</td><td>결측 처리 → 표준화 → 분할</td></tr>
+      <tr><td>표 + 범주형</td><td>나이·도시·직업</td><td>+ One-Hot 또는 임베딩</td></tr>
+      <tr><td>이미지</td><td>사진, 손글씨</td><td>0–255를 0–1로, 평균 빼기 (W9)</td></tr>
+      <tr><td>텍스트</td><td>영문 리뷰</td><td>토큰화 → 임베딩 (W12, W13)</td></tr>
+      <tr><td>시계열</td><td>주가, 센서</td><td>정렬 보존, walk-forward 분할</td></tr>
+      <tr><td>오디오</td><td>음성 명령</td><td>스펙트로그램 변환 후 이미지처럼</td></tr>
+      <tr><td>그래프</td><td>SNS 친구망</td><td>인접행렬 또는 GNN (강의 외)</td></tr>
+    </tbody>
+  </table>
+  <p>모든 형태가 결국 "텐서(다차원 배열)"로 변환되어 모델에 들어간다는 점을 기억하세요. 데이터 핸들링의 본질은 <em>어떤 형태든 텐서로 만드는 변환</em>입니다.</p>
+
+  <h2>🗒️ 이번 주 체크리스트</h2>
+  <ul>
+    <li>☐ NumPy 배열의 shape를 머릿속에서 그릴 수 있다.</li>
+    <li>☐ 브로드캐스팅 규칙(끝에서부터 비교, 1은 자유)을 한 줄로 설명할 수 있다.</li>
+    <li>☐ 결측치 처리의 4가지 표준 방법(dropna, mean/median, mode, ffill)을 안다.</li>
+    <li>☐ 표준화와 정규화의 차이를 한 줄로 말할 수 있다.</li>
+    <li>☐ <code>fit_transform</code>과 <code>transform</code>을 어디에 쓰는지 안다.</li>
+    <li>☐ 데이터 누수의 정의와 원인 한 가지 이상을 댈 수 있다.</li>
+    <li>☐ 5-fold 교차검증의 흐름을 그릴 수 있다.</li>
+    <li>☐ 시계열은 셔플하면 안 된다는 사실을 안다.</li>
+  </ul>
+
+  <h2>🧪 추가 데모 — 표준화가 거리에 미치는 영향</h2>
+  <p>한 번 더 시각적으로 보겠습니다. 단위가 다른 두 변수(키 vs 몸무게)를 그대로 두면 한 변수가 거리를 지배하지만, 표준화하면 두 변수가 동등한 비중을 갖습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 표준화 전후의 KNN 결정 경계</h4>
+    <p>같은 점들에 대해 표준화 전(왼쪽)과 후(오른쪽)의 KNN 결정 경계를 동시에 보여줍니다. 표준화 안 하면 경계가 거의 수직선/수평선이 되어 한 축만 본다는 것을 한눈에 볼 수 있습니다.</p>
+    <canvas id="stdKnn" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>K <span class="val" id="skV">5</span><input type="range" id="sk" min="1" max="15" step="2" value="5"></label>
+      <label>Y 스케일 <span class="val" id="skSV">10</span>×<input type="range" id="skS" min="1" max="50" step="1" value="10"></label>
+      <button id="skR">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('stdKnn');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<20;i++){pts.push({x:0.3+Math.random()*0.2,y:0.3+Math.random()*0.2,c:0});}
+      for(let i=0;i<20;i++){pts.push({x:0.6+Math.random()*0.2,y:0.6+Math.random()*0.2,c:1});}
+      draw();
+    }
+    function knn(qx,qy,xs,ys,K){
+      const ds=pts.map((p,i)=>({d:Math.hypot(qx-xs[i],qy-ys[i]),c:p.c})).sort((a,b)=>a.d-b.d).slice(0,K);
+      let v=0;ds.forEach(d=>v+=(d.c==0?1:-1));return v>=0?0:1;
+    }
+    function draw(){
+      const K=+document.getElementById('sk').value;
+      const sc=+document.getElementById('skS').value;
+      document.getElementById('skV').textContent=K;
+      document.getElementById('skSV').textContent=sc;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ccc';ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();
+      // Left: raw with scaled Y
+      const xsRaw=pts.map(p=>p.x);
+      const ysRaw=pts.map(p=>p.y*sc);
+      const STEP=10;
+      for(let i=0;i<W/2;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const qx=i/(W/2),qy=(1-j/H)*sc;
+        const c=knn(qx,qy,xsRaw,ysRaw,K);
+        ctx.fillStyle=c==0?'rgba(11,95,255,0.10)':'rgba(255,140,0,0.12)';
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      // Right: standardized
+      const mx=xsRaw.reduce((a,b)=>a+b)/xsRaw.length;
+      const sx=Math.sqrt(xsRaw.reduce((a,b)=>a+(b-mx)**2,0)/xsRaw.length)||1;
+      const my=ysRaw.reduce((a,b)=>a+b)/ysRaw.length;
+      const sy=Math.sqrt(ysRaw.reduce((a,b)=>a+(b-my)**2,0)/ysRaw.length)||1;
+      const xsZ=xsRaw.map(v=>(v-mx)/sx),ysZ=ysRaw.map(v=>(v-my)/sy);
+      for(let i=0;i<W/2;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const qx=((i/(W/2))-mx)/sx,qy=((1-j/H)*sc-my)/sy;
+        const c=knn(qx,qy,xsZ,ysZ,K);
+        ctx.fillStyle=c==0?'rgba(11,95,255,0.10)':'rgba(255,140,0,0.12)';
+        ctx.fillRect(W/2+i,j,STEP,STEP);
+      }
+      // points
+      pts.forEach(p=>{
+        const px1=p.x*W/2,py1=(1-p.y)*H;
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(px1,py1,4,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(W/2+px1,py1,4,0,Math.PI*2);ctx.fill();
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('표준화 안 함 (Y 스케일 ×'+sc+')',10,16);
+      ctx.fillText('표준화 후',W/2+10,16);
+    }
+    document.getElementById('sk').addEventListener('input',draw);
+    document.getElementById('skS').addEventListener('input',draw);
+    document.getElementById('skR').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <p>Y 스케일을 50으로 키우고 K를 5로 두면, 왼쪽(표준화 전)의 결정 경계가 거의 수평선이 됩니다 — 알고리즘이 X(가로)는 무시하고 Y(세로)만 보고 결정한다는 뜻이죠. 오른쪽(표준화 후)은 두 군집을 가르는 자연스러운 대각선이 그려집니다. <strong>같은 알고리즘, 같은 데이터인데 결과가 완전히 다른 이유</strong>가 단지 표준화 한 줄 차이입니다.</p>
+
+  <h2>🧭 한 줄 정리 — 이번 주의 빅 아이디어</h2>
+  <div class="tip"><p><strong>"좋은 모델보다 좋은 데이터가 먼저다."</strong> 모양 점검·결측 처리·표준화·정직한 분할 — 이 네 단계가 안 되면 어떤 화려한 모델도 신뢰할 수 없습니다. 다음 주부터는 데이터를 잘 다듬은 상태에서 출발합니다.</p></div>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:24px">— 2주차 끝. 다음 주에 처음으로 "학습"을 만집니다. 🌊</p>
+
+  <h2>📌 부록 — pandas 한 페이지 치트시트</h2>
+  <p>혼자 코드를 짤 때 가장 자주 쓰는 명령들을 한 페이지에 모았습니다. 자주 보면 익숙해집니다.</p>
+  <pre><code># 읽기/쓰기
+df = pd.read_csv('a.csv')           # CSV 읽기
+df.to_csv('out.csv', index=False)   # CSV 쓰기 (인덱스 제외)
+
+# 탐색
+df.head(10);  df.tail(); df.sample(5)
+df.shape;  df.dtypes;  df.info()
+df.describe();  df.nunique()
+
+# 선택
+df['col'];  df[['a','b']]            # 컬럼
+df.iloc[0:5];  df.loc[0:5, 'a':'c']  # 행/범위
+df[df['age'] > 30]                   # 조건 필터
+df.query('age > 30 and city == "서울"')  # SQL풍
+
+# 결측치
+df.isnull().sum();  df.dropna();  df.fillna(0)
+df['x'].fillna(df['x'].median())
+
+# 변환
+df['z'] = df['a'] + df['b']
+df['cat'] = pd.cut(df['age'], bins=[0,20,40,100])
+pd.get_dummies(df, columns=['city'])
+
+# 집계
+df.groupby('city')['price'].mean()
+df.pivot_table(index='city', columns='month', values='price')
+
+# 정렬·중복
+df.sort_values('price', ascending=False)
+df.drop_duplicates(subset=['id'])</code></pre>
+  <p>이 한 장이면 EDA 단계의 90%가 가능합니다. 나머지 10%는 검색을 통해 그때그때 채우면 됩니다.</p>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>Python for Data Analysis</strong> — Wes McKinney (pandas의 창시자). 데이터프레임의 모든 것.</li>
+    <li><strong>NumPy 공식 문서</strong> — <a href="https://numpy.org/doc/">numpy.org/doc</a>. 브로드캐스팅 규칙 부분은 필독.</li>
+    <li><strong>scikit-learn preprocessing</strong> — <a href="https://scikit-learn.org/stable/modules/preprocessing.html">공식 가이드</a>. StandardScaler, MinMaxScaler, RobustScaler 비교.</li>
+    <li><strong>Hands-On Machine Learning</strong> — Aurélien Géron, 2장. 실제 데이터셋으로 끝까지 가는 사례.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="01-ai-intro.html"><small>← 이전</small>W1. AI의 세계</a>
+    <a href="03-regression-1.html" class="next"><small>다음 →</small>W3. 회귀 1</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

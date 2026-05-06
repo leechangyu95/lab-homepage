@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 휘트스톤 브릿지 — $\Delta R$이 $V_o$로 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 휘트스톤 브릿지 — $\Delta R$이 $V_o$로</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/05-dc-analysis-2.html">Week 5. 직류회로 해석 2 — 등가회로와 휘트스톤 브릿지</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 휘트스톤 브릿지 — $\Delta R$이 $V_o$로</h4>
+    <p>네 저항 모두 같은 $R$에서 출발해, 한 가지에 $\Delta R$만큼 변화를 줍니다. $V_o$가 $\Delta R/R$에 거의 선형 비례하는 모습 — 스트레인 게이지 측정 원리.</p>
+    <canvas id="bridgeCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>V_s <span class="val" id="brVsV">24</span> V<input type="range" id="brVs" min="1" max="30" step="1" value="24"></label>
+      <label>R (기준) <span class="val" id="brRV">1000</span> Ω<input type="range" id="brR" min="100" max="2000" step="50" value="1000"></label>
+      <label>ΔR (게이지 변화) <span class="val" id="brDRV">0</span> Ω<input type="range" id="brDR" min="-100" max="100" step="2" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bridgeCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const Vs=+document.getElementById('brVs').value;
+      const R=+document.getElementById('brR').value;
+      const dR=+document.getElementById('brDR').value;
+      document.getElementById('brVsV').textContent=Vs;
+      document.getElementById('brRV').textContent=R;
+      document.getElementById('brDRV').textContent=dR;
+      // R1=R, R2=R, R3=R, R4=R+dR (one-arm active)
+      const R1=R,R2=R,R3=R,R4=R+dR;
+      const Va=Vs*R3/(R1+R3);
+      const Vb=Vs*R4/(R2+R4);
+      const Vo=Va-Vb;
+      const Vo_approx=-Vs*dR/(4*R);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      const cx=W/2,cy=140,d=80;
+      // Diamond
+      ctx.beginPath();ctx.moveTo(cx,cy-d);ctx.lineTo(cx+d,cy);ctx.lineTo(cx,cy+d);ctx.lineTo(cx-d,cy);ctx.closePath();ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText(`R_1=${R1}`,cx-d-50,cy-30);
+      ctx.fillText(`R_2=${R2}`,cx+d+10,cy-30);
+      ctx.fillText(`R_3=${R3}`,cx-d-50,cy+40);
+      ctx.fillStyle=dR===0?'#c62828':'#0b5fff';
+      ctx.fillText(`R_4=${R4}`,cx+d+10,cy+40);
+      ctx.fillStyle='#1b5e20';
+      ctx.fillText(`A: ${Va.toFixed(3)}V`,cx-d-15,cy-5);
+      ctx.fillText(`B: ${Vb.toFixed(3)}V`,cx+d-25,cy-5);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText(`+V_s=${Vs}V`,cx-25,cy-d-10);
+      ctx.fillStyle='#666';
+      ctx.fillText('GND',cx-15,cy+d+20);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`V_o = V_A − V_B = ${(Vo*1000).toFixed(2)} mV`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`근사식: V_o ≈ −V_s·ΔR/(4R) = ${(Vo_approx*1000).toFixed(2)} mV`,40,52);
+      ctx.fillText(dR===0?'평형: V_o = 0 (R_1 R_4 = R_2 R_3)':'불평형: ΔR에 거의 선형',40,H-20);
+    }
+    ['brVs','brR','brDR'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

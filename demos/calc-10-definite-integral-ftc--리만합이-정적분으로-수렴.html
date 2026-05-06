@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 리만합이 정적분으로 수렴 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 리만합이 정적분으로 수렴</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/10-definite-integral-ftc.html">Week 10. 정적분·미적분학 기본정리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 리만합이 정적분으로 수렴</h4>
+    <p>분할 수 $N$ 을 슬라이더로 키워 보세요. 직사각형 면적의 합이 정확한 적분값으로 수렴합니다. 좌·우·중점·사다리꼴의 정확도를 비교해 보세요.</p>
+    <canvas id="rs" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="rsFn">
+          <option value="poly" selected>x² (구간 [0, 2])</option>
+          <option value="sin">sin x (구간 [0, π])</option>
+          <option value="bell">e^(-x²) (구간 [-2, 2])</option>
+        </select>
+      </label>
+      <label>분할 N <span class="val" id="rsNV">10</span><input type="range" id="rsN" min="2" max="100" value="10"></label>
+      <label>방법
+        <select id="rsM">
+          <option value="left">좌측</option>
+          <option value="right">우측</option>
+          <option value="mid" selected>중점</option>
+          <option value="trap">사다리꼴</option>
+        </select>
+      </label>
+    </div>
+    <p id="rsInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rs'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function setup(){
+      const m=document.getElementById('rsFn').value;
+      if(m==='poly')return{f:v=>v*v,a:0,b:2,exact:8/3,xR:[-0.2,2.2],yR:[-0.5,4.5]};
+      if(m==='sin')return{f:Math.sin,a:0,b:Math.PI,exact:2,xR:[-0.2,Math.PI+0.2],yR:[-0.3,1.3]};
+      return{f:v=>Math.exp(-v*v),a:-2,b:2,exact:1.7724538*0.9953,xR:[-2.5,2.5],yR:[-0.2,1.2]};
+    }
+    function loop(){
+      const N=+document.getElementById('rsN').value;
+      document.getElementById('rsNV').textContent=N;
+      const method=document.getElementById('rsM').value;
+      const S=setup();
+      const xR=S.xR,yR=S.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // rectangles
+      const dx=(S.b-S.a)/N;
+      let sum=0;
+      for(let i=0;i<N;i++){
+        const x1=S.a+i*dx,x2=x1+dx;
+        let h;
+        if(method==='left')h=S.f(x1);
+        else if(method==='right')h=S.f(x2);
+        else if(method==='mid')h=S.f((x1+x2)/2);
+        else{h=(S.f(x1)+S.f(x2))/2;}
+        sum+=h*dx;
+        // draw
+        x.fillStyle='rgba(11,95,255,0.25)';
+        const top=py(h),bot=py(0);
+        x.fillRect(px(x1),Math.min(top,bot),px(x2)-px(x1)-1,Math.abs(bot-top));
+        x.strokeStyle='#0b5fff';x.lineWidth=1;
+        x.strokeRect(px(x1),Math.min(top,bot),px(x2)-px(x1)-1,Math.abs(bot-top));
+      }
+      // function
+      x.strokeStyle='#222';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){
+        const yv=S.f(v);if(yv<yR[0]||yv>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // info
+      const exact=S.exact;
+      document.getElementById('rsInfo').textContent='리만합 = '+sum.toFixed(6)+'    ·    정확값 ≈ '+exact.toFixed(6)+'    ·    오차 = '+Math.abs(sum-exact).toExponential(2);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 논리 게이트 7가지 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 논리 게이트 7가지</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/12-digital.html">Week 12. 디지털 논리 — 0과 1로 짓는 컴퓨터</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 논리 게이트 7가지</h4>
+    <p>입력 A, B를 토글하며 7가지 게이트의 출력을 동시에 봅니다. 출력이 1이면 파란색.</p>
+    <canvas id="gateCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>A
+        <select id="gateA"><option value="0">0</option><option value="1">1</option></select>
+      </label>
+      <label>B
+        <select id="gateB"><option value="0">0</option><option value="1">1</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gateCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const gates=[
+      {name:'AND',sym:'A·B',f:(a,b)=>a&b},
+      {name:'OR',sym:'A+B',f:(a,b)=>a|b},
+      {name:'NOT',sym:'~A',f:(a)=>1-a},
+      {name:'NAND',sym:'~(A·B)',f:(a,b)=>1-(a&b)},
+      {name:'NOR',sym:'~(A+B)',f:(a,b)=>1-(a|b)},
+      {name:'XOR',sym:'A⊕B',f:(a,b)=>a^b},
+      {name:'XNOR',sym:'A⊙B',f:(a,b)=>1-(a^b)}
+    ];
+    function draw(){
+      const A=+document.getElementById('gateA').value;
+      const B=+document.getElementById('gateB').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#222';ctx.font='15px sans-serif';
+      ctx.fillText(`현재 입력: A=${A}, B=${B}`,30,30);
+      gates.forEach((g,gi)=>{
+        const col=gi%4,row=Math.floor(gi/4);
+        const gx=30+col*150,gy=60+row*100;
+        const out=g.name==='NOT'?g.f(A):g.f(A,B);
+        ctx.fillStyle=out?'#0b5fff':'#bbb';
+        ctx.fillRect(gx,gy,135,80);
+        ctx.strokeStyle='#222';ctx.lineWidth=1.5;ctx.strokeRect(gx,gy,135,80);
+        ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';
+        ctx.fillText(g.name,gx+10,gy+25);
+        ctx.font='12px sans-serif';
+        ctx.fillText(g.sym,gx+10,gy+45);
+        ctx.font='bold 22px sans-serif';
+        ctx.fillText('→ '+out,gx+10,gy+70);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('NOT은 A만 사용. 모든 게이트가 동시에 같은 입력을 받습니다.',30,H-15);
+    }
+    ['gateA','gateB'].forEach(id=>document.getElementById(id).addEventListener('change',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

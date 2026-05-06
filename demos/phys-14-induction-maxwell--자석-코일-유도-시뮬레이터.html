@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>자석-코일 유도 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">자석-코일 유도 시뮬레이터</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/14-induction-maxwell.html">Week 14. 전자기 유도 + 맥스웰 티저</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>자석-코일 유도 시뮬레이터</h4>
+    <p>막대자석의 N극(빨강)이 코일에 다가오면 코일 안 자속 증가 → 유도 전류는 자석을 <em>밀어내는</em> 방향(파란색 화살표). 멀어지면 자속 감소 → 유도 전류는 자석을 <em>끌어당기는</em> 방향. 두 경우 모두 부호가 반대.</p>
+    <canvas id="w14_coil" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>자석 위치 $x$ <span class="val" id="w14_coilXV">-3.0</span> cm
+        <input type="range" id="w14_coilX" min="-8" max="8" step="0.1" value="-3"></label>
+      <label>자석 속도 $v$ <span class="val" id="w14_coilVV">+2.0</span> cm/s
+        <input type="range" id="w14_coilV" min="-5" max="5" step="0.1" value="2"></label>
+      <label>코일 권수 $N$ <span class="val" id="w14_coilNV">100</span>
+        <input type="range" id="w14_coilN" min="10" max="500" step="10" value="100"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>자석을 코일에 다가가게(속도 +) → 유도 EMF가 한 방향, 멀어지게(속도 -) → 반대 방향.</li>
+        <li>자석이 코일 정중앙($x=0$)을 통과하는 순간 자속의 변화율이 최대(EMF 최대)가 아니라, <em>자속 자체</em>가 최대 → 변화율은 그때 0이 됨에 주목.</li>
+        <li>권수 $N$을 두 배로 → EMF도 두 배. ($\varepsilon = -N\, d\Phi/dt$)</li>
+        <li>속도 0으로 두면 자석이 코일 안에 박혀 있어도 EMF=0. <strong>변화가 핵심</strong>.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w14_coil');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function flux(x){ // Gaussian-ish profile centered at coil (x=0)
+      const sigma=2.5;
+      return Math.exp(-(x*x)/(2*sigma*sigma));
+    }
+    function dflux(x){
+      const sigma=2.5;
+      return -x/(sigma*sigma)*flux(x);
+    }
+    function draw(){
+      const x=+document.getElementById('w14_coilX').value;
+      const v=+document.getElementById('w14_coilV').value;
+      const N=+document.getElementById('w14_coilN').value;
+      document.getElementById('w14_coilXV').textContent=x.toFixed(1);
+      document.getElementById('w14_coilVV').textContent=(v>=0?'+':'')+v.toFixed(1);
+      document.getElementById('w14_coilNV').textContent=N;
+      const Phi=flux(x);
+      const dPhi=dflux(x)*v; // dPhi/dt
+      const EMF=-N*dPhi*0.5; // scaled
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // draw coil at center
+      const cx=W/2, cy=H/2-20;
+      ctx.strokeStyle='#b08000';ctx.lineWidth=4;
+      for(let i=-3;i<=3;i++){
+        ctx.beginPath();ctx.ellipse(cx+i*8,cy,14,40,0,0,Math.PI*2);ctx.stroke();
+      }
+      // ammeter / EMF gauge
+      ctx.fillStyle='#fff';ctx.strokeStyle='#888';
+      ctx.fillRect(cx-50,cy+60,100,50);ctx.strokeRect(cx-50,cy+60,100,50);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('EMF',cx-12,cy+78);
+      ctx.fillStyle=EMF>0?'#0b5fff':(EMF<0?'#c62828':'#888');
+      ctx.font='bold 14px sans-serif';
+      ctx.fillText((EMF>=0?'+':'')+EMF.toFixed(2)+' V',cx-32,cy+98);
+      // draw magnet
+      const sc=22;
+      const mx=cx+x*sc;
+      ctx.fillStyle='#c62828';ctx.fillRect(mx-30,cy-12,30,24); // N
+      ctx.fillStyle='#1b5e20';ctx.fillRect(mx,cy-12,30,24); // S
+      ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';
+      ctx.fillText('N',mx-20,cy+5);ctx.fillText('S',mx+10,cy+5);
+      // velocity arrow
+      if(Math.abs(v)>0.05){
+        const av=v*15;
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(mx+15,cy-30);ctx.lineTo(mx+15+av,cy-30);ctx.stroke();
+        const ang=av>0?0:Math.PI;
+        ctx.beginPath();ctx.moveTo(mx+15+av,cy-30);
+        ctx.lineTo(mx+15+av-8*Math.cos(ang-0.4),cy-30-8*Math.sin(ang-0.4));
+        ctx.lineTo(mx+15+av-8*Math.cos(ang+0.4),cy-30-8*Math.sin(ang+0.4));
+        ctx.closePath();ctx.fillStyle='#0b5fff';ctx.fill();
+        ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+        ctx.fillText('v',mx+15+av/2-3,cy-36);
+      }
+      // info box
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(8,8,260,76);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,260,76);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('자속 Φ_B (상대) = '+Phi.toFixed(3),16,28);
+      ctx.fillText('dΦ/dt = '+dPhi.toFixed(3),16,46);
+      ctx.fillText('ε = -N dΦ/dt = '+EMF.toFixed(3)+' V',16,64);
+      ctx.fillText('(부호 + : 한 방향, - : 반대 방향)',16,80);
+    }
+    ['w14_coilX','w14_coilV','w14_coilN'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

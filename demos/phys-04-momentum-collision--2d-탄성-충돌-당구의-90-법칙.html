@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D 탄성 충돌 — &quot;당구의 90° 법칙&quot; — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">2D 탄성 충돌 — &quot;당구의 90° 법칙&quot;</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/04-momentum-collision.html">Week 4. 운동량과 충돌</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>2D 탄성 충돌 — "당구의 90° 법칙"</h4>
+    <p>왼쪽에서 오는 흰 공이 정지한 빨간 공을 친다. 충돌 매개변수 $b$가 0이면 정통(빨강만 직진), 공의 지름과 같으면 빗겨감(거의 그대로). 그 사이에서 두 공의 속도 벡터가 항상 직각.</p>
+    <canvas id="w4_billiardCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>충돌 매개변수 $b/d$ <span class="val" id="w4_bV">0.5</span>
+        <input type="range" id="w4_b" min="0" max="0.99" step="0.05" value="0.5"></label>
+      <label>입사 속도 $v_0$ <span class="val" id="w4_v0V">5</span> m/s
+        <input type="range" id="w4_v0" min="1" max="10" step="0.5" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>발견할 것</strong>
+      <ul>
+        <li>두 빨간·파란 화살표가 항상 직각 (내적 = 0)</li>
+        <li>$b=0$ → 흰 공 정지, 빨간 공이 모든 운동량 가져감 (1D 속도 교환)</li>
+        <li>$b/d$가 1에 가까우면 흰 공이 거의 그대로 진행</li>
+        <li>운동량 보존: $\vec p_\text{흰}+\vec p_\text{빨} = m\vec v_0$ (벡터 합)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w4_billiardCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const b=+document.getElementById('w4_b').value;
+      const v0=+document.getElementById('w4_v0').value;
+      document.getElementById('w4_bV').textContent=b.toFixed(2);
+      document.getElementById('w4_v0V').textContent=v0.toFixed(1);
+      // 같은질량 탄성 2D: 충돌각 sin(theta)=b
+      const theta=Math.asin(b);
+      // 흰공: 입사 +x. 충돌 후 흰공은 perpendicular 방향, 빨간공은 중심선 방향.
+      // 빨간공 속도 = v0*cos(theta), 방향=중심선; 흰공=v0*sin(theta), 수직
+      const cx=W/2,cy=H/2;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#e3e6ea';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+      // 충돌 위치 시각화
+      const r=22;
+      // 빨간공 정지 위치 (가운데)
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+      // 흰공 충돌 직전 위치 (왼쪽, b만큼 위로 오프셋)
+      const offY=b*r*2*0.5; // visual scale
+      ctx.fillStyle='#fff';ctx.strokeStyle='#666';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(cx-2*r-2,cy-offY,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+      // 충돌 후 화살표
+      function arrow(x1,y1,vx,vy,col){
+        const sc=14;
+        const x2=x1+vx*sc,y2=y1+vy*sc;
+        ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+        const ang=Math.atan2(y2-y1,x2-x1),hl=10;
+        ctx.beginPath();ctx.moveTo(x2,y2);
+        ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+        ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+        ctx.closePath();ctx.fill();
+      }
+      // 입사 화살표
+      arrow(cx-3*r,cy-offY,v0*0.3,0,'#888');
+      // 충돌 후: 빨간공 (중심선 따라, 위쪽에서 비스듬)
+      const vR=v0*Math.cos(theta);
+      const vW=v0*Math.sin(theta);
+      // 중심선 방향 단위벡터 (왼쪽 위에서 오른쪽 아래로 — 충돌점 -> 빨간공 중심 = 빨간공이 갈 방향)
+      // 흰공 중심에서 빨간공 중심으로
+      const dxC=2*r+2, dyC=offY; const Lc=Math.hypot(dxC,dyC);
+      const ux=dxC/Lc, uy=dyC/Lc; // unit center-line
+      const px=-uy, py=ux; // perpendicular
+      // 빨간공 후
+      arrow(cx,cy,vR*ux,vR*uy,'#c62828');
+      // 흰공 후 (수직 방향, b가 양수면 위로 빠짐)
+      arrow(cx-dxC,cy-offY,vW*(-px),vW*(-py),'#0b5fff');
+      // info
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(20,18,260,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(20,18,260,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('산란각 θ = '+(theta*180/Math.PI).toFixed(1)+'°',32,38);
+      ctx.fillText('빨간공 속도 = v0·cosθ = '+vR.toFixed(2),32,56);
+      ctx.fillText('흰공 속도 = v0·sinθ = '+vW.toFixed(2),32,74);
+      // 90도 표시
+      ctx.fillStyle='#2e7d32';ctx.font='bold 12px sans-serif';
+      ctx.fillText('두 화살표가 항상 직각 (90°)',W-220,30);
+    }
+    ['w4_b','w4_v0'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

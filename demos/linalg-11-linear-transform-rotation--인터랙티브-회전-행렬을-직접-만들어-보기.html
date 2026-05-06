@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 회전 행렬을 직접 만들어 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 회전 행렬을 직접 만들어 보기</h1>
+  <p class="demo-meta">
+    선형대수학 · <a href="../backup-lectures/lectures-linear-algebra/11-linear-transform-rotation.html">Week 11. 선형변환 (1) — 회전·반사·스케일</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 회전 행렬을 직접 만들어 보기</h4>
+    <p>슬라이더로 $\theta$ 를 바꾸면 — $\mathbf{e}_1, \mathbf{e}_2$ 가 어디로 가는지 (파랑·주황 화살표),
+       그리고 그 결과 좌표가 어떻게 행렬의 열로 들어가는지 (오른쪽 패널) 실시간으로 보입니다.
+       임의의 입력 벡터 $\mathbf{v}$ (보라)도 함께 회전하는 모습으로, 격자 전체가 함께 돌아갑니다.</p>
+    <canvas id="rotDemo" width="780" height="400"></canvas>
+    <div class="controls">
+      <label>θ (도) <span class="val" id="thV">30</span><input type="range" id="th" min="0" max="360" step="5" value="30"></label>
+      <label>v_x <span class="val" id="vxV">2</span><input type="range" id="vx" min="-3" max="3" step="0.1" value="2"></label>
+      <label>v_y <span class="val" id="vyV">1</span><input type="range" id="vy" min="-3" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rotDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=200,oy=200,scale=50;
+    function px(p){return [ox+p.x*scale,oy-p.y*scale];}
+    function arrow(p,col,lw=3){const [x,y]=px(p);
+      ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x,y);ctx.stroke();
+      const ang=Math.atan2(y-oy,x-ox);
+      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y);
+      ctx.lineTo(x-12*Math.cos(ang-0.4),y-12*Math.sin(ang-0.4));
+      ctx.lineTo(x-12*Math.cos(ang+0.4),y-12*Math.sin(ang+0.4));ctx.closePath();ctx.fill();}
+    function draw(){
+      const th=+document.getElementById('th').value*Math.PI/180;
+      const vx=+document.getElementById('vx').value, vy=+document.getElementById('vy').value;
+      document.getElementById('thV').textContent=document.getElementById('th').value;
+      document.getElementById('vxV').textContent=vx.toFixed(1);
+      document.getElementById('vyV').textContent=vy.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // grid
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;
+      for(let i=-4;i<=4;i++){if(20+ox+i*scale<400){ctx.beginPath();ctx.moveTo(ox+i*scale,20);ctx.lineTo(ox+i*scale,H-20);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(20,oy+i*scale);ctx.lineTo(380,oy+i*scale);ctx.stroke();}}
+      // unit circle
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.arc(ox,oy,scale,0,2*Math.PI);ctx.stroke();ctx.setLineDash([]);
+      // axes
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(380,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,20);ctx.lineTo(ox,H-20);ctx.stroke();
+      // original e1, e2 (faded)
+      ctx.globalAlpha=0.3;
+      arrow({x:1,y:0},'#1677ff',2);arrow({x:0,y:1},'#fa8c16',2);
+      ctx.globalAlpha=1;
+      // rotated
+      const c1={x:Math.cos(th),y:Math.sin(th)};
+      const c2={x:-Math.sin(th),y:Math.cos(th)};
+      arrow(c1,'#1677ff',3.5);arrow(c2,'#fa8c16',3.5);
+      // input v and rotated v
+      ctx.globalAlpha=0.4;arrow({x:vx,y:vy},'#7b1fa2',2.5);ctx.globalAlpha=1;
+      const rv={x:c1.x*vx+c2.x*vy,y:c1.y*vx+c2.y*vy};
+      arrow(rv,'#7b1fa2',3.5);
+      // labels
+      ctx.fillStyle='#1677ff';ctx.font='bold 14px sans-serif';
+      const [x1,y1]=px(c1);ctx.fillText('e₁ →',x1+8,y1-5);
+      ctx.fillStyle='#fa8c16';
+      const [x2,y2]=px(c2);ctx.fillText('e₂ →',x2+8,y2-5);
+      ctx.fillStyle='#7b1fa2';
+      const [xv,yv]=px(rv);ctx.fillText('Rv',xv+8,yv-5);
+      // right panel: matrix
+      ctx.fillStyle='#0b5fff';ctx.font='bold 16px sans-serif';
+      ctx.fillText('① e₁, e₂ 가 어디로 가는가', 420, 50);
+      ctx.fillStyle='#1677ff';ctx.font='15px Consolas,monospace';
+      ctx.fillText(`R(e₁) = (cos θ, sin θ) = (${c1.x.toFixed(3)}, ${c1.y.toFixed(3)})`, 420, 80);
+      ctx.fillStyle='#fa8c16';
+      ctx.fillText(`R(e₂) = (−sin θ, cos θ) = (${c2.x.toFixed(3)}, ${c2.y.toFixed(3)})`, 420, 105);
+      ctx.fillStyle='#0b5fff';ctx.font='bold 16px sans-serif';
+      ctx.fillText('② 이 두 결과를 열로 쌓으면 회전 행렬', 420, 145);
+      ctx.fillStyle='#222';ctx.font='15px Consolas,monospace';
+      ctx.fillText('R = [ cos θ   −sin θ ]', 420, 175);
+      ctx.fillText('    [ sin θ    cos θ ]', 420, 195);
+      ctx.fillText(`  = [ ${c1.x.toFixed(2).padStart(5)}   ${c2.x.toFixed(2).padStart(5)} ]`, 420, 220);
+      ctx.fillText(`    [ ${c1.y.toFixed(2).padStart(5)}   ${c2.y.toFixed(2).padStart(5)} ]`, 420, 240);
+      ctx.fillStyle='#7b1fa2';ctx.font='bold 16px sans-serif';
+      ctx.fillText('③ 임의 v 를 R 로 회전 = R · v', 420, 285);
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      ctx.fillText(`v = (${vx.toFixed(1)}, ${vy.toFixed(1)})`, 420, 310);
+      ctx.fillText(`Rv = ${c1.x.toFixed(2)}·${vx.toFixed(1)} + ${c2.x.toFixed(2)}·${vy.toFixed(1)} = ${rv.x.toFixed(3)}`, 420, 330);
+      ctx.fillText(`     ${c1.y.toFixed(2)}·${vx.toFixed(1)} + ${c2.y.toFixed(2)}·${vy.toFixed(1)} = ${rv.y.toFixed(3)}`, 420, 350);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('연한 화살표 = 원본, 진한 화살표 = 회전 결과', 30, H-10);
+    }
+    ['th','vx','vy'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

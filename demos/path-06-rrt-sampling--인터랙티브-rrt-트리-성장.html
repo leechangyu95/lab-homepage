@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: RRT 트리 성장 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: RRT 트리 성장</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/06-rrt-sampling.html">Week 6. RRT — 뿌리처럼 뻗어 길을 찾는 알고리즘</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: RRT 트리 성장</h4>
+    <p><strong>한 걸음씩</strong> 버튼을 눌러 알고리즘이 한 번 반복하는 모습을 직접 보세요.
+    노란 점은 이번 회 샘플 $q_\text{rand}$, 회색 선이 트리 가지, 파란 점이 목표 도달 시 추출된 경로입니다.</p>
+    <canvas id="rrtCv" width="640" height="420"></canvas>
+    <div class="controls">
+      <label>걸음 step <span class="val" id="stV">0.8</span><input type="range" id="st" min="0.3" max="2.0" step="0.1" value="0.8"></label>
+      <label>Goal bias % <span class="val" id="gbV">5</span><input type="range" id="gb" min="0" max="40" step="1" value="5"></label>
+      <button id="oneBtn">한 걸음</button>
+      <button id="autoBtn">자동 재생</button>
+      <button id="rstBtn" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rrtCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('stV').textContent=(+$('st').value).toFixed(1);$('gbV').textContent=(+$('gb').value).toFixed(0);};
+    ['st','gb'].forEach(id=>$(id).oninput=upd);
+    const W=20,H=13;const sc=c.width/W;
+    const start=[2,2],goal=[18,11];
+    const obs=[[8,7,1.6],[12,4,1.6],[14,10,1.4],[6,11,1.4],[10,2,1.0]];
+    let nodes,parents,path,lastSample,running=false;
+    function reset(){nodes=[start.slice()];parents=[-1];path=null;lastSample=null;draw();}
+    reset();$('rstBtn').onclick=reset;
+    function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+    function nearest(q){let bi=0,bd=1e9;nodes.forEach((p,i)=>{const d=dist(p,q);if(d<bd){bd=d;bi=i;}});return bi;}
+    function colFree(a,b){
+      for(const o of obs){const[cx,cy,r]=o;const ab=[b[0]-a[0],b[1]-a[1]];const ap=[cx-a[0],cy-a[1]];
+        const ab2=ab[0]*ab[0]+ab[1]*ab[1];const t=Math.max(0,Math.min(1,(ap[0]*ab[0]+ap[1]*ab[1])/(ab2+1e-9)));
+        const px=a[0]+t*ab[0],py=a[1]+t*ab[1];if(Math.hypot(px-cx,py-cy)<r)return false;}
+      if(b[0]<0||b[0]>W||b[1]<0||b[1]>H)return false;return true;
+    }
+    function step1(){
+      if(path)return;const step=+$('st').value,gb=(+$('gb').value)/100;
+      const q=Math.random()<gb?goal.slice():[Math.random()*W,Math.random()*H];
+      lastSample=q;const i=nearest(q);const a=nodes[i];const v=[q[0]-a[0],q[1]-a[1]];const d=Math.hypot(v[0],v[1]);
+      const nq=d<=step?q.slice():[a[0]+v[0]/d*step,a[1]+v[1]/d*step];
+      if(!colFree(a,nq)){draw();return;}
+      nodes.push(nq);parents.push(i);
+      if(dist(nq,goal)<step){let id=nodes.length-1;path=[];while(id>=0){path.push(nodes[id]);id=parents[id];}}
+      draw();
+    }
+    $('oneBtn').onclick=step1;
+    $('autoBtn').onclick=()=>{running=!running;$('autoBtn').textContent=running?'중지':'자동 재생';if(running)tick();};
+    function tick(){if(!running||path)return;for(let k=0;k<3;k++)step1();if(running)requestAnimationFrame(tick);}
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      x.strokeStyle='rgba(120,120,120,0.6)';x.lineWidth=1;
+      for(let i=1;i<nodes.length;i++){const a=nodes[parents[i]],b=nodes[i];
+        x.beginPath();x.moveTo(a[0]*sc,c.height-a[1]*sc);x.lineTo(b[0]*sc,c.height-b[1]*sc);x.stroke();}
+      x.fillStyle='#444';nodes.forEach(n=>{x.beginPath();x.arc(n[0]*sc,c.height-n[1]*sc,1.6,0,2*Math.PI);x.fill();});
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0]*sc,c.height-start[1]*sc,7,0,2*Math.PI);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,7,0,2*Math.PI);x.fill();
+      if(lastSample){x.fillStyle='#f5b400';x.beginPath();x.arc(lastSample[0]*sc,c.height-lastSample[1]*sc,4,0,2*Math.PI);x.fill();}
+      if(path){x.strokeStyle='#0b5fff';x.lineWidth=3;x.beginPath();
+        path.forEach((p,i)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle='#222';x.font='13px sans-serif';x.fillText('노드 '+nodes.length+(path?'  · 경로 발견 (길이 '+path.length+')':''),12,18);
+    }
+    upd();
+  })();
+  </script>
+</main>
+</body>
+</html>

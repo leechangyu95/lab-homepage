@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: RBF 커널과 $\gamma$의 효과 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: RBF 커널과 $\gamma$의 효과</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/05-classification.html">Week 5. 분류 알고리즘 — KNN, SVM, 결정트리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: RBF 커널과 $\gamma$의 효과</h4>
+    <p>두 클래스가 동심원으로 섞인 데이터입니다. <strong>선형 경계로는 절대 못 가르지만</strong> RBF 커널의 결정 함수는 가능합니다. $\gamma$를 키우면 경계가 점점 데이터 점 모양에 딱 붙어 과적합이 일어나는 모습을 보세요.</p>
+    <canvas id="rbf" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$\gamma$ (국소성) <span class="val" id="gmV">1.0</span><input type="range" id="gm" min="0.2" max="20" step="0.2" value="1.0"></label>
+      <button id="rbfRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rbf');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<30;i++){const a=Math.random()*Math.PI*2,r=0.05+Math.random()*0.08;pts.push({x:0.5+r*Math.cos(a),y:0.5+r*Math.sin(a),c:0});}
+      for(let i=0;i<40;i++){const a=Math.random()*Math.PI*2,r=0.22+Math.random()*0.08;pts.push({x:0.5+r*Math.cos(a),y:0.5+r*Math.sin(a),c:1});}
+      draw();
+    }
+    function draw(){
+      const g=+document.getElementById('gm').value;
+      document.getElementById('gmV').textContent=g.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const STEP=8;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        let s=0;
+        const xn=i/W,yn=j/H;
+        pts.forEach(p=>{
+          const dx=xn-p.x,dy=yn-p.y;
+          const k=Math.exp(-g*(dx*dx+dy*dy)*100);
+          s+=(p.c?-1:1)*k;
+        });
+        const a=Math.min(0.5,Math.abs(s)*0.05);
+        ctx.fillStyle=s>0?`rgba(11,95,255,${a})`:`rgba(255,140,0,${a})`;
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach(p=>{ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(p.x*W,p.y*H,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(g<1?'γ 작음 → 경계 부드러움':g<5?'γ 적당 → 좋은 일반화':'γ 큼 → 점에 달라붙음 (과적합)',12,22);
+    }
+    document.getElementById('gm').addEventListener('input',draw);
+    document.getElementById('rbfRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

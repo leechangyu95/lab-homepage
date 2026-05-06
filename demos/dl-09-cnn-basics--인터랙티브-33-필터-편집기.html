@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 3×3 필터 편집기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 3×3 필터 편집기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/09-cnn-basics.html">Week 9. CNN 기초 — 합성곱 신경망</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 3×3 필터 편집기</h4>
+    <p>이미지에 적용할 3×3 커널을 직접 고르세요. 소벨 X·Y는 모서리를, 블러는 부드러움을, 샤프닝은 강조를 만듭니다.</p>
+    <canvas id="convCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>커널
+        <select id="krn">
+          <option value="sx">Sobel X (수직 모서리)</option>
+          <option value="sy">Sobel Y (수평 모서리)</option>
+          <option value="blur">블러</option>
+          <option value="sharp">샤프닝</option>
+          <option value="emboss">엠보스</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('convCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const SIZE=80;
+    function makeImg(){
+      const img=[];for(let j=0;j<SIZE;j++){const row=[];for(let i=0;i<SIZE;i++){
+        let v=0;
+        if(i>20&&i<60&&j>20&&j<60)v=200;
+        if(i>30&&i<50&&j>30&&j<50)v=100;
+        v+=Math.random()*20;row.push(Math.min(255,v));
+      }img.push(row);}return img;
+    }
+    const img=makeImg();
+    const kernels={
+      sx:[[-1,0,1],[-2,0,2],[-1,0,1]],
+      sy:[[-1,-2,-1],[0,0,0],[1,2,1]],
+      blur:[[1/9,1/9,1/9],[1/9,1/9,1/9],[1/9,1/9,1/9]],
+      sharp:[[0,-1,0],[-1,5,-1],[0,-1,0]],
+      emboss:[[-2,-1,0],[-1,1,1],[0,1,2]]
+    };
+    function conv(img,k){
+      const out=[];const N=img.length;
+      for(let j=1;j<N-1;j++){const r=[];for(let i=1;i<N-1;i++){
+        let s=0;for(let m=-1;m<=1;m++)for(let n=-1;n<=1;n++)s+=img[j+m][i+n]*k[m+1][n+1];
+        r.push(s);
+      }out.push(r);}return out;
+    }
+    function paint(arr,x0,y0,scale,abs){
+      let mn=Infinity,mx=-Infinity;arr.forEach(r=>r.forEach(v=>{const u=abs?Math.abs(v):v;if(u<mn)mn=u;if(u>mx)mx=u;}));
+      for(let j=0;j<arr.length;j++)for(let i=0;i<arr[0].length;i++){
+        const u=abs?Math.abs(arr[j][i]):arr[j][i];
+        const t=Math.floor((u-mn)/(mx-mn+1e-9)*255);
+        ctx.fillStyle=`rgb(${t},${t},${t})`;
+        ctx.fillRect(x0+i*scale,y0+j*scale,scale,scale);
+      }
+    }
+    function draw(){
+      const t=document.getElementById('krn').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      paint(img,20,30,3,false);
+      const out=conv(img,kernels[t]);
+      paint(out,360,30,3,true);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('원본',20,20);ctx.fillText('합성곱 결과',360,20);
+      // kernel display
+      const k=kernels[t];const kx=180,ky=160;
+      ctx.fillStyle='#fff';ctx.fillRect(kx,ky,120,120);ctx.strokeStyle='#000';ctx.strokeRect(kx,ky,120,120);
+      for(let j=0;j<3;j++)for(let i=0;i<3;i++){
+        ctx.fillStyle='#000';ctx.font='12px sans-serif';
+        ctx.fillText(k[j][i].toFixed(2),kx+8+i*40,ky+25+j*40);
+      }
+      ctx.fillText('커널',kx+45,ky-6);
+    }
+    document.getElementById('krn').onchange=draw;
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

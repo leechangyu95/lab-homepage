@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 점전하 전기장 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 점전하 전기장 시각화</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/10-efield-gauss.html">Week 10. 전기장과 가우스 법칙</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 점전하 전기장 시각화</h4>
+    <p>화살표의 길이 ∝ 전기장 세기, 방향은 전기장 방향. 색이 진할수록 더 강한 영역. 격자 한 셀의 가로 = 약 1 m로 가정하고, 화살표의 색·길이가 $1/r^2$로 빠르게 줄어드는 것을 관찰하세요.</p>
+    <canvas id="w10_pointE" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>전하량 $q$ <span class="val" id="w10_qVal">+5</span> nC
+        <input type="range" id="w10_q" min="-10" max="10" step="0.5" value="5"></label>
+      <label>전하 위치 $x$ <span class="val" id="w10_xVal">0</span>
+        <input type="range" id="w10_x" min="-4" max="4" step="0.5" value="0"></label>
+      <label>전하 위치 $y$ <span class="val" id="w10_yVal">0</span>
+        <input type="range" id="w10_y" min="-3" max="3" step="0.5" value="0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$q$를 양수에서 음수로 바꿔 보세요 — 화살표 방향이 정반대로 뒤집힙니다.</li>
+        <li>$|q|$를 2배로 늘리면 모든 화살표 길이도 2배 — 전기장은 $q$에 비례.</li>
+        <li>전하 가까이 (작은 $r$)의 화살표는 매우 길고, 멀어지면 급격히 짧아짐 — $1/r^2$ 법칙.</li>
+        <li>전하 위치를 옮겨도 전기장은 항상 전하 중심에서 방사형으로 뻗어 나갑니다.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w10_pointE');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const k=8.99e9; // SI
+    function arrow(x1,y1,x2,y2,col,lw){
+      ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw||1.5;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1),hl=6;
+      ctx.beginPath();ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+      ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fill();
+    }
+    function draw(){
+      const q=+document.getElementById('w10_q').value*1e-9; // C
+      const qx=+document.getElementById('w10_x').value;
+      const qy=+document.getElementById('w10_y').value;
+      document.getElementById('w10_qVal').textContent=(q*1e9>=0?'+':'')+(q*1e9).toFixed(1);
+      document.getElementById('w10_xVal').textContent=qx.toFixed(1);
+      document.getElementById('w10_yVal').textContent=qy.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const sc=44, ox=W/2, oy=H/2;
+      // grid
+      ctx.strokeStyle='#eef0f4';ctx.lineWidth=1;
+      for(let g=-7;g<=7;g++){
+        ctx.beginPath();ctx.moveTo(ox+g*sc,0);ctx.lineTo(ox+g*sc,H);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,oy+g*sc);ctx.lineTo(W,oy+g*sc);ctx.stroke();
+      }
+      // arrows
+      const arrows=[];
+      let maxE=0;
+      for(let gx=-7;gx<=7;gx++){
+        for(let gy=-4;gy<=4;gy++){
+          const dx=gx-qx, dy=gy-qy;
+          const r2=dx*dx+dy*dy;
+          if(r2<0.05) continue;
+          const r=Math.sqrt(r2);
+          const Em=k*Math.abs(q)/r2; // N/C
+          const ux=dx/r, uy=dy/r;
+          const sgn=q>=0?1:-1;
+          arrows.push({gx,gy,ux:ux*sgn,uy:uy*sgn,Em});
+          if(Em>maxE) maxE=Em;
+        }
+      }
+      arrows.forEach(a=>{
+        const px=ox+a.gx*sc, py=oy-a.gy*sc;
+        // log scale length
+        const ln=Math.min(0.45*sc, 0.45*sc*Math.log10(1+9*a.Em/maxE));
+        const intensity=Math.min(1, Math.log10(1+9*a.Em/maxE));
+        const r=Math.round(11+200*intensity), gC=Math.round(95-60*intensity), b=Math.round(255-200*intensity);
+        const col=`rgb(${r},${gC},${b})`;
+        arrow(px,py,px+a.ux*ln,py-a.uy*ln,col,1+1.5*intensity);
+      });
+      // charge dot
+      const cpx=ox+qx*sc, cpy=oy-qy*sc;
+      ctx.fillStyle=q>=0?'#c62828':'#1565c0';
+      ctx.beginPath();ctx.arc(cpx,cpy,9+Math.min(8,Math.abs(q*1e9)/2),0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+      ctx.fillText(q>=0?'+':'−',cpx,cpy+5);
+      ctx.textAlign='left';
+      // legend box
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,228,52);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,228,52);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('q = '+(q*1e9>=0?'+':'')+(q*1e9).toFixed(1)+' nC at ('+qx.toFixed(1)+', '+qy.toFixed(1)+')',16,28);
+      ctx.fillText('진한 빨강 = E 큼  ·  연한 파랑 = E 작음',16,46);
+    }
+    ['w10_q','w10_x','w10_y'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

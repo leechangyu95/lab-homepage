@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 함수와 도함수 한 화면에 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 함수와 도함수 한 화면에</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/04-transcendental-implicit.html">Week 4. 초월함수 &amp; 음함수 미분</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 함수와 도함수 한 화면에</h4>
+    <p>예: 사인을 골라 보면 도함수가 정확히 90° 앞선 코사인. 지수를 골라 보면 도함수가 본함수와 (상수배 빼고) 같음.</p>
+    <canvas id="td" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="tdFn">
+          <option value="exp">eˣ</option>
+          <option value="ln">ln x</option>
+          <option value="sin" selected>sin x</option>
+          <option value="cos">cos x</option>
+          <option value="tan">tan x</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('td'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function fn(v){
+      const m=document.getElementById('tdFn').value;
+      if(m==='exp')return{f:Math.exp(v),d:Math.exp(v),xR:[-2,2],yR:[-1,8]};
+      if(m==='ln'){if(v<=0)return{f:NaN,d:NaN,xR:[0.05,5],yR:[-3,3]};return{f:Math.log(v),d:1/v,xR:[0.05,5],yR:[-3,3]};}
+      if(m==='sin')return{f:Math.sin(v),d:Math.cos(v),xR:[-Math.PI*1.5,Math.PI*1.5],yR:[-1.5,1.5]};
+      if(m==='cos')return{f:Math.cos(v),d:-Math.sin(v),xR:[-Math.PI*1.5,Math.PI*1.5],yR:[-1.5,1.5]};
+      const s=1/Math.cos(v);return{f:Math.tan(v),d:s*s,xR:[-1.4,1.4],yR:[-6,6]};
+    }
+    function loop(){
+      const ref=fn(0.01);
+      const xR=ref.xR,yR=ref.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid + axes
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.lineWidth=1.2;
+      x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // f
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();let first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){
+        const o=fn(v);if(!isFinite(o.f)||o.f<yR[0]||o.f>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(o.f));first=false;}else x.lineTo(px(v),py(o.f));
+      }
+      x.stroke();
+      // f'
+      x.strokeStyle='#1b5e20';x.lineWidth=2;x.setLineDash([6,4]);x.beginPath();first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){
+        const o=fn(v);if(!isFinite(o.d)||o.d<yR[0]||o.d>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(o.d));first=false;}else x.lineTo(px(v),py(o.d));
+      }
+      x.stroke();x.setLineDash([]);
+      // legend
+      x.fillStyle='#0b5fff';x.fillRect(M.l+10,M.t+10,16,3);x.fillStyle='#222';x.font='13px sans-serif';x.fillText('f(x)',M.l+30,M.t+15);
+      x.fillStyle='#1b5e20';x.fillRect(M.l+80,M.t+10,16,3);x.fillStyle='#222';x.fillText("f'(x)",M.l+100,M.t+15);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

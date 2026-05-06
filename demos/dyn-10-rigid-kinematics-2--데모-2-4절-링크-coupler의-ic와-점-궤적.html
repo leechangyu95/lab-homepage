@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 4절 링크 — coupler의 IC와 점 궤적 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 4절 링크 — coupler의 IC와 점 궤적</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/10-rigid-kinematics-2.html">Week 10. 강체의 평면 운동학 — 일반 평면운동과 순간중심</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 4절 링크 — coupler의 IC와 점 궤적</h4>
+    <p>입력 크랭크가 회전하면 4절 링크가 움직입니다. <strong>coupler 위의 한 점이 그리는 궤적</strong>(coupler curve)을 trace하고, 매 순간 coupler의 <strong>IC 위치</strong>를 빨간 점으로 보여줍니다. 점의 위치를 바꾸면 다양한 곡선이 나오는 것을 볼 수 있어요 — 자전거 페달, 와이퍼 등이 바로 이 곡선의 응용.</p>
+    <canvas id="fbarC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>크랭크 각속도 <span class="val" id="fbWV">1.5</span><input type="range" id="fbW" min="0.3" max="3" step="0.1" value="1.5"></label>
+      <label>coupler 위 점 위치 <span class="val" id="fbPV">0.5</span><input type="range" id="fbP" min="0" max="1" step="0.05" value="0.5"></label>
+      <label>coupler 위 점 수직 옵셋 <span class="val" id="fbHV">0.3</span><input type="range" id="fbH" min="-0.6" max="0.6" step="0.05" value="0.3"></label>
+      <button id="fbReset">trace 리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fbarC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['fbW','fbP','fbH'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let phi=0,trail=[];
+    sl('fbReset').onclick=()=>{trail=[];};
+    // four-bar geometry
+    // O1-O2: ground, O1 at left, O2 at right
+    const O1={x:200,y:280},O2={x:480,y:280};
+    const r1=80,r2=140,r3=120; // crank, coupler, rocker
+    function loop(){
+      const w=+sl('fbW').value,pp=+sl('fbP').value,ph=+sl('fbH').value;
+      phi+=w*0.025;
+      const A={x:O1.x+r1*Math.cos(phi),y:O1.y-r1*Math.sin(phi)};
+      // solve B such that |AB|=r2 and |O2-B|=r3
+      const dx=O2.x-A.x,dy=O2.y-A.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d>r2+r3||d<Math.abs(r2-r3)){requestAnimationFrame(loop);return;}
+      const a=(r2*r2-r3*r3+d*d)/(2*d);
+      const h=Math.sqrt(Math.max(0,r2*r2-a*a));
+      const mx=A.x+a*dx/d,my=A.y+a*dy/d;
+      const B={x:mx-h*dy/d,y:my+h*dx/d}; // pick one config
+      // tracked point on coupler
+      const P={x:A.x+pp*(B.x-A.x)+ph*(-(B.y-A.y)),
+               y:A.y+pp*(B.y-A.y)+ph*(B.x-A.x)};
+      trail.push({x:P.x,y:P.y});if(trail.length>800)trail.shift();
+      // IC of coupler: A moves perpendicular to O1-A, B perpendicular to O2-B
+      // IC = intersection of lines through A in direction O1-A, and through B in direction O2-B
+      function intersect(p1,d1,p2,d2){
+        const A1=d1.x,B1=-d2.x,C1=p2.x-p1.x;
+        const A2=d1.y,B2=-d2.y,C2=p2.y-p1.y;
+        const det=A1*B2-A2*B1;
+        if(Math.abs(det)<1e-6)return null;
+        const t=(C1*B2-C2*B1)/det;
+        return {x:p1.x+t*d1.x,y:p1.y+t*d1.y};
+      }
+      const IC=intersect(A,{x:A.x-O1.x,y:A.y-O1.y},B,{x:B.x-O2.x,y:B.y-O2.y});
+      // draw
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // ground
+      x.fillStyle='#888';x.fillRect(O1.x-30,O1.y+5,330,8);
+      // trail
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i===0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});
+      x.stroke();
+      // links
+      x.lineWidth=4;
+      x.strokeStyle='#2e7d32';x.beginPath();x.moveTo(O1.x,O1.y);x.lineTo(A.x,A.y);x.stroke();
+      x.strokeStyle='#444';x.beginPath();x.moveTo(A.x,A.y);x.lineTo(B.x,B.y);x.stroke();
+      x.strokeStyle='#9e35b8';x.beginPath();x.moveTo(O2.x,O2.y);x.lineTo(B.x,B.y);x.stroke();
+      // IC line dashed
+      if(IC){
+        x.strokeStyle='#999';x.setLineDash([3,3]);x.lineWidth=1;
+        x.beginPath();x.moveTo(O1.x,O1.y);x.lineTo(IC.x,IC.y);x.stroke();
+        x.beginPath();x.moveTo(O2.x,O2.y);x.lineTo(IC.x,IC.y);x.stroke();
+        x.setLineDash([]);
+        x.fillStyle='#c62828';x.beginPath();x.arc(IC.x,IC.y,6,0,Math.PI*2);x.fill();
+        x.fillStyle='#c62828';x.font='bold 12px sans-serif';x.fillText('IC',IC.x+8,IC.y-4);
+      }
+      // pivots
+      [O1,O2].forEach(p=>{x.fillStyle='#333';x.beginPath();x.arc(p.x,p.y,5,0,Math.PI*2);x.fill();});
+      [A,B].forEach(p=>{x.fillStyle='#fff';x.beginPath();x.arc(p.x,p.y,4,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();});
+      // tracked point
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(P.x,P.y,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('coupler 위 점 P (파랑)의 trace = coupler curve',20,25);
+      x.fillText('IC (빨강)는 두 회전 막대의 연장선이 만나는 점 — 위치가 매 순간 변함',20,43);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

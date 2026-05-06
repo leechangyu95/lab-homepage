@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Q와 R의 줄다리기 — 가중치가 응답을 만든다 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Q와 R의 줄다리기 — 가중치가 응답을 만든다</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/11-mpc.html">Lecture 11. 모델 예측 제어 (MPC)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Q와 R의 줄다리기 — 가중치가 응답을 만든다</h4>
+    <p>$Q$를 키우면 "오차 페널티가 커서" MPC가 빨리 따라가려 입력을 크게 씁니다. $R$을 키우면 "입력 페널티가 커서" 부드럽지만 느려집니다. 두 슬라이더를 움직이며 위치 응답(파랑)과 인가 가속도(주황)가 어떻게 변하는지 보세요. 같은 호라이즌·같은 모델인데, 가중치 하나로 "공격적/부드러운" 두 다른 컨트롤러가 됩니다.</p>
+    <canvas id="qr" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>Q (상태 가중치) <span class="val" id="qrQV">10</span><input type="range" id="qrQ" min="0.5" max="50" step="0.5" value="10"></label>
+      <label>R (입력 가중치) <span class="val" id="qrRV">0.3</span><input type="range" id="qrR" min="0.01" max="5" step="0.01" value="0.3"></label>
+      <label>호라이즌 N <span class="val" id="qrNV">15</span><input type="range" id="qrN" min="5" max="40" value="15"></label>
+      <label>가속도 한계 <span class="val" id="qrUV">3</span><input type="range" id="qrU" min="0.5" max="6" step="0.1" value="3"></label>
+      <button id="qrRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('qr'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const dt=0.1,Tmax=120;
+    let state,t,posH,uH,refH;
+    function init(){state={p:0,v:0};t=0;posH=[];uH=[];refH=[];}
+    init();
+    document.getElementById('qrRst').onclick=init;
+    function refAt(tt){return tt<2?0:(tt<10?2:1);}
+    function mpcStep(){
+      const Q=+document.getElementById('qrQ').value;
+      const R=+document.getElementById('qrR').value;
+      const N=+document.getElementById('qrN').value;
+      const umax=+document.getElementById('qrU').value;
+      let u=new Array(N).fill(0);
+      for(let it=0;it<30;it++){
+        let p=state.p,v=state.v;const ps=[p];
+        for(let i=0;i<N;i++){v+=u[i]*dt;p+=v*dt;ps.push(p);}
+        for(let i=0;i<N;i++){
+          let g=2*R*u[i];
+          for(let k=i+1;k<=N;k++){const rk=refAt(t+k*dt);g+=2*Q*(ps[k]-rk)*dt*(k-i)*dt;}
+          u[i]-=0.025*g;
+          if(u[i]>umax)u[i]=umax;if(u[i]<-umax)u[i]=-umax;
+        }
+      }
+      return u[0];
+    }
+    function loop(){
+      ['qrQ','qrR','qrN','qrU'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const umax=+document.getElementById('qrU').value;
+      const u0=Math.max(-umax,Math.min(umax,mpcStep()));
+      state.v+=u0*dt;state.p+=state.v*dt;
+      const r=refAt(t);
+      posH.push(state.p);uH.push(u0);refH.push(r);
+      if(posH.length>Tmax){posH.shift();uH.shift();refH.shift();}
+      t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const Tx0=40,Tx1=W-20,Ty0=20,Ty1=200;
+      const Bx0=40,Bx1=W-20,By0=230,By1=H-20;
+      x.strokeStyle='#ddd';x.strokeRect(Tx0,Ty0,Tx1-Tx0,Ty1-Ty0);
+      x.strokeRect(Bx0,By0,Bx1-Bx0,By1-By0);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('위치 응답 (파랑) · 목표 (빨강 점선)',Tx0+6,Ty0+14);
+      x.fillText('인가 가속도 (주황) · 한계: ±'+umax.toFixed(1),Bx0+6,By0+14);
+      const pxT=(i)=>Tx0+i/Tmax*(Tx1-Tx0);
+      const pyT=(p)=>Ty1-((p+0.5)/3)*(Ty1-Ty0-20)-10;
+      const pyB=(u)=>{const m=Math.max(umax*1.1,0.5);return (By0+By1)/2 - u/m*((By1-By0)/2-12);};
+      // ref
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=2;x.beginPath();
+      refH.forEach((rr,i)=>{i?x.lineTo(pxT(i),pyT(rr)):x.moveTo(pxT(i),pyT(rr));});x.stroke();x.setLineDash([]);
+      // pos
+      x.strokeStyle='#0b5fff';x.lineWidth=2.4;x.beginPath();
+      posH.forEach((p,i)=>{i?x.lineTo(pxT(i),pyT(p)):x.moveTo(pxT(i),pyT(p));});x.stroke();
+      // saturation
+      x.strokeStyle='#aaa';x.setLineDash([3,3]);
+      x.beginPath();x.moveTo(Bx0,pyB(umax));x.lineTo(Bx1,pyB(umax));x.stroke();
+      x.beginPath();x.moveTo(Bx0,pyB(-umax));x.lineTo(Bx1,pyB(-umax));x.stroke();
+      x.setLineDash([]);
+      x.strokeStyle='#999';x.beginPath();x.moveTo(Bx0,(By0+By1)/2);x.lineTo(Bx1,(By0+By1)/2);x.stroke();
+      // u
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      uH.forEach((u,i)=>{i?x.lineTo(pxT(i),pyB(u)):x.moveTo(pxT(i),pyB(u));});x.stroke();
+      // helper text
+      const Q=+document.getElementById('qrQ').value,R=+document.getElementById('qrR').value;
+      const ratio=Q/R;
+      let advice='';
+      if(ratio>200) advice='Q/R 매우 큼 → 공격적, 입력 한계 활용 많음';
+      else if(ratio>20) advice='Q/R 적당 → 균형 잡힌 추종';
+      else if(ratio>3) advice='Q/R 작음 → 부드럽지만 느림';
+      else advice='Q/R 매우 작음 → 거의 입력 안 씀, 추종 안 됨';
+      x.fillStyle='#0742b8';x.font='12px sans-serif';
+      x.fillText('Q/R = '+ratio.toFixed(1)+'   ·   '+advice,Tx0+6,Ty0+34);
+      requestAnimationFrame(()=>setTimeout(loop,50));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

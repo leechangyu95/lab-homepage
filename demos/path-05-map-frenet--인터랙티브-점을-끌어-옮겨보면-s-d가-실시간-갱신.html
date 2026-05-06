@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브: 점을 끌어 옮겨보면 (s, d)가 실시간 갱신 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브: 점을 끌어 옮겨보면 (s, d)가 실시간 갱신</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/05-map-frenet.html">Week 5. Map 표현 &amp; Frenet 좌표</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브: 점을 끌어 옮겨보면 (s, d)가 실시간 갱신</h4>
+    <p>S자 모양 중심선 위에 빨간 차량 점이 있습니다. 점을 <strong>드래그</strong>해서 옮기면, 가장 가까운 중심선 점($s$)과
+    옆으로 벗어난 거리($d$)가 실시간으로 계산됩니다. 좌측이 양수, 우측이 음수임을 확인하세요.</p>
+    <canvas id="frenet" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>차선 폭 W (m) <span class="val" id="lwV">3.5</span><input type="range" id="lw" min="2.5" max="6" step="0.1" value="3.5"></label>
+      <button id="resetF" class="alt">차량 위치 초기화</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('frenet'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    // S-curve centerline in world coords (m)
+    const path=[];
+    for(let s=0;s<=80;s+=0.4){
+      const xx=s, yy=8*Math.sin(s*0.12);
+      path.push({x:xx,y:yy,s:s});
+    }
+    let car={x:30,y:5};
+    const upd=()=>{$('lwV').textContent=(+$('lw').value).toFixed(1);};
+    $('lw').oninput=()=>{upd();draw();};
+    $('resetF').onclick=()=>{car={x:30,y:5};draw();};
+    // world to canvas
+    const cx=40, cy=H/2, sc=7;
+    const w2c = p=>[cx+p.x*sc, cy-p.y*sc];
+    let dragging=false;
+    c.addEventListener('mousedown',e=>{
+      const r=c.getBoundingClientRect();
+      const px=e.clientX-r.left, py=e.clientY-r.top;
+      const [px0,py0]=w2c(car);
+      if(Math.hypot(px-px0,py-py0)<14)dragging=true;
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!dragging)return;
+      const r=c.getBoundingClientRect();
+      const px=e.clientX-r.left, py=e.clientY-r.top;
+      car.x=(px-cx)/sc; car.y=-(py-cy)/sc;
+      draw();
+    });
+    window.addEventListener('mouseup',()=>{dragging=false;});
+    function findClosest(){
+      let best=0,bd=Infinity;
+      for(let i=0;i<path.length;i++){
+        const dx=path[i].x-car.x, dy=path[i].y-car.y;
+        const d2=dx*dx+dy*dy;
+        if(d2<bd){bd=d2;best=i;}
+      }
+      // tangent at best
+      const i0=Math.max(0,best-1), i1=Math.min(path.length-1,best+1);
+      const tx=path[i1].x-path[i0].x, ty=path[i1].y-path[i0].y;
+      const tn=Math.hypot(tx,ty);
+      const tnx=tx/tn, tny=ty/tn;
+      // normal: rotate tangent +90° (left)
+      const nx=-tny, ny=tnx;
+      const dx=car.x-path[best].x, dy=car.y-path[best].y;
+      const d=dx*nx+dy*ny;
+      return {s:path[best].s, d, idx:best, tnx, tny, nx, ny};
+    }
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const lw=+$('lw').value;
+      // grid
+      x.strokeStyle='#eee';
+      for(let i=-30;i<=80;i+=5){
+        const [px]=w2c({x:i,y:0});
+        x.beginPath();x.moveTo(px,0);x.lineTo(px,H);x.stroke();
+      }
+      for(let i=-15;i<=15;i+=5){
+        const [,py]=w2c({x:0,y:i});
+        x.beginPath();x.moveTo(0,py);x.lineTo(W,py);x.stroke();
+      }
+      // lane boundaries
+      x.strokeStyle='#aaa';x.setLineDash([6,6]);x.lineWidth=1;
+      for(const sign of [-1,1]){
+        x.beginPath();
+        for(let i=0;i<path.length;i++){
+          const i0=Math.max(0,i-1), i1=Math.min(path.length-1,i+1);
+          const tx=path[i1].x-path[i0].x, ty=path[i1].y-path[i0].y;
+          const tn=Math.hypot(tx,ty);
+          const nx=-ty/tn, ny=tx/tn;
+          const px=path[i].x+sign*lw/2*nx, py=path[i].y+sign*lw/2*ny;
+          const [sx,sy]=w2c({x:px,y:py});
+          if(i==0)x.moveTo(sx,sy);else x.lineTo(sx,sy);
+        }
+        x.stroke();
+      }
+      x.setLineDash([]);
+      // centerline
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      path.forEach((p,i)=>{const [sx,sy]=w2c(p);if(i==0)x.moveTo(sx,sy);else x.lineTo(sx,sy);});
+      x.stroke();
+      // closest point
+      const cl=findClosest();
+      const [px0,py0]=w2c(path[cl.idx]);
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(px0,py0,5,0,7);x.fill();
+      // perpendicular line from closest to car
+      const [pxc,pyc]=w2c(car);
+      x.strokeStyle='#2e7d32';x.setLineDash([4,4]);x.lineWidth=1.5;
+      x.beginPath();x.moveTo(px0,py0);x.lineTo(pxc,pyc);x.stroke();x.setLineDash([]);
+      // tangent / normal arrows at closest
+      const tip = (sx,sy,vx,vy,col)=>{
+        const len=40;
+        x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+        x.moveTo(sx,sy);x.lineTo(sx+vx*len,sy-vy*len);x.stroke();
+        // arrow head
+        x.beginPath();x.moveTo(sx+vx*len,sy-vy*len);
+        x.lineTo(sx+vx*len-5*vx+3*vy, sy-vy*len+5*vy+3*vx);
+        x.lineTo(sx+vx*len-5*vx-3*vy, sy-vy*len+5*vy-3*vx);
+        x.closePath();x.fillStyle=col;x.fill();
+      };
+      tip(px0,py0,cl.tnx,cl.tny,'#f57c00');     // tangent
+      tip(px0,py0,cl.nx,cl.ny,'#9c27b0');       // normal (+d direction)
+      // car
+      x.fillStyle='#c62828';x.beginPath();x.arc(pxc,pyc,9,0,7);x.fill();
+      // info
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('차량 (drag): world (x, y) = ('+car.x.toFixed(2)+', '+car.y.toFixed(2)+') m', 10, 18);
+      x.fillText('Frenet (s, d) = ('+cl.s.toFixed(2)+', '+cl.d.toFixed(2)+') m', 10, 36);
+      x.fillStyle='#f57c00';x.fillText('주황 = 접선 방향 (+s)', 10, 54);
+      x.fillStyle='#9c27b0';x.fillText('보라 = 법선 방향 (+d, 왼쪽)', 10, 72);
+      x.fillStyle='#aaa';x.fillText('회색 점선 = 차선 경계 |d| ≤ '+(lw/2).toFixed(2), 10, 90);
+      // lane status
+      const inside = Math.abs(cl.d) <= lw/2;
+      x.fillStyle = inside ? '#2e7d32' : '#c62828';
+      x.fillText('차선 안: '+(inside?'O':'X (이탈!)'), 10, 108);
+    }
+    upd();draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

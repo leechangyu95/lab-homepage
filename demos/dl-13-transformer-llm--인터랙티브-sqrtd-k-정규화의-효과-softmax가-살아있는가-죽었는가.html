@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: $\sqrt{d_k}$ 정규화의 효과 — softmax가 살아있는가 죽었는가 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: $\sqrt{d_k}$ 정규화의 효과 — softmax가 살아있는가 죽었는가</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/13-transformer-llm.html">Week 13. Transformer와 LLM</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: $\sqrt{d_k}$ 정규화의 효과 — softmax가 살아있는가 죽었는가</h4>
+    <p>5개의 키와 1개의 쿼리(랜덤 정규분포)에서 내적을 계산하고, (A) 정규화 없음, (B) $\sqrt{d_k}$로 나누기, 두 경우의 softmax 분포와 그 <strong>최대 그래디언트</strong>를 비교합니다. 차원 $d_k$를 키워보면, 정규화 없는 쪽은 분포가 "한 칸"에 몰리며 그래디언트가 0에 수렴하는 반면, 정규화한 쪽은 부드러운 분포를 유지합니다.</p>
+    <canvas id="sqdk" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>키 차원 d_k <span class="val" id="dkV">64</span><input type="range" id="dk" min="2" max="512" step="1" value="64"></label>
+      <button id="dkRegen">새 무작위 벡터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sqdk');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let q=null,Ks=null;
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function regen(){
+      const dk=+document.getElementById('dk').value;
+      q=Array.from({length:dk},gauss);
+      Ks=Array.from({length:5},()=>Array.from({length:dk},gauss));
+      draw();
+    }
+    function softmax(arr){const m=Math.max(...arr);const e=arr.map(v=>Math.exp(v-m));const s=e.reduce((a,b)=>a+b);return e.map(v=>v/s);}
+    function softmaxJacobianMaxAbs(p){
+      // ∂p_i/∂z_j = p_i(δ_ij - p_j); max abs over (i,j) = max over diag terms p_i(1-p_i)
+      let m=0;p.forEach(pi=>{const v=pi*(1-pi);if(v>m)m=v;});
+      return m;
+    }
+    function draw(){
+      const dk=+document.getElementById('dk').value;
+      document.getElementById('dkV').textContent=dk;
+      if(!q||q.length!==dk)regen();
+      const dots=Ks.map(k=>{let s=0;for(let i=0;i<dk;i++)s+=q[i]*k[i];return s;});
+      const dotsScaled=dots.map(d=>d/Math.sqrt(dk));
+      const probA=softmax(dots);
+      const probB=softmax(dotsScaled);
+      const gA=softmaxJacobianMaxAbs(probA);
+      const gB=softmaxJacobianMaxAbs(probB);
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      const PL=40,PT=40;
+      function barPanel(x0,y0,wp,hp,probs,title,col,grad){
+        ctx.strokeStyle='#ccc';ctx.strokeRect(x0,y0,wp,hp);
+        ctx.fillStyle='#333';ctx.font='13px sans-serif';
+        ctx.fillText(title,x0+8,y0-6);
+        const bw=(wp-30)/probs.length,gap=4;
+        probs.forEach((p,i)=>{
+          const bx=x0+12+i*bw;
+          const bhP=p*(hp-40);
+          ctx.fillStyle=col;ctx.fillRect(bx,y0+hp-20-bhP,bw-gap,bhP);
+          ctx.fillStyle='#222';ctx.font='11px sans-serif';
+          ctx.fillText(p.toFixed(3),bx,y0+hp-bhP-24);
+          ctx.fillText(`k${i+1}`,bx+(bw-gap)/2-8,y0+hp-6);
+        });
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(`max |∂softmax/∂z| = ${grad.toFixed(4)} ${grad<0.005?'(거의 0 — 죽음)':'(살아있음)'}`,x0+8,y0+hp+18);
+      }
+      const wp=(W-PL-30-30)/2,hp=H-PT-70;
+      barPanel(PL,PT,wp,hp,probA,`(A) 정규화 없음 — 내적 raw (분산≈${dk})`,'#c62828',gA);
+      barPanel(PL+wp+30,PT,wp,hp,probB,`(B) ÷√d_k 정규화 — 분산≈1`,'#0b5fff',gB);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`d_k = ${dk}: dot 평균크기 ${(dots.reduce((a,b)=>a+Math.abs(b),0)/5).toFixed(1)} vs scaled ${(dotsScaled.reduce((a,b)=>a+Math.abs(b),0)/5).toFixed(1)}`,PL,20);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`그래디언트 비율 (B/A) = ${(gB/Math.max(gA,1e-9)).toFixed(0)}× — 큰 d_k에서 정규화의 효과가 극단적`,PL,H-15);
+    }
+    document.getElementById('dk').addEventListener('input',draw);
+    document.getElementById('dkRegen').onclick=regen;
+    regen();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 위치 측정만으로 속도까지 추정 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 위치 측정만으로 속도까지 추정</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/05-kalman-2d.html">Week 5. 칼만 필터 (2D) — 위치+속도 동시 추정</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 위치 측정만으로 속도까지 추정</h4>
+    <p>차량이 등속도 모델로 움직입니다. 위치만 측정(잡음 ±$\sqrt{R}$)하지만 칼만 필터는 위치+속도를 모두 추정해요. 위쪽 그래프가 위치, 아래쪽이 추정 속도. <strong>측정값엔 속도 정보가 없는데도 공분산의 비대각 항으로 속도가 학습됩니다</strong>.</p>
+    <canvas id="kf2Mc" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>측정 잡음 R <span class="val" id="k2RV">4</span><input type="range" id="k2R" min="0.1" max="20" step="0.1" value="4"></label>
+      <label>과정 잡음 q <span class="val" id="k2QV">0.1</span><input type="range" id="k2Q" min="0" max="2" step="0.05" value="0.1"></label>
+      <button id="k2Rst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 진짜 위치/속도 &nbsp; 🔴 측정 위치 &nbsp; 🔵 KF 추정</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kf2Mc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t=0,p=0,v=2,xh=[0,0],P=[[1,0],[0,1]],hist=[];
+    document.getElementById('k2Rst').onclick=()=>{t=0;p=0;v=2;xh=[0,0];P=[[1,0],[0,1]];hist=[];};
+    function loop(){
+      const R=+document.getElementById('k2R').value;
+      const q=+document.getElementById('k2Q').value;
+      document.getElementById('k2RV').textContent=R.toFixed(1);
+      document.getElementById('k2QV').textContent=q.toFixed(2);
+      const dt=0.1;
+      // truth: occasional velocity bumps
+      if(Math.random()<0.01)v += (Math.random()-0.5)*1.5;
+      p += v*dt;
+      const z = p + (Math.random()*2-1)*Math.sqrt(R)*1.2;
+      // predict
+      const F=[[1,dt],[0,1]];
+      const xp=[F[0][0]*xh[0]+F[0][1]*xh[1], F[1][0]*xh[0]+F[1][1]*xh[1]];
+      const FP=[[F[0][0]*P[0][0]+F[0][1]*P[1][0], F[0][0]*P[0][1]+F[0][1]*P[1][1]],
+                [F[1][0]*P[0][0]+F[1][1]*P[1][0], F[1][0]*P[0][1]+F[1][1]*P[1][1]]];
+      const Pp=[[FP[0][0]*F[0][0]+FP[0][1]*F[0][1]+q*0.01, FP[0][0]*F[1][0]+FP[0][1]*F[1][1]],
+                [FP[1][0]*F[0][0]+FP[1][1]*F[0][1], FP[1][0]*F[1][0]+FP[1][1]*F[1][1]+q]];
+      // update
+      const S=Pp[0][0]+R;
+      const K=[Pp[0][0]/S, Pp[1][0]/S];
+      const y=z-xp[0];
+      xh=[xp[0]+K[0]*y, xp[1]+K[1]*y];
+      P=[[(1-K[0])*Pp[0][0], (1-K[0])*Pp[0][1]],
+         [Pp[1][0]-K[1]*Pp[0][0], Pp[1][1]-K[1]*Pp[0][1]]];
+      hist.push({p,v,z,ph:xh[0],vh:xh[1]});
+      if(hist.length>250)hist.shift();
+      t+=dt;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // top: position
+      const ox=40,oy=160,w=W-60,h=120;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';ctx.fillText('위치',12,40);
+      const allP=hist.map(h=>[h.p,h.z,h.ph]).flat();
+      const pmin=Math.min(...allP),pmax=Math.max(...allP);
+      const sy1=v=>oy-(v-pmin)/(pmax-pmin+0.01)*(h-10);
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=ox+i/250*w,yy=sy1(h.p);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#c62828';
+      hist.forEach((h,i)=>{ctx.beginPath();ctx.arc(ox+i/250*w,sy1(h.z),1.4,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=ox+i/250*w,yy=sy1(h.ph);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      // bottom: velocity
+      const oy2=H-30,h2=120;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy2);ctx.lineTo(ox+w,oy2);ctx.moveTo(ox,oy2-h2);ctx.lineTo(ox,oy2);ctx.stroke();
+      ctx.fillStyle='#666';ctx.fillText('속도 (측정 안함! 추정만)',12,oy2-h2+10);
+      const allV=hist.map(h=>[h.v,h.vh]).flat();
+      const vmin=Math.min(-3,...allV),vmax=Math.max(3,...allV);
+      const sy2=v=>oy2-(v-vmin)/(vmax-vmin+0.01)*(h2-10);
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=ox+i/250*w,yy=sy2(h.v);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=ox+i/250*w,yy=sy2(h.vh);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText(`P[0][1] (위치-속도 공분산) = ${P[0][1].toFixed(3)}`,W-260,oy2-h2+10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 비용 등고선과 경사하강 경로 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 비용 등고선과 경사하강 경로</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/03-regression-1.html">Week 3. 회귀 1: 선형회귀와 경사하강법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비용 등고선과 경사하강 경로</h4>
+    <p>MSE 비용을 등고선으로 그리고, 시작점에서 경사하강이 어떤 경로로 최적점을 향해 가는지 추적합니다. 학습률을 바꿔보면 경로가 어떻게 변하는지 볼 수 있습니다.</p>
+    <canvas id="contour" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>학습률 α <span class="val" id="ctaV">0.05</span><input type="range" id="cta" min="0.001" max="0.4" step="0.005" value="0.05"></label>
+      <label>반복 횟수 <span class="val" id="ctnV">30</span><input type="range" id="ctn" min="5" max="100" step="1" value="30"></label>
+      <button id="ctR">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('contour');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[[1,2.1],[2,3.0],[3,4.9],[4,7.2],[5,9.0]];
+    function loss(w,b){let s=0;data.forEach(([x,y])=>{const e=w*x+b-y;s+=e*e;});return s/data.length;}
+    function grad(w,b){let gw=0,gb=0;data.forEach(([x,y])=>{const e=w*x+b-y;gw+=2*e*x;gb+=2*e;});return [gw/data.length,gb/data.length];}
+    function draw(){
+      const lr=+document.getElementById('cta').value;
+      const iters=+document.getElementById('ctn').value;
+      document.getElementById('ctaV').textContent=lr.toFixed(3);
+      document.getElementById('ctnV').textContent=iters;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const wmn=-1,wmx=4,bmn=-3,bmx=3;
+      const Nx=80,Ny=60;
+      // contours
+      for(let i=0;i<Nx;i++)for(let j=0;j<Ny;j++){
+        const w=wmn+(wmx-wmn)*i/Nx,b=bmn+(bmx-bmn)*j/Ny;
+        const L=loss(w,b);
+        const t=Math.min(1,L/40);
+        const r=Math.floor(255*(1-t)+200*t);
+        const g=Math.floor(255*(1-t)+220*t);
+        const bl=Math.floor(255*(1-t)+255*t);
+        ctx.fillStyle=`rgb(${r},${g},${bl})`;
+        ctx.fillRect(60+i*(W-100)/Nx,30+j*(H-80)/Ny,(W-100)/Nx+1,(H-80)/Ny+1);
+      }
+      // contour lines
+      ctx.strokeStyle='#888';ctx.lineWidth=0.5;
+      for(let lv of [0.5,2,5,10,20,40]){
+        ctx.beginPath();
+        for(let i=0;i<Nx;i++){
+          const w=wmn+(wmx-wmn)*i/Nx;
+          // find b where loss == lv (rough)
+          for(let j=0;j<Ny-1;j++){
+            const b1=bmn+(bmx-bmn)*j/Ny,b2=bmn+(bmx-bmn)*(j+1)/Ny;
+            if((loss(w,b1)-lv)*(loss(w,b2)-lv)<0){
+              const x=60+i*(W-100)/Nx;
+              const y=30+j*(H-80)/Ny;
+              ctx.fillStyle='rgba(0,0,0,0.3)';
+              ctx.fillRect(x,y,1,1);
+            }
+          }
+        }
+      }
+      // gradient descent path
+      let w=-0.5,b=-2.5;
+      const path=[[w,b]];
+      for(let i=0;i<iters;i++){const [gw,gb]=grad(w,b);w-=lr*gw;b-=lr*gb;path.push([w,b]);if(Math.abs(w)>10||Math.abs(b)>10)break;}
+      function px(w){return 60+(w-wmn)/(wmx-wmn)*(W-100);}
+      function py(b){return 30+(b-bmn)/(bmx-bmn)*(H-80);}
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;
+      ctx.beginPath();
+      path.forEach((p,i)=>{const x=px(p[0]),y=py(p[1]);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      ctx.fillStyle='#c62828';
+      path.forEach(p=>{ctx.beginPath();ctx.arc(px(p[0]),py(p[1]),3,0,Math.PI*2);ctx.fill();});
+      // optimum (analytical)
+      const N=data.length;
+      const sumx=data.reduce((s,[x,y])=>s+x,0),sumy=data.reduce((s,[x,y])=>s+y,0);
+      const sumxx=data.reduce((s,[x,y])=>s+x*x,0),sumxy=data.reduce((s,[x,y])=>s+x*y,0);
+      const wOpt=(N*sumxy-sumx*sumy)/(N*sumxx-sumx*sumx);
+      const bOpt=(sumy-wOpt*sumx)/N;
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(px(wOpt),py(bOpt),6,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`초록 = 정규방정식 해 (w*=${wOpt.toFixed(2)}, b*=${bOpt.toFixed(2)})`,60,22);
+      ctx.fillStyle='#c62828';ctx.fillText(`빨강 = 경사하강 경로 (현재 w=${path[path.length-1][0].toFixed(2)}, b=${path[path.length-1][1].toFixed(2)})`,60,H-15);
+    }
+    document.getElementById('cta').addEventListener('input',draw);
+    document.getElementById('ctn').addEventListener('input',draw);
+    document.getElementById('ctR').addEventListener('click',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

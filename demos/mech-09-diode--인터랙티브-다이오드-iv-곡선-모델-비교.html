@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 다이오드 I–V 곡선 — 모델 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 다이오드 I–V 곡선 — 모델 비교</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/09-diode.html">Week 9. 반도체와 다이오드 — 한 방향만 흐르는 전기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 다이오드 I–V 곡선 — 모델 비교</h4>
+    <p>실제 지수 모델, 이상적 모델, 정전압(0.7V) 모델을 같은 그래프에 겹쳐 봅니다. 5V급 회로에서는 정전압 모델 오차가 거의 없어 모든 손계산의 표준이 됩니다.</p>
+    <canvas id="ivCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>모델
+        <select id="ivSel"><option value="all">전부 보기</option><option value="real">실제 (지수)</option><option value="ideal">이상적</option><option value="cv">정전압 0.7V</option></select>
+      </label>
+      <label>n (이상계수) <span class="val" id="ivnV">1.5</span><input type="range" id="ivn" min="1" max="2" step="0.1" value="1.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ivCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Is=1e-12,VT=0.0259;
+    const Vmin=-2,Vmax=1.2,Imin=-0.2,Imax=10;
+    function x(v){return 60+(v-Vmin)/(Vmax-Vmin)*(W-90);}
+    function y(i){return H-50-(i-Imin)/(Imax-Imin)*(H-90);}
+    function draw(){
+      const sel=document.getElementById('ivSel').value;
+      const n=+document.getElementById('ivn').value;
+      document.getElementById('ivnV').textContent=n.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';
+      for(let v=Math.ceil(Vmin);v<=Vmax;v+=0.5){ctx.beginPath();ctx.moveTo(x(v),y(Imin));ctx.lineTo(x(v),y(Imax));ctx.stroke();}
+      for(let i=0;i<=Imax;i+=2){ctx.beginPath();ctx.moveTo(x(Vmin),y(i));ctx.lineTo(x(Vmax),y(i));ctx.stroke();}
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x(Vmin),y(0));ctx.lineTo(x(Vmax),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),y(Imin));ctx.lineTo(x(0),y(Imax));ctx.stroke();
+      // Real
+      if(sel==='all'||sel==='real'){
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+        for(let v=Vmin;v<=Vmax;v+=0.005){
+          const i=Is*(Math.exp(v/(n*VT))-1)*1000; // mA
+          if(i>Imax)continue;
+          if(v===Vmin)ctx.moveTo(x(v),y(Math.max(Imin,i)));else ctx.lineTo(x(v),y(Math.max(Imin,Math.min(Imax,i))));
+        }
+        ctx.stroke();
+      }
+      // Ideal
+      if(sel==='all'||sel==='ideal'){
+        ctx.strokeStyle='#1b5e20';ctx.lineWidth=2.5;ctx.setLineDash([6,4]);
+        ctx.beginPath();
+        ctx.moveTo(x(Vmin),y(0));ctx.lineTo(x(0),y(0));ctx.lineTo(x(0),y(Imax));
+        ctx.stroke();ctx.setLineDash([]);
+      }
+      // CV 0.7V
+      if(sel==='all'||sel==='cv'){
+        ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.setLineDash([3,3]);
+        ctx.beginPath();
+        ctx.moveTo(x(Vmin),y(0));ctx.lineTo(x(0.7),y(0));ctx.lineTo(x(0.7),y(Imax));
+        ctx.stroke();ctx.setLineDash([]);
+      }
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let v=Math.ceil(Vmin);v<=Vmax;v+=0.5){ctx.fillText(v.toFixed(1),x(v)-8,H-35);}
+      for(let i=0;i<=Imax;i+=2){ctx.fillText(i,30,y(i)+4);}
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('V_D [V]',W/2-15,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('I_D [mA]',-25,0);ctx.restore();
+      ctx.fillStyle='#0b5fff';ctx.fillText('실제 (지수)',W-150,30);
+      ctx.fillStyle='#1b5e20';ctx.fillText('이상적 (0V 단락)',W-150,50);
+      ctx.fillStyle='#c62828';ctx.fillText('정전압 0.7V (표준)',W-150,70);
+    }
+    ['ivSel','ivn'].forEach(id=>{const el=document.getElementById(id);el.addEventListener('input',draw);el.addEventListener('change',draw);});
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

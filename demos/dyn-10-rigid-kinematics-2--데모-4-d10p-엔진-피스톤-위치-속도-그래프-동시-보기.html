@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 4 (d10p): 엔진 피스톤 — 위치/속도 그래프 동시 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 4 (d10p): 엔진 피스톤 — 위치/속도 그래프 동시 보기</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/10-rigid-kinematics-2.html">Week 10. 강체의 평면 운동학 — 일반 평면운동과 순간중심</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 4 (d10p): 엔진 피스톤 — 위치/속도 그래프 동시 보기</h4>
+    <p>크랭크가 일정 각속도로 도는데, 피스톤은 비선형 속도로 왕복. <strong>$\theta = 0°, 180°$에서 속도 0 (dead center)</strong>, $\theta = 90°$ 부근에서 최대. $\theta$ 한 사이클 동안의 위치/속도/가속도를 동시에 그려 직관 확인.</p>
+    <canvas id="d10pC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>크랭크 r (cm) <span class="val" id="d10prV">5</span><input type="range" id="d10pr" min="2" max="8" step="0.5" value="5"></label>
+      <label>로드 l (cm) <span class="val" id="d10plV">15</span><input type="range" id="d10pl" min="8" max="25" step="0.5" value="15"></label>
+      <label>크랭크 회전수 (rpm) <span class="val" id="d10pwV">600</span><input type="range" id="d10pw" min="100" max="3000" step="50" value="600"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d10pC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['d10pr','d10pl','d10pw'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let phi=0;
+    function loop(){
+      const r=+sl('d10pr').value*0.01,l=+sl('d10pl').value*0.01;
+      const rpm=+sl('d10pw').value,w=rpm*2*Math.PI/60;
+      phi+=w*0.025;if(phi>2*Math.PI)phi-=2*Math.PI;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // mechanism on top
+      const cx=200,cy=120,sc=600;
+      const A={x:cx+r*sc*Math.cos(phi),y:cy-r*sc*Math.sin(phi)};
+      // piston B at x = r cos+sqrt(l^2-r^2 sin^2)
+      const xp=r*Math.cos(phi)+Math.sqrt(l*l-r*r*Math.sin(phi)*Math.sin(phi));
+      const B={x:cx+xp*sc,y:cy};
+      x.strokeStyle='#888';x.lineWidth=2;x.beginPath();x.moveTo(cx-30,cy);x.lineTo(cx+l*sc+50,cy);x.stroke();
+      x.strokeStyle='#444';x.lineWidth=1;
+      x.beginPath();x.arc(cx,cy,r*sc,0,Math.PI*2);x.stroke();
+      x.strokeStyle='#2e7d32';x.lineWidth=4;x.beginPath();x.moveTo(cx,cy);x.lineTo(A.x,A.y);x.stroke();
+      x.strokeStyle='#444';x.lineWidth=4;x.beginPath();x.moveTo(A.x,A.y);x.lineTo(B.x,B.y);x.stroke();
+      x.fillStyle='#0b5fff';x.fillRect(B.x-12,cy-18,30,36);x.strokeStyle='#333';x.strokeRect(B.x-12,cy-18,30,36);
+      x.fillStyle='#444';x.beginPath();x.arc(cx,cy,4,0,Math.PI*2);x.fill();
+      x.fillStyle='#fff';x.beginPath();x.arc(A.x,A.y,4,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // graph at bottom
+      const gT=200,gB=350,gL=20,gR=620;
+      x.strokeStyle='#d0d4d9';x.strokeRect(gL,gT,gR-gL,gB-gT);
+      const zeroY=(gT+gB)/2;
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.moveTo(gL,zeroY);x.lineTo(gR,zeroY);x.stroke();x.setLineDash([]);
+      // plot x_dot and x over phi 0..2pi
+      let xMax=r+l,xMin=l-r;
+      let vMax=r*w*1.5;
+      x.strokeStyle='#0b5fff';x.lineWidth=1.8;x.beginPath();
+      for(let i=0;i<=200;i++){
+        const ph=i/200*2*Math.PI;
+        const pos=r*Math.cos(ph)+Math.sqrt(l*l-r*r*Math.sin(ph)*Math.sin(ph));
+        const px2=gL+(i/200)*(gR-gL);
+        const py2=zeroY-(pos-(xMax+xMin)/2)/((xMax-xMin)/2)*((gB-gT)/2-8);
+        if(i===0)x.moveTo(px2,py2);else x.lineTo(px2,py2);
+      }
+      x.stroke();
+      x.strokeStyle='#c62828';x.beginPath();
+      for(let i=0;i<=200;i++){
+        const ph=i/200*2*Math.PI;
+        const vel=-r*w*Math.sin(ph)*(1+r*Math.cos(ph)/Math.sqrt(l*l-r*r*Math.sin(ph)*Math.sin(ph)));
+        const px2=gL+(i/200)*(gR-gL);
+        const py2=zeroY-vel/vMax*((gB-gT)/2-8);
+        if(i===0)x.moveTo(px2,py2);else x.lineTo(px2,py2);
+      }
+      x.stroke();
+      // current phi marker
+      const px=gL+(phi/(2*Math.PI))*(gR-gL);
+      x.strokeStyle='#9e35b8';x.lineWidth=1.5;x.beginPath();x.moveTo(px,gT);x.lineTo(px,gB);x.stroke();
+      // legend
+      x.fillStyle='#0b5fff';x.fillRect(20,182,12,3);x.fillStyle='#333';x.font='11px sans-serif';x.fillText('피스톤 위치',38,188);
+      x.fillStyle='#c62828';x.fillRect(140,182,12,3);x.fillStyle='#333';x.fillText('피스톤 속도',158,188);
+      x.fillStyle='#9e35b8';x.fillText('현재 φ',265,188);
+      x.fillStyle='#444';x.font='12px Consolas,monospace';
+      const curV=-r*w*Math.sin(phi)*(1+r*Math.cos(phi)/Math.sqrt(l*l-r*r*Math.sin(phi)*Math.sin(phi)));
+      x.fillText('φ='+(phi*180/Math.PI).toFixed(0)+'°,  v='+curV.toFixed(2)+' m/s',330,188);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('θ=0°, 180°에서 dead center → v=0. 비대칭 곡선 = 엔진 진동의 1·2차 성분',gL,gB+12);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

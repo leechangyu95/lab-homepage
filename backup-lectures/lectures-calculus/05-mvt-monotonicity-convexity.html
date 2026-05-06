@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W5. 평균값 정리·단조성·볼록성 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html" class="active">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../calculus.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 5. 평균값 정리·단조성·볼록성</h1>
+  <p class="lead">도함수의 부호로 함수의 모양을 읽는 법. 1차 도함수가 증감을, 2차 도함수가 볼록성을 알려 줍니다. 이번 주는 그래프를 손으로 그리는 능력을 기릅니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>롤 정리</li>
+    <li>평균값 정리 (MVT)</li>
+    <li>1차 도함수 → 단조성</li>
+    <li>극값과 1·2계 판정법</li>
+    <li>2차 도함수 → 볼록성</li>
+    <li>변곡점</li>
+    <li>그래프 분석 종합 — 7단계 절차</li>
+    <li>인터랙티브: MVT 시각화</li>
+    <li>인터랙티브: 함수 모양 분석기</li>
+    <li>흔한 오해와 핵심 정리</li>
+    <li>더 깊이 공부하기</li>
+  </ol></div>
+
+  <h2>1. 롤 정리 (Rolle's Theorem)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>등산을 시작한 곳과 도착한 곳의 고도가 같다고 합시다. 그러면 도중에 반드시 <strong>한 번은 평지</strong>(지역적 정상 또는 분지)를 지났을 거예요. 그 평지에서 순간 기울기가 0 — 그게 롤 정리입니다.</p>
+
+  <h3>정리 진술</h3>
+  <p>$f$가 $[a, b]$에서 연속, $(a, b)$에서 미분 가능하고 $f(a) = f(b)$이면, $f'(c) = 0$인 $c \in (a, b)$가 적어도 하나 존재한다.</p>
+
+  <h2>2. 평균값 정리 (MVT, Mean Value Theorem)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>출발점부터 도착점까지의 평균 속력이 60 km/h였다면, 도중에 <strong>적어도 한 번은 정확히 60 km/h로 달린 순간</strong>이 존재합니다. 평균을 한 점에서 실제로 달성한 순간 — 그게 MVT.</p>
+
+  <h3>정리 진술</h3>
+  <p>$f$가 $[a, b]$에서 연속, $(a, b)$에서 미분 가능하면, 다음을 만족하는 $c \in (a, b)$가 적어도 하나 존재한다.</p>
+  $$ f'(c) = \frac{f(b) - f(a)}{b - a} $$
+  <p>그래프 위에서: 두 끝점을 잇는 할선과 <strong>평행한 접선</strong>이 도중에 반드시 한 번은 그어진다는 뜻.</p>
+
+  <h3>왜 강력한가?</h3>
+  <p>다음 두 결과가 MVT의 직접 따름.</p>
+  <ul>
+    <li><strong>$f' \equiv 0$이면 $f$는 상수.</strong> ("변하지 않는데 어떻게 다른 값?")</li>
+    <li><strong>$f'$이 두 함수에서 같으면 두 함수는 상수 차이.</strong> 적분의 정의와 직결되는 결과 (W9).</li>
+  </ul>
+
+  <h2>3. 1차 도함수 → 단조성</h2>
+
+  $$ f'(x) > 0 \;\text{on } I \Rightarrow f \text{ 증가}, \quad f'(x) < 0 \;\text{on } I \Rightarrow f \text{ 감소} $$
+
+  <h3>예제 3.1</h3>
+  <p>$f(x) = x^3 - 3x$의 단조 구간.</p>
+  <p>$f'(x) = 3x^2 - 3 = 3(x-1)(x+1)$. 부호:</p>
+  <ul>
+    <li>$x < -1$: $f' > 0$ → 증가</li>
+    <li>$-1 < x < 1$: $f' < 0$ → 감소</li>
+    <li>$x > 1$: $f' > 0$ → 증가</li>
+  </ul>
+  <p>그러므로 $x = -1$에서 극대, $x = 1$에서 극소.</p>
+
+  <h2>4. 극값과 1·2계 판정법</h2>
+
+  <h3>1계 판정법 (First Derivative Test)</h3>
+  <p>임계점 $c$ ($f'(c) = 0$ 또는 미분 불가능)에서:</p>
+  <ul>
+    <li>$f'$이 $c$ 직전에 양수, 직후에 음수 → <strong>극대</strong>.</li>
+    <li>$f'$이 $c$ 직전에 음수, 직후에 양수 → <strong>극소</strong>.</li>
+    <li>부호가 바뀌지 않음 → 극값 아님.</li>
+  </ul>
+
+  <h3>2계 판정법 (Second Derivative Test)</h3>
+  <p>$f'(c) = 0$이고 $f''(c) \ne 0$이면:</p>
+  <ul>
+    <li>$f''(c) > 0$ → <strong>극소</strong> (그릇 모양).</li>
+    <li>$f''(c) < 0$ → <strong>극대</strong> (역그릇 모양).</li>
+    <li>$f''(c) = 0$ → 판정 불가, 1계로 다시 봐야 함.</li>
+  </ul>
+
+  <h2>5. 2차 도함수 → 볼록성</h2>
+
+  <h3>정의</h3>
+  <p>구간 $I$에서 $f'' > 0$이면 <strong>볼록(convex, concave up)</strong>, $f'' < 0$이면 <strong>오목(concave down)</strong>이라 합니다.</p>
+  <ul>
+    <li>볼록 함수: 그릇 모양. 임의의 두 점을 잇는 할선이 곡선보다 <em>위</em>.</li>
+    <li>오목 함수: 역그릇 모양. 할선이 곡선보다 <em>아래</em>.</li>
+  </ul>
+
+  <h3>왜 중요한가?</h3>
+  <p>최적화에서 결정적입니다. 볼록 함수는 <strong>지역 최저점이 곧 전역 최저점</strong>이라 골치가 없어요. 오목/볼록이 섞여 있으면 가짜 극값에 속을 수 있습니다.</p>
+
+  <h3>예제 5.1 — AM-GM 부등식 ($\ln x$의 오목성에서)</h3>
+  <p>$\ln x$의 도함수 $1/x$, 2차 도함수 $-1/x^2 < 0$이므로 $\ln x$는 $x > 0$에서 오목.</p>
+  <p>오목 함수의 정의(할선이 곡선 아래)로부터 $\ln\!\bigl(\tfrac{a+b}{2}\bigr) \ge \tfrac{1}{2}(\ln a + \ln b) = \ln\sqrt{ab}$. 즉
+  $\dfrac{a+b}{2} \ge \sqrt{ab}$ — 산술-기하 평균 부등식이 한 줄에 떨어집니다.</p>
+
+  <h2>6. 변곡점 (Inflection Point)</h2>
+
+  <p>$f$가 그 점에서 연속이고, 그 점을 지나면서 $f''$의 부호가 바뀌면 그 점을 <strong>변곡점</strong>이라 합니다.</p>
+  <p>주의: $f''(c) = 0$이라고 무조건 변곡점이 되는 게 아닙니다. 부호가 바뀌어야 합니다 (예: $f(x) = x^4$의 $x = 0$은 $f''(0) = 0$이지만 변곡점 아님).</p>
+
+  <h2>7. 그래프 분석 종합 — 7단계 절차</h2>
+
+  <ol>
+    <li>정의역과 점근선.</li>
+    <li>대칭성 (우함수·기함수·주기) 검토.</li>
+    <li>$x$절편·$y$절편.</li>
+    <li>$f'$의 부호로 단조 구간.</li>
+    <li>임계점에서 1계 또는 2계 판정으로 극값 분류.</li>
+    <li>$f''$의 부호로 볼록 구간과 변곡점.</li>
+    <li>표를 그리고 그래프 스케치.</li>
+  </ol>
+
+  <h2>8. 인터랙티브: MVT 시각화</h2>
+
+  <div class="demo">
+    <h4>🎮 평균값 정리 — 평행 접선 찾기</h4>
+    <p>구간 $[a, b]$의 끝점을 슬라이더로 잡으면, 두 점을 잇는 할선과 평행한 접선의 위치(MVT의 $c$)가 자동으로 표시됩니다. 어떤 함수에서도 그런 $c$가 항상 존재함을 확인하세요.</p>
+    <canvas id="mvt" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>a <span class="val" id="mvAV">-1.50</span><input type="range" id="mvA" min="-2.5" max="0.5" step="0.05" value="-1.5"></label>
+      <label>b <span class="val" id="mvBV">2.00</span><input type="range" id="mvB" min="0.5" max="2.8" step="0.05" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mvt'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const xR=[-3,3],yR=[-3,5];
+    const M={l:50,r:20,t:20,b:30};
+    function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+    function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function f(v){return 0.5*v*v*v - v + 1;}
+    function fp(v){return 1.5*v*v - 1;}
+    function loop(){
+      const a=+document.getElementById('mvA').value;
+      const b=+document.getElementById('mvB').value;
+      document.getElementById('mvAV').textContent=a.toFixed(2);
+      document.getElementById('mvBV').textContent=b.toFixed(2);
+      const slope=(f(b)-f(a))/(b-a);
+      // find c: fp(c) = slope. Since fp(v)=1.5v^2-1, c=±sqrt((slope+1)/1.5)
+      const arg=(slope+1)/1.5;
+      let cs=[];
+      if(arg>=0){cs=[Math.sqrt(arg),-Math.sqrt(arg)].filter(v=>v>a&&v<b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // function
+      x.strokeStyle='#222';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=0.01){
+        const yv=f(v);if(yv<yR[0]||yv>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // secant a-b (red)
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      x.moveTo(px(a),py(f(a)));x.lineTo(px(b),py(f(b)));x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(px(a),py(f(a)),5,0,Math.PI*2);x.fill();
+      x.beginPath();x.arc(px(b),py(f(b)),5,0,Math.PI*2);x.fill();
+      // tangent at c (green dashed) — same slope as secant
+      x.strokeStyle='#1b5e20';x.lineWidth=2;x.setLineDash([6,4]);
+      cs.forEach(cv=>{
+        const fc=f(cv);
+        const x0=xR[0],y0=fc+slope*(x0-cv);
+        const x1=xR[1],y1=fc+slope*(x1-cv);
+        x.beginPath();x.moveTo(px(x0),py(y0));x.lineTo(px(x1),py(y1));x.stroke();
+        x.fillStyle='#1b5e20';x.beginPath();x.arc(px(cv),py(fc),5,0,Math.PI*2);x.fill();
+      });
+      x.setLineDash([]);
+      // labels
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('y = 0.5x³ − x + 1',M.l+10,M.t+18);
+      x.fillStyle='#c62828';
+      x.fillText('할선 기울기 = '+slope.toFixed(3),M.l+10,M.t+38);
+      x.fillStyle='#1b5e20';
+      const cstr=cs.map(v=>v.toFixed(3)).join(', ');
+      x.fillText('MVT 점 c ≈ '+(cstr||'(범위 밖)'),M.l+10,M.t+58);
+      requestAnimationFrame(()=>setTimeout(loop,40));
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>9. 인터랙티브: 함수 모양 분석기</h2>
+
+  <div class="demo">
+    <h4>🎮 자동 함수 분석 — 단조·극값·볼록·변곡점</h4>
+    <p>함수를 골라 보세요. $f$ 그래프 위에 단조 구간(빨강/파랑)과 볼록·오목 구간(연한 색칠), 극값과 변곡점이 자동으로 표시됩니다.</p>
+    <canvas id="anly" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="anlyFn">
+          <option value="cubic" selected>x³ − 3x</option>
+          <option value="quartic">x⁴ − 4x²</option>
+          <option value="bell">e^(-x²/2)</option>
+          <option value="rational">x/(1+x²)</option>
+        </select>
+      </label>
+    </div>
+    <p id="anlyInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('anly'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function fn(v){
+      const m=document.getElementById('anlyFn').value;
+      if(m==='cubic')return{f:v**3-3*v,d:3*v*v-3,d2:6*v,xR:[-3,3],yR:[-4,4]};
+      if(m==='quartic')return{f:v**4-4*v*v,d:4*v**3-8*v,d2:12*v*v-8,xR:[-3,3],yR:[-5,9]};
+      if(m==='bell'){const e=Math.exp(-v*v/2);return{f:e,d:-v*e,d2:(v*v-1)*e,xR:[-3,3],yR:[-0.2,1.2]};}
+      const D=1+v*v;return{f:v/D,d:(1-v*v)/(D*D),d2:2*v*(v*v-3)/(D*D*D),xR:[-4,4],yR:[-0.7,0.7]};
+    }
+    function loop(){
+      const ref=fn(0.01);
+      const xR=ref.xR,yR=ref.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // sample
+      const N=600;
+      const samples=[];
+      for(let i=0;i<=N;i++){
+        const v=xR[0]+i*(xR[1]-xR[0])/N;
+        samples.push({v,...fn(v)});
+      }
+      // background shade based on f''
+      for(let i=0;i<N;i++){
+        const a=samples[i],b=samples[i+1];
+        const sgn=a.d2>=0?1:-1;
+        x.fillStyle=sgn>0?'rgba(11,95,255,0.06)':'rgba(245,124,0,0.06)';
+        x.fillRect(px(a.v),py(yR[1]),px(b.v)-px(a.v),py(yR[0])-py(yR[1]));
+      }
+      // curve segmented by f' sign
+      for(let i=0;i<N;i++){
+        const a=samples[i],b=samples[i+1];
+        const sgn=a.d>=0?'#1b5e20':'#c62828';
+        x.strokeStyle=sgn;x.lineWidth=2.5;x.beginPath();
+        x.moveTo(px(a.v),py(a.f));x.lineTo(px(b.v),py(b.f));x.stroke();
+      }
+      // mark critical and inflection points
+      const ext=[],infl=[];
+      for(let i=1;i<N;i++){
+        if(samples[i-1].d*samples[i+1].d<0)ext.push(samples[i]);
+        if(samples[i-1].d2*samples[i+1].d2<0)infl.push(samples[i]);
+      }
+      ext.forEach(p=>{x.fillStyle='#c62828';x.beginPath();x.arc(px(p.v),py(p.f),5,0,Math.PI*2);x.fill();});
+      infl.forEach(p=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(px(p.v),py(p.f),5,0,Math.PI*2);x.fill();});
+      // legend
+      x.fillStyle='#1b5e20';x.fillRect(M.l+10,M.t+10,16,3);x.fillStyle='#222';x.font='12px sans-serif';x.fillText("f'>0 증가",M.l+30,M.t+15);
+      x.fillStyle='#c62828';x.fillRect(M.l+110,M.t+10,16,3);x.fillStyle='#222';x.fillText("f'<0 감소",M.l+130,M.t+15);
+      x.fillStyle='#c62828';x.beginPath();x.arc(M.l+220,M.t+13,4,0,Math.PI*2);x.fill();x.fillStyle='#222';x.fillText('극값',M.l+228,M.t+17);
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(M.l+260,M.t+13,4,0,Math.PI*2);x.fill();x.fillStyle='#222';x.fillText('변곡',M.l+268,M.t+17);
+      // info
+      const exStr=ext.map(p=>'('+p.v.toFixed(2)+', '+p.f.toFixed(2)+')').join('  ');
+      const inStr=infl.map(p=>'('+p.v.toFixed(2)+', '+p.f.toFixed(2)+')').join('  ');
+      document.getElementById('anlyInfo').textContent='극값: '+(exStr||'없음')+'    ·    변곡점: '+(inStr||'없음');
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>10. 흔한 오해와 핵심 정리</h2>
+
+  <div class="note"><strong>흔한 오해 ① — "$f'(c) = 0$이면 극값이다"</strong> —
+  거짓. $f(x) = x^3$의 $x = 0$은 $f'(0) = 0$이지만 극값 아님. 1계 판정으로 부호 변화가 있어야 극값.</div>
+
+  <div class="note"><strong>흔한 오해 ② — "$f''(c) = 0$이면 변곡점이다"</strong> —
+  거짓. $f(x) = x^4$의 $x = 0$은 $f''(0) = 0$이지만 변곡점 아님 (양쪽이 모두 볼록). $f''$의 <em>부호 변화</em>가 있어야 변곡점.</div>
+
+  <div class="note"><strong>흔한 오해 ③ — "MVT는 닫힌 구간 끝점에서도 성립한다"</strong> —
+  $c$는 <em>열린 구간</em> $(a, b)$ 안에 있어야 합니다. 끝점에서는 한쪽 도함수만 정의되니 MVT의 보장이 닿지 않아요.</div>
+
+  <h3>이번 주의 핵심 한 문장</h3>
+  <div class="tip"><strong>"$f'$의 부호로 증감을, $f''$의 부호로 볼록성을 읽는다. 임계점과 변곡점을 찾아 모양을 분류하면 어떤 함수의 그래프든 그릴 수 있다."</strong></div>
+
+  <h2>11. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Stewart, Ch.4.1~4.3.</li>
+    <li>Thomas, Ch.4.1~4.4.</li>
+    <li>다음 주 예고: 단조·볼록 분석을 무기로 <strong>최적화 문제</strong>를 풀고, 닫힌 식이 안 풀리는 경우 <strong>뉴턴법</strong>으로 수치 해를 구합니다.</li>
+  </ul>
+
+  <h2>12. 친절 보강 — 비유로 다시 배우는 MVT·단조성·볼록성</h2>
+
+  <p class="lead">아래는 1학년 학부생 눈높이에서 다시 정리한 보충 강의입니다. 같은 내용이라도 비유 → 정의 → 예제 → 자가 점검의 순서로 한 번 더 다지면, 시험장에서 흔들리지 않습니다.</p>
+
+  <h3>12.1 평균값 정리, 운전 이야기로 한 번 더</h3>
+
+  <div class="tip"><strong>한 줄 비유</strong> — "공주에서 천안까지 평균 60 km/h였다면, <em>도중 어느 한 순간</em>의 속도계는 정확히 60 km/h를 가리켰다." 이게 평균값 정리의 전부입니다.</div>
+
+  <p>속도위반 단속의 구간 단속을 생각해 봅시다. A 지점과 B 지점 사이의 평균 속도가 110 km/h였다면, 두 지점 사이 어딘가에서 <strong>그 110 km/h를 한 번은 진짜로 달성한 순간</strong>이 있다는 게 MVT의 직관입니다. 운전자는 "저는 항상 100 km/h만 밟았어요"라고 우길 수 없어요. 평균이 110이면 어느 순간엔 110이 등장해야 하니까요.</p>
+
+  <p>수학으로 옮기면 거리 함수 $s(t)$가 닫힌 구간 $[a, b]$에서 연속이고 열린 구간에서 미분 가능하면, 평균 속도 $\dfrac{s(b)-s(a)}{b-a}$와 같은 순간 속도 $s'(c)$가 적어도 한 점에서 등장한다는 뜻이 됩니다.</p>
+
+  <h3>12.2 롤 정리는 MVT의 특수 사례</h3>
+
+  <p>롤 정리는 MVT에서 양 끝점 값이 같은($f(a)=f(b)$) 특수 경우입니다. 그 때 평균 변화율이 0이니, MVT가 보장하는 $c$에서 $f'(c)=0$이 됩니다. 즉:</p>
+
+  <table>
+    <thead><tr><th>비교</th><th>롤 정리</th><th>평균값 정리</th></tr></thead>
+    <tbody>
+      <tr><td>가정</td><td>$f$ 연속/미분 + $f(a)=f(b)$</td><td>$f$ 연속/미분</td></tr>
+      <tr><td>결론</td><td>$\exists c\in(a,b),\ f'(c)=0$</td><td>$\exists c\in(a,b),\ f'(c)=\dfrac{f(b)-f(a)}{b-a}$</td></tr>
+      <tr><td>비유</td><td>고도가 같으면 도중 어느 평지를 지난다</td><td>평균 속력이 60이면 도중 한 순간 60</td></tr>
+      <tr><td>그래프</td><td>수평 접선이 적어도 한 번</td><td>할선과 평행한 접선이 적어도 한 번</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note"><strong>꼭 기억</strong> — MVT는 "존재"만 보장합니다. 어디 있는지 정확히 찾아주는 게 아니에요. 그래도 부등식 증명에 굉장히 강력합니다(예: $\sin$의 립시츠 성질, $|\sin x - \sin y|\le |x-y|$).</div>
+
+  <h3>12.3 SVG로 보는 MVT</h3>
+
+  <p>아래 그림은 두 끝점을 잇는 빨간 할선과, 같은 기울기를 갖는 초록 접선이 도중에 반드시 한 번은 그어진다는 사실을 시각화합니다.</p>
+
+  <svg viewBox="0 0 480 260" width="100%" style="max-width:520px;background:#fafbfc;border:1px solid #ddd">
+    <!-- axes -->
+    <line x1="40" y1="220" x2="460" y2="220" stroke="#888"/>
+    <line x1="60" y1="20" x2="60" y2="240" stroke="#888"/>
+    <!-- curve: a parabola-ish -->
+    <path d="M 60 200 Q 200 30 460 180" stroke="#222" stroke-width="2" fill="none"/>
+    <!-- secant -->
+    <line x1="80" y1="190" x2="440" y2="180" stroke="#c62828" stroke-width="2"/>
+    <circle cx="80" cy="190" r="5" fill="#c62828"/>
+    <circle cx="440" cy="180" r="5" fill="#c62828"/>
+    <text x="60" y="210" font-size="12" fill="#c62828">a</text>
+    <text x="445" y="200" font-size="12" fill="#c62828">b</text>
+    <!-- tangent at c (parallel to secant) -->
+    <line x1="180" y1="105" x2="380" y2="100" stroke="#1b5e20" stroke-width="2" stroke-dasharray="6 4"/>
+    <circle cx="270" cy="102" r="5" fill="#1b5e20"/>
+    <text x="265" y="92" font-size="12" fill="#1b5e20">c</text>
+    <text x="80" y="40" font-size="13" fill="#222">할선(빨강) ∥ 접선(초록)</text>
+  </svg>
+
+  <h3>12.4 단조성 — 부호로 산 모양을 읽기</h3>
+
+  <p>$f'$의 부호는 그래프의 "올라감/내려감"을 알려 주는 신호등입니다.</p>
+
+  <table>
+    <thead><tr><th>부호</th><th>해석</th><th>비유</th></tr></thead>
+    <tbody>
+      <tr><td>$f'(x) > 0$</td><td>$f$ 단조 증가</td><td>오르막. 등산하는 발걸음마다 고도가 올라감.</td></tr>
+      <tr><td>$f'(x) = 0$</td><td>임계점(평지/산정/계곡 가능)</td><td>잠시 평평한 능선. 더 봐야 어떤 곳인지 안다.</td></tr>
+      <tr><td>$f'(x) < 0$</td><td>$f$ 단조 감소</td><td>내리막. 한 발짝마다 고도가 떨어짐.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn"><strong>주의 1</strong> — "$f'>0$이면 증가"는 구간 전체에서 성립할 때만 깔끔합니다. 한 점에서만 양수라고 그 점 주변에서 증가가 보장되는 건 아닙니다. 항상 <em>구간 전체의 부호</em>를 살피세요.</div>
+
+  <h3>12.5 단계별 예제 — 단조성 분석</h3>
+
+  <p><strong>예제 12.5.1.</strong> $f(x) = x^4 - 4x^3$의 단조 구간을 구하라.</p>
+
+  <div class="sol">
+    <p><strong>1단계.</strong> 도함수: $f'(x) = 4x^3 - 12x^2 = 4x^2(x-3)$.</p>
+    <p><strong>2단계.</strong> $f'(x)=0$ → $x=0$(중복근), $x=3$.</p>
+    <p><strong>3단계.</strong> 부호표:</p>
+    <ul>
+      <li>$x<0$: $4x^2>0$, $(x-3)<0$ → $f'<0$ → 감소</li>
+      <li>$0<x<3$: $4x^2>0$, $(x-3)<0$ → $f'<0$ → 감소</li>
+      <li>$x>3$: $4x^2>0$, $(x-3)>0$ → $f'>0$ → 증가</li>
+    </ul>
+    <p><strong>결론.</strong> 감소 구간 $(-\infty, 3)$, 증가 구간 $(3, \infty)$. $x=0$은 임계점이지만 부호가 바뀌지 않으므로 극값이 아닙니다(평지가 잠깐 등장). $x=3$이 극소.</p>
+  </div>
+
+  <p><strong>예제 12.5.2.</strong> $g(x) = xe^{-x}$의 단조 구간.</p>
+
+  <div class="sol">
+    <p>곱 미분: $g'(x) = e^{-x} - xe^{-x} = (1-x)e^{-x}$. $e^{-x}>0$이므로 부호는 $1-x$가 결정.</p>
+    <p>$x<1$: $g'>0$ → 증가; $x>1$: $g'<0$ → 감소. 즉 $x=1$이 극대(최댓값 $1/e$).</p>
+  </div>
+
+  <p><strong>예제 12.5.3.</strong> $h(x) = \dfrac{x}{1+x^2}$의 단조 구간.</p>
+
+  <div class="sol">
+    <p>몫 미분: $h'(x) = \dfrac{(1+x^2)-x\cdot 2x}{(1+x^2)^2} = \dfrac{1-x^2}{(1+x^2)^2}$.</p>
+    <p>분모는 항상 양수. 분자 $1-x^2$의 부호:</p>
+    <ul>
+      <li>$|x|<1$ → $h'>0$ → 증가</li>
+      <li>$|x|>1$ → $h'<0$ → 감소</li>
+    </ul>
+    <p>$x=-1$ 극소(=$-1/2$), $x=1$ 극대(=$1/2$). 양 끝에서 0으로 수렴.</p>
+  </div>
+
+  <h3>12.6 볼록성 — 그릇과 엎은 그릇</h3>
+
+  <p>2차 도함수 $f''$는 곡선이 "위로 굽었는지(볼록)" 또는 "아래로 굽었는지(오목)"를 알려 줍니다. 비유 한 줄:</p>
+
+  <div class="tip"><strong>비유</strong> — 비가 와서 곡선 위에 물을 부어 봅시다. 물이 곡선 안에 <em>고이면</em> 볼록(그릇 모양, $f''>0$). 물이 양쪽으로 <em>흘러내리면</em> 오목(엎어 놓은 그릇, $f''<0$).</div>
+
+  <table>
+    <thead><tr><th>2차 도함수</th><th>이름</th><th>그림</th><th>예</th></tr></thead>
+    <tbody>
+      <tr><td>$f''(x) > 0$</td><td>볼록(convex, concave up)</td><td>U 모양 그릇</td><td>$x^2$, $e^x$, $-\ln x$</td></tr>
+      <tr><td>$f''(x) < 0$</td><td>오목(concave down)</td><td>역U 그릇</td><td>$\ln x$, $-x^2$, $\sqrt{x}$</td></tr>
+      <tr><td>$f''(x) = 0$</td><td>변곡 후보</td><td>S자 가운데</td><td>$x^3$의 $x=0$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>12.7 SVG로 보는 볼록 vs 오목</h3>
+
+  <svg viewBox="0 0 520 220" width="100%" style="max-width:560px;background:#fafbfc;border:1px solid #ddd">
+    <!-- left: convex -->
+    <line x1="20" y1="180" x2="240" y2="180" stroke="#888"/>
+    <line x1="130" y1="20" x2="130" y2="200" stroke="#888"/>
+    <path d="M 30 30 Q 130 240 230 30" stroke="#0b5fff" stroke-width="2.5" fill="none"/>
+    <text x="60" y="210" font-size="13" fill="#0b5fff">볼록 (f''>0)</text>
+    <text x="80" y="55" font-size="11" fill="#444">∪ 그릇</text>
+
+    <!-- right: concave -->
+    <line x1="280" y1="180" x2="500" y2="180" stroke="#888"/>
+    <line x1="390" y1="20" x2="390" y2="200" stroke="#888"/>
+    <path d="M 290 170 Q 390 -40 490 170" stroke="#f57c00" stroke-width="2.5" fill="none"/>
+    <text x="320" y="210" font-size="13" fill="#f57c00">오목 (f''<0)</text>
+    <text x="345" y="155" font-size="11" fill="#444">∩ 엎은 그릇</text>
+  </svg>
+
+  <h3>12.8 단계별 예제 — 볼록성 판정</h3>
+
+  <p><strong>예제 12.8.1.</strong> $f(x) = x^3 - 6x^2 + 9x + 1$의 볼록 구간과 변곡점.</p>
+
+  <div class="sol">
+    <p>$f'(x) = 3x^2 - 12x + 9$, $f''(x) = 6x - 12 = 6(x-2)$.</p>
+    <ul>
+      <li>$x<2$: $f''<0$ → 오목</li>
+      <li>$x>2$: $f''>0$ → 볼록</li>
+    </ul>
+    <p>$x=2$에서 부호가 바뀌므로 변곡점. $f(2) = 8 - 24 + 18 + 1 = 3$. 변곡점 $(2, 3)$.</p>
+  </div>
+
+  <p><strong>예제 12.8.2.</strong> $g(x) = x^4$의 $x=0$은 변곡점이 아닌 이유.</p>
+
+  <div class="sol">
+    <p>$g''(x) = 12x^2 \ge 0$. $x=0$에서 $g''(0)=0$이지만 양쪽 모두 $g''>0$(볼록). 부호가 바뀌지 않았으니 변곡점이 아닙니다. 단지 "잠깐 평평한 그릇 바닥".</p>
+  </div>
+
+  <p><strong>예제 12.8.3.</strong> $h(x) = \sin x$의 볼록·오목 구간 (한 주기 $[0, 2\pi]$ 안에서).</p>
+
+  <div class="sol">
+    <p>$h''(x) = -\sin x$.</p>
+    <ul>
+      <li>$0 < x < \pi$: $\sin x > 0$이므로 $h''<0$ → 오목 (산봉우리 쪽)</li>
+      <li>$\pi < x < 2\pi$: $\sin x < 0$이므로 $h''>0$ → 볼록 (계곡 쪽)</li>
+    </ul>
+    <p>$x = 0, \pi, 2\pi$에서 변곡점. 사인 곡선이 위·아래로 번갈아 굽는 이유입니다.</p>
+  </div>
+
+  <p><strong>예제 12.8.4.</strong> $\phi(x) = e^{-x^2}$ (정규분포 종 모양)의 변곡점.</p>
+
+  <div class="sol">
+    <p>$\phi'(x) = -2x e^{-x^2}$, $\phi''(x) = (-2 + 4x^2) e^{-x^2} = 2(2x^2 - 1)e^{-x^2}$.</p>
+    <p>$\phi''=0$ → $x = \pm 1/\sqrt{2}$. 양쪽에서 부호가 바뀌므로 변곡점 두 개. 종 모양 그래프의 어깨 부분이 정확히 이 위치입니다 — 정규분포 표준편차의 위치와도 같습니다.</p>
+  </div>
+
+  <h3>12.9 변곡점 한 번 더</h3>
+
+  <p>변곡점은 두 가지 조건이 함께 필요합니다.</p>
+  <ol>
+    <li>그 점에서 $f$가 연속.</li>
+    <li>그 점을 지나며 $f''$의 부호가 <strong>바뀜</strong>.</li>
+  </ol>
+
+  <div class="warn"><strong>흔한 실수</strong> — "$f''(c)=0$만 보고 변곡점이라고 적기". 부호 변화 검증을 빼먹으면 $x^4$ 같은 함수에서 틀립니다. 부호표를 그리세요.</div>
+
+  <h3>12.10 1계 vs 2계 판정법 — 어떻게 고를까</h3>
+
+  <table>
+    <thead><tr><th>상황</th><th>추천 판정법</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>$f''$ 계산이 쉬움, $f''(c) \ne 0$</td><td>2계 판정법</td><td>한 점에서의 부호만 보면 끝</td></tr>
+      <tr><td>$f''(c)=0$ 이거나 $f''$ 계산이 복잡</td><td>1계 판정법</td><td>부호 변화로 안전하게 분류</td></tr>
+      <tr><td>구간 끝점 또는 미분 불가능 임계점</td><td>1계 판정법 + 함숫값 비교</td><td>2계로는 다룰 수 없는 경계</td></tr>
+      <tr><td>다변수(나중)</td><td>헤시안(2계)</td><td>고차원에선 행렬의 정부호성으로 판정</td></tr>
+    </tbody>
+  </table>
+
+  <h3>12.11 안장점 주의 — $f'(c)=0$이라고 다 극값은 아니다</h3>
+
+  <p>$f(x)=x^3$의 $x=0$은 $f'(0)=0$이지만, 좌우 모두 증가. 극값이 아니라 <strong>안장(saddle)</strong> 같은 평지일 뿐입니다. 다변수에서는 진짜 안장점이 더 자주 등장하지만, 1변수에서도 이런 모양은 종종 나옵니다.</p>
+
+  <div class="hl"><strong>핵심</strong> — 임계점은 "후보"일 뿐. 1계 판정법으로 부호 변화를 확인해야 극값입니다.</div>
+
+  <h3>12.12 그래프 손으로 그리기 — 자세한 7단계</h3>
+
+  <ol>
+    <li><strong>정의역</strong> — 분모 0, 로그 음수, 제곱근 음수 등 제외.</li>
+    <li><strong>대칭성</strong> — $f(-x)=f(x)$(우함수, $y$축 대칭) / $f(-x)=-f(x)$(기함수, 원점 대칭) / 주기성.</li>
+    <li><strong>절편</strong> — $x$절편($f(x)=0$), $y$절편($f(0)$).</li>
+    <li><strong>점근선</strong> — 수평($\lim_{x\to\pm\infty}f$), 수직($x\to a$에서 발산), 사선(다항/유리에서 차수 차).</li>
+    <li><strong>$f'$ 부호표</strong> — 단조 구간, 임계점 위치.</li>
+    <li><strong>$f''$ 부호표</strong> — 볼록 구간, 변곡점.</li>
+    <li><strong>표 → 스케치</strong> — 모든 정보를 한 표로 모은 뒤 손으로 곡선을 잇는다.</li>
+  </ol>
+
+  <h3>12.13 종합 예제 — 그래프 그리기</h3>
+
+  <p><strong>예제 12.13.1.</strong> $f(x) = \dfrac{x^2}{x^2-1}$의 그래프를 그려라.</p>
+
+  <div class="sol">
+    <p><strong>① 정의역</strong>: $x \ne \pm 1$.</p>
+    <p><strong>② 대칭성</strong>: $f(-x) = f(x)$ → $y$축 대칭.</p>
+    <p><strong>③ 절편</strong>: $f(0)=0$ → 원점 통과.</p>
+    <p><strong>④ 점근선</strong>: 수직 점근선 $x = \pm 1$, 수평 점근선 $y = 1$ ($x\to\pm\infty$).</p>
+    <p><strong>⑤ 도함수</strong>: $f'(x) = \dfrac{2x(x^2-1) - x^2 \cdot 2x}{(x^2-1)^2} = \dfrac{-2x}{(x^2-1)^2}$.</p>
+    <ul>
+      <li>$x<0$: 분자 $>0$ → $f'>0$ → 증가</li>
+      <li>$x>0$: 분자 $<0$ → $f'<0$ → 감소</li>
+    </ul>
+    <p>임계점 $x=0$ 극대 ($f(0)=0$).</p>
+    <p><strong>⑥ 2차 도함수</strong>: 계산하면 $f''(x) = \dfrac{2(3x^2+1)}{(x^2-1)^3}$. 분자는 항상 양수, 분모는 $|x|>1$에서 양수, $|x|<1$에서 음수.</p>
+    <ul>
+      <li>$|x|<1$: $f''<0$ → 오목 (점근선 사이의 가운데 봉우리)</li>
+      <li>$|x|>1$: $f''>0$ → 볼록</li>
+    </ul>
+    <p>$x=\pm 1$에서 함수가 정의되지 않으므로 변곡점은 없음.</p>
+    <p><strong>⑦ 스케치</strong>: 가운데 영역에서 0에서 시작해 양쪽으로 발산(아래로). 양 옆에서 $+\infty$로 시작해 1로 수렴(위에서). 표로 정리하면 손으로 그릴 수 있습니다.</p>
+  </div>
+
+  <h3>12.14 부호표를 그리는 표준 양식</h3>
+
+  <p>예제 12.13.1을 기준으로 한 표준 부호표 양식입니다. 시험에서 이렇게 한 페이지에 정리하면 채점자가 한눈에 알 수 있습니다.</p>
+
+  <table>
+    <thead><tr><th>$x$</th><th>$(-\infty,-1)$</th><th>$-1$</th><th>$(-1,0)$</th><th>$0$</th><th>$(0,1)$</th><th>$1$</th><th>$(1,\infty)$</th></tr></thead>
+    <tbody>
+      <tr><td>$f'$</td><td>+</td><td>정의X</td><td>+</td><td>0</td><td>−</td><td>정의X</td><td>−</td></tr>
+      <tr><td>$f''$</td><td>+</td><td>정의X</td><td>−</td><td>−</td><td>−</td><td>정의X</td><td>+</td></tr>
+      <tr><td>형태</td><td>↗ ∪</td><td>점근선</td><td>↗ ∩</td><td>극대</td><td>↘ ∩</td><td>점근선</td><td>↘ ∪</td></tr>
+    </tbody>
+  </table>
+
+  <h3>12.15 응용 ① — 최적화 한 컷 미리보기</h3>
+
+  <p>실생활 최적화 문제는 거의 모두 이 흐름입니다.</p>
+  <ol>
+    <li>변수와 제약을 식으로.</li>
+    <li>목적함수 $f(x)$를 한 변수로 정리.</li>
+    <li>$f'(x)=0$ 풀기.</li>
+    <li>1계/2계 판정으로 최댓값/최솟값 확인.</li>
+    <li>경계와 정의역을 같이 검토.</li>
+  </ol>
+
+  <p>다음 주(W6)에서 본격적으로 다루지만, 단조성·볼록성을 알면 "왜 이게 최적인가?"를 그림으로 설명할 수 있게 됩니다.</p>
+
+  <h3>12.16 응용 ② — 머신러닝의 손실 함수와 볼록성</h3>
+
+  <p>딥러닝의 학습은 결국 손실 함수 $L(\theta)$를 최소화하는 일입니다. 만약 $L$이 <strong>볼록</strong>이라면 지역 최저점이 곧 전역 최저점이라 경사하강법(SGD)이 안전합니다. 선형회귀의 평균제곱오차, 로지스틱 회귀의 교차엔트로피가 그 예입니다.</p>
+
+  <p>반면 신경망 전체는 일반적으로 비볼록입니다. 골짜기와 안장점이 잔뜩 섞여 있어 학습률·초기화·정규화 같은 기법이 필요해요. 학기 후반(딥러닝 강의)에서 다시 만납니다.</p>
+
+  <div class="tip"><strong>한 줄 메시지</strong> — "볼록 = 안전한 그릇, 비볼록 = 산악 지형." 그릇이면 굴려서 바닥을 찾고, 산악이면 길을 잘 골라야 합니다.</div>
+
+  <h3>12.17 응용 ③ — 부등식 증명</h3>
+
+  <p>볼록성은 부등식 증명의 강력한 도구입니다.</p>
+
+  <p><strong>예 1 (예전에 본 AM-GM).</strong> $\ln x$의 오목성 → $\ln\!\bigl(\tfrac{a+b}{2}\bigr)\ge\tfrac{\ln a+\ln b}{2}$ → $\dfrac{a+b}{2}\ge\sqrt{ab}$.</p>
+
+  <p><strong>예 2 (옌센 부등식).</strong> $\phi$가 볼록이면 $\phi\!\bigl(\sum p_i x_i\bigr)\le\sum p_i\phi(x_i)$ ($p_i\ge 0$, $\sum p_i=1$). 확률론·정보이론에서 평생 만납니다.</p>
+
+  <p><strong>예 3 ($e^x \ge 1 + x$).</strong> $f(x)=e^x - 1 - x$로 두면 $f'(x)=e^x-1$. $x>0$이면 $f'>0$, $x<0$이면 $f'<0$. 따라서 $x=0$이 최솟값, $f(0)=0$. 그러므로 모든 $x$에서 $e^x\ge 1+x$.</p>
+
+  <h3>12.18 흔한 오답 모음</h3>
+
+  <div class="warn"><strong>오답 1.</strong> "$f'(x_0)=0$이니까 극값" — 안장 가능. 1계 판정으로 부호 변화 확인.</div>
+
+  <div class="warn"><strong>오답 2.</strong> "$f''(x_0)=0$이니까 변곡점" — $x^4$의 $x=0$ 반례. 부호 변화 확인 필수.</div>
+
+  <div class="warn"><strong>오답 3.</strong> "도함수가 미분 불가능한 점은 극값이 될 수 없다" — 거짓. $f(x)=|x|$의 $x=0$은 미분 불가능하지만 극소.</div>
+
+  <div class="warn"><strong>오답 4.</strong> "MVT에서 $c$를 항상 식으로 정확히 풀 수 있다" — 일반적으로 불가능. 존재만 보장.</div>
+
+  <div class="warn"><strong>오답 5.</strong> "단조 증가 = 항상 $f'>0$" — $f(x)=x^3$은 단조 증가지만 $f'(0)=0$. 도함수가 한 점에서 0이어도 전체적으로 증가일 수 있음.</div>
+
+  <div class="warn"><strong>오답 6.</strong> "볼록 = 위로 솟은 모양" — 한국어 "볼록"이 직관과 반대로 느껴질 수 있어요. 수학에서 <em>convex</em>(볼록)은 "그릇 모양($\cup$)"입니다. "위로 볼록(concave up)"이라 풀어 부르기도 합니다.</div>
+
+  <h3>12.19 식·정의 모음표</h3>
+
+  <table>
+    <thead><tr><th>이름</th><th>가정</th><th>결론</th></tr></thead>
+    <tbody>
+      <tr><td>롤 정리</td><td>$f$ 연속/$[a,b]$, 미분/$(a,b)$, $f(a)=f(b)$</td><td>$\exists c,\ f'(c)=0$</td></tr>
+      <tr><td>평균값 정리</td><td>$f$ 연속/$[a,b]$, 미분/$(a,b)$</td><td>$\exists c,\ f'(c)=\dfrac{f(b)-f(a)}{b-a}$</td></tr>
+      <tr><td>코시 평균값</td><td>$f,g$ 연속·미분, $g'\ne 0$</td><td>$\dfrac{f(b)-f(a)}{g(b)-g(a)}=\dfrac{f'(c)}{g'(c)}$</td></tr>
+      <tr><td>단조성</td><td>$f'>0$ on $I$</td><td>$f$ 증가 on $I$</td></tr>
+      <tr><td>1계 판정</td><td>임계점 $c$에서 $f'$ 부호 변화</td><td>+→− 극대, −→+ 극소</td></tr>
+      <tr><td>2계 판정</td><td>$f'(c)=0$, $f''(c)\ne 0$</td><td>$f''>0$ 극소, $f''<0$ 극대</td></tr>
+      <tr><td>볼록성</td><td>$f''>0$ on $I$</td><td>$f$ 볼록(convex) on $I$</td></tr>
+      <tr><td>변곡점</td><td>$f$ 연속, $f''$ 부호 변화</td><td>그 점이 변곡점</td></tr>
+    </tbody>
+  </table>
+
+  <h3>12.20 자가 점검 (10문제)</h3>
+
+  <ol>
+    <li>$f(x)=x^2$가 $[-1, 2]$에서 MVT를 만족하는 $c$를 구하라. (정답: $c = 1/2$)</li>
+    <li>$f(x)=x^3-3x+1$의 임계점과 그 분류. (정답: $x=-1$ 극대, $x=1$ 극소)</li>
+    <li>$f(x)=x \ln x$의 단조 구간. ($x>0$에서 $x=1/e$가 극소, 그 전 감소·후 증가)</li>
+    <li>$f(x)=\dfrac{1}{1+x^2}$의 볼록 구간. ($f''$ 계산 후 $|x|>1/\sqrt{3}$에서 볼록, $|x|<1/\sqrt{3}$에서 오목)</li>
+    <li>$f(x)=x^4$의 $x=0$은 변곡점인가? (아니다. $f''$의 부호 변화 없음)</li>
+    <li>$f(x)=x+\sin x$의 도함수가 0인 곳을 찾고, 극값이 있는지 판정. ($f'(x)=1+\cos x\ge 0$, $x=(2k+1)\pi$에서 0이지만 부호 변화 없음 → 단조 증가, 극값 없음)</li>
+    <li>롤 정리가 성립하는 예 하나, 가정이 깨져 결론이 깨지는 예 하나를 만들어 보라. (예: $f(x)=|x|$, $[-1,1]$ — 미분 가능 가정 깨짐)</li>
+    <li>$f(x)=e^x$가 모든 곳에서 볼록임을 보여라. ($f''(x)=e^x>0$)</li>
+    <li>$f(x)=x^3$이 단조 증가지만 $f'(0)=0$임을 설명하라.</li>
+    <li>옌센 부등식을 이용해 산술-기하 평균 부등식을 다시 증명해 보라.</li>
+  </ol>
+
+  <h3>12.21 SVG로 보는 변곡점</h3>
+
+  <p>아래는 $f(x)=x^3-3x$의 변곡점($x=0$)을 표시한 그림입니다. 왼쪽은 오목($f''<0$), 오른쪽은 볼록($f''>0$).</p>
+
+  <svg viewBox="0 0 480 240" width="100%" style="max-width:520px;background:#fafbfc;border:1px solid #ddd">
+    <line x1="40" y1="120" x2="440" y2="120" stroke="#888"/>
+    <line x1="240" y1="20" x2="240" y2="220" stroke="#888"/>
+    <!-- left half (concave) shaded -->
+    <rect x="40" y="20" width="200" height="200" fill="rgba(245,124,0,0.08)"/>
+    <!-- right half (convex) shaded -->
+    <rect x="240" y="20" width="200" height="200" fill="rgba(11,95,255,0.08)"/>
+    <!-- curve x^3 - 3x shape -->
+    <path d="M 60 30 C 120 60 180 200 240 120 C 300 40 360 180 420 210" stroke="#222" stroke-width="2.5" fill="none"/>
+    <circle cx="240" cy="120" r="6" fill="#0b5fff"/>
+    <text x="245" y="115" font-size="12" fill="#0b5fff">변곡점 (0,0)</text>
+    <text x="80" y="50" font-size="13" fill="#f57c00">f''&lt;0 (오목)</text>
+    <text x="280" y="200" font-size="13" fill="#0b5fff">f''&gt;0 (볼록)</text>
+  </svg>
+
+  <h3>12.22 FAQ</h3>
+
+  <div class="note"><strong>Q1. MVT의 $c$를 항상 풀 수 있나요?</strong><br>
+  특수한 함수에서만 닫힌 식으로 풀립니다. 일반적으로는 "존재"만 보장. 그래도 부등식 증명·근사·테일러 전개 등에서 이 존재성이 결정적 역할을 합니다.</div>
+
+  <div class="note"><strong>Q2. "볼록"과 "위로 볼록", "concave up"의 관계?</strong><br>
+  같은 말입니다. 영어권은 "concave up = 위로 볼록 = $f''>0$"으로 부르고, 한국 교과서는 "볼록(convex)"이라고 줄여 씁니다. "오목(concave) = 위로 오목 = concave down = $f''<0$"입니다.</div>
+
+  <div class="note"><strong>Q3. 변곡점에서 접선은 어떤 모양인가요?</strong><br>
+  접선이 곡선을 "통과"합니다(곡선이 접선의 한쪽에서 다른 쪽으로 넘어감). 일반 점에서는 접선이 곡선을 한쪽에서만 스쳐 지나갑니다.</div>
+
+  <div class="note"><strong>Q4. 1계와 2계 중 어느 게 더 강력한가요?</strong><br>
+  보편적으로는 1계가 더 안전합니다(부호 변화로 항상 결론). 2계는 빠르지만 $f''(c)=0$일 때 무력해집니다.</div>
+
+  <div class="note"><strong>Q5. 단조 증가와 강한 단조 증가의 차이?</strong><br>
+  강한 단조 증가는 $a<b \Rightarrow f(a)<f(b)$. 단조 증가(약한)는 $\le$. $f'>0$ on $I$이면 강한 단조 증가가 따름.</div>
+
+  <div class="note"><strong>Q6. $f''>0$만으로 전역 최솟값을 보장하나요?</strong><br>
+  볼록 함수가 정의역 전체에서 최솟값을 갖는다는 보장은 없습니다(예: $e^x$). 임계점이 존재하고 정의역이 닫힌 구간이거나, 함수가 무한대에서 발산할 때 보장됩니다.</div>
+
+  <div class="note"><strong>Q7. 미분 불가능한 점에서도 극값이 가능한가요?</strong><br>
+  네. $f(x)=|x|$의 $x=0$은 극소. 임계점의 정의에 "$f'$ 미분 불가능한 점"도 포함되는 이유입니다.</div>
+
+  <h3>12.23 학습 일지 양식</h3>
+
+  <p>아래 양식을 노트에 옮겨 적고 채워 보세요. 일주일 뒤 다시 펼쳐 보면 지금 막힌 부분이 또 막히는지 확인할 수 있습니다.</p>
+
+  <table>
+    <thead><tr><th>항목</th><th>내가 적은 답</th><th>점검</th></tr></thead>
+    <tbody>
+      <tr><td>MVT 한 줄로 설명</td><td>(여기 적기)</td><td>□ 비유 □ 식 □ 그림</td></tr>
+      <tr><td>롤 정리 예 1개</td><td>(여기 적기)</td><td>□ 가정 점검 □ 결론</td></tr>
+      <tr><td>$f'$ 부호 → 단조성 표</td><td>(여기 적기)</td><td>□ 부호표 □ 임계점</td></tr>
+      <tr><td>$f''$ 부호 → 볼록성 표</td><td>(여기 적기)</td><td>□ 부호표 □ 변곡점</td></tr>
+      <tr><td>그래프 스케치 1개</td><td>(여기 적기)</td><td>□ 7단계 모두</td></tr>
+      <tr><td>안장점 반례</td><td>(여기 적기)</td><td>□ $x^3$ 등</td></tr>
+      <tr><td>실수했던 부분</td><td>(여기 적기)</td><td>□ 다시 풀기</td></tr>
+    </tbody>
+  </table>
+
+  <h3>12.24 한 주 학습 루틴 제안</h3>
+
+  <ol>
+    <li><strong>월요일</strong> — 강의 들으며 정의·정리 카드 만들기 (롤·MVT·1계·2계·볼록·변곡 6장).</li>
+    <li><strong>화요일</strong> — 단조성 예제 5문제, 부호표 양식 익히기.</li>
+    <li><strong>수요일</strong> — 볼록성 예제 5문제, 변곡점 부호 변화 확인 연습.</li>
+    <li><strong>목요일</strong> — 그래프 스케치 종합 문제 3개(다항·유리·지수 한 종류씩).</li>
+    <li><strong>금요일</strong> — 자가 점검 10문제 풀이, 오답 노트 작성.</li>
+    <li><strong>토요일</strong> — 응용(부등식 증명·옌센) 한 문제 깊게.</li>
+    <li><strong>일요일</strong> — 학습 일지 점검, 다음 주 예고(최적화·뉴턴법) 미리 읽기.</li>
+  </ol>
+
+  <h3>12.25 마무리 점검</h3>
+
+  <div class="hl"><strong>핵심 점검 — 외워야 할 6가지</strong>
+    <ul>
+      <li>롤 정리: $f(a)=f(b)$ → $f'(c)=0$ 존재.</li>
+      <li>MVT: $f'(c) = \dfrac{f(b)-f(a)}{b-a}$ 존재.</li>
+      <li>$f'>0$ → 증가, $f'<0$ → 감소.</li>
+      <li>$f''>0$ → 볼록(∪), $f''<0$ → 오목(∩).</li>
+      <li>임계점에서 1계로 부호 변화 확인 → 극값 분류.</li>
+      <li>변곡점 = $f$ 연속 + $f''$ 부호 변화.</li>
+    </ul>
+  </div>
+
+  <div class="tip"><strong>다음 주 미리보기</strong> — W6에서는 이번 주의 도구(단조·볼록)로 실제 최적화 문제를 풀고, $f'(x)=0$이 손으로 안 풀릴 때 <strong>뉴턴법</strong>으로 수치 해를 구합니다. 이번 주 부호표 익히는 데에 시간을 충분히 투자하세요 — 다음 주가 훨씬 수월해집니다.</div>
+
+  <h2>13. 더 많은 예제 모음 — 손으로 풀어 보기</h2>
+
+  <p class="lead">아래 예제들은 시험 직전에 한 번씩 손으로 다 풀어 보면 좋습니다. 풀이의 단계마다 "왜 이 단계가 필요한가?"를 한 줄씩 옆에 적으면서 진행하세요.</p>
+
+  <h3>13.1 평균값 정리 — 부등식 증명 응용</h3>
+
+  <p><strong>예제 13.1.1.</strong> 모든 $x>0$에서 $\ln(1+x) < x$임을 MVT로 보여라.</p>
+
+  <div class="sol">
+    <p>$f(t) = \ln(1+t)$를 $[0, x]$에서 살펴보면, $f$는 연속·미분 가능. MVT에 의해 어떤 $c\in(0, x)$가 있어
+    $$\frac{\ln(1+x) - 0}{x - 0} = f'(c) = \frac{1}{1+c}.$$
+    $c>0$이므로 $\dfrac{1}{1+c} < 1$. 양변에 $x>0$ 곱: $\ln(1+x) < x$.</p>
+  </div>
+
+  <p><strong>예제 13.1.2.</strong> $|\sin a - \sin b| \le |a - b|$ (사인 함수의 1-립시츠 성질).</p>
+
+  <div class="sol">
+    <p>$f(x)=\sin x$. MVT로 어떤 $c$에서 $\sin a - \sin b = (a-b)\cos c$. $|\cos c|\le 1$이므로 $|\sin a - \sin b| \le |a-b|$.</p>
+  </div>
+
+  <p><strong>예제 13.1.3.</strong> 모든 실수 $x$에서 $e^x \ge 1 + x$, 등호는 $x=0$.</p>
+
+  <div class="sol">
+    <p>$g(x)=e^x - 1 - x$. $g'(x) = e^x - 1$. $x>0$이면 $g'>0$ 증가, $x<0$이면 $g'<0$ 감소. 따라서 $g$는 $x=0$에서 최솟값 $g(0)=0$. 즉 $e^x \ge 1+x$.</p>
+  </div>
+
+  <h3>13.2 단조성 — 추가 연습</h3>
+
+  <p><strong>예제 13.2.1.</strong> $f(x) = x - \ln(1+x^2)$의 단조 구간.</p>
+
+  <div class="sol">
+    <p>$f'(x) = 1 - \dfrac{2x}{1+x^2} = \dfrac{1+x^2 - 2x}{1+x^2} = \dfrac{(x-1)^2}{1+x^2} \ge 0$.</p>
+    <p>모든 $x$에서 $f'\ge 0$이고, $f'(1)=0$만 한 점. 따라서 $f$는 전체에서 단조 증가 (한 점에서 평지).</p>
+  </div>
+
+  <p><strong>예제 13.2.2.</strong> $f(x) = x^3 - 3x^2 + 4$의 단조 구간 및 극값.</p>
+
+  <div class="sol">
+    <p>$f'(x) = 3x^2 - 6x = 3x(x-2)$. 부호:</p>
+    <ul>
+      <li>$x<0$: $f'>0$ 증가</li>
+      <li>$0<x<2$: $f'<0$ 감소</li>
+      <li>$x>2$: $f'>0$ 증가</li>
+    </ul>
+    <p>$x=0$ 극대 ($f(0)=4$), $x=2$ 극소 ($f(2)=0$).</p>
+  </div>
+
+  <p><strong>예제 13.2.3.</strong> $f(x) = \sqrt{x} - \dfrac{x}{2}$의 최댓값.</p>
+
+  <div class="sol">
+    <p>정의역 $x\ge 0$. $f'(x) = \dfrac{1}{2\sqrt{x}} - \dfrac{1}{2} = \dfrac{1-\sqrt{x}}{2\sqrt{x}}$.</p>
+    <p>$0<x<1$: $f'>0$ 증가; $x>1$: $f'<0$ 감소. 따라서 $x=1$에서 최댓값 $f(1)=1/2$.</p>
+  </div>
+
+  <h3>13.3 볼록성 — 추가 연습</h3>
+
+  <p><strong>예제 13.3.1.</strong> $f(x) = x \ln x$ ($x>0$)의 볼록성.</p>
+
+  <div class="sol">
+    <p>$f'(x)=\ln x + 1$, $f''(x)=\dfrac{1}{x}>0$. 모든 $x>0$에서 볼록. 따라서 옌센 부등식이 성립: $\dfrac{a\ln a + b\ln b}{2} \ge \dfrac{a+b}{2}\ln\dfrac{a+b}{2}$ — 정보이론의 핵심 부등식.</p>
+  </div>
+
+  <p><strong>예제 13.3.2.</strong> $f(x) = \arctan x$의 볼록 구간.</p>
+
+  <div class="sol">
+    <p>$f'(x) = \dfrac{1}{1+x^2}$, $f''(x) = \dfrac{-2x}{(1+x^2)^2}$.</p>
+    <ul>
+      <li>$x<0$: $f''>0$ 볼록</li>
+      <li>$x>0$: $f''<0$ 오목</li>
+    </ul>
+    <p>$x=0$이 변곡점. $\arctan$ 그래프는 왼쪽이 그릇, 오른쪽이 엎은 그릇.</p>
+  </div>
+
+  <p><strong>예제 13.3.3.</strong> $f(x) = e^{-x}\sin x$의 변곡점 (한 주기 안에서 위치 형태만).</p>
+
+  <div class="sol">
+    <p>$f'(x) = e^{-x}(\cos x - \sin x)$, $f''(x) = e^{-x}(-2\cos x)$ (정리하면).</p>
+    <p>$f''=0$ → $\cos x = 0$ → $x = \pi/2 + k\pi$. 양 옆에서 부호가 바뀌므로 모두 변곡점. 진동이 점점 줄어드는 감쇠 사인의 굴곡 위치를 정확히 알려 줍니다.</p>
+  </div>
+
+  <h3>13.4 그래프 그리기 — 추가 종합 예제</h3>
+
+  <p><strong>예제 13.4.1.</strong> $f(x) = \dfrac{e^x}{x}$ ($x\ne 0$).</p>
+
+  <div class="sol">
+    <p>정의역 $x\ne 0$. 점근선: $x=0$ (수직), $x\to-\infty$일 때 $e^x/x \to 0^-$, $x\to\infty$일 때 $\to\infty$.</p>
+    <p>$f'(x) = \dfrac{e^x(x-1)}{x^2}$. 부호:</p>
+    <ul>
+      <li>$x<0$: $e^x>0$, $x-1<0$, $x^2>0$ → $f'<0$ 감소</li>
+      <li>$0<x<1$: $f'<0$ 감소</li>
+      <li>$x>1$: $f'>0$ 증가</li>
+    </ul>
+    <p>$x=1$에서 극소 $f(1)=e$.</p>
+    <p>$f''(x) = \dfrac{e^x(x^2-2x+2)}{x^3}$. 분자 항상 양수 ($x^2-2x+2 = (x-1)^2+1>0$), 분모 $x^3$의 부호: $x>0$이면 양, $x<0$이면 음. 따라서 $x>0$에서 볼록, $x<0$에서 오목. 변곡점은 없음 (점근선에서 분리).</p>
+  </div>
+
+  <p><strong>예제 13.4.2.</strong> $f(x) = x^{2/3}(x-5)$.</p>
+
+  <div class="sol">
+    <p>정리: $f(x) = x^{5/3} - 5x^{2/3}$. $f'(x) = \dfrac{5}{3}x^{2/3} - \dfrac{10}{3}x^{-1/3} = \dfrac{5(x-2)}{3x^{1/3}}$.</p>
+    <p>$f'$가 0 또는 미정인 곳: $x=2$ ($f'=0$), $x=0$ (미분 불가능). 이 두 곳이 임계점.</p>
+    <ul>
+      <li>$x<0$: $x-2<0$, $x^{1/3}<0$ → $f'>0$ 증가</li>
+      <li>$0<x<2$: $x-2<0$, $x^{1/3}>0$ → $f'<0$ 감소</li>
+      <li>$x>2$: $f'>0$ 증가</li>
+    </ul>
+    <p>$x=0$에서 극대(첨점), $x=2$에서 극소.</p>
+    <p>이 예제의 교훈 — 미분 불가능한 점도 임계점이 될 수 있고, 거기서 극값이 등장할 수 있습니다.</p>
+  </div>
+
+  <h3>13.5 코시 평균값 정리 — 보너스</h3>
+
+  <p>일반화된 평균값 정리(코시 MVT)는 두 함수의 비를 다룹니다. $f, g$가 연속·미분 가능하고 $g'\ne 0$이면 어떤 $c\in(a, b)$에서
+  $$\frac{f(b)-f(a)}{g(b)-g(a)} = \frac{f'(c)}{g'(c)}.$$</p>
+
+  <p>이 정리가 결정적으로 쓰이는 곳: <strong>로피탈의 규칙</strong> 증명. $0/0$ 또는 $\infty/\infty$ 형태의 극한을 도함수 비로 바꿔 풀 때 쓰입니다.</p>
+
+  <div class="tip"><strong>한 컷 요약</strong> — MVT가 "한 함수의 평균-순간 일치"라면, 코시 MVT는 "두 함수의 평균비-순간비 일치". 로피탈은 이 정리의 따름.</div>
+
+  <h3>13.6 옌센 부등식 한 번 더</h3>
+
+  <p>볼록 함수 $\phi$와 가중치 $p_1, \dots, p_n \ge 0$ ($\sum p_i = 1$)에 대해
+  $$\phi\!\left(\sum_{i=1}^n p_i x_i\right) \le \sum_{i=1}^n p_i \phi(x_i).$$
+  오목 함수면 부등호 방향이 반대입니다. 활용 예:</p>
+  <ul>
+    <li>$\phi(x)=x^2$ 볼록 → $\bigl(\sum p_i x_i\bigr)^2 \le \sum p_i x_i^2$ → 분산이 음수가 아님.</li>
+    <li>$\phi(x)=-\ln x$ 볼록 → $-\ln\!\bigl(\sum p_i x_i\bigr) \le -\sum p_i \ln x_i$ → 산술-기하 평균(가중) 부등식.</li>
+    <li>정보이론의 KL 발산이 0 이상임을 보장.</li>
+  </ul>
+
+  <h3>13.7 연습 문제 추가 (자율학습용)</h3>
+
+  <ol>
+    <li>$f(x)=x^3 - 12x + 5$의 극값과 그래프 개형.</li>
+    <li>$f(x)=\dfrac{x^2-1}{x^2+1}$의 단조·볼록 구간.</li>
+    <li>$f(x)=x e^{-x^2/2}$의 극값과 변곡점.</li>
+    <li>$f(x)=\sin^2 x$의 한 주기 내 단조·볼록.</li>
+    <li>$f(x)=x - \tan^{-1}x$가 단조 증가임을 증명.</li>
+    <li>$f(x)=\ln(\cos x)$ ($-\pi/2 < x < \pi/2$)의 볼록성.</li>
+    <li>$0<x<\pi/2$에서 $\sin x > x - x^3/6$임을 MVT 또는 단조성으로 증명.</li>
+    <li>$x>0$에서 $x - \dfrac{x^2}{2} < \ln(1+x) < x$임을 단조성으로 증명.</li>
+    <li>$f(x)=x^2 e^{-x}$의 극값과 변곡점.</li>
+    <li>$f(x) = \dfrac{x}{\ln x}$ ($x>0, x\ne 1$)의 단조 구간과 점근선.</li>
+  </ol>
+
+  <h3>13.8 마지막 한 마디</h3>
+
+  <p>이번 주 내용은 시험 단골이자, 앞으로 모든 응용(최적화, 미분방정식, 머신러닝 학습)의 기반입니다. 부호표를 그리는 손이 익숙해지면, 처음 보는 함수도 1분 안에 모양을 추측할 수 있게 됩니다.</p>
+
+  <div class="hl"><strong>최종 한 줄</strong> — "$f'$로 오르내림을, $f''$로 굽힘을 본다. 임계점은 후보, 부호 변화로 결정한다."</div>
+
+  <h2>14. 부록 — 시험 직전 체크리스트와 미니 사전</h2>
+
+  <h3>14.1 시험 직전 한 페이지 요약</h3>
+
+  <div class="tip"><strong>외워서 가는 6공식</strong>
+    <ol>
+      <li>롤: $f(a)=f(b)$ → $\exists c, f'(c)=0$.</li>
+      <li>MVT: $\exists c, f'(c) = \dfrac{f(b)-f(a)}{b-a}$.</li>
+      <li>코시 MVT: $\dfrac{f(b)-f(a)}{g(b)-g(a)} = \dfrac{f'(c)}{g'(c)}$.</li>
+      <li>$f' \gtrless 0$ → 증감 / $f''\gtrless 0$ → 볼록·오목.</li>
+      <li>1계 판정: 임계점 부호 변화로 극대·극소.</li>
+      <li>변곡점 = $f$ 연속 + $f''$ 부호 변화.</li>
+    </ol>
+  </div>
+
+  <h3>14.2 시험 직전 5분 점검 체크리스트</h3>
+
+  <ul>
+    <li>□ "롤 정리"의 3가지 가정을 즉시 댈 수 있다.</li>
+    <li>□ MVT의 결론 식을 막힘 없이 쓸 수 있다.</li>
+    <li>□ 단조 증가가 $f'>0$의 충분조건임은 알지만 필요조건은 아님을 안다.</li>
+    <li>□ "$f'(c)=0$ ≠ 극값"의 반례($x^3$)를 댈 수 있다.</li>
+    <li>□ "$f''(c)=0$ ≠ 변곡점"의 반례($x^4$)를 댈 수 있다.</li>
+    <li>□ 1계와 2계 판정법의 적용 우선순위를 안다.</li>
+    <li>□ 그래프 7단계 절차를 순서대로 외운다.</li>
+    <li>□ 부호표를 표로 그릴 줄 안다.</li>
+    <li>□ 옌센 부등식의 방향(볼록 vs 오목)을 헷갈리지 않는다.</li>
+    <li>□ 미분 불가능한 점도 임계점에 포함됨을 안다.</li>
+  </ul>
+
+  <h3>14.3 미니 사전</h3>
+
+  <table>
+    <thead><tr><th>한국어</th><th>영어</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>평균값 정리</td><td>Mean Value Theorem (MVT)</td><td>평균 변화율과 같은 순간 변화율의 존재 보장</td></tr>
+      <tr><td>롤 정리</td><td>Rolle's Theorem</td><td>$f(a)=f(b)$일 때 도함수가 0인 점 존재</td></tr>
+      <tr><td>코시 평균값 정리</td><td>Cauchy MVT</td><td>두 함수의 평균 변화율 비 = 어떤 점의 도함수 비</td></tr>
+      <tr><td>임계점</td><td>Critical point</td><td>$f'(c)=0$ 또는 미분 불가능한 정의역 내 점</td></tr>
+      <tr><td>극대·극소</td><td>Local max / min</td><td>주변 어떤 구간에서 가장 큰/작은 값</td></tr>
+      <tr><td>최댓값·최솟값</td><td>Global max / min</td><td>정의역 전체에서 가장 큰/작은 값</td></tr>
+      <tr><td>안장점</td><td>Saddle point</td><td>임계점이지만 극값이 아닌 점</td></tr>
+      <tr><td>볼록</td><td>Convex (concave up)</td><td>$f''>0$, 그릇 모양 ∪</td></tr>
+      <tr><td>오목</td><td>Concave (concave down)</td><td>$f''<0$, 엎은 그릇 ∩</td></tr>
+      <tr><td>변곡점</td><td>Inflection point</td><td>볼록·오목이 바뀌는 점</td></tr>
+      <tr><td>옌센 부등식</td><td>Jensen's inequality</td><td>볼록(오목) 함수의 평균과 함숫값 평균 비교</td></tr>
+      <tr><td>립시츠 연속</td><td>Lipschitz continuous</td><td>$|f(a)-f(b)|\le L|a-b|$, MVT의 따름</td></tr>
+    </tbody>
+  </table>
+
+  <h3>14.4 한국어와 영어의 "볼록·오목" 헷갈림 정리</h3>
+
+  <p>한국어 "볼록"과 "오목"은 일상적으로 "위로 솟다 / 움푹 패다"로 쓰이지만, 수학에서는 다음과 같이 약속합니다.</p>
+
+  <table>
+    <thead><tr><th>표현</th><th>의미</th><th>그림</th><th>$f''$</th></tr></thead>
+    <tbody>
+      <tr><td>볼록 (convex) = 위로 볼록 = concave up</td><td>그릇 모양</td><td>∪</td><td>$f''>0$</td></tr>
+      <tr><td>오목 (concave) = 위로 오목 = concave down</td><td>엎은 그릇 모양</td><td>∩</td><td>$f''<0$</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn"><strong>주의</strong> — "위로 볼록"이라는 말이 "솟아 있다(∩)"는 일상 직관과 반대로 들릴 수 있습니다. 수학에서는 <em>"위쪽에서 봤을 때 그릇처럼 들어간 곡선"</em>을 볼록이라 합니다. 헷갈리면 그림 ∪/∩과 $f''$ 부호로 기억하세요.</div>
+
+  <h3>14.5 자주 받는 질문 — 학생 사례</h3>
+
+  <div class="note"><strong>사례 1.</strong> "$f(x)=|x|$의 $x=0$은 임계점인가요?" — 네. $f$가 $x=0$에서 미분 불가능하지만 정의역 안의 점이고 극소이므로 임계점입니다. 임계점의 정의에 미분 불가능 점이 포함되는 것을 잊지 마세요.</div>
+
+  <div class="note"><strong>사례 2.</strong> "MVT를 쓰려면 항상 양 끝점에서 미분 가능해야 하나요?" — 아닙니다. <em>열린 구간</em> $(a, b)$에서만 미분 가능하면 됩니다. 닫힌 구간에서는 연속이면 충분.</div>
+
+  <div class="note"><strong>사례 3.</strong> "단조 증가와 단조 비감소(monotonically nondecreasing)는 같은 말인가요?" — 보통 한국어 "단조 증가"는 강한 의미($a<b \Rightarrow f(a)<f(b)$)로 씁니다. 약한 의미($\le$)는 "단조 비감소"라 씁니다. 교재마다 약속이 다르니 정의를 확인하세요.</div>
+
+  <div class="note"><strong>사례 4.</strong> "변곡점이 극값과 같은 곳에서 나올 수 있나요?" — 일반적으로는 아니지만, 도함수가 한 점에서 매우 평평하게 0인 함수에서는 동시에 일어날 수도 있습니다. 두 개념은 독립적입니다.</div>
+
+  <h3>14.6 마지막 격려</h3>
+
+  <p>이번 주 내용은 처음에는 "정리·정의·판정법" 더미처럼 보일 수 있지만, 부호표를 한 번 손으로 그려 보면 모든 게 자연스럽게 연결됩니다. 다음 주 최적화에 자신감을 갖고 들어갈 수 있도록, 자가 점검 10문제는 꼭 풀고 넘어가세요.</p>
+
+  <div class="hl"><strong>다음 주 W6 예고</strong> — 단조성과 볼록성을 무기로 (1) 면적·부피·비용을 극값으로 푸는 최적화, (2) 손으로 못 푸는 방정식을 빠르게 푸는 뉴턴법을 배웁니다. 머신러닝의 경사하강법(SGD)과 직접 연결되는 주제입니다.</div>
+
+  <h3>14.7 학습 보너스 — 한 줄 정의 카드 12장</h3>
+
+  <p>다음 12장의 카드를 종이에 옮겨 적고, 한 면에는 이름·다른 면에는 정의·예를 적은 뒤 셔플해 가며 외우면 시험 직전 30분 만에 전체 정리가 됩니다.</p>
+
+  <ol>
+    <li><strong>롤 정리</strong> — 양 끝 같으면 도함수 0인 점 존재.</li>
+    <li><strong>평균값 정리</strong> — 평균 변화율 = 어떤 순간 도함수.</li>
+    <li><strong>코시 MVT</strong> — 두 함수의 평균비 = 어떤 점의 도함수 비.</li>
+    <li><strong>임계점</strong> — $f'=0$ 또는 미분 불가능한 정의역 내부 점.</li>
+    <li><strong>1계 판정법</strong> — 임계점 부호 변화: +→− 극대, −→+ 극소.</li>
+    <li><strong>2계 판정법</strong> — $f'=0$이고 $f''\ne 0$일 때, $f''$ 부호로 분류.</li>
+    <li><strong>볼록</strong> — $f''>0$, ∪ 모양, 할선이 곡선 위.</li>
+    <li><strong>오목</strong> — $f''<0$, ∩ 모양, 할선이 곡선 아래.</li>
+    <li><strong>변곡점</strong> — $f$ 연속 + $f''$ 부호 변화.</li>
+    <li><strong>안장점</strong> — 임계점인데 극값 아님 (예: $x^3$의 0).</li>
+    <li><strong>옌센 부등식</strong> — 볼록 함수의 평균과 함숫값 평균 비교.</li>
+    <li><strong>립시츠 성질</strong> — $|f(a)-f(b)|\le L|a-b|$, MVT의 따름.</li>
+  </ol>
+
+  <h3>14.8 마지막의 마지막 — 한 줄 시</h3>
+
+  <div class="tip"><strong>시 한 편으로 외우는 W5</strong><br>
+  "한 번은 평균과 같은 순간이 있다 (MVT).<br>
+  부호 따라 오르내리고 ($f'$),<br>
+  굽힘 따라 그릇이 되거나 엎어진다 ($f''$).<br>
+  임계점은 후보일 뿐, 부호가 결정한다."<br>
+  </div>
+
+  <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:18px">— W5 보강 학습 자료 끝. 다음 주(W6) 최적화·뉴턴법에서 만나요. —</p>
+
+  <p style="text-align:center;color:var(--muted);font-size:12px">공주대학교 기계공학전공 · 미적분학 강의 보충자료 · 한 학기의 절반을 통과하셨습니다. 수고하셨어요.</p>
+
+  <nav class="prevnext">
+    <a href="04-transcendental-implicit.html"><small>← 이전</small>W4. 초월·음함수</a>
+    <a href="06-optimization-newton.html" class="next"><small>다음 →</small>W6. 최적화·뉴턴법</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

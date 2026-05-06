@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브: 같은 자전거가 원을 그릴 때 누가 정확한가 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브: 같은 자전거가 원을 그릴 때 누가 정확한가</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/04-euler-simulation.html">Week 4. 오일러 방법 &amp; 시뮬레이션</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브: 같은 자전거가 원을 그릴 때 누가 정확한가</h4>
+    <p>일정 속도, 일정 조향각에서 자전거 모델은 이론상 완벽한 원을 그려야 합니다(반경 $R = L/\tan\delta$).
+    오일러는 큰 $\Delta t$에서 점점 바깥으로 나가는 <strong>나선</strong>이 되고, RK4는 거의 정확하게 원을 따릅니다.</p>
+    <canvas id="cmp" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>$\Delta t$ <span class="val" id="cdtV">0.10</span><input type="range" id="cdt" min="0.01" max="0.3" step="0.01" value="0.10"></label>
+      <label>조향 $\delta$ (°) <span class="val" id="cdelV">20</span><input type="range" id="cdel" min="5" max="40" step="1" value="20"></label>
+      <label>총 시간 (s) <span class="val" id="cTV">30</span><input type="range" id="cT" min="5" max="60" step="1" value="30"></label>
+      <button id="crun">시뮬</button>
+      <button id="crst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cmp'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    const upd=()=>{
+      $('cdtV').textContent=(+$('cdt').value).toFixed(2);
+      $('cdelV').textContent=(+$('cdel').value).toFixed(0);
+      $('cTV').textContent=(+$('cT').value).toFixed(0);
+    };
+    ['cdt','cdel','cT'].forEach(id=>$(id).oninput=upd);
+    let trajE=[], trajR=[];
+    function bike(s,v,d,L=2.9){return [v*Math.cos(s[2]), v*Math.sin(s[2]), v/L*Math.tan(d)];}
+    function eulerStep(s,v,d,dt){const k=bike(s,v,d);
+      return [s[0]+k[0]*dt, s[1]+k[1]*dt, s[2]+k[2]*dt];}
+    function rk4Step(s,v,d,dt){
+      const k1=bike(s,v,d);
+      const s2=[s[0]+dt/2*k1[0],s[1]+dt/2*k1[1],s[2]+dt/2*k1[2]];const k2=bike(s2,v,d);
+      const s3=[s[0]+dt/2*k2[0],s[1]+dt/2*k2[1],s[2]+dt/2*k2[2]];const k3=bike(s3,v,d);
+      const s4=[s[0]+dt*k3[0],s[1]+dt*k3[1],s[2]+dt*k3[2]];const k4=bike(s4,v,d);
+      return [s[0]+dt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]),
+              s[1]+dt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]),
+              s[2]+dt/6*(k1[2]+2*k2[2]+2*k3[2]+k4[2])];
+    }
+    function run(){
+      const dt=+$('cdt').value, delDeg=+$('cdel').value, T=+$('cT').value;
+      const v=5.0, delta=delDeg*Math.PI/180;
+      let sE=[0,0,0], sR=[0,0,0];
+      trajE=[{x:0,y:0}]; trajR=[{x:0,y:0}];
+      for(let t=0;t<T;t+=dt){
+        sE=eulerStep(sE,v,delta,dt);
+        sR=rk4Step(sR,v,delta,dt);
+        trajE.push({x:sE[0],y:sE[1]});
+        trajR.push({x:sR[0],y:sR[1]});
+      }
+      draw();
+    }
+    function reset(){trajE=[];trajR=[];draw();}
+    $('crun').onclick=run; $('crst').onclick=reset;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2+30;
+      const delDeg=+$('cdel').value, L=2.9;
+      const R=L/Math.tan(delDeg*Math.PI/180);
+      const sc = Math.min(W,H)*0.4 / Math.max(R*1.5, 1);
+      // ideal circle (center at (0,R))
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=1.5;x.beginPath();
+      for(let th=0;th<=2*Math.PI+0.01;th+=0.02){
+        const px=R*Math.sin(th), py=R-R*Math.cos(th);
+        const sx=cx+px*sc, sy=cy-py*sc;
+        if(th==0)x.moveTo(sx,sy);else x.lineTo(sx,sy);
+      }
+      x.stroke();x.setLineDash([]);
+      // axes
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(cx,0);x.lineTo(cx,H);x.stroke();
+      x.beginPath();x.moveTo(0,cy);x.lineTo(W,cy);x.stroke();
+      // euler
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      trajE.forEach((p,i)=>{const sx=cx+p.x*sc, sy=cy-p.y*sc;
+        if(i==0)x.moveTo(sx,sy);else x.lineTo(sx,sy);});
+      x.stroke();
+      // rk4
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      trajR.forEach((p,i)=>{const sx=cx+p.x*sc, sy=cy-p.y*sc;
+        if(i==0)x.moveTo(sx,sy);else x.lineTo(sx,sy);});
+      x.stroke();
+      // info
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('이론 반경 R = '+R.toFixed(2)+' m', 10, 20);
+      x.fillStyle='#c62828';x.fillText('빨강 점선: 이론 원', 10, 38);
+      x.fillStyle='#f57c00';x.fillText('주황: Euler', 10, 56);
+      x.fillStyle='#0b5fff';x.fillText('파랑: RK4', 10, 74);
+      // drift
+      if(trajE.length>1){
+        const eEnd=trajE[trajE.length-1], rEnd=trajR[trajR.length-1];
+        const dE=Math.hypot(eEnd.x-trajE[0].x, eEnd.y-trajE[0].y);
+        const dR=Math.hypot(rEnd.x-trajR[0].x, rEnd.y-trajR[0].y);
+        x.fillStyle='#444';
+        x.fillText('Euler 시작점-끝점 거리: '+dE.toFixed(2)+' m', W-260, H-30);
+        x.fillText('RK4   시작점-끝점 거리: '+dR.toFixed(2)+' m', W-260, H-12);
+      }
+    }
+    upd();draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

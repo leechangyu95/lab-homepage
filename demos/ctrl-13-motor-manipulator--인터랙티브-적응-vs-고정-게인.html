@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 적응 vs 고정 게인 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 적응 vs 고정 게인</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/13-motor-manipulator.html">Week 13. PID 응용 ① — DC 모터 &amp; 로봇 팔</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 적응 vs 고정 게인</h4>
+    <p>페이로드 mass가 시간에 따라 변합니다(예: 물건을 잡았다가 놨다가). 고정 게인은 한 mass에 맞춰져 있고, 적응 게인은 mass에 비례해 자동 조정.</p>
+    <canvas id="c13gs" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>기본 Kp <span class="val" id="c13gsKpV">10</span><input type="range" id="c13gsKp" min="2" max="40" step="0.5" value="10"></label>
+      <label>기본 Kd <span class="val" id="c13gsKdV">2</span><input type="range" id="c13gsKd" min="0" max="10" step="0.1" value="2"></label>
+      <label><input type="checkbox" id="c13gsAd" checked> 적응 게인 ON</label>
+      <button id="c13gsTog">페이로드 변경</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c13gs'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c13gsKpV').textContent=(+$('c13gsKp').value).toFixed(1);$('c13gsKdV').textContent=(+$('c13gsKd').value).toFixed(2);};
+    ['c13gsKp','c13gsKd'].forEach(id=>$(id).oninput=upd);
+    let mPay=0.5, ref=Math.PI/3, th=0, thd=0, hist=[], tHist=[], mHist=[];
+    $('c13gsTog').onclick=()=>{mPay = mPay<2 ? 2.5 : 0.5;};
+    function loop(){
+      const Kp0=+$('c13gsKp').value, Kd0=+$('c13gsKd').value;
+      const adapt=$('c13gsAd').checked;
+      const J0=0.3, b=0.3, g=9.81, L=0.5;
+      const J = J0 + mPay*L*L;
+      // adaptive: scale gains by inertia ratio
+      const scl = adapt ? J/J0 : 1;
+      const Kp = Kp0*scl, Kd = Kd0*Math.sqrt(scl);
+      const e = ref-th;
+      const tau = Kp*e + Kd*(-thd) + mPay*g*L*Math.sin(th);
+      const tau_c = Math.max(-50,Math.min(50,tau));
+      const thdd = (tau_c - b*thd - mPay*g*L*Math.sin(th))/J;
+      thd += thdd*0.02; th += thd*0.02;
+      hist.push(th); tHist.push(ref); mHist.push(mPay);
+      if(hist.length>500){hist.shift();tHist.shift();mHist.shift();}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40, oy=240, w=560, h=180;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      // ref line
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.lineWidth=1.5;x.beginPath();
+      tHist.forEach((v,i)=>{const xx=ox+i*w/500, yy=oy-Math.max(-1,Math.min(2,v))*h*0.4;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((v,i)=>{const xx=ox+i*w/500, yy=oy-Math.max(-1,Math.min(2,v))*h*0.4;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      // mass curve
+      x.strokeStyle='#9c27b0';x.lineWidth=1.5;x.beginPath();
+      mHist.forEach((v,i)=>{const xx=ox+i*w/500, yy=oy-v*h*0.15;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('파랑 = θ,  빨강 점선 = θ_ref,  보라 = 페이로드',ox,oy+18);
+      x.fillText('현재 m = '+mPay.toFixed(2)+' kg,  J = '+J.toFixed(3),ox,oy+34);
+      x.fillStyle=adapt?'#2e7d32':'#c62828';
+      x.fillText(adapt?'적응 게인 ON':'적응 게인 OFF',ox,oy+52);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

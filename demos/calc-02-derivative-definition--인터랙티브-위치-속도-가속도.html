@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 위치 → 속도 → 가속도 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 위치 → 속도 → 가속도</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/02-derivative-definition.html">Week 2. 미분의 정의</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 위치 → 속도 → 가속도</h4>
+    <p>위치를 미분해 속도가, 속도를 미분해 가속도가 만들어집니다. 세 그래프를 동시에 보면 이 사다리가 한눈에 들어와요.</p>
+    <canvas id="kin" width="640" height="420"></canvas>
+    <div class="controls">
+      <label>운동 패턴
+        <select id="kinMode">
+          <option value="fall" selected>자유낙하 ($-\tfrac{1}{2}gt^2$)</option>
+          <option value="osc">단순조화운동</option>
+          <option value="step">가속 → 등속 → 감속</option>
+        </select>
+      </label>
+      <button id="kinPause">일시정지/재생</button>
+      <button id="kinRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kin'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const Tmax=10;
+    let t=0,running=true;
+    document.getElementById('kinPause').onclick=()=>{running=!running;};
+    document.getElementById('kinRst').onclick=()=>{t=0;};
+    function pattern(tt){
+      const m=document.getElementById('kinMode').value;
+      if(m==='fall'){
+        const g=2;
+        return{s:5 - 0.5*g*tt*tt, v:-g*tt, a:-g};
+      }
+      if(m==='osc'){
+        const A=2,om=1.4;
+        return{s:A*Math.cos(om*tt), v:-A*om*Math.sin(om*tt), a:-A*om*om*Math.cos(om*tt)};
+      }
+      // step: piecewise constant accel
+      const a1=1.2,a2=0,a3=-1.2;
+      const t1=3,t2=6;
+      let s=0,v=0,a=0;
+      if(tt<=t1){a=a1;v=a*tt;s=0.5*a*tt*tt;}
+      else if(tt<=t2){a=a2;const v1=a1*t1,s1=0.5*a1*t1*t1;v=v1;s=s1+v1*(tt-t1);}
+      else{a=a3;const v1=a1*t1,s1=0.5*a1*t1*t1;const s2=s1+v1*(t2-t1);v=v1+a3*(tt-t2);s=s2+v1*(tt-t2)+0.5*a3*(tt-t2)*(tt-t2);}
+      return{s,v,a};
+    }
+    // sample whole curve once per draw to keep alignment
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // 3 panels
+      const panels=[
+        {label:'위치 s(t)',color:'#0b5fff',y0:20,y1:140,key:'s',yR:[-6,6]},
+        {label:'속도 v(t) = s′(t)',color:'#1b5e20',y0:150,y1:270,key:'v',yR:[-5,5]},
+        {label:'가속도 a(t) = v′(t)',color:'#c62828',y0:280,y1:400,key:'a',yR:[-3,3]},
+      ];
+      const Lx0=50,Lx1=W-90;
+      const N=400;
+      // sample
+      const samples=[];
+      for(let i=0;i<=N;i++){
+        const tt=i*Tmax/N;
+        samples.push(pattern(tt));
+      }
+      panels.forEach(p=>{
+        x.strokeStyle='#ddd';x.strokeRect(Lx0,p.y0,Lx1-Lx0,p.y1-p.y0);
+        x.fillStyle='#444';x.font='12px sans-serif';
+        x.fillText(p.label,Lx0+6,p.y0+14);
+        // axes
+        const yC=(p.y0+p.y1)/2;
+        x.strokeStyle='#bbb';x.beginPath();x.moveTo(Lx0,yC);x.lineTo(Lx1,yC);x.stroke();
+        // curve
+        x.strokeStyle=p.color;x.lineWidth=2;x.beginPath();
+        for(let i=0;i<=N;i++){
+          const tt=i*Tmax/N;
+          const xx=Lx0+tt/Tmax*(Lx1-Lx0);
+          const v=samples[i][p.key];
+          const yy=yC - v/p.yR[1]*((p.y1-p.y0)/2 - 14);
+          if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+        }
+        x.stroke();
+        // current cursor
+        const cx=Lx0+t/Tmax*(Lx1-Lx0);
+        const cv=pattern(t)[p.key];
+        const cy=yC - cv/p.yR[1]*((p.y1-p.y0)/2 - 14);
+        x.strokeStyle='rgba(0,0,0,0.4)';x.setLineDash([3,3]);
+        x.beginPath();x.moveTo(cx,p.y0);x.lineTo(cx,p.y1);x.stroke();x.setLineDash([]);
+        x.fillStyle=p.color;x.beginPath();x.arc(cx,cy,4,0,Math.PI*2);x.fill();
+        // numeric value on right
+        x.fillStyle='#222';x.font='13px Consolas,monospace';
+        x.fillText(p.key+' = '+cv.toFixed(2),Lx1+8,(p.y0+p.y1)/2+5);
+      });
+      // time label
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('t = '+t.toFixed(2)+' s',Lx0+6,H-6);
+    }
+    function loop(){
+      if(running){t+=1/30;if(t>Tmax)t=0;}
+      draw();
+      requestAnimationFrame(()=>setTimeout(loop,33));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

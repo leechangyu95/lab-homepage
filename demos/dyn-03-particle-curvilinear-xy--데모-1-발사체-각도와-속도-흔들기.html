@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 발사체 — 각도와 속도 흔들기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 발사체 — 각도와 속도 흔들기</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/03-particle-curvilinear-xy.html">Week 3. 곡선 운동학 (직각좌표)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 발사체 — 각도와 속도 흔들기</h4>
+    <p>발사 각도 $\theta_0$와 초속 $v_0$를 슬라이더로 바꿔보세요. 두 성분 $v_x, v_y$가 시간에 따라 어떻게 변하는지 화살표로, 궤적은 곡선으로 그립니다. <strong>$\theta_0 = 45°$가 최대 사거리를 주는 이유를 직접 확인해 보세요</strong>(중력이 일정하고 출발/착지 높이가 같을 때).</p>
+    <canvas id="projC" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>발사 각도 θ₀ (°) <span class="val" id="prAV">45</span><input type="range" id="prA" min="0" max="90" value="45"></label>
+      <label>초속 v₀ (m/s) <span class="val" id="prVV">25</span><input type="range" id="prV" min="5" max="40" step="0.5" value="25"></label>
+      <label>중력 g (m/s²) <span class="val" id="prGV">9.81</span><input type="range" id="prG" min="1" max="20" step="0.1" value="9.81"></label>
+      <button id="prRun">발사</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('projC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['prA','prV','prG'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['prA','prV','prG'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0;
+    sl('prRun').onclick=()=>{t=0;};
+    function loop(){
+      const a=+sl('prA').value*Math.PI/180,v0=+sl('prV').value,g=+sl('prG').value;
+      t+=0.025;
+      const tFlight=2*v0*Math.sin(a)/g;
+      if(t>tFlight+0.5)t=0;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ground=300,scale=4,x0=40;
+      x.fillStyle='#bcd6a8';x.fillRect(0,ground,c.width,40);
+      // grid
+      x.strokeStyle='#e8e8e8';
+      for(let i=0;i<=12;i++){x.beginPath();x.moveTo(x0+i*50,30);x.lineTo(x0+i*50,ground);x.stroke();}
+      // trajectory full
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();
+      for(let tt=0;tt<=tFlight;tt+=0.05){
+        const X=v0*Math.cos(a)*tt,Y=v0*Math.sin(a)*tt-0.5*g*tt*tt;
+        const px=x0+X*scale,py=ground-Y*scale;
+        if(tt===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();x.setLineDash([]);
+      // current trail
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let tt=0;tt<=Math.min(t,tFlight);tt+=0.03){
+        const X=v0*Math.cos(a)*tt,Y=v0*Math.sin(a)*tt-0.5*g*tt*tt;
+        const px=x0+X*scale,py=ground-Y*scale;
+        if(tt===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();
+      // current position
+      const tn=Math.min(t,tFlight);
+      const X=v0*Math.cos(a)*tn,Y=v0*Math.sin(a)*tn-0.5*g*tn*tn;
+      const px=x0+X*scale,py=ground-Y*scale;
+      // velocity components
+      const vx=v0*Math.cos(a),vy=v0*Math.sin(a)-g*tn;
+      // arrows
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();x.moveTo(px,py);x.lineTo(px+vx*2,py);
+      x.lineTo(px+vx*2-5,py-4);x.moveTo(px+vx*2,py);x.lineTo(px+vx*2-5,py+4);x.stroke();
+      x.fillStyle='#2e7d32';x.font='11px sans-serif';x.fillText('v_x',px+vx*2-12,py-6);
+      x.strokeStyle='#c62828';x.beginPath();x.moveTo(px,py);x.lineTo(px,py-vy*2);
+      x.lineTo(px-4,py-vy*2+5);x.moveTo(px,py-vy*2);x.lineTo(px+4,py-vy*2+5);x.stroke();
+      x.fillStyle='#c62828';x.fillText('v_y',px+5,py-vy*2+5);
+      // ball
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+      // info
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      const range=v0*v0*Math.sin(2*a)/g,hmax=Math.pow(v0*Math.sin(a),2)/(2*g);
+      x.fillText('사거리 R = v₀² sin(2θ)/g = '+range.toFixed(1)+' m',420,40);
+      x.fillText('최고점 H = (v₀ sinθ)²/(2g) = '+hmax.toFixed(1)+' m',420,58);
+      x.fillText('체공시간 T = '+tFlight.toFixed(2)+' s',420,76);
+      x.fillText('현재 v_x='+vx.toFixed(1)+', v_y='+vy.toFixed(1),420,94);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

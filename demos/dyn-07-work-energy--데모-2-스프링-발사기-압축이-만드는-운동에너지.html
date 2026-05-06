@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 스프링 발사기 — 압축이 만드는 운동에너지 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 스프링 발사기 — 압축이 만드는 운동에너지</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/07-work-energy.html">Week 7. 일과 에너지</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 스프링 발사기 — 압축이 만드는 운동에너지</h4>
+    <p>스프링을 압축한 양에 따라 공이 얼마나 빠르게 튀어나가는지 봅니다. 에너지 보존: $\tfrac{1}{2}k x_0^2 = \tfrac{1}{2}m v^2$ (마찰이 없을 때). $k$나 $x_0$를 두 배로 하면 $v$가 어떻게 변하는지 직접 확인.</p>
+    <canvas id="sprC" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>스프링 상수 k (N/m) <span class="val" id="spKV">200</span><input type="range" id="spK" min="50" max="800" step="10" value="200"></label>
+      <label>압축량 x₀ (m) <span class="val" id="spXV">0.3</span><input type="range" id="spX" min="0.05" max="0.6" step="0.02" value="0.3"></label>
+      <label>질량 m (kg) <span class="val" id="spMV">0.5</span><input type="range" id="spM" min="0.1" max="2" step="0.05" value="0.5"></label>
+      <button id="spFire">발사</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sprC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['spK','spX','spM'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let phase='ready',pos=0,vel=0,sprX=0.3;
+    function fire(){
+      const k=+sl('spK').value,x0=+sl('spX').value,m=+sl('spM').value;
+      vel=Math.sqrt(k*x0*x0/m);
+      phase='launch';pos=0;sprX=x0;
+    }
+    sl('spFire').onclick=fire;
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const k=+sl('spK').value,x0=+sl('spX').value,m=+sl('spM').value;
+      const groundY=200;
+      x.fillStyle='#bcd6a8';x.fillRect(0,groundY,c.width,40);
+      // wall
+      x.fillStyle='#888';x.fillRect(40,groundY-60,8,60);
+      // spring
+      const sxStart=48;
+      const cur=phase==='ready'?sl('spX').value:(phase==='launch'?Math.max(0,sprX-pos*0.05):0);
+      const sxEnd=sxStart+(80-cur*100);
+      x.strokeStyle='#444';x.lineWidth=2;x.beginPath();
+      const N=12;for(let i=0;i<=N;i++){
+        const t=i/N;const px=sxStart+(sxEnd-sxStart)*t;
+        const py=groundY-30+(i%2===0?-6:6);
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();
+      // ball position
+      let ballX;
+      if(phase==='ready'){ballX=sxEnd+12;}
+      else {
+        pos+=vel*0.025*30;
+        ballX=sxEnd+12+pos;
+        if(ballX>c.width-20){phase='ready';pos=0;}
+      }
+      // ball
+      x.fillStyle='#c62828';x.beginPath();x.arc(ballX,groundY-30,12,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // info
+      const PE=0.5*k*x0*x0,KE=0.5*m*vel*vel;
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('스프링 위치에너지 ½kx₀² = '+PE.toFixed(2)+' J',20,30);
+      x.fillText('발사 후 운동에너지 ½mv² = '+(phase==='launch'?KE.toFixed(2):'0.00')+' J',20,48);
+      x.fillText('속도 v = √(k/m)·x₀ = '+(phase==='launch'?vel.toFixed(2):Math.sqrt(k/m)*x0+' (예측)').toString().slice(0,6)+' m/s',20,66);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('포인트: x₀를 두 배로 하면 v가 두 배, k를 네 배로 하면 v가 두 배.',20,90);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

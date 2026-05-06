@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>단진자 시뮬레이터 — &quot;주기는 길이만&quot; — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">단진자 시뮬레이터 — &quot;주기는 길이만&quot;</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/06-shm.html">Week 6. 단진동 (SHM)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>단진자 시뮬레이터 — "주기는 길이만"</h4>
+    <p>실제 비선형 운동방정식 $\ddot\theta + (g/L)\sin\theta = 0$을 수치적으로 풀어 그립니다. 주기는 한 사이클 측정값(노란색 텍스트)으로 표시.</p>
+    <canvas id="w6_pend_canvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>끈 길이 $L$ <span class="val" id="w6_LV">1.0</span> m
+        <input type="range" id="w6_L" min="0.2" max="2.5" step="0.05" value="1.0"></label>
+      <label>초기 각도 $\theta_0$ <span class="val" id="w6_th0V">15°</span>
+        <input type="range" id="w6_th0" min="3" max="60" step="1" value="15"></label>
+      <label>중력 $g$ <span class="val" id="w6_gV">9.8</span> m/s²
+        <input type="range" id="w6_g" min="1.6" max="20" step="0.1" value="9.8"></label>
+      <button id="w6_resetP" type="button">↺ 처음부터</button>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$L$을 4배 → 주기가 2배. (이론: $T = 2\pi\sqrt{L/g}$)</li>
+        <li>$g$를 1.6 (달)로 → 주기가 약 2.5배 길어짐. 달 위 진자는 매우 느림.</li>
+        <li>$\theta_0$를 5°와 50°로 비교 → 주기 차이가 약 5% 이상 (소진동 근사 한계).</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w6_pend_canvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let theta=0,omega=0,lastT=performance.now();
+    let zeroCross=[],measuredT=null;
+    function reset(){
+      const th0=+document.getElementById('w6_th0').value;
+      theta=th0*Math.PI/180;omega=0;
+      zeroCross=[];measuredT=null;lastT=performance.now();
+    }
+    document.getElementById('w6_resetP').addEventListener('click',reset);
+    document.getElementById('w6_th0').addEventListener('input',reset);
+    document.getElementById('w6_L').addEventListener('input',reset);
+    document.getElementById('w6_g').addEventListener('input',reset);
+    reset();
+    function frame(now){
+      const L=+document.getElementById('w6_L').value;
+      const g=+document.getElementById('w6_g').value;
+      const th0=+document.getElementById('w6_th0').value;
+      document.getElementById('w6_LV').textContent=L.toFixed(2);
+      document.getElementById('w6_th0V').textContent=th0+'°';
+      document.getElementById('w6_gV').textContent=g.toFixed(1);
+      let dt=(now-lastT)*0.001;lastT=now;
+      if(dt>0.05)dt=0.05;
+      const steps=20;
+      for(let s=0;s<steps;s++){
+        const ds=dt/steps;
+        const prevTheta=theta;
+        const a=-(g/L)*Math.sin(theta);
+        omega+=a*ds;theta+=omega*ds;
+        if(prevTheta>0&&theta<=0){
+          const ts=(now-(steps-1-s)*ds*1000)*0.001;
+          zeroCross.push(ts);
+          if(zeroCross.length>4)zeroCross.shift();
+          if(zeroCross.length>=3){
+            measuredT=zeroCross[zeroCross.length-1]-zeroCross[zeroCross.length-3];
+          }
+        }
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=W/2,oy=60;
+      const Lpix=Math.min(L*120,H-120);
+      const bx=ox+Lpix*Math.sin(theta),by=oy+Lpix*Math.cos(theta);
+      ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(ox-30,oy);ctx.lineTo(ox+30,oy);ctx.stroke();
+      ctx.strokeStyle='#888';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(bx,by);ctx.stroke();
+      ctx.strokeStyle='#cfd8e3';ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox,oy+Lpix);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(bx,by,16,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#222';ctx.stroke();
+      // Arc indicator
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(ox,oy,30,Math.PI/2,Math.PI/2+theta,theta<0);ctx.stroke();
+      // Info
+      const Tth=2*Math.PI*Math.sqrt(L/g);
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(15,H-90,260,80);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(15,H-90,260,80);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('이론 주기 (소진동) T = 2π√(L/g)',25,H-72);
+      ctx.fillText('  = '+Tth.toFixed(3)+' s',25,H-56);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('현재 각도 θ = '+(theta*180/Math.PI).toFixed(1)+'°',25,H-40);
+      ctx.fillStyle='#b8860b';
+      ctx.fillText('측정 주기 = '+(measuredT?measuredT.toFixed(3)+' s':'(측정 중...)'),25,H-22);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</main>
+</body>
+</html>

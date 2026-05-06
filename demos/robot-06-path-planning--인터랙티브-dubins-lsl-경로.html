@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Dubins LSL 경로 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Dubins LSL 경로</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Dubins LSL 경로</h4>
+    <p>출발과 도착의 자세, 회전 반경을 조절해 보세요. 차가 갈 수 있는 가장 짧은 "좌-직선-좌" 경로를 그립니다.</p>
+    <canvas id="dub" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>출발 방향 (도) <span class="val" id="t1V">30</span><input type="range" id="t1" min="-180" max="180" value="30"></label>
+      <label>도착 방향 (도) <span class="val" id="t2V">90</span><input type="range" id="t2" min="-180" max="180" value="90"></label>
+      <label>회전 반경 R <span class="val" id="rdV">60</span><input type="range" id="rd" min="20" max="120" value="60"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dub'),x=c.getContext('2d');
+    const A={x:140,y:280},B={x:500,y:120};
+    function loop(){
+      const t1=+document.getElementById('t1').value*Math.PI/180;
+      const t2=+document.getElementById('t2').value*Math.PI/180;
+      const R=+document.getElementById('rd').value;
+      ['t1','t2','rd'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // LSL: turn left at start, straight, turn left at end
+      // center of left turn at start = A + R * perpendicular(left of t1)
+      const c1={x:A.x+R*Math.cos(t1+Math.PI/2),y:A.y+R*Math.sin(t1+Math.PI/2)};
+      const c2={x:B.x+R*Math.cos(t2+Math.PI/2),y:B.y+R*Math.sin(t2+Math.PI/2)};
+      const dx=c2.x-c1.x,dy=c2.y-c1.y,D=Math.hypot(dx,dy);
+      // tangent line angle
+      const ang=Math.atan2(dy,dx);
+      // exit point of arc1 = c1 + R * perpendicular toward tangent
+      const T1={x:c1.x+R*Math.cos(ang-Math.PI/2),y:c1.y+R*Math.sin(ang-Math.PI/2)};
+      const T2={x:c2.x+R*Math.cos(ang-Math.PI/2),y:c2.y+R*Math.sin(ang-Math.PI/2)};
+      // draw circles
+      x.strokeStyle='#e3e6ea';x.beginPath();x.arc(c1.x,c1.y,R,0,Math.PI*2);x.stroke();
+      x.beginPath();x.arc(c2.x,c2.y,R,0,Math.PI*2);x.stroke();
+      // arc1: from A to T1 around c1
+      const ang0a=Math.atan2(A.y-c1.y,A.x-c1.x);
+      const ang1a=Math.atan2(T1.y-c1.y,T1.x-c1.x);
+      x.strokeStyle='#0b5fff';x.lineWidth=3;x.beginPath();x.arc(c1.x,c1.y,R,ang0a,ang1a,true);x.stroke();
+      // straight
+      x.beginPath();x.moveTo(T1.x,T1.y);x.lineTo(T2.x,T2.y);x.stroke();
+      // arc2
+      const ang0b=Math.atan2(T2.y-c2.y,T2.x-c2.x);
+      const ang1b=Math.atan2(B.y-c2.y,B.x-c2.x);
+      x.beginPath();x.arc(c2.x,c2.y,R,ang0b,ang1b,true);x.stroke();
+      // start/end markers with heading arrows
+      [{p:A,th:t1,col:'#2e7d32'},{p:B,th:t2,col:'#c62828'}].forEach(o=>{
+        x.fillStyle=o.col;x.beginPath();x.arc(o.p.x,o.p.y,7,0,Math.PI*2);x.fill();
+        x.strokeStyle=o.col;x.lineWidth=2;x.beginPath();x.moveTo(o.p.x,o.p.y);
+        x.lineTo(o.p.x+Math.cos(o.th)*25,o.p.y+Math.sin(o.th)*25);x.stroke();
+      });
+      // length
+      const L1=R*Math.abs(((ang1a-ang0a)+2*Math.PI)%(2*Math.PI));
+      const L2=D;
+      const L3=R*Math.abs(((ang1b-ang0b)+2*Math.PI)%(2*Math.PI));
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('총 길이 ≈ '+(L1+L2+L3).toFixed(0)+' (호 '+L1.toFixed(0)+' + 직선 '+L2.toFixed(0)+' + 호 '+L3.toFixed(0)+')',12,30);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

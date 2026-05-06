@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 알고리즘 선택 A* / Dijkstra / BFS / Greedy — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 알고리즘 선택 A* / Dijkstra / BFS / Greedy</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 알고리즘 선택 A* / Dijkstra / BFS / Greedy</h4>
+    <p>같은 지도에서 네 알고리즘이 <strong>얼마나 많은 노드를 방문하는지</strong>를 직접 비교해 보세요. 격자를 클릭/드래그하여 장애물을 그리고, 모드를 바꾼 뒤 <strong>Run</strong>을 누르세요.</p>
+    <canvas id="astar" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>알고리즘
+        <select id="mode">
+          <option value="astar">A*</option>
+          <option value="dij">Dijkstra</option>
+          <option value="bfs">BFS</option>
+          <option value="greedy">Greedy Best-First</option>
+        </select>
+      </label>
+      <button id="run">Run</button>
+      <button id="clr" class="alt">장애물 지우기</button>
+      <span id="stats" style="font-size:12px;color:#666">🟢 시작 &nbsp; 🔴 목표 &nbsp; ⬛ 장애물</span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('astar'),x=c.getContext('2d');
+    const W=32,H=20,SZ=20;
+    let grid=Array.from({length:H},()=>Array(W).fill(0));
+    let start=[2,10], goal=[29,10];
+    let visited=new Set(), path=[];
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        if(grid[i][j])x.fillStyle='#222';
+        else if(visited.has(i*W+j))x.fillStyle='#cfe0ff';
+        else x.fillStyle='#fff';
+        x.fillRect(j*SZ,i*SZ,SZ-1,SZ-1);
+      }
+      x.strokeStyle='#0b5fff';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{const xx=p[0]*SZ+SZ/2,yy=p[1]*SZ+SZ/2;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#2e7d32';x.fillRect(start[0]*SZ,start[1]*SZ,SZ-1,SZ-1);
+      x.fillStyle='#c62828';x.fillRect(goal[0]*SZ,goal[1]*SZ,SZ-1,SZ-1);
+    }
+    let drag=false,dragVal=1;
+    function cellOf(e){const r=c.getBoundingClientRect();return [Math.floor((e.clientX-r.left)*c.width/r.width/SZ),Math.floor((e.clientY-r.top)*c.height/r.height/SZ)];}
+    c.onmousedown=e=>{const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W)return;if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1]))return;dragVal=1-grid[i][j];grid[i][j]=dragVal;drag=true;draw();};
+    c.onmousemove=e=>{if(!drag)return;const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W)return;if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1]))return;grid[i][j]=dragVal;draw();};
+    window.addEventListener('mouseup',()=>{drag=false;});
+    function search(){
+      visited=new Set();path=[];
+      const mode=document.getElementById('mode').value;
+      const h=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+      const prio=(g,hv)=>mode==='bfs'?g:mode==='dij'?g:mode==='greedy'?hv:g+hv;
+      const open=[{p:start,g:0,f:prio(0,h(start,goal)),parent:null}];
+      const closed={};
+      while(open.length){
+        open.sort((a,b)=>a.f-b.f);
+        const cur=open.shift();
+        const k=cur.p[1]*W+cur.p[0];
+        if(closed[k])continue;
+        closed[k]=cur;visited.add(k);
+        if(cur.p[0]==goal[0]&&cur.p[1]==goal[1]){
+          let n=cur;while(n){path.push(n.p);n=n.parent;}
+          path.reverse();break;
+        }
+        for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+          const nx=cur.p[0]+dx,ny=cur.p[1]+dy;
+          if(nx<0||ny<0||nx>=W||ny>=H||grid[ny][nx])continue;
+          const stepC=mode==='bfs'?1:Math.hypot(dx,dy);
+          const ng=cur.g+stepC;
+          open.push({p:[nx,ny],g:ng,f:prio(ng,h([nx,ny],goal)),parent:cur});
+        }
+      }
+      document.getElementById('stats').textContent='방문 '+visited.size+' 노드 · 경로 길이 '+path.length;
+      draw();
+    }
+    document.getElementById('run').onclick=search;
+    document.getElementById('clr').onclick=()=>{grid=Array.from({length:H},()=>Array(W).fill(0));visited=new Set();path=[];draw();};
+    // initial obstacles
+    for(let i=4;i<16;i++){grid[i][12]=1;grid[i][20]=1;}
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

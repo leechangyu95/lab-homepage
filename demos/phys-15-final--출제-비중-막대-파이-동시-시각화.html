@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>출제 비중 — 막대 + 파이 동시 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">출제 비중 — 막대 + 파이 동시 시각화</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/15-final.html">Week 15. 기말시험 — 14주 종합</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>출제 비중 — 막대 + 파이 동시 시각화</h4>
+    <p>슬라이더로 본인이 지금 <em>"공부에 쓸 수 있는 시간"</em>의 단원별 분배를 조정하면, 막대그래프(현재 출제 비중) 위에 본인 분배(점선)가 겹쳐 그려집니다. 두 곡선이 비슷할수록 효율적인 시간 분배.</p>
+    <canvas id="w15_weightDemo" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>W1~W6 종합 (현재 22%) <span class="val" id="w15_w16val">22</span>%
+        <input type="range" id="w15_w16" min="0" max="60" step="1" value="22"></label>
+      <label>W8 파동 (현재 12%) <span class="val" id="w15_w8val">12</span>%
+        <input type="range" id="w15_w8" min="0" max="40" step="1" value="12"></label>
+      <label>W9 열 (현재 12%) <span class="val" id="w15_w9val">12</span>%
+        <input type="range" id="w15_w9" min="0" max="40" step="1" value="12"></label>
+      <label>W10 전기장 (현재 14%) <span class="val" id="w15_w10val">14</span>%
+        <input type="range" id="w15_w10" min="0" max="40" step="1" value="14"></label>
+      <label>W11 전위 (현재 12%) <span class="val" id="w15_w11val">12</span>%
+        <input type="range" id="w15_w11" min="0" max="40" step="1" value="12"></label>
+      <label>W12 회로 (현재 14%) <span class="val" id="w15_w12val">14</span>%
+        <input type="range" id="w15_w12" min="0" max="40" step="1" value="14"></label>
+      <label>W13 자기장 (현재 10%) <span class="val" id="w15_w13val">10</span>%
+        <input type="range" id="w15_w13" min="0" max="40" step="1" value="10"></label>
+      <label>W14 유도 (현재 4%) <span class="val" id="w15_w14val">4</span>%
+        <input type="range" id="w15_w14" min="0" max="40" step="1" value="4"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>본인이 가장 약한 단원 1개에 30~40%를 몰빵해 보세요. 다른 단원 비중이 자동 0이 되는 게 보일 때, 그게 위험 신호.</li>
+        <li>출제 비중과 본인 분배가 거의 일치(±3%)하도록 조정 — 이게 "시험-주도 학습".</li>
+        <li>후반부(W8~W14)에 70%를 두면 본 시험 출제와 정확히 같음.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w15_weightDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const labels=['W1-6','W8','W9','W10','W11','W12','W13','W14'];
+    const ids=['w15_w16','w15_w8','w15_w9','w15_w10','w15_w11','w15_w12','w15_w13','w15_w14'];
+    const real=[22,12,12,14,12,14,10,4];
+    const colors=['#0b5fff','#16a085','#e67e22','#c0392b','#8e44ad','#2980b9','#27ae60','#d35400'];
+    function draw(){
+      const my=ids.map(id=>+document.getElementById(id).value);
+      ids.forEach((id,i)=>document.getElementById(id+'val').textContent=my[i]);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const m={l:50,r:20,t:30,b:60};
+      const gw=W-m.l-m.r, gh=H-m.t-m.b;
+      const bw=gw/labels.length*0.7;
+      const maxV=Math.max(40,...my,...real);
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+      for(let p=0;p<=maxV;p+=10){
+        const y=m.t+gh-(p/maxV)*gh;
+        ctx.beginPath();ctx.moveTo(m.l,y);ctx.lineTo(W-m.r,y);ctx.stroke();
+        ctx.fillStyle='#666';ctx.font='11px sans-serif';
+        ctx.fillText(p+'%',8,y+4);
+      }
+      labels.forEach((lab,i)=>{
+        const x=m.l+gw/labels.length*i+gw/labels.length*0.15;
+        const h1=(real[i]/maxV)*gh;
+        ctx.fillStyle=colors[i]+'cc';
+        ctx.fillRect(x,m.t+gh-h1,bw,h1);
+        ctx.fillStyle='#222';ctx.font='11px sans-serif';
+        ctx.fillText(lab,x+bw/2-12,H-m.b+18);
+        ctx.fillText(real[i]+'%',x+bw/2-10,m.t+gh-h1-4);
+      });
+      ctx.strokeStyle='#7b1fa2';ctx.lineWidth=2.5;
+      ctx.setLineDash([6,4]);
+      ctx.beginPath();
+      labels.forEach((lab,i)=>{
+        const x=m.l+gw/labels.length*i+gw/labels.length*0.5;
+        const y=m.t+gh-(my[i]/maxV)*gh;
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+      labels.forEach((lab,i)=>{
+        const x=m.l+gw/labels.length*i+gw/labels.length*0.5;
+        const y=m.t+gh-(my[i]/maxV)*gh;
+        ctx.fillStyle='#7b1fa2';
+        ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();
+      });
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('막대 = 실제 출제 비중',m.l+10,18);
+      ctx.fillStyle='#7b1fa2';
+      ctx.fillText('점선 = 본인 학습시간 분배',m.l+200,18);
+      const sum=my.reduce((a,b)=>a+b,0);
+      ctx.fillStyle=Math.abs(sum-100)<5?'#27ae60':'#c0392b';
+      ctx.fillText('본인 합계: '+sum+'%',W-m.r-130,18);
+    }
+    ids.forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

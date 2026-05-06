@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: RL 응답과 스파크 — $V_L = L\,di/dt$ — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: RL 응답과 스파크 — $V_L = L\,di/dt$</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/07-capacitor-inductor.html">Week 7. 커패시터와 인덕터 — 에너지를 저장하는 두 소자</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: RL 응답과 스파크 — $V_L = L\,di/dt$</h4>
+    <p>RL 직렬에서 전원 ON/OFF 시 전류가 지수적으로 변하고, OFF 순간에는 인덕터 양단에 큰 역기전력 스파크가 발생합니다. <strong>스위치</strong>를 토글하며 전류와 인덕터 전압을 동시에 보세요.</p>
+    <canvas id="rlCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>스위치
+        <select id="rlSw"><option value="on">ON (전류 상승)</option><option value="off">OFF (전류 감쇠)</option></select>
+      </label>
+      <label>R <span class="val" id="rlRV">100</span> Ω<input type="range" id="rlR" min="10" max="1000" step="10" value="100"></label>
+      <label>L <span class="val" id="rlLV">100</span> mH<input type="range" id="rlL" min="10" max="1000" step="10" value="100"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rlCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const V0=10;
+    function draw(){
+      const sw=document.getElementById('rlSw').value;
+      const R=+document.getElementById('rlR').value;
+      const L=+document.getElementById('rlL').value*1e-3;
+      document.getElementById('rlRV').textContent=R;
+      document.getElementById('rlLV').textContent=(L*1000).toFixed(0);
+      const tau=L/R;
+      const i0=V0/R;
+      const Tspan=5*tau;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(t){return 60+t/Tspan*(W-90);}
+      function yI(v){return H-50-(v/i0)*((H-90)/2);}
+      function yV(v){return 100 - v*30;}
+      ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo(x(0),H-50);ctx.lineTo(x(Tspan),H-50);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),50);ctx.lineTo(x(Tspan),50);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),20);ctx.lineTo(x(0),H-30);ctx.stroke();
+      // Current curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=Tspan/200){
+        const i=sw==='on'?i0*(1-Math.exp(-t/tau)):i0*Math.exp(-t/tau);
+        if(t===0)ctx.moveTo(x(t),yI(i));else ctx.lineTo(x(t),yI(i));
+      }
+      ctx.stroke();
+      // V_L curve (V_L = L di/dt = V0*exp(-t/tau) for ON, -V0*exp(-t/tau) for OFF)
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.setLineDash([5,3]);ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=Tspan/200){
+        const vL=sw==='on'?V0*Math.exp(-t/tau):-V0*Math.exp(-t/tau);
+        if(t===0)ctx.moveTo(x(t),yV(vL));else ctx.lineTo(x(t),yV(vL));
+      }
+      ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText(`전류 i(t)  (peak ${(i0*1000).toFixed(1)} mA)`,W-220,H-50);
+      ctx.fillStyle='#c62828';
+      ctx.fillText(`인덕터 전압 v_L(t)`,W-220,50);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`τ = L/R = ${(tau*1000).toFixed(2)} ms`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(sw==='off'?'OFF 순간 v_L가 −V₀로 점프 → 큰 di/dt가 만드는 스파크 원리':'ON 시 v_L가 V₀에서 0으로 감쇠 (i가 정상상태로)',40,H-15);
+    }
+    ['rlSw','rlR','rlL'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.addEventListener('input',draw);el.addEventListener('change',draw);
+    });
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

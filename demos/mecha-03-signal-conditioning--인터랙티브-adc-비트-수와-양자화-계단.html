@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: ADC 비트 수와 양자화 계단 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: ADC 비트 수와 양자화 계단</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/03-signal-conditioning.html">Week 3. 신호 조절(Signal Conditioning)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: ADC 비트 수와 양자화 계단</h4>
+    <p>비트 수를 4 → 12로 키우면 계단이 잘게 쪼개져 원 신호에 가까워집니다. <strong>계단과 원 곡선의 차</strong>가 양자화 오차예요. 4비트면 16단계라 일그러짐이 한눈에 보이고, 10비트(Arduino 기본)면 거의 매끈해집니다.</p>
+    <canvas id="adcDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>ADC 비트 수 N <span class="val" id="adcNV">4</span><input type="range" id="adcN" min="2" max="12" step="1" value="4"></label>
+      <label>입력 진폭 <span class="val" id="adcAV">2.0</span> V<input type="range" id="adcA" min="0.5" max="2.5" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('adcDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const N=+document.getElementById('adcN').value;
+      const A=+document.getElementById('adcA').value;
+      document.getElementById('adcNV').textContent=N;
+      document.getElementById('adcAV').textContent=A.toFixed(1);
+      const Vref=5, levels=Math.pow(2,N), LSB=Vref/levels;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=60,oy=H/2,w=W-90,h=H-60;
+      function px(t){return ox+t*w;}
+      function py(v){return oy-(v-Vref/2)/(Vref/2)*h*0.45;}
+      // levels (light gray)
+      ctx.strokeStyle='#eee';
+      for(let i=0;i<=levels;i++){const v=i*LSB;const yy=py(v);if(yy>30&&yy<H-20){ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      // analog
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      const offset=Vref/2;
+      for(let i=0;i<=400;i++){const t=i/400; const v=offset+A*Math.sin(2*Math.PI*2*t);if(i===0)ctx.moveTo(px(t),py(v));else ctx.lineTo(px(t),py(v));}
+      ctx.stroke();
+      // quantized
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();
+      const samples=80;let prev=null;
+      for(let i=0;i<=samples;i++){const t=i/samples;const v=offset+A*Math.sin(2*Math.PI*2*t);
+        const q=Math.max(0,Math.min(levels-1,Math.round(v/LSB)))*LSB;
+        const xx=px(t),yy=py(q);
+        if(prev){ctx.lineTo(xx,prev);ctx.lineTo(xx,yy);}else ctx.moveTo(xx,yy);
+        prev=yy;}
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`N = ${N} bit → ${levels} 단계, LSB = ${(LSB*1000).toFixed(1)} mV`,ox,25);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`최대 양자화 오차 ≈ ±${(LSB/2*1000).toFixed(1)} mV`,ox,H-15);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 아날로그',ox+260,H-15);
+      ctx.fillStyle='#c62828';ctx.fillText('— ADC 양자화',ox+360,H-15);
+    }
+    document.getElementById('adcN').addEventListener('input',draw);
+    document.getElementById('adcA').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

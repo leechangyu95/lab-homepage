@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🌀 원운동 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🌀 원운동 시뮬레이터</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/02-newton-laws.html">Week 2. 뉴턴 운동법칙</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🌀 원운동 시뮬레이터</h4>
+    <p>줄의 길이와 회전 속도를 조절하고, 임의의 순간에 줄을 잘라 공의 운동을 관찰하세요. <strong>밖으로 튕겨나가지 않고 직선으로</strong> 날아가는 게 핵심.</p>
+    <canvas id="circDemo" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>회전 속력 $v$ <span class="val" id="cv">3.0</span> m/s
+        <input type="range" id="cvel" min="1" max="6" step="0.2" value="3"></label>
+      <label>실 길이 $r$ <span class="val" id="crv">1.0</span> m
+        <input type="range" id="cr" min="0.5" max="2" step="0.1" value="1"></label>
+      <button id="ccut">✂ 실 자르기</button>
+      <button id="creset" class="alt">↺ 다시 묶기</button>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰</strong>
+      <ul>
+        <li>실 자르는 순간, 공은 그 시점 <em>속도 방향</em>(접선)으로 등속 직선운동.</li>
+        <li>속력이 빠를수록 공이 더 빠르게 날아감 (운동에너지 보존, 다음 주).</li>
+        <li>"바깥쪽으로 튕겨나간다"는 흔한 오해와 달리, 사실은 <strong>그 순간 가던 방향</strong>으로.</li>
+        <li>원운동 중 장력 $T = mv^2/r$ — 우상단 패널 값을 속도/반경 바꾸며 확인.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('circDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const cx=W/2,cy=H/2;
+    let theta=0,cut=false,cutPos=null,cutVel=null,t0=Date.now();
+    function update(){
+      const v=+document.getElementById('cvel').value;
+      const r=+document.getElementById('cr').value;
+      document.getElementById('cv').textContent=v.toFixed(1);
+      document.getElementById('crv').textContent=r.toFixed(1);
+      const m=0.4;
+      const T=m*v*v/r;
+      const PX=80;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.arc(cx,cy,r*PX,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#666';ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();
+      if(!cut){
+        const dt=(Date.now()-t0)/1000;
+        theta=(v/r)*dt;
+        const bx=cx+r*PX*Math.cos(theta),by=cy+r*PX*Math.sin(theta);
+        ctx.strokeStyle='#8d6e63';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(bx,by);ctx.stroke();
+        const tx=-Math.sin(theta),ty=Math.cos(theta);
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+tx*40,by+ty*40);ctx.stroke();
+        ctx.fillStyle='#0b5fff';
+        const ang=Math.atan2(ty,tx);
+        ctx.beginPath();ctx.moveTo(bx+tx*40,by+ty*40);
+        ctx.lineTo(bx+tx*40-8*Math.cos(ang-0.4),by+ty*40-8*Math.sin(ang-0.4));
+        ctx.lineTo(bx+tx*40-8*Math.cos(ang+0.4),by+ty*40-8*Math.sin(ang+0.4));
+        ctx.closePath();ctx.fill();
+        ctx.fillStyle='#c62828';
+        ctx.beginPath();ctx.arc(bx,by,10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText('v',bx+tx*45,by+ty*45);
+      }else{
+        const dt=(Date.now()-t0)/1000;
+        const bx=cutPos.x+cutVel.x*dt*PX;
+        const by=cutPos.y+cutVel.y*dt*PX;
+        if(bx<0||bx>W||by<0||by>H){cut=false;t0=Date.now();return;}
+        ctx.strokeStyle='#bdbdbd';ctx.setLineDash([2,4]);
+        ctx.beginPath();ctx.moveTo(cutPos.x,cutPos.y);ctx.lineTo(bx,by);ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='#c62828';
+        ctx.beginPath();ctx.arc(bx,by,10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText('직선 운동 (관성)',bx+15,by);
+      }
+      const ix=15,iy=15,iw=200,ih=72;
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(ix,iy,iw,ih);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(ix,iy,iw,ih);
+      ctx.fillStyle='#444';ctx.font='13px sans-serif';
+      ctx.fillText('m = 0.4 kg (가정)',ix+10,iy+20);
+      ctx.fillText('구심가속도 a_c = '+(v*v/r).toFixed(2)+' m/s²',ix+10,iy+38);
+      ctx.fillText('장력 T = '+T.toFixed(2)+' N',ix+10,iy+56);
+    }
+    setInterval(update,30);
+    document.getElementById('ccut').addEventListener('click',()=>{
+      if(cut)return;
+      const v=+document.getElementById('cvel').value;
+      const r=+document.getElementById('cr').value;
+      const PX=80;
+      const bx=cx+r*PX*Math.cos(theta),by=cy+r*PX*Math.sin(theta);
+      const tx=-Math.sin(theta),ty=Math.cos(theta);
+      cutPos={x:bx,y:by};
+      cutVel={x:v*tx,y:v*ty};
+      cut=true;t0=Date.now();
+    });
+    document.getElementById('creset').addEventListener('click',()=>{
+      cut=false;t0=Date.now();theta=0;
+    });
+    update();
+  })();
+  </script>
+</main>
+</body>
+</html>

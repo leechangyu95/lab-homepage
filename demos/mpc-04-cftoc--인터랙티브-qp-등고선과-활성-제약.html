@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: QP 등고선과 활성 제약 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: QP 등고선과 활성 제약</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/04-cftoc.html">Week 4. CFTOC와 QP 정식화</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: QP 등고선과 활성 제약</h4>
+    <p>2변수 QP $\min \tfrac{1}{2}(z_1^2 + z_2^2)$를 박스 제약 안에서 푸는 단순한 예. <strong>박스 위치</strong>를 움직여 보세요. 박스가 원점을 포함하면 무제약 해(0,0)이 답이고, 그렇지 않으면 박스 모서리·꼭짓점이 답이 됩니다.</p>
+    <canvas id="qpDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>박스 중심 X <span class="val" id="qpCXV">2.0</span><input type="range" id="qpCX" min="-3" max="3" step="0.1" value="2"></label>
+      <label>박스 중심 Y <span class="val" id="qpCYV">1.5</span><input type="range" id="qpCY" min="-3" max="3" step="0.1" value="1.5"></label>
+      <label>박스 크기 <span class="val" id="qpSV">1.0</span><input type="range" id="qpS" min="0.3" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('qpDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+    function draw(){
+      const cx=+document.getElementById('qpCX').value;
+      const cy=+document.getElementById('qpCY').value;
+      const s=+document.getElementById('qpS').value;
+      document.getElementById('qpCXV').textContent=cx.toFixed(1);
+      document.getElementById('qpCYV').textContent=cy.toFixed(1);
+      document.getElementById('qpSV').textContent=s.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const px=v=>W/2+v*60,py=v=>H/2-v*60;
+      // contour lines (concentric circles)
+      ctx.strokeStyle='#cfd8e3';
+      for(let r=0.5;r<=4;r+=0.5){ctx.beginPath();ctx.arc(W/2,H/2,r*60,0,Math.PI*2);ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();
+      ctx.moveTo(40,H/2);ctx.lineTo(W-40,H/2);ctx.moveTo(W/2,40);ctx.lineTo(W/2,H-40);ctx.stroke();
+      // box (constraint)
+      const xmin=cx-s,xmax=cx+s,ymin=cy-s,ymax=cy+s;
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;
+      ctx.strokeRect(px(xmin),py(ymax),(xmax-xmin)*60,(ymax-ymin)*60);
+      ctx.fillStyle='rgba(198,40,40,0.08)';
+      ctx.fillRect(px(xmin),py(ymax),(xmax-xmin)*60,(ymax-ymin)*60);
+      // optimal: closest point of box to origin
+      const z1=clamp(0,xmin,xmax),z2=clamp(0,ymin,ymax);
+      // unconstrained optimum (0,0)
+      ctx.fillStyle='#999';ctx.beginPath();ctx.arc(W/2,H/2,5,0,Math.PI*2);ctx.fill();
+      ctx.font='11px sans-serif';ctx.fillText('무제약 해 (0,0)',W/2+8,H/2-5);
+      // constrained optimum
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(px(z1),py(z2),8,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      // line from origin to optimum
+      ctx.strokeStyle='#0b5fff';ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(W/2,H/2);ctx.lineTo(px(z1),py(z2));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText(`최적 z* = (${z1.toFixed(2)}, ${z2.toFixed(2)})`,12,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const onEdge=(z1===xmin||z1===xmax||z2===ymin||z2===ymax);
+      const onCorner=(z1===xmin||z1===xmax)&&(z2===ymin||z2===ymax);
+      ctx.fillText(onCorner?'활성 제약 2개 (꼭짓점)':onEdge?'활성 제약 1개 (모서리)':'제약 비활성 (내부)',12,40);
+      ctx.fillStyle='#c62828';ctx.fillText('박스 (제약 영역)',W-160,40);
+    }
+    document.getElementById('qpCX').addEventListener('input',draw);
+    document.getElementById('qpCY').addEventListener('input',draw);
+    document.getElementById('qpS').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

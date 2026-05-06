@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 자유낙하 vs 등속 vs 가속 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 자유낙하 vs 등속 vs 가속</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/02-particle-rectilinear.html">Week 2. 입자의 직선 운동학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 자유낙하 vs 등속 vs 가속</h4>
+    <p>세 공을 같은 시각에 출발시킵니다. 슬라이더로 초기 속도를 바꿔보고, $g$를 0으로 줄이면 어떻게 되는지(달 표면), $g$를 키우면 어떻게 되는지(목성) 확인해 보세요.</p>
+    <canvas id="fallC" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>중력 g (m/s²) <span class="val" id="flGV">9.81</span><input type="range" id="flG" min="0" max="25" step="0.5" value="9.81"></label>
+      <label>초기 속도 v₀ (m/s, 위 방향) <span class="val" id="flVV">8</span><input type="range" id="flV" min="-15" max="20" step="0.5" value="8"></label>
+      <button id="flReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fallC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['flG','flV'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['flG','flV'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0;
+    sl('flReset').onclick=()=>{t=0;};
+    function loop(){
+      const g=+sl('flG').value,v0=+sl('flV').value;
+      t+=0.025;if(t>4)t=0;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // ground
+      const ground=260;
+      x.fillStyle='#bcd6a8';x.fillRect(0,ground,c.width,40);
+      // labels and balls
+      const y0=ground-30;
+      // free fall (no initial v, falls)
+      const yA=y0 - (0 + 0 - 0.5*g*t*t)*8;
+      // free fall with v0
+      const yB=y0 - (0 + v0*t - 0.5*g*t*t)*8;
+      // constant velocity (no g)
+      const yC=y0 - v0*t*8;
+      function ball(cx,cy,col,label,subline){
+        const yClip=Math.min(cy,ground-12);
+        x.fillStyle=col;x.beginPath();x.arc(cx,yClip,12,0,Math.PI*2);x.fill();
+        x.strokeStyle='#333';x.stroke();
+        x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='center';
+        x.fillText(label,cx,30);
+        x.fillStyle='#666';x.font='11px sans-serif';x.fillText(subline,cx,46);
+      }
+      ball(140,yA,'#c62828','① 자유낙하 (v₀=0)','y = y₀ − ½gt²');
+      ball(320,yB,'#0b5fff','② v₀ 있는 낙하','y = y₀ + v₀t − ½gt²');
+      ball(500,yC,'#2e7d32','③ 등속 (g=0 가상)','y = y₀ + v₀t');
+      x.fillStyle='#444';x.font='11px Consolas,monospace';x.textAlign='center';
+      x.fillText('t = '+t.toFixed(2)+' s,   g = '+g.toFixed(2)+' m/s²,   v₀ = '+v0.toFixed(1)+' m/s',c.width/2,290);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>데모 3 — 일상 단위 ↔ SI 환산 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">데모 3 — 일상 단위 ↔ SI 환산</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/01-intro.html">Week 1. 강의 소개 (OT)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>데모 3 — 일상 단위 ↔ SI 환산</h4>
+    <canvas id="d1UnitC" width="640" height="220"></canvas>
+    <div class="controls">
+      <label>속도 (km/h) <span class="val" id="d1KmhV">100</span><input type="range" id="d1Kmh" min="0" max="300" step="1" value="100"></label>
+      <label>가속도 (g) <span class="val" id="d1GgV">1.0</span><input type="range" id="d1Gg" min="0" max="9" step="0.1" value="1.0"></label>
+      <label>회전수 (rpm) <span class="val" id="d1RpmV">600</span><input type="range" id="d1Rpm" min="0" max="6000" step="10" value="600"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d1UnitC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['d1Kmh','d1Gg','d1Rpm'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['d1Kmh','d1Gg','d1Rpm'].forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const kmh=+sl('d1Kmh').value,gg=+sl('d1Gg').value,rpm=+sl('d1Rpm').value;
+      const ms=kmh/3.6, mph=kmh/1.609;
+      const ams=gg*9.81;
+      const rads=rpm*2*Math.PI/60, hz=rpm/60;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#0b5fff';x.font='bold 13px sans-serif';x.textAlign='left';
+      x.fillText('일상 단위 → SI 단위 환산',20,30);
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';
+      x.fillText('속도: '+kmh.toFixed(1)+' km/h  =  '+ms.toFixed(2)+' m/s  =  '+mph.toFixed(1)+' mph',20,60);
+      x.fillText('가속도: '+gg.toFixed(2)+' g     =  '+ams.toFixed(2)+' m/s²',20,84);
+      x.fillText('회전: '+rpm.toFixed(0)+' rpm   =  '+rads.toFixed(2)+' rad/s   =  '+hz.toFixed(2)+' Hz',20,108);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('• 100 km/h ≈ 27.8 m/s — 시속을 3.6으로 나누면 m/s',20,140);
+      x.fillText('• 1 g ≈ 9.81 m/s² — 자유낙하 가속도',20,158);
+      x.fillText('• 60 rpm = 1 Hz = 1 회전/초 = 2π rad/s',20,176);
+      x.fillText('• 1 rad/s ≈ 9.55 rpm — rpm을 9.55로 나누면 rad/s',20,194);
+    }
+    setInterval(loop,80);loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

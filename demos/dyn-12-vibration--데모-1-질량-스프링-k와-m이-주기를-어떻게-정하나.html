@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 질량-스프링 — k와 m이 주기를 어떻게 정하나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 질량-스프링 — k와 m이 주기를 어떻게 정하나</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/12-vibration.html">Week 12. 진동 입문</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 질량-스프링 — k와 m이 주기를 어떻게 정하나</h4>
+    <p>질량과 스프링 상수를 슬라이더로 바꿔보세요. <strong>주기 $T = 2\pi\sqrt{m/k}$</strong> — $m$이 4배가 되면 주기가 2배(느림), $k$가 4배가 되면 주기가 절반(빠름). 시간 그래프와 위상 평면이 함께 보여집니다.</p>
+    <canvas id="smC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>질량 m (kg) <span class="val" id="smMV">1</span><input type="range" id="smM" min="0.2" max="5" step="0.1" value="1"></label>
+      <label>스프링 k (N/m) <span class="val" id="smKV">10</span><input type="range" id="smK" min="2" max="50" step="0.5" value="10"></label>
+      <label>초기 변위 x₀ <span class="val" id="smXV">1</span><input type="range" id="smX" min="0.2" max="2" step="0.05" value="1"></label>
+      <button id="smReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('smC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['smM','smK','smX'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let pos,vel,history=[];
+    function reset(){pos=+sl('smX').value;vel=0;history=[];}
+    sl('smReset').onclick=reset;
+    ks.forEach(k=>sl(k).addEventListener('change',reset));
+    reset();
+    function loop(){
+      const m=+sl('smM').value,k=+sl('smK').value;
+      const dt=0.025;
+      const a=-k/m*pos;
+      vel+=a*dt;pos+=vel*dt;
+      history.push({x:pos,v:vel});if(history.length>400)history.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // mass-spring at top
+      const cy=80,wallX=80,scale=60;
+      x.fillStyle='#888';x.fillRect(wallX-12,cy-30,12,60);
+      const massX=wallX+120+pos*scale;
+      // spring zigzag
+      x.strokeStyle='#444';x.lineWidth=2;x.beginPath();
+      const sx0=wallX,sxN=massX-22,N=14;
+      for(let i=0;i<=N;i++){
+        const t=i/N,px=sx0+(sxN-sx0)*t,py=cy+(i%2===0?-8:8);
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();
+      x.fillStyle='#0b5fff';x.fillRect(massX-22,cy-22,44,44);x.strokeStyle='#333';x.strokeRect(massX-22,cy-22,44,44);
+      x.fillStyle='#fff';x.font='bold 13px sans-serif';x.textAlign='center';x.fillText('m',massX,cy+5);
+      // equilibrium line
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.moveTo(wallX+120,cy-30);x.lineTo(wallX+120,cy+30);x.stroke();x.setLineDash([]);
+      // x(t) graph
+      const gT=160,gB=240,gL=20,gR=320;
+      x.strokeStyle='#d0d4d9';x.strokeRect(gL,gT,gR-gL,gB-gT);
+      x.fillStyle='#333';x.font='11px sans-serif';x.textAlign='left';x.fillText('x(t)',gL+4,gT+12);
+      const x0=+sl('smX').value;
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();
+      x.moveTo(gL,(gT+gB)/2);x.lineTo(gR,(gT+gB)/2);x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      history.forEach((h,i)=>{
+        const px=gL+(i/history.length)*(gR-gL);
+        const py=(gT+gB)/2-h.x/x0*((gB-gT)/2-4);
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+      });
+      x.stroke();
+      // phase plane (x, v)
+      const pL=360,pR=620,pT=160,pB=320;
+      x.strokeStyle='#d0d4d9';x.strokeRect(pL,pT,pR-pL,pB-pT);
+      x.fillStyle='#333';x.fillText('위상평면 (x, v)',pL+4,pT+12);
+      const pcx=(pL+pR)/2,pcy=(pT+pB)/2;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(pL,pcy);x.lineTo(pR,pcy);x.moveTo(pcx,pT);x.lineTo(pcx,pB);x.stroke();
+      x.strokeStyle='#c62828';x.lineWidth=1.5;x.beginPath();
+      const vMax=x0*Math.sqrt(k/m);
+      history.forEach((h,i)=>{
+        const px=pcx+h.x/x0*((pR-pL)/2-4);
+        const py=pcy-h.v/vMax*((pB-pT)/2-4);
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+      });
+      x.stroke();
+      // current point on phase plane
+      const px=pcx+pos/x0*((pR-pL)/2-4);
+      const py=pcy-vel/vMax*((pB-pT)/2-4);
+      x.fillStyle='#c62828';x.beginPath();x.arc(px,py,4,0,Math.PI*2);x.fill();
+      // info
+      const wn=Math.sqrt(k/m),T=2*Math.PI/wn;
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('ω_n = √(k/m) = '+wn.toFixed(2)+' rad/s',20,340);
+      x.fillText('주기 T = 2π/ω_n = '+T.toFixed(2)+' s,  진동수 f = '+(1/T).toFixed(2)+' Hz',20,358);
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('위상평면이 타원을 그리는 것은 에너지(½mv²+½kx²)가 보존된다는 시각적 증거',20,375);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

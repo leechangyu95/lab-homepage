@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 로지스틱 회귀의 확률 지도 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 로지스틱 회귀의 확률 지도</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/04-regression-2.html">Week 4. 회귀 2: 다중회귀, 로지스틱, 소프트맥스</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 로지스틱 회귀의 확률 지도</h4>
+    <p>점을 클릭해 추가하고(좌클릭=클래스 0, 우클릭=클래스 1), 모델이 학습한 확률 지도를 봅니다. 색이 진할수록 확신도가 높습니다.</p>
+    <canvas id="lrMap" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>학습 반복 <span class="val" id="lrIV">100</span><input type="range" id="lrI" min="10" max="500" step="10" value="100"></label>
+      <button id="lrR">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lrMap');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function seed(){
+      pts=[];
+      for(let i=0;i<15;i++)pts.push({x:0.2+Math.random()*0.25,y:0.2+Math.random()*0.25,c:0});
+      for(let i=0;i<15;i++)pts.push({x:0.55+Math.random()*0.25,y:0.55+Math.random()*0.25,c:1});
+    }
+    seed();
+    c.onclick=e=>{const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height,c:0});draw();};
+    c.oncontextmenu=e=>{e.preventDefault();const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height,c:1});draw();};
+    document.getElementById('lrR').onclick=()=>{seed();draw();};
+    function sigma(z){return 1/(1+Math.exp(-z));}
+    function train(iters){
+      let w1=0,w2=0,b=0;const lr=0.1;
+      for(let it=0;it<iters;it++){
+        let g1=0,g2=0,gb=0;
+        pts.forEach(p=>{const z=w1*p.x+w2*p.y+b;const yhat=sigma(z);const e=yhat-p.c;g1+=e*p.x;g2+=e*p.y;gb+=e;});
+        const N=pts.length;w1-=lr*g1/N;w2-=lr*g2/N;b-=lr*gb/N;
+      }
+      return {w1,w2,b};
+    }
+    function draw(){
+      const iters=+document.getElementById('lrI').value;
+      document.getElementById('lrIV').textContent=iters;
+      const {w1,w2,b}=train(iters);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const STEP=8;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const x=i/W,y=j/H;
+        const p=sigma(w1*x+w2*y+b);
+        const t=Math.min(1,Math.max(0,p));
+        const r=Math.floor(255-(1-t)*100);
+        const g=Math.floor(255-Math.abs(t-0.5)*200);
+        const bl=Math.floor(255-t*100);
+        ctx.fillStyle=`rgb(${r},${g},${bl})`;
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      // points
+      pts.forEach(p=>{const px=p.x*W,py=p.y*H;ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+      // 0.5 boundary: w1*x + w2*y + b = 0
+      ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.beginPath();
+      let drawn=false;
+      for(let x=0;x<=1;x+=0.001){const y=(-w1*x-b)/w2;if(y>=0&&y<=1){if(!drawn){ctx.moveTo(x*W,y*H);drawn=true;}else ctx.lineTo(x*W,y*H);}}
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`w1=${w1.toFixed(2)}, w2=${w2.toFixed(2)}, b=${b.toFixed(2)}`,12,20);
+    }
+    document.getElementById('lrI').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

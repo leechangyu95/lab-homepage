@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 뉴턴법 한 발씩 — 곡선 위에서 접선이 x축으로 떨어지기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 뉴턴법 한 발씩 — 곡선 위에서 접선이 x축으로 떨어지기</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/06-optimization-newton.html">Week 6. 최적화 &amp; 뉴턴법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 뉴턴법 한 발씩 — 곡선 위에서 접선이 x축으로 떨어지기</h4>
+    <p>함수와 시작점을 골라 한 발씩 진행해 보세요. 빨간 점이 새 추정값, 노란 선이 접선, 초록 점이 진짜 근. 발산하는 시작점도 시도해 보세요.</p>
+    <canvas id="nm" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="nmFn">
+          <option value="cosx" selected>cos x − x = 0</option>
+          <option value="cubic">x³ − 2x − 5 = 0</option>
+          <option value="poly">x³ − 6x² + 9x − 2 = 0</option>
+        </select>
+      </label>
+      <label>시작점 x₀ <span class="val" id="nmX0V">2.00</span><input type="range" id="nmX0" min="-3" max="5" step="0.05" value="2"></label>
+      <button id="nmStep">한 반복</button>
+      <button id="nmAuto">자동/정지</button>
+      <button id="nmRst" class="alt">리셋</button>
+    </div>
+    <p id="nmInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('nm'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function fn(){
+      const m=document.getElementById('nmFn').value;
+      if(m==='cosx')return{f:v=>Math.cos(v)-v,d:v=>-Math.sin(v)-1,xR:[-2,4],yR:[-3,3]};
+      if(m==='cubic')return{f:v=>v*v*v-2*v-5,d:v=>3*v*v-2,xR:[-2,3.5],yR:[-10,10]};
+      return{f:v=>v*v*v-6*v*v+9*v-2,d:v=>3*v*v-12*v+9,xR:[-1,5],yR:[-6,6]};
+    }
+    let trail=[];
+    function init(){trail=[+document.getElementById('nmX0').value];}
+    init();
+    document.getElementById('nmRst').onclick=init;
+    document.getElementById('nmX0').oninput=init;
+    document.getElementById('nmFn').onchange=init;
+    function step(){
+      const F=fn();const xn=trail[trail.length-1];
+      const fp=F.d(xn);
+      if(Math.abs(fp)<1e-9)return;
+      const next=xn - F.f(xn)/fp;
+      trail.push(next);
+      if(trail.length>20)trail.shift();
+    }
+    document.getElementById('nmStep').onclick=step;
+    let auto=false,t0=0;
+    document.getElementById('nmAuto').onclick=()=>{auto=!auto;t0=performance.now();};
+    function loop(){
+      if(auto){const t=performance.now();if(t-t0>500){step();t0=t;}}
+      const F=fn();const xR=F.xR,yR=F.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // function
+      x.strokeStyle='#222';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=(xR[1]-xR[0])/600){
+        const yv=F.f(v);if(yv<yR[0]||yv>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // tangents (yellow) at all but last point
+      for(let i=0;i<trail.length-1;i++){
+        const xn=trail[i],fn1=F.f(xn),fp=F.d(xn);
+        const x0=xR[0],y0=fn1+fp*(x0-xn);
+        const x1=xR[1],y1=fn1+fp*(x1-xn);
+        x.strokeStyle='rgba(245,193,0,0.7)';x.lineWidth=1.3;x.setLineDash([4,3]);
+        x.beginPath();x.moveTo(px(x0),py(y0));x.lineTo(px(x1),py(y1));x.stroke();
+        x.setLineDash([]);
+        // vertical drop from xn to f(xn) and from intersection with x-axis to next point
+        x.strokeStyle='rgba(0,0,0,0.3)';
+        x.beginPath();x.moveTo(px(xn),py(0));x.lineTo(px(xn),py(fn1));x.stroke();
+      }
+      // trail
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      trail.forEach((v,i)=>{const yy=py(0);i?x.lineTo(px(v),yy):x.moveTo(px(v),yy);});x.stroke();
+      trail.forEach((v,i)=>{x.fillStyle=i===trail.length-1?'#c62828':'rgba(198,40,40,0.4)';x.beginPath();x.arc(px(v),py(0),i===trail.length-1?6:4,0,Math.PI*2);x.fill();});
+      // info
+      const last=trail[trail.length-1];
+      const fv=F.f(last);
+      document.getElementById('nmInfo').textContent='반복 '+(trail.length-1)+': x = '+last.toFixed(6)+', f(x) = '+fv.toFixed(6);
+      requestAnimationFrame(()=>setTimeout(loop,60));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

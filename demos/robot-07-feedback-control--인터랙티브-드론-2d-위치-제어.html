@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 드론 2D 위치 제어 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 드론 2D 위치 제어</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/07-feedback-control.html">Lecture 7. 피드백 제어 (PID)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 드론 2D 위치 제어</h4>
+    <p>두 축(좌우·상하) 모두에 같은 PID를 따로 돌립니다. 차이는 <strong>중력</strong>입니다. 수직축은 가만히 있어도 끌어내려지므로, $K_i = 0$이면 드론이 목표보다 항상 $g/K_p$만큼 아래에 매달려 멈춥니다 — "정상상태 오차"의 가장 직관적인 그림입니다. $K_i$를 켜야 사라집니다. 캔버스를 클릭하면 목표가 그곳으로 옮겨가고, 💨 버튼으로 옆바람을 부여 외란 회복을 볼 수 있습니다.</p>
+    <canvas id="drone" width="640" height="380" style="cursor:crosshair"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="dKpV">3</span><input type="range" id="dKp" min="0" max="10" step="0.1" value="3"></label>
+      <label>Ki <span class="val" id="dKiV">0</span><input type="range" id="dKi" min="0" max="5" step="0.1" value="0"></label>
+      <label>Kd <span class="val" id="dKdV">4</span><input type="range" id="dKd" min="0" max="10" step="0.1" value="4"></label>
+      <button id="drnGust">💨 바람</button>
+      <button id="drnRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('drone'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>['dKp','dKi','dKd'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['dKp','dKi','dKd'].forEach(k=>sl(k).oninput=upd);
+    const W=c.width,H=c.height,g=80;
+    let state,target,ix,iy,gust,hist;
+    function reset(){
+      state={x:100,y:300,vx:0,vy:0};
+      target={x:480,y:120};
+      ix=0;iy=0;gust=0;hist=[];
+    }
+    reset();
+    sl('drnRst').onclick=reset;
+    sl('drnGust').onclick=()=>{gust=(Math.random()<0.5?-1:1)*120;};
+    c.onclick=(e)=>{
+      const r=c.getBoundingClientRect();
+      target.x=Math.max(20,Math.min(W-20,(e.clientX-r.left)*W/r.width));
+      target.y=Math.max(20,Math.min(H-30,(e.clientY-r.top)*H/r.height));
+    };
+    function loop(){
+      const Kp=+sl('dKp').value,Ki=+sl('dKi').value,Kd=+sl('dKd').value;
+      const dt=0.04,uMax=200;
+      const ex=target.x-state.x,ey=target.y-state.y;
+      // 미분항은 측정값 미분(=-속도) 사용 → 목표 변경 시 derivative kick 없음
+      const ux=Kp*ex+Ki*ix-Kd*state.vx;
+      const uy=Kp*ey+Ki*iy-Kd*state.vy;
+      const uxs=Math.max(-uMax,Math.min(uMax,ux));
+      const uys=Math.max(-uMax,Math.min(uMax,uy));
+      // 안티 와인드업: 입력 포화 시 적분 정지
+      if(uxs===ux)ix+=ex*dt;
+      if(uys===uy)iy+=ey*dt;
+      gust*=0.97;
+      const ax=uxs+gust;
+      const ay=uys+g; // canvas y는 아래로 +, 따라서 중력은 +g
+      state.vx+=ax*dt;state.vy+=ay*dt;
+      state.x+=state.vx*dt;state.y+=state.vy*dt;
+      if(state.y>H-15){state.y=H-15;if(state.vy>0)state.vy=0;}
+      if(state.x<10){state.x=10;if(state.vx<0)state.vx=0;}
+      if(state.x>W-10){state.x=W-10;if(state.vx>0)state.vx=0;}
+      if(state.y<10){state.y=10;if(state.vy<0)state.vy=0;}
+      hist.push({x:state.x,y:state.y});
+      if(hist.length>200)hist.shift();
+      // 배경
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let i=0;i<W;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke();}
+      for(let j=0;j<H;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(W,j);x.stroke();}
+      x.strokeStyle='#999';x.lineWidth=2;
+      x.beginPath();x.moveTo(0,H-12);x.lineTo(W,H-12);x.stroke();
+      // 궤적
+      x.strokeStyle='rgba(11,95,255,0.3)';x.lineWidth=1;x.beginPath();
+      hist.forEach((h,i)=>{if(i==0)x.moveTo(h.x,h.y);else x.lineTo(h.x,h.y);});
+      x.stroke();
+      // 목표 십자
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      x.beginPath();x.arc(target.x,target.y,12,0,Math.PI*2);x.stroke();
+      x.beginPath();
+      x.moveTo(target.x-16,target.y);x.lineTo(target.x+16,target.y);
+      x.moveTo(target.x,target.y-16);x.lineTo(target.x,target.y+16);x.stroke();
+      // 드론
+      x.save();x.translate(state.x,state.y);
+      const tilt=Math.atan2(uxs,Math.max(50,-uys-g))*0.5;
+      x.rotate(tilt);
+      x.strokeStyle='#333';x.lineWidth=3;
+      x.beginPath();x.moveTo(-18,0);x.lineTo(18,0);x.stroke();
+      x.fillStyle='#555';
+      x.beginPath();x.arc(-18,0,5,0,Math.PI*2);x.fill();
+      x.beginPath();x.arc(18,0,5,0,Math.PI*2);x.fill();
+      x.fillStyle='#0b5fff';x.fillRect(-7,-4,14,8);
+      // 추력 화살표
+      x.strokeStyle='#ff8c00';x.lineWidth=3;
+      const tlen=Math.max(8,Math.min(40,(-uys+g)*0.15));
+      x.beginPath();x.moveTo(0,0);x.lineTo(0,-tlen);
+      x.lineTo(-3,-tlen+5);x.moveTo(0,-tlen);x.lineTo(3,-tlen+5);x.stroke();
+      x.restore();
+      // 바람 표시
+      if(Math.abs(gust)>3){
+        x.fillStyle='#2e7d32';x.font='14px sans-serif';
+        x.fillText('💨 바람 '+(gust>0?'→':'←')+' '+Math.abs(gust).toFixed(0),16,30);
+      }
+      // HUD
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('error = ('+ex.toFixed(0)+', '+(-ey).toFixed(0)+') px  ·  thrust = ('+uxs.toFixed(0)+', '+(-uys).toFixed(0)+')',16,H-22);
+      x.fillText('💡 캔버스 클릭 → 목표 이동  ·  중력 g='+g+' px/s²,  Ki=0이면 드론이 목표 아래로 g/Kp만큼 처짐',16,H-4);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

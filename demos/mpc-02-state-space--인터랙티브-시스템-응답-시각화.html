@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 시스템 응답 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 시스템 응답 시각화</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/02-state-space.html">Week 2. 이산 상태공간 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 시스템 응답 시각화</h4>
+    <p>2차 시스템 $x_{k+1} = A x_k + B u_k$의 행렬 원소를 슬라이더로 바꾸며 임펄스 응답이 어떻게 변하는지 봅니다. <strong>$A$의 고윳값 절댓값이 1보다 작으면</strong> 안정, 1을 넘으면 발산해요.</p>
+    <canvas id="ssDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$A_{11}$ <span class="val" id="a11V">0.90</span><input type="range" id="a11" min="-1.5" max="1.5" step="0.05" value="0.9"></label>
+      <label>$A_{12}$ <span class="val" id="a12V">0.10</span><input type="range" id="a12" min="-1" max="1" step="0.05" value="0.1"></label>
+      <label>$A_{21}$ <span class="val" id="a21V">-0.10</span><input type="range" id="a21" min="-1" max="1" step="0.05" value="-0.1"></label>
+      <label>$A_{22}$ <span class="val" id="a22V">0.85</span><input type="range" id="a22" min="-1.5" max="1.5" step="0.05" value="0.85"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ssDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function eig(a,b,c2,d){
+      const tr=a+d,det=a*d-b*c2;
+      const disc=tr*tr-4*det;
+      if(disc>=0){const s=Math.sqrt(disc);return [{r:(tr+s)/2,i:0},{r:(tr-s)/2,i:0}];}
+      const s=Math.sqrt(-disc);return [{r:tr/2,i:s/2},{r:tr/2,i:-s/2}];
+    }
+    function draw(){
+      const a=+document.getElementById('a11').value,b=+document.getElementById('a12').value;
+      const c2=+document.getElementById('a21').value,d=+document.getElementById('a22').value;
+      ['a11','a12','a21','a22'].forEach((id,i)=>{
+        const v=[a,b,c2,d][i];document.getElementById(id+'V').textContent=v.toFixed(2);
+      });
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // simulate impulse response
+      let x=[1,0];const xs=[],ys=[];const T=40;
+      for(let k=0;k<T;k++){
+        xs.push(x[0]);ys.push(x[1]);
+        x=[a*x[0]+b*x[1],c2*x[0]+d*x[1]];
+      }
+      // left: state trajectory
+      const PW=300;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      ctx.moveTo(40,H/2);ctx.lineTo(PW,H/2);ctx.moveTo(40,30);ctx.lineTo(40,H-30);ctx.stroke();
+      const sc=Math.min(60,80/Math.max(...xs.map(Math.abs).concat(ys.map(Math.abs)),0.5));
+      function plot(arr,col){
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+        arr.forEach((v,i)=>{const x=40+(i/(T-1))*(PW-50);const y=H/2-v*sc;
+          if(!isFinite(y)||Math.abs(y)>10000)return;
+          if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+      }
+      plot(xs,'#0b5fff');plot(ys,'#ff8c00');
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('상태 궤적 (임펄스 응답)',40,22);
+      ctx.fillStyle='#0b5fff';ctx.fillText('x₁',PW-40,40);
+      ctx.fillStyle='#ff8c00';ctx.fillText('x₂',PW-40,58);
+      // right: eigenvalues on complex plane (unit circle)
+      const cx=PW+150,cy=H/2,R=80;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();ctx.moveTo(cx-R-20,cy);ctx.lineTo(cx+R+20,cy);ctx.moveTo(cx,cy-R-20);ctx.lineTo(cx,cy+R+20);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+      const eigs=eig(a,b,c2,d);
+      let stable=true;
+      eigs.forEach(e=>{
+        const mag=Math.hypot(e.r,e.i);
+        if(mag>1.0001)stable=false;
+        ctx.fillStyle=mag>1?'#c62828':'#2e7d32';
+        ctx.beginPath();ctx.arc(cx+e.r*R,cy-e.i*R,6,0,Math.PI*2);ctx.fill();
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('고윳값 (단위원)',PW+90,22);
+      ctx.fillStyle=stable?'#2e7d32':'#c62828';ctx.font='bold 14px sans-serif';
+      ctx.fillText(stable?'✓ 안정':'⚠ 불안정',PW+100,H-15);
+    }
+    ['a11','a12','a21','a22'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

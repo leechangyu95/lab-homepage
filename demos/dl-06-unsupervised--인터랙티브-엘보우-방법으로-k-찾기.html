@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 엘보우 방법으로 K 찾기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 엘보우 방법으로 K 찾기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/06-unsupervised.html">Week 6. 비지도학습 — 군집화와 차원 축소</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 엘보우 방법으로 K 찾기</h4>
+    <p>실제 클러스터 수가 정해진 데이터에 K=1~8을 차례로 적용하고, 각 $K$의 비용 $J$(클러스터 내 분산 합)를 그립니다. <strong>꺾이는 지점</strong>이 적정 $K$입니다. "실제 클러스터 수"를 바꿔보면 엘보우의 위치가 따라 움직여요.</p>
+    <canvas id="elbow" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>실제 클러스터 수 <span class="val" id="elKV">3</span><input type="range" id="elK" min="2" max="6" step="1" value="3"></label>
+      <button id="elGen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('elbow');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      const trueK=+document.getElementById('elK').value;
+      document.getElementById('elKV').textContent=trueK;
+      pts=[];
+      for(let k=0;k<trueK;k++){
+        const cx=80+Math.random()*(W-160),cy=60+Math.random()*120;
+        for(let i=0;i<30;i++){
+          const u=Math.random(),v=Math.random();
+          const z0=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*22;
+          const z1=Math.sqrt(-2*Math.log(u))*Math.sin(2*Math.PI*v)*22;
+          pts.push({x:cx+z0,y:cy+z1});
+        }
+      }
+      draw();
+    }
+    function kmeansJ(K){
+      let centers=[];const idx=new Set();
+      while(centers.length<K){const i=Math.floor(Math.random()*pts.length);if(!idx.has(i)){idx.add(i);centers.push({x:pts[i].x,y:pts[i].y});}}
+      let assign=new Array(pts.length).fill(0);
+      for(let it=0;it<20;it++){
+        for(let i=0;i<pts.length;i++){
+          let bd=Infinity,bi=0;
+          centers.forEach((c,k)=>{const d=(pts[i].x-c.x)**2+(pts[i].y-c.y)**2;if(d<bd){bd=d;bi=k;}});
+          assign[i]=bi;
+        }
+        const ns=new Array(K).fill(0),sx=new Array(K).fill(0),sy=new Array(K).fill(0);
+        for(let i=0;i<pts.length;i++){ns[assign[i]]++;sx[assign[i]]+=pts[i].x;sy[assign[i]]+=pts[i].y;}
+        for(let k=0;k<K;k++)if(ns[k]){centers[k].x=sx[k]/ns[k];centers[k].y=sy[k]/ns[k];}
+      }
+      let J=0;
+      for(let i=0;i<pts.length;i++){const c=centers[assign[i]];J+=(pts[i].x-c.x)**2+(pts[i].y-c.y)**2;}
+      return J;
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // dataset on left
+      const PW=240;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(10,30,PW,H-50);
+      pts.forEach(p=>{ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(10+p.x*PW/W,30+p.y*(H-50)/H,3,0,Math.PI*2);ctx.fill();});
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';ctx.fillText('데이터',12,22);
+      // elbow plot
+      const PX=PW+50,PY=30,PWP=W-PX-20,PHP=H-70;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(PX,PY,PWP,PHP);
+      const Js=[];for(let K=1;K<=8;K++){let bestJ=Infinity;for(let r=0;r<3;r++){const j=kmeansJ(K);if(j<bestJ)bestJ=j;}Js.push(bestJ);}
+      const Jmax=Math.max(...Js),Jmin=Math.min(...Js);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      Js.forEach((j,i)=>{
+        const x=PX+(i+1)/8*PWP*0.9+10;
+        const y=PY+(1-(j-Jmin)/(Jmax-Jmin+0.001))*PHP*0.85+10;
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+      Js.forEach((j,i)=>{
+        const x=PX+(i+1)/8*PWP*0.9+10;
+        const y=PY+(1-(j-Jmin)/(Jmax-Jmin+0.001))*PHP*0.85+10;
+        ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#666';ctx.font='10px sans-serif';ctx.fillText('K='+(i+1),x-10,PY+PHP+12);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('비용 J vs K (엘보우)',PX,22);
+      // mark true K
+      const trueK=+document.getElementById('elK').value;
+      const xT=PX+(trueK)/8*PWP*0.9+10;
+      ctx.strokeStyle='#c62828';ctx.setLineDash([5,5]);
+      ctx.beginPath();ctx.moveTo(xT,PY);ctx.lineTo(xT,PY+PHP);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='11px sans-serif';ctx.fillText('실제 K='+trueK,xT-22,PY+PHP+24);
+    }
+    document.getElementById('elK').addEventListener('input',gen);
+    document.getElementById('elGen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 깊이별 기울기 크기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 깊이별 기울기 크기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/08-dnn-backprop.html">Week 8. 심층신경망과 역전파</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 깊이별 기울기 크기</h4>
+    <p>층 수와 활성함수를 바꿔가며 입력층까지 도달하는 기울기 크기를 봅니다. 시그모이드는 깊어질수록 급격히 작아집니다.</p>
+    <canvas id="vgCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>층 수 <span class="val" id="lyV">8</span><input type="range" id="ly" min="2" max="20" step="1" value="8"></label>
+      <label>활성
+        <select id="actSel2"><option value="sig">Sigmoid</option><option value="tanh">tanh</option><option value="relu">ReLU</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vgCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function maxd(t){if(t==='sig')return 0.25;if(t==='tanh')return 1;if(t==='relu')return 1;}
+    function draw(){
+      const L=+document.getElementById('ly').value,t=document.getElementById('actSel2').value;
+      document.getElementById('lyV').textContent=L;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,20);ctx.lineTo(40,H-30);ctx.stroke();
+      const m=maxd(t);
+      const bw=(W-80)/L;
+      for(let k=0;k<L;k++){
+        const g=Math.pow(m,k+1);
+        const h=Math.max(2,g*(H-60));
+        ctx.fillStyle=g<0.001?'#c62828':g<0.05?'#ff8c00':'#0b5fff';
+        ctx.fillRect(50+k*bw,H-30-h,bw-4,h);
+      }
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('출력층',40,H-10);ctx.fillText('입력층',W-80,H-10);
+      ctx.fillText('|기울기|',5,30);
+    }
+    document.getElementById('ly').addEventListener('input',draw);
+    document.getElementById('actSel2').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

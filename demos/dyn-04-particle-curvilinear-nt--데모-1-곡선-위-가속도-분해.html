@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 곡선 위 가속도 분해 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 곡선 위 가속도 분해</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/04-particle-curvilinear-nt.html">Week 4. 곡선 운동학 — 접선·법선 좌표 &amp; 극좌표</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 곡선 위 가속도 분해</h4>
+    <p>입자가 타원 트랙을 도는 모습입니다. <strong>속도(파랑) · 접선 가속도(초록) · 법선 가속도(빨강)</strong>를 화살표로 보여줍니다. 트랙의 곡률($\rho$)을 슬라이더로 바꿔보고, 속도를 바꾸면 어떻게 두 성분이 변하는지 확인하세요.</p>
+    <canvas id="ntC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>각속도 ω <span class="val" id="ntWV">1.5</span><input type="range" id="ntW" min="0.3" max="3" step="0.05" value="1.5"></label>
+      <label>접선 가속 (속도 변화) <span class="val" id="ntDV">0.4</span><input type="range" id="ntD" min="-1.5" max="1.5" step="0.05" value="0.4"></label>
+      <label>타원 종횡비 b/a <span class="val" id="ntRV">0.6</span><input type="range" id="ntR" min="0.3" max="1" step="0.02" value="0.6"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ntC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['ntW','ntD','ntR'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['ntW','ntD','ntR'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0,v=2;
+    function loop(){
+      const wBase=+sl('ntW').value,dvdt=+sl('ntD').value,ratio=+sl('ntR').value;
+      const dt=0.025;
+      v+=dvdt*dt;
+      if(v<0.5)v=0.5;if(v>5)v=5;
+      t+=wBase*dt*0.5;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height/2;
+      const A=180,B=A*ratio;
+      // ellipse
+      x.strokeStyle='#bbb';x.lineWidth=1.5;x.beginPath();x.ellipse(cx,cy,A,B,0,0,Math.PI*2);x.stroke();
+      // position
+      const px=cx+A*Math.cos(t),py=cy+B*Math.sin(t);
+      // tangent direction (derivative)
+      const tdx=-A*Math.sin(t),tdy=B*Math.cos(t);
+      const tnorm=Math.sqrt(tdx*tdx+tdy*tdy);
+      const ex=tdx/tnorm,ey=tdy/tnorm;
+      // normal (inward) — perpendicular to tangent, pointing toward center of curvature
+      // for ellipse, normal points generally toward center for inside
+      let nx=-ey,ny=ex;
+      // ensure points inward
+      if((px+nx-cx)*(px+nx-cx)/(A*A)+(py+ny-cy)*(py+ny-cy)/(B*B)>1){nx=-nx;ny=-ny;}
+      // radius of curvature for ellipse
+      const rho=Math.pow(A*A*Math.sin(t)**2+B*B*Math.cos(t)**2,1.5)/(A*B);
+      // velocity arrow
+      const vScale=20;
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+ex*v*vScale,py+ey*v*vScale);
+      x.lineTo(px+ex*v*vScale-ex*8-ey*4,py+ey*v*vScale-ey*8+ex*4);
+      x.moveTo(px+ex*v*vScale,py+ey*v*vScale);
+      x.lineTo(px+ex*v*vScale-ex*8+ey*4,py+ey*v*vScale-ey*8-ex*4);x.stroke();
+      // tangential acc arrow
+      const aScale=30;
+      x.strokeStyle='#2e7d32';x.lineWidth=2;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+ex*dvdt*aScale*2,py+ey*dvdt*aScale*2);x.stroke();
+      // normal acc
+      const an=v*v/rho*aScale*2;
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+nx*an,py+ny*an);x.stroke();
+      // particle
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px,py,6,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('v',px+ex*v*vScale+5,py+ey*v*vScale);
+      x.fillStyle='#2e7d32';x.fillText('a_t',px+ex*dvdt*aScale*2+5,py+ey*dvdt*aScale*2-3);
+      x.fillStyle='#c62828';x.fillText('a_n',px+nx*an+5,py+ny*an);
+      // info
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('|v| = '+v.toFixed(2),20,30);
+      x.fillText('a_t = dv/dt = '+dvdt.toFixed(2),20,48);
+      x.fillText('a_n = v²/ρ = '+(v*v/rho).toFixed(3),20,66);
+      x.fillText('곡률반경 ρ = '+rho.toFixed(1)+' (위치마다 변함)',20,84);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

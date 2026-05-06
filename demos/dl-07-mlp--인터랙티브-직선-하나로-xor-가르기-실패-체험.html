@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 직선 하나로 XOR 가르기 (실패 체험) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 직선 하나로 XOR 가르기 (실패 체험)</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/07-mlp.html">Week 7. 퍼셉트론과 다층 신경망(MLP)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 직선 하나로 XOR 가르기 (실패 체험)</h4>
+    <p>네 점을 보고 직선을 그어 1(주황)과 0(파랑)을 가르려 시도해 보세요. 직선의 <strong>각도</strong>와 <strong>위치</strong>를 어떻게 돌려도 항상 둘은 섞입니다 — 이게 1969년 신경망을 죽인 그 직선분리 불가능성입니다.</p>
+    <canvas id="xorTry" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>각도 <span class="val" id="xaV">45</span>°<input type="range" id="xa" min="0" max="180" step="1" value="45"></label>
+      <label>위치 <span class="val" id="xbV">0.0</span><input type="range" id="xb" min="-1" max="1" step="0.05" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('xorTry');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const pts=[{x:0,y:0,c:0},{x:1,y:1,c:0},{x:0,y:1,c:1},{x:1,y:0,c:1}];
+    function draw(){
+      const ang=+document.getElementById('xa').value*Math.PI/180;
+      const off=+document.getElementById('xb').value;
+      document.getElementById('xaV').textContent=document.getElementById('xa').value;
+      document.getElementById('xbV').textContent=off.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,sc=120;
+      // background sides
+      const nx=Math.cos(ang),ny=Math.sin(ang);
+      const STEP=10;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const u=(i-cx)/sc,v=(cy-j)/sc;
+        const side=u*nx+v*ny+off;
+        ctx.fillStyle=side>0?'rgba(11,95,255,0.07)':'rgba(255,140,0,0.09)';
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      // line
+      const dx=-ny,dy=nx;
+      const x0=cx+(-off*nx-2*dx)*sc,y0=cy-(-off*ny-2*dy)*sc;
+      const x1=cx+(-off*nx+2*dx)*sc,y1=cy-(-off*ny+2*dy)*sc;
+      ctx.strokeStyle='#000';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+      // points
+      let correct=0;
+      pts.forEach(p=>{
+        const px=cx+(p.x-0.5)*sc,py=cy-(p.y-0.5)*sc;
+        const u=(p.x-0.5),v=(p.y-0.5);
+        const side=u*nx+v*ny+off;
+        const pred=side>0?0:1;
+        if(pred===p.c)correct++;
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(px,py,12,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle=pred===p.c?'#2e7d32':'#c62828';
+        ctx.lineWidth=4;ctx.stroke();
+        ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';
+        ctx.fillText(p.c,px-4,py+5);
+      });
+      ctx.fillStyle=correct===4?'#2e7d32':'#c62828';
+      ctx.font='bold 16px sans-serif';
+      ctx.fillText(`맞춘 점: ${correct}/4 ${correct===4?'✓ 성공!':'— 직선으로는 절대 4개 다 못 맞춥니다'}`,12,30);
+    }
+    document.getElementById('xa').addEventListener('input',draw);
+    document.getElementById('xb').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

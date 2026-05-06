@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W8. 심층신경망과 역전파 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html" class="active">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../dl.html">← 주차 목록</a></p>
+  <h1 class="page-title">Week 8. 심층신경망과 역전파</h1>
+  <p class="lead">층이 깊어지면 어떻게 학습할까. 연쇄법칙·기울기 소실·ReLU·드롭아웃·배치정규화 — 현대 딥러닝을 떠받치는 다섯 기둥.</p>
+
+  <div class="toc"><h4>이번 주에 배우는 것</h4><ol>
+    <li>역전파 — 연쇄법칙으로 푸는 미분</li>
+    <li>기울기 소실 문제</li>
+    <li>ReLU의 등장</li>
+    <li>가중치 초기화 (Xavier, He)</li>
+    <li>드롭아웃과 배치정규화</li>
+  </ol></div>
+
+  <div class="tip"><strong>지난 주에 우리가 멈춘 곳.</strong> <a href="07-mlp.html">W7</a>에서 우리는 "MLP에 비선형이 있으면 XOR도 푼다"는 사실을 봤지만, <em>어떻게 학습되는지</em>는 미뤄뒀습니다. 오늘이 바로 그 답을 듣는 날입니다 — 1986년 Hinton 그룹이 다시 발견한 알고리즘, <strong>역전파(backpropagation)</strong>.</div>
+
+  <h2>1. 왜 역전파가 필요한가 — 수백만 파라미터의 미분</h2>
+  <p>현대 신경망의 파라미터 수는 수백만, 수억, 심지어 수조 개입니다. GPT-3는 1750억 개의 파라미터를 가집니다. 비용함수 $J$가 있을 때, 경사하강법을 쓰려면 <em>각 파라미터에 대한 편미분</em>을 모두 알아야 합니다. 이걸 손으로 구하는 것은 불가능할 뿐 아니라, 순진하게 <em>수치 미분</em>(각 파라미터를 미세하게 바꿔 차이를 보는 방법)으로 계산하면 파라미터 하나당 한 번의 forward pass가 필요해 총 $O(\text{파라미터 수})$번의 계산이 듭니다. 파라미터가 백만 개면 한 업데이트에 백만 번의 forward pass가 필요 — 완전히 비현실적입니다.</p>
+  <p>다행히 신경망은 <em>함수의 합성(composition)</em>이고, 합성함수의 미분은 <strong>연쇄법칙(chain rule)</strong>으로 풀립니다:</p>
+  $$ \frac{\partial L}{\partial w} = \frac{\partial L}{\partial y} \cdot \frac{\partial y}{\partial z} \cdot \frac{\partial z}{\partial w} $$
+  <p>이 곱셈을 <em>출력층에서 입력층으로 거꾸로 흘려보내는</em> 알고리즘이 <strong>역전파(backpropagation)</strong>입니다. 놀라운 점: 역전파는 파라미터 수에 관계없이 <em>딱 한 번의 backward pass</em>로 모든 편미분을 계산합니다. 시간 복잡도는 forward pass와 동일한 $O(\text{파라미터 수})$. 수치 미분에 비해 정확히 파라미터 수만큼 빨라집니다.</p>
+  <p>역사적으로 역전파는 1960~70년대에 여러 연구자(Bryson & Ho, Linnainmaa, Werbos)가 독립적으로 발견했지만, 신경망 학습에 대중적으로 적용된 것은 1986년 Rumelhart, Hinton, Williams의 Nature 논문 이후입니다. 이 논문은 XOR 같은 문제를 다층 퍼셉트론으로 학습시키는 데 성공했고, <a href="07-mlp.html">W7</a>에서 다룬 첫 번째 AI 겨울을 끝내는 도화선이 되었습니다.</p>
+
+  <h3>1.1 2층 신경망에서 역전파 손으로 유도하기</h3>
+  <div class="note">
+    <strong>겁먹지 말고 큰 그림부터.</strong> 아래 수식이 많아 보이지만, 모두 <em>"손실에서 시작해 출력 → 은닉 → 입력으로 거꾸로 미분을 흘려보내는"</em> 한 가지 일을 반복할 뿐입니다. 매 층에서 우리가 곱하는 건 둘뿐 — ① 위 층에서 내려온 신호 ② 내가 통과시킨 활성함수의 미분. 그게 전부입니다.
+  </div>
+  <p>구체적으로 해봅시다. 입력 $x$, 은닉층 하나, 출력 하나인 단순한 구조를 생각합니다:</p>
+  $$ z_1 = w_1 x + b_1, \quad a_1 = \sigma(z_1) $$
+  $$ z_2 = w_2 a_1 + b_2, \quad \hat y = \sigma(z_2) $$
+  $$ L = \tfrac{1}{2}(\hat y - y)^2 $$
+  <p>Forward pass는 위에서 아래로 — 입력 $x$부터 손실 $L$까지 계산. Backward pass는 아래에서 위로 — $L$부터 각 파라미터까지 편미분 계산.</p>
+  <p><strong>출력층에서 시작</strong>:</p>
+  $$ \frac{\partial L}{\partial \hat y} = \hat y - y $$
+  <p>다음으로 $z_2$에 대한 편미분 (연쇄법칙):</p>
+  $$ \frac{\partial L}{\partial z_2} = \frac{\partial L}{\partial \hat y} \cdot \frac{\partial \hat y}{\partial z_2} = (\hat y - y) \cdot \sigma'(z_2) $$
+  <p>여기서 $\sigma'(z) = \sigma(z)(1 - \sigma(z))$. 이 양을 $\delta_2$로 기록해둡니다 — "출력층의 국소 에러".</p>
+
+  <div class="tip"><strong>$\delta$ 한 번에 이해하기.</strong> $\delta_l = \partial L / \partial z_l$입니다. 한 줄로 해석하면 "이 층의 <em>활성 직전 신호</em> $z_l$을 살짝 바꾸면 손실이 얼마나 변하는가"입니다. 출력층의 $\delta$는 손실 도함수에 활성함수 미분만 곱한 것이고, 그 아래 층의 $\delta$는 위 층의 $\delta$에 가중치를 곱하고 다시 활성함수 미분을 곱한 것 — 정확히 "위에서 내려온 책임 신호 × 내가 통과시킨 비선형의 민감도"입니다. 모든 가중치 미분 $\partial L/\partial w_l$은 결국 $\delta_l \cdot a_{l-1}$이라는 두 양의 곱으로 깔끔하게 압축됩니다.</p>
+  <p>이제 $w_2, b_2$에 대한 편미분:</p>
+  $$ \frac{\partial L}{\partial w_2} = \delta_2 \cdot a_1, \quad \frac{\partial L}{\partial b_2} = \delta_2 $$
+  <p><strong>은닉층으로 전파</strong>:</p>
+  $$ \frac{\partial L}{\partial a_1} = \delta_2 \cdot w_2 $$
+  $$ \frac{\partial L}{\partial z_1} = \frac{\partial L}{\partial a_1} \cdot \sigma'(z_1) = \delta_2 \cdot w_2 \cdot \sigma'(z_1) $$
+  <p>이걸 $\delta_1$이라 부르고, $w_1, b_1$ 편미분:</p>
+  $$ \frac{\partial L}{\partial w_1} = \delta_1 \cdot x, \quad \frac{\partial L}{\partial b_1} = \delta_1 $$
+  <p>핵심 패턴: 각 층의 "에러 신호" $\delta_l$이 이전 층으로 $\delta_{l-1} = (W_l^\top \delta_l) \cdot \sigma'(z_{l-1})$ 형태로 <em>거꾸로 전파</em>됩니다. 이 재귀적 구조 덕분에 층 수에 관계없이 효율적으로 계산할 수 있고, 현대 자동 미분(autograd) 엔진(PyTorch, JAX, TensorFlow)의 기반입니다.</p>
+
+  <div class="tip">
+    <strong>실전 팁</strong> — 역전파를 구현할 때는 Forward pass 중 중간 값($z_l, a_l$)을 모두 저장해 두어야 Backward pass에서 재사용할 수 있습니다. 이 메모리 비용이 모델 크기의 병목이 되어, 딥러닝에서는 "gradient checkpointing"이라는 기법으로 일부 중간값을 버리고 필요할 때 다시 계산하는 트레이드오프를 씁니다.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 연쇄법칙으로 기울기 흘리기</h4>
+    <p>2층 망의 forward와 backward를 단계별로 따라갑니다. 각 노드를 클릭하면 그 노드까지 도달한 기울기 값이 강조됩니다. <strong>backward 진행</strong> 슬라이더를 움직이면 출력층부터 차례로 기울기가 흘러내려요.</p>
+    <canvas id="bp2" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>입력 x <span class="val" id="bpXV">1.0</span><input type="range" id="bpX" min="-2" max="2" step="0.1" value="1"></label>
+      <label>정답 y <span class="val" id="bpYV">1.0</span><input type="range" id="bpY" min="-2" max="2" step="0.1" value="1"></label>
+      <label>backward 진행 <span class="val" id="bpSV">5</span>/5<input type="range" id="bpS" min="0" max="5" step="1" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bp2');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const w1=0.7,b1=0.1,w2=0.5,b2=0.0;
+    function draw(){
+      const x=+document.getElementById('bpX').value;
+      const y=+document.getElementById('bpY').value;
+      const s=+document.getElementById('bpS').value;
+      document.getElementById('bpXV').textContent=x.toFixed(1);
+      document.getElementById('bpYV').textContent=y.toFixed(1);
+      document.getElementById('bpSV').textContent=s;
+      const z1=w1*x+b1,a1=Math.tanh(z1);
+      const z2=w2*a1+b2,yhat=Math.tanh(z2);
+      const L=0.5*(yhat-y)*(yhat-y);
+      const dyhat=(yhat-y);
+      const dz2=dyhat*(1-yhat*yhat);
+      const dw2=dz2*a1,db2=dz2;
+      const da1=dz2*w2,dz1=da1*(1-a1*a1);
+      const dw1=dz1*x,db1=dz1;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const nodes=[
+        {x:60,y:160,label:'x',val:x.toFixed(2),grad:'-',active:false},
+        {x:170,y:120,label:'z₁=w₁x+b₁',val:z1.toFixed(2),grad:dz1.toFixed(3),active:s>=4},
+        {x:170,y:200,label:'(w₁,b₁)',val:`${w1},${b1}`,grad:`${dw1.toFixed(3)},${db1.toFixed(3)}`,active:s>=5},
+        {x:300,y:120,label:'a₁=tanh(z₁)',val:a1.toFixed(2),grad:da1.toFixed(3),active:s>=3},
+        {x:430,y:120,label:'z₂=w₂a₁+b₂',val:z2.toFixed(2),grad:dz2.toFixed(3),active:s>=2},
+        {x:430,y:200,label:'(w₂,b₂)',val:`${w2},${b2}`,grad:`${dw2.toFixed(3)},${db2.toFixed(3)}`,active:s>=2},
+        {x:560,y:120,label:'ŷ=tanh(z₂)',val:yhat.toFixed(2),grad:dyhat.toFixed(3),active:s>=1},
+        {x:560,y:60,label:'L',val:L.toFixed(3),grad:'1',active:s>=1}
+      ];
+      // edges
+      const edges=[[0,1],[2,1],[1,3],[3,4],[5,4],[4,6],[6,7]];
+      edges.forEach(([a,b])=>{
+        ctx.strokeStyle=nodes[b].active?'#c62828':'#cfd8e3';
+        ctx.lineWidth=nodes[b].active?2:1;
+        ctx.beginPath();ctx.moveTo(nodes[a].x+30,nodes[a].y);ctx.lineTo(nodes[b].x-30,nodes[b].y);ctx.stroke();
+      });
+      nodes.forEach(n=>{
+        ctx.fillStyle=n.active?'#fff3e0':'#fff';
+        ctx.strokeStyle=n.active?'#c62828':'#999';
+        ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(n.x,n.y,28,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle='#222';ctx.font='11px sans-serif';
+        ctx.fillText(n.label,n.x-25,n.y-3);
+        ctx.fillStyle='#0b5fff';ctx.fillText('v='+n.val,n.x-25,n.y+10);
+        if(n.active){ctx.fillStyle='#c62828';ctx.fillText('∂L='+n.grad,n.x-25,n.y+40);}
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('→ Forward (파랑) ← Backward (빨강, '+s+'단계 진행)',12,22);
+      ctx.fillText(`손실 L = ${L.toFixed(4)}`,12,290);
+    }
+    document.getElementById('bpX').addEventListener('input',draw);
+    document.getElementById('bpY').addEventListener('input',draw);
+    document.getElementById('bpS').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>2. 기울기 소실 — 깊은 망의 죽음</h2>
+  <p>역전파를 알게 되었으니 이제 깊은 신경망을 쉽게 학습할 수 있어야 할 것 같습니다. 그런데 1990년대에 연구자들은 층을 4~5개 이상 쌓으면 학습이 <em>멈추는</em> 이상한 현상을 목격했습니다. 원인은 <strong>기울기 소실(vanishing gradient)</strong>입니다.</p>
+  <p>시그모이드의 미분 $\sigma'(z) = \sigma(z)(1-\sigma(z))$는 $z = 0$에서 최댓값 0.25를 가지고, 양 끝으로 갈수록 0에 가까워집니다. 역전파에서 각 층을 거칠 때마다 이 미분이 곱해지므로, 10층이면 기울기가 $0.25^{10} \approx 10^{-6}$로 줄어듭니다:</p>
+  $$ \frac{\partial L}{\partial w_1} \propto \sigma'(z_n) \cdot \sigma'(z_{n-1}) \cdots \sigma'(z_1) $$
+  <p>입력층 가까이엔 기울기가 사실상 0이 되어 그 층들은 전혀 학습되지 않습니다. 반대 상황인 <strong>기울기 폭발(exploding gradient)</strong>도 존재하는데, 가중치가 너무 크면 곱셈이 기하급수적으로 커져 학습이 발산합니다.</p>
+  <p>이 문제가 1990년대부터 2000년대 중반까지 신경망 연구를 멈춘 주요 기술적 장벽이었습니다. 그래서 이 시기를 "두 번째 AI 겨울"의 일부로 보기도 합니다. 2010년 경 <strong>ReLU</strong>의 도입과 <strong>영리한 초기화</strong>, <strong>배치 정규화</strong>가 차례로 이 문제를 해결하면서 오늘날의 "딥"러닝이 가능해졌습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: $\sigma'(z)$의 최댓값이 정말 0.25인가?</h4>
+    <p>위 그래프는 시그모이드 $\sigma(z)$, 아래는 그 미분 $\sigma'(z) = \sigma(z)(1-\sigma(z))$입니다. 빨간 점을 슬라이더로 움직여 $\sigma'$의 값을 직접 확인해 보세요. 어디에서도 0.25를 넘지 못합니다 — 그래서 시그모이드를 깊게 쌓으면 기울기가 매 층 4배 이상 줄어듭니다. 오른쪽 패널은 "층 수 $n$에서의 누적 곱 $0.25^n$"을 로그 스케일로 보여줍니다.</p>
+    <canvas id="sigDeriv" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>z 위치 <span class="val" id="sdZV">0.0</span><input type="range" id="sdZ" min="-6" max="6" step="0.1" value="0"></label>
+      <label>활성함수
+        <select id="sdAct"><option value="sig">Sigmoid</option><option value="tanh">tanh</option><option value="relu">ReLU</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sigDeriv');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function f(z,act){if(act==='sig')return 1/(1+Math.exp(-z));if(act==='tanh')return Math.tanh(z);return Math.max(0,z);}
+    function fp(z,act){if(act==='sig'){const s=1/(1+Math.exp(-z));return s*(1-s);}if(act==='tanh'){const t=Math.tanh(z);return 1-t*t;}return z>0?1:0;}
+    function fmax(act){if(act==='sig')return 0.25;if(act==='tanh')return 1.0;return 1.0;}
+    function draw(){
+      const z=+document.getElementById('sdZ').value;
+      const act=document.getElementById('sdAct').value;
+      document.getElementById('sdZV').textContent=z.toFixed(2);
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      // left half: function & derivative graphs (stacked)
+      const lx=10,lwh=W*0.6;
+      const top={x:lx,y:20,w:lwh-20,h:160};
+      const bot={x:lx,y:200,w:lwh-20,h:160};
+      const xmin=-6,xmax=6;
+      const tx=v=>top.x+(v-xmin)/(xmax-xmin)*top.w;
+      const tyA=v=>top.y+top.h*(1-v); // y in [0,1]+a bit
+      const tyB=v=>bot.y+bot.h*(1-v); // y in [0,1]
+      // top: σ(z)
+      ctx.strokeStyle='#ddd';ctx.strokeRect(top.x,top.y,top.w,top.h);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){const zz=xmin+(xmax-xmin)*i/200;const v=f(zz,act);const yp=act==='tanh'?(v+1)/2:Math.max(0,Math.min(1.5,v))/1.5;
+        if(i===0)ctx.moveTo(tx(zz),tyA(yp));else ctx.lineTo(tx(zz),tyA(yp));}
+      ctx.stroke();
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`f(z) — ${act}`,top.x+8,top.y+14);
+      // current z mark
+      const fz=f(z,act);
+      const fzNorm=act==='tanh'?(fz+1)/2:Math.max(0,Math.min(1.5,fz))/1.5;
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(tx(z),tyA(fzNorm),5,0,Math.PI*2);ctx.fill();
+      // bot: σ'(z)
+      ctx.strokeStyle='#ddd';ctx.strokeRect(bot.x,bot.y,bot.w,bot.h);
+      const M=fmax(act);
+      // 0.25 reference line for sigmoid
+      ctx.strokeStyle='#aaa';ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(bot.x,tyB(M/Math.max(M,1)));ctx.lineTo(bot.x+bot.w,tyB(M/Math.max(M,1)));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#888';ctx.font='11px sans-serif';
+      ctx.fillText(`최댓값 = ${M}`,bot.x+8,tyB(M/Math.max(M,1))-3);
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){const zz=xmin+(xmax-xmin)*i/200;const v=fp(zz,act)/Math.max(M,1);
+        if(i===0)ctx.moveTo(tx(zz),tyB(v));else ctx.lineTo(tx(zz),tyB(v));}
+      ctx.stroke();
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`f'(z)`,bot.x+8,bot.y+14);
+      const fpz=fp(z,act);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(tx(z),tyB(fpz/Math.max(M,1)),5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`현재 z=${z.toFixed(2)}: f(z)=${fz.toFixed(3)}, f'(z)=${fpz.toFixed(3)}`,bot.x+8,bot.y+bot.h+18);
+
+      // right half: cumulative product (vanishing)
+      const rx=lwh+10,rwh=W-rx-10;
+      const rect={x:rx,y:30,w:rwh-10,h:H-70};
+      ctx.strokeStyle='#ddd';ctx.strokeRect(rect.x,rect.y,rect.w,rect.h);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('층 수 n에서 누적 곱 (f\')ⁿ',rect.x+8,rect.y-8);
+      // log scale 1 to 1e-12
+      const logMax=0,logMin=-12;
+      const tyR=v=>rect.y+rect.h*(1-(Math.log10(Math.max(v,1e-13))-logMin)/(logMax-logMin));
+      for(const v of [1,1e-2,1e-4,1e-6,1e-8,1e-10,1e-12]){
+        ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(rect.x,tyR(v));ctx.lineTo(rect.x+rect.w,tyR(v));ctx.stroke();
+        ctx.fillStyle='#888';ctx.font='10px sans-serif';
+        ctx.fillText(v.toExponential(0),rect.x+2,tyR(v)-2);
+      }
+      const fpAt=fpz; // use current z's derivative as the per-layer factor
+      const factor=fpAt;
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();
+      for(let n=1;n<=20;n++){
+        const px=rect.x+(n/20)*rect.w;
+        const py=tyR(Math.pow(factor,n));
+        if(n===1)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // also max-case factor (M) as reference (gray)
+      ctx.strokeStyle='rgba(120,120,120,0.6)';ctx.setLineDash([4,3]);ctx.beginPath();
+      for(let n=1;n<=20;n++){const px=rect.x+(n/20)*rect.w;const py=tyR(Math.pow(M,n));if(n===1)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+      ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('빨강=현재 z의 인수, 회색=최댓값 인수',rect.x+8,rect.y+rect.h+14);
+      ctx.fillText('층 수 n →',rect.x+rect.w-60,rect.y+rect.h+30);
+    }
+    document.getElementById('sdZ').addEventListener('input',draw);
+    document.getElementById('sdAct').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+
+  <p>z=0에서 시그모이드 미분이 정확히 0.25, z를 양/음으로 옮기면 더 작아집니다. 오른쪽 그래프는 "현재 z에서의 인수를 n번 곱한 결과"를 로그 스케일로 보여주는데, n=10만 되어도 1e-6 근처로 떨어지는 게 보입니다. 활성함수를 ReLU로 바꿔보세요 — 양수 영역에서 미분이 정확히 1이라 누적 곱이 1로 평평하게 유지됩니다. 이 한 가지 변화가 "깊은" 신경망을 가능케 한 핵심 트릭입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 깊이별 기울기 크기</h4>
+    <p>층 수와 활성함수를 바꿔가며 입력층까지 도달하는 기울기 크기를 봅니다. 시그모이드는 깊어질수록 급격히 작아집니다.</p>
+    <canvas id="vgCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>층 수 <span class="val" id="lyV">8</span><input type="range" id="ly" min="2" max="20" step="1" value="8"></label>
+      <label>활성
+        <select id="actSel2"><option value="sig">Sigmoid</option><option value="tanh">tanh</option><option value="relu">ReLU</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vgCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function maxd(t){if(t==='sig')return 0.25;if(t==='tanh')return 1;if(t==='relu')return 1;}
+    function draw(){
+      const L=+document.getElementById('ly').value,t=document.getElementById('actSel2').value;
+      document.getElementById('lyV').textContent=L;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,20);ctx.lineTo(40,H-30);ctx.stroke();
+      const m=maxd(t);
+      const bw=(W-80)/L;
+      for(let k=0;k<L;k++){
+        const g=Math.pow(m,k+1);
+        const h=Math.max(2,g*(H-60));
+        ctx.fillStyle=g<0.001?'#c62828':g<0.05?'#ff8c00':'#0b5fff';
+        ctx.fillRect(50+k*bw,H-30-h,bw-4,h);
+      }
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('출력층',40,H-10);ctx.fillText('입력층',W-80,H-10);
+      ctx.fillText('|기울기|',5,30);
+    }
+    document.getElementById('ly').addEventListener('input',draw);
+    document.getElementById('actSel2').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>3. ReLU — 단순함의 승리</h2>
+  <p>$f(x) = \max(0, x)$. 이게 전부입니다. 양수에서 미분이 1이라 곱해도 줄어들지 않고, 음수에서 0이라 일부 뉴런이 자연스럽게 꺼져 희소성을 얻습니다. 2010년경 Hinton·Krizhevsky의 ImageNet 승리 이후 사실상 표준이 되었습니다.</p>
+
+  <h3>3.1 왜 시그모이드/tanh보다 좋은가</h3>
+  <p>§2의 기울기 소실 분석을 다시 떠올려 봅시다. 시그모이드 미분의 <em>최댓값</em>은 $0.25$ — 100층 통과하면 $0.25^{100} \approx 10^{-60}$로 사라집니다. tanh는 좀 낫지만 양 끝에서 saturate되는 건 똑같아요. ReLU는 다릅니다.</p>
+  <ul>
+    <li><strong>양수 영역의 미분이 정확히 1</strong> — 곱해도 신호 크기가 줄지 않습니다. 깊은 망에서도 기울기가 살아남는 결정적 이유.</li>
+    <li><strong>계산이 단순하다</strong> — $\exp$ 호출 없이 비교 한 번. 시그모이드/tanh보다 6배 빠르다는 보고(AlexNet 논문 §3.1).</li>
+    <li><strong>희소 활성화(sparsity)</strong> — 평균적으로 약 절반의 뉴런이 0을 출력해, 표현이 자연스럽게 희소해지고 일반화에 도움이 됩니다.</li>
+    <li><strong>생물학적 그럴듯함</strong> — 실제 뉴런도 임계값 이하에서 침묵. tanh의 양/음 대칭보다 ReLU의 단방향 활성이 실제 뉴런 발화에 가깝습니다.</li>
+  </ul>
+
+  <h3>3.2 죽어가는 ReLU (Dying ReLU)</h3>
+  <p>ReLU에도 함정은 있습니다. 큰 음의 입력을 한 번 받으면 출력이 0, <em>미분도 0</em>이라 가중치 갱신이 일어나지 않고 그 뉴런은 영원히 죽은 채로 남습니다.</p>
+  $$ x < 0 \;\Rightarrow\; f(x) = 0,\;\; f'(x) = 0 \;\Rightarrow\; \nabla_W \mathcal{L} = 0 $$
+  <p>특히 학습률이 너무 크거나 가중치 초기화가 나빠 큰 음수 출력이 한꺼번에 발생하면, 망의 <strong>20–40%</strong>가 영구 사망하는 경우도 보고됐습니다(Lu et al. 2019). 대응은 두 가지 — (1) <em>학습률을 작게</em>(특히 초반), (2) <em>He 초기화</em>로 분산이 잘 잡힌 시작점을 두기 (§4 참고). 그래도 부족하면 변종을 씁니다.</p>
+
+  <h3>3.3 ReLU의 변종들 — 무엇을 언제 쓸까</h3>
+  <table>
+    <thead><tr><th>이름</th><th>식</th><th>특징·언제</th></tr></thead>
+    <tbody>
+      <tr><td>Leaky ReLU</td><td>$\max(\alpha x, x),\;\alpha=0.01$</td><td>음수 영역에 작은 기울기를 줘 죽음 방지. 가장 단순한 응급처치.</td></tr>
+      <tr><td>PReLU</td><td>$\max(\alpha x, x)$ ($\alpha$ 학습)</td><td>$\alpha$를 데이터로부터 학습. He 2015 ResNet에서 처음 채택.</td></tr>
+      <tr><td>ELU</td><td>$x>0?\,x:\alpha(e^x-1)$</td><td>음수 쪽이 부드럽게 saturate. 평균 활성을 0에 가깝게 유지해 학습 안정.</td></tr>
+      <tr><td>GELU</td><td>$x\cdot\Phi(x)$</td><td>가우시안 분포 분위수로 부드럽게 게이팅. <strong>BERT·GPT 표준</strong>.</td></tr>
+      <tr><td>Swish/SiLU</td><td>$x\cdot\sigma(x)$</td><td>Google이 자동탐색으로 발견. EfficientNet·MobileNetV3 채택.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>실무 선택 가이드</strong> — CNN 백본은 거의 ReLU(또는 가볍게 GELU/Swish), Transformer 계열은 GELU, 작은 모델·임베디드면 ReLU(빠름). 죽음 문제가 의심되면 Leaky ReLU($\alpha=0.01$)부터 시도하세요. 새 활성함수의 성능 이득은 보통 1% 미만이라, 데이터·구조 튜닝보다 우선순위는 낮습니다.
+  </div>
+
+  <h2>4. 가중치 초기화</h2>
+  <p>가중치를 모두 0으로 초기화하면 모든 뉴런이 같은 출력을 내고, 같은 기울기를 받아 영원히 똑같이 움직입니다(대칭성 문제). 무작위로 초기화하되 분산을 잘 골라야 합니다.</p>
+  <ul>
+    <li><strong>Xavier (Glorot)</strong>: $\text{Var}(W) = 1/n_{\text{in}}$ — 시그모이드/tanh 용.</li>
+    <li><strong>He</strong>: $\text{Var}(W) = 2/n_{\text{in}}$ — ReLU 용.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 초기화 방법별 활성값 분포</h4>
+    <p>5층을 통과한 뒤 마지막 층의 활성값 분포가 어떤지 봅니다. 0 가까이 모이거나 양 끝에 쌓이면 학습이 어려워집니다.</p>
+    <canvas id="initCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>초기화
+        <select id="initSel"><option value="zero">Zero</option><option value="xavier">Xavier</option><option value="he">He</option><option value="big">큰값</option></select>
+      </label>
+      <button id="initRun">새 샘플</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('initCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const t=document.getElementById('initSel').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const N=2000,n=64;
+      const std={zero:0,xavier:Math.sqrt(1/n),he:Math.sqrt(2/n),big:0.5}[t];
+      const out=[];
+      for(let s=0;s<N;s++){
+        let x=new Array(n).fill(0).map(()=>Math.random()*2-1);
+        for(let l=0;l<5;l++){
+          const y=new Array(n).fill(0);
+          for(let i=0;i<n;i++){let z=0;for(let j=0;j<n;j++){const u=Math.random(),v=Math.random();const w=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*std;z+=w*x[j];}y[i]=Math.max(0,z);}
+          x=y;
+        }
+        out.push(x[0]);
+      }
+      const B=40;const mn=Math.min(...out),mx=Math.max(...out);const bins=new Array(B).fill(0);
+      out.forEach(v=>{const b=Math.min(B-1,Math.max(0,Math.floor((v-mn)/(mx-mn+1e-9)*B)));bins[b]++;});
+      const peak=Math.max(...bins);
+      bins.forEach((v,i)=>{const x=20+i*((W-40)/B),y=H-30-(v/peak)*(H-60);ctx.fillStyle='#0b5fff';ctx.fillRect(x,y,(W-40)/B-2,H-30-y);});
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText(`범위 [${mn.toFixed(3)}, ${mx.toFixed(3)}]`,20,18);
+    }
+    document.getElementById('initSel').addEventListener('change',draw);
+    document.getElementById('initRun').addEventListener('click',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>5. 드롭아웃 — 무작위 휴식으로 일반화 얻기</h2>
+  <p><strong>드롭아웃(Dropout, Srivastava et al. 2014)</strong>은 Geoffrey Hinton이 은행 창구에서 영감을 얻었다고 합니다. "왜 은행원을 자주 바꾸지?"라고 물었더니 "누구든 오랫동안 같은 업무를 맡으면 부정이 생길 가능성이 있다"는 답을 들었답니다. 신경망도 마찬가지입니다. 특정 뉴런이 다른 특정 뉴런에만 지나치게 의존하면 "공모(co-adaptation)"가 일어나 일반화가 나빠집니다.</p>
+  <p>드롭아웃의 해법은 놀랍도록 단순합니다. 학습 중 매 미니배치마다 각 뉴런을 확률 $p$로 끕니다(보통 $p = 0.5$). 꺼진 뉴런은 순전파와 역전파에서 완전히 무시됩니다. 그러면 뉴런은 "언제 누가 꺼질지 모르니 혼자서도 쓸모 있어야 한다"고 배우게 되어, 건강한 중복성을 가진 표현이 형성됩니다.</p>
+  <p>추론(테스트) 시에는 모든 뉴런을 켜되 출력에 $1 - p$를 곱해 평균 활성을 맞춥니다. 실제로는 학습 때 $1/(1-p)$로 미리 스케일링해두는 "inverted dropout"이 표준입니다.</p>
+
+  <h3>5.1 드롭아웃이 앙상블인 이유</h3>
+  <p>Hinton은 드롭아웃을 "근사적 앙상블"로 해석했습니다. 네트워크에 $n$개의 뉴런이 있다면 드롭아웃 마스크의 가능한 조합은 $2^n$개. 각 학습 스텝에서 이 중 하나가 선택되는 셈이라, 사실상 $2^n$개의 다른 신경망을 동시에 학습시키고 그 가중 평균을 쓰는 것과 같습니다. 명시적으로 $2^n$개의 모델을 학습하는 것은 불가능하지만, 드롭아웃은 모든 파라미터를 공유하는 형태로 이것을 근사합니다.</p>
+  <p>앙상블은 일반화를 향상시키는 고전적 기법입니다 (<a href="05-classification.html">W5 랜덤포레스트</a>에서 본 것과 같은 아이디어). 드롭아웃은 이 장점을 한 모델 안에서 얻어내는 영리한 트릭입니다.</p>
+
+  <h2>6. 배치 정규화 — 내부 공변량 변화 제어</h2>
+  <p><strong>배치 정규화(Batch Normalization, Ioffe & Szegedy 2015)</strong>는 2015년 이후 거의 모든 딥 컨볼루션 신경망의 표준이 된 기법입니다. 아이디어: 각 층에 들어오는 활성값을 <em>미니배치 단위로 다시 표준화</em>해 분포를 안정시킵니다.</p>
+  $$ \hat{x}_i = \frac{x_i - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}}, \quad y_i = \gamma \hat{x}_i + \beta $$
+  <p>여기서 $\mu_B, \sigma_B^2$은 현재 미니배치의 평균과 분산. 표준화 후 학습 가능한 파라미터 $\gamma, \beta$로 다시 스케일링해 "네트워크가 원하는 분포"를 복원할 여지를 줍니다.</p>
+  <p>왜 효과가 있을까? 원래 저자들은 "내부 공변량 변화(internal covariate shift)" — 학습 중 앞쪽 층이 업데이트되면 뒤쪽 층 입력 분포가 계속 바뀌어 학습이 어려워지는 것 — 를 줄인다고 설명했습니다. 최근 연구는 다른 해석을 제시합니다: 배치 정규화가 <em>손실 지형을 부드럽게</em> 만들어 경사하강법이 더 큰 학습률을 안전하게 쓸 수 있게 한다는 것. 이유가 무엇이든, 실전에서는 다음과 같은 효과를 얻습니다:</p>
+  <ul>
+    <li><strong>학습 속도</strong> — 학습률을 10배 이상 키울 수 있고, 수렴까지 걸리는 에폭이 절반 이하로 줄어듦.</li>
+    <li><strong>초기화에 덜 민감</strong> — 좋은 초기화의 필요성이 줄어듦 (여전히 필요하지만).</li>
+    <li><strong>정규화 효과</strong> — 미니배치마다 미세한 잡음이 들어가 드롭아웃처럼 약한 규제가 됨. 실제로 BN이 있으면 드롭아웃을 뺄 수 있다는 권고가 많음.</li>
+    <li><strong>깊은 망 가능</strong> — BN 덕분에 50층, 100층의 ResNet이 실제로 학습 가능해짐.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>BN vs LN vs GN</strong> — 배치 정규화는 미니배치 크기에 의존적이라 작은 배치에서는 추정이 불안정합니다. 그래서 대안으로 <em>레이어 정규화(LayerNorm)</em>, <em>그룹 정규화(GroupNorm)</em> 등이 제안되었고, Transformer 계열에서는 LayerNorm이 표준입니다. 각자 "무엇을 기준으로 통계를 내는가"가 다릅니다: BN은 배치 차원, LN은 특징 차원, GN은 특징 그룹 차원.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: BN 적용 전후 활성값 분포</h4>
+    <p>스케일이 큰 가중치를 통과한 활성값은 분포가 한쪽으로 쏠리거나 너무 넓게 퍼집니다. <strong>BN 적용</strong>을 켜면 평균 0, 분산 1로 다시 맞춰지면서 ReLU 입력으로 적절한 분포가 됩니다. 학습률을 키울 수 있는 이유가 보여요.</p>
+    <canvas id="bn" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>가중치 σ <span class="val" id="bnSV">1.0</span><input type="range" id="bnS" min="0.2" max="3" step="0.1" value="1"></label>
+      <label><input type="checkbox" id="bnOn" checked> BN 적용</label>
+      <label>γ (스케일) <span class="val" id="bnGV">1.0</span><input type="range" id="bnG" min="0.5" max="2" step="0.1" value="1"></label>
+      <label>β (시프트) <span class="val" id="bnBV">0.0</span><input type="range" id="bnB" min="-2" max="2" step="0.1" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bn');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const std=+document.getElementById('bnS').value;
+      const on=document.getElementById('bnOn').checked;
+      const g=+document.getElementById('bnG').value;
+      const beta=+document.getElementById('bnB').value;
+      document.getElementById('bnSV').textContent=std.toFixed(1);
+      document.getElementById('bnGV').textContent=g.toFixed(1);
+      document.getElementById('bnBV').textContent=beta.toFixed(1);
+      const N=600;
+      let xs=[];
+      for(let i=0;i<N;i++){const u=Math.random(),v=Math.random();xs.push(Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*std+std*0.5);}
+      let pre=[...xs];
+      let post=[...xs];
+      if(on){
+        const mu=post.reduce((a,b)=>a+b,0)/post.length;
+        const va=post.reduce((a,b)=>a+(b-mu)*(b-mu),0)/post.length;
+        const sd=Math.sqrt(va+1e-8);
+        post=post.map(v=>g*(v-mu)/sd+beta);
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function hist(arr,col,y0,label){
+        const B=40,mn=-5,mx=5,bins=new Array(B).fill(0);
+        arr.forEach(v=>{const b=Math.floor((v-mn)/(mx-mn)*B);if(b>=0&&b<B)bins[b]++;});
+        const peak=Math.max(...bins,1);
+        ctx.fillStyle='#666';ctx.font='12px sans-serif';
+        ctx.fillText(label,12,y0-5);
+        bins.forEach((v,i)=>{
+          const x=40+i*((W-60)/B);
+          const h=(v/peak)*80;
+          ctx.fillStyle=col;ctx.fillRect(x,y0+90-h,(W-60)/B-1,h);
+        });
+        // axis
+        ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,y0+90);ctx.lineTo(W-20,y0+90);ctx.stroke();
+        // mean & std markers
+        const mu=arr.reduce((a,b)=>a+b,0)/arr.length;
+        const va=arr.reduce((a,b)=>a+(b-mu)*(b-mu),0)/arr.length;
+        const sd=Math.sqrt(va);
+        const muX=40+(mu-mn)/(mx-mn)*(W-60);
+        ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(muX,y0);ctx.lineTo(muX,y0+90);ctx.stroke();
+        ctx.fillStyle='#c62828';ctx.font='11px sans-serif';
+        ctx.fillText(`μ=${mu.toFixed(2)} σ=${sd.toFixed(2)}`,muX+4,y0+15);
+      }
+      hist(pre,'#cfd8e3',20,'BN 이전');
+      hist(post,on?'#0b5fff':'#cfd8e3',150,on?'BN 이후':'BN OFF (이전과 동일)');
+    }
+    document.getElementById('bnS').addEventListener('input',draw);
+    document.getElementById('bnOn').addEventListener('change',draw);
+    document.getElementById('bnG').addEventListener('input',draw);
+    document.getElementById('bnB').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 드롭아웃 마스크 시각화</h4>
+    <p>뉴런 격자에서 드롭아웃 비율 p에 따라 무작위로 꺼지는(회색) 뉴런을 봅니다. "새 마스크"를 누르면 매번 다른 패턴이 됩니다.</p>
+    <canvas id="dropCanvas" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>드롭아웃 p <span class="val" id="dpV2">0.5</span><input type="range" id="dp2" min="0" max="0.9" step="0.05" value="0.5"></label>
+      <button id="dpNew">새 마스크</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dropCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let mask=[];
+    function gen(){const N=15*6;mask=new Array(N).fill(0).map(()=>Math.random());draw();}
+    function draw(){
+      const p=+document.getElementById('dp2').value;
+      document.getElementById('dpV2').textContent=p.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cols=15,rows=6,sx=(W-40)/cols,sy=(H-40)/rows;
+      for(let r=0;r<rows;r++)for(let cc=0;cc<cols;cc++){
+        const k=r*cols+cc;const on=mask[k]>p;
+        ctx.fillStyle=on?'#0b5fff':'#bbb';
+        ctx.beginPath();ctx.arc(20+cc*sx+sx/2,20+r*sy+sy/2,Math.min(sx,sy)/2-3,0,Math.PI*2);ctx.fill();
+      }
+    }
+    document.getElementById('dp2').addEventListener('input',draw);
+    document.getElementById('dpNew').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+
+  <h2>7. 코드 예제 (PyTorch)</h2>
+  <pre><code>import torch.nn as nn
+
+net = nn.Sequential(
+    nn.Linear(784, 256),
+    nn.BatchNorm1d(256),
+    nn.ReLU(),
+    nn.Dropout(0.3),
+    nn.Linear(256, 10),
+)
+
+# He 초기화
+for m in net.modules():
+    if isinstance(m, nn.Linear):
+        nn.init.kaiming_normal_(m.weight, nonlinearity='relu')</code></pre>
+
+  <h2>✅ 오늘의 핵심 5가지</h2>
+  <div class="tip">
+    <ol style="margin:6px 0">
+      <li><strong>역전파 = 연쇄법칙으로 거꾸로 흘려보내기.</strong> 출력 → 입력 방향으로 미분이 한 번에 모든 파라미터로 전달됨. forward와 같은 비용 $O(\text{파라미터 수})$.</li>
+      <li><strong>기울기 소실</strong> — 시그모이드는 미분 최댓값이 0.25라 깊게 쌓으면 0으로 수렴. ReLU(미분=1 양수영역)가 해결.</li>
+      <li><strong>가중치 초기화가 중요.</strong> Xavier(시그모이드/tanh용)와 He(ReLU용)가 표준. PyTorch <code>nn.init.kaiming_normal_</code>.</li>
+      <li><strong>드롭아웃</strong> — 학습 시 일부 뉴런을 무작위로 끄는 규제. 과적합을 강하게 막고 앙상블 효과.</li>
+      <li><strong>배치 정규화</strong> — 각 층에서 활성값을 다시 표준화. 학습률을 키워도 안정적이고, 자주 쓰는 ResNet/VGG의 표준 부품.</li>
+    </ol>
+  </div>
+
+  <h2>🤔 자가 점검</h2>
+  <ol>
+    <li>역전파가 수치 미분보다 정확히 얼마나 빠른가요? (그리고 왜?)</li>
+    <li>시그모이드 활성함수로 50층 신경망을 학습시키면 어떤 일이 생길까요?</li>
+    <li>모든 가중치를 0으로 초기화하면 안 되는 이유는?</li>
+    <li>드롭아웃은 학습 때만 켜고, 추론(inference) 때는 끕니다. 왜?</li>
+  </ol>
+
+  <h2>📐 역전파 손계산 — 작은 예로 끝까지</h2>
+  <p>2-2-1 신경망에서 한 데이터에 대해 역전파를 손으로 굴려봅시다. 입력 (1, 0), 정답 1, 시그모이드 활성, 출력에 BCE.</p>
+  <p><strong>가중치.</strong> $W_1 = [[0.1, 0.2], [0.3, 0.4]]$, $W_2 = [0.5, 0.6]$. 편향은 모두 0.</p>
+  <p><strong>순전파.</strong></p>
+  <ul>
+    <li>$z_1 = W_1 \cdot (1,0) = (0.1, 0.3)$</li>
+    <li>$h = \sigma(z_1) \approx (0.525, 0.574)$</li>
+    <li>$z_2 = W_2 \cdot h = 0.5 \cdot 0.525 + 0.6 \cdot 0.574 \approx 0.607$</li>
+    <li>$\hat y = \sigma(0.607) \approx 0.647$</li>
+    <li>손실 $L = -\log 0.647 \approx 0.435$</li>
+  </ul>
+  <p><strong>역전파.</strong></p>
+  <ul>
+    <li>$\partial L/\partial \hat y = -1/\hat y \approx -1.546$</li>
+    <li>$\partial \hat y/\partial z_2 = \hat y(1-\hat y) \approx 0.229$</li>
+    <li>$\partial L/\partial z_2 = \hat y - y \approx -0.353$ (시그모이드+BCE의 편한 형태!)</li>
+    <li>$\partial L/\partial W_2 = h \cdot \partial L/\partial z_2 \approx (-0.185, -0.203)$</li>
+    <li>$\partial L/\partial h = W_2 \cdot \partial L/\partial z_2 \approx (-0.177, -0.212)$</li>
+    <li>$\partial L/\partial z_1 = h(1-h) \cdot \partial L/\partial h \approx (-0.044, -0.052)$</li>
+    <li>$\partial L/\partial W_1[0,:] = (1, 0) \cdot \partial L/\partial z_1[0] \approx (-0.044, 0)$</li>
+    <li>$\partial L/\partial W_1[1,:] = (1, 0) \cdot \partial L/\partial z_1[1] \approx (-0.052, 0)$</li>
+  </ul>
+  <p>이게 역전파 한 번. 실제 학습에서는 위 그래디언트에 학습률을 곱해 가중치를 업데이트하고, 다시 다음 샘플로 이동합니다. 모든 큰 신경망의 학습이 결국 이 작은 산수의 거대한 반복입니다.</p>
+
+  <h2>🌐 자동 미분 — PyTorch가 우리 대신 하는 일</h2>
+  <p>위 손계산은 정신노동이지만, 자동 미분(autograd) 덕분에 우리는 한 줄만 쓰면 됩니다.</p>
+  <pre><code>loss.backward()    # 모든 파라미터의 그래디언트 자동 계산</code></pre>
+  <p>PyTorch는 forward 동안 연산 그래프를 만들어두고, backward 호출 시 그 그래프를 거꾸로 따라가며 연쇄법칙을 적용합니다. 그래서 파라미터가 10억 개여도 같은 한 줄로 끝납니다.</p>
+  <ul>
+    <li><strong>requires_grad</strong> — 그래디언트가 필요한 텐서에만 켭니다(파라미터). 입력 데이터는 보통 끔.</li>
+    <li><strong>backward()</strong> — 연쇄법칙으로 모든 그래디언트 계산.</li>
+    <li><strong>optimizer.step()</strong> — 그래디언트로 파라미터 업데이트.</li>
+    <li><strong>optimizer.zero_grad()</strong> — 다음 배치 전에 그래디언트 초기화(누적되지 않게).</li>
+  </ul>
+
+  <h2>🔬 기울기 소실 vs 폭발 — 두 가지 함정</h2>
+  <p>깊은 신경망 학습이 어려운 이유는 두 가지입니다.</p>
+  <ul>
+    <li><strong>기울기 소실</strong> — 매 층에서 미분이 1보다 작은 수가 곱해져 입력 쪽으로 갈수록 0에 수렴. 시그모이드(미분 최댓값 0.25)에서 흔함.</li>
+    <li><strong>기울기 폭발</strong> — 매 층에서 1보다 큰 수가 곱해져 입력 쪽으로 갈수록 무한대로. 학습률이 너무 크거나 가중치가 너무 클 때.</li>
+  </ul>
+  <p>해결책 4총사:</p>
+  <ol>
+    <li><strong>ReLU</strong> — 양수 영역 미분 1로 소실 완화.</li>
+    <li><strong>적절한 초기화</strong> — Xavier(tanh), He(ReLU).</li>
+    <li><strong>BatchNorm</strong> — 매 층 활성값 분포 안정화.</li>
+    <li><strong>Residual connection (ResNet)</strong> — 그래디언트가 지름길로 흐름.</li>
+  </ol>
+
+  <h2>📈 옵티마이저 진화사 — SGD에서 Adam까지</h2>
+  <table>
+    <thead><tr><th>옵티마이저</th><th>아이디어</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td>SGD</td><td>단순 경사하강</td><td>이론 명료, 일반화 좋음</td><td>느림, 학습률 튜닝 어려움</td></tr>
+      <tr><td>SGD + Momentum</td><td>관성 추가</td><td>좁은 골짜기 통과 빠름</td><td>여전히 학습률 수동</td></tr>
+      <tr><td>Adagrad (2011)</td><td>파라미터별 학습률</td><td>희소 데이터에 좋음</td><td>학습률이 점점 줄어 멈춤</td></tr>
+      <tr><td>RMSProp (2012)</td><td>최근 그래디언트 평균만</td><td>Adagrad의 멈춤 문제 해결</td><td>모멘텀 없음</td></tr>
+      <tr><td>Adam (2014)</td><td>모멘텀 + RMSProp</td><td>현대 표준</td><td>일반화 약간 떨어질 수 있음</td></tr>
+      <tr><td>AdamW (2017)</td><td>Adam + 정직한 weight decay</td><td>트랜스포머 시대 표준</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📝 연습문제</h2>
+  <div class="tip"><strong>연습 1.</strong> 시그모이드의 미분 최댓값은 어디서, 얼마인가요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>$\sigma'(z) = \sigma(z)(1-\sigma(z))$. $z=0$에서 $\sigma = 0.5$이고 $\sigma' = 0.25$. 이 한 번의 곱셈만으로도 10층을 거치면 $0.25^{10} \approx 10^{-6}$이 되어 그래디언트가 사라집니다.</p></details></div>
+
+  <div class="tip"><strong>연습 2.</strong> ReLU의 미분은? 0에서는?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>$z &gt; 0$이면 1, $z &lt; 0$이면 0. $z = 0$은 정의되지 않지만 보통 0(또는 1)으로 처리. 양수 영역에서 1이 곱해지므로 깊이 쌓아도 그래디언트가 사라지지 않음.</p></details></div>
+
+  <div class="tip"><strong>연습 3.</strong> 모든 가중치를 0으로 초기화하면 왜 안 될까요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>모든 뉴런이 같은 출력을 내고, 같은 그래디언트를 받아, 같은 업데이트를 함. 결국 모든 뉴런이 똑같은 함수가 되어 다층 신경망의 의미가 사라짐. <strong>대칭성을 깨기 위해</strong> 작은 무작위 값으로 초기화 필요.</p></details></div>
+
+  <div class="tip"><strong>연습 4.</strong> 드롭아웃 비율 0.3의 의미는? 추론 시에는 어떻게 처리하나요?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>학습 시 매 forward에서 30%의 뉴런을 무작위로 끔. 추론 시에는 모든 뉴런 사용. 학습/추론 시 출력 크기 차이를 보정하기 위해 PyTorch는 학습 시 활성값을 1/(1-p)로 스케일업(inverted dropout). 사용자는 그냥 <code>model.train()</code>/<code>model.eval()</code>만 켜면 됩니다.</p></details></div>
+
+  <div class="tip"><strong>연습 5.</strong> BatchNorm은 학습 시와 추론 시 동작이 다릅니다. 어떻게?
+  <details style="margin-top:6px"><summary style="cursor:pointer;color:#0b5fff">풀이 보기</summary>
+  <p>학습: 미니배치의 평균/표준편차로 정규화. 추론: 학습 중 누적한 이동평균 평균/표준편차 사용. 왜? 추론 때는 배치가 1개일 수 있어 통계가 무의미하기 때문. <code>model.eval()</code>이 자동 전환.</p></details></div>
+
+  <h2>👀 다음 주 미리보기 — W9 CNN 기초</h2>
+  <p>오늘 우리는 <em>일반 MLP</em>의 학습 비밀을 풀었습니다. 다음 주에는 — 이미지에 특화된 신경망, <strong>CNN(합성곱 신경망)</strong>을 만납니다. 같은 MLP를 이미지에 그대로 쓰면 파라미터가 폭발하고 위치 정보가 무너지는데, "필터를 픽셀 위로 슬라이딩"하는 단순한 아이디어가 어떻게 그 문제를 한 번에 해결하는지 봅니다.</p>
+
+  <h2>❓ FAQ</h2>
+  <div class="note"><strong>Q1. 역전파의 시간 복잡도는?</strong><br>
+  A. 순전파와 동일한 $O(\text{파라미터 수})$. 그래서 신경망 학습이 실용적이 됐고, 만약 수치 미분(파라미터마다 $\epsilon$ 더해서 다시 forward)을 썼으면 파라미터 수의 제곱이 되어 불가능했을 것.</div>
+  <div class="note"><strong>Q2. Adam과 SGD 중 무엇이 더 좋나요?</strong><br>
+  A. 빠른 학습이 필요하면 Adam, 일반화 성능을 끝까지 짜내려면 SGD + Momentum + 적절한 lr scheduling. CNN 비전에서는 SGD가 자주 더 좋고, 트랜스포머에서는 AdamW가 표준.</div>
+  <div class="note"><strong>Q3. 학습률 스케줄링은 무엇?</strong><br>
+  A. 학습 진행에 따라 학습률을 점진적으로 줄이는 전략. <em>cosine annealing</em>, <em>step decay</em>, <em>warmup</em> 등. 정확도 1~2%p 향상에 결정적.</div>
+  <div class="note"><strong>Q4. Gradient clipping이 무엇이고 언제 쓰나요?</strong><br>
+  A. 그래디언트 폭발을 막기 위해 그래디언트의 노름을 제한. <code>nn.utils.clip_grad_norm_</code>. RNN과 트랜스포머에서 거의 표준.</div>
+  <div class="note"><strong>Q5. 모델이 학습이 안 됩니다. 가장 먼저 무엇을 의심해야 하나요?</strong><br>
+  A. 순서: ① 데이터 표준화 → ② 학습률 → ③ 입력/라벨 모양 매칭 → ④ 손실 함수 선택(분류에 MSE 쓰는 등) → ⑤ 활성함수와 초기화. 작은 데이터(100개)에 일부러 과적합시켜 손실 0으로 가는지 먼저 확인.</div>
+
+  <h2>📚 미니 용어집</h2>
+  <table>
+    <thead><tr><th>용어</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>역전파</td><td>연쇄법칙으로 출력 손실 → 모든 가중치 그래디언트 자동 계산.</td></tr>
+      <tr><td>연쇄법칙</td><td>합성함수 미분 = 외부 미분 × 내부 미분.</td></tr>
+      <tr><td>autograd</td><td>PyTorch의 자동 미분 엔진.</td></tr>
+      <tr><td>기울기 소실</td><td>층이 깊어질수록 그래디언트가 0에 수렴.</td></tr>
+      <tr><td>기울기 폭발</td><td>층이 깊어질수록 그래디언트가 발산.</td></tr>
+      <tr><td>He 초기화</td><td>ReLU용 가중치 초기화. 분산 = 2/n_in.</td></tr>
+      <tr><td>Xavier(Glorot)</td><td>tanh/sigmoid용. 분산 = 1/n_in.</td></tr>
+      <tr><td>드롭아웃</td><td>학습 중 일부 뉴런 무작위 OFF. 정규화.</td></tr>
+      <tr><td>BatchNorm</td><td>각 층 활성값을 미니배치 통계로 정규화.</td></tr>
+      <tr><td>Adam</td><td>모멘텀 + 적응형 학습률. 현대 표준 옵티마이저.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🗒️ 이번 주 체크리스트</h2>
+  <ul>
+    <li>☐ 역전파의 직관(연쇄법칙으로 거꾸로)을 그릴 수 있다.</li>
+    <li>☐ 기울기 소실의 원인과 해결책(ReLU)을 안다.</li>
+    <li>☐ He vs Xavier 초기화의 차이를 안다.</li>
+    <li>☐ 드롭아웃의 동작과 학습/추론 차이를 안다.</li>
+    <li>☐ BatchNorm의 의미와 동작을 안다.</li>
+    <li>☐ Adam vs SGD의 차이를 한 줄로 말할 수 있다.</li>
+    <li>☐ <code>loss.backward()</code> 한 줄이 무엇을 하는지 안다.</li>
+  </ul>
+
+  <h2>🧭 한 줄 정리 — 이번 주의 빅 아이디어</h2>
+  <div class="tip"><p><strong>"역전파 + ReLU + 적절한 초기화 + 정규화 = 깊은 신경망 학습 가능."</strong> 이 조합이 2010년대 딥러닝 폭발의 토대입니다. 이제 우리는 깊은 신경망의 모든 부품을 손에 쥐었습니다 — 다음 주는 그것을 이미지에 특화시킨 CNN입니다.</p></div>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong>Sung Kim Lec 9-10</strong> — 역전파와 기울기 소실 한국어 강의.</li>
+    <li><strong>Backprop intro</strong> — Chris Olah, <a href="https://colah.github.io/posts/2015-08-Backprop/">Calculus on Computational Graphs</a>.</li>
+    <li><strong>Glorot &amp; He init</strong> — 두 원논문(2010, 2015).</li>
+    <li><strong>Dropout</strong> — Srivastava·Hinton 외(2014). 직관과 실험.</li>
+    <li><strong>Batch Normalization</strong> — Ioffe·Szegedy(2015).</li>
+    <li><strong>Adam</strong> — Kingma·Ba(2014). 가장 많이 쓰이는 옵티마이저.</li>
+    <li><strong>3Blue1Brown — Backpropagation</strong>. 시각적 직관의 결정판.</li>
+    <li><strong>The Matrix Calculus You Need For Deep Learning</strong> — Parr·Howard.</li>
+  </ul>
+
+  <h2>🌟 ResNet 미리보기 — 100층의 시대를 연 트릭</h2>
+  <p>2015년 ResNet은 152층 신경망을 학습 가능하게 만들었습니다. 핵심 아이디어는 <strong>잔차 연결(residual connection)</strong>:</p>
+  $$ y = F(x) + x $$
+  <p>층의 출력에 입력을 그대로 더해주는 "지름길". 그래디언트가 깊은 층까지 잘 흐르도록 하고, 학습이 안 될 때는 $F(x) = 0$이 되어 항등 함수처럼 동작. 이 한 줄짜리 트릭이 깊이의 한계를 100배 끌어올렸습니다. <a href="10-cnn-transfer.html">W10</a>에서 자세히.</p>
+
+  <h2>🎯 한 페이지 흐름 — 깊은 신경망 학습 표준 절차</h2>
+  <ol>
+    <li>데이터 표준화 + 분할.</li>
+    <li>모델 정의 (Linear + BatchNorm + ReLU + Dropout 패턴).</li>
+    <li>He 초기화로 가중치 초기화.</li>
+    <li>옵티마이저 Adam(lr=1e-3) 또는 AdamW.</li>
+    <li>손실 함수 (분류=CE, 회귀=MSE).</li>
+    <li>학습 루프: forward → loss → backward → step → zero_grad.</li>
+    <li>검증 손실로 조기종료(early stopping).</li>
+    <li>학습률 스케줄링(cosine 또는 step).</li>
+  </ol>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:24px">— 8주차 끝. 깊은 신경망의 모든 부품을 손에 쥐었습니다. 🌊</p>
+  <p style="font-size:12px;color:var(--muted)">다음 주는 이 부품들을 <em>이미지</em>에 맞게 진화시킨 CNN입니다.</p>
+
+  <h2>🧪 깊은 신경망 PyTorch 풀 코드</h2>
+  <pre><code>import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
+
+# 모델 — Linear + BN + ReLU + Dropout 표준 패턴
+class DNN(nn.Module):
+    def __init__(self, in_dim=784, hidden=256, out_dim=10):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, hidden),
+            nn.BatchNorm1d(hidden),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden, hidden),
+            nn.BatchNorm1d(hidden),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden, out_dim),
+        )
+        # He 초기화
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
+                nn.init.zeros_(m.bias)
+    def forward(self, x):
+        return self.net(x)
+
+model = DNN()
+opt = optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+sched = optim.lr_scheduler.CosineAnnealingLR(opt, T_max=20)
+loss_fn = nn.CrossEntropyLoss()
+
+for epoch in range(20):
+    model.train()
+    for X_batch, y_batch in train_loader:
+        yhat = model(X_batch)
+        loss = loss_fn(yhat, y_batch)
+        opt.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # 기울기 클리핑
+        opt.step()
+    sched.step()
+
+    model.eval()
+    with torch.no_grad():
+        correct = sum((model(X) .argmax(1) == y).sum() for X, y in val_loader)
+    print(f'Epoch {epoch}: val acc {correct/len(val_set):.4f}')</code></pre>
+  <p>이 50줄이 현대 딥러닝 모델 학습의 표준 골격입니다. 모델·옵티마이저·스케줄러·손실 모두 라이브러리에서 가져오고, 학습 루프만 우리가 씁니다. CNN, RNN, 트랜스포머도 모델 클래스만 바꾸면 같은 코드로 학습.</p>
+
+  <h2>🌟 자가 학습용 추가 문제</h2>
+  <ol>
+    <li>10층 시그모이드 신경망의 그래디언트가 입력층에서 얼마나 작아질까? 대략 추정해보세요.</li>
+    <li>Adam의 두 모멘텀 $\beta_1=0.9, \beta_2=0.999$의 의미를 한 줄로.</li>
+    <li>BatchNorm을 RNN에 그대로 못 쓰는 이유는?</li>
+    <li>Layer Normalization과 Batch Normalization의 차이는?</li>
+    <li>가중치를 정규분포 N(0, 0.01)로 초기화하는 ReLU 신경망은 왜 학습이 잘 안 될 가능성이 큰가?</li>
+  </ol>
+  <p style="font-size:13px;color:var(--muted)">정답 힌트: 1) $0.25^{10} \approx 10^{-6}$. 거의 0. 2) β1=일차 모멘텀(평균) 감쇠율, β2=이차 모멘텀(분산) 감쇠율. 3) 시퀀스 길이가 가변이라 배치 통계가 일관되지 않음. → LayerNorm. 4) BN은 배치 차원으로, LN은 특성 차원으로 정규화. 5) 분산이 너무 작아 활성값이 거의 0 → ReLU 미분 0 → 죽은 뉴런.</p>
+
+  <h2>🌐 응용 사례 — 깊은 신경망의 자리</h2>
+  <ul>
+    <li><strong>음성 인식</strong> — 깊은 RNN/CNN으로 시리·구글 어시스턴트 동작.</li>
+    <li><strong>의료 영상 진단</strong> — 깊은 CNN으로 X-ray·MRI에서 병변 자동 검출. 일부 영역에서 인간 전문가와 동등.</li>
+    <li><strong>자율주행</strong> — 카메라 영상에서 차선·차량·보행자 탐지. ResNet/EfficientNet 계열.</li>
+    <li><strong>번역</strong> — 트랜스포머 기반 Google Translate. 100개 이상 언어 동시 처리.</li>
+    <li><strong>추천 시스템</strong> — 유튜브·넷플릭스의 깊은 다층 임베딩 + MLP.</li>
+  </ul>
+
+  <h2>🛡️ 정규화 기법 한 페이지</h2>
+  <table>
+    <thead><tr><th>기법</th><th>아이디어</th><th>언제</th></tr></thead>
+    <tbody>
+      <tr><td>L2 (weight decay)</td><td>가중치 크기에 벌점</td><td>거의 항상 (5e-4 정도)</td></tr>
+      <tr><td>L1</td><td>가중치 절댓값에 벌점</td><td>특성 선택 효과 원할 때</td></tr>
+      <tr><td>Dropout</td><td>학습 중 일부 뉴런 OFF</td><td>완전연결층, 과적합 시</td></tr>
+      <tr><td>BatchNorm</td><td>층 출력 분포 안정화</td><td>CNN, MLP에 자주</td></tr>
+      <tr><td>LayerNorm</td><td>샘플별로 정규화</td><td>RNN, 트랜스포머</td></tr>
+      <tr><td>Data Augmentation</td><td>데이터에 변형 추가</td><td>이미지·음성에 거의 필수</td></tr>
+      <tr><td>Early Stopping</td><td>검증 손실 더 안 줄면 종료</td><td>모든 학습</td></tr>
+      <tr><td>Label Smoothing</td><td>라벨을 0.9/0.1로 부드럽게</td><td>분류, 트랜스포머</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🔚 마지막 한 마디</h2>
+  <p>이번 주는 한 학기에서 가장 기술적으로 빽빽한 한 주였습니다. 역전파, 기울기 소실, 초기화, 정규화 — 모두 한 번에 흡수하기 어렵습니다. 핵심은 <em>"손계산이 안 되더라도 PyTorch 한 줄(<code>loss.backward()</code>)이 무엇을 하는지 머릿속에 그림이 있는가"</em>입니다. 그 그림만 있으면 모델 디버깅이 가능합니다.</p>
+  <p>다음 주부터는 영상·언어 등 구체적 데이터 영역으로 들어갑니다. 이번 주의 부품들이 거기서 어떻게 조립되는지 보게 됩니다.</p>
+
+  <h2>🌟 보너스 — 그래디언트 흐름 시각화</h2>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 깊이에 따른 그래디언트 크기</h4>
+    <p>활성함수에 따라 깊이가 깊어질수록 그래디언트가 어떻게 변하는지 봅니다. 시그모이드는 빠르게 사라지고, ReLU는 살아남습니다.</p>
+    <canvas id="gradFlow" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>활성함수
+        <select id="gfAct">
+          <option value="sigmoid">Sigmoid</option>
+          <option value="tanh">Tanh</option>
+          <option value="relu" selected>ReLU</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gradFlow');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const act=document.getElementById('gfAct').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const PL=50,PR=20,PT=20,PB=40;
+      const plotW=W-PL-PR,plotH=H-PT-PB;
+      const factor={'sigmoid':0.25,'tanh':1.0,'relu':1.0}[act];
+      const noise={'sigmoid':1,'tanh':0.6,'relu':1}[act];
+      ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(PL,PT+plotH);ctx.lineTo(PL+plotW,PT+plotH);ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+plotH);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('층 깊이 →',PL+plotW/2-30,H-12);
+      ctx.save();ctx.translate(14,PT+plotH/2+30);ctx.rotate(-Math.PI/2);ctx.fillText('그래디언트 크기 (log)',0,0);ctx.restore();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=20;i++){
+        const grad=Math.pow(factor*noise,i)*1.0;
+        const logG=Math.log10(Math.max(grad,1e-12));
+        const x=PL+plotW*i/20;
+        const y=PT+plotH*(1-(logG+12)/12);
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`활성: ${act}`,PL+10,PT+15);
+    }
+    document.getElementById('gfAct').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>📌 부록 — 자동 미분이 발견되기까지</h2>
+  <p>"역전파"라는 말이 1986년 Rumelhart-Hinton 논문으로 유명해졌지만, 사실 같은 아이디어는 이전부터 있었습니다.</p>
+  <ul>
+    <li><strong>1962</strong> — Rosenblatt이 다층 퍼셉트론에 비슷한 아이디어를 시도(완전한 일반화는 못함).</li>
+    <li><strong>1970</strong> — Linnainmaa가 자동 미분의 reverse mode 식을 정확히 기술.</li>
+    <li><strong>1974</strong> — Werbos가 박사논문에서 신경망에 적용.</li>
+    <li><strong>1986</strong> — Rumelhart, Hinton, Williams의 Nature 논문이 대중화. 이때부터 "Backpropagation"이 표준 명칭.</li>
+  </ul>
+  <p>"누가 발명했는가"는 학계의 영원한 논쟁이지만, 1986년 논문이 신경망 부활의 신호탄이었다는 점은 이견이 없습니다.</p>
+
+  <h2>📌 부록 — 그래디언트 검사(Gradient Check)</h2>
+  <p>역전파 코드를 직접 짜는 경우 버그를 잡기 위한 표준 기법.</p>
+  $$ \frac{\partial L}{\partial w} \approx \frac{L(w + \epsilon) - L(w - \epsilon)}{2\epsilon} $$
+  <p>$\epsilon = 10^{-5}$ 정도로 두고 수치 미분과 분석 미분을 비교. 두 값의 상대 오차가 $10^{-7}$ 이하면 OK. PyTorch는 <code>torch.autograd.gradcheck</code>로 제공.</p>
+
+  <h2>📌 부록 — 옵티마이저 PyTorch 코드 한눈에</h2>
+  <pre><code># SGD
+opt = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+
+# Adam
+opt = torch.optim.Adam(model.parameters(), lr=1e-3, betas=(0.9, 0.999))
+
+# AdamW (트랜스포머 표준)
+opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.01)
+
+# 학습률 스케줄러
+sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=100)
+sched = torch.optim.lr_scheduler.StepLR(opt, step_size=30, gamma=0.1)
+sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=0.1, steps_per_epoch=...)</code></pre>
+  <p>각 옵티마이저의 기본값은 대체로 합리적입니다 — 처음에는 그대로 쓰고, 성능이 부족하면 lr만 조정해 보세요.</p>
+
+  <h2>📌 부록 — 학습 안정화 체크리스트</h2>
+  <ol>
+    <li>입력 표준화 ✓</li>
+    <li>적절한 활성함수 (ReLU 또는 GELU) ✓</li>
+    <li>적절한 초기화 (He 또는 Xavier) ✓</li>
+    <li>배치 정규화 또는 레이어 정규화 ✓</li>
+    <li>드롭아웃 0.1~0.3 ✓</li>
+    <li>학습률 1e-3 또는 3e-4 ✓</li>
+    <li>옵티마이저 AdamW ✓</li>
+    <li>학습률 스케줄러 (cosine 또는 step) ✓</li>
+    <li>그래디언트 클리핑 1.0 ✓</li>
+    <li>weight decay 1e-4 ~ 1e-2 ✓</li>
+  </ol>
+  <p>이 10개를 모두 켜면 거의 모든 신경망이 안정적으로 학습됩니다. "기본값을 따르면 거의 된다"가 현대 딥러닝의 진실.</p>
+
+  <h2>📌 부록 — 신경망 학습 디버깅 절차</h2>
+  <ol>
+    <li>먼저 작은 데이터(예: 10개 샘플)로 모델이 0 손실에 수렴하는지 확인 (sanity check).</li>
+    <li>안 되면 모델 자체의 버그(forward 모양 불일치, 부호 등).</li>
+    <li>되면 점점 큰 데이터로 늘려가며 손실 곡선을 본다.</li>
+    <li>학습 손실이 줄지만 검증이 안 줄면 → 과적합. 정규화 강화.</li>
+    <li>학습 손실도 안 줄면 → 학습률, 활성함수, 초기화, 데이터 표준화 의심.</li>
+    <li>여전히 안 되면 → 모델을 더 작게(파라미터 수 감소)하거나, 데이터에 문제 있는지 확인.</li>
+  </ol>
+
+  <h2>📌 부록 — 흔한 오류 메시지와 해결</h2>
+  <table>
+    <thead><tr><th>에러</th><th>원인</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>RuntimeError: shape mismatch</td><td>층 사이 차원 불일치</td><td>모든 층 입력/출력 차원 출력해 확인</td></tr>
+      <tr><td>NaN loss</td><td>학습률 너무 큼, log(0)</td><td>lr ÷10, eps 추가</td></tr>
+      <tr><td>CUDA out of memory</td><td>배치/모델 너무 큼</td><td>batch_size ÷2, gradient checkpointing</td></tr>
+      <tr><td>학습이 안 됨</td><td>다양</td><td>위 디버깅 절차</td></tr>
+      <tr><td>RuntimeError: leaf variable used in autograd</td><td>requires_grad 누락</td><td>파라미터 정의 시 nn.Parameter 사용</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📌 부록 — Adam 옵티마이저의 식</h2>
+  <p>Adam은 두 모멘텀을 추적합니다.</p>
+  $$ m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t \quad\text{(1차 모멘텀, 평균)}$$
+  $$ v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \quad\text{(2차 모멘텀, 분산)}$$
+  <p>편향 보정:</p>
+  $$ \hat m_t = m_t / (1-\beta_1^t), \quad \hat v_t = v_t / (1-\beta_2^t) $$
+  <p>업데이트:</p>
+  $$ \theta \leftarrow \theta - \alpha \frac{\hat m_t}{\sqrt{\hat v_t} + \epsilon} $$
+  <p>직관: $\hat m$이 평균 그래디언트 방향(모멘텀), $\sqrt{\hat v}$가 그래디언트 크기(자동 학습률 조정). $\beta_1 = 0.9, \beta_2 = 0.999, \epsilon = 10^{-8}$가 표준.</p>
+
+  <h2>📌 부록 — 가중치 초기화 한 페이지</h2>
+  <ul>
+    <li><strong>Xavier(Glorot, 2010)</strong>: $\text{Var}(W) = 1/n_{in}$. tanh, sigmoid에.</li>
+    <li><strong>He(Kaiming, 2015)</strong>: $\text{Var}(W) = 2/n_{in}$. ReLU에.</li>
+    <li><strong>Orthogonal</strong>: 직교 행렬로 초기화. RNN에 도움.</li>
+    <li><strong>편향(bias)</strong>: 보통 0으로 초기화. ReLU 직전이면 작은 양수(0.01) 시도.</li>
+  </ul>
+
+  <h2>📌 부록 — 학습률 스케줄링 시각 비교</h2>
+  <ul>
+    <li><strong>Step decay</strong>: 일정 epoch마다 ÷10. 가장 단순.</li>
+    <li><strong>Cosine annealing</strong>: lr이 코사인 곡선 따라 감소. 최근 트랜스포머에 자주.</li>
+    <li><strong>Warmup</strong>: 처음 1~5 epoch는 lr을 0에서 점점 키움. 큰 모델 학습 안정화.</li>
+    <li><strong>OneCycle</strong>: warmup → cooldown 한 사이클. fast.ai에서 인기.</li>
+    <li><strong>ReduceLROnPlateau</strong>: 검증 손실이 안 줄면 자동 ÷10.</li>
+  </ul>
+
+  <h2>📌 부록 — 정규화 vs 표준화 헷갈림 정리</h2>
+  <p>"정규화(normalization)"라는 단어는 분야마다 다른 뜻으로 쓰입니다. 한 페이지에 정리:</p>
+  <table>
+    <thead><tr><th>용어</th><th>정의</th><th>분야</th></tr></thead>
+    <tbody>
+      <tr><td>표준화 (standardization)</td><td>(x − μ) / σ. 평균 0, 표준편차 1.</td><td>전처리</td></tr>
+      <tr><td>Min-Max 정규화</td><td>(x − min) / (max − min). 0~1 범위.</td><td>전처리</td></tr>
+      <tr><td>L2 정규화 (regularization)</td><td>가중치 크기에 벌점. 과적합 방지.</td><td>학습</td></tr>
+      <tr><td>BatchNorm / LayerNorm</td><td>각 층 출력의 분포 안정화.</td><td>아키텍처</td></tr>
+    </tbody>
+  </table>
+  <p>"Normalization"이 Batch/Layer Normalization을 가리키면 아키텍처 부품이고, 입력 정규화면 전처리이고, "regularization"으로 쓰이면 정규화입니다. 같은 영문이 셋 다라서 한국어로 옮길 때 헷갈립니다.</p>
+
+  <h2>📌 부록 — 정밀도(precision) 옵션</h2>
+  <p>학습 속도와 메모리를 줄이는 현대적 트릭들.</p>
+  <ul>
+    <li><strong>FP32</strong> — 표준 32비트 부동소수점. 안정적, 메모리 큼.</li>
+    <li><strong>FP16 (Mixed Precision)</strong> — 16비트로 forward, 32로 가중치 업데이트. 속도 2배, 메모리 절반. PyTorch <code>torch.cuda.amp</code>.</li>
+    <li><strong>BF16 (BFloat16)</strong> — 16비트지만 지수부가 32비트와 같음. NVIDIA A100 이후 GPU 지원.</li>
+    <li><strong>INT8</strong> — 추론 시 양자화로 8비트. 메모리 1/4, CPU에서도 빠름.</li>
+  </ul>
+  <p>이 영역은 학기 외 영역이지만, 현대 LLM 학습/배포에서 결정적이라 알아두면 좋습니다.</p>
+
+  <h2>🔚 마무리</h2>
+  <p>오늘 배운 모든 도구가 W9~W13에서 차례로 등장합니다. 역전파는 모든 학습의 엔진이고, ReLU+He+BatchNorm+Adam은 표준 부품 세트입니다. 하나라도 빠지면 학습이 흔들리는데, 모두 갖추면 100층도 학습됩니다. 다음 주는 이 도구들을 영상에 맞게 진화시킨 CNN.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">참고: 이번 주 보너스 영상은 3Blue1Brown의 Backpropagation 편(약 13분).</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">한 학기의 핵심 도구를 다 만났습니다. 이제 영역별 모델로 들어갑니다.</p>
+  <p style="font-size:12px;color:var(--muted)">읽어주셔서 감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+
+  <h2>📌 부록 — 학습 모니터링 도구</h2>
+  <p>학습 진행을 시각화하면 디버깅이 훨씬 쉽습니다.</p>
+  <ul>
+    <li><strong>matplotlib</strong> — 가장 단순. 학습/검증 손실 그리기.</li>
+    <li><strong>TensorBoard</strong> — PyTorch <code>SummaryWriter</code>와 함께. 손실, 가중치 히스토그램, 임베딩.</li>
+    <li><strong>Weights &amp; Biases</strong> — 클라우드. 여러 실험 비교.</li>
+    <li><strong>MLflow</strong> — 모델 버전 관리.</li>
+  </ul>
+  <p>실무에서는 W&amp;B나 MLflow가 표준이지만, 처음에는 matplotlib로 충분합니다.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 정말로 끝. 다음 주 만나요. 🌊</p>
+
+  <h2>📌 부록 — 한 페이지 요약</h2>
+  <p>역전파 = 연쇄법칙. ReLU = 기울기 소실 해결. He 초기화 = ReLU와 짝. 드롭아웃 = 학습 시 무작위 OFF. BatchNorm = 층 출력 안정화. Adam = 모멘텀 + 적응 학습률.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <nav class="prevnext">
+    <a href="07-mlp.html"><small>← 이전</small>W7. MLP</a>
+    <a href="09-cnn-basics.html" class="next"><small>다음 →</small>W9. CNN 기초</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

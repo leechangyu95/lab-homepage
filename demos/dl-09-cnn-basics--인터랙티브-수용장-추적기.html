@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 수용장 추적기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 수용장 추적기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/09-cnn-basics.html">Week 9. CNN 기초 — 합성곱 신경망</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 수용장 추적기</h4>
+    <p>가상 입력(64×64)에 합성곱·풀링 층을 자유롭게 쌓고, 가장 깊은 층의 빨간 출력 한 칸이 원본 이미지의 어떤 영역을 "보고" 있는지 노란 박스로 표시합니다. 층을 더 추가하거나 풀링을 끼워넣으며 수용장이 어떻게 자라는지 직접 확인하세요.</p>
+    <canvas id="rf" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>레이어 1
+        <select id="rfL1"><option value="c3">Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="c7">Conv 7×7 s=1</option><option value="p2">MaxPool 2×2 s=2</option></select>
+      </label>
+      <label>레이어 2
+        <select id="rfL2"><option value="c3">Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="p2" selected>MaxPool 2×2 s=2</option><option value="none">(없음)</option></select>
+      </label>
+      <label>레이어 3
+        <select id="rfL3"><option value="c3" selected>Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="p2">MaxPool 2×2 s=2</option><option value="none">(없음)</option></select>
+      </label>
+      <label>레이어 4
+        <select id="rfL4"><option value="c3">Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="p2" selected>MaxPool 2×2 s=2</option><option value="none">(없음)</option></select>
+      </label>
+      <label>레이어 5
+        <select id="rfL5"><option value="c3" selected>Conv 3×3 s=1</option><option value="c5">Conv 5×5 s=1</option><option value="p2">MaxPool 2×2 s=2</option><option value="none">(없음)</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rf');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const SPECS={c3:{k:3,s:1,name:'Conv 3×3'},c5:{k:5,s:1,name:'Conv 5×5'},c7:{k:7,s:1,name:'Conv 7×7'},p2:{k:2,s:2,name:'MaxPool 2×2'},none:null};
+    function draw(){
+      const ids=['rfL1','rfL2','rfL3','rfL4','rfL5'];
+      const layers=ids.map(id=>SPECS[document.getElementById(id).value]).filter(Boolean);
+      // compute RF and jump per layer
+      let RF=1,J=1,size=64;
+      const trace=[{name:'Input',RF:1,J:1,size:64}];
+      layers.forEach(L=>{
+        RF=RF+(L.k-1)*J;
+        size=Math.floor((size-L.k)/L.s)+1;
+        J=J*L.s;
+        trace.push({name:L.name,RF,J,size});
+      });
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      // top: input image grid (64×64) with RF region
+      const lx=20,ly=30,lwh=H-60;
+      const gridSize=64;const cell=lwh/gridSize;
+      ctx.strokeStyle='#bbb';ctx.strokeRect(lx,ly,gridSize*cell,gridSize*cell);
+      // checkerboard
+      for(let i=0;i<gridSize;i+=2)for(let j=0;j<gridSize;j+=2){
+        ctx.fillStyle='#f5f5f5';ctx.fillRect(lx+i*cell,ly+j*cell,cell,cell);
+      }
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`입력 64×64`,lx,ly-6);
+      // RF box centered
+      const rfPx=Math.min(64,RF)*cell;
+      const cx0=lx+(gridSize/2)*cell,cy0=ly+(gridSize/2)*cell;
+      ctx.fillStyle='rgba(255,200,40,0.45)';
+      ctx.fillRect(cx0-rfPx/2,cy0-rfPx/2,rfPx,rfPx);
+      ctx.strokeStyle='#e08e00';ctx.lineWidth=2;
+      ctx.strokeRect(cx0-rfPx/2,cy0-rfPx/2,rfPx,rfPx);
+      // mark center "1 output pixel" deep
+      ctx.fillStyle='#c62828';
+      ctx.fillRect(cx0-3,cy0-3,6,6);
+
+      // right: layer-by-layer text
+      const rx=lx+gridSize*cell+30;
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('층별 수용장(RF) 누적',rx,ly+10);
+      ctx.font='12px sans-serif';
+      trace.forEach((t,i)=>{
+        const y=ly+30+i*22;
+        ctx.fillStyle=i===trace.length-1?'#c62828':'#444';
+        ctx.fillText(`${i}. ${t.name}: 출력 ${t.size}×${t.size}, RF=${t.RF}, jump=${t.J}`,rx,y);
+      });
+      // summary
+      ctx.fillStyle='#222';ctx.font='bold 13px sans-serif';
+      const last=trace[trace.length-1];
+      ctx.fillText(`최종: 출력 한 픽셀이 원본의 ${Math.min(64,last.RF)}×${Math.min(64,last.RF)} 영역을 봅니다`,rx,H-30);
+      ctx.font='12px sans-serif';ctx.fillStyle='#666';
+      ctx.fillText(`(노란 박스=수용장, 빨간 점=깊은 층의 한 출력 픽셀)`,rx,H-12);
+    }
+    ['rfL1','rfL2','rfL3','rfL4','rfL5'].forEach(id=>document.getElementById(id).addEventListener('change',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

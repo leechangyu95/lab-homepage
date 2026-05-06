@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 회전반경 / Understeer / 슬립각 즉석 계산기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 회전반경 / Understeer / 슬립각 즉석 계산기</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/08-midterm-review.html">Week 8. 중간고사 범위 정리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 회전반경 / Understeer / 슬립각 즉석 계산기</h4>
+    <p>슬라이더로 값을 바꾸면 결과가 바로 갱신됩니다. 시험 전 손계산 결과를 검증하는 용도로 쓰세요.</p>
+
+    <h5 style="margin:12px 0 4px">① 회전반경 $R = L/\tan\delta$</h5>
+    <div class="controls">
+      <label>휠베이스 L [m] <span class="val" id="LV">2.8</span><input type="range" id="L" min="1.5" max="4.0" step="0.1" value="2.8"></label>
+      <label>조향각 δ [°] <span class="val" id="dV">15</span><input type="range" id="d" min="1" max="45" step="0.5" value="15"></label>
+    </div>
+    <p>→ <span class="calc-out" id="RR">R ≈ 10.45 m</span>, 요레이트 $\dot\psi = (v/L)\tan\delta$. 속도 $v=$
+      <input type="number" id="vv" value="5" min="0" max="40" step="1" style="width:60px"> m/s 일 때 <span class="calc-out" id="psR"></span>.</p>
+
+    <h5 style="margin:18px 0 4px">② Understeer Gradient $K_{us}$</h5>
+    <div class="controls">
+      <label>m [kg] <span class="val" id="mV">1500</span><input type="range" id="m" min="800" max="2500" step="50" value="1500"></label>
+      <label>$l_f$ [m] <span class="val" id="lfV">1.2</span><input type="range" id="lf" min="0.8" max="2.0" step="0.05" value="1.2"></label>
+      <label>$l_r$ [m] <span class="val" id="lrV">1.6</span><input type="range" id="lr" min="0.8" max="2.0" step="0.05" value="1.6"></label>
+      <label>$C_f$ [kN/rad] <span class="val" id="cfV">80</span><input type="range" id="cf" min="20" max="160" step="5" value="80"></label>
+      <label>$C_r$ [kN/rad] <span class="val" id="crV">80</span><input type="range" id="cr" min="20" max="160" step="5" value="80"></label>
+    </div>
+    <p>→ <span class="calc-out" id="kusOut"></span></p>
+  </div>
+  <script>
+  (function(){
+    const $=id=>document.getElementById(id);
+    function refresh(){
+      const L=+$('L').value,d=(+$('d').value)*Math.PI/180,v=+$('vv').value;
+      $('LV').textContent=(+$('L').value).toFixed(1);
+      $('dV').textContent=(+$('d').value).toFixed(1);
+      const R=L/Math.tan(d);$('RR').textContent='R ≈ '+R.toFixed(2)+' m';
+      const ps=(v/L)*Math.tan(d);$('psR').textContent='ψ̇ ≈ '+ps.toFixed(3)+' rad/s ('+(ps*180/Math.PI).toFixed(1)+'°/s)';
+      const m=+$('m').value,lf=+$('lf').value,lr=+$('lr').value;
+      const cf=(+$('cf').value)*1000,cr=(+$('cr').value)*1000;
+      $('mV').textContent=m;$('lfV').textContent=lf.toFixed(2);$('lrV').textContent=lr.toFixed(2);
+      $('cfV').textContent=(cf/1000).toFixed(0);$('crV').textContent=(cr/1000).toFixed(0);
+      const Lt=lf+lr,g=9.81;const Kus=(lr*m*g)/(Lt*cf)-(lf*m*g)/(Lt*cr);
+      const tag=Kus>0.001?'Understeer (안전)':Kus<-0.001?'Oversteer (위험)':'Neutral';
+      $('kusOut').textContent='K_us = '+Kus.toFixed(4)+'  →  '+tag;
+    }
+    ['L','d','vv','m','lf','lr','cf','cr'].forEach(id=>{const e=$(id);if(e.type==='range')e.oninput=refresh;else e.onchange=refresh;});
+    refresh();
+  })();
+  </script>
+</main>
+</body>
+</html>

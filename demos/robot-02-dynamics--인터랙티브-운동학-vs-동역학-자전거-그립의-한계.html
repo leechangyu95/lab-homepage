@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 운동학 vs 동역학 자전거 — 그립의 한계 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 운동학 vs 동역학 자전거 — 그립의 한계</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/02-dynamics.html">Lecture 2. 운동학과 동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 운동학 vs 동역학 자전거 — 그립의 한계</h4>
+    <p>같은 입력 $(v, \delta)$를 두 모델에 보냅니다. 운동학 모델은 항상 깔끔하게 회전하지만, 동역학 모델은 노면 그립 한계 $a_{\max} = \mu g$를 넘는 순간 슬립이 일어나 회전 반경이 커집니다(언더스티어). 속도를 키우면서 어디서 두 궤적이 갈라지는지 관찰해보세요.</p>
+    <canvas id="kdC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>속도 v (m/s) <span class="val" id="kdVV">8</span><input type="range" id="kdV" min="0" max="20" step="0.5" value="8"></label>
+      <label>조향각 δ (°) <span class="val" id="kdDV">15</span><input type="range" id="kdD" min="-30" max="30" value="15"></label>
+      <label>마찰 μ <span class="val" id="kdMuV">0.7</span><input type="range" id="kdMu" min="0.1" max="1.2" step="0.05" value="0.7"></label>
+      <button id="kdR">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kdC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    let kin,dyn,kT,dT;
+    const home=()=>{kin={x:80,y:200,th:0};dyn={x:80,y:200,th:0};kT=[];dT=[];};home();
+    const upd=()=>['kdV','kdD','kdMu'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    sl('kdR').onclick=home;
+    ['kdV','kdD','kdMu'].forEach(k=>sl(k).oninput=upd);upd();
+    function inB(s){return s.x>0&&s.x<c.width&&s.y>0&&s.y<c.height;}
+    function loop(){
+      const v=+sl('kdV').value,d=+sl('kdD').value*Math.PI/180,mu=+sl('kdMu').value;
+      const L=2.5,g=9.81,dt=0.05,SCALE=6;
+      const wK=v/L*Math.tan(d);
+      kin.th+=wK*dt;kin.x+=v*Math.cos(kin.th)*dt*SCALE;kin.y+=v*Math.sin(kin.th)*dt*SCALE;
+      const Rk=Math.abs(L/Math.tan(d));
+      const aReq=v*v/Rk, aMax=mu*g;
+      let wD=wK;
+      if(Math.abs(d)>0.001 && aReq>aMax){const Rd=v*v/aMax;wD=Math.sign(Math.tan(d))*v/Rd;}
+      dyn.th+=wD*dt;dyn.x+=v*Math.cos(dyn.th)*dt*SCALE;dyn.y+=v*Math.sin(dyn.th)*dt*SCALE;
+      if(!inB(kin)||!inB(dyn))home();
+      kT.push([kin.x,kin.y]);if(kT.length>600)kT.shift();
+      dT.push([dyn.x,dyn.y]);if(dT.length>600)dT.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();kT.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.stroke();
+      x.strokeStyle='#c62828';x.beginPath();dT.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.stroke();
+      function drawCar(s,col){x.save();x.translate(s.x,s.y);x.rotate(s.th);x.fillStyle=col;x.fillRect(-12,-7,24,14);x.fillStyle='#fff';x.beginPath();x.moveTo(8,0);x.lineTo(0,-4);x.lineTo(0,4);x.closePath();x.fill();x.restore();}
+      drawCar(kin,'#0b5fff');drawCar(dyn,'#c62828');
+      x.fillStyle='#0b5fff';x.font='bold 13px sans-serif';x.textAlign='left';x.fillText('🔵 운동학 (그립 가정)',14,22);
+      x.fillStyle='#c62828';x.fillText('🔴 동역학 (그립 한계)',14,42);
+      x.fillStyle='#666';x.font='12px Consolas,monospace';
+      x.fillText('a_req = v²/R = '+aReq.toFixed(1)+' m/s²',360,22);
+      x.fillText('a_max = μg = '+aMax.toFixed(1)+' m/s²',360,40);
+      x.fillStyle=aReq>aMax?'#c62828':'#2e7d32';x.font='bold 12px sans-serif';
+      x.fillText(aReq>aMax?'⚠ 슬립 — 언더스티어':'✓ 그립 유지',360,60);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 정보이득 — 어디서 자르는 게 좋을까 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 정보이득 — 어디서 자르는 게 좋을까</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/05-classification.html">Week 5. 분류 알고리즘 — KNN, SVM, 결정트리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정보이득 — 어디서 자르는 게 좋을까</h4>
+    <p>1차원 데이터에 두 클래스가 섞여 있습니다. <strong>분할선</strong>을 움직이며 왼쪽/오른쪽 영역의 지니 불순도와 정보이득(Information Gain)이 어떻게 변하는지 보세요. 정보이득이 가장 큰 곳이 결정트리가 자동으로 고르는 분할입니다.</p>
+    <canvas id="ig" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>분할 위치 <span class="val" id="igTV">0.50</span><input type="range" id="igT" min="0.05" max="0.95" step="0.01" value="0.5"></label>
+      <button id="igRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ig');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<25;i++)pts.push({x:0.1+Math.random()*0.35,c:0});
+      for(let i=0;i<8;i++)pts.push({x:0.45+Math.random()*0.5,c:0});
+      for(let i=0;i<25;i++)pts.push({x:0.55+Math.random()*0.35,c:1});
+      for(let i=0;i<8;i++)pts.push({x:0.05+Math.random()*0.5,c:1});
+      draw();
+    }
+    function gini(arr){if(!arr.length)return 0;const c0=arr.filter(p=>p.c==0).length/arr.length;return 1-c0*c0-(1-c0)*(1-c0);}
+    function bestT(){
+      let best=null;
+      for(let t=0.05;t<=0.95;t+=0.01){
+        const L=pts.filter(p=>p.x<t),R=pts.filter(p=>p.x>=t);
+        if(!L.length||!R.length)continue;
+        const wg=(L.length*gini(L)+R.length*gini(R))/pts.length;
+        const ig=gini(pts)-wg;
+        if(!best||ig>best.ig)best={t,ig};
+      }
+      return best;
+    }
+    function draw(){
+      const t=+document.getElementById('igT').value;
+      document.getElementById('igTV').textContent=t.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const yLine=H-90;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,yLine);ctx.lineTo(W-20,yLine);ctx.stroke();
+      pts.forEach(p=>{
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        const x=40+p.x*(W-60);
+        ctx.beginPath();ctx.arc(x,yLine+(p.c?15:-15),5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.stroke();
+      });
+      const tx=40+t*(W-60);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.moveTo(tx,30);ctx.lineTo(tx,H-20);ctx.stroke();ctx.setLineDash([]);
+      const L=pts.filter(p=>p.x<t),R=pts.filter(p=>p.x>=t);
+      const gL=gini(L),gR=gini(R),gP=gini(pts);
+      const wg=(L.length*gL+R.length*gR)/pts.length;
+      const igVal=gP-wg;
+      const best=bestT();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`부모 Gini ${gP.toFixed(3)} | 분할 후 가중평균 ${wg.toFixed(3)}`,12,22);
+      ctx.fillText(`왼쪽 (n=${L.length}) Gini=${gL.toFixed(3)} | 오른쪽 (n=${R.length}) Gini=${gR.toFixed(3)}`,12,42);
+      ctx.fillStyle=Math.abs(t-best.t)<0.02?'#2e7d32':'#0b5fff';
+      ctx.font='bold 14px sans-serif';
+      ctx.fillText(`정보이득 IG = ${igVal.toFixed(3)}  (최적값 ${best.ig.toFixed(3)} @ t=${best.t.toFixed(2)})`,12,64);
+      // bar
+      const bw=(W-80),bx=40,by=H-50;
+      ctx.fillStyle='#eef0f4';ctx.fillRect(bx,by,bw,16);
+      ctx.fillStyle='#0b5fff';ctx.fillRect(bx,by,bw*igVal/Math.max(0.01,best.ig),16);
+      ctx.strokeStyle='#999';ctx.strokeRect(bx,by,bw,16);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('IG 비율 (현재/최대)',bx,by-3);
+    }
+    document.getElementById('igT').addEventListener('input',draw);
+    document.getElementById('igRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

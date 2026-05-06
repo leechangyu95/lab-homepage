@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 지도/비지도 데이터 생성기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 지도/비지도 데이터 생성기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/01-ai-intro.html">Week 1. AI의 세계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 지도/비지도 데이터 생성기</h4>
+    <p>클러스터 수와 분산을 조절해 데이터를 생성합니다. "라벨 보이기"를 끄면 비지도학습 입장에서 본 데이터입니다 — 색이 없으니 그저 점 무더기죠.</p>
+    <canvas id="genCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>클러스터 수 <span class="val" id="kgV">3</span><input type="range" id="kg" min="2" max="5" step="1" value="3"></label>
+      <label>분산 <span class="val" id="sgV">25</span><input type="range" id="sg" min="5" max="60" step="1" value="25"></label>
+      <label><input type="checkbox" id="lblOn" checked> 라벨 보이기</label>
+      <button id="regen">새로 생성</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('genCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLORS=['#0b5fff','#ff8c00','#2e7d32','#c62828','#6a1b9a'];
+    let pts=[];
+    function gen(){
+      const K=+document.getElementById('kg').value;
+      const sigma=+document.getElementById('sg').value;
+      pts=[];
+      const centers=[];
+      for(let k=0;k<K;k++){centers.push({x:80+Math.random()*(W-160),y:60+Math.random()*(H-120)});}
+      for(let k=0;k<K;k++){
+        for(let i=0;i<40;i++){
+          const u=Math.random(),v=Math.random();
+          const z0=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+          const z1=Math.sqrt(-2*Math.log(u))*Math.sin(2*Math.PI*v);
+          pts.push({x:centers[k].x+z0*sigma,y:centers[k].y+z1*sigma,c:k});
+        }
+      }
+      draw();
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const lbl=document.getElementById('lblOn').checked;
+      pts.forEach(p=>{
+        ctx.fillStyle=lbl?COLORS[p.c]:'#888';
+        ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();
+      });
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(lbl?'지도학습 — 색=라벨':'비지도학습 — 라벨 없음',12,20);
+    }
+    ['kg','sg'].forEach(id=>{
+      document.getElementById(id).addEventListener('input',()=>{
+        document.getElementById(id+'V').textContent=document.getElementById(id).value;
+        if(id==='sg')gen();else gen();
+      });
+    });
+    document.getElementById('lblOn').addEventListener('change',draw);
+    document.getElementById('regen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

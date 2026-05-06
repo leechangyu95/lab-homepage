@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 오차 곡선 — 차수 ↑ 면 얼마나 작아지나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 오차 곡선 — 차수 ↑ 면 얼마나 작아지나</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/07-taylor-series.html">Week 7. 테일러 급수</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 오차 곡선 — 차수 ↑ 면 얼마나 작아지나</h4>
+    <p>$y$축이 로그 스케일. 작은 $|x|$ 에서는 차수가 큰 효과 — 차수 4와 10의 오차가 10⁵배 차이도 흔합니다. $|x|$ 가 수렴 반경 1 근처로 가면 어떤 차수도 빠르게 발산.</p>
+    <canvas id="te" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="teFn">
+          <option value="sin" selected>sin x</option>
+          <option value="exp">eˣ</option>
+          <option value="ln">ln(1+x)</option>
+        </select>
+      </label>
+    </div>
+    <p id="teInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('te'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:60,r:20,t:30,b:40};
+    function fact(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
+    function setup(){
+      const m=document.getElementById('teFn').value;
+      if(m==='sin'){
+        return{
+          f:Math.sin,xMax:6,
+          T:(N,xv)=>{let s=0;for(let k=0;k<=N;k++){if(k%2===0)continue;const sign=(((k-1)/2)%2===0)?1:-1;s+=sign*Math.pow(xv,k)/fact(k);}return s;}
+        };
+      }
+      if(m==='exp'){
+        return{
+          f:Math.exp,xMax:4,
+          T:(N,xv)=>{let s=0;for(let k=0;k<=N;k++)s+=Math.pow(xv,k)/fact(k);return s;}
+        };
+      }
+      return{
+        f:v=>Math.log(1+v),xMax:1.5,
+        T:(N,xv)=>{let s=0;for(let k=1;k<=N;k++){const sign=((k-1)%2===0)?1:-1;s+=sign*Math.pow(xv,k)/k;}return s;}
+      };
+    }
+    function loop(){
+      const S=setup();
+      const Lx0=M.l,Lx1=W-M.r,Ly0=M.t,Ly1=H-M.b;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#ddd';x.strokeRect(Lx0,Ly0,Lx1-Lx0,Ly1-Ly0);
+      function px(v){return Lx0+v/S.xMax*(Lx1-Lx0);}
+      function py(e){const lo=-15,hi=2;const lg=Math.log10(Math.max(e,Math.pow(10,lo)));return Ly1 - (lg-lo)/(hi-lo)*(Ly1-Ly0);}
+      // grid
+      x.strokeStyle='#eee';
+      for(let p=2;p>=-15;p-=2){
+        const yy=py(Math.pow(10,p));
+        x.beginPath();x.moveTo(Lx0,yy);x.lineTo(Lx1,yy);x.stroke();
+        x.fillStyle='#666';x.font='11px sans-serif';x.fillText('10^'+p,8,yy+4);
+      }
+      for(let i=0;i<=Math.ceil(S.xMax);i++){
+        const xx=px(i);x.strokeStyle='#eee';x.beginPath();x.moveTo(xx,Ly0);x.lineTo(xx,Ly1);x.stroke();
+        x.fillStyle='#666';x.fillText('|x|='+i,xx-15,Ly1+14);
+      }
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('|f − T_N|  (로그 스케일)',8,Ly0-8);
+      // curves for several N
+      const Ns=[2,4,6,10];
+      const colors=['#c62828','#f57c00','#1b5e20','#0b5fff'];
+      Ns.forEach((N,idx)=>{
+        x.strokeStyle=colors[idx];x.lineWidth=2;x.beginPath();
+        let first=true;
+        for(let v=0.01;v<=S.xMax;v+=S.xMax/300){
+          const e=Math.abs(S.f(v)-S.T(N,v));
+          if(!isFinite(e))continue;
+          if(first){x.moveTo(px(v),py(e));first=false;}else x.lineTo(px(v),py(e));
+        }
+        x.stroke();
+        x.fillStyle=colors[idx];x.fillRect(Lx0+10,Ly0+8+idx*16,16,3);x.fillStyle='#222';x.fillText('N='+N,Lx0+30,Ly0+13+idx*16);
+      });
+      document.getElementById('teInfo').textContent='차수가 한 단계 ↑ 면 작은 |x|에서 오차가 ~|x|배 더 작아집니다 (테일러 잉여항의 (N+1)! 분모 효과).';
+    }
+    loop();
+    document.getElementById('teFn').onchange=loop;
+  })();
+  </script>
+</main>
+</body>
+</html>

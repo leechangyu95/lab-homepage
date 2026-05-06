@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Pacejka Magic Formula 맛보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Pacejka Magic Formula 맛보기</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/03-vehicle-dynamics.html">Week 3. 차량 동역학 기초</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Pacejka Magic Formula 맛보기</h4>
+    <p>슬립각 $\alpha$를 슬라이더로 흔들어 보세요. <span style="color:#0b5fff;font-weight:600">파란선</span>은 선형 근사 $F_y = C_\alpha\alpha$,
+    <span style="color:#c62828;font-weight:600">빨간선</span>은 Pacejka의 비선형 곡선입니다. 슬립각이 작을 때는 두 곡선이 거의 같지만, 5°를 넘어가면서 빨간선이 <strong>포화</strong>되는 게 보입니다.</p>
+    <canvas id="tireCv" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>슬립각 α [°] <span class="val" id="alV">3</span><input type="range" id="al" min="-15" max="15" step="0.2" value="3"></label>
+      <label>코너링 강성 Cα [kN/rad] <span class="val" id="caV">80</span><input type="range" id="ca" min="20" max="160" step="5" value="80"></label>
+      <label>마찰계수 μ <span class="val" id="muV">0.9</span><input type="range" id="mu" min="0.2" max="1.0" step="0.05" value="0.9"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tireCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('alV').textContent=(+$('al').value).toFixed(1);$('caV').textContent=(+$('ca').value).toFixed(0);$('muV').textContent=(+$('mu').value).toFixed(2);draw();};
+    ['al','ca','mu'].forEach(id=>$(id).oninput=upd);
+    function pacejka(alpha,Ca,mu){
+      const Fz=4500;const D=mu*Fz;const B=Ca*1000/(D);const C=1.3,E=-0.2;
+      const phi=(1-E)*(B*alpha)+E*Math.atan(B*alpha);
+      return D*Math.sin(C*Math.atan(phi));
+    }
+    function draw(){
+      const Ca=+$('ca').value,mu=+$('mu').value,al=+$('al').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h=c.height,pad=40;const xa=a=>pad+(a+15)/30*(w-2*pad);const ya=f=>h-pad-(f+5000)/10000*(h-2*pad);
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(pad,ya(0));x.lineTo(w-pad,ya(0));x.moveTo(xa(0),pad);x.lineTo(xa(0),h-pad);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('α [°]',w-pad+4,ya(0)+14);x.fillText('Fy [N]',xa(0)+6,pad-6);
+      for(let a=-15;a<=15;a+=5){x.fillText(a,xa(a)-6,ya(0)+18);}
+      for(let f=-4000;f<=4000;f+=2000){if(f!==0){x.fillText(f,xa(0)-40,ya(f)+4);}}
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let a=-15;a<=15;a+=0.2){const F=Ca*1000*a*Math.PI/180;const xx=xa(a),yy=ya(Math.max(-5000,Math.min(5000,F)));if(a==-15)x.moveTo(xx,yy);else x.lineTo(xx,yy);}x.stroke();
+      x.strokeStyle='#c62828';x.lineWidth=2.4;x.beginPath();
+      for(let a=-15;a<=15;a+=0.2){const F=pacejka(a*Math.PI/180,Ca,mu);const xx=xa(a),yy=ya(F);if(a==-15)x.moveTo(xx,yy);else x.lineTo(xx,yy);}x.stroke();
+      const Flin=Ca*1000*al*Math.PI/180,Fpac=pacejka(al*Math.PI/180,Ca,mu);
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(xa(al),ya(Math.max(-5000,Math.min(5000,Flin))),5,0,2*Math.PI);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(xa(al),ya(Fpac),5,0,2*Math.PI);x.fill();
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('선형 근사 Fy = '+(Flin/1000).toFixed(2)+' kN',pad+8,pad+18);
+      x.fillStyle='#c62828';x.fillText('Pacejka     Fy = '+(Fpac/1000).toFixed(2)+' kN',pad+8,pad+38);
+    }
+    upd();
+  })();
+  </script>
+</main>
+</body>
+</html>

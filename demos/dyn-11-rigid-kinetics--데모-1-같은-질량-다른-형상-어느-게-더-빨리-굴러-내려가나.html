@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 같은 질량, 다른 형상 — 어느 게 더 빨리 굴러 내려가나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 같은 질량, 다른 형상 — 어느 게 더 빨리 굴러 내려가나</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/11-rigid-kinetics.html">Week 11. 강체의 평면 운동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 같은 질량, 다른 형상 — 어느 게 더 빨리 굴러 내려가나</h4>
+    <p>경사면 꼭대기에서 동시에 출발하는 세 물체: <strong>속이 찬 원통, 속이 빈 원통(링), 속이 찬 구</strong>. 같은 반지름·같은 질량인데 누가 가장 빠를까요? <strong>관성모멘트가 작은 게 이깁니다</strong> — 회전에 쓸 에너지가 적게 들어 병진에 더 많이 남습니다.</p>
+    <canvas id="rollRaceC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>경사각 θ (°) <span class="val" id="rrAV">20</span><input type="range" id="rrA" min="5" max="35" step="1" value="20"></label>
+      <button id="rrStart">출발</button>
+      <button id="rrReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rollRaceC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    sl('rrA').oninput=()=>sl('rrAV').textContent=sl('rrA').value;
+    let t=0,running=false;
+    sl('rrStart').onclick=()=>{t=0;running=true;};
+    sl('rrReset').onclick=()=>{t=0;running=false;};
+    sl('rrA').addEventListener('input',()=>{t=0;running=false;});
+    function loop(){
+      const th=+sl('rrA').value*Math.PI/180,g=9.81;
+      // a_center = g sinθ / (1 + I/(mR²))
+      // sphere: I/(mR²) = 2/5 → factor = 1/(1+2/5) = 5/7
+      // solid cyl: 1/2 → 2/3
+      // hollow cyl: 1 → 1/2
+      const factors={sphere:5/7,solid:2/3,hollow:1/2};
+      const accs={sphere:g*Math.sin(th)*factors.sphere,solid:g*Math.sin(th)*factors.solid,hollow:g*Math.sin(th)*factors.hollow};
+      if(running)t+=0.025;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // slope
+      const x0=80,y0=80,L=480;
+      const ex=Math.cos(th),ey=Math.sin(th);
+      const tipx=x0+ex*L,tipy=y0+ey*L;
+      x.fillStyle='#d8c8a8';x.beginPath();x.moveTo(x0,y0);x.lineTo(tipx,tipy);x.lineTo(tipx,y0+ey*L);x.lineTo(20,y0+ey*L);x.closePath();x.fill();
+      x.strokeStyle='#333';x.lineWidth=1.5;x.beginPath();x.moveTo(x0,y0);x.lineTo(tipx,tipy);x.stroke();
+      // three rolling objects
+      const r=18;
+      const types=['sphere','solid','hollow'];
+      const cols=['#0b5fff','#2e7d32','#c62828'];
+      const labels=['속이 찬 구 (2/5 mR²)','속이 찬 원통 (1/2 mR²)','속이 빈 링 (mR²)'];
+      const offs=[0,40,80];
+      types.forEach((tp,i)=>{
+        const a=accs[tp];
+        const s=0.5*a*t*t*15;
+        const px=x0+ex*(offs[i]+s),py=y0+ey*(offs[i]+s)-r;
+        // perpendicular offset to slope so the ball sits on top
+        const npx=-ey,npy=ex;
+        const cx2=px+npx*r,cy2=py+npy*r-r;
+        // depending on type, draw differently
+        if(tp==='sphere'){
+          x.fillStyle=cols[i];x.beginPath();x.arc(cx2,cy2,r,0,Math.PI*2);x.fill();
+        } else if(tp==='solid'){
+          x.fillStyle=cols[i];x.beginPath();x.arc(cx2,cy2,r,0,Math.PI*2);x.fill();
+          x.fillStyle='#fff8';x.beginPath();x.arc(cx2,cy2,r*0.4,0,Math.PI*2);x.fill();
+        } else {
+          x.strokeStyle=cols[i];x.lineWidth=4;x.beginPath();x.arc(cx2,cy2,r,0,Math.PI*2);x.stroke();
+        }
+        x.strokeStyle='#333';x.lineWidth=1;x.beginPath();x.arc(cx2,cy2,r,0,Math.PI*2);x.stroke();
+        // spoke for rotation visualization
+        const phi=s/r;
+        x.strokeStyle='#333';x.lineWidth=1.5;
+        x.beginPath();x.moveTo(cx2,cy2);x.lineTo(cx2+r*Math.cos(phi-th),cy2-r*Math.sin(phi-th));x.stroke();
+      });
+      // legend
+      types.forEach((tp,i)=>{
+        x.fillStyle=cols[i];x.fillRect(20,300+i*20,12,12);
+        x.fillStyle='#333';x.font='12px sans-serif';x.textAlign='left';
+        x.fillText(labels[i]+'  →  a = '+accs[tp].toFixed(2)+' m/s²',38,310+i*20);
+      });
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('굴림 가속도 a = g sinθ / (1 + I/mR²) — I가 작을수록 빠르다',20,370);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

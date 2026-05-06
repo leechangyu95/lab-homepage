@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 선형화 vs 비선형 — 단진자 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 선형화 vs 비선형 — 단진자</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/03-state-space.html">Lecture 3. 상태공간 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 선형화 vs 비선형 — 단진자</h4>
+    <p>같은 단진자를 비선형 식 $\ddot\theta = -(g/\ell)\sin\theta - b\dot\theta$와 선형화 식 $\ddot\theta = -(g/\ell)\theta - b\dot\theta$로 동시에 시뮬레이션합니다. 초기 각도가 작을 때는 두 곡선이 겹치지만, 큰 각도(예: 60° 이상)에서는 갈라집니다.</p>
+    <canvas id="lin" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>초기 각도 θ₀ (도) <span class="val" id="th0V">30</span><input type="range" id="th0" min="5" max="170" step="1" value="30"></label>
+      <label>막대 길이 ℓ <span class="val" id="ellV">1</span><input type="range" id="ell" min="0.3" max="2" step="0.05" value="1"></label>
+      <label>감쇠 b <span class="val" id="bV">0.1</span><input type="range" id="b" min="0" max="2" step="0.05" value="0.1"></label>
+      <button id="linRst">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lin'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    let th_n,thd_n,th_l,thd_l,t,hist_n,hist_l;
+    function init(){
+      const th0=+sl('th0').value*Math.PI/180;
+      th_n=th0;thd_n=0;th_l=th0;thd_l=0;t=0;hist_n=[];hist_l=[];
+    }
+    init();sl('linRst').onclick=init;
+    ['th0','ell','b'].forEach(k=>sl(k).oninput=()=>{init();});
+    function loop(){
+      const ell=+sl('ell').value, b=+sl('b').value, g=9.81, dt=0.02;
+      ['th0','ell','b'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+      // RK4: 비선형
+      function fN(s){return [s[1],-(g/ell)*Math.sin(s[0])-b*s[1]];}
+      function fL(s){return [s[1],-(g/ell)*s[0]-b*s[1]];}
+      function rk4(s,f){
+        const k1=f(s);
+        const k2=f([s[0]+k1[0]*dt/2,s[1]+k1[1]*dt/2]);
+        const k3=f([s[0]+k2[0]*dt/2,s[1]+k2[1]*dt/2]);
+        const k4=f([s[0]+k3[0]*dt,s[1]+k3[1]*dt]);
+        return [s[0]+dt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]),s[1]+dt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1])];
+      }
+      [th_n,thd_n]=rk4([th_n,thd_n],fN);
+      [th_l,thd_l]=rk4([th_l,thd_l],fL);
+      t+=dt;
+      hist_n.push(th_n);hist_l.push(th_l);
+      if(hist_n.length>320){hist_n.shift();hist_l.shift();}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 좌측: 두 진자 시각화
+      const cx1=120,cx2=240,cy=80,L=70;
+      x.fillStyle='#666';x.font='12px sans-serif';x.textAlign='center';
+      x.fillText('비선형 (실제)',cx1,30);x.fillText('선형 근사',cx2,30);x.textAlign='start';
+      // 비선형
+      x.strokeStyle='#999';x.beginPath();x.arc(cx1,cy,3,0,Math.PI*2);x.stroke();
+      const px1=cx1+L*Math.sin(th_n), py1=cy+L*Math.cos(th_n);
+      x.strokeStyle='#2e7d32';x.lineWidth=3;x.beginPath();x.moveTo(cx1,cy);x.lineTo(px1,py1);x.stroke();
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(px1,py1,7,0,Math.PI*2);x.fill();
+      // 선형
+      x.strokeStyle='#999';x.beginPath();x.arc(cx2,cy,3,0,Math.PI*2);x.stroke();
+      // 선형 모델은 작은 각도 가정이지만 시뮬레이션 자체는 진행됨 — 모델 식대로 그리되 시각적으로는 막대로 표현
+      const px2=cx2+L*Math.sin(th_l), py2=cy+L*Math.cos(th_l);
+      x.strokeStyle='#c62828';x.lineWidth=3;x.beginPath();x.moveTo(cx2,cy);x.lineTo(px2,py2);x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(px2,py2,7,0,Math.PI*2);x.fill();
+      // 우측: θ(t) 비교
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('θ(t) 비교',360,30);
+      x.strokeStyle='#ccc';x.beginPath();x.moveTo(360,180);x.lineTo(630,180);x.stroke();
+      x.beginPath();x.moveTo(360,40);x.lineTo(360,290);x.stroke();
+      // 스케일: x축 320 step → 270 px
+      const sx=i=>360+i*270/320;
+      const sy=v=>180-v*40;
+      // 비선형
+      x.strokeStyle='#2e7d32';x.lineWidth=1.8;x.beginPath();
+      hist_n.forEach((v,i)=>{if(i==0)x.moveTo(sx(i),sy(v));else x.lineTo(sx(i),sy(v));});x.stroke();
+      // 선형
+      x.strokeStyle='#c62828';x.lineWidth=1.8;x.beginPath();
+      hist_l.forEach((v,i)=>{if(i==0)x.moveTo(sx(i),sy(v));else x.lineTo(sx(i),sy(v));});x.stroke();
+      // 라벨
+      x.fillStyle='#2e7d32';x.fillText('— 비선형',365,50);
+      x.fillStyle='#c62828';x.fillText('— 선형',430,50);
+      x.fillStyle='#666';
+      const err=Math.abs(th_n-th_l)*180/Math.PI;
+      x.fillText('현재 오차: '+err.toFixed(2)+'°',365,68);
+      const th0deg=+sl('th0').value;
+      x.fillStyle=th0deg<20?'#2e7d32':th0deg<60?'#ff8c00':'#c62828';
+      x.fillText(th0deg<20?'✓ 선형 근사가 거의 일치':th0deg<60?'⚠ 점차 벌어짐':'✗ 큰 각도 — 모델 깨짐',365,290);
+      // 진자 아래 각도 표시
+      x.fillStyle='#2e7d32';x.font='12px sans-serif';
+      x.fillText((th_n*180/Math.PI).toFixed(0)+'°',cx1-10,180);
+      x.fillStyle='#c62828';
+      x.fillText((th_l*180/Math.PI).toFixed(0)+'°',cx2-10,180);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

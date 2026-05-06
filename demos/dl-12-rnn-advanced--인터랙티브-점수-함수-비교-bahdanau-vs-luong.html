@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 점수 함수 비교 — Bahdanau vs Luong — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 점수 함수 비교 — Bahdanau vs Luong</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/12-rnn-advanced.html">Week 12. Seq2Seq와 Attention</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 점수 함수 비교 — Bahdanau vs Luong</h4>
+    <p>같은 디코더 상태와 인코더 출력에 대해 두 점수 함수가 만드는 어텐션 분포를 비교합니다. <strong>온도</strong>를 낮추면 분포가 한 곳에 집중되고, 높이면 균등에 가까워져요.</p>
+    <canvas id="scoreFn" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>온도 τ <span class="val" id="sfTV">1.0</span><input type="range" id="sfT" min="0.1" max="3" step="0.1" value="1"></label>
+      <button id="sfNew">새 입력</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('scoreFn');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let s=[],h=[];
+    function gen(){
+      s=Array(4).fill(0).map(()=>Math.random()*2-1);
+      h=Array(8).fill(0).map(()=>Array(4).fill(0).map(()=>Math.random()*2-1));
+      draw();
+    }
+    function softmax(arr,tau){const m=Math.max(...arr);const e=arr.map(v=>Math.exp((v-m)/tau));const Z=e.reduce((a,b)=>a+b);return e.map(v=>v/Z);}
+    function draw(){
+      const tau=+document.getElementById('sfT').value;
+      document.getElementById('sfTV').textContent=tau.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // additive: tanh-based, simulated with sum of squared diff
+      const additive=h.map(hi=>{let v=0;for(let k=0;k<4;k++)v+=Math.tanh(s[k]+hi[k]);return v;});
+      // dot
+      const dot=h.map(hi=>{let v=0;for(let k=0;k<4;k++)v+=s[k]*hi[k];return v;});
+      const aA=softmax(additive,tau);
+      const aD=softmax(dot,tau);
+      const cell=(W-80)/8;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('Bahdanau (additive)',12,40);
+      aA.forEach((v,i)=>{
+        ctx.fillStyle='#0b5fff';ctx.fillRect(60+i*cell,80-v*60,cell-4,v*60);
+        ctx.fillStyle='#666';ctx.font='10px sans-serif';
+        ctx.fillText(v.toFixed(2),60+i*cell,95);
+        ctx.fillText('h'+(i+1),60+i*cell+8,110);
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('Luong (dot product)',12,160);
+      aD.forEach((v,i)=>{
+        ctx.fillStyle='#ff8c00';ctx.fillRect(60+i*cell,200-v*60,cell-4,v*60);
+        ctx.fillStyle='#666';ctx.font='10px sans-serif';
+        ctx.fillText(v.toFixed(2),60+i*cell,215);
+        ctx.fillText('h'+(i+1),60+i*cell+8,230);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('두 분포 모두 합 = 1. Bahdanau는 비선형이라 부드럽고 Luong은 한 곳에 집중되기 쉬움.',12,260);
+    }
+    document.getElementById('sfT').addEventListener('input',draw);
+    document.getElementById('sfNew').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

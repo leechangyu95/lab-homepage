@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 에일리어싱 직접 만들기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 에일리어싱 직접 만들기</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/03-signal-conditioning.html">Week 3. 신호 조절(Signal Conditioning)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 에일리어싱 직접 만들기</h4>
+    <p>신호 주파수를 $f_s/2$ 위로 올려보세요. 점들이 갑자기 <em>훨씬 느린 가짜 신호</em>를 그립니다. 이 가짜 신호의 주파수 = $|f - f_s|$. 이게 영화에서 빠르게 도는 바퀴가 거꾸로 도는 것처럼 보이는 이유입니다.</p>
+    <canvas id="aliasDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>신호 주파수 f <span class="val" id="aFV">8</span> Hz<input type="range" id="aF" min="1" max="40" step="0.5" value="8"></label>
+      <label>표본화 fs <span class="val" id="aFsV">20</span> Hz<input type="range" id="aFs" min="5" max="50" step="1" value="20"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('aliasDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const f=+document.getElementById('aF').value;
+      const fs=+document.getElementById('aFs').value;
+      document.getElementById('aFV').textContent=f.toFixed(1);
+      document.getElementById('aFsV').textContent=fs;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H/2,w=W-70,h=H-80,T=1.0;
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      // continuous truth
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1.5;ctx.beginPath();
+      for(let i=0;i<=600;i++){const t=i/600*T;const v=Math.cos(2*Math.PI*f*t);
+        const xx=ox+t/T*w, yy=oy-v*h*0.4;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // sampled points
+      ctx.fillStyle='#c62828';
+      const Ns=Math.floor(fs*T);
+      for(let i=0;i<=Ns;i++){const t=i/fs;const v=Math.cos(2*Math.PI*f*t);
+        const xx=ox+t/T*w, yy=oy-v*h*0.4;
+        ctx.beginPath();ctx.arc(xx,yy,3.5,0,Math.PI*2);ctx.fill();}
+      // alias line connecting the points (perceived signal)
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=Ns;i++){const t=i/fs;const v=Math.cos(2*Math.PI*f*t);
+        const xx=ox+t/T*w, yy=oy-v*h*0.4;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // verdict
+      const Nyq=fs/2;
+      const aliasF = f<=Nyq ? f : Math.abs(f - Math.round(f/fs)*fs);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`나이퀴스트 = fs/2 = ${Nyq.toFixed(1)} Hz`,ox,25);
+      ctx.fillStyle=f>Nyq?'#c62828':'#2e7d32';
+      ctx.fillText(f>Nyq?`⚠ 에일리어싱! ${f.toFixed(1)}Hz가 ${aliasF.toFixed(1)}Hz로 보임`:`✓ 안전 (${f.toFixed(1)}Hz < ${Nyq.toFixed(1)}Hz)`,ox+220,25);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('— 진짜 신호 (연속)',ox+10,H-15);
+      ctx.fillStyle='#c62828';ctx.fillText('● 표본 → 인식되는 신호',ox+170,H-15);
+    }
+    document.getElementById('aF').addEventListener('input',draw);
+    document.getElementById('aFs').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

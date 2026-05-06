@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 깊이에 따른 그래디언트 크기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 깊이에 따른 그래디언트 크기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/08-dnn-backprop.html">Week 8. 심층신경망과 역전파</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 깊이에 따른 그래디언트 크기</h4>
+    <p>활성함수에 따라 깊이가 깊어질수록 그래디언트가 어떻게 변하는지 봅니다. 시그모이드는 빠르게 사라지고, ReLU는 살아남습니다.</p>
+    <canvas id="gradFlow" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>활성함수
+        <select id="gfAct">
+          <option value="sigmoid">Sigmoid</option>
+          <option value="tanh">Tanh</option>
+          <option value="relu" selected>ReLU</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gradFlow');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const act=document.getElementById('gfAct').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const PL=50,PR=20,PT=20,PB=40;
+      const plotW=W-PL-PR,plotH=H-PT-PB;
+      const factor={'sigmoid':0.25,'tanh':1.0,'relu':1.0}[act];
+      const noise={'sigmoid':1,'tanh':0.6,'relu':1}[act];
+      ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(PL,PT+plotH);ctx.lineTo(PL+plotW,PT+plotH);ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+plotH);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('층 깊이 →',PL+plotW/2-30,H-12);
+      ctx.save();ctx.translate(14,PT+plotH/2+30);ctx.rotate(-Math.PI/2);ctx.fillText('그래디언트 크기 (log)',0,0);ctx.restore();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=20;i++){
+        const grad=Math.pow(factor*noise,i)*1.0;
+        const logG=Math.log10(Math.max(grad,1e-12));
+        const x=PL+plotW*i/20;
+        const y=PT+plotH*(1-(logG+12)/12);
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`활성: ${act}`,PL+10,PT+15);
+    }
+    document.getElementById('gfAct').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

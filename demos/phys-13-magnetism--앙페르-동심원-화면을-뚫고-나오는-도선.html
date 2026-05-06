@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>앙페르 동심원 — 화면을 뚫고 나오는 도선 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">앙페르 동심원 — 화면을 뚫고 나오는 도선</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/13-magnetism.html">Week 13. 자기장과 자기력</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>앙페르 동심원 — 화면을 뚫고 나오는 도선</h4>
+    <p>중앙의 ⊙는 전류가 화면 바깥으로 나오는 방향(반대로 ⊗는 안으로). 화살표 길이는 $B$ 크기, 동심원 위에 그려집니다.</p>
+    <canvas id="w13_wire" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>전류 $I$ <span class="val" id="w13_IV">5</span> A
+        <input type="range" id="w13_I" min="-20" max="20" step="1" value="5"></label>
+      <label>표시할 동심원 수 <span class="val" id="w13_nV">5</span>
+        <input type="range" id="w13_n" min="2" max="8" step="1" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰</strong>
+      <ul>
+        <li>같은 동심원 위 $|B|$ 일정. 멀어질수록 약해짐.</li>
+        <li>전류 부호 반전 → 모든 화살표 동시에 반대로.</li>
+        <li>$I=10$ A, $r=2$ cm일 때 $B = (4\pi\!\times\!10^{-7})(10)/(2\pi\!\times\!0.02) = 10^{-4}$ T = 1 G — 지구 자기장의 두 배 정도.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w13_wire');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const I=+document.getElementById('w13_I').value;
+      const n=+document.getElementById('w13_n').value;
+      document.getElementById('w13_IV').textContent=I;
+      document.getElementById('w13_nV').textContent=n;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2;
+      // wire symbol
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx,cy,14,0,Math.PI*2);ctx.stroke();
+      if(I>=0){ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fillStyle='#222';ctx.fill();}
+      else{ctx.beginPath();ctx.moveTo(cx-9,cy-9);ctx.lineTo(cx+9,cy+9);
+        ctx.moveTo(cx+9,cy-9);ctx.lineTo(cx-9,cy+9);ctx.stroke();}
+      // concentric circles
+      const sense=I>=0?1:-1;
+      const Imag=Math.abs(I);
+      for(let k=1;k<=n;k++){
+        const r=30+k*38;
+        if(r>Math.min(W,H)/2-20)break;
+        ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+        ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+        // arrows around the circle
+        const Bmag=Imag/r*30;
+        const len=Math.min(28, 6+Bmag*0.5);
+        const arrows=8;
+        for(let a=0;a<arrows;a++){
+          const ang=a*2*Math.PI/arrows;
+          const ax=cx+r*Math.cos(ang),ay=cy+r*Math.sin(ang);
+          // tangent direction (counterclockwise for positive)
+          const tx=-Math.sin(ang)*sense,ty=Math.cos(ang)*sense;
+          ctx.strokeStyle='#0b5fff';ctx.fillStyle='#0b5fff';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(ax-tx*len/2,ay-ty*len/2);
+          ctx.lineTo(ax+tx*len/2,ay+ty*len/2);ctx.stroke();
+          const ahn=Math.atan2(ty,tx);
+          const tipx=ax+tx*len/2,tipy=ay+ty*len/2;
+          ctx.beginPath();ctx.moveTo(tipx,tipy);
+          ctx.lineTo(tipx-7*Math.cos(ahn-0.4),tipy-7*Math.sin(ahn-0.4));
+          ctx.lineTo(tipx-7*Math.cos(ahn+0.4),tipy-7*Math.sin(ahn+0.4));
+          ctx.closePath();ctx.fill();
+        }
+      }
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,260,52);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,260,52);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('I = '+I+' A, 방향: '+(I>=0?'화면 밖(⊙)':'화면 안(⊗)'),16,28);
+      ctx.fillText('B ∝ 1/r — 멀어질수록 화살표 짧음',16,46);
+    }
+    ['w13_I','w13_n'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 성능 열화(Degradation) 곡선 — ResNet 논문 Fig 1 재현 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 성능 열화(Degradation) 곡선 — ResNet 논문 Fig 1 재현</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/10-cnn-transfer.html">Week 10. CNN 심화와 전이학습</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 성능 열화(Degradation) 곡선 — ResNet 논문 Fig 1 재현</h4>
+    <p>왼쪽: <strong>평면 네트워크</strong>는 깊을수록 훈련 오차가 오히려 늘어나는 비정상 현상이 나타납니다(과적합과는 다름 — 검증이 아니라 <em>훈련</em> 오차가 늘어요). 오른쪽: <strong>잔차 연결</strong>을 추가하면 같은 깊이에서 훈련 오차가 단조 감소합니다. 슬라이더로 학습 epoch를 진행시켜 두 곡선을 비교해 보세요.</p>
+    <canvas id="degrad" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>학습 진행 (epoch) <span class="val" id="dgEV">60</span><input type="range" id="dgE" min="0" max="100" step="1" value="60"></label>
+      <button id="dgPlay">▶ 자동 재생</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('degrad');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let auto=null;
+    // simulate train error vs depth at given training epoch t
+    // plain net: optimization failure at deep layers; train err = floor + degradation*(depth-20)+ when depth>20
+    // resnet: monotone with depth.
+    function plainErr(depth,t){
+      const learn=Math.exp(-t/30); // 1 at t=0, decays
+      const optBase=0.30+0.55*learn; // base error decays with training
+      const degrade=Math.max(0,(depth-20)/120)*0.18*Math.min(1,t/15); // degradation appears as training proceeds
+      return Math.max(0.04,optBase*(0.6+0.4*Math.exp(-depth/40))+degrade-0.001*depth*(1-learn));
+    }
+    function resnetErr(depth,t){
+      const learn=Math.exp(-t/25);
+      const base=0.28+0.50*learn;
+      // monotone: deeper helps slightly
+      return Math.max(0.025,base*(0.55+0.45*Math.exp(-depth/45))-0.0003*depth*(1-learn));
+    }
+    function plotPanel(x0,y0,wp,hp,errFn,t,col,title){
+      ctx.strokeStyle='#ccc';ctx.strokeRect(x0,y0,wp,hp);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(title,x0+8,y0-6);
+      // grid
+      for(let v=0.0;v<=1.0001;v+=0.2){
+        const y=y0+hp-hp*v;
+        ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x0+wp,y);ctx.stroke();
+        ctx.fillStyle='#888';ctx.font='10px sans-serif';
+        ctx.fillText(v.toFixed(1),x0-22,y+4);
+      }
+      // curve
+      ctx.strokeStyle=col;ctx.lineWidth=2.2;ctx.beginPath();
+      for(let d=10;d<=80;d+=2){
+        const e=errFn(d,t);
+        const px=x0+(d-10)/70*wp;
+        const py=y0+hp-Math.min(1,e)*hp;
+        if(d===10)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // mark 20 and 56
+      [20,56].forEach(d=>{
+        const px=x0+(d-10)/70*wp;
+        const e=errFn(d,t);
+        const py=y0+hp-Math.min(1,e)*hp;
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#333';ctx.font='11px sans-serif';
+        ctx.fillText(`${d}층: ${(e*100).toFixed(1)}%`,px-25,py-7);
+      });
+      // x-axis
+      ctx.fillStyle='#888';ctx.font='10px sans-serif';
+      [10,30,50,70].forEach(d=>{const px=x0+(d-10)/70*wp;ctx.fillText(d,px-5,y0+hp+12);});
+      ctx.fillText('깊이(층 수)',x0+wp/2-25,y0+hp+24);
+      ctx.save();ctx.translate(x0-32,y0+hp/2+30);ctx.rotate(-Math.PI/2);ctx.fillText('훈련 오차',0,0);ctx.restore();
+    }
+    function draw(){
+      const t=+document.getElementById('dgE').value;
+      document.getElementById('dgEV').textContent=t;
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      const PL=50,PT=30,wp=(W-PL-30-30)/2,hp=H-PT-50;
+      plotPanel(PL,PT,wp,hp,plainErr,t,'#c62828','① Plain Net (잔차 없음)');
+      plotPanel(PL+wp+30,PT,wp,hp,resnetErr,t,'#0b5fff','② ResNet (잔차 연결)');
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('빨강↑우상향: 깊을수록 훈련조차 잘 안 됨 (성능 열화)',PL,H-12);
+      ctx.fillText('파랑↘우하향: 깊을수록 훈련 잘 됨 (정상)',PL+wp+30,H-12);
+    }
+    document.getElementById('dgE').addEventListener('input',draw);
+    document.getElementById('dgPlay').onclick=function(){
+      if(auto){clearInterval(auto);auto=null;this.textContent='▶ 자동 재생';return;}
+      let t=0;
+      auto=setInterval(()=>{t=(t+2)%101;document.getElementById('dgE').value=t;draw();},80);
+      this.textContent='⏸ 정지';
+    };
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

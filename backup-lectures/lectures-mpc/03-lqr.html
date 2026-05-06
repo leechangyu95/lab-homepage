@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W3. LQR — 무제약 최적 제어 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html" class="active">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../mpc.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 3. LQR — 무제약 최적 제어</h1>
+  <p class="lead">제약을 잠시 잊으면 최적 제어 문제는 우아한 닫힌형 해를 갖습니다. 그게 <strong>LQR(Linear Quadratic Regulator)</strong>이에요.
+  벨만의 동적계획법으로 한 줄씩 유도해보고, 무한 호라이즌이 어떻게 매트릭스 한 번 풀어 끝나는지 봅니다. MPC의 출발점이자 종단 비용 설계의 기준점.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 LQR을 먼저 배우는가</li>
+    <li>유한 호라이즌 LQR — 벨만 + DP</li>
+    <li>리카티 차분방정식 (Riccati Difference Equation)</li>
+    <li>무한 호라이즌 — DARE</li>
+    <li>안정성과 게인 마진</li>
+    <li>LQR vs PID — 언제 무엇을</li>
+  </ol></div>
+
+  <h2>1. 왜 LQR을 먼저 배우는가</h2>
+
+  <p>MPC는 결국 "제약이 있는 LQR"입니다. 제약을 빼면 정확히 LQR이 되고, 제약이 활성화되지 않은 상태에서는 LQR과 동일한 입력을 냅니다. 따라서 LQR을 모르고 MPC를 짜는 건 사칙연산 없이 미적분을 배우는 것과 같습니다. 또한 MPC의 <strong>종단 비용 행렬 $P$</strong>는 보통 LQR 무한 호라이즌 해(DARE)로 두는 것이 표준입니다 (W6에서 안정성 보장과 함께 다시 등장).</p>
+
+  <h2>2. 유한 호라이즌 LQR</h2>
+
+  <h3>문제 정식화</h3>
+  <p>이산 LTI 시스템 $x_{k+1} = A x_k + B u_k$에 대해, 다음 비용을 최소화하는 입력 시퀀스를 찾습니다:</p>
+  $$ J(x_0) = \sum_{k=0}^{N-1} \left( x_k^\top Q x_k + u_k^\top R u_k \right) + x_N^\top P_f x_N $$
+  <ul>
+    <li>$Q \succeq 0$ — 상태 가중치. 보통 $Q = \text{diag}(q_1, \ldots, q_n)$.</li>
+    <li>$R \succ 0$ — 입력 가중치. $R$이 양정치여야 해가 unique.</li>
+    <li>$P_f \succeq 0$ — 종단 비용. "$N$ 스텝 후의 상태에 얼마나 벌점을 줄까".</li>
+  </ul>
+
+  <h3>벨만의 원리 — 거꾸로 풀기</h3>
+  <p>벨만 원리: <em>"최적 정책의 끝부분도 그 자체로 최적이다"</em>. 즉 $k$에서의 최적 입력은 $k+1$ 이후의 최적 비용 함수만 알면 결정됩니다. 이를 이용해 <strong>거꾸로 시간(backward in time)</strong> 재귀를 세웁니다.</p>
+
+  <p>"value function" $V_k(x) = $ "시점 $k$에서 상태 $x$일 때 남은 최적 비용"을 정의:</p>
+  $$ V_N(x) = x^\top P_f x $$
+  $$ V_k(x) = \min_{u}\ \{x^\top Q x + u^\top R u + V_{k+1}(Ax + Bu)\} $$
+
+  <p>핵심 추측: $V_k$가 이차형 $V_k(x) = x^\top P_k x$ 라고 가정하면, 위 미분 = 0으로 풀어:</p>
+  $$ u_k^* = -(R + B^\top P_{k+1} B)^{-1} B^\top P_{k+1} A\, x_k = -K_k x_k $$
+
+  <p>대입하면 $P_k$는 다음 재귀를 만족:</p>
+  $$ \boxed{\; P_k = Q + A^\top P_{k+1} A - A^\top P_{k+1} B (R + B^\top P_{k+1} B)^{-1} B^\top P_{k+1} A \;} $$
+
+  <p>이걸 <strong>리카티 차분방정식 (Riccati Difference Equation)</strong>이라 부릅니다. $P_N = P_f$에서 시작해 거꾸로 $P_{N-1}, P_{N-2}, \ldots, P_0$를 계산한 뒤, 게인 $K_k$를 얻으면 끝.</p>
+
+  <div class="tip">
+    <strong>핵심 사실</strong> — LQR의 최적 입력은 시점에 따라 달라지는 <em>선형 상태 피드백</em> $u_k = -K_k x_k$입니다. 시변(time-varying) 게인을 N 스텝 거꾸로 한 번만 계산해두면 끝.
+  </div>
+
+  <h2>3. 무한 호라이즌 — DARE</h2>
+
+  <p>$N \to \infty$로 보내면, 호라이즌이 충분히 길어진 시점부터 $P_k$는 고정값 $P_\infty$로 수렴합니다. 이 고정점을 만족하는 행렬 방정식이 <strong>이산 대수 리카티 방정식 (Discrete Algebraic Riccati Equation, DARE)</strong>:</p>
+  $$ P = Q + A^\top P A - A^\top P B (R + B^\top P B)^{-1} B^\top P A $$
+
+  <p>이를 푸는 함수가 <code>scipy.linalg.solve_discrete_are(A, B, Q, R)</code> 또는 MATLAB <code>dlqr(A,B,Q,R)</code>. 결과로 시간 불변(time-invariant) 게인:</p>
+  $$ K = (R + B^\top P B)^{-1} B^\top P A,\quad u_k = -K x_k $$
+
+  <p>이 한 게인 행렬을 매 스텝마다 그대로 쓰면 됩니다 — 단순한 선형 상태 피드백.</p>
+
+  <h3>존재·안일성 조건</h3>
+  <ul>
+    <li>$(A, B)$가 안정화 가능 — 불안정 모드는 입력으로 제어 가능.</li>
+    <li>$(A, Q^{1/2})$가 검출 가능 — 비용에 반영되지 않는 불안정 모드가 없음.</li>
+  </ul>
+  <p>이 둘이 만족되면 DARE의 양정치 해가 존재하고 유일하며, 닫힌 루프 $A - BK$가 안정합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: LQR 닫힌 루프 응답</h4>
+    <p>2차 시스템 $\ddot x = u$를 이산화해 LQR로 0으로 보냅니다. <strong>$Q/R$ 비율</strong>을 키우면 빠르게 수렴하지만 입력이 거칠어지고, 줄이면 부드럽지만 느립니다. <strong>초기 위치</strong>도 조절 가능.</p>
+    <canvas id="lqrDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$\log_{10}(Q/R)$ <span class="val" id="lqRV">1.0</span><input type="range" id="lqR" min="-2" max="3" step="0.1" value="1"></label>
+      <label>초기 위치 <span class="val" id="lqXV">3.0</span><input type="range" id="lqX" min="-5" max="5" step="0.2" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lqrDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function dlqr(qr){
+      // System: x_{k+1} = A x_k + B u_k, A=[[1,dt],[0,1]], B=[[0],[dt]], dt=0.1
+      const dt=0.1;const A=[[1,dt],[0,1]],B=[[0],[dt]];
+      const Q=[[qr,0],[0,qr*0.1]],R=[[1]];
+      // Iteratively solve DARE
+      let P=[[qr,0],[0,qr*0.1]];
+      for(let it=0;it<200;it++){
+        const PA=[[P[0][0]*A[0][0]+P[0][1]*A[1][0],P[0][0]*A[0][1]+P[0][1]*A[1][1]],
+                  [P[1][0]*A[0][0]+P[1][1]*A[1][0],P[1][0]*A[0][1]+P[1][1]*A[1][1]]];
+        const ATPA=[[A[0][0]*PA[0][0]+A[1][0]*PA[1][0],A[0][0]*PA[0][1]+A[1][0]*PA[1][1]],
+                    [A[0][1]*PA[0][0]+A[1][1]*PA[1][0],A[0][1]*PA[0][1]+A[1][1]*PA[1][1]]];
+        const PB=[[P[0][0]*B[0][0]+P[0][1]*B[1][0]],[P[1][0]*B[0][0]+P[1][1]*B[1][0]]];
+        const BTPB=B[0][0]*PB[0][0]+B[1][0]*PB[1][0];
+        const inv=1/(R[0][0]+BTPB);
+        const BTPA=[B[0][0]*PA[0][0]+B[1][0]*PA[1][0],B[0][0]*PA[0][1]+B[1][0]*PA[1][1]];
+        const K_new=[[BTPA[0]*inv,BTPA[1]*inv]];
+        const ATPB=[A[0][0]*PB[0][0]+A[1][0]*PB[1][0],A[0][1]*PB[0][0]+A[1][1]*PB[1][0]];
+        const correction=[[ATPB[0]*K_new[0][0],ATPB[0]*K_new[0][1]],
+                          [ATPB[1]*K_new[0][0],ATPB[1]*K_new[0][1]]];
+        const Pnew=[[Q[0][0]+ATPA[0][0]-correction[0][0],Q[0][1]+ATPA[0][1]-correction[0][1]],
+                    [Q[1][0]+ATPA[1][0]-correction[1][0],Q[1][1]+ATPA[1][1]-correction[1][1]]];
+        P=Pnew;
+      }
+      // Final K
+      const PA=[[P[0][0]*A[0][0]+P[0][1]*A[1][0],P[0][0]*A[0][1]+P[0][1]*A[1][1]],
+                [P[1][0]*A[0][0]+P[1][1]*A[1][0],P[1][0]*A[0][1]+P[1][1]*A[1][1]]];
+      const PB=[[P[0][0]*B[0][0]+P[0][1]*B[1][0]],[P[1][0]*B[0][0]+P[1][1]*B[1][0]]];
+      const BTPB=B[0][0]*PB[0][0]+B[1][0]*PB[1][0];
+      const inv=1/(R[0][0]+BTPB);
+      const BTPA=[B[0][0]*PA[0][0]+B[1][0]*PA[1][0],B[0][0]*PA[0][1]+B[1][0]*PA[1][1]];
+      return {K:[BTPA[0]*inv,BTPA[1]*inv],dt};
+    }
+    function draw(){
+      const lr=+document.getElementById('lqR').value;
+      const x0=+document.getElementById('lqX').value;
+      const QR=Math.pow(10,lr);
+      document.getElementById('lqRV').textContent=lr.toFixed(1);
+      document.getElementById('lqXV').textContent=x0.toFixed(1);
+      const {K,dt}=dlqr(QR);
+      let x=[x0,0];const xs=[],vs=[],us=[];const T=120;
+      for(let k=0;k<T;k++){
+        const u=-(K[0]*x[0]+K[1]*x[1]);
+        xs.push(x[0]);vs.push(x[1]);us.push(u);
+        x=[x[0]+dt*x[1],x[1]+dt*u];
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const tH=170;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      ctx.moveTo(40,30);ctx.lineTo(W-20,30);ctx.moveTo(40,tH);ctx.lineTo(W-20,tH);
+      ctx.moveTo(40,30);ctx.lineTo(40,tH);ctx.stroke();
+      const refY=(30+tH)/2;
+      ctx.strokeStyle='#999';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(40,refY);ctx.lineTo(W-20,refY);ctx.stroke();ctx.setLineDash([]);
+      const sc=(tH-30)/12;
+      function plot(arr,col){
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+        arr.forEach((v,i)=>{const x=40+(i/(T-1))*(W-60);const y=refY-v*sc;
+          if(!isFinite(y))return;
+          if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+      }
+      plot(xs,'#0b5fff');plot(vs,'#2e7d32');
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';ctx.fillText('상태',12,40);
+      ctx.fillStyle='#0b5fff';ctx.fillText('위치 x',W-180,40);
+      ctx.fillStyle='#2e7d32';ctx.fillText('속도ẋ',W-180,58);
+      // u
+      const uTop=190,uBot=H-30;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      ctx.moveTo(40,uTop);ctx.lineTo(W-20,uTop);ctx.moveTo(40,uBot);ctx.lineTo(W-20,uBot);
+      ctx.moveTo(40,uTop);ctx.lineTo(40,uBot);ctx.stroke();
+      const mid=(uTop+uBot)/2;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,mid);ctx.lineTo(W-20,mid);ctx.stroke();
+      const uMax=Math.max(...us.map(Math.abs),0.1);
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;ctx.beginPath();
+      us.forEach((v,i)=>{const x=40+(i/(T-1))*(W-60);const y=mid-(v/uMax)*((uBot-uTop)/2-5);
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`u(t), 게인 K=[${K[0].toFixed(2)}, ${K[1].toFixed(2)}]`,12,200);
+    }
+    document.getElementById('lqR').addEventListener('input',draw);
+    document.getElementById('lqX').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>4. 안정성과 게인 마진</h2>
+
+  <p>LQR이 매력적인 또 다른 이유: <strong>훌륭한 강건성 보장</strong>.</p>
+  <ul>
+    <li><strong>게인 여유 [1/2, ∞)</strong> — 입력 채널의 게인을 0.5배 ~ 무한배 곱해도 안정 유지.</li>
+    <li><strong>위상 여유 ≥ 60°</strong> — 위상 변화에 매우 강함.</li>
+  </ul>
+  <p>이는 LQR의 "내장된 강건성" 결과로, PID는 훨씬 작은 마진을 가집니다. 그래서 LQR은 모델 오차에 자연스럽게 강합니다.</p>
+
+  <p>하지만 LQG (LQR + 칼만 필터)에서는 이 마진이 깨질 수 있다는 것이 1978년 Doyle의 유명한 결과 (<em>"Guaranteed Margins for LQG Regulators"</em> = "보장 없음"). 그래서 강건 제어 (H∞)가 발전했습니다.</p>
+
+  <h2>5. LQR vs PID — 언제 무엇을</h2>
+
+  <table>
+    <thead><tr><th>특성</th><th>PID</th><th>LQR</th></tr></thead>
+    <tbody>
+      <tr><td>입출력</td><td>SISO 위주</td><td>MIMO 자연</td></tr>
+      <tr><td>설계 변수</td><td>$K_p, K_i, K_d$ — 직관적이지만 튜닝 어려움</td><td>$Q, R$ — 물리적 의미 있음, 자동 튜닝</td></tr>
+      <tr><td>모델 필요</td><td>없어도 됨 (Ziegler-Nichols)</td><td>상태공간 모델 필수</td></tr>
+      <tr><td>제약 처리</td><td>안티 와인드업 같은 임시방편</td><td>제약 처리 안 됨 → MPC로 확장</td></tr>
+      <tr><td>강건성</td><td>설계자에 따라 다양</td><td>내장된 보장 (게인/위상 마진)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. 코드 예제</h2>
+  <pre><code>import numpy as np
+from scipy.linalg import solve_discrete_are
+
+# 2차 적분기 시스템 (이산화 dt=0.1)
+A = np.array([[1, 0.1],[0, 1]])
+B = np.array([[0],[0.1]])
+Q = np.diag([10, 1])     # 위치 10, 속도 1 가중치
+R = np.array([[1]])       # 입력 1
+
+# DARE 풀기
+P = solve_discrete_are(A, B, Q, R)
+
+# LQR 게인
+K = np.linalg.inv(R + B.T @ P @ B) @ B.T @ P @ A
+print("LQR gain K =", K)
+
+# 폐루프 시뮬레이션
+x = np.array([3.0, 0.0])
+for _ in range(50):
+    u = -K @ x
+    x = A @ x + B.flatten() * u[0]
+    print(f"x = {x}, u = {u[0]:.3f}")
+</code></pre>
+
+  <h2>7. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>LQR은 무제약 이차 비용 + 선형 시스템 = 닫힌형 해. 매트릭스 한 번 풀어 끝.</li>
+      <li>유한 호라이즌은 시변 게인 $K_k$, 무한 호라이즌은 시불변 게인 $K = $ <code>dlqr</code>.</li>
+      <li>닫힌 루프는 자동 안정 + 좋은 강건성 마진 (게인 1/2~∞, 위상 60°+).</li>
+      <li>MPC의 종단 비용 $P$는 보통 LQR DARE 해로 두는 것이 표준.</li>
+      <li>제약을 추가하면 닫힌형 해가 사라지고 → 다음 주의 CFTOC + QP로.</li>
+    </ul>
+  </div>
+
+  <h2>📚 보강 1 — LQR을 직관으로</h2>
+  <p>LQR(Linear Quadratic Regulator)은 가장 단순한 최적 제어. 무한 호라이즌 + 이차 비용 + 선형 모델 + 무제약. 닫힌 해가 존재 — 그게 매력입니다.</p>
+
+  <h3>1.1 친절 비유</h3>
+  <ul>
+    <li><strong>주차장 자동 정렬</strong> — 차를 가능한 빠르게(작은 $R$), 그러나 너무 급격하지 않게(큰 $R$) 주차 위치로 이동.</li>
+    <li><strong>난방 제어</strong> — 빠르게 목표 온도(작은 $R$) vs 부드러운 온도 변화(큰 $R$).</li>
+    <li><strong>드론 자세</strong> — 빠른 자세 추종 vs 모터 RPM 한계.</li>
+  </ul>
+
+  <h3>1.2 핵심 식 한 줄</h3>
+  <p>$$J = \sum_{k=0}^\infty (x_k^T Q x_k + u_k^T R u_k)$$</p>
+  <p>최적 제어 $u_k = -K x_k$, 게인 $K$는 DARE(Discrete Algebraic Riccati Equation) 해로 결정.</p>
+
+  <h2>📚 보강 2 — Riccati 식 단계별 유도</h2>
+
+  <h3>2.1 Bellman 방정식</h3>
+  <p>최적 비용 함수 $V^*(x) = x^T P x$로 가정.</p>
+  <p>$$V^*(x_k) = \min_{u_k} (x_k^TQx_k + u_k^TRu_k + V^*(x_{k+1}))$$</p>
+
+  <h3>2.2 대입과 전개</h3>
+  <p>$x_{k+1} = Ax_k + Bu_k$ 대입. 미분 = 0:</p>
+  <p>$$u_k^* = -(R + B^TPB)^{-1}B^TPA\, x_k = -K x_k$$</p>
+
+  <h3>2.3 DARE</h3>
+  <p>$P$가 만족하는 식:</p>
+  <p>$$P = A^TPA - A^TPB(R + B^TPB)^{-1}B^TPA + Q$$</p>
+  <p>이게 이산 Riccati 식. scipy.linalg.solve_discrete_are로 한 줄 풀이.</p>
+
+  <h2>📚 보강 3 — 단계별 예제</h2>
+
+  <h3>3.1 예제 — 1차원 LQR</h3>
+  <p>$x_{k+1} = x_k + u_k$, $Q = 1, R = 1$. 최적 $K$?</p>
+  <div class="sol">
+    DARE: $P = P - P^2/(1+P) + 1$ → $P(1+P) - P^2 + (1+P) = P + P^2 - P^2 + 1 + P = 2P + 1$. 같으면 $P(1+P) = 2P+1$ → $P = (1+\sqrt{5})/2 \approx 1.618$ (golden ratio!).<br>
+    $K = P/(1+P) \approx 0.618$. 닫힌 루프 $A - BK \approx 0.382$, 안정.
+  </div>
+
+  <h3>3.2 예제 — 2차원 LQR (도립진자 1축)</h3>
+  <p>$A = \begin{pmatrix}1 &amp; 0.01 \\ 0 &amp; 1\end{pmatrix}$, $B = \begin{pmatrix}0 \\ 0.1\end{pmatrix}$, $Q = I, R = 1$. scipy로 풀이.</p>
+  <pre style="background:#f5f5f5;padding:10px;border-radius:6px">
+from scipy.linalg import solve_discrete_are
+A = [[1, 0.01], [0, 1]]
+B = [[0], [0.1]]
+Q = [[1, 0], [0, 1]]
+R = [[1]]
+P = solve_discrete_are(A, B, Q, R)
+K = inv(R + B.T @ P @ B) @ B.T @ P @ A
+  </pre>
+
+  <h3>3.3 예제 — Q/R 비율 변화</h3>
+  <p>$Q$ 키우면 → 빠른 추적. $R$ 키우면 → 부드러운 입력. 1차원에서 직관 확인.</p>
+
+  <h2>📚 보강 4 — LQR 안정성과 강건성</h2>
+  <ul>
+    <li><strong>안정성</strong>: $A - BK$ 모든 고유값 $|\lambda| &lt; 1$.</li>
+    <li><strong>게인 마진</strong>: $1/2 \le k \le \infty$ (무한 게인 마진).</li>
+    <li><strong>위상 마진</strong>: 60° 이상.</li>
+    <li>이런 자연스러운 강건성이 LQR의 매력.</li>
+  </ul>
+
+  <h2>📚 보강 5 — LQR vs MPC 한 페이지 비교</h2>
+  <table>
+    <thead><tr><th>항목</th><th>LQR</th><th>MPC</th></tr></thead>
+    <tbody>
+      <tr><td>호라이즌</td><td>무한</td><td>유한 ($N$)</td></tr>
+      <tr><td>제약</td><td>없음</td><td>명시적 처리</td></tr>
+      <tr><td>해의 형식</td><td>닫힌 해 $K$</td><td>매 시점 QP</td></tr>
+      <tr><td>계산</td><td>오프라인 한 번</td><td>온라인 매 시점</td></tr>
+      <tr><td>비선형 시스템</td><td>지역 선형화</td><td>NMPC로 확장</td></tr>
+      <tr><td>안정성</td><td>자동</td><td>설계 필요</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 보강 6 — 흔한 오답</h2>
+  <ol>
+    <li>DARE를 손으로 풀려 함 (3차원 이상은 비현실적).</li>
+    <li>$Q, R$ 단위 무시.</li>
+    <li>$Q \ge 0, R &gt; 0$ 조건 빠뜨림.</li>
+    <li>가제어 안 되는 시스템에 LQR 적용.</li>
+    <li>제약을 LQR로 처리하려 함 → MPC 필요.</li>
+  </ol>
+
+  <h2>📚 보강 7 — 자가 점검 7문항</h2>
+  <ol>
+    <li>LQR 비용 함수 한 줄?</li>
+    <li>최적 제어 형식?</li>
+    <li>DARE 식 한 줄?</li>
+    <li>LQR의 게인 마진?</li>
+    <li>LQR vs MPC 차이 한 줄?</li>
+    <li>$Q$ 크게 하면?</li>
+    <li>LQR이 동작하기 위한 시스템 조건?</li>
+  </ol>
+  <p>정답 — ① $\sum x^TQx + u^TRu$ ② $u = -Kx$ ③ $P = A^TPA - A^TPB(R+B^TPB)^{-1}B^TPA + Q$ ④ 1/2~∞ ⑤ LQR=무한 호라이즌·무제약, MPC=유한·제약 ⑥ 빠른 추적 ⑦ 가제어 + $(A,Q^{1/2})$ 가검출.</p>
+
+  <h2>📚 보강 8 — FAQ</h2>
+  <h3>Q1. LQR이 안정성을 보장하는 이유?</h3>
+  <p>$P > 0$이 Lyapunov 함수 → 닫힌 루프 시스템의 에너지가 감소. 따라서 안정.</p>
+
+  <h3>Q2. $Q, R$ 어떻게 선택?</h3>
+  <p>대각 행렬로 시작 → Bryson 규칙: 대각 원소 = 1/(허용 최대값)². 그 후 시뮬로 튜닝.</p>
+
+  <h3>Q3. 무한 호라이즌이 현실적인가?</h3>
+  <p>이론. 실무는 정착 후 비용이 거의 0이라 무한이나 유한이나 같음.</p>
+
+  <h3>Q4. LQR 외 다른 무한 호라이즌 제어?</h3>
+  <p>$H_\infty$ 제어, LQG (LQR + Kalman). MPC도 무한 호라이즌으로 근사 가능.</p>
+
+  <h3>Q5. MPC 종단 비용 $P_f$는 보통 LQR DARE 해?</h3>
+  <p>네. 무한 호라이즌 cost-to-go의 근사. 안정성 보장에도 사용.</p>
+
+  <h2>📚 보강 9 — 응용</h2>
+  <ul>
+    <li>드론 안쪽 자세 루프 — LQR로 충분.</li>
+    <li>도립진자 균형 제어 — 클래식 LQR 적용 사례.</li>
+    <li>위성 자세 제어 — 작은 변화 영역에서 LQR.</li>
+    <li>차량 LKAS 횡방향 — LQR + feedforward.</li>
+  </ul>
+
+  <h2>📚 보강 10 — 학기 진도 W3</h2>
+  <p>10주 중 3주차. 30% 진행. LQR이 닫힌 해라 가장 단순 — 다음 주 CFTOC가 진짜 MPC의 시작.</p>
+
+  <h2>📚 보강 11 — 한 줄 격언</h2>
+  <p class="lead">"LQR은 MPC의 사촌 형 — 닫힌 해, 무제약, 무한 호라이즌."</p>
+
+  <h2>📚 보강 12 — 학습 일지</h2>
+  <p>"이번 주에 새로 익힌 도구: $K = $ DARE 풀이 한 줄."</p>
+
+  <h2>📚 보강 13 — 추가 워크북 5문제</h2>
+
+  <h3>워크 1</h3>
+  <p>$A = 0.9, B = 1, Q = R = 1$. $P, K$?</p>
+  <div class="sol">DARE: $P = 0.81P - 0.81P^2/(1+P) + 1$. 풀면 $P \approx 1.236$, $K = 0.9P/(1+P) \approx 0.498$.</div>
+
+  <h3>워크 2</h3>
+  <p>$Q = 100, R = 1$. 응답은?</p>
+  <div class="sol">큰 $K$, 빠른 추적, 입력 큼.</div>
+
+  <h3>워크 3</h3>
+  <p>$Q = 1, R = 100$. 응답은?</p>
+  <div class="sol">작은 $K$, 느린 추적, 부드러운 입력.</div>
+
+  <h3>워크 4</h3>
+  <p>가관측 안 되는 모드가 $Q$로 보강 안 되면?</p>
+  <div class="sol">DARE에 영향 없음 — 그러나 옵저버에서 그 모드를 못 보면 안정성 손상.</div>
+
+  <h3>워크 5</h3>
+  <p>가제어 안 되는 시스템에 LQR?</p>
+  <div class="sol">DARE 무한대 발산. 가제어 부분만 제어 가능.</div>
+
+  <h2>📚 보강 14 — 한 페이지 정리</h2>
+  <table>
+    <thead><tr><th>항목</th><th>식</th></tr></thead>
+    <tbody>
+      <tr><td>비용</td><td>$J = \sum x^TQx + u^TRu$</td></tr>
+      <tr><td>최적 제어</td><td>$u = -Kx$</td></tr>
+      <tr><td>DARE</td><td>$P = A^TPA - A^TPB(R+B^TPB)^{-1}B^TPA + Q$</td></tr>
+      <tr><td>게인</td><td>$K = (R+B^TPB)^{-1}B^TPA$</td></tr>
+      <tr><td>닫힌 루프</td><td>$x_{k+1} = (A-BK)x_k$</td></tr>
+      <tr><td>최소 비용</td><td>$V^*(x) = x^TPx$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 보강 15 — Bryson 규칙 — Q/R 첫 선택</h2>
+  <p>$Q_{ii} = 1/(x_i^{\max})^2$, $R_{jj} = 1/(u_j^{\max})^2$. 각 변수의 허용 최대값 역수 제곱. 그 후 시뮬로 미세 조정.</p>
+
+  <h2>📚 보강 16 — LQR 특수 케이스</h2>
+  <ul>
+    <li><strong>$R \to \infty$</strong>: $K \to 0$, 입력 0, 시스템 자유 응답.</li>
+    <li><strong>$R \to 0$</strong>: $K$ 매우 큼, deadbeat 응답.</li>
+    <li><strong>$Q$ 일부만 0</strong>: 그 상태는 자유, 다른 것만 정착.</li>
+  </ul>
+
+  <h2>📚 보강 17 — 다음 주 미리보기</h2>
+  <p>W4 CFTOC: 유한 호라이즌 + 제약 → 닫힌 해 사라짐 → QP. MPC의 진짜 시작.</p>
+
+  <h2>📚 보강 18 — 한 줄 마무리</h2>
+  <p class="lead">"$u = -Kx$ — 한 줄 식이 한 학기 최적 제어의 출발점."</p>
+
+  <h2>📚 보강 19 — 추가 응용 — DC 모터 위치 제어</h2>
+  <p>2상태 (위치, 속도). $Q = \text{diag}(100, 1), R = 0.1$. LQR 게인으로 빠른 위치 정착. 산업 표준.</p>
+
+  <h2>📚 보강 20 — 학기 후 추천 자료</h2>
+  <ul>
+    <li>Anderson &amp; Moore — Optimal Control: Linear Quadratic Methods.</li>
+    <li>Kwakernaak &amp; Sivan — Linear Optimal Control Systems.</li>
+    <li>한국어: 김상우 — 최적 제어.</li>
+  </ul>
+
+  <h2>📚 보강 21 — LQR 안정성 직관 — Lyapunov</h2>
+  <p>$V(x) = x^TPx > 0$이 Lyapunov 함수. $V(x_{k+1}) - V(x_k) = -x^TQx - u^TRu &lt; 0$. 따라서 $V$ 감소 → $x \to 0$.</p>
+
+  <h2>📚 보강 22 — 한 줄</h2>
+  <p>"LQR — 한 학기에서 가장 깨끗한 닫힌 해."</p>
+
+  <h2>📚 보강 23 — Cross 항 도입</h2>
+  <p>$J = \sum (x^TQx + 2x^TSu + u^TRu)$. Cross 항 $S$ 있으면 DARE도 약간 변형. 일반적으로는 $S = 0$.</p>
+
+  <h2>📚 보강 24 — 출력 LQR (LQR 변형)</h2>
+  <p>비용을 $y = Cx$로 표현: $J = \sum y^T \tilde Q y + u^TRu$, 즉 $Q = C^T\tilde QC$.</p>
+
+  <h2>📚 보강 25 — 마지막 한 줄</h2>
+  <p class="lead">"$u = -Kx$ — 한 식이 한 학기 절반의 최적 제어를 푼다."</p>
+
+  <h2>📚 보강 26 — 학기 W3 종료</h2>
+  <p>다음 주 CFTOC에서 만나요.</p>
+
+  <h2>📚 보강 27 — Riccati 식 풀이 도구</h2>
+  <ul>
+    <li>Python: scipy.linalg.solve_discrete_are.</li>
+    <li>MATLAB: dlqr, dare.</li>
+    <li>C: SLICOT 라이브러리.</li>
+  </ul>
+
+  <h2>📚 보강 28 — 한 학기 핵심 카드</h2>
+  <div class="hl">
+    <strong>비용</strong>: $J = \sum x^TQx + u^TRu$<br>
+    <strong>최적 입력</strong>: $u = -Kx$<br>
+    <strong>DARE</strong>: $P = A^TPA - A^TPB(R+B^TPB)^{-1}B^TPA + Q$<br>
+    <strong>게인 마진</strong>: $1/2 \le k \le \infty$<br>
+    <strong>위상 마진</strong>: $\ge 60°$
+  </div>
+
+  <h2>📚 보강 29 — 한 줄 마지막</h2>
+  <p>"$u = -Kx$ — 한 식, 한 학기 절반."</p>
+
+  <h2>📚 보강 30 — 다음 주(W4) 미리</h2>
+  <p>"제약 추가하면 닫힌 해 사라짐. QP로 변환. MPC 진짜 시작."</p>
+
+  <h2>📚 보강 31 — 한 학기 W3 진짜 끝</h2>
+  <p class="lead">"한 식 한 주차 한 학기. W4에서 만나요!"</p>
+
+  <h2>📚 보강 32 — Python 시뮬</h2>
+  <pre style="background:#f5f5f5;padding:14px;border-radius:8px;overflow-x:auto">
+import numpy as np
+from scipy.linalg import solve_discrete_are
+
+A = np.array([[1, 0.1], [0, 1]])
+B = np.array([[0], [0.1]])
+Q = np.eye(2)
+R = np.array([[1]])
+
+P = solve_discrete_are(A, B, Q, R)
+K = np.linalg.inv(R + B.T @ P @ B) @ (B.T @ P @ A)
+
+# Closed loop simulation
+x = np.array([[1.0], [0.0]])
+xs = []
+for k in range(50):
+    u = -K @ x
+    x = A @ x + B @ u
+    xs.append(x.flatten())
+  </pre>
+
+  <h2>📚 보강 33 — 한 줄 종료</h2>
+  <p class="lead">"LQR = MPC의 한계 케이스 + 닫힌 해. 다음 주 진짜 MPC."</p>
+
+  <h2>📚 보강 34 — 한 학기 진도</h2>
+  <p>10주 중 3주차 끝. 다음 주 W4 CFTOC가 MPC의 첫 본격 단원.</p>
+
+  <h2>📚 보강 35 — 학습 일지 마지막</h2>
+  <p>"이번 주에 새로 익힌 도구: 무한 호라이즌 + 닫힌 해 = LQR."</p>
+
+  <h2>📚 보강 36 — 한 줄</h2>
+  <p>"$u = -Kx$. 끝."</p>
+
+  <h2>📚 보강 37 — 마무리</h2>
+  <p class="lead">"다음 주 CFTOC에서 만나요!"</p>
+
+  <h2>📚 보강 38 — 한 학기 진도 시각화</h2>
+  <figure>
+    <svg viewBox="0 0 720 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="680" height="20" fill="#eee" stroke="#aaa"/>
+      <rect x="20" y="20" width="204" height="20" fill="#1565c0"/>
+      <text x="20" y="15" font-size="11" fill="#333">W1</text>
+      <text x="220" y="15" font-size="11" fill="#1565c0" font-weight="bold">W3 (현재)</text>
+      <text x="700" y="15" font-size="11" fill="#666" text-anchor="end">W10</text>
+    </svg>
+    <figcaption>그림. 한 학기 30% 통과.</figcaption>
+  </figure>
+
+  <h2>📚 보강 39 — 한 줄 진짜 끝</h2>
+  <p class="lead">"한 식 한 학기 한 약속 — 다음 주!"</p>
+
+  <h2>📚 보강 40 — LQR 변형 — LQG (with Kalman)</h2>
+  <p>LQG = LQR + Kalman 필터. 측정 노이즈 + 일부 상태만 측정 가능 시. Separation principle: LQR과 칼만을 따로 설계해도 안정성 보장.</p>
+  <p>$$u = -K\hat x,\ \hat x = \text{Kalman estimate}$$</p>
+
+  <h2>📚 보강 41 — LQR Robustness Trade-off</h2>
+  <p>LQR은 강건성이 좋지만, LQG는 그렇지 않을 수 있습니다. Doyle (1978)의 유명한 예: LQG의 마진이 임의로 작아질 수 있음. LTR(Loop Transfer Recovery)으로 보완.</p>
+
+  <h2>📚 보강 42 — 무한 호라이즌이 의미하는 것</h2>
+  <p>실제로 무한 시간을 시뮬하지 않습니다. DARE 한 번 풀이 = 무한 호라이즌 비용 함수의 닫힌 해. 그 해에서 게인 $K$를 추출.</p>
+
+  <h2>📚 보강 43 — 시간 가변 LQR (Finite Horizon)</h2>
+  <p>유한 호라이즌 LQR은 시간 가변 게인 $K_k$가 필요. 역방향 Riccati로 풀이. 호라이즌 끝에서 시작해 거꾸로.</p>
+
+  <h2>📚 보강 44 — Tracking LQR</h2>
+  <p>$x_{ref}$ 추종 → 상태를 $\tilde x = x - x_{ref}$로 정의 후 LQR. 또는 Augmented state로 적분 추종.</p>
+
+  <h2>📚 보강 45 — 한 줄 진짜 마지막</h2>
+  <p class="lead">"$u = -Kx$ — 한 식 한 학기 절반의 핵심."</p>
+
+  <h2>📚 보강 46 — 학기 후 추천 — 한국어 자료</h2>
+  <ul>
+    <li>K-MOOC "최적제어" — 한국어 강의.</li>
+    <li>네이버 블로그 다수 — LQR 입문 한국어.</li>
+    <li>YouTube "공돌이의 수학정리노트" — Riccati 식 유도.</li>
+  </ul>
+
+  <h2>📚 보강 47 — DARE 풀이 알고리즘 종류</h2>
+  <ul>
+    <li><strong>Schur 분해</strong>: 표준, scipy 기본.</li>
+    <li><strong>Newton-Kleinman</strong>: 반복법.</li>
+    <li><strong>Doubling 알고리즘</strong>: 큰 차원에 효율.</li>
+  </ul>
+
+  <h2>📚 보강 48 — 학기 진짜 진짜 마지막</h2>
+  <p>"$u = -Kx$. 한 식. 끝."</p>
+
+  <h2>📚 보강 49 — 응용 — 도립진자 LQR</h2>
+  <p>4상태(카트 위치, 카트 속도, 진자 각도, 각속도). $Q = \text{diag}(1, 1, 100, 1)$ — 진자 각도에 큰 비중. $R = 0.1$. 결과: 안정 균형 + 빠른 카트 이동.</p>
+
+  <h2>📚 보강 50 — 응용 — 4륜 드론 자세</h2>
+  <p>3축 자세 + 3축 각속도 = 6상태. 4 모터 RPM = 4입력. LQR로 자세 안정화 — 최내부 루프. 외부 위치 루프는 MPC.</p>
+
+  <h2>📚 보강 51 — 한 줄</h2>
+  <p>"LQR — 단순한 닫힌 해 + 자연 안정성 + 좋은 강건성. 한 학기에 가장 깨끗한 도구."</p>
+
+  <h2>📚 보강 52 — 다음 주 미리보기</h2>
+  <p>제약 추가 → 닫힌 해 사라짐 → 매 시점 QP. 그게 진짜 MPC.</p>
+
+  <h2>📚 보강 53 — 학기 후 적용 — 산업 사례</h2>
+  <ul>
+    <li>Boston Dynamics Spot — 다리 자세 제어 LQR.</li>
+    <li>SpaceX Falcon 9 자세 — LQR + MPC.</li>
+    <li>Tesla Autopilot 종방향 — LQR 기반.</li>
+    <li>로봇 팔 토크 — LQR + feedforward.</li>
+  </ul>
+
+  <h2>📚 보강 54 — 한 줄 마지막</h2>
+  <p class="lead">"$u = -Kx$ — 한 식 한 학기."</p>
+
+  <h2>📚 보강 55 — Q&amp;A 추가</h2>
+  <h3>Q. LQR을 처음 배울 때 가장 어려운 부분?</h3>
+  <p>Riccati 식의 의미. "왜 그게 최적의 비용을 만족하나?"라는 질문은 동적 프로그래밍의 핵심.</p>
+  <h3>Q. 학생이 한 학기에 LQR 손풀이를 한 번?</h3>
+  <p>1차원 손풀이 + 2차원 scipy 풀이 = 충분.</p>
+
+  <h2>📚 보강 56 — 마지막 한 줄</h2>
+  <p>"LQR. 한 식. 한 학기."</p>
+
+  <h2>📚 보강 57 — 한 학기 W3 진짜 진짜 종료</h2>
+  <p class="lead">"다음 주 CFTOC + QP에서 만나요!"</p>
+
+  <h2>📚 보강 58 — 한 줄 격언</h2>
+  <p>"LQR = 닫힌 해 최적 제어. 그 우아함을 한 학기에 한 번 손에 잡아 두세요."</p>
+
+  <h2>📚 보강 59 — 추가 학습 — 연속 시간 LQR</h2>
+  <p>연속 시간: $\dot P = -A^TP - PA + PBR^{-1}B^TP - Q$ (CARE). scipy.linalg.solve_continuous_are. 거의 동일한 풀이.</p>
+
+  <h2>📚 보강 60 — 한 줄 진짜 마지막</h2>
+  <p class="lead">"한 식 한 학기. 다음 주!"</p>
+
+  <h2>📚 보강 61 — 학기 진도 30%</h2>
+  <p>3주차 끝. 7주 남음. 다음 주 W4가 MPC의 본격 시작.</p>
+
+  <h2>📚 보강 62 — 학습 일지 한 줄 한 번 더</h2>
+  <p>"이번 주에 새로 익힌 도구: $u = -Kx$ + DARE 한 줄 풀이."</p>
+
+  <h2>📚 보강 63 — 마무리</h2>
+  <p class="lead">"다음 주 W4 CFTOC + QP! 진짜 MPC 시작."</p>
+
+  <h2>📚 보강 64 — 한 식 다시</h2>
+  <p>$$u = -Kx,\quad K = (R + B^TPB)^{-1}B^TPA,\quad P = \text{DARE}$$</p>
+  <p>이 세 줄이 LQR의 모든 것. 외워두세요.</p>
+
+  <h2>📚 보강 65 — 한 줄</h2>
+  <p>"한 식 세 줄, 한 학기 절반."</p>
+
+  <h2>📚 보강 66 — W3 진짜 진짜 끝</h2>
+  <p class="lead">"한 학기에 가장 깨끗한 닫힌 해. 다음 주 진짜 MPC로!"</p>
+
+  <h2>📚 깊이 1 — Riccati 식의 의미: 동적 프로그래밍</h2>
+  <p>DARE는 단순히 행렬 식이 아니라, Bellman의 <strong>최적성 원리</strong>를 한 줄로 표현한 것입니다.</p>
+  <p>$$V^*(x_k) = \min_{u_k}\Big[\underbrace{x_k^TQx_k + u_k^TRu_k}_{\text{현재 비용}} + \underbrace{V^*(x_{k+1})}_{\text{미래 최적 비용}}\Big]$$</p>
+  <p>$V^*(x) = x^TPx$로 가정하고 양변에 대입한 후 $u$로 미분=0을 풀면 정확히 DARE가 나옵니다. 즉 DARE = Bellman 방정식의 닫힌 형태.</p>
+
+  <h3>왜 $V^* = x^TPx$ 형태로 가정?</h3>
+  <p>이차 비용 + 선형 시스템 → 최적 가치 함수도 이차형. 이 가정이 맞다는 것은 Bellman 방정식에 대입해서 self-consistent임을 보이면 증명.</p>
+
+  <h2>📚 깊이 2 — Lyapunov 안정성 증명 단계별</h2>
+  <p>$V(x) = x^TPx$가 닫힌 루프 시스템 $x_{k+1} = (A-BK)x_k$의 Lyapunov 함수임을 보입니다.</p>
+  <ol>
+    <li><strong>양정값(positive definite)</strong>: $P > 0$이므로 $V(x) > 0\ \forall x \ne 0$, $V(0) = 0$.</li>
+    <li><strong>감소(decrescent)</strong>: 한 스텝 변화량 $\Delta V = V(x_{k+1}) - V(x_k) = -x^TQx - u^TRu \le 0$.</li>
+    <li><strong>가관측 가정</strong>: $(A, Q^{1/2})$가 가관측이면 $\Delta V = 0 \Leftrightarrow x = 0$.</li>
+  </ol>
+  <p>3가지 조건 → 점근 안정성. LQR이 자동 안정성을 갖는 이유의 정확한 증명.</p>
+
+  <h2>📚 깊이 3 — 게인 마진 1/2~∞ 유도</h2>
+  <p>LQR의 유명한 강건성 결과. 입력 채널에 게인 $\alpha$가 곱해져도 ($\alpha I$의 다중 입력 perturbation) 폐루프가 안정한 $\alpha$ 범위가 $[1/2, \infty)$.</p>
+  <p>증명 핵심: Return Difference equation $|I + L(z)|^2 \ge 1$ (단변수 경우) — 즉 LQR 폐루프의 sensitivity 함수는 항상 $\le 1$. 이 성질이 게인/위상 마진을 보장.</p>
+  <p>주의: 이 성질은 LQR (full state feedback)에 한해 성립. LQG (관측기 + LQR)에서는 일반적으로 성립 안 함 (Doyle 1978).</p>
+
+  <h2>📚 깊이 4 — 무한 호라이즌의 의미</h2>
+  <p>유한 호라이즌 $J_N = \sum_{k=0}^{N-1}(\cdot) + x_N^T P_f x_N$에서 $N \to \infty$이면 $P_k \to P_\infty$로 수렴. 이 $P_\infty$가 DARE의 안정 해.</p>
+  <p>실용적 의미: 한 번 DARE 풀이 = 임의 시간 시작점의 최적 비용 결정. 시간 가변 게인이 아닌 상수 게인으로 충분.</p>
+
+  <h2>📚 깊이 5 — Q, R 튜닝 — Bryson 규칙 자세히</h2>
+  <p>Bryson 규칙(1975): 각 변수의 허용 최대 편차 역수의 제곱.</p>
+  <p>$$Q_{ii} = \frac{1}{(x_i^{\max})^2},\quad R_{jj} = \frac{1}{(u_j^{\max})^2}$$</p>
+  <p>이러면 비용 함수의 각 항이 정규화되어 같은 스케일. 그 후 시뮬레이션으로 미세 조정.</p>
+
+  <h3>예시 — 도립진자</h3>
+  <ul>
+    <li>카트 위치 허용 ±1 m → $Q_{11} = 1$.</li>
+    <li>카트 속도 허용 ±2 m/s → $Q_{22} = 0.25$.</li>
+    <li>진자 각도 허용 ±0.1 rad → $Q_{33} = 100$.</li>
+    <li>진자 각속도 허용 ±0.5 rad/s → $Q_{44} = 4$.</li>
+    <li>입력 힘 허용 ±10 N → $R = 0.01$.</li>
+  </ul>
+  <p>진자 각도에 큰 가중치 → 균형 우선.</p>
+
+  <h2>📚 깊이 6 — Cross 항 $S$ 있는 비용</h2>
+  <p>일반 비용:</p>
+  <p>$$J = \sum_{k=0}^\infty \begin{pmatrix}x_k \\ u_k\end{pmatrix}^T \begin{pmatrix} Q &amp; S \\ S^T &amp; R \end{pmatrix} \begin{pmatrix}x_k \\ u_k\end{pmatrix}$$</p>
+  <p>유도 단계에서 $S \ne 0$이면 게인 식이 약간 바뀜:</p>
+  <p>$$K = (R + B^TPB)^{-1}(B^TPA + S^T)$$</p>
+  <p>출력 정규화나 시간지연 처리 시 $S$가 자연스럽게 등장.</p>
+
+  <h2>📚 깊이 7 — 출력 LQR (Output LQR)</h2>
+  <p>전체 상태가 아닌 출력 $y = Cx$에 대한 비용:</p>
+  <p>$$J = \sum_{k=0}^\infty (y_k^T \tilde Q y_k + u_k^TRu_k) = \sum_{k=0}^\infty (x_k^T C^T \tilde Q C x_k + u_k^TRu_k)$$</p>
+  <p>즉 $Q = C^T \tilde Q C$. 여전히 표준 DARE 풀이로 환원. 단, $Q$가 양반정값일 수 있어 가검출 조건 점검 필요.</p>
+
+  <h2>📚 깊이 8 — Tracking LQR</h2>
+  <p>참조 신호 $x_{ref}$를 추종:</p>
+  <p>$$\tilde x_k = x_k - x_{ref},\ \tilde u_k = u_k - u_{ref}$$</p>
+  <p>$x_{ref}$가 평형점이면 ($Ax_{ref} + Bu_{ref} = x_{ref}$ 만족) $\tilde x$ 동역학 = 표준 LQR. $x_{ref}$가 시간 가변이면 시간 가변 LQR (피드포워드 추가).</p>
+
+  <h2>📚 깊이 9 — 적분 LQR (Integral Action)</h2>
+  <p>정상상태 오차를 0으로 만들려면 적분 상태 추가:</p>
+  <p>$$\tilde x = \begin{pmatrix} x \\ \int e\,dt \end{pmatrix}$$</p>
+  <p>이 증강된 상태에 LQR 적용 → 적분 액션을 가진 LQR. PID의 I 항과 같은 효과.</p>
+
+  <h2>📚 깊이 10 — LQR과 MPC의 관계</h2>
+  <ul>
+    <li><strong>제약 비활성</strong> 영역에서는 MPC = LQR (같은 닫힌 해).</li>
+    <li><strong>제약 활성</strong> 영역에서는 MPC = LQR + 제약 보정.</li>
+    <li>MPC의 종단 비용 $P_f = $ LQR DARE 해로 두면 안정성 보장.</li>
+    <li>종단 제약 $x_N \in \mathcal X_f$ ($\mathcal X_f$ = LQR 안정 영역)이 표준 트릭.</li>
+  </ul>
+
+  <h2>📚 깊이 11 — 단계별 풀이 — 1차원 LQR 손계산</h2>
+  <p>$x_{k+1} = ax_k + bu_k$, $Q = q, R = r$ (모두 스칼라). DARE:</p>
+  <p>$$p = a^2 p - \frac{a^2 b^2 p^2}{r + b^2 p} + q$$</p>
+  <p>분모 곱: $p(r + b^2p) = a^2p(r + b^2p) - a^2b^2p^2 + q(r + b^2p)$</p>
+  <p>전개: $rp + b^2p^2 = a^2pr + a^2b^2p^2 - a^2b^2p^2 + qr + qb^2p$</p>
+  <p>정리: $b^2 p^2 + (r - a^2 r - q b^2) p - qr = 0$</p>
+  <p>이차방정식. 양의 해가 안정 해. 게인 $K = a b p / (r + b^2 p)$.</p>
+
+  <h3>수치 예: $a = 1, b = 1, q = 1, r = 1$</h3>
+  <p>$p^2 + (1 - 1 - 1)p - 1 = 0$ → $p^2 - p - 1 = 0$ → $p = (1+\sqrt{5})/2 \approx 1.618$ (황금비!).</p>
+  <p>$K = 1.618/(1+1.618) \approx 0.618$. 닫힌 루프 $a - bK = 0.382$, $|0.382| &lt; 1$ → 안정.</p>
+
+  <h2>📚 깊이 12 — LQG와 분리 정리 (Separation Principle)</h2>
+  <p>실제 시스템은 $x$를 직접 못 봄. 칼만 필터로 추정 $\hat x$ 후 $u = -K\hat x$ 사용. 분리 정리:</p>
+  <ul>
+    <li>LQR 게인 $K$를 $A, B, Q, R$로 따로 결계산.</li>
+    <li>칼만 게인 $L$을 $A, C$, 노이즈 공분산으로 따로 계산.</li>
+    <li>두 게인이 독립적으로 결정되어도 폐루프 안정성 보장.</li>
+  </ul>
+  <p>이 분리 덕분에 LQG 설계가 모듈화 가능.</p>
+
+  <h2>📚 깊이 13 — Doyle's Counterexample (1978)</h2>
+  <p>"LQG가 안 좋은 강건성을 가질 수 있다"의 유명한 예. LQR과 칼만 필터 각각이 좋은 마진을 가져도, 결합한 LQG의 게인 마진이 임의로 작아질 수 있음. 해결: <strong>LTR (Loop Transfer Recovery)</strong>.</p>
+  <p>실무 시사점: 항상 LQG 폐루프의 강건성을 별도 분석.</p>
+
+  <h2>📚 깊이 14 — 이산 vs 연속 LQR 정리</h2>
+  <table>
+    <thead><tr><th>항목</th><th>연속</th><th>이산</th></tr></thead>
+    <tbody>
+      <tr><td>모델</td><td>$\dot x = Ax + Bu$</td><td>$x_{k+1} = Ax_k + Bu_k$</td></tr>
+      <tr><td>비용</td><td>$\int (x^TQx + u^TRu)dt$</td><td>$\sum(x^TQx + u^TRu)$</td></tr>
+      <tr><td>Riccati (CARE/DARE)</td><td>$A^TP+PA-PBR^{-1}B^TP+Q=0$</td><td>위 식</td></tr>
+      <tr><td>최적 게인</td><td>$K = R^{-1}B^TP$</td><td>$K = (R+B^TPB)^{-1}B^TPA$</td></tr>
+      <tr><td>scipy</td><td>solve_continuous_are</td><td>solve_discrete_are</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📚 깊이 15 — DARE 풀이 알고리즘 비교</h2>
+  <ul>
+    <li><strong>Schur 분해</strong>: 표준 직접 방법. scipy 기본. $O(n^3)$.</li>
+    <li><strong>Newton-Kleinman</strong>: 반복. 초기값 필요. 큰 문제에 효율.</li>
+    <li><strong>Doubling 알고리즘</strong>: 스파스 큰 문제에 효율.</li>
+    <li><strong>Hamiltonian 행렬 고유값 분해</strong>: 이론적으로 가장 깨끗한 접근.</li>
+  </ul>
+
+  <h2>📚 깊이 16 — 응용 사례 1 — 도립진자 균형</h2>
+  <p>4상태 도립진자에서 LQR로 카트 위치 + 진자 균형 동시 안정화.</p>
+  <pre style="background:#f5f5f5;padding:14px;border-radius:8px;overflow-x:auto">
+import numpy as np
+from scipy.linalg import solve_discrete_are
+
+# 카트(M=1kg) + 진자(m=0.1kg, L=0.5m) 선형화 + 이산화
+A = np.array([
+    [1, 0.02, 0, 0],
+    [0, 1, -0.196, 0],
+    [0, 0, 1, 0.02],
+    [0, 0, 0.392, 1]
+])
+B = np.array([[0], [0.02], [0], [-0.04]])
+Q = np.diag([1, 1, 100, 1])  # 진자 각도에 큰 비중
+R = np.array([[0.1]])
+
+P = solve_discrete_are(A, B, Q, R)
+K = np.linalg.inv(R + B.T @ P @ B) @ B.T @ P @ A
+print("LQR gain K =", K)
+  </pre>
+
+  <h2>📚 깊이 17 — 응용 사례 2 — DC 모터 위치 제어</h2>
+  <p>2상태 (위치 $\theta$, 속도 $\dot\theta$). $A = [[1, T_s], [0, 1-T_s/\tau]]$, $B = [0, T_s K_m/\tau]^T$.</p>
+  <p>$Q = \text{diag}(100, 1), R = 0.1$ → 빠른 위치 정착, 부드러운 입력. 산업용 서보 표준.</p>
+
+  <h2>📚 깊이 18 — 응용 사례 3 — 자동차 횡방향 (LKAS)</h2>
+  <p>차선 유지 보조 시스템. 상태: 차선 중앙선 오프셋, 헤딩 오차. LQR로 조향각 명령. 양산 ADAS.</p>
+
+  <h2>📚 깊이 19 — 응용 사례 4 — 위성 자세 제어</h2>
+  <p>3축 자세 (Euler 또는 quaternion) + 3축 각속도. 평형점(원하는 자세) 주변 선형화 → LQR. 반응 휠 또는 추력기 토크가 입력.</p>
+
+  <h2>📚 깊이 20 — 응용 사례 5 — 로봇 매니퓰레이터 토크 제어</h2>
+  <p>관절별 LQR + feedforward (중력 보상). 산업 로봇 팔의 표준 제어 방식.</p>
+
+  <h2>📚 깊이 21 — 학기 후 추천 학습 경로</h2>
+  <ol>
+    <li><strong>Anderson-Moore — Optimal Control: Linear Quadratic Methods</strong> (입문 + 깊이).</li>
+    <li><strong>Kwakernaak-Sivan — Linear Optimal Control Systems</strong> (이론).</li>
+    <li><strong>Bertsekas — Dynamic Programming and Optimal Control</strong> (Bellman 시각).</li>
+    <li><strong>Skogestad-Postlethwaite — Multivariable Feedback Control</strong> (LQG, $H_\infty$).</li>
+  </ol>
+
+  <h2>📚 깊이 22 — 한 학기 진도 W3 마무리</h2>
+  <p>10주 중 3주차 끝 (30%). 다음 주(W4) CFTOC에서 제약을 추가하면 닫힌 해가 사라지고 매 시점 QP 풀이가 시작됩니다 — 진짜 MPC.</p>
+
+  <h3>한 줄 격언</h3>
+  <p class="lead">"LQR — 무한 호라이즌 + 이차 비용 + 무제약 = 닫힌 해. MPC의 사촌 형이자 종단 비용의 표준."</p>
+
+  <h3>학습 일지</h3>
+  <p>"이번 주에 새로 익힌 도구: DARE 한 줄로 무한 호라이즌 최적 제어 풀이. 게인 $K$ 추출."</p>
+
+  <div class="prevnext">
+    <a href="02-state-space.html"><small>← 이전</small>W2. 이산 상태공간</a>
+    <a href="04-cftoc.html" class="next"><small>다음 →</small>W4. CFTOC와 QP</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W15. 1차 ODE + 종합 정리 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html" class="active">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../calculus.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 15. 1차 ODE + 종합 정리</h1>
+  <p class="lead">한 학기 미적분의 자연스러운 종착지 — <strong>미분방정식</strong>. 도함수가 식 안에 들어 있는 방정식을 풀어 자연 현상(인구·온도·전기회로)을 모델링합니다.
+  마지막에 한 학기를 한 화면에 모아 정리하고, 다음 학기로 가는 다리를 놓습니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>미분방정식이란</li>
+    <li>방향장 (Slope Field) — 풀지 않고 보는 ODE</li>
+    <li>분리변수형 ODE</li>
+    <li>1차 선형 ODE — 적분인자</li>
+    <li>1차 시스템의 지수 응답</li>
+    <li>응용 — 뉴턴 냉각·RC 회로·인구 모델</li>
+    <li>오일러 방법 — 수치적 풀이의 출발점</li>
+    <li>초기조건과 해의 유일성</li>
+    <li>인터랙티브: 1차 시스템 응답</li>
+    <li>인터랙티브: 방향장과 해 곡선</li>
+    <li>한 학기 정리 — 한 장 표</li>
+    <li>다음 학기로 가는 다리</li>
+    <li>더 깊이 공부하기</li>
+  </ol></div>
+
+  <h2>1. 미분방정식이란</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>"내가 매시간 키가 1 cm 자란다." 이건 키 $h(t)$ 에 대한 정보가 아니라 그 도함수 $dh/dt$ 에 대한 정보예요. 도함수가 주어진 식에서 본 함수를 거꾸로 찾아내는 게 미분방정식 풀이입니다.</p>
+
+  <h3>정의</h3>
+  <p>미지의 함수와 그 도함수가 등식 안에 들어 있는 방정식이 <strong>미분방정식(Differential Equation, DE)</strong>. 본 강의에서는 가장 단순한 1차(도함수 1번까지) 일변수 ODE만 다룹니다.</p>
+
+  <h3>예시</h3>
+  <ul>
+    <li>$\dfrac{dy}{dt} = ky$ — 인구·복리·방사성 붕괴.</li>
+    <li>$\dfrac{dy}{dt} = -ky + u$ — 1차 시스템 응답 (RC, 뉴턴 냉각).</li>
+    <li>$\dfrac{dy}{dt} = -y + \sin t$ — 외부 입력이 시간에 따라 변하는 경우.</li>
+  </ul>
+
+  <h3>차수와 선형성</h3>
+  <ul>
+    <li><strong>차수</strong>: 식에 들어 있는 가장 높은 도함수의 횟수. $y'' + y' + y = 0$ → 2차.</li>
+    <li><strong>선형</strong>: $y$ 와 그 도함수가 모두 1차로만 등장 (제곱·곱·다른 함수 합성 없음). $y' + p(t) y = q(t)$ 는 선형, $y' = y^2$ 는 비선형.</li>
+  </ul>
+  <p>본 강의는 1차·선형 위주로 다룹니다. 다음 학기에 2차 선형(스프링·진자)·연립·라플라스 변환으로 확장.</p>
+
+  <h2>2. 방향장 (Slope Field) — 풀지 않고 보는 ODE</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>풍향계가 도시 전체에 빽빽하게 놓여 있다고 상상해 봅시다. 어디서 바람이 어느 방향으로 부는지 한눈에 보이죠. 비행기가 그 바람만 따라 흘러가면 전체 경로가 자연스럽게 그려집니다.
+  ODE의 방향장도 똑같아요 — $(t, y)$ 평면 위 각 점에서 $dy/dt = f(t, y)$ 가 알려주는 방향(기울기)을 작은 화살표·선분으로 표시하면, 어느 초기점에서 출발하든 해 곡선이 그 흐름을 따라 그려집니다.</p>
+
+  <h3>왜 유용한가</h3>
+  <ul>
+    <li>식을 닫힌 식으로 풀 수 없어도 <em>해의 모양</em>을 즉시 알 수 있음.</li>
+    <li>여러 초기조건의 해를 한 그림에서 비교.</li>
+    <li>평형점(고정점)·안정성을 시각으로 확인 — 화살표가 한 점으로 모이면 안정, 흩어지면 불안정.</li>
+  </ul>
+
+  <h3>예제 2.1 — $\dfrac{dy}{dt} = -y$</h3>
+  <p>$(t, y)$ 의 어느 점에서든 기울기가 $-y$. $y > 0$ 영역에서는 음의 기울기 (하강), $y < 0$ 영역에서는 양의 기울기 (상승). 모든 해 곡선이 $y = 0$ 으로 수렴 — 평형점 $y = 0$ 이 안정.</p>
+
+  <h2>3. 분리변수형 ODE</h2>
+
+  <h3>형태</h3>
+  $$ \frac{dy}{dt} = g(t) h(y) $$
+  <p>$y$ 항과 $t$ 항이 곱셈으로 분리되는 경우. 다음과 같이 풀이.</p>
+  $$ \frac{dy}{h(y)} = g(t)\, dt \;\Rightarrow\; \int \frac{dy}{h(y)} = \int g(t)\, dt $$
+
+  <h3>예제 2.1 — 지수 증감</h3>
+  <p>$\dfrac{dy}{dt} = ky$ ($k$ 는 상수).</p>
+  <p>$\dfrac{dy}{y} = k\, dt$ → 양변 적분: $\ln|y| = kt + C_1$ → $y = C e^{kt}$.</p>
+  <p>$k > 0$ 이면 지수 증가 (인구·복리), $k < 0$ 이면 지수 감소 (방사성 붕괴).</p>
+
+  <h3>예제 2.2 — 뉴턴 냉각 법칙</h3>
+  <p>"커피의 온도가 주변 온도와의 차이에 비례해 떨어진다." 식: $\dfrac{dT}{dt} = -k(T - T_\text{room})$.</p>
+  <p>$u = T - T_\text{room}$ 으로 치환: $du/dt = -ku$ → $u = u_0 e^{-kt}$. 따라서</p>
+  $$ T(t) = T_\text{room} + (T_0 - T_\text{room}) e^{-kt} $$
+
+  <h2>4. 1차 선형 ODE — 적분인자</h2>
+
+  <h3>형태</h3>
+  $$ \frac{dy}{dt} + p(t) y = q(t) $$
+  <p>$y$ 와 $y'$ 이 1차 선형으로 들어 있는 경우. 분리가 안 되면 적분인자(integrating factor) 트릭.</p>
+
+  <h3>적분인자 풀이</h3>
+  <p>$\mu(t) = e^{\int p(t)\, dt}$ 를 양변에 곱하면 좌변이 곱의 미분 모양으로 바뀝니다.</p>
+  $$ \frac{d}{dt}[\mu(t) y] = \mu(t) q(t) \;\Rightarrow\; \mu(t) y = \int \mu(t) q(t)\, dt + C $$
+
+  <h3>예제 3.1</h3>
+  <p>$\dfrac{dy}{dt} + 2y = 6$.</p>
+  <p>$\mu = e^{\int 2\, dt} = e^{2t}$. 양변에 곱: $\frac{d}{dt}[e^{2t} y] = 6 e^{2t}$.</p>
+  <p>$e^{2t} y = 3 e^{2t} + C$ → $y = 3 + C e^{-2t}$. 시간이 지나면 $y \to 3$ (정상상태).</p>
+
+  <h2>5. 1차 시스템의 지수 응답</h2>
+
+  <h3>표준형</h3>
+  $$ \tau \frac{dy}{dt} + y = K u(t) $$
+  <p>$\tau$ 는 <strong>시간상수(time constant)</strong>, $K$ 는 정적 이득. 이 식이 전기회로(RC, RL), 화학반응, 온도 응답 등 학부 공학 어디서나 나오는 표준 1차 시스템.</p>
+
+  <h3>계단 입력에 대한 응답</h3>
+  <p>$u(t) = u_0$ (상수, $t \ge 0$), $y(0) = 0$ 이라면:</p>
+  $$ y(t) = K u_0 \bigl(1 - e^{-t/\tau}\bigr) $$
+
+  <h3>시간상수의 의미</h3>
+  <ul>
+    <li>$t = \tau$: 정상상태의 약 63% 에 도달.</li>
+    <li>$t = 3\tau$: 약 95%.</li>
+    <li>$t = 5\tau$: 약 99% (실용적 "정착 시간").</li>
+  </ul>
+  <p>$\tau$ 가 작으면 빠른 응답, 크면 느린 응답. 회로·기계 시스템의 "민첩함"을 결정하는 한 숫자.</p>
+
+  <h2>6. 응용 — 뉴턴 냉각·RC 회로·인구 모델</h2>
+
+  <h3>뉴턴 냉각</h3>
+  <p>커피 한 잔을 끓는 물(100℃)에서 꺼내 21℃ 방에 둡니다. $\tau = 10$ 분이라 합시다.</p>
+  $$ T(t) = 21 + 79 e^{-t/10} $$
+  <p>10분 후 $T \approx 21 + 79 \cdot 0.368 \approx 50.1$℃, 30분 후 약 25℃ — 거의 방 온도.</p>
+
+  <h3>RC 회로</h3>
+  <p>저항 $R$ + 축전기 $C$ 를 직렬로 연결하고 전압원 $V_s$. 축전기 전압 $V_C$ 는:</p>
+  $$ RC \frac{dV_C}{dt} + V_C = V_s $$
+  <p>시간상수 $\tau = RC$. $R = 1\,\text{k}\Omega, C = 1\,\mu\text{F}$ 이면 $\tau = 1$ ms — 1 ms 마다 정상상태에 더 가까이.</p>
+
+  <h3>로지스틱 인구 모델 (비선형)</h3>
+  <p>지수 증가 $dy/dt = ky$ 는 영원한 폭발을 예측 — 비현실적. 환경 수용한계 $K$ 가 있다면:</p>
+  $$ \frac{dy}{dt} = ky\!\left(1 - \frac{y}{K}\right) $$
+  <p>$y \ll K$ 면 지수 증가, $y \to K$ 면 증가 둔화. 분리변수로 풀면:</p>
+  $$ y(t) = \frac{K}{1 + \bigl(\frac{K}{y_0} - 1\bigr) e^{-kt}} $$
+  <p>S자 모양 곡선 (sigmoid). 인구·전염병 확산·시장 점유율 모델의 표준. 머신러닝에서 시그모이드 함수가 같은 식이에요 (W4 지수·로그의 응용).</p>
+
+  <h2>7. 오일러 방법 — 수치적 풀이의 출발점</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>$dy/dt = f(t, y)$ 가 손으로 안 풀려도, 컴퓨터로 푸는 가장 단순한 방법이 있어요 — 작은 시간 간격마다 "지금 이 점에서의 기울기로 한 발짝 가기"를 반복.</p>
+
+  <h3>오일러 방법 (Forward Euler)</h3>
+  $$ y_{n+1} = y_n + h \cdot f(t_n, y_n) $$
+  <p>$h$ 는 시간 스텝. 현재 점의 기울기로 직선 한 발짝 → 다음 점에서 기울기 다시 → 또 한 발짝.</p>
+
+  <h3>예제 7.1 — $dy/dt = y$, $y(0) = 1$, $h = 0.1$</h3>
+  <p>실제 해 $y = e^t$. $t = 1$ 일 때 $y = e \approx 2.718$.</p>
+  <ul>
+    <li>$y_1 = 1 + 0.1 \cdot 1 = 1.1$</li>
+    <li>$y_2 = 1.1 + 0.1 \cdot 1.1 = 1.21$</li>
+    <li>...$y_{10} \approx 2.594$</li>
+  </ul>
+  <p>오차 약 4.6%. $h$ 를 절반으로 줄이면 오차도 약 절반 — 1차 정확도. 더 정밀한 룽게-쿠타(RK4) 같은 방법은 4차 정확도.</p>
+
+  <h3>왜 알아두나?</h3>
+  <p>모든 시뮬레이션·게임 물리 엔진·로봇 제어가 이 방법을 변형해 사용해요. W2 운동학 데모도 사실 forward Euler. 다음 학기 실습에서 본격적으로.</p>
+
+  <h2>8. 초기조건과 해의 유일성</h2>
+
+  <h3>왜 초기조건이 필요한가</h3>
+  <p>$y' = ky$ 의 일반해는 $y = C e^{kt}$ — 상수 $C$ 가 자유. 초기조건 $y(0) = y_0$ 가 주어져야 $C = y_0$ 로 고정되어 한 해가 결정됩니다.
+  1차 ODE는 보통 한 개의 자유상수, 그래서 한 개의 초기조건이 필요. $n$차 ODE는 $n$ 개의 자유상수, $n$ 개의 초기조건.</p>
+
+  <h3>존재·유일성 정리 (개략)</h3>
+  <p>$f(t, y)$ 와 $\partial f/\partial y$ 가 어떤 영역에서 연속이면, 그 영역의 점 $(t_0, y_0)$ 에 대해 $y(t_0) = y_0$ 인 해가 유일하게 존재. 학부 수준의 거의 모든 식에서 이 조건이 자동 성립.</p>
+
+  <h2>9. 인터랙티브: 1차 시스템 응답</h2>
+
+  <div class="demo">
+    <h4>🎮 시간상수 $\tau$ 슬라이더</h4>
+    <p>$\tau$ 를 움직여 보세요. 작은 $\tau$ → 빠른 응답, 큰 $\tau$ → 느린 응답. 입력 종류(계단·임펄스·사인)에 따라 응답 모양이 어떻게 바뀌는지 비교해 보세요.
+    이 한 시스템이 RC 회로·뉴턴 냉각·차량의 종방향 1차 모델 등 수많은 현상을 모두 설명합니다.</p>
+    <canvas id="fo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>시간상수 τ <span class="val" id="foTV">1.00</span><input type="range" id="foT" min="0.1" max="3" step="0.05" value="1"></label>
+      <label>입력
+        <select id="foU">
+          <option value="step" selected>계단</option>
+          <option value="impulse">임펄스 (짧은 펄스)</option>
+          <option value="sine">사인</option>
+          <option value="ramp">램프</option>
+        </select>
+      </label>
+      <button id="foRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fo'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    const Tmax=10,N=600;
+    const dt=Tmax/N;
+    function uAt(t){
+      const m=document.getElementById('foU').value;
+      if(m==='step')return t<1?0:1;
+      if(m==='impulse')return(t>=1&&t<1.2)?5:0;
+      if(m==='sine')return Math.sin(t*1.5);
+      return Math.min(t/3,1);
+    }
+    let auto=null;
+    document.getElementById('foRst').onclick=()=>{auto=null;};
+    function loop(){
+      const tau=+document.getElementById('foT').value;
+      document.getElementById('foTV').textContent=tau.toFixed(2);
+      // simulate: tau y' + y = u
+      let y=0;const ys=[],us=[],ts=[];
+      for(let i=0;i<=N;i++){
+        const t=i*dt;ts.push(t);
+        const u=uAt(t);us.push(u);ys.push(y);
+        // forward Euler
+        const dy=(u-y)/tau;
+        y+=dy*dt;
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const Lx0=M.l,Lx1=W-M.r;
+      const Ly0=M.t,Ly1=H-M.b;
+      x.strokeStyle='#ddd';x.strokeRect(Lx0,Ly0,Lx1-Lx0,Ly1-Ly0);
+      // axis
+      const vmax=Math.max(2,Math.max(...us.map(Math.abs))*1.2);
+      function px(t){return Lx0+t/Tmax*(Lx1-Lx0);}
+      function py(v){return(Ly0+Ly1)/2-v/vmax*((Ly1-Ly0)/2-12);}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(Lx0,(Ly0+Ly1)/2);x.lineTo(Lx1,(Ly0+Ly1)/2);x.stroke();
+      // input (gray)
+      x.strokeStyle='#999';x.lineWidth=1.5;x.setLineDash([4,3]);x.beginPath();
+      us.forEach((u,i)=>{i?x.lineTo(px(ts[i]),py(u)):x.moveTo(px(ts[i]),py(u));});x.stroke();x.setLineDash([]);
+      // output (blue)
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      ys.forEach((u,i)=>{i?x.lineTo(px(ts[i]),py(u)):x.moveTo(px(ts[i]),py(u));});x.stroke();
+      // legend
+      x.fillStyle='#666';x.fillRect(Lx0+10,Ly0+10,16,2);x.fillStyle='#222';x.font='12px sans-serif';x.fillText('입력 u(t)',Lx0+30,Ly0+15);
+      x.fillStyle='#0b5fff';x.fillRect(Lx0+90,Ly0+10,16,3);x.fillStyle='#222';x.fillText('출력 y(t)',Lx0+110,Ly0+15);
+      x.fillStyle='#0742b8';x.font='12px sans-serif';
+      x.fillText('τ y\' + y = u    ·    τ = '+tau.toFixed(2)+'    ·    63% 도달 시간 ≈ τ',Lx0+10,Ly1-8);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="tip"><strong>관찰 포인트</strong> —
+  ① 계단 입력에서 $\tau$ 가 작으면 빠르게 1에 도달, 크면 천천히 도달.
+  ② 임펄스 입력: 짧은 자극 후 지수적으로 0으로 감쇠.
+  ③ 사인 입력: 같은 주기의 사인이 출력으로 나오지만 진폭이 작아지고 위상이 늦어짐 — 이게 자동제어의 주파수 응답 입문.</div>
+
+  <h2>10. 인터랙티브: 방향장과 해 곡선</h2>
+
+  <p>$(t, y)$ 평면 위에 ODE의 방향장을 그리고, 클릭한 점에서 출발하는 해 곡선을 자동으로 그립니다 — 식을 풀지 않고도 해의 모양을 시각으로 확인.</p>
+
+  <div class="demo">
+    <h4>🎮 방향장 (Slope Field) — 풀지 않고 해 보기</h4>
+    <p>화살표는 그 점에서 ODE 가 알려주는 기울기. 캔버스를 클릭하면 그 점에서 출발하는 해 곡선 (오일러 적분) 이 그려집니다. 평형점·안정성도 한눈에.</p>
+    <canvas id="sf" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>ODE
+        <select id="sfFn">
+          <option value="decay" selected>dy/dt = −y (지수 감소)</option>
+          <option value="growth">dy/dt = y (지수 증가)</option>
+          <option value="logistic">dy/dt = y(1 − y) (로지스틱)</option>
+          <option value="forced">dy/dt = −y + sin(t)</option>
+          <option value="ty">dy/dt = t − y</option>
+        </select>
+      </label>
+      <span style="font-size:12px;color:#666">캔버스 클릭 → 그 점에서의 해 곡선</span>
+      <button id="sfClr" class="alt">곡선 지우기</button>
+    </div>
+    <p id="sfInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sf'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:30,b:40};
+    function fn(t,y){
+      const m=document.getElementById('sfFn').value;
+      if(m==='decay')return -y;
+      if(m==='growth')return y;
+      if(m==='logistic')return y*(1-y);
+      if(m==='forced')return -y+Math.sin(t);
+      return t-y;
+    }
+    function fnRange(){
+      const m=document.getElementById('sfFn').value;
+      if(m==='logistic')return{tR:[0,8],yR:[-0.3,1.5],desc:'평형점 y=0(불안정), y=1(안정)'};
+      if(m==='growth')return{tR:[0,4],yR:[-3,3],desc:'평형점 y=0(불안정) — 모든 해 발산'};
+      if(m==='forced')return{tR:[0,12],yR:[-2,2],desc:'주기 입력 → 정상상태에서 사인파로 응답'};
+      if(m==='ty')return{tR:[0,5],yR:[-2,5],desc:'점근선 y = t−1 로 모든 해 수렴'};
+      return{tR:[0,5],yR:[-2,2],desc:'평형점 y=0(안정) — 모든 해 0으로 수렴'};
+    }
+    let trails=[];
+    document.getElementById('sfClr').onclick=()=>{trails=[];loop();};
+    document.getElementById('sfFn').onchange=()=>{trails=[];loop();};
+    function pxT(v,tR){return M.l+(v-tR[0])/(tR[1]-tR[0])*(W-M.l-M.r);}
+    function pyY(v,yR){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function invT(px0,tR){return tR[0]+(px0-M.l)/(W-M.l-M.r)*(tR[1]-tR[0]);}
+    function invY(py0,yR){return yR[0]+(H-M.b-py0)/(H-M.t-M.b)*(yR[1]-yR[0]);}
+    c.onclick=e=>{
+      const {tR,yR}=fnRange();
+      const r=c.getBoundingClientRect();
+      const cx=(e.clientX-r.left)*c.width/r.width;
+      const cy=(e.clientY-r.top)*c.height/r.height;
+      const t0=invT(cx,tR),y0=invY(cy,yR);
+      // forward and backward Euler
+      const path=[{t:t0,y:y0}];
+      let t=t0,y=y0;const h=(tR[1]-tR[0])/300;
+      while(t<tR[1]&&y>yR[0]-2&&y<yR[1]+2){
+        const k=fn(t,y);y+=h*k;t+=h;
+        path.push({t,y});
+      }
+      // backward
+      t=t0;y=y0;
+      while(t>tR[0]&&y>yR[0]-2&&y<yR[1]+2){
+        const k=fn(t,y);y-=h*k;t-=h;
+        path.unshift({t,y});
+      }
+      trails.push(path);
+      loop();
+    };
+    function loop(){
+      const{tR,yR,desc}=fnRange();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(tR[0]);v<=tR[1];v++){x.beginPath();x.moveTo(pxT(v,tR),pyY(yR[0],yR));x.lineTo(pxT(v,tR),pyY(yR[1],yR));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(pxT(tR[0],tR),pyY(v,yR));x.lineTo(pxT(tR[1],tR),pyY(v,yR));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(pxT(tR[0],tR),pyY(0,yR));x.lineTo(pxT(tR[1],tR),pyY(0,yR));x.stroke();
+      // slope field
+      const NX=20,NY=12;
+      x.strokeStyle='#0b5fff';x.lineWidth=1.2;
+      for(let i=0;i<NX;i++){
+        for(let j=0;j<NY;j++){
+          const t=tR[0]+(i+0.5)/NX*(tR[1]-tR[0]);
+          const y=yR[0]+(j+0.5)/NY*(yR[1]-yR[0]);
+          const k=fn(t,y);
+          // unit vector with slope k
+          const len=12;
+          const ang=Math.atan2(k*(H-M.t-M.b)/(yR[1]-yR[0]),(W-M.l-M.r)/(tR[1]-tR[0]));
+          const dx=Math.cos(ang)*len,dy=Math.sin(ang)*len;
+          const cx=pxT(t,tR),cy=pyY(y,yR);
+          x.beginPath();x.moveTo(cx-dx/2,cy-dy/2);x.lineTo(cx+dx/2,cy+dy/2);x.stroke();
+        }
+      }
+      // trails
+      trails.forEach(path=>{
+        x.strokeStyle='#c62828';x.lineWidth=2.2;x.beginPath();
+        path.forEach((p,i)=>{i?x.lineTo(pxT(p.t,tR),pyY(p.y,yR)):x.moveTo(pxT(p.t,tR),pyY(p.y,yR));});x.stroke();
+        x.fillStyle='#c62828';
+        const start=path.find(p=>p.t>=path[0].t)||path[0];
+        x.beginPath();x.arc(pxT(start.t,tR),pyY(start.y,yR),4,0,Math.PI*2);x.fill();
+      });
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('t',pxT(tR[1],tR)-10,pyY(0,yR)+15);
+      x.fillText('y',M.l-15,M.t+8);
+      x.fillStyle='#0742b8';x.fillText('파란 화살표: 방향장 (각 점의 기울기)',M.l+10,M.t-12);
+      x.fillStyle='#c62828';x.fillText('빨간 곡선: 클릭한 초기조건의 해',M.l+250,M.t-12);
+      document.getElementById('sfInfo').textContent=desc;
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="tip"><strong>관찰 포인트</strong> —
+  ① $dy/dt = -y$: 모든 해가 $y = 0$ 으로 수렴 (안정 평형).
+  ② $dy/dt = y$: 모든 해가 $|y| \to \infty$ 로 발산 (불안정).
+  ③ <strong>로지스틱</strong>: $y = 0$ 위쪽 근처는 $y = 1$ 로 수렴(S자), 아래쪽은 발산. 두 평형점이 다른 안정성.
+  ④ $dy/dt = t - y$: 모든 해가 점근선 $y = t - 1$ 에 수렴.
+  ⑤ 사인 강제 입력: 정상상태에서 사인 응답 — 다음 학기 자동제어 주파수 응답의 출발점.</div>
+
+  <h2>11. 한 학기 정리 — 한 장 표</h2>
+
+  <table>
+    <thead><tr><th>주차</th><th>핵심 개념</th><th>대표 공식·도구</th></tr></thead>
+    <tbody>
+      <tr><td>W1</td><td>함수·극한·연속</td><td>$\lim$, ε-δ, IVT</td></tr>
+      <tr><td>W2</td><td>미분의 정의</td><td>$f'(a) = \lim_{h\to 0}(f(a+h)-f(a))/h$</td></tr>
+      <tr><td>W3</td><td>미분 규칙</td><td>합·곱·몫·연쇄</td></tr>
+      <tr><td>W4</td><td>초월·음함수 미분</td><td>$(\sin)' = \cos$, $(e^x)' = e^x$, 음함수</td></tr>
+      <tr><td>W5</td><td>MVT·단조·볼록</td><td>$f' > 0$ 증가, $f'' > 0$ 볼록</td></tr>
+      <tr><td>W6</td><td>최적화·뉴턴법</td><td>임계점·끝점 비교, $x_{n+1} = x_n - f/f'$</td></tr>
+      <tr><td>W7</td><td>테일러 급수</td><td>$\sum f^{(k)}(a)(x-a)^k/k!$</td></tr>
+      <tr><td>W8</td><td>중간고사 정리</td><td>—</td></tr>
+      <tr><td>W9</td><td>적분 기법</td><td>치환·부분적분·삼각치환</td></tr>
+      <tr><td>W10</td><td>정적분·FTC</td><td>$\int_a^b f = F(b) - F(a)$</td></tr>
+      <tr><td>W11</td><td>적분 응용</td><td>면적·부피·곡선 길이</td></tr>
+      <tr><td>W12</td><td>매개변수·곡률</td><td>$\kappa = |f''|/(1+(f')^2)^{3/2}$</td></tr>
+      <tr><td>W13</td><td>다변수·그라디언트</td><td>$\nabla f$ = 최대 증가 방향</td></tr>
+      <tr><td>W14</td><td>헤시안·라그랑주</td><td>$D = \det H$, $\nabla f = \lambda \nabla g$</td></tr>
+      <tr><td>W15</td><td>1차 ODE</td><td>$\tau y' + y = u$, $y = K(1 - e^{-t/\tau})$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12. 다음 학기로 가는 다리</h2>
+
+  <p>이번 학기에 다진 미적분이 다음 학기·다음 강의에서 어떻게 살아나는지 미리 보세요.</p>
+
+  <ul>
+    <li><strong>다변수 미적분 / 미분방정식</strong> — W13~W14의 그라디언트·헤시안이 정식 다변수 미적분으로, W15의 1차 ODE가 2차·연립으로 확장됩니다.</li>
+    <li><strong><a href="../../mechatronics.html">메카트로닉스</a></strong> — W15의 1차 시스템 응답이 라플라스 변환·전달함수로 일반화되어 회로·기계 시스템 해석의 표준 언어가 됩니다.</li>
+    <li><strong><a href="../../control.html">자동제어</a></strong> — W6 최적화와 W15 ODE가 PID·주파수 응답 설계의 출발점.</li>
+    <li><strong><a href="../../dl.html">딥러닝 &amp; 머신러닝</a></strong> — W6 뉴턴법·W13 그라디언트가 경사하강법(SGD·Adam)으로 직결.</li>
+    <li><strong><a href="../../path-planning.html">경로계획 &amp; 추종</a></strong> — W12 곡률이 차량 경로 설계의 핵심 양으로 등장.</li>
+    <li><strong>물리·공학 전반</strong> — 작은각 근사, 복리·붕괴, 전기회로 응답 — 매주 응용 코너에서 본 것들이 그대로 다시 나타납니다.</li>
+  </ul>
+
+  <div class="tip">
+  <strong>이번 학기 마지막 한 마디</strong> —
+  미적분의 두 핵심 도구 — <em>미분(변화율)</em> 과 <em>적분(누적)</em> — 그리고 둘이 정확히 서로의 역이라는 미적분학 기본정리. 이 한 줄이 한 학기의 결론입니다.
+  앞으로 만날 모든 공학·과학 식이 결국 이 두 도구의 변형. 미적분을 잘 다룰 수 있다면 어떤 공학 분야든 식 자체가 두렵지 않게 됩니다.
+  </div>
+
+  <h2>13. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Stewart, Ch.9 (미분방정식 입문).</li>
+    <li>Boyce·DiPrima, <em>Elementary Differential Equations</em> — 미분방정식 정통 입문서.</li>
+    <li>3Blue1Brown, <em>Differential Equations</em> 시리즈 — 시각적 직관.</li>
+    <li>다음 학기: <strong>다변수 미적분</strong> 또는 <strong>공학수학(미분방정식·라플라스 변환·푸리에)</strong> 으로.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="14-hessian-lagrange.html"><small>← 이전</small>W14. 헤시안·라그랑주</a>
+    <a href="../../calculus.html" class="next"><small>강의 목록 →</small>미분적분학</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

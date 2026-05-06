@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W10. 강체 평면 운동학(2) — 동역학</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html" class="active">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">MPC</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 10. 강체의 평면 운동학 — 일반 평면운동과 순간중심</h1>
+  <p class="lead">병진 + 회전이 동시에 일어날 때. 핵심 트릭: "지금 이 순간만큼은 어떤 점을 축으로 회전하는 걸까?"</p>
+
+  <h2>0. 학습 목표</h2>
+  <ul>
+    <li>상대 속도법 $\mathbf{v}_B = \mathbf{v}_A + \boldsymbol{\omega} \times \mathbf{r}_{B/A}$로 강체 위 두 점 사이 속도 관계를 적는다.</li>
+    <li>순간중심(IC)을 찾고 강체 위 임의의 점의 속도를 즉시 구한다.</li>
+    <li>4절 링크·슬라이더-크랭크 같은 메커니즘에서 입출력 운동을 연결한다.</li>
+    <li>가속도 분석에 IC를 그대로 쓸 수 없는 이유와 별도 처리법을 안다.</li>
+  </ul>
+
+  <h2>1. 상대 속도법 — 한 점을 기준으로 다른 점 보기</h2>
+  <p>강체의 두 점 $A$, $B$가 있을 때, $A$에서 본 $B$의 운동은 $A$를 중심으로 한 회전입니다(거리 일정).</p>
+  $$ \mathbf{v}_B = \mathbf{v}_A + \boldsymbol{\omega} \times \mathbf{r}_{B/A} $$
+  <p>여기서 $\boldsymbol{\omega}$는 강체 전체의 각속도(W9에서 본 그것). $\mathbf{r}_{B/A}$는 $A$에서 $B$로의 위치 벡터. 평면 운동에서는 $\boldsymbol{\omega}$가 종이면에 수직이므로 외적이 깔끔하게 떨어집니다.</p>
+  <div class="tip"><strong>비유</strong> — 회전하는 메리고라운드 위의 친구를 "지면 좌표계"에서 보지 말고, "내가 메리고라운드 중심에 있다고 가정"하면 친구는 단순히 원을 그립니다. 같은 원리예요.</div>
+
+  <h3>1.1 식의 세 항을 분해해 보자</h3>
+  <p>상대속도 식 $\mathbf{v}_B = \mathbf{v}_A + \boldsymbol{\omega} \times \mathbf{r}_{B/A}$을 단어로 풀어 쓰면 다음과 같습니다.</p>
+  <ul>
+    <li><strong>$\mathbf{v}_A$</strong> — "기준점이 어디로 가고 있는가" (병진 부분).</li>
+    <li><strong>$\boldsymbol{\omega} \times \mathbf{r}_{B/A}$</strong> — "기준점에서 본 $B$가 어떻게 도는가" (회전 부분). $A$를 따라가는 관찰자에겐 $B$가 단순히 $A$ 둘레를 도는 것처럼 보임.</li>
+    <li><strong>$\mathbf{v}_B$</strong> — 위 두 효과의 합. 강체이므로 거리 $|\mathbf{r}_{B/A}|$는 일정.</li>
+  </ul>
+  <p>같은 식을 $A$ 기준이 아닌 $B$ 기준으로 다시 쓰면 $\mathbf{v}_A = \mathbf{v}_B + \boldsymbol{\omega} \times \mathbf{r}_{A/B}$. 두 식을 더하면 $\boldsymbol{\omega}$ 항이 부호가 반대라 사라지므로 항등식이 됩니다 — 어느 점을 기준으로 잡든 결과는 같음.</p>
+
+  <h3>1.2 평면운동에서 외적의 빠른 계산</h3>
+  <p>평면운동(2D)에서는 $\boldsymbol{\omega} = \omega\,\hat{k}$ (지면에 수직), $\mathbf{r}_{B/A} = (x,y,0)$이므로 외적은 다음과 같이 단순합니다.</p>
+  $$ \boldsymbol{\omega} \times \mathbf{r}_{B/A} = \omega\,\hat{k} \times (x\,\hat{i} + y\,\hat{j}) = \omega(-y\,\hat{i} + x\,\hat{j}) $$
+  <p>즉 위치 벡터를 <strong>반시계 방향으로 90° 회전</strong>한 후 $\omega$를 곱한 것. "수직 회전 후 스케일"로 외우면 손계산이 빠릅니다.</p>
+
+  <div class="note">
+    <strong>예제 1.1 — 한 점 위치, 한 점 속도, 각속도가 주어진 경우</strong>
+    <p>강체 위 점 $A$가 $\mathbf{v}_A = (3, 1)$ m/s. 같은 강체에 점 $B$가 $A$에서 $\mathbf{r}_{B/A} = (0.4, 0.3)$ m. 강체의 각속도 $\omega = 5$ rad/s (반시계). $B$의 속도?</p>
+    <strong>풀이</strong> — $\boldsymbol{\omega} \times \mathbf{r}_{B/A} = 5(-0.3, 0.4) = (-1.5, 2.0)$. 따라서 $\mathbf{v}_B = (3,1) + (-1.5, 2.0) = (1.5, 3.0)$ m/s. 크기 $\sqrt{1.5^2 + 3^2} \approx 3.35$ m/s.
+  </div>
+
+  <h3>1.3 슬라이더-크랭크에서 식을 직접 적용</h3>
+  <p>크랭크 끝점 $A$의 속도는 $r\omega_c$로 알려져 있고 $A \to B$ 막대(로드)의 끝 $B$는 수평으로만 움직임(피스톤). 식을 두 축으로 분해하면 미지수가 두 개($v_B$, 로드의 각속도 $\omega_r$). 두 식이라 풀립니다 — 컴퓨터가 없던 시절 엔진 분석을 손으로 할 수 있었던 표준 절차.</p>
+
+  <h2>2. 순간중심(Instantaneous Center, IC)</h2>
+  <p>강체의 어떤 점이 그 순간 속도가 0이라면, 그 순간 강체는 마치 그 점을 축으로 회전하고 있는 것처럼 보입니다. 그 점을 <strong>순간중심</strong>이라 합니다.</p>
+  <p>IC만 찾으면 강체의 모든 점의 속도를 손쉽게 그릴 수 있어요. 점 $P$의 속도는 IC에서 $P$까지 거리에 $\omega$를 곱한 것, 방향은 $P$와 IC를 잇는 선에 수직.</p>
+
+  <h3>IC 찾는 두 방법</h3>
+  <ol>
+    <li><strong>두 점의 속도 방향을 알 때</strong>: 각 점에서 속도 방향에 수직선을 긋는다. 두 수직선의 교점이 IC.</li>
+    <li><strong>한 점이 정지일 때</strong>: 그 점이 IC. (예: 굴림 운동의 접촉점)</li>
+  </ol>
+
+  <h3>2.1 IC가 멀리 있을 때 — 거의 병진</h3>
+  <p>두 점의 속도 방향이 거의 평행하다면 두 수직선도 거의 평행 → 교점이 무한히 멀어짐. 의미: 그 순간 강체는 거의 <strong>순수 병진</strong>(각속도가 0에 가까움). 슬라이더-크랭크에서 $\theta = 90°$일 때가 그 예입니다.</p>
+
+  <h3>2.2 두 점의 속도가 평행이지만 크기가 다를 때</h3>
+  <p>두 점이 같은 방향으로 다른 크기로 움직이면 수직선이 한 직선 위에 겹쳐 두 직선의 교점이 단일하지 않음. 이 경우 두 점을 잇는 선과 그 위에서 속도 크기가 비례하는 점을 찾으면 됨(IC). 예: 굴림 바퀴의 중심선 위에서 IC를 찾는 표준 그림.</p>
+
+  <h3>2.3 IC를 좌표로 푸는 식</h3>
+  <p>두 점 $A=(x_A,y_A)$, $B=(x_B,y_B)$의 속도 단위벡터를 $\hat{u}_A$, $\hat{u}_B$라 하면 IC는 두 직선의 교점:</p>
+  $$ \text{직선 1: } (x,y) = A + t\,\hat{u}_A^\perp, \quad \text{직선 2: } (x,y) = B + s\,\hat{u}_B^\perp $$
+  <p>($\hat{u}^\perp$는 $\hat{u}$에 수직인 단위벡터). 4절 링크 데모에서 이 교점을 매 프레임 계산하고 있습니다.</p>
+
+  <div class="warn">
+    <strong>주의 — IC와 강체 위 한 점의 차이</strong> — IC는 "그 순간 속도가 0인 가상의 점"이지, "강체 위에 영구적으로 박혀 있는 점"이 아닙니다. 매 순간 IC가 강체 안의 다른 위치(또는 강체 밖)에 잡힙니다. 그래서 IC가 그리는 곡선을 따로 <em>centrode</em>라 부르고, 정지좌표에서의 centrode를 <em>fixed centrode</em>, 강체좌표에서의 centrode를 <em>body centrode</em>로 구분합니다.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 사다리가 미끄러진다 — IC 찾기</h4>
+    <p>벽에 기댄 사다리의 위쪽이 벽을 따라 아래로, 아래쪽이 바닥을 따라 옆으로 미끄러집니다. 두 점의 속도 방향이 정해져 있으니 각 방향에 수직선을 그으면 두 선이 만나는 곳이 <strong>IC</strong>입니다(빨간 점). 사다리의 모든 점은 그 순간 IC를 중심으로 회전합니다.</p>
+    <canvas id="ladC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>각도 θ (°) <span class="val" id="ldAV">60</span><input type="range" id="ldA" min="10" max="80" step="1" value="60"></label>
+      <label>각속도 ω <span class="val" id="ldWV">0.4</span><input type="range" id="ldW" min="-1" max="1" step="0.05" value="0.4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ladC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['ldA','ldW'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const th=+sl('ldA').value*Math.PI/180,w=+sl('ldW').value;
+      const L=240;
+      const ox=120,oy=320;  // floor-wall corner
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // wall and floor
+      x.fillStyle='#888';x.fillRect(ox-12,40,12,oy-40);x.fillRect(ox,oy,c.width-ox,12);
+      // ladder endpoints
+      const A={x:ox,y:oy-L*Math.sin(th)};  // on wall
+      const B={x:ox+L*Math.cos(th),y:oy};  // on floor
+      // velocities: A moves down (vertical), B moves right (horizontal)
+      // v_A = -L cosθ ω (down=negative, but we'll show direction)
+      const vA={x:0,y:L*Math.cos(th)*w};  // y positive = down on canvas
+      const vB={x:L*Math.sin(th)*w,y:0};
+      // IC at intersection of perpendiculars to v_A and v_B
+      // perpendicular to v_A (which is vertical) is horizontal at A's height
+      // perpendicular to v_B (which is horizontal) is vertical at B's x
+      const IC={x:B.x,y:A.y};
+      // ladder
+      x.strokeStyle='#8b6f47';x.lineWidth=8;x.beginPath();x.moveTo(A.x,A.y);x.lineTo(B.x,B.y);x.stroke();
+      x.strokeStyle='#3a2a14';x.lineWidth=1;x.stroke();
+      // perpendiculars (dashed)
+      x.strokeStyle='#999';x.setLineDash([4,4]);
+      x.beginPath();x.moveTo(A.x,A.y);x.lineTo(IC.x,IC.y);x.stroke();
+      x.beginPath();x.moveTo(B.x,B.y);x.lineTo(IC.x,IC.y);x.stroke();
+      x.setLineDash([]);
+      // IC point
+      x.fillStyle='#c62828';x.beginPath();x.arc(IC.x,IC.y,7,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.font='bold 13px sans-serif';x.fillText('IC',IC.x+10,IC.y-6);
+      // velocity arrows
+      const sc=80;
+      function arrow(p,vec,col){
+        const px=p.x+vec.x*sc,py=p.y+vec.y*sc;
+        x.strokeStyle=col;x.lineWidth=2.5;
+        x.beginPath();x.moveTo(p.x,p.y);x.lineTo(px,py);
+        const a=Math.atan2(py-p.y,px-p.x);
+        x.lineTo(px-Math.cos(a)*8-Math.sin(a)*4,py-Math.sin(a)*8+Math.cos(a)*4);
+        x.moveTo(px,py);x.lineTo(px-Math.cos(a)*8+Math.sin(a)*4,py-Math.sin(a)*8-Math.cos(a)*4);
+        x.stroke();
+      }
+      arrow(A,vA,'#0b5fff');
+      arrow(B,vB,'#2e7d32');
+      // midpoint
+      const M={x:(A.x+B.x)/2,y:(A.y+B.y)/2};
+      // velocity of midpoint = ω × r from IC
+      const dx=M.x-IC.x,dy=M.y-IC.y;
+      const vM={x:-dy*w/L*L,y:dx*w/L*L};
+      arrow(M,{x:vM.x/L,y:vM.y/L},'#9e35b8');
+      // points
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(A.x,A.y,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(B.x,B.y,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#9e35b8';x.beginPath();x.arc(M.x,M.y,5,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('A (벽)',A.x-32,A.y+4);
+      x.fillStyle='#2e7d32';x.fillText('B (바닥)',B.x-22,B.y-10);
+      x.fillStyle='#9e35b8';x.fillText('M (중점)',M.x+8,M.y+4);
+      // info
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('두 점의 속도 방향에 수직선 → 만나는 점이 IC',20,25);
+      x.fillText('IC에서 멀수록 속도가 크다 (v = r_IC · ω)',20,43);
+      x.fillText('각도 θ가 0에 가까워질수록 IC가 사다리에서 멀어짐 → 각속도 같아도 속도 폭증',20,61);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>2.4 SVG로 본 IC 구성 — 사다리·굴림·4절</h2>
+  <div class="demo">
+    <h4>📐 SVG 다이어그램: 세 가지 IC의 모양</h4>
+    <p>왼쪽: 사다리(두 직각 수직선이 교차한 모서리). 가운데: 굴림 바퀴(접촉점이 IC). 오른쪽: 4절 링크(두 회전 막대 연장선이 만남).</p>
+    <svg viewBox="0 0 720 260" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:8px">
+      <!-- ladder -->
+      <text x="120" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#0742b8">사다리</text>
+      <line x1="40" y1="40" x2="40" y2="220" stroke="#888" stroke-width="2"/>
+      <line x1="40" y1="220" x2="220" y2="220" stroke="#888" stroke-width="2"/>
+      <line x1="40" y1="80" x2="200" y2="220" stroke="#8b6f47" stroke-width="6"/>
+      <line x1="40" y1="80" x2="200" y2="80" stroke="#999" stroke-dasharray="4,4"/>
+      <line x1="200" y1="80" x2="200" y2="220" stroke="#999" stroke-dasharray="4,4"/>
+      <circle cx="200" cy="80" r="6" fill="#c62828"/>
+      <text x="210" y="76" font-size="11" fill="#c62828" font-weight="bold">IC</text>
+      <circle cx="40" cy="80" r="5" fill="#0b5fff"/>
+      <circle cx="200" cy="220" r="5" fill="#2e7d32"/>
+      <text x="20" y="84" font-size="10" fill="#0b5fff">A</text>
+      <text x="200" y="240" font-size="10" fill="#2e7d32">B</text>
+
+      <!-- rolling wheel -->
+      <text x="360" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#0742b8">굴림 바퀴</text>
+      <line x1="280" y1="200" x2="440" y2="200" stroke="#888" stroke-width="2"/>
+      <circle cx="360" cy="160" r="40" fill="none" stroke="#444" stroke-width="2"/>
+      <circle cx="360" cy="160" r="3" fill="#444"/>
+      <line x1="360" y1="160" x2="360" y2="200" stroke="#999" stroke-dasharray="3,3"/>
+      <circle cx="360" cy="200" r="6" fill="#c62828"/>
+      <text x="370" y="216" font-size="11" fill="#c62828" font-weight="bold">IC=접촉점</text>
+      <circle cx="360" cy="120" r="4" fill="#9e35b8"/>
+      <text x="368" y="120" font-size="10" fill="#9e35b8">v=2rω</text>
+      <text x="375" y="160" font-size="10" fill="#444">v=rω</text>
+
+      <!-- four-bar -->
+      <text x="600" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#0742b8">4절 링크</text>
+      <circle cx="500" cy="200" r="4" fill="#333"/>
+      <circle cx="660" cy="200" r="4" fill="#333"/>
+      <text x="495" y="220" font-size="10">O₁</text>
+      <text x="660" y="220" font-size="10">O₂</text>
+      <line x1="500" y1="200" x2="540" y2="130" stroke="#2e7d32" stroke-width="3"/>
+      <line x1="540" y1="130" x2="630" y2="115" stroke="#444" stroke-width="3"/>
+      <line x1="660" y1="200" x2="630" y2="115" stroke="#9e35b8" stroke-width="3"/>
+      <line x1="500" y1="200" x2="600" y2="40" stroke="#999" stroke-dasharray="4,4"/>
+      <line x1="660" y1="200" x2="600" y2="40" stroke="#999" stroke-dasharray="4,4"/>
+      <circle cx="600" cy="40" r="6" fill="#c62828"/>
+      <text x="610" y="38" font-size="11" fill="#c62828" font-weight="bold">IC of coupler</text>
+    </svg>
+    <p style="color:#666;font-size:12px">세 경우 모두 같은 원리: <em>두 점의 속도 방향에 수직선을 긋고 그 교점을 잡는다.</em></p>
+  </div>
+
+  <h2>3. 굴림 바퀴의 IC — 가장 간단한 예부터</h2>
+  <p>W9에서 미끄러지지 않는 굴림은 접촉점이 순간 정지라고 했죠. 그러므로 굴림 바퀴의 <strong>IC는 접촉점</strong>입니다. 이걸 알면 바퀴 위 임의의 점의 속도가 즉시 보입니다 — 접촉점에서 그 점까지의 거리에 $\omega$를 곱한 것.</p>
+  <ul>
+    <li>접촉점 자체: 거리 0 → 속도 0 (정의)</li>
+    <li>중심: 거리 $r$ → 속도 $r\omega = v_c$</li>
+    <li>꼭대기: 거리 $2r$ → 속도 $2r\omega = 2v_c$ — 중심의 두 배. 바퀴 위에서 보면 살짝 비현실적인 사실이지만 수식이 정확히 말해줍니다.</li>
+    <li>옆 점(중심과 같은 높이): 거리 $\sqrt{r^2+r^2} = r\sqrt 2$ → 속도 $r\sqrt 2 \omega$, 방향은 IC를 지나는 선에 수직(=대각선 위 방향).</li>
+  </ul>
+
+  <div class="tip">
+    <strong>속도 분석 — 한 가지만 기억</strong>: 강체 위 어떤 점 $P$가 있고 IC가 어디인지 안다면, $|\mathbf{v}_P| = (\text{IC에서 }P\text{까지의 거리}) \times \omega$, 방향은 IC와 $P$를 잇는 선에 수직.
+  </div>
+
+  <h3>3.1 자동차 휠의 사이클로이드 궤적</h3>
+  <p>굴림 바퀴 위 한 점은 이동 + 회전이 합쳐져 사이클로이드(cycloid) 곡선을 그립니다. 접촉점에서는 순간적으로 속도가 0이 되었다가, 위로 올라가면서 점점 빨라지고, 꼭대기에서 가장 빠르고, 다시 내려오면서 느려져 0이 됩니다. 자동차 휠 옆에 페인트를 한 점 찍어 두면 정확히 이 곡선을 그립니다.</p>
+  <p>같은 원리가 트랙터 캐터필러(궤도)에 있는 한 칸의 운동, 자전거 휠에 매달린 LED의 야간 사진(긴 노출 시 사이클로이드 궤적), 풍차 날개 끝(타워가 안 흔들린다 가정 시 단순 원, 흔들리면 사이클로이드)에서 모두 보입니다.</p>
+
+  <div class="note">
+    <strong>예제 3.1 — 차바퀴 옆에 박힌 점의 가장 빠른 속도</strong>
+    <p>차가 30 km/h(8.33 m/s)로 굴러간다. 휠 반경 0.32 m. 휠 위 임의의 한 점이 도달하는 최대 속도는?</p>
+    <strong>풀이</strong> — IC=접촉점. 휠 위에서 IC로부터 가장 먼 점이 휠 꼭대기. 거리 $2R = 0.64$ m. $\omega = v_c/R = 8.33/0.32 \approx 26$ rad/s. 따라서 꼭대기 속도 $= 2R\omega = 16.66$ m/s = <strong>차의 두 배 속도 60 km/h</strong>. 직관에 반하지만 정답입니다 — 그래서 자전거 흙받이가 회전 휠 위쪽까지 길게 덮여 있는 것.
+  </div>
+
+  <h2>4. 4절 링크(four-bar linkage) — 일반 평면운동의 대표 예</h2>
+  <p>네 개의 막대가 핀으로 연결된 메커니즘 — 입력 축이 회전하면 출력 축이 정해진 운동을 합니다. 자동차 와이퍼, 펀치 프레스, 재봉틀 모두 4절 링크의 변형입니다.</p>
+  <p>입력 막대(crank)는 고정축 회전, 출력 막대(rocker)도 고정축 회전, 가운데 연결 막대(coupler)는 일반 평면운동을 합니다. 이 coupler의 IC를 어떻게 찾는지가 이 단원의 하이라이트.</p>
+
+  <div class="note">
+    <strong>4절 링크 coupler의 IC 찾기 — 두 단계</strong>
+    <ol style="margin:6px 0 0 0">
+      <li>coupler의 양 끝점 $A, B$는 각각 고정축 $O_1, O_2$를 중심으로 도는 막대에 붙어 있다. 그러므로 $A$의 속도 방향은 $O_1A$에 수직, $B$의 속도 방향은 $O_2B$에 수직.</li>
+      <li>"두 점의 속도 방향에 수직선" → 각각 $O_1A$의 연장, $O_2B$의 연장. 두 연장선의 교점이 곧 IC.</li>
+    </ol>
+    데모에서 회전 막대의 점선 연장이 만나는 빨간 점이 그것입니다. 입력 크랭크가 한 바퀴 도는 동안 IC가 공간을 떠다니는 모습을 잘 관찰해 보세요.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 4절 링크 — coupler의 IC와 점 궤적</h4>
+    <p>입력 크랭크가 회전하면 4절 링크가 움직입니다. <strong>coupler 위의 한 점이 그리는 궤적</strong>(coupler curve)을 trace하고, 매 순간 coupler의 <strong>IC 위치</strong>를 빨간 점으로 보여줍니다. 점의 위치를 바꾸면 다양한 곡선이 나오는 것을 볼 수 있어요 — 자전거 페달, 와이퍼 등이 바로 이 곡선의 응용.</p>
+    <canvas id="fbarC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>크랭크 각속도 <span class="val" id="fbWV">1.5</span><input type="range" id="fbW" min="0.3" max="3" step="0.1" value="1.5"></label>
+      <label>coupler 위 점 위치 <span class="val" id="fbPV">0.5</span><input type="range" id="fbP" min="0" max="1" step="0.05" value="0.5"></label>
+      <label>coupler 위 점 수직 옵셋 <span class="val" id="fbHV">0.3</span><input type="range" id="fbH" min="-0.6" max="0.6" step="0.05" value="0.3"></label>
+      <button id="fbReset">trace 리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fbarC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['fbW','fbP','fbH'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let phi=0,trail=[];
+    sl('fbReset').onclick=()=>{trail=[];};
+    // four-bar geometry
+    // O1-O2: ground, O1 at left, O2 at right
+    const O1={x:200,y:280},O2={x:480,y:280};
+    const r1=80,r2=140,r3=120; // crank, coupler, rocker
+    function loop(){
+      const w=+sl('fbW').value,pp=+sl('fbP').value,ph=+sl('fbH').value;
+      phi+=w*0.025;
+      const A={x:O1.x+r1*Math.cos(phi),y:O1.y-r1*Math.sin(phi)};
+      // solve B such that |AB|=r2 and |O2-B|=r3
+      const dx=O2.x-A.x,dy=O2.y-A.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d>r2+r3||d<Math.abs(r2-r3)){requestAnimationFrame(loop);return;}
+      const a=(r2*r2-r3*r3+d*d)/(2*d);
+      const h=Math.sqrt(Math.max(0,r2*r2-a*a));
+      const mx=A.x+a*dx/d,my=A.y+a*dy/d;
+      const B={x:mx-h*dy/d,y:my+h*dx/d}; // pick one config
+      // tracked point on coupler
+      const P={x:A.x+pp*(B.x-A.x)+ph*(-(B.y-A.y)),
+               y:A.y+pp*(B.y-A.y)+ph*(B.x-A.x)};
+      trail.push({x:P.x,y:P.y});if(trail.length>800)trail.shift();
+      // IC of coupler: A moves perpendicular to O1-A, B perpendicular to O2-B
+      // IC = intersection of lines through A in direction O1-A, and through B in direction O2-B
+      function intersect(p1,d1,p2,d2){
+        const A1=d1.x,B1=-d2.x,C1=p2.x-p1.x;
+        const A2=d1.y,B2=-d2.y,C2=p2.y-p1.y;
+        const det=A1*B2-A2*B1;
+        if(Math.abs(det)<1e-6)return null;
+        const t=(C1*B2-C2*B1)/det;
+        return {x:p1.x+t*d1.x,y:p1.y+t*d1.y};
+      }
+      const IC=intersect(A,{x:A.x-O1.x,y:A.y-O1.y},B,{x:B.x-O2.x,y:B.y-O2.y});
+      // draw
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // ground
+      x.fillStyle='#888';x.fillRect(O1.x-30,O1.y+5,330,8);
+      // trail
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i===0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});
+      x.stroke();
+      // links
+      x.lineWidth=4;
+      x.strokeStyle='#2e7d32';x.beginPath();x.moveTo(O1.x,O1.y);x.lineTo(A.x,A.y);x.stroke();
+      x.strokeStyle='#444';x.beginPath();x.moveTo(A.x,A.y);x.lineTo(B.x,B.y);x.stroke();
+      x.strokeStyle='#9e35b8';x.beginPath();x.moveTo(O2.x,O2.y);x.lineTo(B.x,B.y);x.stroke();
+      // IC line dashed
+      if(IC){
+        x.strokeStyle='#999';x.setLineDash([3,3]);x.lineWidth=1;
+        x.beginPath();x.moveTo(O1.x,O1.y);x.lineTo(IC.x,IC.y);x.stroke();
+        x.beginPath();x.moveTo(O2.x,O2.y);x.lineTo(IC.x,IC.y);x.stroke();
+        x.setLineDash([]);
+        x.fillStyle='#c62828';x.beginPath();x.arc(IC.x,IC.y,6,0,Math.PI*2);x.fill();
+        x.fillStyle='#c62828';x.font='bold 12px sans-serif';x.fillText('IC',IC.x+8,IC.y-4);
+      }
+      // pivots
+      [O1,O2].forEach(p=>{x.fillStyle='#333';x.beginPath();x.arc(p.x,p.y,5,0,Math.PI*2);x.fill();});
+      [A,B].forEach(p=>{x.fillStyle='#fff';x.beginPath();x.arc(p.x,p.y,4,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();});
+      // tracked point
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(P.x,P.y,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('coupler 위 점 P (파랑)의 trace = coupler curve',20,25);
+      x.fillText('IC (빨강)는 두 회전 막대의 연장선이 만나는 점 — 위치가 매 순간 변함',20,43);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4.1 4절 링크의 그라쇼프(Grashof) 조건 — "한 막대가 한 바퀴 도느냐"</h2>
+  <p>네 막대 길이를 $\ell_1, \ell_2, \ell_3, \ell_4$라 하고 $S$가 가장 짧은 막대, $L$이 가장 긴 막대, $P$, $Q$가 나머지 두 개라 할 때 — <strong>$S + L \le P + Q$</strong>이면 가장 짧은 막대가 360° 회전 가능(그라쇼프 조건). 반대면 모두 진동(rocker)만 함.</p>
+  <ul>
+    <li><strong>크랭크-로커</strong>: 가장 짧은 막대를 크랭크(360°)로, 인접 막대를 로커로. 펌프, 와이퍼.</li>
+    <li><strong>이중 크랭크</strong>: 가장 짧은 막대가 ground일 때 양쪽이 모두 크랭크. 평행사변형 메커니즘 — 기관차 동륜 연결봉.</li>
+    <li><strong>이중 로커</strong>: 가장 짧은 막대가 coupler일 때. 자동차 와이퍼의 핵심 부분이 여기에 가까움.</li>
+  </ul>
+
+  <h2>4.2 응용 — 산업용 로봇 매니퓰레이터</h2>
+  <p>SCARA 로봇 팔, 직교 좌표 로봇, 6축 머니퓰레이터 모두 여러 강체가 핀(혹은 슬라이더)으로 연결된 메커니즘. 각 관절의 속도가 정해지면 말단(end-effector)의 속도가 상대속도 식의 연쇄 — <em>Jacobian</em>(속도 야코비안)을 곱한 것:</p>
+  $$ \mathbf{v}_{\text{end}} = \mathbf{J}(\boldsymbol\theta)\,\dot{\boldsymbol\theta} $$
+  <p>학부 동역학에서 본 $\mathbf{v}_B = \mathbf{v}_A + \boldsymbol\omega \times \mathbf{r}_{B/A}$ 식이 로봇공학에서는 행렬 형태로 일반화됩니다. 같은 식, 다른 옷.</p>
+
+  <h2>4.3 응용 — 풍력 발전기 블레이드</h2>
+  <p>풍력 발전기 날개 끝의 속도는 허브 회전에 의한 회전 속도($r_\text{tip}\omega$)와 바람을 받아 상대 운동하는 속도가 합쳐진 것. 날개 끝이 바람보다 빠른 영역에 들어가면 양력이 음(-) 방향으로 바뀌어 효율이 떨어짐. 이 때문에 <em>tip-speed ratio</em> $\lambda = r_\text{tip}\omega / v_{\text{wind}}$를 7 정도로 설계하는 것이 표준입니다. 70 m 블레이드, 12 m/s 바람이라면 $\omega \approx 1.2$ rad/s ≈ 12 rpm.</p>
+
+  <h2>5. 슬라이더-크랭크 메커니즘 — 자동차 엔진의 핵심</h2>
+  <p>크랭크(회전) + 커넥팅 로드 + 피스톤(직선 운동) 조합. 자동차 가솔린 엔진에서 연소가 피스톤을 밀고, 피스톤이 로드를 거쳐 크랭크를 돌려 바퀴로 동력을 보냄.</p>
+  <ul>
+    <li>크랭크 길이 $r$, 로드 길이 $l$ (보통 $l \approx 3r$). 크랭크 각도 $\theta$일 때 피스톤 위치는</li>
+  </ul>
+  $$ x_{\text{piston}}(\theta) = r\cos\theta + \sqrt{l^2 - r^2 \sin^2\theta} $$
+  <p>이 식을 시간 미분하면 피스톤의 속도, 가속도가 비선형 함수로 나옵니다(엔진의 떨림 원인). 정확한 분석에는 IC가 도움이 됩니다 — 로드의 IC는 크랭크 끝점에서 위로 그은 수직선과 피스톤에서 수평으로 그은 수직선의 교점.</p>
+
+  <div class="note">
+    <strong>예제 — 슬라이더-크랭크 IC</strong>
+    <p>크랭크 $r = 0.05$ m, 로드 $l = 0.15$ m. 크랭크 회전수 $\omega_c = 200$ rad/s ≈ 1900 rpm. 크랭크 각도 $\theta = 90°$일 때 피스톤 속도는?</p>
+    <strong>풀이</strong> — $\theta = 90°$에서 크랭크 끝점 $A$의 속도는 수평으로 $v_A = r\omega_c = 0.05 \cdot 200 = 10$ m/s. 피스톤 $B$는 수평으로만 움직임. 두 점이 모두 수평으로 움직이니 두 속도 방향에 수직인 선 = 두 점에서 위로 그은 수직선. $\theta = 90°$에서 두 수직선이 평행 → IC 무한대. 의미: 이 순간 로드는 순수 병진(둘 다 수평으로 같은 속도). 즉 $v_B = v_A = \mathbf{10\text{ m/s}}$.
+    <br><br>
+    다른 각도 $\theta = 0°$(상사점)에서는 IC가 가깝고 피스톤이 순간적으로 정지($v_B = 0$). 이 비선형성이 엔진 진동의 원인입니다.
+  </div>
+
+  <h2>5.1 슬라이더-크랭크 추가 예제 — 피스톤 가속도</h2>
+  <div class="note">
+    <strong>예제</strong> — $r = 0.05$ m, $l = 0.2$ m, 크랭크 각속도 $\omega_c = 300$ rad/s 일정. $\theta = 60°$에서 피스톤의 (a) 속도 (b) 가속도.
+    <br><br>
+    <strong>풀이</strong> — 피스톤 위치 $x(\theta) = r\cos\theta + \sqrt{l^2 - r^2\sin^2\theta}$. $\sin 60° = 0.866$, $\cos 60° = 0.5$.
+    <ul style="margin:6px 0 0 0">
+      <li>$r\sin\theta = 0.0433$, $r^2\sin^2\theta = 1.875\times 10^{-3}$, $\sqrt{l^2-\cdot} = \sqrt{0.04 - 0.001875} = 0.1953$.</li>
+      <li>속도: $\dot x = -r\omega_c\sin\theta\big(1 + \tfrac{r\cos\theta}{\sqrt{l^2-r^2\sin^2\theta}}\big) = -300\cdot 0.0433(1 + 0.5\cdot 0.05/0.1953)$.</li>
+      <li>$\approx -12.99 \cdot 1.128 \approx -14.65$ m/s (피스톤 후퇴).</li>
+      <li>가속도는 한 번 더 미분(한 학기 미적분 좋은 연습) → 약 $-3650$ m/s². 절댓값으로 약 $370\,g$. 엔진 부품이 받는 가속도가 얼마나 큰지 가늠해 볼 수 있음.</li>
+    </ul>
+  </div>
+
+  <h2>6. 응용 — 자동차 서스펜션의 4절 구조</h2>
+  <p>대부분의 자동차 앞바퀴 서스펜션은 더블 위시본·맥퍼슨 스트럿 등 다양하지만, 운동학적으로는 4절 링크의 변형. 입력은 노면의 수직 가진(쇼크), 출력은 차체의 안정된 자세. 위 데모에서 본 coupler curve가 바로 휠이 그리는 궤적이고, 이 곡선의 모양이 핸들링 특성(캠버 변화·토 변화)을 결정.</p>
+
+  <h3>6.1 더블 위시본 서스펜션의 운동학</h3>
+  <p>위·아래 두 개의 A자형 암(arm)이 차체와 휠 캐리어를 연결. 차체에 고정된 두 핀이 $O_1, O_2$ 역할, 휠 캐리어에 붙은 두 핀이 coupler의 양 끝 $A, B$. 4절 링크의 coupler가 바로 휠 캐리어이고, 그 위 한 점(휠 중심)이 그리는 곡선이 휠의 운동 궤적.</p>
+  <ul>
+    <li><strong>캠버(camber) 변화</strong>: 휠이 위로 갈 때 휠 평면이 약간 안쪽으로 기울도록 4절 비율을 조정. 코너링 시 외측 휠이 노면에 더 잘 밀착.</li>
+    <li><strong>토(toe) 변화</strong>: 핀 위치를 조절해 휠이 위로 갈 때 약간 안쪽 또는 바깥쪽으로 향하게 함. 직진성 vs 회두성 trade-off.</li>
+    <li><strong>레이싱 자동차</strong>: 4절 운동학 분석으로 코너링·제동 특성을 0.1°까지 튜닝.</li>
+  </ul>
+
+  <h3>6.2 보행 로봇·동물 다리 — 4절의 자연 사례</h3>
+  <p>네 발 로봇(Spot, ANYmal 등)의 다리, 곤충의 다리, 말의 다리도 모두 4절(혹은 5절) 링크. coupler에 해당하는 끝마디가 그리는 곡선이 바로 발걸음 궤적이며, 이를 정교하게 설계하는 것이 보행 안정성의 핵심. 발이 노면에 닿는 동안엔 노면이 새 IC가 되어 다리는 마치 고정점 둘레를 회전하는 것처럼 거동 — 이 과정이 보행 운동학의 한 사이클.</p>
+
+  <h2>7. 가속도 분석 — IC를 그대로 쓸 수 없는 이유</h2>
+  <p>강체의 두 점 가속도 관계는 다음과 같습니다(외적 두 항 등장).</p>
+  $$ \mathbf{a}_B = \mathbf{a}_A + \boldsymbol{\alpha} \times \mathbf{r}_{B/A} + \boldsymbol{\omega} \times (\boldsymbol{\omega} \times \mathbf{r}_{B/A}) $$
+  <p>마지막 항이 "구심가속도 부분"으로, 이 때문에 IC라 해도 그 점의 <em>가속도가 0이라고 보장할 수 없음</em>. 사다리의 IC는 속도가 0이지만 가속도가 분명히 있습니다 — 사다리는 지속적으로 미끄러지면서 IC 위치 자체가 이동하기 때문.</p>
+
+  <h3>7.1 가속도 식의 세 항 — 단어로</h3>
+  <ul>
+    <li><strong>$\mathbf{a}_A$</strong> — 기준점이 가속하고 있는 양.</li>
+    <li><strong>$\boldsymbol{\alpha} \times \mathbf{r}_{B/A}$</strong> — 강체가 각가속도($\alpha = \dot\omega$)로 인해 회전 속도가 바뀌면서 $B$가 $A$에 대해 가지는 <em>접선 가속도</em>. 평면 운동에서 크기는 $r \alpha$, 방향은 $\boldsymbol{\omega}\times\mathbf{r}_{B/A}$ 방향(즉 회전 속도 방향).</li>
+    <li><strong>$\boldsymbol{\omega}\times(\boldsymbol{\omega}\times\mathbf{r}_{B/A})$</strong> — 항상 $\mathbf{r}_{B/A}$의 반대 방향(중심을 향함). 평면 운동에서 크기는 $r\omega^2$. 이른바 <em>구심 가속도(centripetal)</em>.</li>
+  </ul>
+  <p>$\boldsymbol{\omega}=0$이면 마지막 항이 사라져 회전 가속도만 남고, $\boldsymbol{\alpha}=0$(등속 회전)이면 가운데 항이 사라져 구심 가속도만 남음.</p>
+
+  <h3>7.2 굴림 바퀴 접촉점의 가속도 — IC인데 0이 아니다</h3>
+  <p>굴림 바퀴 중심 가속도 $\mathbf{a}_C = (a, 0)$, $\omega = v/R$, $\alpha = a/R$. 접촉점 $P$는 중심에서 아래 $R$만큼.</p>
+  $$ \mathbf{a}_P = \mathbf{a}_C + \boldsymbol{\alpha}\times\mathbf{r}_{P/C} + \boldsymbol{\omega}\times(\boldsymbol{\omega}\times\mathbf{r}_{P/C}) $$
+  <p>계산하면 $\mathbf{a}_P = (0, R\omega^2)$ — 위쪽 방향 구심가속도. 즉 접촉점은 속도는 0이지만 가속도는 $R\omega^2$로 위쪽을 향함. 그래서 운동학(IC, 속도)과 운동역학(가속도, 힘)을 분리해서 다루어야 합니다.</p>
+
+  <div class="note">
+    <strong>예제 7.1 — 사다리 끝점들의 가속도</strong>
+    <p>사다리(길이 4 m)가 $\theta = 60°$에서 바닥 끝이 0.5 m/s 일정 속도로 멀어진다. 각가속도 계산.</p>
+    <strong>풀이</strong> — $\omega = v/(L\cos\theta) = 0.5/(4\cdot 0.5) = 0.25$ rad/s. 바닥 끝 $B$의 속도가 일정하므로 $a_B = 0$. 식 $\mathbf{v}_B = \mathbf{v}_A + \boldsymbol\omega\times\mathbf{r}_{B/A}$를 시간 미분하고 풀면 $\alpha = -\omega^2 \tan\theta = -0.0625\cdot\tan 60° \approx -0.108$ rad/s². 즉 회전이 점점 빨라지지 않고 약간 둔화 — 사다리가 "더 평평해지면서" 회전 속도 자체는 줄어듭니다.
+  </div>
+
+  <h2>7.3 corioilis 효과의 등장 — 회전 좌표계에서 본 운동</h2>
+  <p>강체 위 한 점에 대해 또 다른 점이 미끄러질 수 있다면(예: 슬라이더가 회전하는 막대 위를 따라 이동), 식에 한 항이 더 붙습니다 — <em>코리올리(Coriolis) 가속도</em> $2\,\boldsymbol\omega\times\mathbf{v}_{\text{rel}}$. 회전하는 좌표계에서 직선 운동을 보면 휘어 보이는 현상이 그 출처. 4학년/대학원 동역학에서 다시 만남.</p>
+
+  <h2>8. 연습 문제</h2>
+  <div class="note" style="background:#f5f8fc;border-color:#0b5fff">
+    <ol style="margin:6px 0 0 0">
+      <li>사다리(길이 4 m)가 벽에서 $\theta = 60°$ 기울기. 바닥 끝이 0.5 m/s로 미끄러짐. (a) IC 위치 (b) 사다리의 각속도 (c) 벽 위 끝의 속도.</li>
+      <li>굴림 바퀴(반경 0.4 m, 중심 속도 5 m/s). 바퀴의 (a) 꼭대기 점 (b) 옆 점(중심과 같은 높이)의 속도 크기와 방향.</li>
+      <li>4절 링크에서 입력 크랭크 각속도 2 rad/s, 출력 로커가 정확히 그 순간 정지(IC가 출력 회전축에 있음). 이때 출력 속도 = 0이 되는 위치(<em>dead center</em>)임. 이 결과로 가능한 응용은? (힌트: 짤각 메커니즘)</li>
+      <li>자전거가 수평 도로에서 5 m/s로 굴러간다. 휠 반경 0.34 m. 휠 위 페달 위치(중심에서 0.17 m 앞쪽 위)의 지면 좌표계 속도는?</li>
+      <li>슬라이더-크랭크 ($r$=0.04, $l$=0.12) 크랭크 각속도 100 rad/s. 크랭크 각도 60°에서 피스톤 속도와 그 방향.</li>
+      <li>풍력 발전기 블레이드 끝의 속도는? 길이 50 m, 회전수 15 rpm. 바람 속도 11 m/s일 때 tip-speed ratio $\lambda$ 계산.</li>
+      <li>SCARA 로봇의 두 회전 관절 각속도 $\dot\theta_1 = 1.5$ rad/s, $\dot\theta_2 = -2.0$ rad/s. 두 링크 길이 모두 0.4 m. 두 링크가 일직선일 때 ($\theta_2 = 0$) 말단 속도 크기는?</li>
+      <li>4절 링크에서 입력 크랭크 길이 50 mm, 출력 로커 길이 80 mm, coupler 120 mm, ground 150 mm. 그라쇼프 조건이 만족되는가? 어느 막대가 360° 회전할 수 있나?</li>
+    </ol>
+    <strong>약식 답</strong>: 1) (a) 벽-바닥 모서리에서 (4cos60°, 4sin60°)=(2, 3.46) m 위치 (b) $\omega = v/r_{IC} = 0.5/(4\cos 60°)=0.25$ rad/s (c) 벽 끝은 IC에서 $4\sin 60°$ 떨어져 있음→ $v = 0.25 \cdot 3.46 \approx 0.866$ m/s 아래 &nbsp;&nbsp; 2) (a) 10 m/s 수평 (b) $5\sqrt 2 \approx 7.07$ m/s 대각선 위 &nbsp;&nbsp; 3) 출력이 잠시 멈춰야 하는 응용(예: 인쇄기 도장 찍기 — 종이 위에 잠시 멈춰 인쇄) &nbsp;&nbsp; 4) 페달 점 속도 = 중심 속도(5,0) + ω×r = ω = 5/0.34 ≈ 14.7 rad/s, ω × (0.17, 0.17) = 대각선 → 약 (5+2.5, -2.5) m/s 즉 약 7.91 m/s &nbsp;&nbsp; 5) 식 $\dot x = -r\omega\sin\theta(1 + r\cos\theta/\sqrt{l^2-r^2\sin^2\theta})$에 대입하면 약 -4.0 m/s (피스톤이 후퇴) &nbsp;&nbsp; 6) $\omega = 15\cdot 2\pi/60 = 1.57$ rad/s, $v_\text{tip} = 50\cdot 1.57 = 78.5$ m/s, $\lambda = 78.5/11 \approx 7.1$ &nbsp;&nbsp; 7) $\theta_2=0$이라 두 링크 일직선, 첫 링크 끝점 속도 = $0.4\cdot 1.5 = 0.6$ m/s, 말단 속도 = 0.4 m로 강체적으로 더해진 것 = $0.4\cdot(1.5 - 2.0) = -0.2$ m/s 회전, 합쳐 약 $\sqrt{0.6^2 + 0.2^2}\cdot$ 모드 = 0.4 m/s 정도(자세한 풀이 J 행렬 필요) &nbsp;&nbsp; 8) $S=50$, $L=150$, $P+Q = 80+120 = 200$, $S+L = 200$. 등호 — 경계 케이스(Grashof neutral). $S=$ 크랭크 가능.
+  </div>
+
+  <h2>8.1 추가 도전 — 자동차 와이퍼 메커니즘 분석</h2>
+  <div class="note">
+    <strong>도전</strong> — 차량 와이퍼는 보통 와이퍼 모터의 회전 운동을 좌우 왕복 운동으로 바꾸는 4절 링크. 한 사이클 동안 와이퍼가 좌우 끝에서 잠시 멈추고 다시 돌아오는 모양인데, 이 멈춤은 어디에서 오나? 4절 링크의 dead center를 떠올려 답해 보라. 답: 출력 로커가 두 ground 핀을 잇는 직선과 평행해지는 위치 — 이때 IC가 출력 회전축에 위치 → 출력 속도 0. 짧은 멈춤이 wiping이 부드러워 보이게 함.
+  </div>
+
+  <h2>9. 흔한 오개념</h2>
+  <ul>
+    <li><strong>"IC는 강체 위의 한 점이다"</strong> — 강체 안에 있을 수도, 밖에 있을 수도 있습니다. 사다리 데모에서 IC는 사다리에서 떨어진 곳에 있죠.</li>
+    <li><strong>"IC는 시간이 지나도 같은 점"</strong> — 매 순간 다른 점입니다. "순간"중심이라는 이름이 그래서 붙었어요.</li>
+    <li><strong>"IC가 있으면 그 점은 진짜로 정지해 있다"</strong> — 속도만 0이고, 가속도는 0이 아닐 수 있습니다. 그래서 운동학(속도 분석)에는 유용하지만 운동역학(가속도, 힘)에는 그대로 쓸 수 없어요.</li>
+    <li><strong>"4절 링크 coupler의 IC는 두 회전 막대의 끝점 중 하나"</strong> — 끝점이 아니라 두 회전 막대의 <em>연장선의 교점</em>입니다. 끝점이 IC가 되는 건 그 점이 정지(예: 출력이 dead center)일 때만.</li>
+    <li><strong>"$\omega \times r$의 크기는 $\omega r \cos\theta$이다"</strong> — 외적은 $\sin\theta$로 들어갑니다. 평면 운동에서 $\boldsymbol\omega$가 $\mathbf{r}$에 수직이라 $\sin\theta = 1$이 되어 그냥 $\omega r$.</li>
+    <li><strong>"상대속도 식은 두 점 거리가 변할 때도 쓸 수 있다"</strong> — 강체이기 때문에 거리가 일정한 두 점에 대해서만 유효. 슬라이더가 막대를 따라 움직인다면 그 점은 강체 위 점이 아니므로 식이 그대로 적용되지 않음(코리올리 항 추가).</li>
+  </ul>
+
+  <h2>10. 한 줄 요약</h2>
+  <table>
+    <thead><tr><th>개념</th><th>식</th><th>핵심</th></tr></thead>
+    <tbody>
+      <tr><td>상대 속도</td><td>$\mathbf{v}_B = \mathbf{v}_A + \boldsymbol\omega\times\mathbf{r}_{B/A}$</td><td>"$A$를 기준으로 본 $B$는 $A$ 둘레를 도는 회전"</td></tr>
+      <tr><td>상대 가속도</td><td>$\mathbf{a}_B = \mathbf{a}_A + \boldsymbol\alpha\times\mathbf{r}_{B/A} - \omega^2\mathbf{r}_{B/A}$</td><td>접선 + 구심 두 항이 추가됨</td></tr>
+      <tr><td>순간중심(IC)</td><td>$|\mathbf{v}_P| = r_{IC}\omega$</td><td>속도 0인 가상의 점, 매 순간 위치 변화</td></tr>
+      <tr><td>굴림 IC</td><td>접촉점</td><td>꼭대기 속도 = 중심 속도의 2배</td></tr>
+      <tr><td>4절 IC of coupler</td><td>두 회전 막대 연장선의 교점</td><td>매 순간 공간을 떠다님</td></tr>
+      <tr><td>그라쇼프 조건</td><td>$S+L \le P+Q$</td><td>가장 짧은 막대가 360° 회전 가능</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9.1 IC를 직접 추적 — 사다리 미끄러짐의 centrode</h2>
+  <div class="demo">
+    <h4>📐 SVG: 사다리 fixed centrode (벽-바닥 모서리 둘레 1/4 원)</h4>
+    <p>사다리가 미끄러지는 동안 IC가 그리는 곡선(빨간 점선)은 벽-바닥 모서리를 중심으로 한 반지름 $L$(사다리 길이)의 1/4 원호입니다. 사다리 중점이 그리는 곡선(파란 실선)은 같은 모서리 중심, 반지름 $L/2$의 1/4 원호 — 즉 사다리 중점은 정확히 모서리 둘레의 원호 운동을 합니다(Cardano 정리의 한 예).</p>
+    <svg viewBox="0 0 460 280" style="width:100%;max-width:460px;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:8px">
+      <line x1="60" y1="40" x2="60" y2="240" stroke="#888" stroke-width="3"/>
+      <line x1="60" y1="240" x2="420" y2="240" stroke="#888" stroke-width="3"/>
+      <text x="50" y="40" font-size="11" text-anchor="end">벽</text>
+      <text x="420" y="260" font-size="11">바닥</text>
+      <!-- ladder positions at three angles -->
+      <line x1="60" y1="80" x2="280" y2="240" stroke="#8b6f47" stroke-width="3" opacity="0.5"/>
+      <line x1="60" y1="100" x2="240" y2="240" stroke="#8b6f47" stroke-width="3" opacity="0.5"/>
+      <line x1="60" y1="140" x2="180" y2="240" stroke="#8b6f47" stroke-width="3" opacity="0.5"/>
+      <!-- IC positions (on top-right of each ladder rectangle) -->
+      <circle cx="280" cy="80" r="4" fill="#c62828"/>
+      <circle cx="240" cy="100" r="4" fill="#c62828"/>
+      <circle cx="180" cy="140" r="4" fill="#c62828"/>
+      <!-- fixed centrode: arc r=L (about corner 60,240), L=200 in pixel -->
+      <path d="M 60 40 A 200 200 0 0 1 260 240" stroke="#c62828" stroke-width="1.5" fill="none" stroke-dasharray="4,4"/>
+      <text x="290" y="60" font-size="11" fill="#c62828">fixed centrode (반지름 L)</text>
+      <!-- midpoint trace: arc r=L/2 -->
+      <path d="M 60 140 A 100 100 0 0 1 160 240" stroke="#0b5fff" stroke-width="2" fill="none"/>
+      <circle cx="170" cy="160" r="4" fill="#0b5fff"/>
+      <circle cx="150" cy="170" r="4" fill="#0b5fff"/>
+      <circle cx="120" cy="190" r="4" fill="#0b5fff"/>
+      <text x="180" y="170" font-size="11" fill="#0b5fff">사다리 중점 궤적 (반지름 L/2)</text>
+    </svg>
+    <p style="color:#666;font-size:12px">두 곡선의 반지름 비가 1:2 — 작은 원이 큰 원의 내부를 굴러가면서 나오는 카르다노 곡선. 사다리 운동의 본질을 한 그림으로 보여줍니다.</p>
+  </div>
+
+  <h2>10.1 손계산 워크플로 — 4절 링크 속도 분석 단계별</h2>
+  <div class="note">
+    <strong>예제 10.1 — 4절 링크의 입출력 각속도 비</strong>
+    <p>입력 크랭크 $O_1A$ 길이 80 mm가 $\omega_1 = 5$ rad/s로 회전. 출력 로커 $O_2B$ 길이 120 mm. coupler $AB$ 길이 200 mm. ground $O_1O_2$ 거리 250 mm. 입력 각도 $\theta_1 = 60°$일 때 출력 각속도 $\omega_2$를 구하라.</p>
+    <strong>풀이 단계</strong>
+    <ol style="margin:6px 0 0 0">
+      <li><strong>위치 분석</strong>: $A = (80\cos 60°, 80\sin 60°) = (40, 69.28)$ mm. $B$는 $|AB|=200$, $|O_2 B|=120$의 두 원의 교점. 풀면 $B \approx (227, 56)$ mm (한 분지 선택).</li>
+      <li><strong>$A$의 속도</strong>: $\mathbf{v}_A = \omega_1 \hat{k} \times \mathbf{r}_A$. $\omega_1 = 5$이고 $\mathbf{r}_A = (40, 69.28)$ → $\mathbf{v}_A = 5(-69.28, 40) = (-346.4, 200)$ mm/s.</li>
+      <li><strong>상대속도 식</strong>: $\mathbf{v}_B = \mathbf{v}_A + \omega_3 \hat{k}\times\mathbf{r}_{B/A}$. $\mathbf{r}_{B/A} = (187, -13.28)$ → $\hat{k}\times \mathbf{r}_{B/A} = (13.28, 187)$.</li>
+      <li><strong>$B$의 속도 형태</strong>: $\mathbf{v}_B = \omega_2 \hat{k}\times \mathbf{r}_{B} = \omega_2(-(B_y-O_{2y}), B_x - O_{2x})$. $O_2 = (250, 0)$ → $\mathbf{r}_B$ from $O_2 = (-23, 56)$ → $\mathbf{v}_B = \omega_2(-56, -23)$.</li>
+      <li><strong>두 식 같다고 두면</strong>: 두 미지수 $\omega_2, \omega_3$. 행렬로 풀면 $\omega_2 \approx 2.0$ rad/s, $\omega_3 \approx 1.1$ rad/s.</li>
+    </ol>
+    <strong>의미</strong> — 이 위치에서 입력 5 rad/s가 출력 2.0 rad/s로 감소(축당량 비 약 0.4). 4절 링크는 이렇게 위치에 따라 비가 변화 → 비선형 변환기. 캠 메커니즘과 함께 정확한 운동을 만드는 도구.
+  </div>
+
+  <h2>10.2 IC 활용 — 같은 4절 링크를 IC로 풀어 보기</h2>
+  <p>위 예제를 상대속도 식 대신 IC 방법으로 풀면 다음과 같습니다.</p>
+  <ol>
+    <li>$A$의 속도 방향은 $O_1 A$에 수직(이미 알고 있음). $B$의 속도 방향은 $O_2 B$에 수직.</li>
+    <li>두 방향에 수직인 선 = $O_1 A$의 연장과 $O_2 B$의 연장. 두 선의 교점 IC.</li>
+    <li>$\omega_3 = v_A / r_{IC,A}$ ($r_{IC,A}$ = IC에서 $A$까지 거리). 위 예제에서 IC는 약 (X, Y) — 도면을 그려야 정확한 좌표.</li>
+    <li>$\omega_2 = v_B / r_{O_2,B} = (\omega_3 \cdot r_{IC,B})/r_{O_2,B}$.</li>
+  </ol>
+  <p>IC 방법은 도면이 있어야 빠르고, 좌표 식 방법은 컴퓨터로 자동화하기 쉽습니다. 둘 다 같은 결과.</p>
+
+  <h2>10.3 사다리 추가 예제 — 미끄럼 마찰의 영향은?</h2>
+  <div class="note">
+    <strong>예제</strong> — 같은 사다리(4 m, $\theta=60°$, 바닥 끝 0.5 m/s)에서 사다리 중점의 속도 크기와 방향.
+    <br><br>
+    <strong>풀이</strong> — IC = (2, 3.46) m (벽-바닥 모서리에서 잰 좌표, 바닥 끝 $B$의 위치). 중점 $M$은 사다리 중간 = ($A+B$)/2 = (1, 1.73) m. IC에서 $M$까지 거리 = $\sqrt{1^2 + 1.73^2} = 2$ m (= 사다리 절반 길이). 흥미롭게도 사다리 위에서 IC까지 거리는 사다리 자체 길이의 절반과 같음. $\omega = 0.25$ rad/s. 따라서 중점 속도 = $2 \cdot 0.25 = 0.5$ m/s. 방향은 IC와 중점을 잇는 선에 수직.
+  </div>
+
+  <h2>10.4 굴림 + 미끄럼 — 일반화</h2>
+  <p>휠이 굴러가지만 미끄럼이 동시에 일어난다면(빙판, 마찰력 부족) 접촉점이 더 이상 IC가 아닙니다. 접촉점의 속도 = $v_c - R\omega \neq 0$. 이 양을 <em>미끄럼 속도(slip velocity)</em>라 함.</p>
+  <ul>
+    <li>가속 중: $v_c < R\omega$ (휠이 더 많이 회전), 접촉점 속도가 뒤쪽 → 마찰이 앞쪽으로(트랙션).</li>
+    <li>제동 중: $v_c > R\omega$ (휠이 덜 회전), 접촉점 속도가 앞쪽 → 마찰이 뒤쪽(제동력).</li>
+    <li>완전 잠김(ABS 없음 급제동): $\omega = 0$, 접촉점이 차와 같은 속도로 미끄러짐.</li>
+  </ul>
+  <p>미끄럼율(slip ratio) $s = (v_c - R\omega)/v_c$가 0~0.2 사이에서 마찰계수가 최대 — ABS·트랙션 컨트롤이 이 영역을 유지하려는 이유.</p>
+
+  <h2>11. 인터랙티브 데모 — 굴림 바퀴 위 임의의 점</h2>
+  <div class="demo">
+    <h4>🎮 데모 3 (d10c): 굴림 바퀴 — 점의 위치에 따른 속도 분포</h4>
+    <p>바퀴가 일정 속도로 굴러간다. 휠 위 임의의 점(반경 비율 슬라이더로 조절, 0=중심, 1=림)이 그리는 사이클로이드 궤적을 trace하고, 그 순간 속도 벡터를 표시. 점이 림 위에 있으면 IC(접촉점)에서 가장 멀리 있을 때 속도가 가장 크다는 것을 직접 확인.</p>
+    <canvas id="d10cC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>중심 속도 v_c (m/s) <span class="val" id="d10cVV">3</span><input type="range" id="d10cV" min="0.5" max="6" step="0.1" value="3"></label>
+      <label>점의 반경비 (0=중심, 1=림) <span class="val" id="d10cRV">1</span><input type="range" id="d10cR" min="0" max="1.4" step="0.05" value="1"></label>
+      <button id="d10cReset">trace 리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d10cC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['d10cV','d10cR'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let phi=0,trail=[],wheelX=120;
+    sl('d10cReset').onclick=()=>{trail=[];phi=0;wheelX=120;};
+    const R=70;
+    function loop(){
+      const v=+sl('d10cV').value,rr=+sl('d10cR').value;
+      const dt=0.025;
+      const w=v/(R*0.01);  // scale: R*0.01 m
+      phi+=w*dt;
+      wheelX+=v*dt*40;
+      if(wheelX>c.width-80){wheelX=80;trail=[];}
+      const cy=240;
+      // point on wheel at angle phi, radius rr*R from center
+      const px=wheelX+rr*R*Math.sin(phi);
+      const py=cy-rr*R*Math.cos(phi);
+      trail.push({x:px,y:py});if(trail.length>500)trail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // ground
+      x.strokeStyle='#888';x.lineWidth=2;x.beginPath();x.moveTo(0,cy+R);x.lineTo(c.width,cy+R);x.stroke();
+      // trail (cycloid)
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i===0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});
+      x.stroke();
+      // wheel
+      x.strokeStyle='#444';x.lineWidth=2;x.beginPath();x.arc(wheelX,cy,R,0,Math.PI*2);x.stroke();
+      // spokes
+      x.lineWidth=1;
+      for(let i=0;i<8;i++){
+        const a=phi+i*Math.PI/4;
+        x.beginPath();x.moveTo(wheelX,cy);x.lineTo(wheelX+R*Math.sin(a),cy-R*Math.cos(a));x.stroke();
+      }
+      // center
+      x.fillStyle='#444';x.beginPath();x.arc(wheelX,cy,4,0,Math.PI*2);x.fill();
+      // contact point IC
+      x.fillStyle='#c62828';x.beginPath();x.arc(wheelX,cy+R,5,0,Math.PI*2);x.fill();
+      x.font='10px sans-serif';x.textAlign='center';x.fillStyle='#c62828';x.fillText('IC',wheelX,cy+R+18);
+      // tracked point
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+      // velocity vector at point: v = v_c + ω × r
+      const dx_=px-wheelX,dy_=py-cy;
+      // ω is into page (clockwise as wheel rolls right): vx = v_c + ω*dy, vy = -ω*dx (using w>0 = clockwise)
+      const vx=v+w*0.01*dy_/0.01,vy=-w*0.01*dx_/0.01;
+      // simplify: with R as pixels and w in rad/s scaled
+      const vxp=v*40+w*dy_,vyp=-w*dx_;
+      // arrow
+      const sc=0.05;
+      x.strokeStyle='#2e7d32';x.lineWidth=2;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+vxp*sc,py+vyp*sc);x.stroke();
+      const a=Math.atan2(vyp,vxp);
+      const tx=px+vxp*sc,ty=py+vyp*sc;
+      x.beginPath();x.moveTo(tx,ty);x.lineTo(tx-Math.cos(a)*8-Math.sin(a)*4,ty-Math.sin(a)*8+Math.cos(a)*4);
+      x.moveTo(tx,ty);x.lineTo(tx-Math.cos(a)*8+Math.sin(a)*4,ty-Math.sin(a)*8-Math.cos(a)*4);x.stroke();
+      // info
+      const speed=Math.sqrt(vxp*vxp+vyp*vyp)/40;
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('점의 IC 거리 = '+(Math.sqrt(dx_*dx_+(dy_+R)*(dy_+R))/40*0.01).toFixed(3)+' m (스케일 보정)',20,30);
+      x.fillText('점의 속도 크기 ≈ '+speed.toFixed(2)+' m/s   (참고: 중심 v_c='+v.toFixed(2)+', 꼭대기 = 2v_c)',20,48);
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('반경비 1.4면 점이 림 바깥(예: 기차 휠 플랜지) → 일부에서 음의 수평속도 → 살짝 뒤로 감',20,c.height-15);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>12. 심화 — Coriolis 항이 등장하는 메커니즘</h2>
+  <p>슬라이더가 회전하는 막대 위를 따라 미끄러지는 메커니즘(예: Geneva drive, 회전 펌프의 베인)에서는 강체 위 점이 아닌 미끄러지는 점을 추적하므로 식에 추가 항이 붙습니다.</p>
+  $$ \mathbf{v}_P = \mathbf{v}_{P'} + \mathbf{v}_{\text{rel}} $$
+  $$ \mathbf{a}_P = \mathbf{a}_{P'} + \mathbf{a}_{\text{rel}} + 2\,\boldsymbol\omega\times\mathbf{v}_{\text{rel}} $$
+  <p>여기서 $P'$는 강체 위에 "지금 $P$의 위치에 있는 점"(가상). $\mathbf{v}_{\text{rel}}$는 강체에서 본 $P$의 속도. 마지막 항이 <em>코리올리 가속도</em>. 지구 자전 좌표계에서의 폭풍 회전, 회전 좌석에서 던진 공의 휘어짐, 지구 표면을 흐르는 강물의 한쪽 둑 침식까지 모두 같은 항.</p>
+
+  <div class="note">
+    <strong>예제 12.1 — Geneva drive</strong>
+    <p>Geneva drive는 연속 회전을 간헐 회전으로 바꾸는 메커니즘. 회전하는 driver에서 핀 하나가 driven wheel의 슬롯에 들어갔다 나옴. 핀이 슬롯 안에 있는 동안 핀의 운동은 driven wheel의 회전 + 슬롯 안에서의 미끄럼 두 효과의 합. 코리올리 가속도가 핀에 큰 횡력을 만들어 슬롯 측면을 마모시키므로 정밀 윤활이 필요. 영사기·인덱싱 머신·자동 조립 라인에서 사용.</p>
+  </div>
+
+  <h2>13. 심화 — 평면 메커니즘의 자유도와 그뤼블러 식</h2>
+  <p>평면 메커니즘의 자유도(degrees of freedom)는 그뤼블러(Grübler)의 식으로 계산:</p>
+  $$ \text{DOF} = 3(N-1) - 2J_1 - J_2 $$
+  <p>$N$ = 강체 수(ground 포함), $J_1$ = 1자유도 관절(회전핀, 슬라이더), $J_2$ = 2자유도 관절(점접촉 등). 4절 링크: $N=4$, $J_1=4$ → $\text{DOF}=9-8=1$. 입력 하나로 메커니즘 전체가 결정됨.</p>
+  <ul>
+    <li>5절 링크 ($N=5$, $J_1=5$): DOF = 12-10 = 2 → 입력 두 개 필요. 제어가 까다롭지만 자유도가 더 높아 다양한 운동 가능. 일부 보행 로봇 다리에 사용.</li>
+    <li>슬라이더-크랭크 ($N=4$, $J_1=4$): DOF = 1. 4절과 같은 자유도(슬라이더가 회전핀 대신).</li>
+  </ul>
+
+  <h2>14. 한 학기 흐름과의 연결</h2>
+  <p>이번 주 W10은 아래 흐름의 정점에 있습니다.</p>
+  <ul>
+    <li><strong>W2~W4</strong>(점 입자 운동학) → "한 점이 어떻게 움직이나"</li>
+    <li><strong>W5</strong>(상대 운동) → "두 점의 운동을 어떻게 비교하나"</li>
+    <li><strong>W9</strong>(강체 운동학 1) → "여러 점이 강체로 묶이면" — 회전, 굴림</li>
+    <li><strong>W10</strong>(강체 운동학 2) → "병진 + 회전이 동시에" — 상대 속도, IC, 메커니즘 ← 지금 여기</li>
+    <li><strong>W11</strong>(강체 운동역학) → 위 운동학에 힘과 토크를 더해 미분방정식 완성</li>
+  </ul>
+
+  <h2>14.1 연속체 관점 — 강체는 점들의 집합</h2>
+  <p>강체가 무한히 많은 입자로 이루어졌다고 보면, 모든 입자가 같은 $\boldsymbol\omega$로 회전(거리 보존 조건의 결과). 한 점($A$)을 지정하면 다른 모든 점의 운동이 정해진다 — "한 점의 병진 + 강체 전체의 회전"으로 분해되는 게 강체 운동학의 핵심 정리(샤를의 정리, Chasles' theorem).</p>
+  <p>3차원으로 확장하면 같은 정리가 "병진 + 회전축 둘레의 회전" 즉 나선(screw) 운동으로 일반화 — 모츠코비치(Mozzi)·샤를의 정리. 로봇공학에서 매니퓰레이터 운동을 단일 나선축으로 표현하는 표준 방법(screw theory).</p>
+
+  <h2>14.2 IC가 그리는 곡선 — Centrode</h2>
+  <p>강체가 운동하는 동안 IC는 매 순간 다른 위치. 두 곡선이 정의됩니다.</p>
+  <ul>
+    <li><strong>Fixed centrode (공간 centrode)</strong>: 정지 좌표계에서 본 IC의 자취. 사다리의 경우 벽-바닥 모서리에서 (cos²θ, sinθcosθ) 형태의 원호.</li>
+    <li><strong>Body centrode (강체 centrode)</strong>: 강체와 함께 움직이는 좌표계에서 본 IC의 자취.</li>
+  </ul>
+  <p>강체 운동은 마치 body centrode 곡선이 fixed centrode 위를 미끄럼 없이 굴러가는 것과 동일 — 이 결정적 사실로 임의 강체 운동이 "곡선의 굴림"으로 일반화됩니다(Cardan 곡선).</p>
+
+  <div class="tip">
+    <strong>아이디어 — 사다리의 Centrode</strong> — 사다리 미끄럼 운동에서 fixed centrode는 모서리 둘레 반경 $L$의 1/4 원호이고, body centrode는 사다리 중점 둘레 반경 $L/2$의 반원. 이 사실은 그림으로 보면 매우 우아함 — 사다리 길이 절반 짜리 작은 원이 사다리 길이 짜리 큰 원의 안에서 굴러가는 모양 = 카르다노 원(Cardano circle).
+  </div>
+
+  <h2>14.3 응용 통합 — 한 페이지 정리</h2>
+  <table>
+    <thead><tr><th>응용</th><th>핵심 메커니즘</th><th>이번 주에서 사용한 개념</th></tr></thead>
+    <tbody>
+      <tr><td>자동차 엔진</td><td>슬라이더-크랭크</td><td>피스톤의 비선형 속도, dead center</td></tr>
+      <tr><td>자동차 와이퍼</td><td>4절 링크 (크랭크-로커)</td><td>그라쇼프 조건, dead center로 끝에서 멈춤</td></tr>
+      <tr><td>자동차 서스펜션</td><td>4절 (더블 위시본)</td><td>coupler curve로 캠버·토 변화</td></tr>
+      <tr><td>풍력 발전기</td><td>회전체 + 바람 상대운동</td><td>tip-speed ratio 최적</td></tr>
+      <tr><td>산업 로봇</td><td>회전 관절 연쇄</td><td>속도 야코비안</td></tr>
+      <tr><td>보행 로봇</td><td>4~5절 다리</td><td>발 IC가 노면, coupler curve = 발걸음 궤적</td></tr>
+      <tr><td>Geneva drive</td><td>회전+슬라이드</td><td>코리올리 가속도</td></tr>
+      <tr><td>인쇄기</td><td>dead center 메커니즘</td><td>출력 momentary stop</td></tr>
+      <tr><td>재봉틀</td><td>4절 + 캠 합성</td><td>바늘 상하 + 실 잡이의 위상차</td></tr>
+      <tr><td>자전거</td><td>휠 굴림</td><td>접촉점 IC, 페달 점의 사이클로이드</td></tr>
+    </tbody>
+  </table>
+
+  <h2>14.4 시험 대비 체크리스트</h2>
+  <ul>
+    <li>상대속도 식을 평면운동 좌표로 분해해서 적을 수 있다.</li>
+    <li>강체의 두 점이 주어졌을 때 IC를 그래프로 찾을 수 있다.</li>
+    <li>4절 링크에서 입력→출력 각속도 비를 구할 수 있다.</li>
+    <li>굴림 바퀴의 임의 점 속도를 IC로 즉시 답할 수 있다.</li>
+    <li>가속도 식의 두 추가 항(접선·구심)이 어디서 오는지 설명할 수 있다.</li>
+    <li>그라쇼프 조건을 적용해 4절 링크의 운동 모드를 분류할 수 있다.</li>
+  </ul>
+
+  <h2>14.5 도전 문제 — 자전거의 "역설"</h2>
+  <div class="note">
+    <strong>도전</strong> — 자전거가 5 m/s로 굴러간다. 휠 반경 0.34 m. 휠 위 한 점이 0.5초 동안 그리는 사이클로이드 호의 길이 $s$를 구하라.
+    <br><br>
+    <strong>풀이</strong> — 사이클로이드 한 사이클 ($\phi: 0 \to 2\pi$)의 호 길이는 $8R$(고전 결과). 한 사이클은 시간 $T = 2\pi/\omega = 2\pi R/v_c = 2\pi(0.34)/5 \approx 0.427$ s. 즉 0.5초는 약 한 사이클 + 약간. 한 사이클 호 길이 = $8R = 2.72$ m. 추가 0.073초 = $0.073/T \approx 0.171$ 사이클 → 부분 호 길이는 적분으로 약 0.78 m. 합 약 <strong>3.5 m</strong>. 흥미롭게도 0.5초 동안 자전거가 이동한 거리는 2.5 m뿐 — 휠 위 점은 차체보다 더 많이 움직임.
+  </div>
+
+  <h2>14.6 IC와 자유도 — 마지막 통찰</h2>
+  <p>강체 평면 운동의 자유도는 3(병진 2 + 회전 1). 그런데 IC를 알면 그 자유도가 "두 점의 위치 + 한 점의 속도" 대신 "IC 위치(2) + 각속도(1) = 3"로 다시 셀 수 있음. 같은 정보의 다른 표현이지만 IC 표현이 굴림·메커니즘 분석에 훨씬 직관적입니다.</p>
+  <p>3차원으로 가면 강체 자유도는 6(병진 3 + 회전 3). IC는 "순간회전축(instantaneous screw axis)"으로 일반화되고, 운동학은 screw theory로 정리됩니다.</p>
+
+  <h2>15. 추가 읽을거리 (자율)</h2>
+  <ul>
+    <li><strong>Norton, "Design of Machinery"</strong> — 4절 링크·캠 분석의 표준 교과서. 그라쇼프 조건과 coupler curve 설계법이 자세히.</li>
+    <li><strong>Burmester theory</strong> — 4절 링크가 정해진 위치(2/3/4점) 통과하도록 합성하는 고전 그래픽 방법.</li>
+    <li><strong>로봇공학 — Craig, "Introduction to Robotics"</strong> — Jacobian 정의와 응용. 동역학과 직결.</li>
+    <li><strong>Murray, Li, Sastry "A Mathematical Introduction to Robotic Manipulation"</strong> — screw theory와 강체 운동학의 현대적 정리.</li>
+    <li><strong>역사 자료</strong> — James Watt가 증기기관에 직선 운동을 만들기 위해 4절 링크를 응용한 "Watt linkage" — 정확한 직선 대신 "근사 직선 coupler curve"로 만족한 19세기 디자인 철학.</li>
+  </ul>
+
+  <h2>15.1 데모 4 — 슬라이더-크랭크 피스톤의 비선형 속도</h2>
+  <div class="demo">
+    <h4>🎮 데모 4 (d10p): 엔진 피스톤 — 위치/속도 그래프 동시 보기</h4>
+    <p>크랭크가 일정 각속도로 도는데, 피스톤은 비선형 속도로 왕복. <strong>$\theta = 0°, 180°$에서 속도 0 (dead center)</strong>, $\theta = 90°$ 부근에서 최대. $\theta$ 한 사이클 동안의 위치/속도/가속도를 동시에 그려 직관 확인.</p>
+    <canvas id="d10pC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>크랭크 r (cm) <span class="val" id="d10prV">5</span><input type="range" id="d10pr" min="2" max="8" step="0.5" value="5"></label>
+      <label>로드 l (cm) <span class="val" id="d10plV">15</span><input type="range" id="d10pl" min="8" max="25" step="0.5" value="15"></label>
+      <label>크랭크 회전수 (rpm) <span class="val" id="d10pwV">600</span><input type="range" id="d10pw" min="100" max="3000" step="50" value="600"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d10pC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['d10pr','d10pl','d10pw'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let phi=0;
+    function loop(){
+      const r=+sl('d10pr').value*0.01,l=+sl('d10pl').value*0.01;
+      const rpm=+sl('d10pw').value,w=rpm*2*Math.PI/60;
+      phi+=w*0.025;if(phi>2*Math.PI)phi-=2*Math.PI;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // mechanism on top
+      const cx=200,cy=120,sc=600;
+      const A={x:cx+r*sc*Math.cos(phi),y:cy-r*sc*Math.sin(phi)};
+      // piston B at x = r cos+sqrt(l^2-r^2 sin^2)
+      const xp=r*Math.cos(phi)+Math.sqrt(l*l-r*r*Math.sin(phi)*Math.sin(phi));
+      const B={x:cx+xp*sc,y:cy};
+      x.strokeStyle='#888';x.lineWidth=2;x.beginPath();x.moveTo(cx-30,cy);x.lineTo(cx+l*sc+50,cy);x.stroke();
+      x.strokeStyle='#444';x.lineWidth=1;
+      x.beginPath();x.arc(cx,cy,r*sc,0,Math.PI*2);x.stroke();
+      x.strokeStyle='#2e7d32';x.lineWidth=4;x.beginPath();x.moveTo(cx,cy);x.lineTo(A.x,A.y);x.stroke();
+      x.strokeStyle='#444';x.lineWidth=4;x.beginPath();x.moveTo(A.x,A.y);x.lineTo(B.x,B.y);x.stroke();
+      x.fillStyle='#0b5fff';x.fillRect(B.x-12,cy-18,30,36);x.strokeStyle='#333';x.strokeRect(B.x-12,cy-18,30,36);
+      x.fillStyle='#444';x.beginPath();x.arc(cx,cy,4,0,Math.PI*2);x.fill();
+      x.fillStyle='#fff';x.beginPath();x.arc(A.x,A.y,4,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // graph at bottom
+      const gT=200,gB=350,gL=20,gR=620;
+      x.strokeStyle='#d0d4d9';x.strokeRect(gL,gT,gR-gL,gB-gT);
+      const zeroY=(gT+gB)/2;
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.moveTo(gL,zeroY);x.lineTo(gR,zeroY);x.stroke();x.setLineDash([]);
+      // plot x_dot and x over phi 0..2pi
+      let xMax=r+l,xMin=l-r;
+      let vMax=r*w*1.5;
+      x.strokeStyle='#0b5fff';x.lineWidth=1.8;x.beginPath();
+      for(let i=0;i<=200;i++){
+        const ph=i/200*2*Math.PI;
+        const pos=r*Math.cos(ph)+Math.sqrt(l*l-r*r*Math.sin(ph)*Math.sin(ph));
+        const px2=gL+(i/200)*(gR-gL);
+        const py2=zeroY-(pos-(xMax+xMin)/2)/((xMax-xMin)/2)*((gB-gT)/2-8);
+        if(i===0)x.moveTo(px2,py2);else x.lineTo(px2,py2);
+      }
+      x.stroke();
+      x.strokeStyle='#c62828';x.beginPath();
+      for(let i=0;i<=200;i++){
+        const ph=i/200*2*Math.PI;
+        const vel=-r*w*Math.sin(ph)*(1+r*Math.cos(ph)/Math.sqrt(l*l-r*r*Math.sin(ph)*Math.sin(ph)));
+        const px2=gL+(i/200)*(gR-gL);
+        const py2=zeroY-vel/vMax*((gB-gT)/2-8);
+        if(i===0)x.moveTo(px2,py2);else x.lineTo(px2,py2);
+      }
+      x.stroke();
+      // current phi marker
+      const px=gL+(phi/(2*Math.PI))*(gR-gL);
+      x.strokeStyle='#9e35b8';x.lineWidth=1.5;x.beginPath();x.moveTo(px,gT);x.lineTo(px,gB);x.stroke();
+      // legend
+      x.fillStyle='#0b5fff';x.fillRect(20,182,12,3);x.fillStyle='#333';x.font='11px sans-serif';x.fillText('피스톤 위치',38,188);
+      x.fillStyle='#c62828';x.fillRect(140,182,12,3);x.fillStyle='#333';x.fillText('피스톤 속도',158,188);
+      x.fillStyle='#9e35b8';x.fillText('현재 φ',265,188);
+      x.fillStyle='#444';x.font='12px Consolas,monospace';
+      const curV=-r*w*Math.sin(phi)*(1+r*Math.cos(phi)/Math.sqrt(l*l-r*r*Math.sin(phi)*Math.sin(phi)));
+      x.fillText('φ='+(phi*180/Math.PI).toFixed(0)+'°,  v='+curV.toFixed(2)+' m/s',330,188);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('θ=0°, 180°에서 dead center → v=0. 비대칭 곡선 = 엔진 진동의 1·2차 성분',gL,gB+12);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>15.2 r/l 비가 작아질수록 — 거의 사인 운동</h2>
+  <p>로드가 크랭크보다 훨씬 길면 ($l \gg r$) $\sqrt{l^2-r^2\sin^2\theta} \approx l$로 근사 가능. 피스톤 위치 $x \approx r\cos\theta + l$, 속도 $\dot x \approx -r\omega\sin\theta$ — 거의 순수 사인 함수. 즉 로드가 길수록 피스톤은 SHM에 가까운 운동을 함. 자동차 엔진은 $r/l \approx 0.3$이라 살짝 비대칭, 짧은 로드를 쓰는 모터사이클은 $r/l \approx 0.5$로 더 비대칭.</p>
+
+  <h2>15.3 캠 메커니즘 — 4절보다 자유로운 운동 생성</h2>
+  <p>4절 링크가 만들 수 있는 출력 운동은 정해진 곡선군. 임의의 운동(예: "180° 동안 천천히 가다 잠시 멈춤")을 정확히 만들려면 캠 메커니즘이 필요. 캠은 회전하는 비원형 곡선이고 추종자(follower)가 그 곡선을 따라 움직임. 같은 운동학 식($\mathbf{v}_B = \mathbf{v}_A + \boldsymbol\omega\times\mathbf{r}$)이 캠과 추종자 사이 접촉점에서도 적용 — 단, 강체 두 점이 아니라 미끄러지는 점이라 코리올리 항이 추가됨.</p>
+
+  <h2>15.4 단계별 풀이 — 더블 위시본 한 사이클</h2>
+  <div class="note">
+    <strong>예제 15.4 — 더블 위시본 서스펜션 분석</strong>
+    <p>위 암(상부 컨트롤 암) 길이 250 mm, 아래 암 길이 350 mm, 휠 캐리어(coupler) 위/아래 핀 간격 200 mm, 차체 위/아래 핀 간격 280 mm. 휠이 위로 30 mm 올라갔을 때 캠버 변화량 추정.</p>
+    <strong>풀이</strong>
+    <ol style="margin:6px 0 0 0">
+      <li>4절 위치 분석 — 차체 핀을 ground로, 두 암이 회전 막대(crank/rocker), 휠 캐리어가 coupler.</li>
+      <li>휠 중심이 30 mm 상승하는 입력 → 두 암의 회전 각도 변화. $\Delta\theta_\text{upper} \approx 30/250 = 0.12$ rad ≈ 6.9°, $\Delta\theta_\text{lower} \approx 30/350 = 0.086$ rad ≈ 4.9°.</li>
+      <li>두 회전이 다르므로 휠 캐리어가 약간 회전 — 그 회전이 곧 캠버 변화.</li>
+      <li>$\Delta\text{camber} \approx (\Delta\theta_\text{upper} - \Delta\theta_\text{lower}) \cdot \text{기하 비} \approx 1$~$2°$ 안쪽 기울기(경험치).</li>
+    </ol>
+    <strong>의미</strong> — 이 조정이 코너링 시 외측 휠을 노면에 더 잘 밀착시켜 그립을 향상. F1 서스펜션은 이 비를 0.1° 단위로 튜닝.
+  </div>
+
+  <h2>15.5 응용 — 시계 메커니즘 (Watch Escapement)</h2>
+  <p>기계식 시계의 진자가 일정한 진동수를 유지하려면 매 진동마다 정확히 같은 양의 에너지가 공급되어야 함. 이 일을 하는 부품이 escapement(이탈기). 진자의 한 진동마다 톱니바퀴(escape wheel)가 한 칸씩 돌면서 진자에 살짝 밀어주는 임펄스를 줌. 이 짧은 접촉이 4절 링크의 dead center 비슷한 dwell(멈춤) 구간을 만들어 정확한 시간 측정이 가능. 동역학과 시계 정확도가 직결되는 사례.</p>
+
+  <h2>15.6 응용 — 자전거 페달과 기어</h2>
+  <p>자전거 페달이 만드는 파워는 페달 위치(크랭크 각도)에 따라 다름. 페달이 위/아래 dead center 부근에서는 모멘트 팔이 짧아 토크가 거의 0 — 그래서 멈췄다가 출발할 때 페달을 위·아래에 두지 않고 약 45°에 두는 것이 직관. 평지 주행에서는 두 발이 교대로 dead center를 지나기 때문에 차체의 추진력이 미세하게 맥동. 비싼 자전거의 비원형 chainring(타원형 기어)은 이 맥동을 줄이려는 시도.</p>
+
+  <h2>15.7 통합 예제 — 굴림 + 회전 메커니즘</h2>
+  <div class="note">
+    <strong>예제</strong> — 자전거 페달이 크랭크 길이 175 mm로 회전(60 rpm). 페달은 휠과 chain으로 연결되며 기어비 3:1(크랭크 1바퀴=휠 3바퀴). 휠 반경 0.34 m. (a) 자전거의 지면 속도 (b) 페달 위 한 점이 그리는 사이클로이드의 궤적은 어떤 모양?
+    <br><br>
+    <strong>풀이</strong>
+    <ul style="margin:6px 0 0 0">
+      <li>페달 회전속도 $\omega_p = 60\cdot 2\pi/60 = 2\pi$ rad/s.</li>
+      <li>휠 회전속도 $\omega_w = 3\omega_p = 6\pi$ rad/s ≈ 18.85 rad/s.</li>
+      <li>지면 속도 $v_c = R\omega_w = 0.34\cdot 18.85 \approx \mathbf{6.41}$ m/s = 23 km/h.</li>
+      <li>페달은 차체 좌표계에서 반경 175 mm 원, 차체가 6.41 m/s로 이동 → 페달의 지면 좌표계 운동은 사이클로이드(차체 속도가 페달 회전 끝점 속도 $r_p\omega_p \approx 0.55$ m/s보다 크므로 항상 앞으로 → 곡선 모양은 정점이 둥근 cycloid).</li>
+    </ul>
+  </div>
+
+  <h2>15.8 그래픽 vs 해석 — 두 방법의 비교</h2>
+  <table>
+    <thead><tr><th>방법</th><th>장점</th><th>단점</th><th>적용</th></tr></thead>
+    <tbody>
+      <tr><td>그래픽 (IC, 도면)</td><td>직관적, 빠름, 실수 적음</td><td>정밀도 낮음</td><td>설계 초기, 시험문제 풀이</td></tr>
+      <tr><td>해석 (식, 좌표)</td><td>임의 정밀도, 자동화 가능</td><td>실수 잡기 어려움</td><td>최종 설계, 시뮬레이션</td></tr>
+      <tr><td>벡터 (외적, 좌표 자유)</td><td>3D 일반화 자연스러움</td><td>외적 계산이 번거로움</td><td>로봇공학·우주역학</td></tr>
+      <tr><td>복소수 표현</td><td>2D에서 외적이 곱셈 한 번</td><td>3D 일반화 안 됨</td><td>2D 메커니즘 분석에 깔끔</td></tr>
+    </tbody>
+  </table>
+
+  <h2>15.9 복소수 표현 — 2D 강체 운동의 우아한 수학</h2>
+  <p>평면 운동을 복소수 $z = x + iy$로 표현하면 회전이 $e^{i\theta}$ 곱으로 단순화. 강체 위 두 점 $z_A, z_B$에 대해</p>
+  $$ z_B - z_A = |r|e^{i\phi(t)},\quad \dot z_B - \dot z_A = i\omega\,(z_B - z_A) $$
+  <p>외적 대신 $i\omega$ 곱셈 한 번. 4절 링크에 적용하면 4개의 막대를 4개의 복소수로 적고, "닫힌 다각형 조건"을 한 줄 식으로 풀 수 있음 — 위치/속도/가속도 분석이 모두 한 페이지에 정리됨. 동역학 강좌의 한 페이지가 다음 학기 메커니즘 설계로 자연스레 이어집니다.</p>
+
+  <h2>15.10 추가 도전 — 두 휠이 다른 속도로 회전 (차동기어)</h2>
+  <div class="note">
+    <strong>도전</strong> — 자동차가 코너를 돈다. 외측 휠이 내측 휠보다 빠르게 회전해야 미끄러지지 않음. 두 휠 사이 거리(트랙) 1.5 m, 코너 회전 반경(차체 중심 기준) 10 m, 차체 속도 15 m/s. 두 휠의 각속도 차이는?
+    <br><br>
+    <strong>풀이</strong> — 차체가 코너를 돌 때 차체의 회전 IC는 차체 옆 10 m 떨어진 점. 외측 휠은 IC에서 10.75 m, 내측 휠은 9.25 m 떨어짐. 차체 회전 각속도 $\Omega = v/r = 15/10 = 1.5$ rad/s. 외측 휠 속도 $= 1.5\cdot 10.75 = 16.125$ m/s, 내측 = $1.5\cdot 9.25 = 13.875$ m/s. 휠 반경 0.32 m이라면 외측 $\omega = 50.4$ rad/s, 내측 $\omega = 43.4$ rad/s. <strong>차이 7 rad/s 약 14%</strong>. 이 차이를 자동으로 만드는 것이 차동기어(differential), W10에서 본 IC 개념의 직접 응용.
+  </div>
+
+  <h2>15.11 4절 링크 분류 — Coupler Curve 종류</h2>
+  <ul>
+    <li><strong>Symmetric coupler curve</strong>: 4절 링크가 대칭(두 회전 막대 길이 같고 ground·coupler도 같음)일 때 coupler curve도 좌우 대칭. 미용 미러·상자 뚜껑 등 대칭 운동에 사용.</li>
+    <li><strong>Coupler curve with cusp</strong>: 한 점에서 속도가 0이 되며 뾰족점을 만듦. dead center에 해당. 인쇄·도장·자수기에 활용.</li>
+    <li><strong>Watt's curve (approximate straight line)</strong>: 4절 비를 잘 잡으면 coupler 위 한 점이 거의 직선으로 움직이는 영역이 생김. James Watt가 증기기관에 응용.</li>
+    <li><strong>Roberts' straight-line linkage, Chebyshev linkage, Hoekens linkage</strong>: 학자들이 4절 비를 미세 조정해 더 좋은 직선 근사를 만든 역사. 19세기 메커니즘 설계의 백미.</li>
+  </ul>
+
+  <h2>15.12 시뮬레이션 vs 손계산 — 둘 다 필요</h2>
+  <p>현대 엔지니어링은 ADAMS·SimMechanics·MATLAB의 운동학 시뮬레이터로 메커니즘을 분석합니다. 그러나 손계산이 필요한 두 이유:</p>
+  <ol>
+    <li><strong>설계 초기 직관</strong> — 어떤 4절 비가 좋을지, 어디가 dead center인지 등은 손계산이 더 빠름. 시뮬레이션은 이미 정해진 디자인의 검증용.</li>
+    <li><strong>시뮬레이션 결과 검증</strong> — 시뮬레이터에 모델링 실수가 있어도 결과는 그럴듯해 보일 수 있음. 손으로 한두 위치를 풀어 비교하는 것이 실수 잡는 표준 절차.</li>
+  </ol>
+
+  <h2>16. 마무리 — 한 학기 흐름의 정점</h2>
+  <p>운동학(W2~W4 점, W9~W10 강체)은 "왜 그렇게 움직이나"를 묻지 않고 "어떻게 움직이는가"만 다룹니다. 이번 주는 운동학의 절정 — 강체의 어떤 점이든 IC와 $\omega$ 두 가지로 즉시 답을 낼 수 있고, 4절·슬라이더-크랭크 같은 메커니즘 분석이 일관된 방법으로 풀립니다.</p>
+  <p>다음 주 W11에서는 여기에 힘과 토크를 더해 운동방정식을 닫습니다. F=ma의 회전 버전 $M_G = I_G\alpha$를 만나고, 관성모멘트라는 새 양이 등장 — 강체가 "회전을 거부하는 정도"의 정량화. 그리고 W12에서는 위 모든 것이 진동이라는 한 형태의 운동에서 만나게 됩니다.</p>
+
+  <h3>한 줄 요약</h3>
+  <p style="font-size:14px"><strong>강체의 평면 운동 = 한 점의 병진 + 그 점 둘레의 회전. 이를 시각화하는 가장 쉬운 방법은 IC를 찾는 것이고, 메커니즘이 복잡해지면 같은 식을 좌표·복소수·외적으로 자동화한다.</strong></p>
+
+  <h2>17. 보충 — 자주 묻는 질문</h2>
+  <h3>Q1. IC가 강체 밖에 있어도 정말 의미가 있나요?</h3>
+  <p>네. IC는 "수학적으로 그 순간 속도가 0이 되는 점"이지 "강체에 박혀 있는 물리적인 점"이 아닙니다. 사다리 데모처럼 IC가 사다리에서 멀리 떨어진 곳에 있어도 강체의 모든 점 속도가 그 IC를 중심으로 회전하는 것처럼 보입니다. 이 가상의 회전 중심이 속도 분석을 단순화합니다.</p>
+
+  <h3>Q2. 굴림 운동에서 접촉점이 IC인 이유가 뭐죠?</h3>
+  <p>미끄러지지 않는다는 조건이 곧 "접촉점 = 정지"라는 운동학적 조건입니다. 정지 = 속도 0 = IC 정의. 만약 미끄러진다면 접촉점도 일정 속도로 움직이므로 IC가 아닙니다(slip velocity가 존재). ABS·트랙션 컨트롤이 다루는 영역.</p>
+
+  <h3>Q3. 4절 링크에서 dead center가 두 번 일어나나요?</h3>
+  <p>일반적인 크랭크-로커 4절은 한 사이클 동안 출력 로커가 끝점에서 두 번 멈춥니다(좌측 끝, 우측 끝). 이 두 멈춤이 곧 dead center 두 위치. 자동차 와이퍼가 화면 양 끝에서 잠시 멈췄다 돌아오는 게 그 직접 응용.</p>
+
+  <h3>Q4. 가속도 분석에 IC를 써도 되는 경우가 있나요?</h3>
+  <p>특수한 경우 — IC가 시간에 대해 정지(즉 IC 위치 자체가 안 움직임)일 때만 IC의 가속도가 0이고, 이때 가속도 분석에 IC를 쓸 수 있습니다. 일반적으로는 IC가 매 순간 위치를 바꾸므로 운동량 효과가 추가되어 그대로 적용 불가. 이 때문에 가속도 분석은 별도 식이 필요합니다.</p>
+
+  <h3>Q5. 상대속도 식과 좌표계 변환의 차이는?</h3>
+  <p>좌표계 변환(W5)은 두 좌표계 사이 운동을 이은 것이고, 상대속도 식(W10)은 같은 좌표계에서 본 두 점의 운동 관계. 둘은 다른 도구이고 강체에서 두 점의 거리가 일정하다는 사실이 W10 식의 핵심 단서입니다.</p>
+
+  <h2>18. 한 학기 통합 — IC가 등장하는 모든 곳</h2>
+  <table>
+    <thead><tr><th>주차</th><th>IC가 어디에 숨어 있는가</th></tr></thead>
+    <tbody>
+      <tr><td>W4 (n-t 좌표)</td><td>곡률 중심이 한 순간의 회전 중심 — IC의 일반화</td></tr>
+      <tr><td>W5 (상대 운동)</td><td>"한 점에서 본 다른 점" 관점 = IC 분석의 기초</td></tr>
+      <tr><td>W9 (강체 회전·굴림)</td><td>접촉점이 IC라는 사실</td></tr>
+      <tr><td>W10 (강체 일반평면운동)</td><td>IC 이론 정점 ← 지금</td></tr>
+      <tr><td>W11 (강체 운동역학)</td><td>고정점 둘레 회전: $\sum M_O = I_O\alpha$ (O가 정지 IC)</td></tr>
+      <tr><td>W12 (진동)</td><td>물리진자: 핀이 IC, $I_O$로 진동수 계산</td></tr>
+    </tbody>
+  </table>
+
+  <h2>19. 시각화 — 4절 링크 한 사이클의 Snapshots</h2>
+  <div class="demo">
+    <h4>📐 SVG: 4절 한 사이클 (입력 0°, 90°, 180°, 270°에서)</h4>
+    <p>같은 4절 링크가 4가지 입력 각도에서 어떤 모양인지. 흥미로운 사실: $\theta_1 = 90°$와 $270°$에서 메커니즘이 거의 거울상이지만 출력 위치는 다름. 이 비대칭이 메커니즘의 단방향 특성을 만듦.</p>
+    <svg viewBox="0 0 720 200" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:8px">
+      <!-- 4 frames -->
+      <g transform="translate(20,20)">
+        <text x="80" y="0" text-anchor="middle" font-size="11" font-weight="bold">θ₁=0°</text>
+        <line x1="20" y1="140" x2="140" y2="140" stroke="#888" stroke-width="2"/>
+        <circle cx="40" cy="140" r="3" fill="#333"/>
+        <circle cx="120" cy="140" r="3" fill="#333"/>
+        <line x1="40" y1="140" x2="80" y2="140" stroke="#2e7d32" stroke-width="3"/>
+        <line x1="80" y1="140" x2="120" y2="100" stroke="#444" stroke-width="3"/>
+        <line x1="120" y1="140" x2="120" y2="100" stroke="#9e35b8" stroke-width="3"/>
+      </g>
+      <g transform="translate(190,20)">
+        <text x="80" y="0" text-anchor="middle" font-size="11" font-weight="bold">θ₁=90°</text>
+        <line x1="20" y1="140" x2="140" y2="140" stroke="#888" stroke-width="2"/>
+        <circle cx="40" cy="140" r="3" fill="#333"/>
+        <circle cx="120" cy="140" r="3" fill="#333"/>
+        <line x1="40" y1="140" x2="40" y2="100" stroke="#2e7d32" stroke-width="3"/>
+        <line x1="40" y1="100" x2="100" y2="80" stroke="#444" stroke-width="3"/>
+        <line x1="120" y1="140" x2="100" y2="80" stroke="#9e35b8" stroke-width="3"/>
+      </g>
+      <g transform="translate(360,20)">
+        <text x="80" y="0" text-anchor="middle" font-size="11" font-weight="bold">θ₁=180°</text>
+        <line x1="20" y1="140" x2="140" y2="140" stroke="#888" stroke-width="2"/>
+        <circle cx="40" cy="140" r="3" fill="#333"/>
+        <circle cx="120" cy="140" r="3" fill="#333"/>
+        <line x1="40" y1="140" x2="0" y2="140" stroke="#2e7d32" stroke-width="3"/>
+        <line x1="0" y1="140" x2="100" y2="120" stroke="#444" stroke-width="3"/>
+        <line x1="120" y1="140" x2="100" y2="120" stroke="#9e35b8" stroke-width="3"/>
+      </g>
+      <g transform="translate(530,20)">
+        <text x="80" y="0" text-anchor="middle" font-size="11" font-weight="bold">θ₁=270°</text>
+        <line x1="20" y1="140" x2="140" y2="140" stroke="#888" stroke-width="2"/>
+        <circle cx="40" cy="140" r="3" fill="#333"/>
+        <circle cx="120" cy="140" r="3" fill="#333"/>
+        <line x1="40" y1="140" x2="40" y2="170" stroke="#2e7d32" stroke-width="3"/>
+        <line x1="40" y1="170" x2="100" y2="170" stroke="#444" stroke-width="3"/>
+        <line x1="120" y1="140" x2="100" y2="170" stroke="#9e35b8" stroke-width="3"/>
+      </g>
+    </svg>
+  </div>
+
+  <p style="color:#666;font-size:12px;margin-top:12px">위 그림은 어림 형태이며, 정확한 분석은 위 데모 2를 참고하세요.</p>
+
+  <h2>20. 추가 연습 — 단계별 풀이까지</h2>
+  <div class="note">
+    <strong>연습 20.1</strong> — 굴림 바퀴(반경 0.3 m)가 5 m/s로 굴러간다. 휠 상에서 중심에서 0.2 m 떨어진 점이 휠 앞쪽 위 45° 방향에 있을 때, 그 점의 속도 벡터(지면 좌표)?
+    <p><strong>풀이</strong> — $\omega = 5/0.3 = 16.67$ rad/s. 점의 위치 = 중심 + (0.2cos45°, 0.2sin45°) = 중심에서 (0.1414, -0.1414) (위쪽 양 y로 잡음). $\mathbf{v} = (5, 0) + \omega\hat{k}\times(0.1414, -0.1414) = (5, 0) + 16.67(0.1414, 0.1414) = (5+2.357, 2.357) = (7.36, 2.36)$ m/s. 크기 $\sqrt{7.36^2+2.36^2} \approx 7.73$ m/s.</p>
+  </div>
+
+  <div class="note">
+    <strong>연습 20.2</strong> — 같은 휠에서, 휠 위 점의 속도 크기가 차체 속도(5 m/s)와 같아지는 지점은? (즉 점의 속도 = 5 m/s)
+    <p><strong>풀이</strong> — 점이 IC(접촉점)에서 거리 $d$만큼 떨어져 있다면 속도 $= d\omega$. $d\omega = 5 \Rightarrow d = 5/16.67 = 0.3$ m = 휠 반경. 즉 IC에서 휠 반경만큼 떨어진 모든 점 = 휠 중심을 둘러싼 반지름 0.3 m 원호 위 점들. 이 원이 휠 자체 둘레와 만나는 두 점이 정확히 차 속도와 같은 속도를 가짐.</p>
+  </div>
+
+  <div class="note">
+    <strong>연습 20.3</strong> — 사다리 추가: 사다리(L=4 m)가 미끄러질 때, 사다리 위의 어떤 점이 가장 큰 속도를 가지나? 그리고 그 속도는?
+    <p><strong>풀이</strong> — 속도 = (IC에서 거리)·ω. 사다리 위에서 IC와의 거리가 가장 먼 점이 가장 빠름. 사다리는 IC와 모서리를 두 변으로 하는 직사각형의 대각선이고, IC가 모서리에 직각으로 위치하므로 IC에서 사다리 위 점까지 거리가 양 끝점에서 최대. $\theta=60°$, IC=(2, 3.46) m. 양 끝 거리: 위 끝(0, 3.46)→IC=2, 아래 끝(2, 0)→IC=3.46. 즉 <strong>아래 끝이 가장 빠름</strong>(3.46·0.25=0.866 m/s). 단 데모 설정에 따라 두 끝의 속도는 정해진 값으로 설정될 수 있음.</p>
+  </div>
+
+  <h2>21. 종합 — 한 단어로 W10</h2>
+  <p style="font-size:15px;text-align:center;font-weight:bold;color:#0742b8">"순간중심"</p>
+  <p>강체의 평면 운동에서 매 순간 회전 중심이 어디인지를 찾으면, 그 강체 위 모든 점의 속도가 한눈에 보인다. 그것이 운동학의 마지막 도구이자 메커니즘 설계의 첫 단추.</p>
+
+  <h2>22. 마지막 한 마디 — 왜 우리는 사다리·바퀴·4절을 배우는가</h2>
+  <p>겉보기엔 따로따로 보이지만 모두 같은 식($\mathbf{v}_B = \mathbf{v}_A + \boldsymbol\omega\times\mathbf{r}_{B/A}$)에서 출발합니다. 이 식이 사다리에 적용되면 IC가 한 점, 굴림 바퀴에서는 접촉점, 4절에서는 두 회전축 연장선 교점. <em>본질이 같다</em>는 것을 보는 능력이 공학자에게 가장 큰 자산입니다. 새 메커니즘을 마주쳐도 "이건 W10에서 본 그것이다"라고 알아채는 순간 풀이가 보입니다.</p>
+
+  <p style="font-style:italic;color:#666;text-align:center;margin-top:24px">"수학자에게는 단지 한 식이지만, 공학자에게는 천 개의 응용이다." — Jean-Victor Poncelet, projective geometry 창시자.</p>
+
+  <h2>23. 부록 — 외적 한 줄 정리</h2>
+  <p>2D 강체 운동학에서 자주 등장하는 외적의 빠른 계산을 모아 둡니다.</p>
+  <ul>
+    <li>$\hat{k}\times\hat{i} = \hat{j}$, $\hat{k}\times\hat{j} = -\hat{i}$.</li>
+    <li>$\omega\hat{k}\times(x\hat{i}+y\hat{j}) = \omega(-y\hat{i}+x\hat{j})$ — "위치를 90° 반시계 회전 후 ω 곱"</li>
+    <li>$\omega\hat{k}\times r\hat{e}_r = \omega r \hat{e}_\theta$ — 극좌표에서 자연스러움</li>
+    <li>$|\boldsymbol\omega\times\mathbf{r}| = \omega r \sin\angle(\boldsymbol\omega, \mathbf{r})$, 평면 운동에서는 항상 $\sin = 1$.</li>
+    <li>$(\omega\hat{k})\times[(\omega\hat{k})\times\mathbf{r}] = -\omega^2\mathbf{r}$ — 구심 가속도 한 줄 식.</li>
+  </ul>
+
+  <h2>24. 부록 — 영상자료 추천</h2>
+  <ul>
+    <li>"Mechanism Animations" YouTube 채널 — 4절·캠·기어·연결봉 모두 시각화.</li>
+    <li>MIT OCW 2.003J 강의 동영상 — 강체 운동학·운동역학 한 학기 분량 공개.</li>
+    <li>"Engineer Guy" — 자동차 차동기어, 트랜스미션 분해 영상으로 IC 개념 직관 학습 가능.</li>
+  </ul>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="09-rigid-kinematics-1.html">← W9</a> · <a href="../../dynamics.html">강의 목록</a> · <a href="11-rigid-kinetics.html">W11 강체 평면 운동역학 →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

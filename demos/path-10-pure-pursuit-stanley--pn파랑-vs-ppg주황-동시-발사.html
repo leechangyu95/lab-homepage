@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 PN(파랑) vs PPG(주황) 동시 발사 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 PN(파랑) vs PPG(주황) 동시 발사</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/10-pure-pursuit-stanley.html">Week 10. Guidance — Pure Pursuit · Stanley · PN</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 PN(파랑) vs PPG(주황) 동시 발사</h4>
+    <p>같은 시작점·속도·표적에서 두 미사일을 동시에 발사. PPG 는 매 순간 표적의 <em>지금 위치</em>로 돌고,
+    PN 은 LOS 회전율 $\dot\lambda$ 에 비례해 회전합니다. 표적 패턴(직선/사인/급기동)과 항법상수 $N$ 을 만져보세요.
+    PN 이 거의 항상 더 빨리 명중합니다.</p>
+    <canvas id="pn" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>표적 패턴
+        <select id="pnPat">
+          <option value="straight">직선</option>
+          <option value="sine" selected>사인 회피</option>
+          <option value="evade">급기동 회피</option>
+        </select>
+      </label>
+      <label>항법상수 N <span class="val" id="pnNV">3.0</span><input type="range" id="pnN" min="1" max="6" step="0.1" value="3"></label>
+      <label>회전 한계 ω_max <span class="val" id="pnOmaxV">3</span><input type="range" id="pnOmax" min="0.5" max="6" step="0.1" value="3"></label>
+      <button id="pnRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pn'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    const aDiff=(a,b)=>((a-b+Math.PI*3)%(2*Math.PI))-Math.PI;
+    let mp,mn,t,tk,lamPrev,hist,phitT,nhitT;
+    function reset(){
+      mp={x:60,y:340,th:-0.4,v:120,alive:true,latAcc:0};
+      mn={x:60,y:340,th:-0.4,v:120,alive:true,latAcc:0};
+      t={x:560,y:60,th:Math.PI*0.65,v:55};
+      tk=0;
+      lamPrev=Math.atan2(t.y-mn.y,t.x-mn.x);
+      hist={mp:[],mn:[],t:[]};
+      phitT=null;nhitT=null;
+    }
+    reset();
+    sl('pnRst').onclick=reset;
+    function moveTarget(dt){
+      const pat=sl('pnPat').value;
+      if(pat==='sine')t.th+=1.8*Math.cos(tk*1.5)*dt;
+      else if(pat==='evade')t.th+=2.4*Math.cos(tk*2.2)*dt;
+      t.x+=t.v*Math.cos(t.th)*dt;
+      t.y+=t.v*Math.sin(t.th)*dt;
+      if(t.x<20){t.x=20;t.th=Math.PI-t.th;}
+      if(t.x>W-20){t.x=W-20;t.th=Math.PI-t.th;}
+      if(t.y<20){t.y=20;t.th=-t.th;}
+      if(t.y>H-20){t.y=H-20;t.th=-t.th;}
+      tk+=dt;
+    }
+    function loop(){
+      sl('pnNV').textContent=(+sl('pnN').value).toFixed(1);
+      sl('pnOmaxV').textContent=sl('pnOmax').value;
+      const dt=0.04,omegaMax=+sl('pnOmax').value,N=+sl('pnN').value;
+      moveTarget(dt);
+      if(mp.alive){
+        const lam=Math.atan2(t.y-mp.y,t.x-mp.x);
+        const desiredTurn=aDiff(lam,mp.th);
+        const omega=Math.max(-omegaMax,Math.min(omegaMax,desiredTurn/dt));
+        mp.latAcc=omega*mp.v;
+        mp.th+=omega*dt;
+        mp.x+=mp.v*Math.cos(mp.th)*dt;
+        mp.y+=mp.v*Math.sin(mp.th)*dt;
+        if(Math.hypot(t.x-mp.x,t.y-mp.y)<10){mp.alive=false;phitT=tk;}
+      }
+      if(mn.alive){
+        const lam=Math.atan2(t.y-mn.y,t.x-mn.x);
+        const lamDot=aDiff(lam,lamPrev)/dt;
+        lamPrev=lam;
+        const omega=Math.max(-omegaMax,Math.min(omegaMax,N*lamDot));
+        mn.latAcc=omega*mn.v;
+        mn.th+=omega*dt;
+        mn.x+=mn.v*Math.cos(mn.th)*dt;
+        mn.y+=mn.v*Math.sin(mn.th)*dt;
+        if(Math.hypot(t.x-mn.x,t.y-mn.y)<10){mn.alive=false;nhitT=tk;}
+      }
+      hist.mp.push({x:mp.x,y:mp.y});
+      hist.mn.push({x:mn.x,y:mn.y});
+      hist.t.push({x:t.x,y:t.y});
+      if(hist.mp.length>500){hist.mp.shift();hist.mn.shift();hist.t.shift();}
+      if((!mp.alive&&!mn.alive&&tk>Math.max(phitT||0,nhitT||0)+1.5)||tk>18)reset();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let i=0;i<W;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke();}
+      for(let j=0;j<H;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(W,j);x.stroke();}
+      x.strokeStyle='rgba(245,124,0,0.7)';x.lineWidth=2;x.beginPath();
+      hist.mp.forEach((p,i)=>{if(i==0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(11,95,255,0.7)';x.beginPath();
+      hist.mn.forEach((p,i)=>{if(i==0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(198,40,40,0.4)';x.beginPath();
+      hist.t.forEach((p,i)=>{if(i==0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});x.stroke();
+      if(mp.alive){
+        x.save();x.translate(mp.x,mp.y);x.rotate(mp.th);
+        x.fillStyle='#f57c00';
+        x.beginPath();x.moveTo(14,0);x.lineTo(-9,-6);x.lineTo(-9,6);x.closePath();x.fill();
+        x.restore();
+      }
+      if(mn.alive){
+        x.save();x.translate(mn.x,mn.y);x.rotate(mn.th);
+        x.fillStyle='#0b5fff';
+        x.beginPath();x.moveTo(14,0);x.lineTo(-9,-6);x.lineTo(-9,6);x.closePath();x.fill();
+        x.restore();
+      }
+      x.fillStyle='#c62828';x.beginPath();x.arc(t.x,t.y,7,0,Math.PI*2);x.fill();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('🟠 PPG (꼬리 추격)   ·   🔵 PN (N='+(+sl('pnN').value).toFixed(1)+')   ·   🔴 표적',12,22);
+      const sp=mp.alive?'추적':'명중@'+phitT.toFixed(1)+'s';
+      const sn=mn.alive?'추적':'명중@'+nhitT.toFixed(1)+'s';
+      x.fillStyle='#666';
+      x.fillText('PPG '+sp+'   ·   PN '+sn+'   ·   |a_PPG|='+Math.abs(mp.latAcc).toFixed(0)+'   ·   |a_PN|='+Math.abs(mn.latAcc).toFixed(0)+'   ·   t='+tk.toFixed(1)+'s',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

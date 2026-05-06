@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 본체에선 일정해도 관성에선 곡선 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 본체에선 일정해도 관성에선 곡선</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/02-dynamics.html">Lecture 2. 운동학과 동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 본체에선 일정해도 관성에선 곡선</h4>
+    <p>본체 좌표에서 $u, v, \omega$를 일정하게 둬도, $\omega \ne 0$이면 관성 좌표에서는 원이나 나선이 그려집니다. "전진만" 명령에 회전이 더해지면 결과가 어떻게 달라지는지 관찰해보세요.</p>
+    <canvas id="bvC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>본체 전진 u <span class="val" id="bvUV">1.5</span><input type="range" id="bvU" min="0" max="3" step="0.1" value="1.5"></label>
+      <label>본체 좌우 v <span class="val" id="bvVV">0</span><input type="range" id="bvV" min="-2" max="2" step="0.1" value="0"></label>
+      <label>각속도 ω <span class="val" id="bvWV">0.5</span><input type="range" id="bvW" min="-1.5" max="1.5" step="0.05" value="0.5"></label>
+      <button id="bvR">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bvC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    let s,trail;
+    const home=()=>{s={x:c.width/2,y:c.height/2,th:0};trail=[];};home();
+    const upd=()=>['bvU','bvV','bvW'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    sl('bvR').onclick=home;
+    ['bvU','bvV','bvW'].forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const u=+sl('bvU').value,v=+sl('bvV').value,w=+sl('bvW').value,dt=0.05,SCALE=40;
+      const cs=Math.cos(s.th),sn=Math.sin(s.th);
+      s.x+=(cs*u-sn*v)*dt*SCALE;
+      s.y+=(sn*u+cs*v)*dt*SCALE;
+      s.th+=w*dt;
+      if(s.x<10||s.x>c.width-10||s.y<10||s.y>c.height-10)home();
+      trail.push([s.x,s.y]);if(trail.length>500)trail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      trail.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.stroke();
+      x.save();x.translate(s.x,s.y);x.rotate(s.th);
+      x.fillStyle='#0b5fff';x.fillRect(-14,-9,28,18);
+      x.fillStyle='#fff';x.beginPath();x.moveTo(10,0);x.lineTo(2,-5);x.lineTo(2,5);x.closePath();x.fill();
+      x.restore();
+      x.fillStyle='#666';x.font='12px sans-serif';x.textAlign='left';
+      let label='';
+      if(Math.abs(w)<0.02)label='ω≈0 → 직선';
+      else if(Math.abs(v)<0.02)label='ω≠0 & v=0 → 원';
+      else label='ω≠0 & v≠0 → 나선';
+      x.fillText('관성 좌표 궤적: '+label,12,22);
+      x.fillStyle='#0b5fff';x.font='bold 12px Consolas,monospace';
+      x.fillText('본체 (u,v,ω) = ('+u.toFixed(1)+', '+v.toFixed(1)+', '+w.toFixed(2)+')',12,42);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

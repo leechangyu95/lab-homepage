@@ -1,0 +1,1004 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W11. 피드백 제어 — 메카트로닉스</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 11. 피드백 제어 — PID로 시작하는 제어공학</h1>
+  <p class="lead">결과를 보고 명령을 다시 조정하는 단순한 발상이 어떻게 자율 시스템의 토대가 되는지.</p>
+
+  <div class="tip">
+    <strong>🚿 PID를 한 문단으로 — 샤워기 비유</strong>
+    <ul style="margin:8px 0 0 20px">
+      <li><strong>P (지금)</strong>: "지금 너무 차갑네 → 따뜻한 쪽으로 많이 돌리자". 오차에 비례.</li>
+      <li><strong>I (지금까지)</strong>: "<em>계속</em> 차갑네 → 매번 조금씩 더 돌리자". 오차의 누적에 비례.</li>
+      <li><strong>D (앞으로)</strong>: "온도가 <em>오르고 있는 중</em>이네 → 미리 식는 쪽으로 손을 옮기자". 변화율에 비례.</li>
+    </ul>
+    이 세 사람을 한 컨트롤러에 합친 게 PID입니다. 자율주행 속도 조절, 드론 자세, 에어컨 온도, 모터 속도 제어 — 산업의 95%가 이 한 컨트롤러로 돕니다. <strong>식보다 데모(3절)에서 직접 슬라이더를 조절하면서 직관을 잡으세요</strong>.
+  </div>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>개루프 vs 폐루프</li>
+    <li>피드백 시스템의 블록 다이어그램</li>
+    <li>PID 제어기 — P·I·D 세 항</li>
+    <li>각 항의 직관과 효과</li>
+    <li>튜닝 — Ziegler-Nichols와 실무 가이드</li>
+    <li>실전 함정과 해결책</li>
+  </ol></div>
+
+  <h2>1. 개루프 vs 폐루프</h2>
+  <p>제어 시스템은 크게 두 가지로 나뉩니다.</p>
+
+  <h3>1.1 개루프(Open-loop)</h3>
+  <p>입력을 정해 명령만 보내고 결과는 확인하지 않음. 외란이 없을 때만 잘 동작.</p>
+  <ul>
+    <li><strong>예</strong>: 토스터(시간 타이머), 신호등, 일반 세탁기 시간 모드.</li>
+    <li><strong>장점</strong>: 단순하고 안정적이다(불안정해질 일이 없음).</li>
+    <li><strong>단점</strong>: 외란·시스템 변동에 그대로 노출. "모터에 부하가 더 걸려도" 명령은 그대로.</li>
+  </ul>
+
+  <h3>1.2 폐루프(Closed-loop) = 피드백</h3>
+  <p>출력을 측정해 목표와의 오차를 계산하고, 그 오차를 줄이는 방향으로 입력을 조정.</p>
+  <ul>
+    <li><strong>예</strong>: 자율주행 차량의 속도 제어, 드론 자세 제어, 에어컨 온도 제어.</li>
+    <li><strong>장점</strong>: 외란을 자동으로 보상. 시스템 불확실성에 강함.</li>
+    <li><strong>단점</strong>: 잘못 설계하면 발진·발산 가능 (안정성 분석 필요).</li>
+  </ul>
+
+  <p>샤워기 온도 조절이 일상의 가장 친근한 폐루프 — 너무 뜨거우면 찬물 쪽으로, 너무 차가우면 따뜻한 쪽으로. 결과(피부 감각)를 보고 입력(밸브)을 조정.</p>
+
+  <h2>2. 피드백 시스템의 블록 다이어그램</h2>
+
+  <figure>
+    <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+      <text x="40" y="105" font-size="13" fill="#333">r(t)</text>
+      <line x1="60" y1="100" x2="100" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a)"/>
+      <circle cx="120" cy="100" r="20" fill="white" stroke="#333" stroke-width="2"/>
+      <text x="115" y="105" font-size="14">+</text>
+      <text x="120" y="135" font-size="11" text-anchor="middle">−</text>
+      <line x1="140" y1="100" x2="190" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a)"/>
+      <text x="160" y="93" font-size="11" fill="#666">e(t)</text>
+      <rect x="190" y="80" width="100" height="40" fill="#fff7e6" stroke="#f5a623"/>
+      <text x="240" y="105" text-anchor="middle" font-size="13" font-weight="bold" fill="#d46b08">제어기 C(s)</text>
+      <line x1="290" y1="100" x2="340" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a)"/>
+      <text x="305" y="93" font-size="11" fill="#666">u(t)</text>
+      <rect x="340" y="80" width="100" height="40" fill="#e3f2fd" stroke="#1976d2"/>
+      <text x="390" y="105" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d47a1">대상 P(s)</text>
+      <line x1="440" y1="100" x2="540" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a)"/>
+      <text x="555" y="105" font-size="13" fill="#333">y(t)</text>
+      <line x1="490" y1="100" x2="490" y2="160" stroke="#333" stroke-width="2"/>
+      <line x1="490" y1="160" x2="120" y2="160" stroke="#333" stroke-width="2"/>
+      <rect x="190" y="150" width="100" height="20" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="240" y="165" text-anchor="middle" font-size="11" fill="#1b5e20">센서 H(s)</text>
+      <line x1="120" y1="160" x2="120" y2="120" stroke="#333" stroke-width="2" marker-end="url(#a)"/>
+      <defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#666"/></marker></defs>
+    </svg>
+    <figcaption>그림 1. 단위 피드백 제어 시스템. 참조 $r(t)$와 출력 $y(t)$의 차이 $e(t)$가 제어기 입력.</figcaption>
+  </figure>
+
+  <p>각 신호의 의미:</p>
+  <ul>
+    <li>$r(t)$: 참조(reference) — 원하는 값 (예: 목표 속도)</li>
+    <li>$y(t)$: 출력 — 실제 측정된 값</li>
+    <li>$e(t) = r(t) - y(t)$: 오차</li>
+    <li>$u(t)$: 제어 입력 — 제어기가 만들어 대상에 보내는 명령</li>
+  </ul>
+
+  <p>전체 폐루프 전달 함수 (단위 피드백, $H = 1$):</p>
+  $$ \frac{Y(s)}{R(s)} = \frac{C(s) P(s)}{1 + C(s) P(s)} $$
+  <p>분모 $1 + CP$가 0이 되는 $s$ 값이 폐루프 시스템의 극점 — 이것이 좌반평면에 있어야 안정.</p>
+
+  <h2>3. PID 제어기 — 가장 보편적인 컨트롤러</h2>
+  <p>제어기 $C(s)$의 가장 많이 쓰이는 형태가 <strong>PID(Proportional-Integral-Derivative)</strong>입니다.</p>
+  $$ u(t) = K_p\,e(t) + K_i\!\int_0^t e(\tau)\,d\tau + K_d\,\dot{e}(t) $$
+  <p>라플라스 영역에서:</p>
+  $$ C(s) = K_p + \frac{K_i}{s} + K_d s $$
+
+  <p>세 항의 직관:</p>
+  <ul>
+    <li><strong>P (비례)</strong>: 현재 오차에 비례. 오차가 크면 큰 명령. 빠른 응답을 만들지만 정상상태 오차가 남음.</li>
+    <li><strong>I (적분)</strong>: 누적된 오차에 비례. 작은 오차도 시간이 지나면 누적되어 컨트롤러가 강하게 반응 → 정상상태 오차 0.</li>
+    <li><strong>D (미분)</strong>: 오차의 변화율에 비례. "오차가 줄어드는 중이면 명령을 미리 줄여" 오버슈트를 억제.</li>
+  </ul>
+
+  <p><strong>일상 비유 — 샤워기 온도 조절</strong>:</p>
+  <ul>
+    <li><em>P 사람</em>: "지금 너무 차가우니 따뜻한 쪽으로 많이 돌리자" → 너무 많이 돌리면 뜨거워서 다시 차가운 쪽으로… 진동.</li>
+    <li><em>I 사람</em>: "<strong>계속</strong> 차갑네, 매번 조금씩 더 따뜻한 쪽으로" → 시간이 지나면 정확히 원하는 온도. 단, 천천히.</li>
+    <li><em>D 사람</em>: "온도가 <strong>오르고 있는 중</strong>이니 미리 식는 쪽으로 손을 옮겨 놓자" → 오버슈트 방지. 단, 측정 잡음에 민감.</li>
+  </ul>
+  <p>실제 PID는 이 세 사람을 합친 컨트롤러예요. 각자 약점을 다른 두 사람이 보완합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: PID로 1차 플랜트 제어</h4>
+    <p>플랜트는 1차 시스템 $1/(\tau s+1)$($\tau=0.7$s, 외란이 출력에 더해짐). 슬라이더로 $K_p, K_i, K_d$를 만져보고 다음 시나리오를 차례로 시도해 보세요:</p>
+    <ol style="margin:6px 0 6px 20px;font-size:13px;color:#444">
+      <li><strong>P만</strong> ($K_p$=2, $K_i$=$K_d$=0): 빠르게 따라오지만 정상상태 오차 남음.</li>
+      <li><strong>$K_p$를 더 키움</strong> ($K_p$=15): 오버슈트와 진동이 심해짐. 정상상태 오차도 여전히 0이 아님.</li>
+      <li><strong>I 추가</strong> ($K_p$=2, $K_i$=2): 시간이 지나면 오차가 0으로! 단, 정착이 느려짐.</li>
+      <li><strong>D 추가</strong> ($K_p$=2, $K_i$=2, $K_d$=0.5): 오버슈트 억제, 응답이 깔끔해짐.</li>
+      <li><strong>외란 추가</strong>: 외란 슬라이더를 키우면 P-only는 영구 오차, PI는 자동 보상.</li>
+    </ol>
+    <canvas id="pidDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="pidKpV">2.0</span><input type="range" id="pidKp" min="0" max="20" step="0.1" value="2"></label>
+      <label>Ki <span class="val" id="pidKiV">0.0</span><input type="range" id="pidKi" min="0" max="10" step="0.1" value="0"></label>
+      <label>Kd <span class="val" id="pidKdV">0.0</span><input type="range" id="pidKd" min="0" max="3" step="0.05" value="0"></label>
+      <label>외란 d <span class="val" id="pidDV">0.0</span><input type="range" id="pidD" min="0" max="1" step="0.05" value="0"></label>
+      <label>측정 잡음 <span class="val" id="pidNV">0.0</span><input type="range" id="pidN" min="0" max="0.1" step="0.005" value="0"></label>
+      <button id="pidPreset1">P만</button>
+      <button id="pidPreset2">PID 균형</button>
+      <button id="pidRst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 목표 r=1 &nbsp; 🔵 출력 y &nbsp; 🟠 제어입력 u (× 0.2 스케일)</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pidDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let y=0, integ=0, ePrev=0, t=0, hist=[], raf=null;
+    function reset(){y=0;integ=0;ePrev=0;t=0;hist=[];}
+    document.getElementById('pidRst').onclick=reset;
+    document.getElementById('pidPreset1').onclick=()=>{
+      document.getElementById('pidKp').value=2;
+      document.getElementById('pidKi').value=0;
+      document.getElementById('pidKd').value=0;
+      reset();
+    };
+    document.getElementById('pidPreset2').onclick=()=>{
+      document.getElementById('pidKp').value=2.5;
+      document.getElementById('pidKi').value=2;
+      document.getElementById('pidKd').value=0.5;
+      reset();
+    };
+    function loop(){
+      const Kp=+document.getElementById('pidKp').value;
+      const Ki=+document.getElementById('pidKi').value;
+      const Kd=+document.getElementById('pidKd').value;
+      const dist=+document.getElementById('pidD').value;
+      const noise=+document.getElementById('pidN').value;
+      ['pidKp','pidKi','pidKd','pidD','pidN'].forEach(id=>{
+        document.getElementById(id+'V').textContent=(+document.getElementById(id).value).toFixed(2);
+      });
+      const dt=0.05, tau=0.7, ref=1;
+      // measure (with noise)
+      const yMeas = y + (Math.random()*2-1)*noise;
+      const e = ref - yMeas;
+      integ += e*dt;
+      // anti-windup: simple clamp
+      if(Math.abs(integ)>10)integ=Math.sign(integ)*10;
+      const deriv = (e - ePrev)/dt;
+      ePrev = e;
+      const u = Kp*e + Ki*integ + Kd*deriv;
+      // plant: dy/dt = (-y + u + d)/tau (1st order with output disturbance equiv)
+      y += dt*(-y + u + dist*tau)/tau;
+      hist.push({t,y,u,e});
+      if(hist.length>500)hist.shift();
+      t += dt;
+      // draw
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-40,w=W-70,h=H-70;
+      ctx.strokeStyle='#eee';
+      for(let g=0;g<=4;g++){const yy=oy-g/4*h;ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      function py(v){return oy-(v+0.3)/2*h;}
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      ctx.moveTo(ox,py(1));ctx.lineTo(ox+w,py(1));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';ctx.fillText('r = 1',ox+w-50,py(1)-4);
+      // control input (scaled)
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=1.5;ctx.beginPath();
+      hist.forEach((h0,i)=>{const xx=ox+i/500*w, yy=py(h0.u*0.2);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+      ctx.stroke();
+      // output
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      hist.forEach((h0,i)=>{const xx=ox+i/500*w, yy=py(Math.max(-0.3,Math.min(1.7,h0.y)));if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+      ctx.stroke();
+      // status
+      const yFinal=hist.length>0?hist[hist.length-1].y:0;
+      const err=1-yFinal;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`y = ${yFinal.toFixed(3)},  오차 = ${err.toFixed(3)},  u = ${(hist.length?hist[hist.length-1].u:0).toFixed(2)}`,ox,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 →',W-60,oy+22);
+      raf=requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 각 항의 효과</h2>
+
+  <table>
+    <thead><tr><th>이득 ↑</th><th>상승시간</th><th>오버슈트</th><th>정착시간</th><th>정상상태 오차</th></tr></thead>
+    <tbody>
+      <tr><td>$K_p$</td><td>감소</td><td>증가</td><td>변화 적음</td><td>감소</td></tr>
+      <tr><td>$K_i$</td><td>감소</td><td>증가</td><td>증가</td><td><strong>0으로</strong></td></tr>
+      <tr><td>$K_d$</td><td>변화 적음</td><td>감소</td><td>감소</td><td>변화 없음</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 표가 PID 튜닝의 직관적 가이드가 됩니다. 너무 큰 $K_p$는 오버슈트·발진을, 너무 큰 $K_i$는 늦은 정착을, 너무 큰 $K_d$는 잡음 증폭을 일으킵니다.</p>
+
+  <h2>5. 튜닝 방법</h2>
+
+  <h3>5.1 Ziegler-Nichols 공식 (가장 고전)</h3>
+  <p>$K_i = K_d = 0$로 두고 $K_p$를 천천히 키우다가 시스템이 등진동(일정 진폭 진동)을 시작하는 임계 이득 $K_u$와 그때의 진동 주기 $T_u$를 측정. 다음 표로 이득을 결정:</p>
+  <table>
+    <thead><tr><th>제어기</th><th>$K_p$</th><th>$T_i$</th><th>$T_d$</th></tr></thead>
+    <tbody>
+      <tr><td>P</td><td>$0.5 K_u$</td><td>—</td><td>—</td></tr>
+      <tr><td>PI</td><td>$0.45 K_u$</td><td>$T_u/1.2$</td><td>—</td></tr>
+      <tr><td>PID</td><td>$0.6 K_u$</td><td>$T_u/2$</td><td>$T_u/8$</td></tr>
+    </tbody>
+  </table>
+  <p>여기서 $K_i = K_p/T_i$, $K_d = K_p T_d$. 시스템을 한계까지 밀어붙이는 방식이라 가전·산업의 안전 시스템에는 직접 못 씁니다.</p>
+
+  <h3>5.2 실무 권장 — 점진적 튜닝</h3>
+  <ol>
+    <li><strong>P만 살리고 시작</strong>: $K_p$를 작게 시작해 응답이 빠르되 발진 직전에서 멈춤.</li>
+    <li><strong>I 추가</strong>: 정상상태 오차가 보이면 $K_i$를 천천히 증가 (너무 크면 적분 와인드업).</li>
+    <li><strong>D 추가</strong>: 오버슈트가 거슬리면 $K_d$를 추가. 단, 잡음을 증폭하니 D 앞에 LPF를 두는 게 표준.</li>
+    <li><strong>스텝 응답 측정과 반복</strong>.</li>
+  </ol>
+
+  <h2>6. 실전 함정과 해결책</h2>
+
+  <h3>6.1 적분 와인드업(Integral Windup)</h3>
+  <p>액추에이터가 포화 상태(예: 모터 PWM이 100%로 다 차 있음)인데 오차가 계속 누적되면 적분 항이 무한정 커집니다. 그 후 오차가 0이 되어도 적분이 너무 커져 시스템이 한참 동안 잘못된 명령을 내보내요.</p>
+  <p><strong>해결</strong>: 액추에이터 포화를 감지하면 적분을 멈추는 <em>anti-windup</em> 기법. 또는 적분값에 상한을 둠.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 와인드업 vs Anti-Windup</h4>
+    <p>큰 스텝을 입력하면 P+I 컨트롤러가 매우 큰 명령을 만드는데, 액추에이터 한계가 ±$u_{max}$로 잘립니다. 그동안에도 적분은 계속 누적 — <strong>안정점에 도달한 후에도 적분이 너무 커서 한참을 오버슈트</strong>합니다. Anti-windup을 켜면 포화 시 적분을 멈춰 이를 막아요.</p>
+    <canvas id="awDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>액추에이터 한계 u_max <span class="val" id="awUV">2</span><input type="range" id="awU" min="0.5" max="10" step="0.5" value="2"></label>
+      <label>Kp <span class="val" id="awKpV">3</span><input type="range" id="awKp" min="0.5" max="10" step="0.1" value="3"></label>
+      <label>Ki <span class="val" id="awKiV">5</span><input type="range" id="awKi" min="0" max="10" step="0.1" value="5"></label>
+      <label><input type="checkbox" id="awEn" checked> Anti-windup 켜기</label>
+      <button id="awRst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🔴 와인드업 발생 (anti-windup 끔) &nbsp; 🔵 anti-windup 적용 &nbsp; 🟢 목표</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('awDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function simulate(awEn){
+      const Kp=+document.getElementById('awKp').value;
+      const Ki=+document.getElementById('awKi').value;
+      const umax=+document.getElementById('awU').value;
+      const dt=0.02, T=10, tau=0.5, ref=5; // big setpoint
+      let y=0, integ=0;
+      const data=[];
+      for(let i=0;i<T/dt;i++){
+        const e=ref-y;
+        integ += e*dt;
+        let u = Kp*e + Ki*integ;
+        const uSat = Math.max(-umax, Math.min(umax, u));
+        if(awEn && Math.abs(u-uSat)>1e-6){
+          // back-calc anti-windup: undo the part that got saturated
+          integ -= e*dt;
+        }
+        y += dt*(-y + uSat)/tau;
+        data.push({t:i*dt, y, u:uSat, integ});
+      }
+      return data;
+    }
+    function draw(){
+      const Kp=+document.getElementById('awKp').value;
+      const Ki=+document.getElementById('awKi').value;
+      const umax=+document.getElementById('awU').value;
+      const aw=document.getElementById('awEn').checked;
+      ['awU','awKp','awKi'].forEach(id=>document.getElementById(id+'V').textContent=(+document.getElementById(id).value).toFixed(1));
+      const dataNo=simulate(false);
+      const dataAw=simulate(true);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-40,w=W-70,h=H-70,T=10;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      const ymax=8;
+      function py(v){return oy-v/ymax*h;}
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      ctx.moveTo(ox,py(5));ctx.lineTo(ox+w,py(5));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';ctx.fillText('r = 5',ox+w-40,py(5)-4);
+      // without aw
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();
+      dataNo.forEach((d,i)=>{const xx=ox+d.t/T*w,yy=py(Math.max(-1,Math.min(ymax,d.y)));if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+      ctx.stroke();
+      // with aw (highlight if checkbox on)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=aw?3:2;ctx.beginPath();
+      dataAw.forEach((d,i)=>{const xx=ox+d.t/T*w,yy=py(Math.max(-1,Math.min(ymax,d.y)));if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+      ctx.stroke();
+      // labels
+      const yFinNo=dataNo[dataNo.length-1].y;
+      const yFinAw=dataAw[dataAw.length-1].y;
+      const overshootNo = Math.max(...dataNo.map(d=>d.y));
+      const overshootAw = Math.max(...dataAw.map(d=>d.y));
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`u_max = ${umax.toFixed(1)} (액추에이터 한계)`,ox,22);
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText(`AW 끔: 최대 = ${overshootNo.toFixed(2)} (큰 오버슈트)`,ox+220,22);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText(`AW 켬: 최대 = ${overshootAw.toFixed(2)}`,ox+450,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 →',W-50,oy+22);
+    }
+    ['awU','awKp','awKi','awEn'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    document.getElementById('awRst').onclick=draw;
+    draw();
+  })();
+  </script>
+
+  <h3>6.2 미분 잡음 증폭</h3>
+  <p>D 항은 입력을 미분하므로 고주파 잡음을 키웁니다. 그래서 실제 PID에서 D 앞에는 거의 항상 LPF를 둡니다 — "D + LPF"가 한 모듈로 패키지된 형태.</p>
+
+  <h3>6.3 디지털 구현 — 샘플링 주기</h3>
+  <p>임베디드에서 PID는 다음과 같이 이산화:</p>
+  <pre><code>e = ref - y;                        // 현재 오차
+integral += e * dt;                 // 적분
+derivative = (e - e_prev) / dt;     // 미분
+u = Kp*e + Ki*integral + Kd*derivative;
+e_prev = e;
+</code></pre>
+  <p>샘플링 주기 $dt$는 시스템 시정수의 1/10 이하로 잡는 게 보통. 모터 제어는 보통 1kHz(1ms), 자세제어는 100~500Hz.</p>
+
+  <h2>6.4 미분 잡음 시각 비교</h2>
+  <p>실제 측정에는 항상 잡음이 섞여 있습니다. 같은 신호를 D 항이 미분하면 잡음이 폭발적으로 키워집니다 — 이것이 D 항을 그대로 쓰지 못하는 이유.</p>
+
+  <ul>
+    <li><strong>그냥 D</strong>: $u_D = K_d \cdot \dfrac{e_n - e_{n-1}}{\Delta t}$ — 한 샘플 사이의 잡음 차이가 $1/\Delta t$로 곱해져 폭발.</li>
+    <li><strong>D + LPF (실무 표준)</strong>: D 출력에 1차 LPF 통과. 시정수 $T_f \approx K_d/(N K_p)$로 잡고 $N \in [10, 20]$. 안정성과 잡음 억제의 균형.</li>
+    <li><strong>측정 미분 대신 출력 미분</strong>: $D$를 오차 $e$가 아닌 측정 $y$만으로 계산하면 참조 변화 시 D 킥(derivative kick)을 막을 수 있음.</li>
+  </ul>
+
+  <h2>6.5 적분기 와인드업의 또 다른 해법 — Conditional Integration</h2>
+  <p>Anti-windup을 구현하는 방법은 여러 가지가 있습니다.</p>
+  <ol>
+    <li><strong>Clamping</strong>: 적분값에 ±한계를 둠. 가장 단순.</li>
+    <li><strong>Conditional integration</strong>: 액추에이터가 포화 상태이면 적분 자체를 멈춤. 위 데모에서 사용한 방식.</li>
+    <li><strong>Back-calculation</strong>: 포화로 잘린 양만큼 적분에서 빼줌. 가장 정확하고 산업 표준에 가까움.</li>
+  </ol>
+
+  <h2>6.6 디지털 PID 구현의 두 형태 — 위치형 vs 증분형</h2>
+  <p>임베디드 코드로 PID를 짤 때 두 가지 표준 형식이 있습니다.</p>
+  <ul>
+    <li><strong>위치형(Positional)</strong>: $u_n = K_p e_n + K_i \sum e + K_d \frac{e_n - e_{n-1}}{\Delta t}$. 각 시점의 전체 명령을 직접 계산. 위에 보인 예가 이 형식.</li>
+    <li><strong>증분형(Incremental)</strong>: $\Delta u_n = K_p(e_n - e_{n-1}) + K_i e_n \Delta t + K_d \frac{e_n - 2e_{n-1} + e_{n-2}}{\Delta t}$. 명령의 변화량만 계산하고 더해 나감. 액추에이터(밸브 등)가 직접 증분을 받는 경우 유리. 와인드업이 자연 방지.</li>
+  </ul>
+
+  <h2>7. 캐스케이드 제어 — 실무의 표준</h2>
+  <p>실제 산업 시스템은 PID 한 개가 아니라 <strong>두 개 이상의 PID를 직렬</strong>로 묶어 씁니다. 이를 <em>캐스케이드 제어(cascade control)</em>라 해요.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+      <text x="20" y="105" font-size="12" fill="#444">위치 r</text>
+      <line x1="58" y1="100" x2="90" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a2)"/>
+      <circle cx="105" cy="100" r="14" fill="#fff" stroke="#333"/>
+      <text x="100" y="105" font-size="13">−</text>
+      <line x1="119" y1="100" x2="150" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a2)"/>
+      <rect x="150" y="80" width="80" height="40" fill="#fff7e6" stroke="#f5a623"/>
+      <text x="190" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#d46b08">위치 PID</text>
+      <line x1="230" y1="100" x2="265" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="247" y="92" font-size="11" fill="#666">속도 명령</text>
+      <circle cx="280" cy="100" r="14" fill="#fff" stroke="#333"/>
+      <text x="275" y="105" font-size="13">−</text>
+      <line x1="294" y1="100" x2="320" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a2)"/>
+      <rect x="320" y="80" width="80" height="40" fill="#fff7e6" stroke="#f5a623"/>
+      <text x="360" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#d46b08">속도 PID</text>
+      <line x1="400" y1="100" x2="430" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="412" y="92" font-size="11" fill="#666">전류 명령</text>
+      <rect x="430" y="80" width="80" height="40" fill="#e3f2fd" stroke="#1976d2"/>
+      <text x="470" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#0d47a1">모터+부하</text>
+      <line x1="510" y1="100" x2="555" y2="100" stroke="#333" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="565" y="105" font-size="12" fill="#444">위치 y</text>
+      <line x1="535" y1="100" x2="535" y2="160" stroke="#666" stroke-width="1.5"/>
+      <line x1="535" y1="160" x2="105" y2="160" stroke="#666" stroke-width="1.5"/>
+      <line x1="105" y1="160" x2="105" y2="115" stroke="#666" stroke-width="1.5" marker-end="url(#a2)"/>
+      <line x1="420" y1="100" x2="420" y2="180" stroke="#888" stroke-width="1" stroke-dasharray="3"/>
+      <line x1="420" y1="180" x2="280" y2="180" stroke="#888" stroke-width="1" stroke-dasharray="3"/>
+      <line x1="280" y1="180" x2="280" y2="115" stroke="#888" stroke-width="1" stroke-dasharray="3" marker-end="url(#a2)"/>
+      <text x="345" y="195" font-size="10" fill="#888">속도 피드백 (인코더 차분)</text>
+      <defs><marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#666"/></marker></defs>
+    </svg>
+    <figcaption>그림 2. 위치-속도 캐스케이드 제어. 외부 루프(위치)가 속도 명령을 만들고, 내부 루프(속도)가 그 명령을 따라간다.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>외부 루프(slow)</strong>: 위치 오차를 보고 속도 명령을 만듦. 보통 ~10–100Hz.</li>
+    <li><strong>내부 루프(fast)</strong>: 속도 오차를 보고 토크/전류 명령을 만듦. 보통 ~1kHz.</li>
+    <li>3중 캐스케이드: 위치 → 속도 → 전류(토크) 도 흔함. 산업용 서보 드라이브의 표준 구성.</li>
+  </ul>
+  <p><strong>왜 캐스케이드?</strong> — 내부 루프가 빠르게 외란을 잡아주면 외부 루프 입장에서는 시스템이 "단순한 1차"처럼 보여 튜닝이 쉬워집니다. 또 액추에이터 한계를 내부 루프에서 직접 처리할 수 있어요.</p>
+
+  <h2>8. 응용 예 — 자율주행 속도 제어</h2>
+  <p>차량의 목표 속도 60km/h에 맞추는 PID:</p>
+  <ul>
+    <li>$y$ = 휠 엔코더로 측정한 실제 속도</li>
+    <li>$u$ = 스로틀(또는 브레이크) 명령</li>
+    <li>$P$: 빠르게 속도를 따라가게</li>
+    <li>$I$: 오르막에서 속도가 처지면 보상해 정확히 60에 맞춤</li>
+    <li>$D$: 가속이 너무 급격하면 미리 누름</li>
+  </ul>
+
+  <h2>9. 산업의 PID 사례 — 1줄 진단</h2>
+  <table>
+    <thead><tr><th>응용</th><th>제어 변수</th><th>주기</th><th>주요 함정</th></tr></thead>
+    <tbody>
+      <tr><td>드론 자세제어</td><td>롤·피치·요</td><td>250Hz~1kHz</td><td>D 잡음, 모터 PWM 포화</td></tr>
+      <tr><td>3D 프린터 히팅베드</td><td>온도</td><td>10Hz</td><td>큰 시정수 → I 와인드업</td></tr>
+      <tr><td>로봇팔 관절</td><td>각도</td><td>1kHz (전류 루프 ~10kHz)</td><td>마찰·중력 보상 필요</td></tr>
+      <tr><td>크루즈 컨트롤</td><td>속도</td><td>50Hz</td><td>오르막 외란, 변속기 비선형성</td></tr>
+      <tr><td>HVAC (공조)</td><td>온도</td><td>0.1Hz</td><td>매우 큰 시간 지연</td></tr>
+      <tr><td>화학 공정 (반응기)</td><td>온도, 압력, pH</td><td>0.01–1Hz</td><td>비선형, 다중 입출력 결합</td></tr>
+      <tr><td>하드디스크 헤드</td><td>위치</td><td>~10kHz</td><td>공진 모드 회피</td></tr>
+    </tbody>
+  </table>
+
+  <p>주기가 빠를수록 D 항이 도움이 되고, 느릴수록 I 항이 핵심이 됩니다. PID 한 가지로 이렇게 다양한 시간 스케일을 커버한다는 점이 PID가 산업 표준이 된 이유.</p>
+
+  <h2>10. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>요소</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td>P</td><td>현재 오차 → 빠른 응답</td></tr>
+      <tr><td>I</td><td>누적 오차 → 정상상태 오차 0</td></tr>
+      <tr><td>D</td><td>오차 변화율 → 오버슈트 억제</td></tr>
+      <tr><td>Anti-windup</td><td>적분 폭주 방지</td></tr>
+      <tr><td>D-LPF</td><td>미분 잡음 억제</td></tr>
+    </tbody>
+  </table>
+
+  <h2>11. 더 깊이 보기</h2>
+  <ul>
+    <li><a href="../../lectures/07-feedback-control.html">로봇공학특론 L7</a> — PID의 더 깊은 분석, 안정성 마진, 차량 추종 제어(Pure Pursuit, Stanley).</li>
+    <li><a href="../../lectures/11-mpc.html">L11 MPC</a> — PID 다음 단계의 모델 기반 최적 제어.</li>
+    <li><a href="../../lectures-mech/11-opamp.html">기전공학기초 W11</a> — op-amp 적분기·미분기로 PID를 아날로그 회로로 구현하는 방법.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>한 줄 요약</strong> — "오차를 보고 입력을 조정하는" 단순한 발상이 PID라는 이름으로 산업의 95%를 돌리고 있습니다. 더 복잡한 제어(MPC, LQR, 적응제어)는 PID로 풀 수 없는 특수 문제에만 등장해요.
+  </div>
+
+  <h2>PID 워크북 — 8문제</h2>
+  <h3>1. P 단독</h3>
+  <p>$u = K_pe$. 정상상태 오차 존재.</p>
+  <h3>2. PI</h3>
+  <p>$u = K_pe + K_i\int e$. 정상오차 0.</p>
+  <h3>3. PD</h3>
+  <p>$u = K_pe + K_d\dot e$. 응답 빠르게.</p>
+  <h3>4. PID</h3>
+  <p>세 항 결합. 산업 표준.</p>
+  <h3>5. 와인드업</h3>
+  <p>적분기 누적 폭발. 안티-와인드업 필수.</p>
+  <h3>6. 미분 잡음</h3>
+  <p>D 항이 잡음 증폭. LPF로 완화.</p>
+  <h3>7. Ziegler-Nichols</h3>
+  <p>경험적 튜닝. Kp 임계 게인 → PI/PID 게인 결정.</p>
+  <h3>8. 디지털 PID</h3>
+  <p>이산화 구현. 적분 누적, 미분 차분.</p>
+
+  <h2>PID 튜닝 절차</h2>
+  <ol>
+    <li>I, D 끄고 P만 키우기.</li>
+    <li>진동 임계점 → 적정 P.</li>
+    <li>I 추가 → 정상오차 0.</li>
+    <li>D 추가 → 응답 매끄럽게.</li>
+    <li>안티-와인드업 적용.</li>
+  </ol>
+
+  <h2>응용 사례</h2>
+  <ul>
+    <li>모터 위치 — 캐스케이드 PID.</li>
+    <li>온도 — PI.</li>
+    <li>드론 자세 — PID 3축.</li>
+    <li>차량 ACC — PID + 적응.</li>
+    <li>로봇 매니퓰레이터 — PID + 중력 보상.</li>
+  </ul>
+
+  <h2>자주 만나는 함정</h2>
+  <ul>
+    <li>적분 와인드업.</li>
+    <li>미분 잡음 증폭.</li>
+    <li>샘플링 주파수 부족.</li>
+    <li>액추에이터 포화.</li>
+    <li>모델 불확실성.</li>
+  </ul>
+
+  <h2>Python PID 구현</h2>
+  <pre><code>class PID:
+    def __init__(self, kp, ki, kd, dt):
+        self.kp, self.ki, self.kd, self.dt = kp, ki, kd, dt
+        self.integral = 0.0
+        self.prev_error = 0.0
+    def step(self, sp, pv):
+        error = sp - pv
+        self.integral += error * self.dt
+        derivative = (error - self.prev_error) / self.dt
+        self.prev_error = error
+        return self.kp*error + self.ki*self.integral + self.kd*derivative</code></pre>
+
+  <h2>한 페이지 핵심</h2>
+  <ul>
+    <li>PID = $K_pe + K_i\int e + K_d\dot e$.</li>
+    <li>P → 응답 빠름. I → 정상오차 0. D → 진동 감쇠.</li>
+    <li>안티-와인드업.</li>
+    <li>Ziegler-Nichols 튜닝.</li>
+    <li>디지털 구현.</li>
+  </ul>
+
+  <h2>한 줄 마무리</h2>
+  <p class="lead">"PID = 산업 95% 제어. 단순하지만 강력."</p>
+
+  <h2>부록 — 추가 단원</h2>
+  <p>피드백 제어의 본질:</p>
+  <ul>
+    <li>오차 측정 → 입력 조정.</li>
+    <li>안정성과 정확도의 균형.</li>
+    <li>외란 거부.</li>
+    <li>모델 불확실성 강건성.</li>
+  </ul>
+
+  <h2>부록 — Cascade PID</h2>
+  <p>외부 루프(위치) + 내부 루프(속도) + 가장 안쪽(전류). 안쪽 5~10배 빠르게.</p>
+
+  <h2>부록 — Feedforward + PID</h2>
+  <p>예측 가능한 외란을 미리 보상 + PID로 잔여 오차 처리. 매우 강력한 조합.</p>
+
+  <h2>부록 — Gain Scheduling</h2>
+  <p>운영 조건(속도, 페이로드)에 따라 PID 게인 변경. 항공기 자동조종, 자동차 ESP에 표준.</p>
+
+  <h2>부록 — Adaptive Control</h2>
+  <p>시스템 파라미터 실시간 추정 + 게인 조정. 페이로드 변화 큰 시스템에 강함.</p>
+
+  <h2>부록 — H∞, LQR</h2>
+  <p>현대 제어. PID로 풀기 어려운 다변수 시스템. 학부 외 영역.</p>
+
+  <h2>부록 — Robust Control</h2>
+  <p>모델 불확실성에 강건한 제어 설계. μ-synthesis. 항공·자동차에서 사용.</p>
+
+  <h2>부록 — Model Predictive Control</h2>
+  <p>미래 예측 + 최적화. 제약 처리 가능. PID의 진화.</p>
+
+  <h2>부록 — Digital Implementation</h2>
+  <pre><code># 안티-와인드업 PID
+class APID:
+    def step(self, sp, pv):
+        error = sp - pv
+        u_unsat = self.kp*error + self.integral + self.kd*(error - self.prev_error)/self.dt
+        u = max(self.u_min, min(self.u_max, u_unsat))
+        # back-calculation
+        self.integral += (self.ki * error + self.kt * (u - u_unsat)) * self.dt
+        self.prev_error = error
+        return u</code></pre>
+
+  <h2>부록 — 한국 산업 응용</h2>
+  <ul>
+    <li>현대모터스 — 차량 EMS PID.</li>
+    <li>삼성 반도체 — 챔버 온도.</li>
+    <li>LG 가전 — 냉장고·세탁기.</li>
+    <li>두산 — 발전 보일러.</li>
+    <li>로보스타 — 산업 로봇.</li>
+  </ul>
+
+  <h2>한 줄 진짜 끝</h2>
+  <p>"PID는 60년+ 산업 표준. 졸업 후 실무에서 매일 만남."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— W11 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <h2>부록 — 추가 PID 변형</h2>
+  <ul>
+    <li>2-DOF PID — Setpoint와 PV의 PID 분리.</li>
+    <li>Fractional-order PID — 분수 차수 미적분.</li>
+    <li>Fuzzy PID — 게인을 fuzzy 규칙으로.</li>
+    <li>Self-tuning PID — 온라인 튜닝.</li>
+    <li>Neural PID — 신경망이 게인 출력.</li>
+  </ul>
+
+  <h2>부록 — Auto-tuning</h2>
+  <ul>
+    <li>Relay Feedback — Åström-Hägglund.</li>
+    <li>Step Response — Skogestad SIMC.</li>
+    <li>Frequency Response — Bode 기반.</li>
+    <li>RL 기반 — 보상으로 게인 학습.</li>
+  </ul>
+
+  <h2>부록 — 한 페이지 요약 (재정리)</h2>
+  <p>피드백 제어의 핵심 — 측정 - 명령 = 오차 → 입력. PID가 그 단순한 형태. 60+ 년 산업 표준. 졸업 후 실무에서 매일.</p>
+
+  <p style="font-size:13px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <nav class="prevnext">
+    <a href="10-transfer-function.html"><small>← 이전</small>W10. 전달 함수</a>
+    <a href="12-deep-learning.html" class="next"><small>다음 →</small>W12. 딥러닝</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

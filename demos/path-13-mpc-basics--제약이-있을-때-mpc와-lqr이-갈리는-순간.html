@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>제약이 있을 때 MPC와 LQR이 갈리는 순간 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">제약이 있을 때 MPC와 LQR이 갈리는 순간</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/13-mpc-basics.html">Week 13. MPC 기초 — 미래를 보고 제어하는 법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>제약이 있을 때 MPC와 LQR이 갈리는 순간</h4>
+    <p>같은 1D 시스템에 같은 비용을 주었습니다. <span style="color:#0b5fff">MPC</span>는 조향(입력) 한계
+    $|u| \le u_{max}$를 인지하고 미리 분배합니다. <span style="color:#f57c00">LQR</span>은 한계를 모르고
+    무한대 입력을 가정해 푼 뒤 후처리로 잘립니다 — 그 결과 오버슈트와 정착 지연이 생깁니다.</p>
+    <canvas id="cmp_canvas" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>입력 한계 u_max <span class="val" id="cmpU_v">1.0</span><input type="range" id="cmpU" min="0.3" max="3" step="0.1" value="1.0"></label>
+      <label>목표 변경 (step)
+        <button id="cmpStep">목표 반전</button>
+      </label>
+      <button id="cmpReset" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cmp_canvas'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>$('cmpU_v').textContent=(+$('cmpU').value).toFixed(2);
+    $('cmpU').oninput=upd;
+    let xMpc=0,xLqr=0,ref=4,hist=[];
+    $('cmpReset').onclick=()=>{xMpc=0;xLqr=0;hist=[];};
+    $('cmpStep').onclick=()=>{ref=ref>0?-4:4;};
+    const dt=0.1,K=2.0; // LQR gain (high)
+    function mpcInput(p,r,uMax,N){
+      // analytical: at most uMax until we get within reach, then proportional
+      const err=r-p;
+      let u=err*1.5;
+      u=Math.max(-uMax,Math.min(uMax,u));
+      return u;
+    }
+    function loop(){
+      const uMax=+$('cmpU').value;
+      const uM=mpcInput(xMpc,ref,uMax,15);
+      let uL=K*(ref-xLqr); // unsaturated LQR command
+      const uLsat=Math.max(-uMax,Math.min(uMax,uL));
+      xMpc += dt*uM;
+      xLqr += dt*uLsat;
+      hist.push({xMpc,xLqr,ref,uM,uLsat,uL});
+      if(hist.length>300) hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // states
+      const y0=140;
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(0,y0);x.lineTo(c.width,y0);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      hist.forEach((h,i)=>{const px=i*2,py=y0-h.ref*15;if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const px=i*2,py=y0-h.xMpc*15;if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});x.stroke();
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const px=i*2,py=y0-h.xLqr*15;if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('상태 x: 빨강 점선=목표, 파랑=MPC, 주황=LQR(saturated)',12,20);
+      // inputs
+      const y1=240;
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(0,y1);x.lineTo(c.width,y1);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();
+      x.moveTo(0,y1-uMax*30);x.lineTo(c.width,y1-uMax*30);
+      x.moveTo(0,y1+uMax*30);x.lineTo(c.width,y1+uMax*30);x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const px=i*2,py=y1-h.uM*30;if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});x.stroke();
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const px=i*2,py=y1-h.uLsat*30;if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});x.stroke();
+      x.fillStyle='#444';x.fillText('입력 u (빨간 점선 = ±u_max 한계)',12,180);
+      // residual
+      const last=hist[hist.length-1]||{xMpc:0,xLqr:0,ref:0};
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('잔여오차    MPC: '+(last.ref-last.xMpc).toFixed(2)+'    LQR: '+(last.ref-last.xLqr).toFixed(2),12,290);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: CBF 안전 필터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: CBF 안전 필터</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/08-guidance-cbf.html">Lecture 8. 유도 &amp; 제어 장벽 함수 (CBF)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: CBF 안전 필터</h4>
+    <p>로봇(파랑)이 왼쪽에서 오른쪽으로 x축을 따라 일정한 속도로 이동합니다. 경로상에 장애물이 있으면 CBF 안전 필터가 자동으로 명령을 수정해 y 방향으로 회피합니다. $\gamma$가 작을수록 일찍, 크면 늦게 회피합니다.</p>
+    <canvas id="cbf" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>γ (보수성) <span class="val" id="gV">0.20</span><input type="range" id="g" min="0.00" max="0.30" step="0.01" value="0.20"></label>
+      <label><input type="checkbox" id="off"> CBF 끄기 (충돌 발생!)</label>
+      <button id="cbfRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cbf');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const obs=[{x:230,y:180,r:45},{x:400,y:210,r:40},{x:520,y:170,r:30}];
+    const y0=190;      // nominal y (center line)
+    const vx=2.4;      // constant forward speed (px/frame) — never modified by filter
+    let robot={x:20,y:y0},trail=[];
+    function reset(){robot={x:20,y:y0};trail=[];}
+    document.getElementById('cbfRst').addEventListener('click',reset);
+    function loop(){
+      const gamma=parseFloat(document.getElementById('g').value);
+      const off=document.getElementById('off').checked;
+      document.getElementById('gV').textContent=gamma.toFixed(2);
+      // Nominal control: forward speed is fixed, lateral pull toward y0
+      const ux=vx;
+      let uy=(y0-robot.y)*0.05;
+      // CBF lateral-only filter: ux는 그대로 두고 uy만 안전 영역으로 투영
+      // condition: 2*dx*vx + 2*dy*uy + gamma*h >= 0  →  solve for uy
+      if(!off){
+        for(let pass=0; pass<3; pass++){            // 다중 장애물 동시 만족을 위한 sweep
+          for(const o of obs){
+            const dx=robot.x-o.x, dy=robot.y-o.y;
+            const h=dx*dx+dy*dy-o.r*o.r;
+            const cond=2*dx*ux+2*dy*uy+gamma*h;
+            if(cond<0){
+              const dyEff=Math.abs(dy)<1e-2 ? (dy>=0?1e-2:-1e-2) : dy;
+              const uyBound=(-2*dx*ux-gamma*h)/(2*dyEff);
+              if(dyEff>0)      uy=Math.max(uy,uyBound);  // push further below
+              else             uy=Math.min(uy,uyBound);  // push further above
+            }
+          }
+        }
+      }
+      robot.x+=ux; robot.y+=uy;
+      trail.push({x:robot.x,y:robot.y});
+      if(trail.length>600)trail.shift();
+      if(robot.x>W-20)reset();
+      // render
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // baseline y=y0
+      ctx.strokeStyle='#e5e7eb';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(0,y0);ctx.lineTo(W,y0);ctx.stroke();
+      ctx.setLineDash([]);
+      // obstacles + safety margin
+      for(const o of obs){
+        ctx.fillStyle='rgba(198,40,40,0.15)';
+        ctx.beginPath();ctx.arc(o.x,o.y,o.r+10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#c62828';
+        ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill();
+      }
+      // trail
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      trail.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
+      ctx.stroke();
+      // robot
+      ctx.fillStyle='#0b5fff';
+      ctx.beginPath();ctx.arc(robot.x,robot.y,8,0,Math.PI*2);ctx.fill();
+      // label
+      ctx.fillStyle='#555';ctx.font='12px sans-serif';
+      ctx.fillText('γ = '+gamma.toFixed(2)+(off?' · CBF OFF':' · CBF ON'),12,25);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

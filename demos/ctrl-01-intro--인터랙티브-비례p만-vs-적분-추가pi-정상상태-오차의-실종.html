@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 비례(P)만 vs 적분 추가(PI) — 정상상태 오차의 실종 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 비례(P)만 vs 적분 추가(PI) — 정상상태 오차의 실종</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/01-intro.html">Week 1. 자동제어 개요</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비례(P)만 vs 적분 추가(PI) — 정상상태 오차의 실종</h4>
+    <p>같은 1차 플랜트에 단순 P 제어기와 PI 제어기를 동시에 걸어 보았습니다. 외란을 가하면 둘의 차이가
+    한눈에 보입니다. <span style="color:#0b5fff;font-weight:600">파랑(P 제어)</span>은 외란이 있는 동안
+    잔류 오차가 남고, <span style="color:#2e7d32;font-weight:600">초록(PI 제어)</span>은 적분 항이
+    천천히 그 오차를 0으로 끌어옵니다. 이것이 W12에서 배울 PID 제어의 P와 I 항 역할 분담입니다.</p>
+    <canvas id="c1piDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>외란 d <span class="val" id="c1dV">1.5</span><input type="range" id="c1d" min="-3" max="3" step="0.1" value="1.5"></label>
+      <label>P 게인 Kp <span class="val" id="c1kpV">2</span><input type="range" id="c1kp" min="0.1" max="6" step="0.1" value="2"></label>
+      <label>I 게인 Ki <span class="val" id="c1kiV">1.5</span><input type="range" id="c1ki" min="0" max="4" step="0.1" value="1.5"></label>
+      <button id="c1Reset" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c1piDemo');if(!c)return;
+    const x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{
+      $('c1dV').textContent=(+$('c1d').value).toFixed(1);
+      $('c1kpV').textContent=(+$('c1kp').value).toFixed(1);
+      $('c1kiV').textContent=(+$('c1ki').value).toFixed(1);
+    };
+    ['c1d','c1kp','c1ki'].forEach(id=>$(id).oninput=upd);
+    const K=1.0, tau=2.0;
+    let yp=0, ypi=0, eint=0, ref=3, hist=[];
+    $('c1Reset').onclick=()=>{yp=0;ypi=0;eint=0;hist=[];};
+    function loop(){
+      const d=+$('c1d').value, Kp=+$('c1kp').value, Ki=+$('c1ki').value;
+      const dt=0.04;
+      const ep=ref-yp;
+      const epi=ref-ypi;
+      eint+=epi*dt;
+      const up=Kp*ep;
+      const upi=Kp*epi+Ki*eint;
+      yp+=dt*((K*up+d-yp)/tau);
+      ypi+=dt*((K*upi+d-ypi)/tau);
+      hist.push({yp,ypi,ref}); if(hist.length>360)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40,oy=270,w=560,h=210;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      const ry=oy-ref*40;x.moveTo(ox,ry);x.lineTo(ox+w,ry);x.stroke();x.setLineDash([]);
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('r='+ref,ox+w-30,ry-6);x.fillText('0',ox-12,oy+4);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((p,i)=>{const xx=ox+i*w/360, yy=oy-p.yp*40; if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='#2e7d32';x.beginPath();
+      hist.forEach((p,i)=>{const xx=ox+i*w/360, yy=oy-p.ypi*40; if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('P 제어 (파랑) — 잔류 오차 '+(ref-yp).toFixed(2),ox+10,oy-h+18);
+      x.fillText('PI 제어 (초록) — 잔류 오차 '+(ref-ypi).toFixed(2),ox+10,oy-h+38);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

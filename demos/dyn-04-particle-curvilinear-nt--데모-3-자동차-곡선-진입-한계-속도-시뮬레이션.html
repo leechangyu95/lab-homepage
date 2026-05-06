@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 3: 자동차 곡선 진입 — 한계 속도 시뮬레이션 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 3: 자동차 곡선 진입 — 한계 속도 시뮬레이션</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/04-particle-curvilinear-nt.html">Week 4. 곡선 운동학 — 접선·법선 좌표 &amp; 극좌표</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 3: 자동차 곡선 진입 — 한계 속도 시뮬레이션</h4>
+    <p>차량이 직선 → 곡선 → 직선으로 트랙을 따라 달립니다. 슬라이더로 진입 속도와 곡률반경을 바꿔보세요. <strong>$a_n$이 마찰 한계 $\mu g$를 넘으면 차량이 곡선 바깥쪽으로 미끄러져 나갑니다</strong>(빨간색으로 표시). 안전한 진입 한계 $v_{max} = \sqrt{\mu g \rho}$를 직관적으로 확인할 수 있어요.</p>
+    <canvas id="d4cornC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>진입 속도 v (m/s) <span class="val" id="d4VV">15</span><input type="range" id="d4V" min="5" max="35" step="0.5" value="15"></label>
+      <label>곡률반경 ρ (m) <span class="val" id="d4RV">40</span><input type="range" id="d4R" min="15" max="100" step="2" value="40"></label>
+      <label>마찰계수 μ <span class="val" id="d4MV">0.7</span><input type="range" id="d4M" min="0.2" max="1.2" step="0.05" value="0.7"></label>
+      <button id="d4Reset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d4cornC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['d4V','d4R','d4M'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let s=0,slipped=false,sx=0,sy=0,svx=0,svy=0;
+    sl('d4Reset').onclick=()=>{s=0;slipped=false;};
+    ks.forEach(k=>sl(k).addEventListener('input',()=>{s=0;slipped=false;}));
+    function loop(){
+      const v=+sl('d4V').value,R=+sl('d4R').value,mu=+sl('d4M').value;
+      const g=9.81;
+      const vMax=Math.sqrt(mu*g*R);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // track: straight (left) → arc (top) → straight (right)
+      // arc center at (320, 180), radius R*scale
+      const scale=2;
+      const Rd=R*scale*0.8;
+      const cx=320,cy=180+Rd;
+      // road
+      x.strokeStyle='#999';x.lineWidth=Math.min(20,Rd*0.4);
+      x.beginPath();
+      x.moveTo(40,cy);x.lineTo(cx-Rd,cy);
+      x.stroke();
+      x.beginPath();x.arc(cx,cy,Rd,Math.PI,0,false);x.stroke();
+      x.beginPath();x.moveTo(cx+Rd,cy);x.lineTo(600,cy);x.stroke();
+      // centerline
+      x.strokeStyle='#fff';x.lineWidth=1.5;x.setLineDash([8,8]);
+      x.beginPath();x.moveTo(40,cy);x.lineTo(cx-Rd,cy);
+      x.stroke();
+      x.beginPath();x.arc(cx,cy,Rd,Math.PI,0,false);x.stroke();
+      x.beginPath();x.moveTo(cx+Rd,cy);x.lineTo(600,cy);x.stroke();
+      x.setLineDash([]);
+      // car position
+      const totalLen=(cx-Rd-40)+Math.PI*Rd+(600-cx-Rd);
+      let dist=s%totalLen;
+      let px,py,ang;
+      if(!slipped){
+        s+=v*0.5;
+        if(dist<cx-Rd-40){
+          px=40+dist;py=cy;ang=0;
+        } else if(dist<cx-Rd-40+Math.PI*Rd){
+          const arcDist=dist-(cx-Rd-40);
+          const th=Math.PI - arcDist/Rd;
+          px=cx+Rd*Math.cos(th);py=cy+Rd*Math.sin(th);
+          ang=th-Math.PI/2;
+          // check slipping at arc entry
+          if(v>vMax){
+            slipped=true;
+            sx=px;sy=py;
+            // tangent direction at entry
+            svx=-Math.sin(th)*v*4;
+            svy=Math.cos(th)*v*4;
+          }
+        } else {
+          const d=dist-(cx-Rd-40)-Math.PI*Rd;
+          px=cx+Rd+d;py=cy;ang=0;
+        }
+      } else {
+        sx+=svx*0.025;sy+=svy*0.025;
+        px=sx;py=sy;ang=Math.atan2(svy,svx);
+        if(px>700||py>500||py<-50||px<-50){slipped=false;s=0;}
+      }
+      // draw car
+      x.save();x.translate(px,py);x.rotate(ang);
+      x.fillStyle=slipped?'#c62828':'#0b5fff';
+      x.fillRect(-12,-7,24,14);
+      x.strokeStyle='#333';x.strokeRect(-12,-7,24,14);
+      x.restore();
+      // info panel
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      const an=v*v/R;
+      x.fillText('진입 속도 v = '+v+' m/s ('+Math.round(v*3.6)+' km/h)',20,25);
+      x.fillText('곡률반경 ρ = '+R+' m,  μ = '+mu,20,43);
+      x.fillText('a_n = v²/ρ = '+an.toFixed(2)+' m/s²,  마찰 한계 μg = '+(mu*g).toFixed(2)+' m/s²',20,61);
+      if(v>vMax){
+        x.fillStyle='#c62828';x.fillText('⚠ v > v_max = √(μgρ) ≈ '+vMax.toFixed(2)+' m/s — 곡선에서 미끄러짐!',20,79);
+      } else {
+        x.fillStyle='#2e7d32';x.fillText('✓ v_max ≈ '+vMax.toFixed(2)+' m/s 이내 — 안전',20,79);
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

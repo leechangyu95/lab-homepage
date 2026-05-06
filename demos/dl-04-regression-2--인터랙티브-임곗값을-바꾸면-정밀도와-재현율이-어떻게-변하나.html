@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 임곗값을 바꾸면 정밀도와 재현율이 어떻게 변하나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 임곗값을 바꾸면 정밀도와 재현율이 어떻게 변하나</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/04-regression-2.html">Week 4. 회귀 2: 다중회귀, 로지스틱, 소프트맥스</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 임곗값을 바꾸면 정밀도와 재현율이 어떻게 변하나</h4>
+    <p>로지스틱 회귀의 출력이 0.5 이상이면 양성으로 분류하는 게 기본이지만, 이 임곗값을 0.3으로 낮추면 더 많이 "양성"이라 판정해 재현율이 오르고 정밀도가 떨어집니다. 0.7로 높이면 반대. 시나리오에 따라 적절한 임곗값을 골라야 합니다.</p>
+    <canvas id="thrCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>임곗값 <span class="val" id="thV">0.50</span><input type="range" id="th" min="0.05" max="0.95" step="0.01" value="0.5"></label>
+      <button id="thR">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('thrCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let scores=[];
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(){
+      scores=[];
+      for(let i=0;i<60;i++){const s=1/(1+Math.exp(-(gauss()*0.7-1.0)));scores.push({s,c:0});}
+      for(let i=0;i<40;i++){const s=1/(1+Math.exp(-(gauss()*0.7+1.0)));scores.push({s,c:1});}
+      draw();
+    }
+    function draw(){
+      const th=+document.getElementById('th').value;
+      document.getElementById('thV').textContent=th.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const PL=40,PT=30,plotH=H-PT-100;
+      ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(PL,PT+plotH).lineTo;ctx.moveTo(PL,PT+plotH);ctx.lineTo(W-20,PT+plotH);ctx.stroke();
+      // points along x = score
+      scores.forEach(p=>{
+        const x=PL+(p.s)*(W-PL-30);
+        const y=PT+plotH/2+(p.c?20:-20)+gauss()*5;
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
+      });
+      // threshold line
+      const thx=PL+th*(W-PL-30);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(thx,PT);ctx.lineTo(thx,PT+plotH);ctx.stroke();
+      // metrics
+      let TP=0,FP=0,TN=0,FN=0;
+      scores.forEach(p=>{const pred=p.s>=th?1:0;
+        if(pred===1&&p.c===1)TP++;
+        else if(pred===1&&p.c===0)FP++;
+        else if(pred===0&&p.c===0)TN++;
+        else FN++;
+      });
+      const prec=TP/(TP+FP+1e-9),rec=TP/(TP+FN+1e-9),f1=2*prec*rec/(prec+rec+1e-9);
+      const acc=(TP+TN)/scores.length;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`임곗값 = ${th.toFixed(2)}`,PL,20);
+      ctx.fillText(`Accuracy ${(acc*100).toFixed(1)}%   Precision ${(prec*100).toFixed(1)}%   Recall ${(rec*100).toFixed(1)}%   F1 ${(f1*100).toFixed(1)}%`,PL,PT+plotH+25);
+      ctx.fillText(`TP ${TP}, FP ${FP}, FN ${FN}, TN ${TN}`,PL,PT+plotH+45);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('파랑 = 실제 음성, 주황 = 실제 양성. 빨간 선의 오른쪽이 "양성"으로 분류',PL,PT+plotH+65);
+    }
+    document.getElementById('th').addEventListener('input',draw);
+    document.getElementById('thR').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

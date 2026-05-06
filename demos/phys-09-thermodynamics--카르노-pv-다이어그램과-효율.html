@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🔄 카르노 PV 다이어그램과 효율 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🔄 카르노 PV 다이어그램과 효율</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/09-thermodynamics.html">Week 9. 열역학 핵심</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🔄 카르노 PV 다이어그램과 효율</h4>
+    <p>같은 $T_H$를 유지하면서 $T_C$만 0 K에 가깝게 → 효율이 100%에 접근. 하지만 절대영도는 도달 불가능하므로 효율 = 1은 영원히 불가능. 닫힌 곡선의 면적이 한 사이클당 한 일.</p>
+    <canvas id="w9_carDemo" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>$T_H$ (고온 열원) <span class="val" id="w9_carTHV">600</span> K
+        <input type="range" id="w9_carTH" min="350" max="1200" step="10" value="600"></label>
+      <label>$T_C$ (저온 열원) <span class="val" id="w9_carTCV">300</span> K
+        <input type="range" id="w9_carTC" min="50" max="500" step="10" value="300"></label>
+      <label>압축비 $V_2/V_1$ <span class="val" id="w9_carRV">2.0</span>
+        <input type="range" id="w9_carR" min="1.2" max="4.0" step="0.1" value="2.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$T_H = 600$ K 고정, $T_C$를 600→300 K로 → 효율이 0%에서 50%로 증가</li>
+        <li>$T_C$를 $T_H$와 같게 → 사이클이 납작해지고 효율 0% (열원 차이가 없으면 일을 못 뽑음)</li>
+        <li>실제 화력발전소: $T_H \approx 800$ K, $T_C \approx 320$ K → 카르노 효율 한계 ≈ 60% (실제 ≈ 40%)</li>
+        <li>자동차 엔진: $T_H \approx 2500$ K, $T_C \approx 800$ K → 한계 ≈ 68% (실제 ≈ 30%)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w9_carDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const R=8.314,GAMMA=1.4,n=1.0;
+    function draw(){
+      const TH=+document.getElementById('w9_carTH').value;
+      const TC=+document.getElementById('w9_carTC').value;
+      const ratio=+document.getElementById('w9_carR').value;
+      document.getElementById('w9_carTHV').textContent=TH;
+      document.getElementById('w9_carTCV').textContent=TC;
+      document.getElementById('w9_carRV').textContent=ratio.toFixed(1);
+      // V1 -> V2 isothermal at TH; V2 -> V3 adiabatic to TC; V3 -> V4 isothermal at TC; V4 -> V1 adiabatic to TH
+      const V1=10; // L
+      const V2=V1*ratio;
+      // adiabatic TV^(g-1) const => V3=V2*(TH/TC)^(1/(g-1))
+      const V3=V2*Math.pow(TH/TC,1/(GAMMA-1));
+      const V4=V1*Math.pow(TH/TC,1/(GAMMA-1));
+      function P(V,T){return n*R*T/(V*1e-3)/1000;} // kPa
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=52;
+      const Vmin=V1*0.9,Vmax=V3*1.05;
+      const Pmax=P(V1,TH)*1.1;
+      const sx=(W-margin-20)/(Vmax-Vmin);
+      const sy=(H-margin-20)/Pmax;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      ctx.moveTo(margin,H-margin);ctx.lineTo(W-20,H-margin);
+      ctx.moveTo(margin,H-margin);ctx.lineTo(margin,20);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('부피 V (L)',W-100,H-12);
+      ctx.save();ctx.translate(14,H/2);ctx.rotate(-Math.PI/2);
+      ctx.fillText('압력 P (kPa)',0,0);ctx.restore();
+      function plot(fn,Va,Vb,col){
+        ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.beginPath();
+        const N=60;
+        for(let i=0;i<=N;i++){
+          const v=Va+(Vb-Va)*i/N;
+          const p=fn(v);
+          const px=margin+(v-Vmin)*sx,py=H-margin-p*sy;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+      // 1->2 iso TH
+      plot(v=>P(v,TH),V1,V2,'#c62828');
+      // 2->3 adia
+      plot(v=>P(V2,TH)*Math.pow(V2/v,GAMMA),V2,V3,'#0b5fff');
+      // 3->4 iso TC
+      plot(v=>P(v,TC),V4,V3,'#1976d2');
+      // 4->1 adia
+      plot(v=>P(V1,TH)*Math.pow(V1/v,GAMMA),V1,V4,'#7b1fa2');
+      // points
+      const pts=[[V1,P(V1,TH),'1'],[V2,P(V2,TH),'2'],[V3,P(V3,TC),'3'],[V4,P(V4,TC),'4']];
+      pts.forEach(([v,p,lbl])=>{
+        ctx.fillStyle='#222';
+        ctx.beginPath();ctx.arc(margin+(v-Vmin)*sx,H-margin-p*sy,5,0,Math.PI*2);ctx.fill();
+        ctx.fillText(lbl,margin+(v-Vmin)*sx+8,H-margin-p*sy-6);
+      });
+      // efficiency
+      const eta=1-TC/TH;
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(W-220,30,200,118);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,30,200,118);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('카르노 사이클',W-210,50);
+      ctx.font='12px sans-serif';
+      ctx.fillStyle='#c62828';ctx.fillText('① 등온 팽창 (T_H)',W-210,70);
+      ctx.fillStyle='#0b5fff';ctx.fillText('② 단열 팽창 → T_C',W-210,86);
+      ctx.fillStyle='#1976d2';ctx.fillText('③ 등온 압축 (T_C)',W-210,102);
+      ctx.fillStyle='#7b1fa2';ctx.fillText('④ 단열 압축 → T_H',W-210,118);
+      ctx.fillStyle='#000';ctx.font='bold 14px sans-serif';
+      ctx.fillText('η = 1 - T_C/T_H = '+(eta*100).toFixed(1)+' %',W-210,140);
+    }
+    ['w9_carTH','w9_carTC','w9_carR'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

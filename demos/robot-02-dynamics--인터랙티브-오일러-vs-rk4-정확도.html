@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 오일러 vs RK4 정확도 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 오일러 vs RK4 정확도</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/02-dynamics.html">Lecture 2. 운동학과 동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 오일러 vs RK4 정확도</h4>
+    <p>2차 진동 시스템 $\ddot x = -x$ (해석해는 정확한 단위원)을 두 방법으로 적분합니다.
+    Euler는 매 스텝 약간씩 바깥으로 새어나가 나선형으로 발산하고, RK4는 단위원 위에 거의 정확히 머무릅니다.
+    <strong>$\Delta t$를 0.4까지 키워보세요</strong> — Euler가 한 바퀴도 못 도는 것이 보입니다.</p>
+    <canvas id="rkc" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Δt <span class="val" id="dtV">0.2</span><input type="range" id="dt" min="0.02" max="0.4" step="0.01" value="0.2"></label>
+      <button id="rkR">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rkc'),x=c.getContext('2d');
+    let eul,rk4,t,eulTrail,rkTrail,frame=0;
+    function init(){eul=[1,0];rk4=[1,0];t=0;eulTrail=[];rkTrail=[];}
+    init();document.getElementById('rkR').onclick=init;
+    function f(s){return [s[1],-s[0]];}
+    function step(){
+      const dt=+document.getElementById('dt').value;
+      const k1=f(eul);eul=[eul[0]+k1[0]*dt,eul[1]+k1[1]*dt];
+      const r=rk4;
+      const a1=f(r);
+      const a2=f([r[0]+a1[0]*dt/2,r[1]+a1[1]*dt/2]);
+      const a3=f([r[0]+a2[0]*dt/2,r[1]+a2[1]*dt/2]);
+      const a4=f([r[0]+a3[0]*dt,r[1]+a3[1]*dt]);
+      rk4=[r[0]+dt/6*(a1[0]+2*a2[0]+2*a3[0]+a4[0]),r[1]+dt/6*(a1[1]+2*a2[1]+2*a3[1]+a4[1])];
+      eulTrail.push([...eul]);if(eulTrail.length>500)eulTrail.shift();
+      rkTrail.push([...rk4]);if(rkTrail.length>500)rkTrail.shift();
+      t+=dt;
+    }
+    function loop(){
+      // 10프레임마다 한 번만 적분 → 약 6 step/sec (sim 1초에 ~10초의 실제 시간)
+      if(frame++%10===0)step();
+      const dt=+document.getElementById('dt').value;
+      document.getElementById('dtV').textContent=dt.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320,cy=160,sc=100;
+      // 정답 단위원
+      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.beginPath();x.arc(cx,cy,sc,0,Math.PI*2);x.stroke();
+      // 자취
+      x.strokeStyle='rgba(198,40,40,0.5)';x.lineWidth=1.5;x.beginPath();
+      eulTrail.forEach((p,i)=>{const xx=cx+p[0]*sc,yy=cy+p[1]*sc;if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='rgba(11,95,255,0.5)';x.beginPath();
+      rkTrail.forEach((p,i)=>{const xx=cx+p[0]*sc,yy=cy+p[1]*sc;if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      // 텍스트
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('🟢 정답 (반지름 1)',20,30);
+      x.fillStyle='#c62828';x.fillText('🔴 Euler 반지름: '+Math.hypot(eul[0],eul[1]).toFixed(3),20,50);
+      x.fillStyle='#0b5fff';x.fillText('🔵 RK4   반지름: '+Math.hypot(rk4[0],rk4[1]).toFixed(3),20,70);
+      x.fillStyle='#666';x.fillText('시간 t = '+t.toFixed(1)+' s',20,90);
+      // 점
+      x.fillStyle='#c62828';x.beginPath();x.arc(cx+eul[0]*sc,cy+eul[1]*sc,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(cx+rk4[0]*sc,cy+rk4[1]*sc,6,0,Math.PI*2);x.fill();
+      if(t>30)init();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

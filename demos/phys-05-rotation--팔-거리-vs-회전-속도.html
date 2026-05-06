@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>⛸️ 팔 거리 vs 회전 속도 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">⛸️ 팔 거리 vs 회전 속도</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/05-rotation.html">Week 5. 회전과 각운동량</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>⛸️ 팔 거리 vs 회전 속도</h4>
+    <p>처음 상태(팔을 편 상태)의 각운동량을 기준으로, 팔을 모으면 $\omega$와 회전 KE가 어떻게 변하는지 실시간으로 보여 줍니다. 회전 KE는 보존되지 <em>않습니다</em> — 학생이 팔을 모으는 데 일을 하기 때문입니다.</p>
+    <canvas id="w5_skaterDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>팔 거리 $r$ <span class="val" id="w5_skR_V">1.0</span> m
+        <input type="range" id="w5_skR" min="0.15" max="1.0" step="0.01" value="1.0"></label>
+      <label>몸통 $I_0$ <span class="val" id="w5_skI0_V">2.0</span> kg·m²
+        <input type="range" id="w5_skI0" min="0.5" max="5" step="0.1" value="2.0"></label>
+      <label>팔(점질량) $m$ <span class="val" id="w5_skM_V">3.0</span> kg
+        <input type="range" id="w5_skM" min="1" max="6" step="0.5" value="3.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$r$을 1.0 → 0.2로 줄이면 $\omega$가 몇 배 커지는지 — $I$ 비율로 예측해 본 뒤 슬라이더로 확인</li>
+        <li>회전 KE는 $I$가 줄어든 비율의 <em>역수만큼</em> 커진다 (∵ $K = L^2/(2I)$). 즉 무료 운동이 아님</li>
+        <li>$r=0.2$일 때 회전 속도가 1초에 몇 바퀴인지(rpm) 머릿속으로 계산</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w5_skaterDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    // initial reference: at r0=1.0, I0=2.0, m=3.0, omega0=2 rad/s
+    let theta=0, last=performance.now();
+    const r0=1.0, omega0=2.0;
+    function I(r,I0,m){return I0 + 2*m*r*r;}
+    function tick(){
+      const now=performance.now();
+      const dt=Math.min((now-last)/1000,0.05);
+      last=now;
+      const r=+document.getElementById('w5_skR').value;
+      const I0=+document.getElementById('w5_skI0').value;
+      const m=+document.getElementById('w5_skM').value;
+      const Iref=I0+2*m*r0*r0;
+      const L=Iref*omega0; // reference angular momentum (constant)
+      const Inow=I(r,I0,m);
+      const omega=L/Inow;
+      const KE=0.5*Inow*omega*omega;
+      const KE0=0.5*Iref*omega0*omega0;
+      theta+=omega*dt;
+      document.getElementById('w5_skR_V').textContent=r.toFixed(2);
+      document.getElementById('w5_skI0_V').textContent=I0.toFixed(1);
+      document.getElementById('w5_skM_V').textContent=m.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2-80,cy=H/2;
+      // body (torso) circle scaled by I0
+      const bodyR=14+I0*4;
+      ctx.fillStyle='#cfd8e3';ctx.beginPath();ctx.arc(cx,cy,bodyR,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#999';ctx.stroke();
+      // arms — two point masses at distance r
+      const scl=80; // m to pixel
+      const ax1=cx+Math.cos(theta)*r*scl, ay1=cy+Math.sin(theta)*r*scl;
+      const ax2=cx-Math.cos(theta)*r*scl, ay2=cy-Math.sin(theta)*r*scl;
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(ax1,ay1);ctx.lineTo(ax2,ay2);ctx.stroke();
+      const massR=4+m*1.5;
+      ctx.fillStyle='#0b5fff';
+      ctx.beginPath();ctx.arc(ax1,ay1,massR,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(ax2,ay2,massR,0,Math.PI*2);ctx.fill();
+      // info panel
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-220,16,200,140);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,16,200,140);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('I = I₀ + 2mr² = '+Inow.toFixed(2)+' kg·m²',W-210,36);
+      ctx.fillText('ω = L/I = '+omega.toFixed(2)+' rad/s',W-210,56);
+      ctx.fillText('rpm = '+(omega*60/(2*Math.PI)).toFixed(1),W-210,76);
+      ctx.fillText('L = '+L.toFixed(2)+' kg·m²/s (보존)',W-210,96);
+      ctx.fillText('KE = '+KE.toFixed(2)+' J',W-210,116);
+      ctx.fillText('KE/KE₀ = '+(KE/KE0).toFixed(2)+'배',W-210,136);
+      requestAnimationFrame(tick);
+    }
+    tick();
+  })();
+  </script>
+</main>
+</body>
+</html>

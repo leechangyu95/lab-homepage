@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📊 마우스 호버 — 한 번에 세 그래프 따라가기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">📊 마우스 호버 — 한 번에 세 그래프 따라가기</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/01-kinematics.html">Week 1. 수학 도구와 운동학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>📊 마우스 호버 — 한 번에 세 그래프 따라가기</h4>
+    <p>위에서 아래로: $x$-$t$, $v$-$t$, $a$-$t$. 셋 다 같은 시각 $t$를 가리킵니다.</p>
+    <canvas id="motionDemo" width="640" height="380"></canvas>
+    <div class="note" style="margin-top:14px">
+      <strong>발견할 것</strong>
+      <ul>
+        <li>$x$가 극값(꼭짓점)일 때 $v = 0$ — 그래프의 정점은 기울기 0</li>
+        <li>$v$가 0인 시각은 두 번 → 한 번은 멈췄다가 되돌아오는 운동</li>
+        <li>$a$는 시간에 대해 직선 → 가속도가 일정한 비율로 변하는 운동 (저크 일정)</li>
+        <li>$v < 0$인 구간은 위치가 <em>감소</em> — $x$ 그래프가 내려가는 부분과 일치</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('motionDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const TMAX=8;
+    function x_of(t){return 0.3*t*t*t-2*t*t+5*t;}
+    function v_of(t){return 0.9*t*t-4*t+5;}
+    function a_of(t){return 1.8*t-4;}
+    let mouseT=null;
+    function panel(idx,fn,col,label,unit){
+      const ph=Math.floor(H/3)-8,py=4+idx*Math.floor(H/3);
+      const ts=[];for(let t=0;t<=TMAX;t+=0.05)ts.push(t);
+      const vals=ts.map(fn);
+      const vmin=Math.min(0,...vals),vmax=Math.max(0,...vals);
+      const sc=(ph-12)/(vmax-vmin+0.01);
+      const zero=py+ph-4-(0-vmin)*sc;
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;ctx.beginPath();
+      ctx.moveTo(40,py+ph);ctx.lineTo(W-15,py+ph);
+      ctx.moveTo(40,py+4);ctx.lineTo(40,py+ph);ctx.stroke();
+      ctx.strokeStyle='#eef0f4';ctx.beginPath();ctx.moveTo(40,zero);ctx.lineTo(W-15,zero);ctx.stroke();
+      ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+      ts.forEach((t,i)=>{
+        const px=40+(t/TMAX)*(W-55);
+        const yy=py+ph-4-(vals[i]-vmin)*sc;
+        if(i===0)ctx.moveTo(px,yy);else ctx.lineTo(px,yy);
+      });
+      ctx.stroke();
+      if(mouseT!==null){
+        const px=40+(mouseT/TMAX)*(W-55);
+        const v=fn(mouseT);
+        const yy=py+ph-4-(v-vmin)*sc;
+        ctx.strokeStyle='#888';ctx.setLineDash([3,3]);ctx.beginPath();
+        ctx.moveTo(px,py+4);ctx.lineTo(px,py+ph);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(px,yy,4,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        const tx=px<W-130?px+8:px-110;
+        ctx.fillText(label+' = '+v.toFixed(2)+unit,tx,Math.max(yy-6,py+14));
+      }
+      ctx.fillStyle='#444';ctx.font='bold 13px sans-serif';
+      ctx.fillText(label+'-t',45,py+15);
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      panel(0,x_of,'#0b5fff','x',' m');
+      panel(1,v_of,'#ff8c00','v',' m/s');
+      panel(2,a_of,'#2e7d32','a',' m/s²');
+      if(mouseT!==null){
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText('t = '+mouseT.toFixed(2)+' s',W-95,15);
+      }
+    }
+    c.addEventListener('mousemove',e=>{
+      const r=c.getBoundingClientRect();
+      const px=(e.clientX-r.left)*(W/r.width);
+      mouseT=Math.max(0,Math.min(TMAX,(px-40)/(W-55)*TMAX));
+      draw();
+    });
+    c.addEventListener('mouseleave',()=>{mouseT=null;draw();});
+    c.addEventListener('touchmove',e=>{
+      e.preventDefault();
+      const r=c.getBoundingClientRect();
+      const px=(e.touches[0].clientX-r.left)*(W/r.width);
+      mouseT=Math.max(0,Math.min(TMAX,(px-40)/(W-55)*TMAX));
+      draw();
+    },{passive:false});
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

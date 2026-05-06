@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 빔 서치 트리 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 빔 서치 트리</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/12-rnn-advanced.html">Week 12. Seq2Seq와 Attention</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 빔 서치 트리</h4>
+    <p>각 시점에서 빔 폭만큼의 후보가 살아남는 모습을 봅니다. 빔 폭이 커질수록 트리가 넓어집니다.</p>
+    <canvas id="beamCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>빔 폭 <span class="val" id="bwV">3</span><input type="range" id="bw" min="1" max="5" step="1" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('beamCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const k=+document.getElementById('bw').value;
+      document.getElementById('bwV').textContent=k;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const T=4,sx=W/(T+1);
+      let prev=[{x:30,y:H/2}];
+      for(let t=1;t<=T;t++){
+        const curr=[];
+        const x=sx*t+30;
+        for(let j=0;j<k;j++){
+          const y=40+j*((H-80)/Math.max(1,k-1)||1);
+          curr.push({x,y});
+          prev.forEach(p=>{ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(x,y);ctx.stroke();});
+        }
+        prev=curr;
+        curr.forEach(p=>{ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fill();});
+      }
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(30,H/2,8,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`빔 폭 k=${k}, 시점 4`,20,25);
+    }
+    document.getElementById('bw').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

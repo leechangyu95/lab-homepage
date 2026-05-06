@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: DBSCAN — 반달 모양도 거뜬 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: DBSCAN — 반달 모양도 거뜬</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/06-unsupervised.html">Week 6. 비지도학습 — 군집화와 차원 축소</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: DBSCAN — 반달 모양도 거뜬</h4>
+    <p>K-평균이 절대 못 푸는 <strong>두 반달(half-moons)</strong> 데이터입니다. DBSCAN은 밀도만 보고 모양을 신경 쓰지 않으니 한 방에 가릅니다. <strong>$\varepsilon$</strong>을 너무 작게 하면 클러스터가 잘게 쪼개지고, 너무 크면 모두 하나로 합쳐져요. 회색 X는 잡음으로 분류된 점입니다.</p>
+    <canvas id="dbs" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$\varepsilon$ (반경) <span class="val" id="dbEV">0.06</span><input type="range" id="dbE" min="0.02" max="0.20" step="0.01" value="0.06"></label>
+      <label>minPts <span class="val" id="dbMV">4</span><input type="range" id="dbM" min="2" max="10" step="1" value="4"></label>
+      <button id="dbGen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dbs');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLORS=['#0b5fff','#ff8c00','#2e7d32','#c62828','#6a1b9a','#00838f'];
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<60;i++){const t=Math.PI*Math.random();pts.push({x:0.3+0.2*Math.cos(t)+(Math.random()-0.5)*0.04,y:0.4-0.18*Math.sin(t)+(Math.random()-0.5)*0.04});}
+      for(let i=0;i<60;i++){const t=Math.PI*Math.random();pts.push({x:0.5+0.2*Math.cos(t)+(Math.random()-0.5)*0.04,y:0.55+0.18*Math.sin(t)+(Math.random()-0.5)*0.04});}
+      for(let i=0;i<8;i++)pts.push({x:Math.random(),y:Math.random()}); // noise
+      run();
+    }
+    function run(){
+      const eps=+document.getElementById('dbE').value;
+      const minPts=+document.getElementById('dbM').value;
+      document.getElementById('dbEV').textContent=eps.toFixed(2);
+      document.getElementById('dbMV').textContent=minPts;
+      const N=pts.length;
+      const labels=new Array(N).fill(undefined);
+      const visited=new Array(N).fill(false);
+      function neighbors(i){const out=[];for(let j=0;j<N;j++){if(i===j)continue;if(Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y)<eps)out.push(j);}return out;}
+      let cl=0;
+      for(let i=0;i<N;i++){
+        if(visited[i])continue;visited[i]=true;
+        const nb=neighbors(i);
+        if(nb.length<minPts){labels[i]=-1;continue;}
+        labels[i]=cl;
+        const seeds=[...nb];
+        while(seeds.length){
+          const j=seeds.shift();
+          if(!visited[j]){visited[j]=true;const nb2=neighbors(j);if(nb2.length>=minPts)nb2.forEach(k=>{if(!seeds.includes(k))seeds.push(k);});}
+          if(labels[j]===undefined||labels[j]===-1)labels[j]=cl;
+        }
+        cl++;
+      }
+      draw(labels,cl);
+    }
+    function draw(labels,nClusters){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      pts.forEach((p,i)=>{
+        const lab=labels[i];
+        if(lab===-1){ctx.strokeStyle='#888';ctx.beginPath();const x=p.x*W,y=p.y*H;ctx.moveTo(x-5,y-5);ctx.lineTo(x+5,y+5);ctx.moveTo(x-5,y+5);ctx.lineTo(x+5,y-5);ctx.stroke();}
+        else{ctx.fillStyle=COLORS[lab%6];ctx.beginPath();ctx.arc(p.x*W,p.y*H,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();}
+      });
+      const noise=labels.filter(l=>l===-1).length;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`발견 클러스터 ${nClusters}개 · 잡음 ${noise}개`,12,22);
+    }
+    document.getElementById('dbE').addEventListener('input',run);
+    document.getElementById('dbM').addEventListener('input',run);
+    document.getElementById('dbGen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

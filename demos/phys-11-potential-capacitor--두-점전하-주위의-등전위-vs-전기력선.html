@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>두 점전하 주위의 등전위 vs 전기력선 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">두 점전하 주위의 등전위 vs 전기력선</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/11-potential-capacitor.html">Week 11. 전위와 축전기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>두 점전하 주위의 등전위 vs 전기력선</h4>
+    <p>전하 부호와 거리(분리)를 조절해 보세요. <strong>같은 부호(쌍극자가 아닌 동극)</strong>일 때와 <strong>반대 부호(쌍극자)</strong>일 때 등전위면 모양이 어떻게 다른지 비교.</p>
+    <canvas id="w11_eqCanvas" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>전하 1 부호 $q_1$ <span class="val" id="w11_q1v">+1</span>
+        <input type="range" id="w11_q1" min="-2" max="2" step="1" value="1"></label>
+      <label>전하 2 부호 $q_2$ <span class="val" id="w11_q2v">−1</span>
+        <input type="range" id="w11_q2" min="-2" max="2" step="1" value="-1"></label>
+      <label>전하 분리 $s$ <span class="val" id="w11_sv">120</span> px
+        <input type="range" id="w11_s" min="40" max="240" step="10" value="120"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$q_1=+1, q_2=-1$ → 쌍극자. 등전위선이 두 전하를 둘러싸지 않고 한쪽으로 휨.</li>
+        <li>$q_1=q_2=+1$ → 두 +. 멀리서는 +2 점전하처럼 보이는 동심원.</li>
+        <li>전기력선은 +에서 시작 -로 끝남. 등전위선과 만나는 곳마다 90°.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w11_eqCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function V(x,y,x1,y1,q1,x2,y2,q2){
+      const r1=Math.hypot(x-x1,y-y1)+1e-6;
+      const r2=Math.hypot(x-x2,y-y2)+1e-6;
+      return q1/r1+q2/r2;
+    }
+    function draw(){
+      const q1=+document.getElementById('w11_q1').value;
+      const q2=+document.getElementById('w11_q2').value;
+      const s=+document.getElementById('w11_s').value;
+      document.getElementById('w11_q1v').textContent=(q1>0?'+':'')+q1;
+      document.getElementById('w11_q2v').textContent=(q2>0?'+':'')+q2;
+      document.getElementById('w11_sv').textContent=s;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2, cy=H/2;
+      const x1=cx-s/2,y1=cy,x2=cx+s/2,y2=cy;
+      // sample V on grid for contours
+      const NX=80,NY=45,gw=W/NX,gh=H/NY;
+      const grid=[];
+      for(let j=0;j<NY;j++){grid.push([]);for(let i=0;i<NX;i++){grid[j].push(V(i*gw,j*gh,x1,y1,q1,x2,y2,q2));}}
+      // contour levels (rough marching squares)
+      ctx.strokeStyle='#1f77b4';ctx.lineWidth=1;
+      const levels=[-0.08,-0.04,-0.02,-0.01,0.01,0.02,0.04,0.08];
+      for(const L of levels){
+        for(let j=0;j<NY-1;j++){
+          for(let i=0;i<NX-1;i++){
+            const a=grid[j][i],b=grid[j][i+1],cV=grid[j+1][i+1],dV=grid[j+1][i];
+            const seg=[];
+            function ip(va,vb,xa,ya,xb,yb){const t=(L-va)/(vb-va);return [xa+t*(xb-xa),ya+t*(yb-ya)];}
+            if((a-L)*(b-L)<0)seg.push(ip(a,b,i*gw,j*gh,(i+1)*gw,j*gh));
+            if((b-L)*(cV-L)<0)seg.push(ip(b,cV,(i+1)*gw,j*gh,(i+1)*gw,(j+1)*gh));
+            if((cV-L)*(dV-L)<0)seg.push(ip(cV,dV,(i+1)*gw,(j+1)*gh,i*gw,(j+1)*gh));
+            if((dV-L)*(a-L)<0)seg.push(ip(dV,a,i*gw,(j+1)*gh,i*gw,j*gh));
+            if(seg.length>=2){ctx.beginPath();ctx.moveTo(seg[0][0],seg[0][1]);ctx.lineTo(seg[1][0],seg[1][1]);ctx.stroke();}
+          }
+        }
+      }
+      // field lines starting around +charges
+      ctx.strokeStyle='#d62728';ctx.fillStyle='#d62728';ctx.lineWidth=1.5;
+      function drawFL(sx,sy,sign){
+        let x=sx,y=sy;
+        for(let st=0;st<400;st++){
+          const eps=0.5;
+          const v0=V(x,y,x1,y1,q1,x2,y2,q2);
+          const ex=-(V(x+eps,y,x1,y1,q1,x2,y2,q2)-V(x-eps,y,x1,y1,q1,x2,y2,q2))/(2*eps);
+          const ey=-(V(x,y+eps,x1,y1,q1,x2,y2,q2)-V(x,y-eps,x1,y1,q1,x2,y2,q2))/(2*eps);
+          const m=Math.hypot(ex,ey)+1e-9;
+          const dx=sign*ex/m*2.5, dy=sign*ey/m*2.5;
+          ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();
+          x+=dx;y+=dy;
+          if(x<0||x>W||y<0||y>H)break;
+          if(Math.hypot(x-x1,y-y1)<8||Math.hypot(x-x2,y-y2)<8)break;
+        }
+      }
+      const N=12;
+      if(q1!==0)for(let k=0;k<N;k++){const a=2*Math.PI*k/N;drawFL(x1+12*Math.cos(a),y1+12*Math.sin(a),Math.sign(q1));}
+      if(q2!==0)for(let k=0;k<N;k++){const a=2*Math.PI*k/N;drawFL(x2+12*Math.cos(a),y2+12*Math.sin(a),Math.sign(q2));}
+      // charges
+      function drawQ(x,y,q){
+        ctx.beginPath();ctx.arc(x,y,10,0,2*Math.PI);
+        ctx.fillStyle=q>0?'#d62728':(q<0?'#1f77b4':'#888');ctx.fill();
+        ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(q>0?'+':(q<0?'−':'0'),x,y);ctx.textAlign='start';ctx.textBaseline='alphabetic';
+      }
+      drawQ(x1,y1,q1);drawQ(x2,y2,q2);
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,260,46);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,260,46);
+      ctx.fillStyle='#1f77b4';ctx.font='13px sans-serif';ctx.fillText('━ 등전위선 (V = 일정)',16,28);
+      ctx.fillStyle='#d62728';ctx.fillText('→ 전기력선 (E = −∇V)',16,46);
+    }
+    ['w11_q1','w11_q2','w11_s'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 1차 + 적분기 시스템의 Bode — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 1차 + 적분기 시스템의 Bode</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/10-bode.html">Week 10. Bode 선도 — 주파수 응답</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 + 적분기 시스템의 Bode</h4>
+    <p>$G(s) = \dfrac{K}{s(\tau s + 1)}$의 Bode를 그립니다. K와 τ를 움직여 보세요.
+    상단은 크기(dB), 하단은 위상(°). 빨간 가로선은 0 dB와 −180° 기준선.</p>
+    <canvas id="bd2" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>K <span class="val" id="bdKV">10</span><input type="range" id="bdK" min="0.5" max="50" step="0.5" value="10"></label>
+      <label>τ <span class="val" id="bdtV2">0.5</span><input type="range" id="bdt2" min="0.05" max="2" step="0.05" value="0.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bd2'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('bdKV').textContent=(+$('bdK').value).toFixed(1);$('bdtV2').textContent=(+$('bdt2').value).toFixed(2);};
+    ['bdK','bdt2'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const K=+$('bdK').value, tau=+$('bdt2').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // log frequency axis: 10^-1 to 10^3
+      const wmin=-1, wmax=3;
+      const ox=60, mw=560;
+      const xOf=lw=>ox + (lw-wmin)/(wmax-wmin)*mw;
+      // magnitude plot top
+      const myT=20, myB=170, myH=myB-myT;
+      // magnitude axis: -60 to +40 dB
+      const mTop=40, mBot=-60;
+      const yMof=db=>myT + (mTop-db)/(mTop-mBot)*myH;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,myT);x.lineTo(ox,myB);x.lineTo(ox+mw,myB);x.stroke();
+      // grid
+      for(let dec=wmin;dec<=wmax;dec++){const xx=xOf(dec);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(xx,myT);x.lineTo(xx,myB);x.stroke();
+        x.fillStyle='#777';x.font='10px sans-serif';x.fillText('10^'+dec,xx-12,myB+12);}
+      for(let db=mTop;db>=mBot;db-=20){const yy=yMof(db);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(ox,yy);x.lineTo(ox+mw,yy);x.stroke();
+        x.fillStyle='#777';x.fillText(db+' dB',ox-40,yy+3);}
+      // 0 dB line
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,yMof(0));x.lineTo(ox+mw,yMof(0));x.stroke();x.setLineDash([]);
+      // magnitude curve
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      let wgc=null;
+      for(let i=0;i<=400;i++){const lw=wmin+i/400*(wmax-wmin), w=Math.pow(10,lw);
+        const mag = K / (w * Math.sqrt(1+(tau*w)**2));
+        const dB = 20*Math.log10(mag);
+        const xx=xOf(lw), yy=yMof(dB);
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+        if(wgc===null && dB<=0 && i>0) wgc=w;}
+      x.stroke();
+      // phase plot bottom
+      const pyT=210, pyB=350, pyH=pyB-pyT;
+      const pTop=0, pBot=-270;
+      const yPof=p=>pyT + (pTop-p)/(pTop-pBot)*pyH;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,pyT);x.lineTo(ox,pyB);x.lineTo(ox+mw,pyB);x.stroke();
+      for(let dec=wmin;dec<=wmax;dec++){const xx=xOf(dec);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(xx,pyT);x.lineTo(xx,pyB);x.stroke();}
+      for(let p=pTop;p>=pBot;p-=45){const yy=yPof(p);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(ox,yy);x.lineTo(ox+mw,yy);x.stroke();
+        x.fillStyle='#777';x.fillText(p+'°',ox-40,yy+3);}
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,yPof(-180));x.lineTo(ox+mw,yPof(-180));x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=400;i++){const lw=wmin+i/400*(wmax-wmin), w=Math.pow(10,lw);
+        const ph = -90 - 180/Math.PI*Math.atan(tau*w);
+        const xx=xOf(lw), yy=yPof(ph);
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('|G(jω)| [dB]',10,myT-5);
+      x.fillText('∠G(jω) [°]',10,pyT-5);
+      if(wgc) x.fillText('이득 교차주파수 ωgc ≈ '+wgc.toFixed(2)+' rad/s',ox+200,myT-5);
+      x.fillText('ω [rad/s]',ox+mw-50,pyB+25);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

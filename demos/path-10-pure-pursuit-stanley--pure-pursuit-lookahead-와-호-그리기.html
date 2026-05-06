@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 Pure Pursuit — Lookahead 와 호 그리기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 Pure Pursuit — Lookahead 와 호 그리기</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/10-pure-pursuit-stanley.html">Week 10. Guidance — Pure Pursuit · Stanley · PN</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 Pure Pursuit — Lookahead 와 호 그리기</h4>
+    <p>곡선 경로(초록)를 자전거 모델 차량(파랑)이 추종합니다. 주황 점이 lookahead 점, 점선이 차량과 lookahead 사이 시선,
+    빨간 화살표가 앞바퀴와 조향각 $\delta$. <strong>$L_d$ 를 작게</strong> 줄이면 지그재그가, <strong>크게</strong> 늘리면 코너 안쪽 자르기가 보입니다.
+    "속도 적응형" 토글을 켜면 $L_d = 0.1 v \cdot \text{scale} + L_{fc}$ 로 자동 조절됩니다.</p>
+    <canvas id="pp" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Lookahead L_d <span class="val" id="ppLdV">70</span><input type="range" id="ppLd" min="20" max="180" value="70"></label>
+      <label>속도 v <span class="val" id="ppVV">2.0</span><input type="range" id="ppV" min="0.5" max="4" step="0.1" value="2"></label>
+      <label><input type="checkbox" id="ppAdapt"> 속도 적응형 L_d</label>
+      <button id="ppRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pp'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const path=[];
+    for(let s=0;s<W+50;s+=2){
+      path.push({x:s,y:H/2+55*Math.sin(s*0.012)});
+    }
+    const arc=[0];
+    for(let i=1;i<path.length;i++) arc.push(arc[i-1]+Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y));
+    const L=24;
+    let car;
+    function init(){car={x:30,y:H/2-40,th:0.0,trail:[],errSum:0,n:0};}
+    init();
+    document.getElementById('ppRst').onclick=init;
+    function nearestIdx(px,py){
+      let best=0,bd=1e9;
+      for(let i=0;i<path.length;i++){
+        const d=(path[i].x-px)**2+(path[i].y-py)**2;
+        if(d<bd){bd=d;best=i;}
+      }
+      return best;
+    }
+    function loop(){
+      const v=+document.getElementById('ppV').value;
+      const adapt=document.getElementById('ppAdapt').checked;
+      let Ld=+document.getElementById('ppLd').value;
+      if(adapt){Ld=15*v+30;}
+      document.getElementById('ppLdV').textContent=Ld.toFixed(0);
+      document.getElementById('ppVV').textContent=v.toFixed(1);
+      const ni=nearestIdx(car.x,car.y);
+      let li=ni;
+      while(li<path.length-1 && arc[li]-arc[ni]<Ld) li++;
+      const tgt=path[li];
+      const lookAng=Math.atan2(tgt.y-car.y,tgt.x-car.x);
+      const alpha=((lookAng-car.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+      const delta=Math.atan2(2*L*Math.sin(alpha),Ld);
+      const dt=0.05;
+      car.x+=v*Math.cos(car.th)*dt*15;
+      car.y+=v*Math.sin(car.th)*dt*15;
+      car.th+=v/L*Math.tan(delta)*dt*15;
+      // track lateral error
+      const ne=path[ni];
+      const dxe=car.x-ne.x,dye=car.y-ne.y;
+      const eLat=Math.hypot(dxe,dye);
+      car.errSum+=eLat*eLat;car.n++;
+      car.trail.push({x:car.x,y:car.y});
+      if(car.trail.length>600) car.trail.shift();
+      if(car.x>W-20) init();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#2e7d32';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(11,95,255,0.4)';x.lineWidth=2;x.beginPath();
+      car.trail.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='#ff8c00';x.setLineDash([4,4]);x.lineWidth=1;
+      x.beginPath();x.moveTo(car.x,car.y);x.lineTo(tgt.x,tgt.y);x.stroke();
+      x.setLineDash([]);
+      x.fillStyle='#ff8c00';x.beginPath();x.arc(tgt.x,tgt.y,6,0,Math.PI*2);x.fill();
+      x.save();x.translate(car.x,car.y);x.rotate(car.th);
+      x.fillStyle='#0b5fff';x.fillRect(-2,-7,L+2,14);
+      x.fillStyle='#222';x.fillRect(-3,-7,3,14);
+      x.translate(L,0);x.rotate(delta);
+      x.fillStyle='#c62828';x.fillRect(-3,-6,6,12);
+      x.restore();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      const rmse=car.n?Math.sqrt(car.errSum/car.n):0;
+      x.fillText('α = '+(alpha*180/Math.PI).toFixed(1)+'°   ·   δ = '+(delta*180/Math.PI).toFixed(1)+'°   ·   곡률 반경 R ≈ '+(Ld/(2*Math.sin(Math.abs(alpha))+0.001)).toFixed(0)+' px   ·   RMSE = '+rmse.toFixed(1)+' px',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

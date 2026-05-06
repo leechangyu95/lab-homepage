@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W5. 1차 시스템 시간응답 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html" class="active">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../control.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 5. 1차 시스템 시간응답</h1>
+  <p class="lead">시정수 τ 하나로 모든 게 결정되는 가장 단순한 동적 시스템.
+  RC 필터·온도·1차 모터 — 자동제어에서 가장 자주 만나는 형태입니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>1차 시스템의 표준형</li>
+    <li>시정수 τ 의 다섯 가지 얼굴</li>
+    <li>계단응답과 63% 규칙</li>
+    <li>임펄스응답과 자연 응답 모드</li>
+    <li>시정수와 5τ 규칙</li>
+    <li>친숙한 1차 시스템 응용 모음</li>
+    <li>손계산 예제 다섯 문제</li>
+    <li>주파수 응답 미리보기 — 1차 시스템의 보드 선도</li>
+    <li>인터랙티브 1: τ와 K 슬라이더</li>
+    <li>인터랙티브 2: 시정수와 극점 위치 동시 보기</li>
+    <li>실험으로 시스템 식별 (System ID)</li>
+    <li>연습문제 (10문제)</li>
+    <li>다음 강의로의 다리 — 2차 시스템과 안정성</li>
+  </ol></div>
+
+  <h2>1. 1차 시스템의 표준형</h2>
+
+  <p>1차 시스템은 미분방정식이 1차인 시스템입니다.</p>
+  $$ \tau\, \dot{y}(t) + y(t) = K\, u(t) $$
+  <p>라플라스 변환:</p>
+  $$ \boxed{\, G(s) = \frac{Y(s)}{U(s)} = \frac{K}{\tau s + 1} \,} $$
+
+  <ul>
+    <li><strong>$K$ (DC 게인)</strong>: 입력이 1로 영원히 유지될 때 출력이 정착하는 값.</li>
+    <li><strong>$\tau$ (시정수, time constant)</strong>: 시스템이 얼마나 빠르게 반응하는지의 척도. 단위는 시간(초).</li>
+    <li><strong>극점</strong>: $\tau s + 1 = 0 \;\Rightarrow\; s = -1/\tau$ (실수, 좌반평면) → <em>항상 안정</em>.</li>
+  </ul>
+
+  <h3>1.1 미분방정식이 1차라는 말의 뜻</h3>
+  <p>물리적으로 1차 시스템이 등장하는 순간은 한 마디로 "에너지 저장 요소가 한 개"일 때입니다.
+  RC 회로에는 커패시터 하나가 전하를 저장하고, 항온조에는 물의 열용량 하나가 열을 저장하며,
+  관성이 무시될 정도로 작은 DC 모터는 토크 - 마찰만의 1차 균형식이 됩니다. 에너지 저장 요소가 두 개 이상이면
+  진동이 가능해지고, 자연스럽게 W6의 2차 시스템으로 넘어갑니다.</p>
+
+  <p>표준형의 양변에 같은 시간 단위(초)가 필요하다는 사실에서 $\tau$가 시간 단위를 가져야 한다는 점이 즉시 보입니다 —
+  $\tau\dot y$의 단위 = $\tau \cdot [y/\text{s}]$, $y$의 단위 = $[y]$, 같으려면 $[\tau]=$초.</p>
+
+  <h3>1.2 RC 회로 - 가장 익숙한 1차 시스템</h3>
+  <figure>
+    <svg viewBox="0 0 380 160" xmlns="http://www.w3.org/2000/svg">
+      <line x1="20" y1="40" x2="60" y2="40" stroke="#333" stroke-width="2"/>
+      <text x="20" y="32" font-size="11" fill="#333">u(t) (입력 전압)</text>
+      <rect x="60" y="32" width="60" height="16" fill="none" stroke="#333" stroke-width="2"/>
+      <text x="78" y="44" font-size="11" fill="#333">R</text>
+      <line x1="120" y1="40" x2="200" y2="40" stroke="#333" stroke-width="2"/>
+      <line x1="200" y1="20" x2="200" y2="60" stroke="#333" stroke-width="3"/>
+      <line x1="220" y1="20" x2="220" y2="60" stroke="#333" stroke-width="3"/>
+      <text x="225" y="44" font-size="11" fill="#333">C</text>
+      <line x1="200" y1="40" x2="200" y2="40" stroke="#333"/>
+      <line x1="220" y1="40" x2="280" y2="40" stroke="#333" stroke-width="2"/>
+      <text x="290" y="44" font-size="11" fill="#0b5fff">y(t)=v_C</text>
+      <line x1="20" y1="40" x2="20" y2="120" stroke="#333" stroke-width="2"/>
+      <line x1="20" y1="120" x2="280" y2="120" stroke="#333" stroke-width="2"/>
+      <line x1="280" y1="40" x2="280" y2="120" stroke="#333" stroke-width="2"/>
+    </svg>
+    <figcaption>그림. RC 저역통과 회로. 키르히호프 전압법칙으로 $RC\,\dot v_C + v_C = u$.</figcaption>
+  </figure>
+
+  <p>회로에서 $u = iR + v_C$, $i = C\dot v_C$를 대입하면 즉시</p>
+  $$ RC\,\dot v_C(t) + v_C(t) = u(t) $$
+  <p>이고 표준형과 비교하면 $\tau = RC$, $K = 1$. $R = 1\,\text{k}\Omega$, $C = 100\,\mu\text{F}$이면 $\tau = 0.1\,\text{s}$로
+  눈에 보일 만큼 천천히 충전되는 RC가 됩니다.</p>
+
+  <h2>2. 시정수 τ 의 다섯 가지 얼굴</h2>
+
+  <p>같은 $\tau$를 다섯 가지 다른 각도에서 해석할 수 있다는 점을 몸에 익혀두면 시험·과제·실무 어디서든 막힘없이
+  적용할 수 있습니다.</p>
+
+  <table>
+    <thead><tr><th>각도</th><th>표현</th><th>한 줄 해석</th></tr></thead>
+    <tbody>
+      <tr><td>① 정의</td><td>$y(\tau) = 0.632\,K$</td><td>최종값의 63.2% 도달 시간</td></tr>
+      <tr><td>② 극점</td><td>$s = -1/\tau$</td><td>좌반평면에서 원점에 가까울수록 $\tau$ 큼 → 느림</td></tr>
+      <tr><td>③ 초기 기울기</td><td>$\dot y(0) = K/\tau$</td><td>"이 기울기로 그대로 가면 $\tau$초 뒤 $K$ 도달" — 그래프 기하 해석</td></tr>
+      <tr><td>④ 절단주파수</td><td>$\omega_c = 1/\tau$</td><td>보드 선도에서 −3 dB가 되는 각주파수</td></tr>
+      <tr><td>⑤ 5τ 규칙</td><td>$y(5\tau) = 0.993\,K$</td><td>실무에서 "정착했다"고 보는 시간</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>③ 초기 기울기의 직관</strong> — 표준형에서 $t=0$, $y(0)=0$, $u(0)=1$을 대입하면 $\tau\dot y(0) = K$,
+    즉 $\dot y(0) = K/\tau$. 그래프에서 원점의 접선을 그어 $K$ 수평선과 만나는 점의 시간이 정확히 $\tau$. 이 기하 해석은
+    실험 데이터에서 시정수를 잡는 또 다른 방법입니다 ("초기 접선 외삽법").
+  </div>
+
+  <h2>3. 계단응답과 63% 규칙</h2>
+
+  <p>$u(t)$가 단위 스텝(0 → 1)일 때 W2 예제에서 본 결과:</p>
+  $$ \boxed{\, y(t) = K\bigl(1 - e^{-t/\tau}\bigr) \,} $$
+
+  <table>
+    <thead><tr><th>$t$</th><th>$y(t)/K$</th><th>해석</th></tr></thead>
+    <tbody>
+      <tr><td>$\tau$</td><td>$1 - e^{-1} \approx 0.632$</td><td><strong>63.2%</strong> ← 시정수의 정의</td></tr>
+      <tr><td>$2\tau$</td><td>$\approx 0.865$</td><td>86.5%</td></tr>
+      <tr><td>$3\tau$</td><td>$\approx 0.950$</td><td>95.0%</td></tr>
+      <tr><td>$4\tau$</td><td>$\approx 0.982$</td><td>98.2%</td></tr>
+      <tr><td>$5\tau$</td><td>$\approx 0.993$</td><td>99.3% — 실무에서 "정착"으로 본다</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>왜 63%일까?</strong> $\tau$의 정의 자체가 "응답이 최종값의 $1 - 1/e \approx 63.2\%$에 도달하는 시간"입니다.
+    이 사실 한 줄이면 측정된 응답 곡선에서 자를 대고 시정수를 바로 읽을 수 있습니다 — 6절 시스템 식별의 핵심.
+  </div>
+
+  <h3>2.1 유도 — 라플라스 한 줄, 시간영역 한 줄</h3>
+  <p>입력 $U(s) = 1/s$를 표준 전달함수에 곱하면</p>
+  $$ Y(s) = \frac{K}{\tau s+1}\cdot\frac{1}{s} = \frac{K}{s} - \frac{K\tau}{\tau s+1} $$
+  <p>(부분분수 전개). 두 항을 각각 역변환하면 $\mathcal L^{-1}\{K/s\} = K$, $\mathcal L^{-1}\{K\tau/(\tau s+1)\} = K e^{-t/\tau}$.
+  합치면 정확히 $y(t) = K(1 - e^{-t/\tau})$. 라플라스 변환이 시간 영역의 미분방정식을 풀어주는 가장 짧은 시범입니다.</p>
+
+  <h3>2.2 그래프적 해석 — 한 페이지에 다 넣기</h3>
+  <figure>
+    <svg viewBox="0 0 480 220" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="180" x2="460" y2="180" stroke="#999"/>
+      <line x1="40" y1="20" x2="40" y2="180" stroke="#999"/>
+      <line x1="40" y1="40" x2="460" y2="40" stroke="#c62828" stroke-dasharray="3,3"/>
+      <text x="465" y="44" font-size="11" fill="#c62828">K</text>
+      <line x1="40" y1="91.5" x2="460" y2="91.5" stroke="#0b5fff" stroke-dasharray="2,3" opacity=".5"/>
+      <text x="465" y="95" font-size="11" fill="#0b5fff">0.632K</text>
+      <path d="M40,180 C70,180 100,90 130,67 C160,52 200,45 260,42 C320,40 460,40 460,40"
+        stroke="#0b5fff" fill="none" stroke-width="2"/>
+      <line x1="40" y1="180" x2="180" y2="40" stroke="#2e7d32" stroke-dasharray="4,3"/>
+      <text x="100" y="120" fill="#2e7d32" font-size="11">초기 접선: y˙(0)=K/τ</text>
+      <line x1="120" y1="180" x2="120" y2="91.5" stroke="#888" stroke-dasharray="1,2"/>
+      <text x="105" y="195" fill="#444" font-size="11">τ</text>
+      <line x1="200" y1="180" x2="200" y2="40" stroke="#2e7d32" stroke-dasharray="1,3"/>
+      <text x="180" y="195" fill="#2e7d32" font-size="11">τ (외삽)</text>
+      <text x="20" y="20" font-size="11" fill="#666">y(t)</text>
+      <text x="455" y="195" font-size="11" fill="#666">t</text>
+    </svg>
+    <figcaption>그림. 1차 계단응답에서 시정수 τ를 두 가지 방법으로 읽기 — ① 0.632K 가로선, ② 원점 접선의 외삽.</figcaption>
+  </figure>
+
+  <h2>4. 임펄스응답과 자연 응답 모드</h2>
+
+  <p>$u(t) = \delta(t)$일 때 (수학적 임펄스, 짧고 강한 자극):</p>
+  $$ y(t) = \frac{K}{\tau} e^{-t/\tau} $$
+
+  <p>$t=0$에서 갑자기 $K/\tau$로 뛰었다가 시정수 $\tau$로 지수 감쇠합니다. 자연 응답(natural response) 모드를
+  순수하게 보여주는 시험이지만, 실제 시스템에 진짜 임펄스를 가하기는 어려워서 보통은 계단응답으로 대체합니다.</p>
+
+  <h3>4.1 자연 응답 vs 강제 응답</h3>
+  <p>1차 시스템의 시간응답은 두 부분의 합으로 분해할 수 있습니다.</p>
+  $$ y(t) = \underbrace{y(0)\,e^{-t/\tau}}_{\text{자연 응답 (homogeneous)}} + \underbrace{K\bigl(1 - e^{-t/\tau}\bigr)}_{\text{강제 응답 (forced, 스텝 입력의 경우)}} $$
+
+  <p>자연 응답은 항상 $e^{-t/\tau}$의 모드 — 시스템 고유의 "지수적 망각" 행동. 강제 응답은 입력 형태에 따라 모양이 달라집니다.
+  중요한 통찰: $\tau$가 결정하는 건 자연 응답의 망각 속도, 즉 시스템이 외부 입력을 얼마나 빨리 따라가는지의 기준 시간입니다.</p>
+
+  <h3>4.2 임의 초기조건과 일반 해</h3>
+  <p>$y(0) = y_0$, 단위 스텝 입력일 때:</p>
+  $$ y(t) = y_0\, e^{-t/\tau} + K\bigl(1 - e^{-t/\tau}\bigr) = K + (y_0 - K)\,e^{-t/\tau} $$
+  <p>초기값 $y_0$에서 정상값 $K$로 시정수 $\tau$로 지수적으로 가까워진다는 한 줄 그림으로 외워둡시다.</p>
+
+  <h2>5. 시정수와 5τ 규칙</h2>
+
+  <p>실무 한 문장: "<strong>1차 시스템은 5τ 정도면 정착했다고 본다</strong>." 이 한 줄 때문에 모터·필터·온도제어를
+  설계할 때 "필요한 응답 시간 = 5τ" 식으로 거꾸로 시정수를 정합니다.</p>
+
+  <p>예: 0.5초 안에 응답을 정착시키고 싶다 → $\tau \leq 0.1$초가 되어야 함 → 그에 맞춰 회로의 RC 값이나
+  제어기의 게인을 결정.</p>
+
+  <h3>5.0 5τ ≈ 99% 가 어디서 나오는가?</h3>
+  <p>$1 - e^{-5} = 1 - 0.00674 = 0.9933$. 정확히 99.33%. 4τ면 98.17%, 6τ면 99.75%. 학부 자동제어에서
+  "5τ" 한 가지를 기준으로 잡는 이유는 ① 100%에 충분히 가깝고 ② 한 손에 다섯 손가락처럼 외우기 쉽기 때문일 뿐,
+  엄격한 수학적 경계가 있는 것은 아닙니다. 회사·논문에 따라 4τ를 쓰기도, 7τ를 쓰기도 합니다.</p>
+
+  <p>한 가지 흥미로운 정량적 사실은: $\tau$가 두 배가 되면 같은 정착 기준 ($\pm \alpha$)에 도달하는 시간도
+  정확히 두 배가 됩니다 — 시정수 척도법(scaling). 이건 1차 시스템이 시간에 대해 "선형적으로 늘어나는" 시스템이라는
+  의미이고, 다음 주 2차 시스템의 정착시간 공식 $t_s \approx 4/(\zeta\omega_n)$도 같은 척도 성질을 갖습니다.</p>
+
+  <h3>5.1 정착 기준에 따른 시간 환산표</h3>
+  <p>"정착시간"이라는 말은 어느 ± 밴드를 기준으로 하느냐에 따라 숫자가 달라집니다. 다음 표를 한 번 보고 외워두면
+  학과·논문·실무에서 표준이 다를 때 헷갈리지 않습니다.</p>
+
+  <table>
+    <thead><tr><th>정착 기준</th><th>$y/K$</th><th>$t_s/\tau$</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>±10%</td><td>0.90 ~ 1.10</td><td>$\approx 2.30$</td><td>거친 명세</td></tr>
+      <tr><td>±5%</td><td>0.95 ~ 1.05</td><td>$\approx 3.00$</td><td>한국 학부 시험에서 가장 자주</td></tr>
+      <tr><td>±2%</td><td>0.98 ~ 1.02</td><td>$\approx 3.91$</td><td>국제표준, 5τ로 외움</td></tr>
+      <tr><td>±1%</td><td>0.99 ~ 1.01</td><td>$\approx 4.61$</td><td>정밀 계측</td></tr>
+    </tbody>
+  </table>
+
+  <p>유도는 한 줄: $1 - e^{-t_s/\tau} = 1 - \alpha$ → $t_s = -\tau\ln\alpha$. ±2%면 $\alpha=0.02$, $-\ln 0.02 \approx 3.91 \approx 4$.</p>
+
+  <h2>6. 친숙한 1차 시스템 응용 모음</h2>
+
+  <p>이 절은 "1차 시스템이 진짜로 어디 있는가"를 다섯 가지 친숙한 예로 정리합니다. 시정수의 수치 감각을 잡으면
+  앞으로 어떤 시스템을 만나도 1차로 근사할 수 있는지 직관이 생깁니다.</p>
+
+  <h3>6.1 자동차 실내 온도 (HVAC)</h3>
+  <p>여름에 차에 타서 에어컨을 최대로 켰을 때 실내가 시원해지는 과정. 단순화하면 <em>실내 공기 열용량 - 에어컨 냉각 파워</em>의
+  1차 시스템입니다.</p>
+  $$ C_\text{air}\,\dot T_\text{in}(t) + h(T_\text{in}(t) - T_\text{set}) = 0 \;\Rightarrow\; \tau = \frac{C_\text{air}}{h} $$
+  <p>중형 세단 기준 대략 $\tau \approx 4 \sim 8$분. 시동 후 5분 (≈τ)이면 실내 온도가 설정값과의 차이의 63%만큼 줄어듭니다.
+  20분(5τ) 정도면 거의 정착. 이 숫자가 체감과 일치하는지 다음 운전 때 확인해 보세요.</p>
+
+  <h3>6.2 RC 저역통과 필터 — 신호처리의 기초</h3>
+  <p>아두이노로 ADC 샘플을 받을 때 노이즈를 줄이려고 RC 필터를 다는 경우. $R = 10\,\text{k}\Omega$, $C = 0.1\,\mu\text{F}$이면
+  $\tau = 1\,\text{ms}$, 절단주파수 $f_c = 1/(2\pi\tau) \approx 159\,\text{Hz}$. 60 Hz 전원 노이즈는 거의 그대로 통과,
+  10 kHz 고주파는 강하게 차단합니다.</p>
+
+  <h3>6.3 DC 모터의 전기적 시정수와 기계적 시정수</h3>
+  <p>DC 모터에는 두 개의 시정수가 있습니다.</p>
+  <ul>
+    <li>전기적 시정수 $\tau_e = L/R$: 보통 1 ms 이하. 전류가 입력 전압에 빠르게 따라간다.</li>
+    <li>기계적 시정수 $\tau_m = J\,R/(K_t K_e)$: 보통 50 ms ~ 수백 ms. 회전자 속도가 토크에 천천히 따라간다.</li>
+  </ul>
+  <p>$\tau_e \ll \tau_m$이면 전기 동역학을 무시하고 1차 시스템 $G(s) = 1/(\tau_m s+1)$로 근사합니다. 이게
+  학부 자동제어에서 모터를 1차로 다루는 이유입니다. 정확한 모델은 W6의 2차로 넘어갑니다.</p>
+
+  <h3>6.4 항온조 (incubator, 양조 발효통)</h3>
+  <p>20 L짜리 항온조에 2 kW 히터를 달았을 때 전형적으로 $\tau \approx 10 \sim 30$분. 이게 길다는 건 <em>큰 외란이
+  들어올 때 회복이 느리다</em>는 뜻이고, 그래서 단순 P 제어로는 외란이 있는 환경에서 정상오차가 남습니다.
+  W7과 PI 제어가 자연스러운 해결책으로 등장하는 동기입니다.</p>
+
+  <h3>6.4.5 인체 약물 농도 - 또 하나의 1차 시스템</h3>
+  <p>혈중 약물 농도의 단순 모델: 약을 한 번에 주입하면(임펄스에 가까움) 혈중 농도가 즉시 최대치로 갔다가 간·신장에서
+  배출되며 지수 감쇠합니다. 시정수가 흔히 "반감기"로 불리는 시간과 직접 연결되는데, 반감기 $t_{1/2}$와 시정수 $\tau$ 사이는</p>
+  $$ t_{1/2} = \tau \ln 2 \approx 0.693\,\tau $$
+  <p>관계입니다 ($e^{-t_{1/2}/\tau} = 1/2$에서). 카페인 반감기가 5시간이라면 시정수는 약 7.2시간 — 잠자기 7시간 전에 마신
+  커피가 여전히 ~37% 남아 있다는 직관과 일치합니다.</p>
+
+  <h3>6.5 수조의 수위 - 가장 직관적인 1차 시스템</h3>
+  <figure>
+    <svg viewBox="0 0 360 180" xmlns="http://www.w3.org/2000/svg">
+      <rect x="80" y="40" width="180" height="120" fill="none" stroke="#333" stroke-width="2"/>
+      <rect x="80" y="100" width="180" height="60" fill="rgba(11,95,255,0.2)"/>
+      <line x1="170" y1="20" x2="170" y2="40" stroke="#0b5fff" stroke-width="3"/>
+      <text x="175" y="32" font-size="11" fill="#0b5fff">유입 q_in</text>
+      <line x1="260" y1="120" x2="320" y2="120" stroke="#333" stroke-width="3"/>
+      <text x="280" y="115" font-size="11" fill="#333">유출 q_out</text>
+      <text x="60" y="105" font-size="11" fill="#333">h</text>
+      <line x1="80" y1="100" x2="260" y2="100" stroke="#0b5fff" stroke-dasharray="3,3"/>
+    </svg>
+    <figcaption>그림. 단면적 $A$의 수조, 출구 저항 $R$. $A\dot h = q_\text{in} - h/R$.</figcaption>
+  </figure>
+  <p>표준형 비교 → $\tau = AR$, $K = R$. 수조 단면을 두 배로 키우면 시정수가 두 배 → 두 배 느려진다는
+  당연한 결론을 식이 그대로 알려줍니다.</p>
+
+  <h2>7. 손계산 예제 다섯 문제</h2>
+
+  <h3>예제 1. RC 필터의 시정수와 정착시간</h3>
+  <p><strong>문제</strong>: $R = 4.7\,\text{k}\Omega$, $C = 220\,\mu\text{F}$인 RC 저역통과 필터에 5 V 스텝 전압을 가했다.
+  ① 시정수, ② 출력이 3.5 V를 넘는 시간, ③ ±2% 정착시간을 구하라.</p>
+  <p><strong>풀이</strong>:</p>
+  <ol>
+    <li>$\tau = RC = 4700 \times 220\times 10^{-6} = 1.034\,\text{s}$.</li>
+    <li>$y(t) = 5(1 - e^{-t/\tau})$가 3.5 V인 시점: $1 - e^{-t/\tau} = 0.7$ → $e^{-t/\tau} = 0.3$ →
+        $t = \tau\ln(1/0.3) = 1.034 \times 1.204 = 1.245\,\text{s}$.</li>
+    <li>±2% 정착: $t_s \approx 4\tau = 4.14\,\text{s}$.</li>
+  </ol>
+
+  <h3>예제 2. 측정 데이터로부터 시정수 추정</h3>
+  <p><strong>문제</strong>: 어떤 모터에 2 V 스텝을 가했더니 출력 속도가 정상값 6 rad/s로 정착했다.
+  $t = 0.4\,\text{s}$에서 출력이 3.8 rad/s였다면 시정수는?</p>
+  <p><strong>풀이</strong>: $K = 6/2 = 3\,(\text{rad/s})/\text{V}$. $y(0.4) = 6(1 - e^{-0.4/\tau}) = 3.8$ →
+  $e^{-0.4/\tau} = 1 - 3.8/6 = 0.367$ → $0.4/\tau = -\ln 0.367 = 1.003$ → $\tau \approx 0.40\,\text{s}$.
+  $t = \tau$에서 정확히 63.2%(여기서는 3.79 rad/s)에 가까웠다는 뜻이고, 측정 그래프에서 자로 잡았더라도 같은 결과를 얻었을 것입니다.</p>
+
+  <h3>예제 3. 항온조 가열기 설계</h3>
+  <p><strong>문제</strong>: 50 L 항온조의 시정수 측정값이 25분이었고 DC 게인은 0.04 °C/W. 외부 25 °C에서 50 °C로
+  올리려고 한다. ① 정상상태에서 필요한 히터 출력, ② 5τ 정착까지 걸리는 시간, ③ 시정수를 절반으로 줄이려면
+  히터 파워와 단열 중 어느 쪽을 바꿔야 하는가?</p>
+  <p><strong>풀이</strong>:</p>
+  <ol>
+    <li>$\Delta T = K\,P_\text{ss}$ → $25 = 0.04 \times P_\text{ss}$ → $P_\text{ss} = 625\,\text{W}$.</li>
+    <li>$5\tau = 125\,\text{분} \approx 2$시간. 외란이 없다는 가정 아래.</li>
+    <li>$\tau = C/h$ ($C$ 열용량, $h$ 손실계수). 시정수를 줄이려면 $h$를 키우거나 $C$를 줄여야 함 →
+        단열을 <em>줄이거나</em> (반대로 가는 거 같지만 외부와의 열교환을 키운다는 의미) 또는 항온조 부피를 줄이는 게 직접적.
+        히터 파워는 $K$를 바꿀 뿐 $\tau$는 바꾸지 못함 (1차 시스템의 핵심 통찰: 게인과 시정수는 독립).</li>
+  </ol>
+
+  <div class="warn">
+    <strong>주의</strong> — "히터를 키우면 빨리 데워질 거야"라는 직관은 1차 시스템에서 <em>틀립니다</em>.
+    히터 파워는 $K$(또는 입력 크기)만 키울 뿐 $\tau$를 바꾸지 못합니다. 빨라 보이는 건 더 큰 입력이 같은 시간에
+    더 많이 갔기 때문일 뿐, 정착 시간 비율(63% 도달 시간)은 그대로입니다.
+  </div>
+
+  <h3>예제 4. 시정수가 다른 두 시스템의 직렬 — 지배적 극점</h3>
+  <p><strong>문제</strong>: $G_1(s) = 1/(0.1s+1)$, $G_2(s) = 1/(s+1)$이 직렬로 연결되어 있다. 전체 시스템의 응답은
+  어느 시정수가 지배하는가?</p>
+  <p><strong>풀이</strong>: 직렬 연결의 전달함수 $G(s) = G_1 G_2 = 1/[(0.1s+1)(s+1)]$. 극점 두 개: $s = -10$, $s = -1$.
+  더 작은 절댓값 (= 시정수가 더 큰 = $\tau = 1$인 극점)이 응답을 지배합니다. $s = -10$ 모드는 $e^{-10t}$로
+  순식간에 사라지므로 일정 시간 뒤에는 1차 시스템 $1/(s+1)$처럼 보입니다. 이 "지배 극점(dominant pole)" 개념이
+  W6와 W12에서 다시 등장합니다.</p>
+
+  <h3>예제 5. 외란이 들어오는 1차 시스템</h3>
+  <p><strong>문제</strong>: $\tau \dot y + y = K(u + d)$, $\tau = 2$, $K = 1$, $u = 1$ (스텝), $d = 0.3$ (상수 외란).
+  정상상태 출력은?</p>
+  <p><strong>풀이</strong>: 정상상태에서 $\dot y = 0$ → $y_\text{ss} = K(u + d) = 1 \times 1.3 = 1.3$.
+  외란이 정상값을 0.3만큼 끌어올림. 단위 피드백 P 제어를 걸어도 외란 효과를 완전히 없애지 못함 → W7에서 적분기가 필요한 동기.</p>
+
+  <h3>예제 6. 두 시정수 시스템의 캐스케이드 — 자동차 공조</h3>
+  <p><strong>문제</strong>: 자동차에서 송풍구의 공기 온도가 1차 시스템 (시정수 $\tau_1 = 30$ s, 게인 1)이고,
+  실내 공기 온도는 송풍구 공기에 대해 또 다른 1차 시스템 (시정수 $\tau_2 = 5$분 = 300 s)이라고 하자. 운전자가 송풍구 설정 온도를
+  20 °C에서 24 °C로 4 °C 변화시켰을 때 ① 송풍구 공기 온도가 23 °C 도달까지의 시간, ② 실내 공기 온도가 23 °C 도달까지의 시간을 구하라.</p>
+  <p><strong>풀이</strong>:</p>
+  <ol>
+    <li>송풍구만: $T_1(t) = 20 + 4(1-e^{-t/30})$. 23 °C 도달 시 $4(1-e^{-t/30}) = 3$ → $t = 30\ln 4 \approx 41.6$ s.</li>
+    <li>전체 직렬: $G(s) = 1/[(30s+1)(300s+1)]$. 두 시정수가 한 자리수 이상 차이나면 빠른 쪽 ($\tau_1 = 30$)을 무시하고
+        지배 극점 ($\tau_2 = 300$)으로 1차 근사. 따라서 실내 23 °C 도달 시간 $\approx 300\ln 4 \approx 416$ s ≈ 7분.
+        실제로는 두 시정수의 영향으로 시작이 약간 늦어져 약 7.5분 정도가 됩니다.</li>
+  </ol>
+  <p>이 7배 차이가 "에어컨을 켰는데 왜 이렇게 안 시원해지나" 의 정량적 답입니다. 송풍구는 빨리 시원해져도 차내 공기 전체가
+  교체되려면 시정수의 5배(≈25분)가 필요합니다.</p>
+
+  <h3>예제 7. 램프 입력에 대한 1차 시스템의 응답</h3>
+  <p><strong>문제</strong>: $G(s) = 2/(0.5s+1)$에 $u(t) = t$ (단위 램프) 입력을 가했을 때 $t$가 충분히 큰 후의 응답을 구하라.</p>
+  <p><strong>풀이</strong>: $U(s) = 1/s^2$. $Y(s) = 2/[(0.5s+1)s^2]$. 부분분수: $Y(s) = A/s^2 + B/s + C/(0.5s+1)$.
+  계산하면 $A = 2$, $B = -1$, $C = 0.5$. 시간영역: $y(t) = 2t - 1 + e^{-t/0.5}$.
+  $t$가 충분히 크면 $y(t) \approx 2t - 1$. 즉 입력 램프 $t$의 두 배 기울기로 따라가지만 1만큼 뒤처짐 ("위치 lag").
+  이건 W7에서 다룰 정상상태 오차 ($K_v = 2$로부터 $e_\text{ss} = 1/K_v = 0.5$, 단위 램프 기준)의 직접적 결과입니다.</p>
+
+  <h3>예제 7.5. 시정수가 알려진 시스템에 외란이 들어왔을 때 회복</h3>
+  <p><strong>문제</strong>: $\tau = 3$ s인 항온조가 50 °C에서 정상 운전 중. 갑자기 문이 열려 외부 공기가 들어와
+  내부 온도가 순간적으로 40 °C로 떨어졌다. 문이 다시 닫힌 후, 49 °C에 도달하는 데 걸리는 시간은? (히터 출력은 변화 없음, 동일한 50 °C로 정착하려고 함.)</p>
+  <p><strong>풀이</strong>: 자유 응답 + 강제 응답 결합으로 풀면 됩니다. 새 시점 $t' = 0$에서 초기조건 $y(0) = 40$,
+  목표 정상값 $y_\infty = 50$. 일반해 $y(t') = 50 + (40 - 50)e^{-t'/3} = 50 - 10\,e^{-t'/3}$.
+  $y = 49$일 때: $50 - 10\,e^{-t'/3} = 49$ → $e^{-t'/3} = 0.1$ → $t' = 3\ln 10 \approx 6.91$ s.
+  10 °C 손실의 90%(즉 9 °C)가 회복되는 데 약 6.9초. 학생 직관: "10°C 손실 → 회복도 ~τ의 두세 배".</p>
+
+  <h3>예제 8. 두 1차 시스템의 병렬 결합</h3>
+  <p><strong>문제</strong>: $G_1(s) = 2/(s+1)$과 $G_2(s) = 1/(2s+1)$이 병렬로 연결되어 있다 ($Y = G_1 U + G_2 U$).
+  전체 시스템의 DC 게인과 전달함수를 구하라.</p>
+  <p><strong>풀이</strong>: $G(s) = G_1 + G_2 = 2/(s+1) + 1/(2s+1) = [2(2s+1) + (s+1)]/[(s+1)(2s+1)] = (5s+3)/[(s+1)(2s+1)]$.
+  DC 게인: $s=0$ 대입 → $3/1 = 3$ (또는 개별 게인 합 $2 + 1 = 3$). 분모는 2차이지만 분자가 1차이므로 영점 하나 ($s = -3/5$).
+  전체 시스템은 더 이상 1차가 아니라 2차 (분모 2차) — 병렬 결합은 차수를 더한다는 일반 규칙의 한 예.</p>
+
+  <h2>8. 주파수 응답 미리보기 — 1차 시스템의 보드 선도</h2>
+
+  <p>$s = j\omega$를 대입하면 1차 시스템의 주파수 응답이 됩니다.</p>
+  $$ G(j\omega) = \frac{K}{1 + j\omega\tau} \;\Rightarrow\; |G(j\omega)| = \frac{K}{\sqrt{1 + (\omega\tau)^2}}, \;\; \angle G = -\arctan(\omega\tau) $$
+
+  <p>두 가지 점근선이 보드 선도(W11)에서 핵심입니다.</p>
+  <ul>
+    <li>$\omega \ll 1/\tau$: $|G| \approx K$ (DC 게인), 위상 $\approx 0°$.</li>
+    <li>$\omega \gg 1/\tau$: $|G| \approx K/(\omega\tau)$ → 옥타브당 −6 dB, 위상 → −90°.</li>
+    <li>코너(절단)주파수 $\omega_c = 1/\tau$: $|G| = K/\sqrt 2 \approx 0.707K$ (= −3 dB), 위상 −45°.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 480 220" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="180" x2="460" y2="180" stroke="#999"/>
+      <line x1="40" y1="20" x2="40" y2="180" stroke="#999"/>
+      <text x="20" y="20" font-size="11" fill="#666">|G| dB</text>
+      <text x="455" y="195" font-size="11" fill="#666">log ω</text>
+      <line x1="40" y1="40" x2="220" y2="40" stroke="#0b5fff" stroke-width="2"/>
+      <line x1="220" y1="40" x2="440" y2="160" stroke="#0b5fff" stroke-width="2"/>
+      <line x1="220" y1="20" x2="220" y2="180" stroke="#c62828" stroke-dasharray="3,3"/>
+      <text x="200" y="195" font-size="11" fill="#c62828">ωc=1/τ</text>
+      <text x="100" y="32" font-size="11" fill="#0b5fff">평탄 (게인 K)</text>
+      <text x="290" y="80" font-size="11" fill="#0b5fff">−20 dB/decade</text>
+      <text x="225" y="55" font-size="10" fill="#888">−3 dB</text>
+      <circle cx="220" cy="50" r="3" fill="#888"/>
+    </svg>
+    <figcaption>그림. 1차 시스템의 보드 크기 선도 점근선. 절단주파수에서 −3 dB, 그 위로는 −20 dB/decade로 떨어진다.</figcaption>
+  </figure>
+
+  <p>여기서 시정수와 절단주파수가 같은 정보의 다른 표현이라는 점이 다시 확인됩니다 — 시간영역 사람은 $\tau$를 외우고,
+  주파수영역 사람은 $\omega_c = 1/\tau$를 외운다는 차이일 뿐.</p>
+
+  <h3>8.1 정현파 입력에 대한 정상응답</h3>
+  <p>$u(t) = U_0\sin(\omega t)$를 충분히 오래 가하면 (과도가 사라진 후), 출력은</p>
+  $$ y(t) = U_0\,|G(j\omega)|\,\sin(\omega t + \angle G(j\omega)) $$
+  <p>크기는 $|G(j\omega)|$배로 감쇠/증폭, 위상은 $\angle G(j\omega)$만큼 지연됩니다. 1차 시스템의 위상은 항상 0~−90°
+  사이 — 입력보다 먼저 갈 수는 없다는 인과성과 일치.</p>
+
+  <h3>8.2 절단주파수가 의미하는 "신호 통과 한계"</h3>
+  <p>예: $\tau = 0.1$ s인 1차 시스템 ($\omega_c = 10$ rad/s ≈ 1.6 Hz). 1 Hz 신호는 거의 그대로 통과,
+  10 Hz 신호는 약 1/10로 감쇠. 운전자가 핸들을 천천히 돌리면 차가 잘 따라가지만, 빠르게 흔들면 차가 못 따라간다는
+  당연한 사실의 정량화. 시스템마다 "따라갈 수 있는 입력 주파수"의 한계가 시정수에 의해 정해진다는 통찰입니다.</p>
+
+  <h3>8.3 보드 선도 손그림 절차 (1차 시스템)</h3>
+  <ol>
+    <li>가로축: $\log\omega$ (decade 단위), 세로축: dB (크기), 도(degree) (위상).</li>
+    <li>크기 점근선: $\omega = \omega_c$를 기준으로 좌측 = $20\log K$ 평탄, 우측 = $-20\,\text{dB/decade}$ 직선.</li>
+    <li>코너에서 $-3$ dB 보정.</li>
+    <li>위상 점근선: $\omega < 0.1\omega_c$ → 0°, $\omega > 10\omega_c$ → −90°, 사이는 직선 보간.</li>
+    <li>$\omega = \omega_c$에서 정확히 −45°.</li>
+  </ol>
+
+  <h2>8.5 1차 시스템의 상태공간 표현 — 가장 단순한 한 줄</h2>
+
+  <p>현대 제어이론에서는 시스템을 상태공간 $\dot{\mathbf x} = A\mathbf x + B u$, $y = C\mathbf x + Du$로 적습니다.
+  1차 시스템은 가장 단순해서 행렬이 모두 스칼라가 됩니다.</p>
+  $$ \dot y = -\frac{1}{\tau} y + \frac{K}{\tau} u,\quad y = y $$
+  <p>비교하면 $A = -1/\tau$, $B = K/\tau$, $C = 1$, $D = 0$. 행렬 $A$의 고유값이 곧 시스템 극점 ($-1/\tau$)이라는 일반 사실의
+  가장 단순한 사례. 이 한 줄에서 W13 상태공간 단원의 모든 직관이 시작됩니다.</p>
+
+  <h3>8.5.1 위상선도 (Phase Portrait)</h3>
+  <p>1차 시스템의 위상선도는 1차원 — 그냥 수직선 위의 화살표입니다. $\dot y > 0$인 영역은 오른쪽 화살표,
+  $\dot y < 0$인 영역은 왼쪽. $u = 0$이고 $\tau > 0$일 때 $\dot y = -y/\tau$이므로</p>
+  <ul>
+    <li>$y > 0$: $\dot y < 0$ (왼쪽 화살표, 0으로 향함)</li>
+    <li>$y < 0$: $\dot y > 0$ (오른쪽 화살표, 0으로 향함)</li>
+  </ul>
+  <p>모든 화살표가 평형점 $y = 0$으로 모임 → 안정. 이 그림이 일반 상태공간 안정성 분석의 출발점.</p>
+
+  <h2>9. 인터랙티브 1: τ와 K 슬라이더</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 시스템의 계단응답 만져보기</h4>
+    <p>$\tau$와 $K$를 바꿔보면서 응답이 어떻게 변하는지 관찰하세요.
+    파란 점은 $t = \tau$, $2\tau$, $3\tau$, $5\tau$ 위치.</p>
+    <canvas id="fo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>시정수 τ <span class="val" id="ftV">1.0</span><input type="range" id="ft" min="0.2" max="3" step="0.05" value="1.0"></label>
+      <label>DC 게인 K <span class="val" id="fkV">1.0</span><input type="range" id="fk" min="0.2" max="3" step="0.1" value="1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fo'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('ftV').textContent=(+$('ft').value).toFixed(2);$('fkV').textContent=(+$('fk').value).toFixed(1);};
+    ['ft','fk'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const tau=+$('ft').value, K=+$('fk').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=50, oy=270, w=560, h=220, T=10;
+      // grid + axes
+      x.strokeStyle='#eee';for(let i=0;i<=5;i++){const xx=ox+i*w/5;x.beginPath();x.moveTo(xx,oy-h);x.lineTo(xx,oy);x.stroke();
+        x.fillStyle='#888';x.font='10px sans-serif';x.fillText((i*T/5).toFixed(0)+'s',xx-8,oy+13);}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      // K line
+      const kY=oy-K*h/3;
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(ox,kY);x.lineTo(ox+w,kY);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.fillText('K = '+K.toFixed(1),ox+w-50,kY-4);
+      // 63% line
+      const y63=oy-K*0.632*h/3;
+      x.strokeStyle='#0b5fff';x.setLineDash([2,3]);x.beginPath();x.moveTo(ox,y63);x.lineTo(ox+w,y63);x.stroke();x.setLineDash([]);
+      x.fillStyle='#0b5fff';x.fillText('0.632·K',ox+w-60,y63-4);
+      // response curve
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=300;i++){const t=i*T/300, y=K*(1-Math.exp(-t/tau));
+        const xx=ox+i*w/300, yy=oy-y*h/3; if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      // markers at τ, 2τ, 3τ, 5τ
+      [1,2,3,5].forEach(n=>{const t=n*tau;if(t>T)return;
+        const y=K*(1-Math.exp(-n)); const xx=ox+t*w/T, yy=oy-y*h/3;
+        x.fillStyle='#0b5fff';x.beginPath();x.arc(xx,yy,5,0,Math.PI*2);x.fill();
+        x.fillStyle='#444';x.font='11px sans-serif';x.fillText(n+'τ',xx-6,yy-8);});
+      // labels
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('y(t) = K(1 − e^(−t/τ))   ⟶  τ='+tau.toFixed(2)+'s, 5τ='+(5*tau).toFixed(2)+'s',20,30);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰</strong>:</p>
+  <ul>
+    <li>$\tau$를 키우면 응답이 느려진다 (정착까지 더 오래).</li>
+    <li>$K$는 최종 정착 값만 바꾼다 — 응답의 모양(시간 척도)은 건드리지 않는다.</li>
+    <li>$t = \tau$에서 항상 $0.632\,K$를 지나간다. 자로 그 점을 잡으면 미지의 시스템에서도 $\tau$를 측정할 수 있다.</li>
+  </ul>
+
+  <h3>9.1 인터랙티브 1 추가 관찰 - 정량적 검증</h3>
+  <p>위 데모에서 확인할 수 있는 정량적 사실을 표로 정리해 두면 다음과 같습니다. 실제 시뮬레이션과 일치하는지 확인해 보세요.</p>
+  <table>
+    <thead><tr><th>조작</th><th>관찰</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>$\tau$ 두 배</td><td>모든 시간 척도 두 배 (τ, 2τ 점이 두 배 멀리)</td><td>$y(t/\tau)$ 형태의 자기상사성</td></tr>
+      <tr><td>$K$ 두 배</td><td>세로축만 두 배, 정착 시간 그대로</td><td>$K$는 정상값만 결정</td></tr>
+      <tr><td>$\tau$ 0.2로 줄임</td><td>1초도 안 되어 정착</td><td>5τ = 1 s</td></tr>
+      <tr><td>$\tau$ 3.0으로 키움</td><td>10초 화면에서 5τ 도달 못함</td><td>5τ = 15 s, 화면 밖</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. 인터랙티브 2: 시정수와 극점 위치 동시 보기</h2>
+
+  <div class="demo">
+    <h4>인터랙티브: 극점이 원점에 가까울수록 응답이 느려진다</h4>
+    <p>왼쪽 s-평면의 빨간 극점을 슬라이더로 좌우로 옮겨 보세요. 극점이 원점(허수축)에 가까우면 시스템이 느려지고,
+    멀어지면 빨라집니다. 오른쪽 시간응답이 동시에 변합니다.</p>
+    <canvas id="c5pole" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>극점 위치 s = −1/τ <span class="val" id="c5pV">-1.00</span><input type="range" id="c5p" min="-6" max="-0.2" step="0.05" value="-1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c5pole'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c5pV').textContent=(+$('c5p').value).toFixed(2);};
+    $('c5p').oninput=upd;
+    function loop(){
+      const p=+$('c5p').value;
+      const tau=-1/p;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // s-plane on left
+      const cx=140, cy=160, sc=30;
+      x.fillStyle='rgba(198,40,40,0.06)';x.fillRect(cx,20,160,280);
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(20,cy);x.lineTo(280,cy);x.moveTo(cx,20);x.lineTo(cx,300);x.stroke();
+      x.fillStyle='#666';x.font='10px sans-serif';x.fillText('Re',272,cy-4);x.fillText('Im',cx+5,28);
+      x.fillText('-5',cx-5*sc-6,cy+14);x.fillText('-3',cx-3*sc-6,cy+14);x.fillText('-1',cx-sc-6,cy+14);
+      // pole
+      const px=cx+p*sc;
+      x.fillStyle='#c62828';x.beginPath();x.arc(px,cy,7,0,Math.PI*2);x.fill();
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      x.moveTo(px-5,cy-5);x.lineTo(px+5,cy+5);x.moveTo(px-5,cy+5);x.lineTo(px+5,cy-5);x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('s = '+p.toFixed(2)+'   τ = '+tau.toFixed(2)+' s',20,30);
+      // mode line e^{pt} arrow
+      x.strokeStyle='#0b5fff';x.beginPath();x.moveTo(px,cy);x.lineTo(px-30,cy-30);x.stroke();
+      x.fillStyle='#0b5fff';x.font='11px sans-serif';x.fillText('e^(pt) 모드',px-50,cy-35);
+      // step response right
+      const ox=320, oy=270, w=300, h=200, T=10;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,oy-h*0.6);x.lineTo(ox+w,oy-h*0.6);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='10px sans-serif';x.fillText('K=1',ox+w-25,oy-h*0.6-2);
+      // 0.632 line
+      x.strokeStyle='#2e7d32';x.setLineDash([2,3]);x.beginPath();x.moveTo(ox,oy-h*0.6*0.632).constructor; x.beginPath();
+      x.moveTo(ox,oy-h*0.6*0.632);x.lineTo(ox+w,oy-h*0.6*0.632);x.stroke();x.setLineDash([]);
+      x.fillStyle='#2e7d32';x.fillText('0.632',ox+w-30,oy-h*0.6*0.632-2);
+      // response curve
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=300;i++){const t=i*T/300, y=1-Math.exp(-t/tau);
+        const xx=ox+i*w/300, yy=oy-y*h*0.6; if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      // mark tau
+      if(tau<T){const tx=ox+tau*w/T;
+        x.strokeStyle='#888';x.setLineDash([1,2]);x.beginPath();
+        x.moveTo(tx,oy);x.lineTo(tx,oy-h*0.6*0.632);x.stroke();x.setLineDash([]);
+        x.fillStyle='#444';x.fillText('τ='+tau.toFixed(2)+'s',tx-15,oy+12);}
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('계단응답  y(t)=1-e^(-t/τ)',ox,290);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p><strong>관찰 포인트</strong>:</p>
+  <ul>
+    <li>극점이 $s=-0.5$ 근처(원점에 가까움) → $\tau=2$, 5τ=10초로 정착이 화면 끝에서야 끝남.</li>
+    <li>극점이 $s=-5$ 근처 → $\tau=0.2$, 0.6초쯤 이미 정착.</li>
+    <li>극점의 절댓값이 클수록 시스템이 "빠르다"는 표현은 모든 LTI 시스템에 적용되는 일반 규칙. W6에서 2차 시스템에도 그대로.</li>
+  </ul>
+
+  <h2>10.3 인터랙티브 2 추가 관찰 - 극점 이동의 정량화</h2>
+
+  <p>위 인터랙티브에서 극점을 슬라이더로 옮기며 다음 관계를 직접 확인하세요.</p>
+
+  <table>
+    <thead><tr><th>극점 위치 $s_p$</th><th>시정수 $\tau = -1/s_p$</th><th>±2% 정착시간 $4\tau$</th><th>1초 후 응답 $y(1)$</th></tr></thead>
+    <tbody>
+      <tr><td>−0.5</td><td>2.0 s</td><td>8.0 s</td><td>$1 - e^{-0.5} \approx 0.393$</td></tr>
+      <tr><td>−1.0</td><td>1.0 s</td><td>4.0 s</td><td>$1 - e^{-1} \approx 0.632$</td></tr>
+      <tr><td>−2.0</td><td>0.5 s</td><td>2.0 s</td><td>$1 - e^{-2} \approx 0.865$</td></tr>
+      <tr><td>−5.0</td><td>0.2 s</td><td>0.8 s</td><td>$1 - e^{-5} \approx 0.993$</td></tr>
+    </tbody>
+  </table>
+
+  <p>극점이 두 배 멀어지면 시정수와 정착시간은 정확히 절반. 자동제어 전체에서 가장 자주 쓰는 비례 관계입니다.
+  W9 근궤적에서 게인을 키울 때 폐루프 극점이 좌측으로 이동 → 시스템이 빨라진다는 한 줄 직관도 같은 사실에서 나옵니다.</p>
+
+  <h2>10.4 정량적 비교 — 시정수가 다른 두 시스템의 옆자리 시뮬레이션</h2>
+
+  <p>두 1차 시스템 $G_a(s) = 1/(0.5s+1)$ ($\tau = 0.5$)와 $G_b(s) = 1/(2s+1)$ ($\tau = 2$)에 같은 단위 스텝을 줬을 때
+  여러 시점의 출력 값을 표로 비교합니다. 학생들이 "시정수가 4배 차이"를 숫자로 느낄 수 있도록.</p>
+
+  <table>
+    <thead><tr><th>$t$ [s]</th><th>$y_a(t)$ ($\tau=0.5$)</th><th>$y_b(t)$ ($\tau=2$)</th><th>차이</th></tr></thead>
+    <tbody>
+      <tr><td>0.1</td><td>0.181</td><td>0.049</td><td>3.7배</td></tr>
+      <tr><td>0.5</td><td>0.632</td><td>0.221</td><td>2.9배</td></tr>
+      <tr><td>1.0</td><td>0.865</td><td>0.393</td><td>2.2배</td></tr>
+      <tr><td>2.0</td><td>0.982</td><td>0.632</td><td>1.55배</td></tr>
+      <tr><td>5.0</td><td>0.99996</td><td>0.918</td><td>1.09배</td></tr>
+      <tr><td>10.0</td><td>≈1</td><td>0.993</td><td>1.007배</td></tr>
+    </tbody>
+  </table>
+
+  <p>흥미로운 점: 두 시스템이 같은 정상값을 가지므로 시간이 충분히 흐르면 차이는 사라집니다. 차이가 가장 큰 구간은
+  $t \approx \tau_a$ 부근으로, 이 시점에 빠른 시스템은 이미 절반 이상 가 있고 느린 시스템은 시작 단계에 있습니다.</p>
+
+  <h2>10.5 이산 시간에서의 1차 시스템 — 디지털 제어로 가는 다리</h2>
+
+  <p>실제 디지털 제어기는 일정 주기 $T_s$로 샘플링합니다. 1차 시스템의 미분방정식을 이산 시간 차분방정식으로 옮기면
+  마이크로컨트롤러에서 한 줄 코드로 구현 가능합니다.</p>
+
+  <h3>10.5.1 정확한 이산화 (Zero-Order Hold)</h3>
+  <p>$\tau\dot y + y = Ku$를 ZOH로 이산화하면</p>
+  $$ y_k = a\, y_{k-1} + (1-a) K u_{k-1},\quad a = e^{-T_s/\tau} $$
+
+  <p>여기서 $a$가 "이전 값을 얼마나 기억할지"의 비율 (0~1). $T_s \ll \tau$이면 $a \approx 1$ (느린 시스템 빠른 샘플링),
+  $T_s \approx \tau$이면 $a \approx 0.37$로 빠르게 잊어버림.</p>
+
+  <h3>10.5.2 EMA 필터 = 이산화된 1차 시스템</h3>
+  <p>코드:</p>
+  <pre><code class="language-python">alpha = math.exp(-Ts/tau)         # 0 < alpha < 1
+y = 0.0
+for u in stream:
+    y = alpha * y + (1 - alpha) * u   # K=1로 가정한 EMA</code></pre>
+  <p>임베디드 펌웨어에 가장 흔하게 들어가는 한 줄 필터의 정체. $T_s$와 $\tau$를 정하면 $\alpha$가 결정됩니다.</p>
+
+  <h3>10.5.3 샘플링 주기를 너무 크게 잡으면?</h3>
+  <p>$T_s > \tau$가 되면 ZOH 등가 시스템에서 정보 손실이 크게 일어납니다. 실무 규칙: $T_s \leq \tau/10$ (대역폭의 10배 이상으로
+  샘플링). 즉 $\tau = 0.1$ s 시스템이면 $T_s \leq 10$ ms (샘플링 100 Hz 이상). W12·MPC 강의에서 다시 등장.</p>
+
+  <h2>11. 실험으로 시스템 식별 (System ID)</h2>
+
+  <p>실제 모터·온도제어기·드론 데이터를 받았을 때 1차 모델로 근사하는 가장 빠른 방법:</p>
+
+  <ol>
+    <li>입력에 단위 스텝을 가한다 (예: 모터에 일정 전압 5V 인가).</li>
+    <li>출력이 정착하는 값을 측정 → $K = y_{\infty} / u_{\infty}$.</li>
+    <li>출력이 $0.632\, K$가 되는 시간을 측정 → 그게 $\tau$.</li>
+  </ol>
+
+  <p>이걸 그래프 한 장에서 자로 잡으면 $G(s) = K/(\tau s + 1)$ 모델 완성.
+  공정 제어 분야에서 60년 넘게 쓰이고 있는 클래식한 방법입니다 (Cohen-Coon, IMC 등의 출발점).</p>
+
+<pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+
+# 임의의 측정 데이터 (예: 모터 속도 응답)
+t = np.linspace(0, 10, 200)
+y_meas = 3.0 * (1 - np.exp(-t/1.5)) + 0.05*np.random.randn(len(t))  # K=3, τ=1.5
+
+# 1) DC 게인 추정: 마지막 N 샘플 평균
+K_hat = y_meas[-30:].mean()
+# 2) 0.632*K 지점 찾기
+idx = np.argmax(y_meas >= 0.632 * K_hat)
+tau_hat = t[idx]
+
+print(f'추정값:  K ≈ {K_hat:.2f},  τ ≈ {tau_hat:.2f} s')
+
+# 모델 응답과 비교
+y_model = K_hat * (1 - np.exp(-t/tau_hat))
+plt.plot(t, y_meas, '.', label='측정', alpha=.5)
+plt.plot(t, y_model, 'r-', label=f'모델 K={K_hat:.2f}, τ={tau_hat:.2f}')
+plt.axhline(0.632*K_hat, ls='--', color='gray')
+plt.xlabel('t [s]'); plt.ylabel('y'); plt.legend(); plt.grid(); plt.show()</code></pre>
+
+  <h3>11.0 1차 시스템 식별 - 단계별 워크플로우</h3>
+  <p>실험실에서 처음 받아보는 미지의 시스템에 대해 1차 모델을 추정하는 표준 절차를 단계별로 정리합니다.</p>
+  <ol>
+    <li><strong>안전 점검</strong>: 입력 한계, 출력 안전 범위 확인. 너무 큰 스텝은 비선형 영역으로 끌고 갈 수 있음 (포화).</li>
+    <li><strong>정상상태 확인</strong>: 입력을 어느 일정값에 두고 출력이 안정될 때까지 대기. 시작점 정의.</li>
+    <li><strong>스텝 인가</strong>: 작은 스텝(정상값의 5~10%)을 인가. 시스템을 선형 영역에 머물게 함.</li>
+    <li><strong>응답 기록</strong>: 정착할 때까지 (혹은 5~10τ 추정 시간 동안) 데이터 저장.</li>
+    <li><strong>$K$ 추정</strong>: $K = \Delta y_\infty / \Delta u$ (변화량 비). 마지막 30개 샘플 평균 등으로.</li>
+    <li><strong>$\tau$ 추정</strong>: 0.632 첫 통과, 로그 회귀, 면적 적분 중 데이터 노이즈 수준에 맞는 방법 선택.</li>
+    <li><strong>검증</strong>: 추정한 $G(s) = K/(\tau s+1)$로 시뮬레이션한 응답을 측정 데이터에 겹쳐 그림. RMSE가 데이터 노이즈 수준 이내면 OK.</li>
+    <li><strong>모델 한계 명시</strong>: 큰 입력에서는 비선형, 환경 변화 (온도/하중)에 따라 $K, \tau$가 달라질 수 있음을 기록.</li>
+  </ol>
+
+  <div class="warn">
+    <strong>흔한 함정</strong> — 응답이 정착하기 전에 측정을 끝내면 $K$ 추정이 작게 나옵니다. 그러면 $\tau$도 작게 추정되어
+    "이 시스템 빠르네!" 라는 잘못된 결론. 항상 5τ 이상 기록할 것.
+  </div>
+
+  <h3>11.1 노이즈가 있는 데이터에서 시정수 잡기 — 두 가지 방법 비교</h3>
+  <p>실제 측정에는 노이즈가 끼어 있습니다. 위 코드의 "0.632 첫 통과 시점"은 한 점의 노이즈에 민감합니다.
+  더 안정적인 두 가지 보완 방법을 알려드립니다.</p>
+
+  <ol>
+    <li><strong>로그 회귀</strong>: $1 - y(t)/K = e^{-t/\tau}$ → 양변에 자연로그를 취하면 $\ln(1 - y/K) = -t/\tau$.
+        $t$ vs $\ln(1-y/K)$를 플롯하고 직선의 기울기를 최소제곱으로 구해 $\tau$를 추정. 노이즈에 강함.</li>
+    <li><strong>면적 적분법</strong>: 정착된 후 $\int_0^\infty (K - y(t))\,dt = K\tau$. 이걸 수치 적분하면 $\tau$가 한 번에 나옴.
+        Cohen-Coon 등 고전 PID 튜닝 공식의 출발점.</li>
+  </ol>
+
+  <pre><code class="language-python">import numpy as np
+
+# 데이터 (예제 1과 같은 측정)
+t = np.linspace(0, 10, 200)
+y_true = 3.0 * (1 - np.exp(-t/1.5))
+y = y_true + 0.1*np.random.randn(len(t))
+
+K_hat = y[-30:].mean()
+
+# 방법 A: 첫 통과
+idx = np.argmax(y >= 0.632*K_hat); tau_A = t[idx]
+
+# 방법 B: 로그 회귀 (안정적)
+mask = (y > 0.05*K_hat) & (y < 0.9*K_hat)
+slope, intercept = np.polyfit(t[mask], np.log(1 - y[mask]/K_hat), 1)
+tau_B = -1/slope
+
+# 방법 C: 면적 적분
+area = np.trapz(K_hat - y, t)
+tau_C = area / K_hat
+
+print(f'A 첫통과:  τ ≈ {tau_A:.2f}')
+print(f'B 로그회귀: τ ≈ {tau_B:.2f}')
+print(f'C 면적적분: τ ≈ {tau_C:.2f}')</code></pre>
+
+  <h2>12. 연습문제</h2>
+
+  <p>각 문제를 손으로 풀어 본 뒤 위 인터랙티브 데모로 검증해 보세요.</p>
+
+  <ol>
+    <li><strong>RC 설계</strong>: 절단주파수 100 Hz의 1차 저역통과 필터를 만들고 싶다. $C = 1\,\mu\text{F}$이면 $R$은?</li>
+    <li><strong>스텝 응답 시간</strong>: $G(s) = 5/(2s+1)$에 단위 스텝을 가했을 때 출력이 4가 되는 시간은?</li>
+    <li><strong>측정 → 모델</strong>: 어떤 시스템에 1 V 스텝을 가했더니 $t=0.5\,\text{s}$에서 $y=1.265$, 정상값 $y_\infty=2$.
+        $G(s)$는?</li>
+    <li><strong>5τ 환산</strong>: ±5% 정착시간이 6초로 측정된 1차 시스템의 시정수는?</li>
+    <li><strong>외란이 있는 정상값</strong>: $\tau\dot y + y = K(u + d)$, $K=2$, $u=3$, $d=0.5$. $y_\text{ss}$는?</li>
+    <li><strong>지배 극점</strong>: $G(s) = 10/[(s+1)(s+20)]$. 1차 근사 모델 (지배 극점만 사용)을 쓰라.</li>
+    <li><strong>임펄스 → 스텝</strong>: $G(s) = 1/(0.5s+1)$의 임펄스응답이 $t=1.0$에서 갖는 값을 구하라.</li>
+    <li><strong>주파수 응답</strong>: $G(s) = 4/(0.1s+1)$의 $\omega = 20$ rad/s에서의 크기와 위상은?</li>
+    <li><strong>모터 시정수</strong>: DC 모터 측정 결과 시정수 $\tau_m = 0.08$ s. 0.5초 안에 ±2% 정착 가능한가? 가능/불가능 이유와 함께 답하라.</li>
+    <li><strong>두 1차의 차이</strong>: $G_1 = 1/(s+1)$, $G_2 = 1/(s+10)$. ① 어느 쪽이 빠른가? ② 절단주파수의 비는? ③ 같은 노이즈 환경에서 어느 쪽이 노이즈를 잘 줄이는가?</li>
+  </ol>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>답 (먼저 풀어 본 뒤 펼쳐 보세요)</strong></summary>
+    <ol>
+      <li>$\tau = 1/(2\pi \cdot 100) = 1.59\,\text{ms}$, $R = \tau/C = 1.59\,\text{k}\Omega$.</li>
+      <li>$y=4 = 5(1-e^{-t/2})$ → $e^{-t/2}=0.2$ → $t = 2\ln 5 \approx 3.22\,\text{s}$.</li>
+      <li>$K=2$. $1.265 = 2(1-e^{-0.5/\tau})$ → $e^{-0.5/\tau}=0.3675$ → $\tau = 0.5/\ln(1/0.3675) \approx 0.5\,\text{s}$. 따라서 $G(s) = 2/(0.5s+1)$.</li>
+      <li>±5%면 $t_s \approx 3\tau$ → $\tau \approx 2$초.</li>
+      <li>$y_\text{ss} = K(u+d) = 2(3.5) = 7$.</li>
+      <li>$s=-1$ 극점이 지배 → $G(s) \approx 10/[(s+1)\cdot 20] = 0.5/(s+1)$. (DC 게인 보존을 위해 분모 $s+20$에서 $s=0$ 대입한 20을 분자로 가져옴.)</li>
+      <li>$y(t) = 2e^{-2t}$ → $y(1) = 2e^{-2} = 0.271$. (참고: $G(s) = 1/(0.5s+1) = 2/(s+2)$이므로 임펄스응답 $2e^{-2t}$.)</li>
+      <li>$|G| = 4/\sqrt{1+(0.1\cdot 20)^2} = 4/\sqrt 5 \approx 1.79$, $\angle G = -\arctan(2) \approx -63.4°$.</li>
+      <li>$5\tau_m = 0.4$ s. 가능 (여유 있게).</li>
+      <li>① $G_2$가 더 빠름 ($\tau_2=0.1$ vs $\tau_1=1$). ② $\omega_{c2}/\omega_{c1} = 10$. ③ 절단주파수가 낮은 $G_1$이 고주파 노이즈를 더 강하게 차단함.</li>
+    </ol>
+  </details>
+
+  <h2>12.2 추가 연습 — 응용 위주</h2>
+  <ol>
+    <li><strong>스마트워치 심박 필터</strong>: 30 Hz 샘플링, 시정수 0.5 s인 EMA로 노이즈 제거. $\alpha$ 값과 절단주파수는?</li>
+    <li><strong>가스 농도 센서</strong>: $\tau = 8$ s, $K = 100$ ppm/V. 0.5 V 스텝 인가 시 ① 정상값 ② 95% 도달 시간.</li>
+    <li><strong>차량 운동량</strong>: 엔진 토크 → 차량 속도가 1차 시스템 ($\tau = 4$ s, $K = 0.05$ (m/s)/Nm). 0에서 30 m/s 도달까지 일정 토크 200 Nm을 가하면 정착 도달 가능?</li>
+    <li><strong>지수가중이동평균의 등가 평균 길이</strong>: $\alpha = 0.9$인 EMA의 "유효 윈도우 길이"는 몇 샘플?</li>
+    <li><strong>프린터 헤드 온도</strong>: PLA 출력 시 200 °C 유지. 헤드 시스템 $\tau=20$ s, 외부 외란이 −5 °C 영향. P 제어만으로 정상오차는 얼마?</li>
+  </ol>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>답</strong></summary>
+    <ol>
+      <li>$\alpha = e^{-1/(30\cdot 0.5)} = e^{-1/15} \approx 0.9355$. 절단주파수 $f_c = 1/(2\pi \cdot 0.5) = 0.318$ Hz.</li>
+      <li>① 50 ppm. ② $-\tau\ln 0.05 = 8 \cdot 3 = 24$ s.</li>
+      <li>정상값 $= K \cdot T = 0.05 \cdot 200 = 10$ m/s. 30 m/s 도달 불가능 — 토크 부족.</li>
+      <li>등가 길이 $\approx 1/(1-\alpha) = 10$ 샘플.</li>
+      <li>외란 응답: $K_\text{disturbance}/(1+K_\text{loop} K_\text{plant}) \cdot d$. 자세한 계산은 W7에서.</li>
+    </ol>
+  </details>
+
+  <h2>12.5 추가 응용 시나리오 — 케이스 스터디</h2>
+
+  <h3>케이스 A: 드론 기압고도 센서의 저역통과</h3>
+  <p>BMP280 기압 센서가 1초에 100번 고도를 측정하는데 진동 노이즈 ±0.5 m가 끼어 있습니다. 비행 제어기에서 사용할
+  필터 시정수를 정해 봅시다.</p>
+  <ul>
+    <li>위치제어 PID의 대역폭을 5 Hz로 설계 → 위치 신호의 유효 주파수는 0~5 Hz.</li>
+    <li>필터 절단주파수를 5 Hz보다 충분히 위로 (예: 20 Hz) 둬야 위치 정보를 살리면서 노이즈를 거른다.</li>
+    <li>$\omega_c = 2\pi \cdot 20 = 125.7$ rad/s → $\tau = 1/\omega_c = 8\,\text{ms}$.</li>
+    <li>이산 시간 (Δt = 10 ms)에서 1차 IIR 필터: $y_k = \alpha y_{k-1} + (1-\alpha)x_k$, $\alpha = e^{-\Delta t/\tau} \approx e^{-10/8} = 0.287$.</li>
+    <li>"평균 7개 샘플" 정도로 부드러워지지만 위치 신호는 거의 그대로 통과.</li>
+  </ul>
+  <p>이게 드론 비행 제어 코드에 흔히 들어가는 한 줄 EMA(지수가중이동평균) 필터의 정확한 정체입니다.</p>
+
+  <h3>케이스 B: PI 제어기의 닫힌 루프 시정수</h3>
+  <p>1차 공정 $G(s) = K/(\tau s+1)$에 PI 제어기 $C(s) = K_p(1 + 1/(T_i s))$를 걸고 $T_i = \tau$ ("영점-극점 상쇄")로
+  설정하면 폐루프가 다시 1차 시스템이 됩니다.</p>
+  $$ \frac{Y}{R} = \frac{1}{1 + \tau_\text{cl} s},\quad \tau_\text{cl} = \frac{T_i}{K K_p} $$
+  <p>의도한 폐루프 시정수 $\tau_\text{cl}$이 정해지면 게인 $K_p$가 자동으로 계산됨. 산업계 PI 튜닝의
+  IMC(Internal Model Control) 방식이 정확히 이 아이디어. W12 PID 단원에서 자세히.</p>
+
+  <h3>케이스 B.5: 자동차 크루즈 컨트롤의 1차 모델</h3>
+  <p>크루즈 컨트롤이 다루는 단순화된 차량 동역학:</p>
+  $$ m\dot v + b v = F_\text{engine} - F_\text{drag/road} $$
+  <p>$m \approx 1500$ kg (차량 질량), $b \approx 50$ Ns/m (구름 + 공기 저항 등가 계수). 이걸 표준형으로 옮기면
+  $\tau = m/b = 30$ s, $K = 1/b$. 즉 차량 속도는 엔진 힘에 대해 시정수 30초의 1차 시스템.
+  60 km/h에서 80 km/h로 속도를 올릴 때 5τ = 150초 = 2.5분이 걸린다는 의미 — 실제 운전 경험과 거의 일치합니다.
+  P 제어만으로는 오르막에서 정상오차가 남고, 그래서 실제 크루즈 컨트롤은 PI 제어를 씁니다 (W7과 W12 동기).</p>
+
+  <h3>케이스 C: 배터리 충전 전압 곡선</h3>
+  <p>리튬이온 배터리를 정전류(CC) 모드로 충전할 때 셀 전압 상승은 거의 1차에 가깝습니다. 시정수는 내부 저항 $R_\text{int}$와
+  표면 정전용량(전기이중층) $C_\text{dl}$의 곱으로 결정되고, 보통 수 초 ~ 수십 초 단위. BMS(Battery Management System)에서
+  이 시정수를 추정해 둠으로써 짧은 휴지 후 OCV(개방회로 전압)를 예측할 수 있습니다.</p>
+
+  <h2>13. 다음 강의로의 다리</h2>
+
+  <p>1차 시스템은 진동을 못 합니다 — 극점이 실수축 위에만 있기 때문에. 진동이 등장하려면 에너지 저장 요소가 둘 이상 있어야
+  하고, 그러면 극점이 복소수가 될 수 있습니다. 그게 다음 주 W6 <strong>2차 시스템</strong>의 출발점입니다. 거기서 만나는
+  핵심 매개변수가 <em>감쇠비 ζ</em>와 <em>고유진동수 ωₙ</em>인데, 이번 주의 시정수 $\tau$가 ζ와 ωₙ의 곱 형태로 다시
+  등장합니다 — $1/\tau \leftrightarrow \zeta\omega_n$ (실수부, 감쇠 속도).</p>
+
+  <p>또 W7 정상상태 오차에서는 1차 시스템에 적분기를 추가하면 어떻게 정상 오차가 0이 되는지를 다룹니다 (Type 0 → Type 1).
+  이번 주 6.4절에서 항온조에 PI가 자연스러운 이유의 이론적 배경입니다.</p>
+
+  <h3>13.1 1차 → 2차로 갈 때 일어나는 변화 5가지</h3>
+  <ol>
+    <li><strong>극점 개수가 1 → 2</strong>: 두 극점이 실수일 수도, 복소 공액쌍일 수도 있다.</li>
+    <li><strong>진동 가능</strong>: 복소 극점이 등장하면 시간응답에 $\sin/\cos$이 등장.</li>
+    <li><strong>오버슈트 등장</strong>: 1차에서는 절대 없었던 "정상값보다 더 가는" 현상.</li>
+    <li><strong>두 매개변수</strong>: $\tau$ 하나에서 $(\zeta, \omega_n)$ 두 개로 — 응답 모양과 속도가 분리됨.</li>
+    <li><strong>주파수 응답에 공진</strong>: $\zeta$가 작으면 보드 선도에 봉우리(peak)가 생긴다.</li>
+  </ol>
+
+  <h3>13.2 하나의 통합 관점 — "극점이 시간응답을 결정한다"</h3>
+  <p>1차 시스템에서 시작해서 W6의 2차, W8의 안정성, W9의 근궤적까지 관통하는 한 가지 통찰을 미리 정리합니다.</p>
+  <ul>
+    <li>극점의 <strong>실수부</strong> = 응답이 얼마나 빨리 감쇠하느냐 (좌측에 있을수록 빠름).</li>
+    <li>극점의 <strong>허수부</strong> = 응답이 얼마나 자주 진동하느냐 (절댓값이 클수록 빠른 진동).</li>
+    <li>극점이 <strong>우반평면</strong>에 있으면 시스템 불안정 (응답이 발산).</li>
+    <li>극점이 <strong>허수축 위</strong>에 있으면 경계 (지속 진동, 또는 적분기).</li>
+  </ul>
+  <p>1차 시스템은 이 그림의 가장 단순한 사례 — 극점 하나가 음의 실수축 위에 있고, 절댓값이 응답 속도. 이 직관을
+  몸에 익혀두면 W8 이후에 새 시스템을 만났을 때 "극점 보고 응답 추측" 가능.</p>
+
+  <p>준비 운동: 다음 식이 1차인지 2차인지 분류해 보세요.</p>
+  <ul>
+    <li>$\dot y + 3y = 2u$ — 1차</li>
+    <li>$\ddot y + 4\dot y + 3y = u$ — 2차 (W6)</li>
+    <li>$\dddot y + \ddot y + \dot y + y = u$ — 3차 (W6 끝부분에서 지배 극점으로 단순화)</li>
+    <li>$\dot y + y = u + 0.5\dot u$ — 1차 + 미분기 (영점 추가, W6 후반)</li>
+  </ul>
+
+  <h2>13.5 자주 하는 실수 모음</h2>
+
+  <p>학생 과제·시험에서 반복적으로 나오는 실수와 그 진단을 모았습니다. 한 번 읽어두면 같은 실수를 안 합니다.</p>
+
+  <ol>
+    <li><strong>실수</strong>: $\tau$를 "시간 상수"로만 외우고 단위를 잊어버림.<br>
+      <strong>진단</strong>: $\tau\dot y$의 단위 = $\dot y \cdot$초 = $y$의 단위. 항상 [s] 단위.</li>
+    <li><strong>실수</strong>: $K$가 응답을 빠르게 한다고 착각.<br>
+      <strong>진단</strong>: $K$는 정상값만 결정, 응답 속도는 $\tau$만이 결정.</li>
+    <li><strong>실수</strong>: 데이터에서 정상값 도달 전에 "마지막 값"을 $K$로 사용.<br>
+      <strong>진단</strong>: 5τ 이상 측정 후 평균. 부족하면 $K$가 작게 추정되고 $\tau$도 작게 추정됨.</li>
+    <li><strong>실수</strong>: 임펄스응답 그래프에 "0.632" 점을 찍으려고 함.<br>
+      <strong>진단</strong>: 0.632 규칙은 <em>스텝</em>응답에만 적용. 임펄스에서는 $1/e \approx 0.368$ (반대 방향).</li>
+    <li><strong>실수</strong>: 1차 시스템의 극점이 우반평면에 있을 수 있다고 생각.<br>
+      <strong>진단</strong>: $G = K/(\tau s + 1)$에서 $\tau > 0$이면 극점은 항상 $-1/\tau < 0$. 음의 $\tau$는 발산 시스템 (불안정).</li>
+    <li><strong>실수</strong>: 비선형 시스템(예: 큰 신호의 모터 토크 - 속도)에 1차 모델을 그대로 적용.<br>
+      <strong>진단</strong>: 동작점 근방의 작은 신호 선형화에서만 1차 근사가 정확. 큰 신호는 포화·마찰 등 비선형 효과 고려.</li>
+    <li><strong>실수</strong>: 보드 선도에서 코너 주파수에 −3 dB 점을 찍지 않고 점근선만 그림.<br>
+      <strong>진단</strong>: 점근선은 코너에서 0 dB, 실제는 −3 dB. 두 점근선의 교차점에서 정확히 3 dB 차이.</li>
+    <li><strong>실수</strong>: $\tau$와 $T_s$(샘플링 주기)를 혼동.<br>
+      <strong>진단</strong>: $\tau$는 시스템의 자연 시간 척도, $T_s$는 우리가 선택하는 디지털 샘플링 간격. 보통 $T_s \ll \tau$.</li>
+  </ol>
+
+  <h2>14. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>1차 시스템: $G(s) = K/(\tau s + 1)$, 극점 하나가 $-1/\tau$. 항상 안정.</li>
+      <li>계단응답 $y(t) = K(1 - e^{-t/\tau})$, $t = \tau$에서 63.2%.</li>
+      <li>5τ ≈ 99% 정착 — "1차 시스템 정착 시간"의 실무 기준.</li>
+      <li>$K$와 $\tau$는 독립 — $K$는 정상값만, $\tau$만 응답 속도를 결정.</li>
+      <li>주파수영역: 절단주파수 $\omega_c = 1/\tau$, 고주파 −20 dB/decade.</li>
+      <li>측정된 응답에서 $K$와 τ를 바로 읽을 수 있다 → 가장 단순한 시스템 식별.</li>
+      <li>다음 주 2차 시스템에서 진동이 처음 등장. $1/\tau \leftrightarrow \zeta\omega_n$의 대응 관계 기억.</li>
+    </ul>
+  </div>
+
+  <h2>15. 부록 — 한 페이지 요약 카드</h2>
+
+  <div class="tip">
+    <h3>1차 시스템 요약 카드</h3>
+    <p><strong>전달함수</strong>: $G(s) = K/(\tau s+1)$, 극점 $-1/\tau$.</p>
+    <p><strong>계단응답</strong>: $y(t) = K(1-e^{-t/\tau})$.</p>
+    <p><strong>임펄스응답</strong>: $y(t) = (K/\tau)\,e^{-t/\tau}$.</p>
+    <p><strong>주파수응답</strong>: $G(j\omega) = K/(1+j\omega\tau)$, $\omega_c = 1/\tau$.</p>
+    <p><strong>정착시간</strong>: $t_s \approx 4\tau$ (±2%) 또는 $5\tau$ (±0.7%).</p>
+    <p><strong>이산화</strong>: $y_k = a y_{k-1} + (1-a)Ku_{k-1}$, $a = e^{-T_s/\tau}$.</p>
+    <p><strong>식별</strong>: $K = y_\infty/u_\infty$, $\tau = $ 0.632·K 도달 시간.</p>
+    <p><strong>응용</strong>: RC, 모터(저속), 항온조, 수조, 약물농도, EMA 필터.</p>
+  </div>
+
+  <h3>15.1 자동제어 전체 강의 흐름에서의 위치</h3>
+  <p>본 강의 (W5)는 자동제어 14주 강의의 첫 번째 시간응답 분석입니다. 다음 흐름으로 이어집니다.</p>
+  <ul>
+    <li>W5 (오늘): 1차 시스템 시간응답 — 시정수 하나로 결정되는 가장 단순한 모델</li>
+    <li>W6: 2차 시스템 시간응답 — 진동의 등장, $\zeta$와 $\omega_n$</li>
+    <li>W7: 정상상태 오차 — Type 번호와 입력 종류별 오차</li>
+    <li>W8: Routh-Hurwitz 안정성 — "어디서부터 시스템이 발산하는가"</li>
+    <li>W9: 근궤적 — 게인 변화에 따른 폐루프 극점의 이동</li>
+    <li>W11: 보드 선도 — 주파수영역 안정성과 안정여유</li>
+    <li>W12: PID 제어 설계 — 명세 → 게인의 정량적 설계</li>
+    <li>W13: 상태공간 — 다입력 다출력으로의 일반화</li>
+  </ul>
+  <p>오늘 배운 시정수·63%·5τ·0.632·1차 보드는 W6 이후에도 끊임없이 다시 등장합니다. 가장 기본 도구이므로
+  손으로 풀고 슬라이더로 만져 본 경험치가 다음 주 진도에서 큰 차이를 만듭니다.</p>
+
+  <h3>15.1.5 자주 받는 질문 (FAQ)</h3>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q1. 시정수가 음수일 수 있나요?</strong></summary>
+    <p>물리적 1차 시스템 (RC, 모터, 항온조 등)의 시정수는 항상 양수입니다. $\tau < 0$이면 극점이 우반평면 → 시스템 불안정 (응답이 발산).
+    이런 시스템은 폐루프 제어 없이 그대로 두면 폭발하므로, 모델링에서 $\tau < 0$이 나오면 무언가 잘못된 신호입니다.
+    예외: 비선형 시스템의 일부 동작점 근방에서 선형화하면 unstable equilibrium이 될 수 있음.</p>
+  </details>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q2. 1차 시스템에 영점은 없나요?</strong></summary>
+    <p>표준형 $K/(\tau s+1)$에는 영점이 없지만, 더 일반적인 1차 시스템 $G(s) = K(\tau_z s+1)/(\tau s+1)$도 있습니다.
+    이건 분자에 미분 항이 있는 형태로, "lead-lag 보상기"의 가장 간단한 예. 영점이 분자에 있으면 응답이 더 빠르게 시작하지만
+    오버슈트가 생길 수 있음 (1차인데도 오버슈트!). W12에서 다시.</p>
+  </details>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q3. 왜 $\tau$의 정의는 0.632일까? 0.5나 0.9가 더 직관적이지 않나?</strong></summary>
+    <p>$1 - 1/e$가 자연스럽게 나오는 이유: 미분방정식 $\dot y = -y/\tau$의 해 $e^{-t/\tau}$에서 지수가 −1이 되는 시점.
+    "지수가 가장 단순한 −1"이라는 수학적 깔끔함 때문에 이 시점이 표준이 됐습니다. 0.5는 반감기, 0.9는 90% 도달인데
+    이들은 모두 $\tau$의 상수배로 표현 가능 ($t_{1/2} = 0.693\tau$, $t_{0.9} = 2.303\tau$). 어느 정의를 써도 정보는 같지만
+    수식이 가장 단순한 0.632를 선택한 것.</p>
+  </details>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q4. 5τ가 아니라 4τ를 쓰는 책도 있던데?</strong></summary>
+    <p>둘 다 맞습니다. 4τ는 ±2% 정착 (1.83% 차이), 5τ는 ±0.7%. 한국 학부에서 자주 5τ로 외우지만, 미국/유럽 텍스트는 4τ가 더 일반적.
+    설계 시 어느 기준을 쓰는지만 명시하면 됩니다.</p>
+  </details>
+
+  <details class="note" style="margin:12px 0">
+    <summary><strong>Q5. 임펄스응답을 실제로 측정하려면?</strong></summary>
+    <p>완전한 디랙 임펄스는 만들 수 없지만, 시정수에 비해 충분히 짧은 직사각 펄스 ($\Delta t \ll \tau$, 면적 = 1)면
+    근사적으로 임펄스응답을 얻을 수 있습니다. 또는 스텝응답을 미분해서 임펄스응답을 얻기도 함 (수치 노이즈 주의).
+    대부분의 산업 응용은 그냥 스텝응답으로 끝냅니다.</p>
+  </details>
+
+  <h3>15.2 추천 추가 학습</h3>
+  <ul>
+    <li>Ogata, "Modern Control Engineering" 5장 (Time Response of First/Second Order Systems)</li>
+    <li>Nise, "Control Systems Engineering" 4장</li>
+    <li>온라인 시뮬레이터: MATLAB Control System Toolbox `step()`, `impulse()`, `bode()`</li>
+    <li>Python: `scipy.signal.TransferFunction`, `signal.step`, `signal.bode`</li>
+  </ul>
+
+  <h3>15.3 한 시간 분량의 자기 점검 체크리스트</h3>
+  <p>이번 강의를 끝낸 뒤, 다음 항목을 모두 손으로 풀 수 있어야 합니다. 만약 한 항목이라도 막힌다면 해당 절을 다시 봐 주세요.</p>
+  <ul>
+    <li>1차 시스템의 표준 전달함수와 그 두 매개변수의 단위</li>
+    <li>주어진 미분방정식에서 $\tau$와 $K$ 식별</li>
+    <li>주어진 $\tau, K$로부터 시간응답 식 유도 (스텝, 임펄스)</li>
+    <li>주어진 측정 그래프에서 시정수 읽기 (0.632 규칙)</li>
+    <li>주어진 명세 (정착시간, 절단주파수)에서 RC, 모터 등의 부품 값 결정</li>
+    <li>1차 시스템의 보드 선도 점근선 그리기</li>
+    <li>외란 입력에 대한 정상상태 출력 계산</li>
+    <li>이산화: $T_s$와 $\tau$로부터 EMA 계수 $\alpha$ 계산</li>
+    <li>두 시정수 시스템의 직렬·병렬 결합 분석 (지배 극점 개념)</li>
+    <li>램프·정현파 입력에 대한 응답의 정성적 예측</li>
+  </ul>
+
+  <h3>15.3.5 강의 마무리 활동 (선택)</h3>
+  <p>다음 중 하나를 골라 30분 정도 직접 해 보세요. 손과 직관이 같이 단련됩니다.</p>
+  <ol>
+    <li><strong>RC 회로 실험</strong>: 브레드보드에 R, C를 꽂고 함수발생기로 사각파를 입력. 오실로스코프로 0.632 점을 측정해 시정수를 산출.
+        계산값과 ±10% 이내로 일치하면 좋음.</li>
+    <li><strong>온도 측정 실험</strong>: 핫팩이나 따뜻한 물 컵에 디지털 온도계를 담갔다 꺼내 공기 중 자연 냉각을 기록. 1차 모델로 회귀하여 $\tau$ 추정.</li>
+    <li><strong>Python 시뮬레이션</strong>: $\tau$와 $K$를 무작위로 잡고 노이즈 섞인 스텝응답을 만든 뒤 위 11.1절의 세 식별 방법을 비교. RMSE를 비교해 어떤 방법이 좋은지 확인.</li>
+    <li><strong>주변에서 1차 시스템 찾기</strong>: 가전제품, 운전 경험, 일상 도구에서 "스텝을 가하면 지수적으로 따라가는" 현상을 5개 찾아 시정수를 추정.</li>
+  </ol>
+
+  <h3>15.4 마지막 한 줄</h3>
+  <p>1차 시스템은 모든 LTI 시스템의 가장 단순한 사례이지만, 여기서 익힌 직관 — <strong>"극점의 위치가 시간응답을 결정한다"</strong> —
+  은 자동제어 강의 전체를 관통합니다. 다음 주 W6의 2차 시스템에서 같은 직관이 두 매개변수로 확장되고,
+  W8 이후에서는 이 직관 위에서 안정성과 설계가 전개됩니다. 시정수 한 숫자에 익숙해지는 게 한 학기의 출발점입니다.</p>
+
+  <div class="prevnext">
+    <a href="04-block-diagram.html"><small>← 이전</small>W4. 블록선도</a>
+    <a href="06-second-order.html" class="next"><small>다음 →</small>W6. 2차 시스템 시간응답</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

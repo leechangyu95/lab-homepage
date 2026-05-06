@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 도르래 — 줄 끝을 당기면 짐은 얼마나 올라가나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 도르래 — 줄 끝을 당기면 짐은 얼마나 올라가나</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/05-relative-dependent.html">Week 5. 상대운동과 종속운동</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 도르래 — 줄 끝을 당기면 짐은 얼마나 올라가나</h4>
+    <p>왼쪽은 단순 도르래(1:1 비율), 오른쪽은 움직이는 도르래(2:1 비율, 짐을 들기 더 쉬움). <strong>슬라이더로 줄 끝을 당겨</strong> 보세요. 같은 거리를 당겨도 짐이 올라가는 거리와 당겨야 하는 힘이 다릅니다.</p>
+    <canvas id="pulleyC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>줄 끝 당김 거리 <span class="val" id="puPV">0</span><input type="range" id="puP" min="0" max="100" step="1" value="0"></label>
+      <button id="puReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pulleyC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    sl('puP').oninput=()=>sl('puPV').textContent=sl('puP').value;
+    sl('puReset').onclick=()=>{sl('puP').value=0;sl('puPV').textContent='0';};
+    function pulley(cx,cy,r){
+      x.fillStyle='#ddd';x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fill();
+      x.strokeStyle='#333';x.lineWidth=1.5;x.stroke();
+      x.beginPath();x.arc(cx,cy,2,0,Math.PI*2);x.fillStyle='#333';x.fill();
+    }
+    function loop(){
+      const pull=+sl('puP').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#1a1a1a';x.font='bold 13px sans-serif';x.textAlign='center';
+      x.fillText('단순 도르래 (1:1)',160,30);
+      x.fillText('움직이는 도르래 (2:1)',480,30);
+      // ceiling
+      x.fillStyle='#888';x.fillRect(40,50,260,8);x.fillRect(360,50,240,8);
+      // ============ Simple pulley ============
+      // pulley at (160, 80)
+      pulley(160,80,16);
+      // hand pulls right rope down by `pull`
+      const handY1=180+pull;
+      const blockY1=180-pull;  // block goes up by same amount
+      // ropes
+      x.strokeStyle='#444';x.lineWidth=2;
+      x.beginPath();x.moveTo(144,80);x.lineTo(144,blockY1);x.stroke();
+      x.beginPath();x.moveTo(176,80);x.lineTo(176,handY1);x.stroke();
+      // arc on top
+      x.beginPath();x.arc(160,80,16,Math.PI,0);x.stroke();
+      // block left
+      x.fillStyle='#0b5fff';x.fillRect(144-25,blockY1,50,30);x.strokeStyle='#333';x.strokeRect(144-25,blockY1,50,30);
+      x.fillStyle='#fff';x.font='bold 12px sans-serif';x.textAlign='center';x.fillText('짐',144,blockY1+19);
+      // hand right
+      x.fillStyle='#f4d2a3';x.beginPath();x.arc(176,handY1+10,10,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // arrow showing relations
+      x.fillStyle='#444';x.font='11px Consolas,monospace';x.textAlign='left';
+      x.fillText('당김 거리: '+pull+' (단위)',60,330);
+      x.fillText('짐 올라간 거리: '+pull+' (1:1)',60,348);
+      // ============ Movable pulley ============
+      // top fixed pulley at (520, 80)
+      pulley(520,80,16);
+      // moving pulley starts at (440, 200) with block
+      // when rope end pulls up by `pull`, block goes up by pull/2
+      const blockY2=200-pull/2;
+      const handY2=80+(80+pull);  // hand pulls down rope from top right; we'll show hand below
+      pulley(440,blockY2-15,12);
+      // ropes:
+      // 1. left rope: ceiling (380, 58) -> moving pulley left side (428, blockY2-15)
+      x.strokeStyle='#444';x.lineWidth=2;
+      x.beginPath();x.moveTo(390,58);x.lineTo(390,blockY2-15);x.lineTo(428,blockY2-15);x.stroke();
+      // 2. right rope: moving pulley right (452, blockY2-15) -> top pulley left (504, 80) -> hand (536, handY2)
+      x.beginPath();x.moveTo(452,blockY2-15);x.lineTo(504,80);x.stroke();
+      x.beginPath();x.arc(520,80,16,Math.PI,0);x.stroke();
+      x.beginPath();x.moveTo(536,80);x.lineTo(536,80+pull+50);x.stroke();
+      // moving pulley arc
+      x.beginPath();x.arc(440,blockY2-15,12,0,Math.PI);x.stroke();
+      // block
+      x.fillStyle='#c62828';x.fillRect(415,blockY2,50,30);x.strokeStyle='#333';x.strokeRect(415,blockY2,50,30);
+      x.fillStyle='#fff';x.font='bold 12px sans-serif';x.textAlign='center';x.fillText('짐',440,blockY2+19);
+      // hand
+      x.fillStyle='#f4d2a3';x.beginPath();x.arc(536,80+pull+60,10,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      x.fillStyle='#444';x.font='11px Consolas,monospace';x.textAlign='left';
+      x.fillText('당김 거리: '+pull+' (단위)',360,330);
+      x.fillText('짐 올라간 거리: '+(pull/2).toFixed(1)+' (2:1)',360,348);
+      x.fillStyle='#666';x.font='11px sans-serif';x.textAlign='center';
+      x.fillText('힘은 절반, 거리는 두 배 — 일은 같다',480,366);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🏁 같은 사면, 누가 먼저 도착할까? — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🏁 같은 사면, 누가 먼저 도착할까?</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/05-rotation.html">Week 5. 회전과 각운동량</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🏁 같은 사면, 누가 먼저 도착할까?</h4>
+    <p>처음에는 셋 다 같은 위치에서 동시에 출발합니다. 같은 위치에너지 $Mgh$가 직선 KE($\tfrac12Mv^2$)와 회전 KE($\tfrac12I\omega^2$)로 나뉘는데, $I$가 작을수록 직선 KE에 더 많이 가서 빨라집니다.</p>
+    <canvas id="w5_rollDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>사면 각도 $\theta$ <span class="val" id="w5_rollAngV">25°</span>
+        <input type="range" id="w5_rollAng" min="10" max="45" step="1" value="25"></label>
+      <label>사면 길이 $L$ <span class="val" id="w5_rollLenV">5</span> m
+        <input type="range" id="w5_rollLen" min="2" max="8" step="0.5" value="5"></label>
+      <label>중력 $g$ <span class="val" id="w5_rollGV">9.8</span> m/s²
+        <input type="range" id="w5_rollG" min="1.6" max="15" step="0.1" value="9.8"></label>
+      <button id="w5_rollReset" type="button" style="margin-top:8px">다시 굴리기</button>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>이론 확인</strong> — 도착 직전 속도는 $v = \sqrt{\dfrac{2gh}{1 + I/(MR^2)}}$ 입니다. 비율 $k = I/(MR^2)$이 작을수록 빠릅니다.
+      <ul>
+        <li>속이 꽉 찬 구 — $k = 2/5$ → 가장 빠름</li>
+        <li>속이 꽉 찬 원기둥 — $k = 1/2$ → 중간</li>
+        <li>속이 빈 원기둥(껍질) — $k = 1$ → 가장 느림</li>
+      </ul>
+      <strong>중요:</strong> 결과는 질량·반경에 무관! "굴리는 도형의 모양"만이 도착 순서를 결정합니다.
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w5_rollDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t0=performance.now();
+    function reset(){t0=performance.now();}
+    document.getElementById('w5_rollReset').addEventListener('click',reset);
+    ['w5_rollAng','w5_rollLen','w5_rollG'].forEach(id=>{
+      document.getElementById(id).addEventListener('input',reset);
+    });
+    function draw(){
+      const ang=+document.getElementById('w5_rollAng').value;
+      const L=+document.getElementById('w5_rollLen').value;
+      const g=+document.getElementById('w5_rollG').value;
+      document.getElementById('w5_rollAngV').textContent=ang+'°';
+      document.getElementById('w5_rollLenV').textContent=L.toFixed(1);
+      document.getElementById('w5_rollGV').textContent=g.toFixed(1);
+      const rad=ang*Math.PI/180;
+      const h=L*Math.sin(rad);
+      // a = g sin(ang)/(1+k), s = 1/2 a t^2
+      const ks=[2/5,1/2,1.0];
+      const labels=['속이 꽉 찬 구','속이 꽉 찬 원기둥','속이 빈 원기둥'];
+      const colors=['#0b5fff','#ff8c00','#7b1fa2'];
+      const accs=ks.map(k=>g*Math.sin(rad)/(1+k));
+      const Tmax=Math.max(...ks.map((k,i)=>Math.sqrt(2*L/accs[i])));
+      const elapsed=(performance.now()-t0)/1000;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // sloped surface
+      const ox=80,oy=H-50;
+      const tipX=ox+L*Math.cos(rad)*40, tipY=oy-h*40;
+      ctx.strokeStyle='#888';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(tipX,tipY);ctx.lineTo(tipX,oy);ctx.closePath();ctx.stroke();
+      ctx.fillStyle='rgba(180,200,220,0.3)';ctx.fill();
+      // floor
+      ctx.beginPath();ctx.moveTo(0,oy);ctx.lineTo(W,oy);ctx.stroke();
+      // three shapes
+      for(let i=0;i<3;i++){
+        const a=accs[i];
+        const T=Math.sqrt(2*L/a);
+        const tt=Math.min(elapsed,T);
+        const s=Math.min(0.5*a*tt*tt,L);
+        // position along slope from top
+        const sx=tipX - s*Math.cos(rad)*40;
+        const sy=tipY + s*Math.sin(rad)*40;
+        // perpendicular offset for each shape
+        const off=(i-1)*16;
+        const nx=-Math.sin(rad), ny=-Math.cos(rad); // normal pointing up-out from slope
+        const cx=sx+nx*(14+off*0.0)+(i-1)*0;
+        const cy=sy+ny*14;
+        ctx.fillStyle=colors[i];
+        ctx.beginPath();
+        if(i===0){ // sphere
+          ctx.arc(cx+(i-1)*36, cy-((i-1)*0), 11, 0, Math.PI*2);ctx.fill();
+        } else if(i===1){ // solid cyl
+          ctx.arc(cx+(i-1)*36, cy, 11, 0, Math.PI*2);ctx.fill();
+          ctx.strokeStyle='#fff';ctx.lineWidth=2;
+          ctx.beginPath();ctx.arc(cx+(i-1)*36, cy, 6, 0, Math.PI*2);ctx.stroke();
+        } else { // hollow
+          ctx.arc(cx+(i-1)*36, cy, 11, 0, Math.PI*2);ctx.fill();
+          ctx.fillStyle='#fafbfc';ctx.beginPath();ctx.arc(cx+(i-1)*36, cy, 7, 0, Math.PI*2);ctx.fill();
+        }
+        // status label
+        const finished=tt>=T;
+        ctx.fillStyle=colors[i];ctx.font='12px sans-serif';
+        ctx.fillText(labels[i]+(finished?' ✓ '+T.toFixed(2)+'s':''),16,22+i*16);
+      }
+      // info panel
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-190,12,180,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-190,12,180,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('높이 h = '+h.toFixed(2)+' m',W-180,30);
+      ctx.fillText('가속도(구) = '+accs[0].toFixed(2)+' m/s²',W-180,48);
+      ctx.fillText('가속도(껍질) = '+accs[2].toFixed(2)+' m/s²',W-180,66);
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

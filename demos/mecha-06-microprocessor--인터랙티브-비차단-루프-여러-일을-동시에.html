@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 비차단 루프 — 여러 일을 동시에 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 비차단 루프 — 여러 일을 동시에</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/06-microprocessor.html">Week 6. 마이크로프로세서 프로그래밍 — Arduino로 시작하기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비차단 루프 — 여러 일을 동시에</h4>
+    <p>각 작업은 자기 주기에 맞춰 실행되고, <code>millis()</code>로 마지막 실행 시각만 기억합니다. 시간 축의 색깔 막대가 실제로 언제 어떤 작업이 돌았는지 보여줘요. <strong>주기를 다르게 잡아도 서로 막지 않고</strong> 동시에 흐릅니다.</p>
+    <canvas id="nbDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>센서 주기 <span class="val" id="nbS1V">10</span> ms<input type="range" id="nbS1" min="1" max="100" step="1" value="10"></label>
+      <label>제어 주기 <span class="val" id="nbS2V">50</span> ms<input type="range" id="nbS2" min="5" max="200" step="5" value="50"></label>
+      <label>LED 깜빡 주기 <span class="val" id="nbS3V">200</span> ms<input type="range" id="nbS3" min="50" max="1000" step="10" value="200"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('nbDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const p1=+document.getElementById('nbS1').value;
+      const p2=+document.getElementById('nbS2').value;
+      const p3=+document.getElementById('nbS3').value;
+      document.getElementById('nbS1V').textContent=p1;
+      document.getElementById('nbS2V').textContent=p2;
+      document.getElementById('nbS3V').textContent=p3;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const Twin=1000;
+      const tracks=[
+        {name:'센서 읽기',period:p1,col:'#0742b8'},
+        {name:'제어 계산',period:p2,col:'#e65100'},
+        {name:'LED 깜빡',period:p3,col:'#2e7d32'}
+      ];
+      const ox=130,w=W-150,trackH=50,gap=15;
+      tracks.forEach((tr,idx)=>{
+        const y=40+idx*(trackH+gap);
+        ctx.fillStyle='#f5f5f5';ctx.fillRect(ox,y,w,trackH);
+        ctx.fillStyle='#222';ctx.font='13px sans-serif';
+        ctx.fillText(tr.name,12,y+20);
+        ctx.fillStyle='#666';ctx.font='11px sans-serif';
+        ctx.fillText(`${tr.period} ms`,12,y+38);
+        ctx.fillStyle='#999';ctx.font='10px sans-serif';
+        ctx.fillText(`= ${(1000/tr.period).toFixed(1)} Hz`,75,y+38);
+        // events
+        ctx.fillStyle=tr.col;
+        for(let t=0;t<=Twin;t+=tr.period){
+          const xx=ox+t/Twin*w;
+          ctx.fillRect(xx-1,y+8,3,trackH-16);
+        }
+      });
+      // time axis
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,H-25);ctx.lineTo(ox+w,H-25);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let t=0;t<=Twin;t+=200){const xx=ox+t/Twin*w;
+        ctx.beginPath();ctx.moveTo(xx,H-25);ctx.lineTo(xx,H-20);ctx.stroke();
+        ctx.fillText(t+' ms',xx-12,H-8);}
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('1초간의 실행 타임라인 (각 막대 = 한 번의 실행)',12,25);
+    }
+    ['nbS1','nbS2','nbS3'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

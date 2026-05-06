@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: BFS · Dijkstra · A* — 같은 미로, 다른 탐색 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: BFS · Dijkstra · A* — 같은 미로, 다른 탐색</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/13-path-planning.html">Week 13. 경로 계획(Path Planning) — 시작에서 목표까지의 길 찾기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: BFS · Dijkstra · A* — 같은 미로, 다른 탐색</h4>
+    <p>같은 격자에서 세 알고리즘을 실행해 비교하세요. <strong>탐색한 칸 수</strong>(연한 색)와 <strong>최종 경로 길이</strong>(진한 선)를 보면 A*가 왜 표준이 됐는지 한눈에 보입니다. 칸을 클릭해 장애물을 추가/제거하고, 출발(S)·목표(G)도 마우스로 끌어 옮길 수 있어요.</p>
+    <canvas id="astarDemo" width="640" height="400" style="cursor:crosshair"></canvas>
+    <div class="controls">
+      <label>알고리즘
+        <select id="astarAlg">
+          <option value="bfs">BFS</option>
+          <option value="dijkstra">Dijkstra</option>
+          <option value="astar" selected>A*</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="astarDiag" checked> 대각선 이동 허용</label>
+      <button id="astarRandom">랜덤 장애물</button>
+      <button id="astarClear">초기화</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 출발 S &nbsp; 🔴 목표 G &nbsp; ⬛ 장애물 &nbsp; 🟦 탐색됨 &nbsp; 🟣 최종 경로</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('astarDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLS=32, ROWS=20, CELL=W/COLS;
+    let grid=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>0)); // 0 free, 1 obstacle
+    let start={r:3,c:3}, goal={r:ROWS-3,c:COLS-3};
+    let drag=null;
+    function inBounds(r,c){return r>=0&&r<ROWS&&c>=0&&c<COLS;}
+    function neighbors(r,c,diag){
+      const nbs=[];
+      const off4=[[-1,0],[1,0],[0,-1],[0,1]];
+      const off8=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+      const list=diag?off8:off4;
+      for(const [dr,dc] of list){
+        const nr=r+dr, nc=c+dc;
+        if(!inBounds(nr,nc))continue;
+        if(grid[nr][nc]===1)continue;
+        const cost=(dr&&dc)?Math.SQRT2:1;
+        nbs.push([nr,nc,cost]);
+      }
+      return nbs;
+    }
+    function manhattan(r,c){return Math.abs(r-goal.r)+Math.abs(c-goal.c);}
+    function octile(r,c){const dr=Math.abs(r-goal.r),dc=Math.abs(c-goal.c);return Math.max(dr,dc)+(Math.SQRT2-1)*Math.min(dr,dc);}
+    function search(alg,diag){
+      const visited=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>false));
+      const dist=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>Infinity));
+      const parent={};
+      dist[start.r][start.c]=0;
+      const open=[{r:start.r,c:start.c,f:0}];
+      let visitedCount=0;
+      while(open.length>0){
+        // pop min
+        let bestI=0;
+        for(let i=1;i<open.length;i++)if(open[i].f<open[bestI].f)bestI=i;
+        const cur=open.splice(bestI,1)[0];
+        if(visited[cur.r][cur.c])continue;
+        visited[cur.r][cur.c]=true;
+        visitedCount++;
+        if(cur.r===goal.r&&cur.c===goal.c)break;
+        for(const [nr,nc,cost] of neighbors(cur.r,cur.c,diag)){
+          const newDist = (alg==='bfs') ? dist[cur.r][cur.c]+1 : dist[cur.r][cur.c]+cost;
+          if(newDist<dist[nr][nc]){
+            dist[nr][nc]=newDist;
+            parent[nr+','+nc]=cur.r+','+cur.c;
+            let f=newDist;
+            if(alg==='astar')f=newDist+(diag?octile(nr,nc):manhattan(nr,nc));
+            open.push({r:nr,c:nc,f});
+          }
+        }
+      }
+      // path
+      const path=[];
+      if(visited[goal.r][goal.c]){
+        let cur=goal.r+','+goal.c;
+        while(cur){path.push(cur);cur=parent[cur];}
+      }
+      return {visited,visitedCount,path,distGoal:dist[goal.r][goal.c]};
+    }
+    function draw(){
+      const alg=document.getElementById('astarAlg').value;
+      const diag=document.getElementById('astarDiag').checked;
+      const res=search(alg,diag);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // grid
+      for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+        const x=c*CELL, y=r*CELL;
+        if(grid[r][c]===1){ctx.fillStyle='#333';ctx.fillRect(x,y,CELL,CELL);}
+        else if(res.visited[r][c]){ctx.fillStyle='rgba(11,95,255,0.20)';ctx.fillRect(x,y,CELL,CELL);}
+        else{ctx.fillStyle='#fff';ctx.fillRect(x,y,CELL,CELL);}
+        ctx.strokeStyle='#e5e5e5';ctx.strokeRect(x,y,CELL,CELL);
+      }
+      // path
+      if(res.path.length>0){
+        ctx.strokeStyle='#7b1fa2';ctx.lineWidth=4;ctx.beginPath();
+        res.path.forEach((id,i)=>{const [r,c]=id.split(',').map(Number);
+          const x=c*CELL+CELL/2, y=r*CELL+CELL/2;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+      }
+      // start/goal
+      const sx=start.c*CELL+CELL/2, sy=start.r*CELL+CELL/2;
+      const gx=goal.c*CELL+CELL/2, gy=goal.r*CELL+CELL/2;
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(sx,sy,CELL*0.4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold '+(CELL*0.5)+'px sans-serif';ctx.textAlign='center';
+      ctx.fillText('S',sx,sy+CELL*0.18);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(gx,gy,CELL*0.4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.fillText('G',gx,gy+CELL*0.18);
+      ctx.textAlign='left';
+      // stats overlay (top-left)
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,260,55);
+      ctx.strokeStyle='#bbb';ctx.strokeRect(8,8,260,55);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`알고리즘: ${alg.toUpperCase()}`,16,28);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`탐색 칸: ${res.visitedCount},  경로 길이: ${isFinite(res.distGoal)?res.distGoal.toFixed(2):'경로 없음'}`,16,48);
+    }
+    function getCell(e){
+      const r=c.getBoundingClientRect();
+      const x=e.clientX-r.left, y=e.clientY-r.top;
+      return {r:Math.floor(y/CELL), c:Math.floor(x/CELL)};
+    }
+    c.addEventListener('mousedown',e=>{
+      const {r,c:cc}=getCell(e);
+      if(!inBounds(r,cc))return;
+      if(r===start.r&&cc===start.c){drag='start';return;}
+      if(r===goal.r&&cc===goal.c){drag='goal';return;}
+      drag={mode:grid[r][cc]===0?'add':'remove'};
+      grid[r][cc]=grid[r][cc]===0?1:0;
+      draw();
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!drag)return;
+      const {r,c:cc}=getCell(e);
+      if(!inBounds(r,cc))return;
+      if(drag==='start'){if(grid[r][cc]===0){start={r,c:cc};draw();}}
+      else if(drag==='goal'){if(grid[r][cc]===0){goal={r,c:cc};draw();}}
+      else{grid[r][cc]=drag.mode==='add'?1:0;draw();}
+    });
+    window.addEventListener('mouseup',()=>{drag=null;});
+    document.getElementById('astarAlg').addEventListener('change',draw);
+    document.getElementById('astarDiag').addEventListener('change',draw);
+    document.getElementById('astarRandom').onclick=()=>{
+      grid=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>Math.random()<0.25?1:0));
+      grid[start.r][start.c]=0;grid[goal.r][goal.c]=0;
+      draw();
+    };
+    document.getElementById('astarClear').onclick=()=>{
+      grid=Array.from({length:ROWS},()=>Array.from({length:COLS},()=>0));draw();
+    };
+    // initial obstacles
+    for(let r=5;r<15;r++)grid[r][12]=1;
+    for(let c=15;c<25;c++)grid[10][c]=1;
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

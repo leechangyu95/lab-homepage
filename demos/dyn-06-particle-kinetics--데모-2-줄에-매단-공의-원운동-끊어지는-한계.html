@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 줄에 매단 공의 원운동 — 끊어지는 한계 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 줄에 매단 공의 원운동 — 끊어지는 한계</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/06-particle-kinetics.html">Week 6. 입자의 운동역학 — F = ma</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 줄에 매단 공의 원운동 — 끊어지는 한계</h4>
+    <p>공이 수평면에서 줄에 매달려 등속 원운동합니다. 줄의 장력이 구심력 역할을 합니다($T = mv^2/r$). 속도를 키우면 장력이 커지고, <strong>줄의 최대 장력을 넘으면 줄이 끊어지면서 공은 그 순간의 속도 방향(접선)으로 직진</strong>합니다.</p>
+    <canvas id="circC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>각속도 ω (rad/s) <span class="val" id="ccWV">2</span><input type="range" id="ccW" min="0.5" max="6" step="0.1" value="2"></label>
+      <label>반지름 r (m) <span class="val" id="ccRV">1.5</span><input type="range" id="ccR" min="0.5" max="2.5" step="0.1" value="1.5"></label>
+      <label>줄 최대 장력 T_max (N) <span class="val" id="ccTV">12</span><input type="range" id="ccT" min="3" max="40" step="0.5" value="12"></label>
+      <button id="ccReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('circC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['ccW','ccR','ccT'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let th=0,broken=false,fly={x:0,y:0,vx:0,vy:0};
+    sl('ccReset').onclick=()=>{broken=false;th=0;};
+    function loop(){
+      const w=+sl('ccW').value,r=+sl('ccR').value,Tmax=+sl('ccT').value,m=1;
+      const T=m*r*w*w;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height/2,scale=70;
+      // dashed circle (the path)
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.arc(cx,cy,r*scale,0,Math.PI*2);x.stroke();x.setLineDash([]);
+      // center peg
+      x.fillStyle='#333';x.beginPath();x.arc(cx,cy,5,0,Math.PI*2);x.fill();
+      let bx,by,vx,vy;
+      if(!broken){
+        th+=w*0.025;
+        bx=cx+r*scale*Math.cos(th);by=cy+r*scale*Math.sin(th);
+        vx=-r*w*Math.sin(th);vy=r*w*Math.cos(th);
+        if(T>Tmax){
+          broken=true;
+          fly={x:bx,y:by,vx:vx*scale,vy:vy*scale};
+        }
+        // string
+        x.strokeStyle='#444';x.lineWidth=2;x.beginPath();x.moveTo(cx,cy);x.lineTo(bx,by);x.stroke();
+        // tension arrow (toward center)
+        const Tlen=Math.min(T*8,80);
+        const tx=cx-bx,ty=cy-by;const tn=Math.sqrt(tx*tx+ty*ty);
+        x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();x.moveTo(bx,by);x.lineTo(bx+tx/tn*Tlen,by+ty/tn*Tlen);x.stroke();
+        x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('T = mv²/r',bx+tx/tn*Tlen+4,by+ty/tn*Tlen);
+        // velocity (tangent)
+        x.strokeStyle='#0b5fff';x.beginPath();x.moveTo(bx,by);x.lineTo(bx+vx*scale*0.3,by+vy*scale*0.3);x.stroke();
+        x.fillStyle='#0b5fff';x.fillText('v',bx+vx*scale*0.3+4,by+vy*scale*0.3);
+      } else {
+        // ball flies straight
+        fly.x+=fly.vx*0.025;fly.y+=fly.vy*0.025;
+        bx=fly.x;by=fly.y;
+        if(bx<0||bx>c.width||by<0||by>c.height){broken=false;}
+        // straight line shows initial trajectory
+        x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.setLineDash([2,4]);
+        x.beginPath();x.moveTo(fly.x,fly.y);x.lineTo(fly.x+fly.vx*5,fly.y+fly.vy*5);x.stroke();x.setLineDash([]);
+      }
+      // ball
+      x.fillStyle=broken?'#e7a33a':'#0b5fff';x.beginPath();x.arc(bx,by,12,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // info
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('m = 1 kg, ω = '+w.toFixed(2)+' rad/s, r = '+r.toFixed(2)+' m',20,25);
+      x.fillText('필요 구심력 T = m r ω² = '+T.toFixed(2)+' N   |   T_max = '+Tmax.toFixed(1)+' N',20,43);
+      if(broken){x.fillStyle='#c62828';x.fillText('줄이 끊어짐! 공은 끊긴 순간의 접선 방향으로 직진합니다.',20,61);}
+      else x.fillText('속도(파랑)는 접선 방향, 합력(빨강)은 중심 방향',20,61);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 1D 함수 학습 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 1D 함수 학습</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/10-ann.html">Lecture 10. 인공 신경망 (ANN)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D 함수 학습</h4>
+    <p>작은 신경망(1→8→1, ReLU)이 sin 함수를 학습하는 과정입니다. 학습률을 바꾸며 수렴 속도를 보세요.</p>
+    <canvas id="ann" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>학습률 α <span class="val" id="lrV">0.05</span><input type="range" id="lr" min="0.001" max="0.3" step="0.001" value="0.05"></label>
+      <label>은닉 뉴런 H <span class="val" id="hV">8</span><input type="range" id="h" min="2" max="20" value="8"></label>
+      <button id="rst">재학습</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 정답 sin(x) &nbsp; 🔵 신경망 출력 &nbsp; <span id="ep"></span></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ann'),x=c.getContext('2d');
+    let H=8,W1,b1,W2,b2,epoch=0;
+    function init(){
+      H=+document.getElementById('h').value;
+      W1=Array.from({length:H},()=>Math.random()*2-1);
+      b1=Array.from({length:H},()=>Math.random()*2-1);
+      W2=Array.from({length:H},()=>Math.random()*2-1);
+      b2=Math.random()*2-1; epoch=0;
+    }
+    document.getElementById('rst').onclick=init;
+    document.getElementById('h').onchange=init;
+    init();
+    function forward(xi){
+      const z1=W1.map((w,i)=>w*xi+b1[i]);
+      const a1=z1.map(v=>Math.max(0,v));
+      const y=a1.reduce((s,a,i)=>s+W2[i]*a,0)+b2;
+      return {a1,y};
+    }
+    function step(){
+      const lr=+document.getElementById('lr').value;
+      // mini-batch
+      for(let it=0;it<20;it++){
+        const xi=(Math.random()*2-1)*Math.PI;
+        const target=Math.sin(xi);
+        const {a1,y}=forward(xi);
+        const dy=(y-target);
+        // grad on output layer
+        const dW2=a1.map(a=>dy*a);
+        const db2=dy;
+        // grad on hidden
+        const da1=W2.map(w=>dy*w);
+        const dz1=da1.map((d,i)=>d*(a1[i]>0?1:0));
+        const dW1=dz1.map(d=>d*xi);
+        const db1=dz1;
+        for(let i=0;i<H;i++){W1[i]-=lr*dW1[i];b1[i]-=lr*db1[i];W2[i]-=lr*dW2[i];}
+        b2-=lr*db2;
+      }
+      epoch++;
+    }
+    function loop(){
+      step();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      const sx=v=>320+v*80,sy=v=>160-v*100;
+      // truth
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();
+      for(let xi=-Math.PI;xi<Math.PI;xi+=0.05){const xx=sx(xi),yy=sy(Math.sin(xi));if(xi==-Math.PI)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      // network
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let xi=-Math.PI;xi<Math.PI;xi+=0.05){const yy=sy(forward(xi).y);const xx=sx(xi);if(xi==-Math.PI)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      document.getElementById('lrV').textContent=document.getElementById('lr').value;
+      document.getElementById('hV').textContent=H;
+      document.getElementById('ep').textContent='epoch '+epoch;
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

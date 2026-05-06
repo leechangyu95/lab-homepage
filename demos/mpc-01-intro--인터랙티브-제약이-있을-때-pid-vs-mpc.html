@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 제약이 있을 때 PID vs MPC — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 제약이 있을 때 PID vs MPC</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/01-intro.html">Week 1. MPC 입문</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 제약이 있을 때 PID vs MPC</h4>
+    <p>1차 시스템 $\dot x = -x + u$를 목표 $r=10$으로 보내려 합니다. 단, 입력 제한 $|u|\le u_{\max}$. <strong>$u_{\max}$를 줄이면</strong> PID는 와인드업으로 오버슈트가 커지는 반면, MPC는 제약을 알고 미리 부드럽게 감속해요.</p>
+    <canvas id="cmp" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$u_{\max}$ <span class="val" id="cmUV">3.0</span><input type="range" id="cmU" min="1" max="15" step="0.1" value="3"></label>
+      <label>호라이즌 N <span class="val" id="cmNV">10</span><input type="range" id="cmN" min="3" max="30" step="1" value="10"></label>
+      <button id="cmRun">다시 실행</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cmp');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function simPID(uMax,T,r){
+      let x=0,iErr=0,prev=0;const xs=[],us=[];
+      const dt=0.1,Kp=2,Ki=1.5,Kd=0.1;
+      for(let k=0;k<T;k++){
+        const e=r-x;
+        iErr+=e*dt;
+        let u=Kp*e+Ki*iErr+Kd*(e-prev)/dt;
+        prev=e;
+        if(u>uMax)u=uMax;else if(u<-uMax)u=-uMax;
+        x+=dt*(-x+u);
+        xs.push(x);us.push(u);
+      }
+      return {xs,us};
+    }
+    function simMPC(uMax,N,T,r){
+      let x=0;const xs=[],us=[];const dt=0.1,Q=1,R=0.05;
+      for(let k=0;k<T;k++){
+        // simple analytical: choose u sequence that solves min sum (x_i-r)^2 + R*u^2 with first-order discrete-time
+        // We approximate by greedy: at each step, choose u in [-uMax,uMax] to minimize predicted N-step cost
+        // Iterate u over grid
+        let bestU=0,bestC=Infinity;
+        for(let ug=-100;ug<=100;ug++){
+          const u=ug/100*uMax;let xp=x,cost=0;
+          for(let i=0;i<N;i++){xp+=dt*(-xp+u);cost+=(xp-r)*(xp-r)*Q+u*u*R;}
+          if(cost<bestC){bestC=cost;bestU=u;}
+        }
+        x+=dt*(-x+bestU);
+        xs.push(x);us.push(bestU);
+      }
+      return {xs,us};
+    }
+    function draw(){
+      const uMax=+document.getElementById('cmU').value;
+      const N=+document.getElementById('cmN').value;
+      document.getElementById('cmUV').textContent=uMax.toFixed(1);
+      document.getElementById('cmNV').textContent=N;
+      const T=80,r=10;
+      const pid=simPID(uMax,T,r);
+      const mpc=simMPC(uMax,N,T,r);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // top: x trajectory
+      const tH=160;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();ctx.moveTo(40,30);ctx.lineTo(W-20,30);ctx.moveTo(40,tH);ctx.lineTo(W-20,tH);ctx.moveTo(40,30);ctx.lineTo(40,tH);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('x(t) → 목표 '+r,12,40);
+      // reference
+      const refY=tH-(r/15)*(tH-30);
+      ctx.strokeStyle='#999';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(40,refY);ctx.lineTo(W-20,refY);ctx.stroke();ctx.setLineDash([]);
+      function plotX(arr,col){
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+        arr.forEach((v,i)=>{const x=40+(i/(T-1))*(W-60);const y=tH-(v/15)*(tH-30);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+      }
+      plotX(pid.xs,'#ff8c00');plotX(mpc.xs,'#0b5fff');
+      // bottom: u
+      const uTop=180,uBot=H-30;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();ctx.moveTo(40,uTop);ctx.lineTo(W-20,uTop);ctx.moveTo(40,uBot);ctx.lineTo(W-20,uBot);ctx.moveTo(40,uTop);ctx.lineTo(40,uBot);ctx.stroke();
+      const mid=(uTop+uBot)/2;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,mid);ctx.lineTo(W-20,mid);ctx.stroke();
+      // u_max bands
+      const uH=(uBot-uTop)/2;
+      const uMaxY1=mid-uH*(uMax/15),uMaxY2=mid+uH*(uMax/15);
+      ctx.strokeStyle='#c62828';ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.moveTo(40,uMaxY1);ctx.lineTo(W-20,uMaxY1);ctx.moveTo(40,uMaxY2);ctx.lineTo(W-20,uMaxY2);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='11px sans-serif';
+      ctx.fillText('±u_max',W-60,uMaxY1+12);
+      function plotU(arr,col){
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+        arr.forEach((v,i)=>{const x=40+(i/(T-1))*(W-60);const y=mid-(v/15)*uH;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+      }
+      plotU(pid.us,'#ff8c00');plotU(mpc.us,'#0b5fff');
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('u(t)',12,190);
+      // legend
+      ctx.fillStyle='#ff8c00';ctx.font='13px sans-serif';
+      ctx.fillText('PID (제약 모름)',W-200,30);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText('MPC (제약 알고 계획)',W-200,48);
+    }
+    document.getElementById('cmU').addEventListener('input',draw);
+    document.getElementById('cmN').addEventListener('input',draw);
+    document.getElementById('cmRun').addEventListener('click',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

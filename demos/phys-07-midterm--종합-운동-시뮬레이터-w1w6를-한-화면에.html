@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>종합 운동 시뮬레이터 — &quot;W1~W6를 한 화면에&quot; — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">종합 운동 시뮬레이터 — &quot;W1~W6를 한 화면에&quot;</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/07-midterm.html">Week 7. 중간시험</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>종합 운동 시뮬레이터 — "W1~W6를 한 화면에"</h4>
+    <p>"재시작" 버튼을 누르면 4개의 운동이 동시에 실행됩니다.
+    <strong>왼쪽 위</strong> = 발사체(W1), <strong>오른쪽 위</strong> = 사면 + 마찰(W2·W3),
+    <strong>왼쪽 아래</strong> = 진자(W6), <strong>오른쪽 아래</strong> = 1D 탄성충돌(W4).</p>
+    <canvas id="w7_megaDemo" width="640" height="420"></canvas>
+    <div class="controls">
+      <label>속도 배율 <span class="val" id="w7_megaSpeedV">1.0×</span>
+        <input type="range" id="w7_megaSpeed" min="0.2" max="2.5" step="0.1" value="1.0"></label>
+      <label>중력 $g$ <span class="val" id="w7_megaGV">9.8</span>
+        <input type="range" id="w7_megaG" min="1" max="20" step="0.5" value="9.8"></label>
+      <label>마찰 $\mu$ <span class="val" id="w7_megaMuV">0.10</span>
+        <input type="range" id="w7_megaMu" min="0" max="0.5" step="0.02" value="0.10"></label>
+      <button id="w7_megaReset" type="button">재시작</button>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$g$를 키우면 발사체가 더 빨리 떨어지고, 진자 주기 $T = 2\pi\sqrt{L/g}$가 짧아집니다.</li>
+        <li>$\mu$를 0으로 놓으면 사면 블록은 영원히 가속 — 시험 문제의 "마찰 무시" 가정이 어떤 단순화인지 한눈에 보임.</li>
+        <li>1D 충돌(오른쪽 아래)은 운동량과 에너지가 둘 다 보존되는 탄성충돌 — W4의 식이 그대로 적용.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w7_megaDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t=0,raf=null;
+    const state={proj:null,ramp:null,pend:null,coll:null};
+    function reset(){
+      t=0;
+      state.proj={x:0,y:0,vx:6,vy:-7,gone:false};
+      state.ramp={s:0,v:0};
+      state.pend={th:0.7,om:0};
+      state.coll={x1:80,v1:5,x2:200,v2:-3};
+    }
+    function step(dt){
+      const g=+document.getElementById('w7_megaG').value;
+      const mu=+document.getElementById('w7_megaMu').value;
+      // projectile
+      const p=state.proj;
+      if(!p.gone){
+        p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=g*0.1*dt;
+        if(p.y>40){p.gone=true;}
+      }
+      // ramp
+      const r=state.ramp;
+      const ang=Math.PI/6;
+      const acc=g*0.1*(Math.sin(ang)-mu*Math.cos(ang));
+      r.v+=acc*dt;if(r.v<0)r.v=0;
+      r.s+=r.v*dt;if(r.s>120)r.s=0;
+      // pendulum
+      const pen=state.pend;
+      const L=70;
+      pen.om+=-g*0.1/L*Math.sin(pen.th)*dt - 0.02*pen.om;
+      pen.th+=pen.om*dt;
+      // collision
+      const co=state.coll;
+      co.x1+=co.v1*dt;co.x2+=co.v2*dt;
+      if(co.x2-co.x1<26 && co.v1>co.v2){
+        const m1=1,m2=2;
+        const v1n=((m1-m2)*co.v1+2*m2*co.v2)/(m1+m2);
+        const v2n=((m2-m1)*co.v2+2*m1*co.v1)/(m1+m2);
+        co.v1=v1n;co.v2=v2n;
+      }
+      if(co.x1<20)co.v1=Math.abs(co.v1);
+      if(co.x2>300-20)co.v2=-Math.abs(co.v2);
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);
+      ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();
+      ctx.fillStyle='#777';ctx.font='12px sans-serif';
+      ctx.fillText('① 발사체 (W1)',10,16);
+      ctx.fillText('② 사면+마찰 (W2·W3)',W/2+10,16);
+      ctx.fillText('③ 진자 (W6)',10,H/2+16);
+      ctx.fillText('④ 1D 탄성충돌 (W4)',W/2+10,H/2+16);
+      // projectile
+      const p=state.proj;
+      ctx.fillStyle='#0b5fff';
+      ctx.beginPath();ctx.arc(20+p.x*8,180-p.y*4,7,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(20,180);ctx.lineTo(W/2-10,180);ctx.stroke();
+      // ramp
+      const r=state.ramp;
+      const rx=W/2+30,ry=180,rl=120,ang=Math.PI/6;
+      ctx.strokeStyle='#666';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(rx,ry);ctx.lineTo(rx+rl*Math.cos(ang),ry-rl*Math.sin(ang)*0+rl*Math.sin(ang));ctx.stroke();
+      const bx=rx+rl*Math.cos(ang)-r.s*Math.cos(ang);
+      const by=ry+rl*Math.sin(ang)-r.s*Math.sin(ang);
+      ctx.fillStyle='#e91e63';ctx.fillRect(bx-8,by-8,16,16);
+      // pendulum
+      const pen=state.pend;
+      const px=80,py=H/2+40,L=70;
+      const bx2=px+L*Math.sin(pen.th),by2=py+L*Math.cos(pen.th);
+      ctx.strokeStyle='#666';ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(bx2,by2);ctx.stroke();
+      ctx.fillStyle='#00838f';ctx.beginPath();ctx.arc(bx2,by2,9,0,Math.PI*2);ctx.fill();
+      // collision
+      const co=state.coll;
+      const cox=W/2+20,coy=H/2+80;
+      ctx.strokeStyle='#999';ctx.beginPath();
+      ctx.moveTo(cox,coy+12);ctx.lineTo(cox+300,coy+12);ctx.stroke();
+      ctx.fillStyle='#ff8c00';ctx.fillRect(cox+co.x1-10,coy,18,18);
+      ctx.fillStyle='#7b1fa2';ctx.fillRect(cox+co.x2-12,coy-2,22,22);
+    }
+    function loop(){
+      const sp=+document.getElementById('w7_megaSpeed').value;
+      step(0.4*sp);draw();
+      raf=requestAnimationFrame(loop);
+    }
+    function refreshLabels(){
+      document.getElementById('w7_megaSpeedV').textContent=(+document.getElementById('w7_megaSpeed').value).toFixed(1)+'×';
+      document.getElementById('w7_megaGV').textContent=(+document.getElementById('w7_megaG').value).toFixed(1);
+      document.getElementById('w7_megaMuV').textContent=(+document.getElementById('w7_megaMu').value).toFixed(2);
+    }
+    ['w7_megaSpeed','w7_megaG','w7_megaMu'].forEach(id=>document.getElementById(id).addEventListener('input',refreshLabels));
+    document.getElementById('w7_megaReset').addEventListener('click',()=>{reset();refreshLabels();});
+    reset();refreshLabels();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

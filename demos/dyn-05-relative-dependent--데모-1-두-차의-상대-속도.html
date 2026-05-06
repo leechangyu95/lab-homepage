@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 두 차의 상대 속도 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 두 차의 상대 속도</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/05-relative-dependent.html">Week 5. 상대운동과 종속운동</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 두 차의 상대 속도</h4>
+    <p>두 차가 각자 다른 방향과 속도로 움직입니다. 차 A에 탄 사람이 본 차 B의 속도가 화살표로 그려집니다. <strong>두 차가 같은 속도, 같은 방향이면 서로 정지해 보입니다</strong>(상대 속도 = 0).</p>
+    <canvas id="relC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>차 A v_x <span class="val" id="rAxV">2</span><input type="range" id="rAx" min="-3" max="3" step="0.1" value="2"></label>
+      <label>차 A v_y <span class="val" id="rAyV">0</span><input type="range" id="rAy" min="-3" max="3" step="0.1" value="0"></label>
+      <label>차 B v_x <span class="val" id="rBxV">1</span><input type="range" id="rBx" min="-3" max="3" step="0.1" value="1"></label>
+      <label>차 B v_y <span class="val" id="rByV">1.5</span><input type="range" id="rBy" min="-3" max="3" step="0.1" value="1.5"></label>
+      <button id="rReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('relC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['rAx','rAy','rBx','rBy'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let A={x:200,y:200},B={x:400,y:120};
+    sl('rReset').onclick=()=>{A={x:200,y:200};B={x:400,y:120};};
+    function loop(){
+      const Ax=+sl('rAx').value,Ay=+sl('rAy').value,Bx=+sl('rBx').value,By=+sl('rBy').value;
+      A.x+=Ax;A.y-=Ay;B.x+=Bx;B.y-=By;
+      // wrap
+      [A,B].forEach(p=>{if(p.x<0)p.x+=c.width;if(p.x>c.width)p.x-=c.width;if(p.y<0)p.y+=c.height;if(p.y>c.height)p.y-=c.height;});
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // top: ground frame
+      x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='left';
+      x.fillText('지상 좌표계 (강가)',20,25);
+      function car(p,col,label,vx,vy){
+        x.fillStyle=col;x.fillRect(p.x-15,p.y-8,30,16);
+        x.strokeStyle='#333';x.strokeRect(p.x-15,p.y-8,30,16);
+        x.fillStyle='#333';x.beginPath();x.arc(p.x-9,p.y+8,3,0,Math.PI*2);x.arc(p.x+9,p.y+8,3,0,Math.PI*2);x.fill();
+        // velocity arrow
+        x.strokeStyle=col;x.lineWidth=2;x.beginPath();x.moveTo(p.x,p.y);x.lineTo(p.x+vx*15,p.y-vy*15);x.stroke();
+        x.fillStyle=col;x.font='12px sans-serif';x.fillText(label,p.x+vx*15+4,p.y-vy*15);
+      }
+      car(A,'#0b5fff','A',Ax,Ay);
+      car(B,'#c62828','B',Bx,By);
+      // info
+      const dx=Bx-Ax,dy=By-Ay;
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('지상에서: v_A = ('+Ax.toFixed(1)+', '+Ay.toFixed(1)+')',360,25);
+      x.fillText('             v_B = ('+Bx.toFixed(1)+', '+By.toFixed(1)+')',360,42);
+      x.fillText('A가 본 B: v_{B/A} = v_B − v_A = ('+dx.toFixed(1)+', '+dy.toFixed(1)+')',360,59);
+      // separator
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(0,160);x.lineTo(c.width,160);x.stroke();
+      // bottom: A's frame — show relative velocity vector at car A
+      x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='left';
+      x.fillText("차 A 좌표계: A는 정지, B는 v_{B/A}로 움직임",20,180);
+      const ax=320,ay=240;
+      // car A static
+      x.fillStyle='#0b5fff';x.fillRect(ax-15,ay-8,30,16);x.strokeStyle='#333';x.strokeRect(ax-15,ay-8,30,16);
+      x.fillStyle='#333';x.font='11px sans-serif';x.textAlign='center';x.fillText('A (정지)',ax,ay+24);
+      // relative velocity arrow scaled
+      x.strokeStyle='#c62828';x.lineWidth=2.5;
+      const sc=30;
+      x.beginPath();x.moveTo(ax,ay);x.lineTo(ax+dx*sc,ay-dy*sc);
+      const ang=Math.atan2(-dy,dx);
+      x.lineTo(ax+dx*sc-Math.cos(ang)*8-Math.sin(ang)*4,ay-dy*sc+Math.sin(ang)*8-Math.cos(ang)*4);
+      x.moveTo(ax+dx*sc,ay-dy*sc);
+      x.lineTo(ax+dx*sc-Math.cos(ang)*8+Math.sin(ang)*4,ay-dy*sc+Math.sin(ang)*8+Math.cos(ang)*4);
+      x.stroke();
+      x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('v_{B/A}',ax+dx*sc+8,ay-dy*sc);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>⏱️ RC 시정수 — 충전/방전 곡선 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">⏱️ RC 시정수 — 충전/방전 곡선</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/12-circuits.html">Week 12. 회로</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>⏱️ RC 시정수 — 충전/방전 곡선</h4>
+    <p>가로축은 시간. 파랑 곡선이 충전 $V_C(t) = V_0(1 - e^{-t/\tau})$, 주황 곡선이 방전 $V_C(t) = V_0 e^{-t/\tau}$. 두 곡선이 시정수 $\tau$에서 만나는 비율(63%/37%)에 주목하세요.</p>
+    <canvas id="w12_rcDemo" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$R$ <span class="val" id="w12_rcRV">10</span> kΩ
+        <input type="range" id="w12_rcR" min="1" max="100" step="1" value="10"></label>
+      <label>$C$ <span class="val" id="w12_rcCV">100</span> μF
+        <input type="range" id="w12_rcC" min="10" max="1000" step="10" value="100"></label>
+      <label>$V_0$ <span class="val" id="w12_rcV0V">5.0</span> V
+        <input type="range" id="w12_rcV0" min="1" max="12" step="0.5" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$R$을 두 배 → $\tau$도 두 배 → 곡선이 천천히 올라간다</li>
+        <li>$C$를 키우면 같은 효과 — $\tau$ 결정에 $R, C$가 동등</li>
+        <li>$\tau$ 후: 63.2% 충전 / 36.8% 잔량 (한 번 외워두면 평생 사용)</li>
+        <li>$5\tau$ 후: 99.3% — 실용적으로 "거의 완료"</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w12_rcDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const R=+document.getElementById('w12_rcR').value;   // kΩ
+      const C=+document.getElementById('w12_rcC').value;   // μF
+      const V0=+document.getElementById('w12_rcV0').value; // V
+      document.getElementById('w12_rcRV').textContent=R;
+      document.getElementById('w12_rcCV').textContent=C;
+      document.getElementById('w12_rcV0V').textContent=V0.toFixed(1);
+      const tau=R*1e3 * C*1e-6; // seconds
+      const TMAX=5*tau;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=46;
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;ctx.beginPath();
+      ctx.moveTo(margin,H-margin);ctx.lineTo(W-margin,H-margin);
+      ctx.moveTo(margin,H-margin);ctx.lineTo(margin,margin);
+      ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('시간 t (s)',W/2-30,H-12);
+      ctx.save();ctx.translate(14,H/2);ctx.rotate(-Math.PI/2);
+      ctx.fillText('전압 V_C (V)',0,0);ctx.restore();
+      const sx=(W-2*margin)/TMAX, sy=(H-2*margin)/V0;
+      // grid
+      ctx.strokeStyle='#eef0f4';
+      for(let k=1;k<=5;k++){
+        const px=margin+k*tau*sx;
+        ctx.beginPath();ctx.moveTo(px,H-margin);ctx.lineTo(px,margin);ctx.stroke();
+        ctx.fillStyle='#999';ctx.fillText(k+'τ',px-8,H-margin+14);
+      }
+      // 0.632 V0 line
+      ctx.strokeStyle='#cfd8e3';ctx.setLineDash([4,4]);
+      const y63=H-margin-0.632*V0*sy;
+      ctx.beginPath();ctx.moveTo(margin,y63);ctx.lineTo(W-margin,y63);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#888';ctx.fillText('0.632 V₀',W-margin-66,y63-4);
+      // 충전곡선 (파랑)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const t=TMAX*i/200;
+        const v=V0*(1-Math.exp(-t/tau));
+        const px=margin+t*sx, py=H-margin-v*sy;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // 방전곡선 (주황)
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const t=TMAX*i/200;
+        const v=V0*Math.exp(-t/tau);
+        const px=margin+t*sx, py=H-margin-v*sy;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // marker at τ
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(margin+tau*sx,H-margin-0.632*V0*sy,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ff8c00';ctx.beginPath();ctx.arc(margin+tau*sx,H-margin-0.368*V0*sy,5,0,Math.PI*2);ctx.fill();
+      // 결과창
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(W-200,30,180,90);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-200,30,180,90);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      let tauStr;
+      if(tau<1e-3) tauStr=(tau*1e6).toFixed(1)+' μs';
+      else if(tau<1) tauStr=(tau*1e3).toFixed(1)+' ms';
+      else tauStr=tau.toFixed(2)+' s';
+      ctx.fillText('τ = RC = '+tauStr,W-190,52);
+      ctx.fillText('5τ ≈ 거의 완료',W-190,72);
+      ctx.fillStyle='#0b5fff';ctx.fillText('● 충전 (Charging)',W-190,90);
+      ctx.fillStyle='#ff8c00';ctx.fillText('● 방전 (Discharging)',W-190,108);
+    }
+    ['w12_rcR','w12_rcC','w12_rcV0'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

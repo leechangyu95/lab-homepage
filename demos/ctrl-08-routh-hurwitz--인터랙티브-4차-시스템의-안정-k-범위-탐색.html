@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브: 4차 시스템의 안정 K 범위 탐색 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브: 4차 시스템의 안정 K 범위 탐색</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/08-routh-hurwitz.html">Week 8. 안정성 — Routh-Hurwitz</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브: 4차 시스템의 안정 K 범위 탐색</h4>
+    <p>$s^4 + 13s^3 + 34s^2 + 42s + (20+K) = 0$의 폐루프 극점을 표시합니다. 빨간색 영역이 우반평면(불안정), 회색 점선이 임계 K 경계. K가 커질수록 두 극점이 안쪽에서 빠져나와 허수축을 가로지릅니다.</p>
+    <canvas id="c8Demo2" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>K <span class="val" id="c8KV2">10</span><input type="range" id="c8K2" min="-19" max="120" step="0.5" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c8Demo2'), x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c8KV2').textContent=(+$('c8K2').value).toFixed(1);};
+    $('c8K2').oninput=upd;
+    function quartRoots(coeffs){
+      // numerical roots via Durand-Kerner 4 dim
+      const [a,b,c2,d,e]=coeffs;
+      let r=[{re:1,im:1},{re:1,im:-1},{re:-1,im:1},{re:-1,im:-1}];
+      for(let it=0;it<80;it++){
+        r=r.map((zi,i)=>{
+          const z2={re:zi.re*zi.re-zi.im*zi.im, im:2*zi.re*zi.im};
+          const z3={re:z2.re*zi.re-z2.im*zi.im, im:z2.re*zi.im+z2.im*zi.re};
+          const z4={re:z3.re*zi.re-z3.im*zi.im, im:z3.re*zi.im+z3.im*zi.re};
+          const f={re:a*z4.re+b*z3.re+c2*z2.re+d*zi.re+e, im:a*z4.im+b*z3.im+c2*z2.im+d*zi.im};
+          let dn={re:1,im:0};
+          r.forEach((zj,j)=>{if(i===j)return;
+            const dr=zi.re-zj.re, di=zi.im-zj.im;
+            dn={re:dn.re*dr-dn.im*di, im:dn.re*di+dn.im*dr};});
+          const denom=dn.re*dn.re+dn.im*dn.im+1e-20;
+          const dz={re:(f.re*dn.re+f.im*dn.im)/denom, im:(f.im*dn.re-f.re*dn.im)/denom};
+          return {re:zi.re-dz.re, im:zi.im-dz.im};
+        });
+      }
+      return r;
+    }
+    function loop(){
+      const K=+$('c8K2').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320, cy=160, sc=22;
+      x.fillStyle='rgba(198,40,40,0.07)'; x.fillRect(cx,10,320,300);
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(20,cy);x.lineTo(620,cy);x.moveTo(cx,10);x.lineTo(cx,310);x.stroke();
+      x.fillStyle='#666';x.font='10px sans-serif';x.fillText('Re',605,cy-4);x.fillText('Im',cx+5,20);
+      // grid
+      x.strokeStyle='#eee';for(let r=-14;r<=14;r++){const xx=cx+r*sc;x.beginPath();x.moveTo(xx,10);x.lineTo(xx,310);x.stroke();}
+      for(let i=-6;i<=6;i++){const yy=cy-i*sc;x.beginPath();x.moveTo(20,yy);x.lineTo(620,yy);x.stroke();}
+      const r=quartRoots([1,13,34,42,20+K]);
+      r.forEach(p=>{const px=cx+p.re*sc, py=cy-p.im*sc;
+        const u=p.re>0.001;
+        x.strokeStyle=u?'#c62828':'#0b5fff';x.lineWidth=2.5;x.beginPath();
+        x.moveTo(px-7,py-7);x.lineTo(px+7,py+7);x.moveTo(px-7,py+7);x.lineTo(px+7,py-7);x.stroke();});
+      const unstable=r.some(p=>p.re>0.001);
+      x.fillStyle=unstable?'#c62828':'#2e7d32';x.font='14px sans-serif';
+      x.fillText(unstable?'불안정 (우반평면 극점)':'안정',20,30);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('Routh가 예측한 안정 K 범위:  -20 < K < 79.4',20,50);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

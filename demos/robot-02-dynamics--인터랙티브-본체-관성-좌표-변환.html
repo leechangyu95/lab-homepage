@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 본체 ↔ 관성 좌표 변환 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 본체 ↔ 관성 좌표 변환</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/02-dynamics.html">Lecture 2. 운동학과 동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 본체 ↔ 관성 좌표 변환</h4>
+    <p>차량의 heading $\theta$와 본체 속도 $(u, v)$를 조정해보세요. 같은 물리 벡터 한 개가 본체 좌표에서는 $(u, v)$, 관성 좌표에서는 $(\dot x, \dot y)$로 다르게 표현됩니다. 둘을 잇는 게 회전 행렬 $R(\theta)$입니다.</p>
+    <canvas id="frmC" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>heading θ (°) <span class="val" id="frmThV">30</span><input type="range" id="frmTh" min="0" max="360" value="30"></label>
+      <label>본체 전진 u <span class="val" id="frmUV">2</span><input type="range" id="frmU" min="-3" max="3" step="0.1" value="2"></label>
+      <label>본체 좌우 v <span class="val" id="frmVV">0.5</span><input type="range" id="frmV" min="-3" max="3" step="0.1" value="0.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('frmC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['frmTh','frmU','frmV'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['frmTh','frmU','frmV'].forEach(k=>sl(k).oninput=upd);upd();
+    function arrow(x0,y0,x1,y1,color,w){
+      x.strokeStyle=color;x.fillStyle=color;x.lineWidth=w||2;
+      x.beginPath();x.moveTo(x0,y0);x.lineTo(x1,y1);x.stroke();
+      const ang=Math.atan2(y1-y0,x1-x0);
+      x.beginPath();x.moveTo(x1,y1);
+      x.lineTo(x1-9*Math.cos(ang-0.4),y1-9*Math.sin(ang-0.4));
+      x.lineTo(x1-9*Math.cos(ang+0.4),y1-9*Math.sin(ang+0.4));
+      x.closePath();x.fill();
+    }
+    function pad(n){return (n>=0?' ':'')+n.toFixed(2);}
+    function loop(){
+      const th=+sl('frmTh').value*Math.PI/180,u=+sl('frmU').value,v=+sl('frmV').value;
+      const cs=Math.cos(th),sn=Math.sin(th);
+      const xdot=cs*u-sn*v, ydot=sn*u+cs*v;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      const ox=70,oy=180;
+      x.fillStyle='#666';x.font='12px sans-serif';x.textAlign='left';x.fillText('관성 {I}',ox-20,oy-70);
+      arrow(ox,oy,ox+50,oy,'#888',2);x.fillStyle='#666';x.fillText('x',ox+55,oy+4);
+      arrow(ox,oy,ox,oy-50,'#888',2);x.fillText('y',ox-3,oy-55);
+      const px=400,py=160,SCALE=35;
+      x.fillStyle='#0b5fff';x.font='bold 12px sans-serif';x.fillText('본체 {B} (heading θ='+(+sl('frmTh').value)+'°)',px-90,30);
+      x.save();x.translate(px,py);x.rotate(-th);
+      x.fillStyle='#444';x.fillRect(-22,-12,44,24);
+      x.fillStyle='#fff';x.beginPath();x.moveTo(14,0);x.lineTo(4,-7);x.lineTo(4,7);x.closePath();x.fill();
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=1.5;
+      x.beginPath();x.moveTo(0,0);x.lineTo(75,0);x.stroke();
+      x.strokeStyle='#0a8a3e';x.beginPath();x.moveTo(0,0);x.lineTo(0,-75);x.stroke();
+      x.setLineDash([]);
+      x.restore();
+      x.fillStyle='#c62828';x.font='12px sans-serif';
+      x.fillText('x_B',px+75*cs+6,py-75*sn+4);
+      x.fillStyle='#0a8a3e';
+      x.fillText('y_B',px-75*sn+6,py-75*cs);
+      const tx=px+xdot*SCALE,ty=py-ydot*SCALE;
+      arrow(px,py,tx,ty,'#7e3ff2',3);
+      x.fillStyle='#ff8c00';x.font='12px Consolas,monospace';
+      x.fillText('본체: ('+u.toFixed(1)+', '+v.toFixed(1)+')',tx+8,ty-4);
+      x.fillStyle='#0b5fff';
+      x.fillText('관성: ('+xdot.toFixed(2)+', '+ydot.toFixed(2)+')',tx+8,ty+12);
+      x.fillStyle='#1a1a1a';x.font='13px Consolas,monospace';x.textAlign='left';
+      const ey=295;
+      x.fillText('R(θ) = | '+pad(cs)+'  '+pad(-sn)+' |',50,ey);
+      x.fillText('       | '+pad(sn)+'   '+pad(cs)+'  |',50,ey+18);
+      x.fillStyle='#0b5fff';
+      x.fillText('ẋ = cos θ·u − sin θ·v = '+xdot.toFixed(2),360,ey);
+      x.fillText('ẏ = sin θ·u + cos θ·v = '+ydot.toFixed(2),360,ey+18);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

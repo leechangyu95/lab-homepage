@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 같은 조향, 다른 거동 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 같은 조향, 다른 거동</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/03-vehicle-dynamics.html">Week 3. 차량 동역학 기초</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 같은 조향, 다른 거동</h4>
+    <p>같은 시점에 같은 조향 스텝(0.08 rad ≈ 4.6°)이 들어옵니다.
+    <span style="color:#0b5fff;font-weight:600">파랑 — Understeer</span>(앞 타이어가 더 약함),
+    <span style="color:#2e7d32;font-weight:600">초록 — Neutral</span>,
+    <span style="color:#c62828;font-weight:600">빨강 — Oversteer</span>(뒷 타이어가 더 약함). 속도를 올려가며 차이를 보세요.</p>
+    <canvas id="threeCar" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>속도 vx [m/s] <span class="val" id="vxV">20</span><input type="range" id="vx" min="5" max="40" step="1" value="20"></label>
+      <label>조향각 δ [°] <span class="val" id="dlV">5</span><input type="range" id="dl" min="0" max="10" step="0.5" value="5"></label>
+      <button id="resetBtn">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('threeCar'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('vxV').textContent=(+$('vx').value).toFixed(0);$('dlV').textContent=(+$('dl').value).toFixed(1);};
+    ['vx','dl'].forEach(id=>$(id).oninput=upd);
+    const m=1500,Iz=2500,lf=1.2,lr=1.6,L=lf+lr;
+    const cars=[
+      {name:'Understeer',Cf:60000,Cr:90000,color:'#0b5fff'},
+      {name:'Neutral',   Cf:80000,Cr:80000,color:'#2e7d32'},
+      {name:'Oversteer', Cf:90000,Cr:60000,color:'#c62828'},
+    ];
+    let t=0;const dt=0.05;
+    function reset(){cars.forEach(cc=>{cc.x=0;cc.y=0;cc.psi=0;cc.vy=0;cc.r=0;cc.tr=[];});t=0;}
+    reset();$('resetBtn').onclick=reset;
+    function step(cc,vx,delta){
+      const a11=-(cc.Cf+cc.Cr)/(m*vx),a12=-vx-(lf*cc.Cf-lr*cc.Cr)/(m*vx);
+      const a21=-(lf*cc.Cf-lr*cc.Cr)/(Iz*vx),a22=-(lf*lf*cc.Cf+lr*lr*cc.Cr)/(Iz*vx);
+      const dvy=a11*cc.vy+a12*cc.r+(cc.Cf/m)*delta;
+      const dr =a21*cc.vy+a22*cc.r+(lf*cc.Cf/Iz)*delta;
+      cc.vy+=dvy*dt;cc.r+=dr*dt;
+      cc.x+=(vx*Math.cos(cc.psi)-cc.vy*Math.sin(cc.psi))*dt;
+      cc.y+=(vx*Math.sin(cc.psi)+cc.vy*Math.cos(cc.psi))*dt;
+      cc.psi+=cc.r*dt;cc.tr.push([cc.x,cc.y]);if(cc.tr.length>800)cc.tr.shift();
+    }
+    function loop(){
+      const vx=+$('vx').value,delta=(+$('dl').value)*Math.PI/180;
+      const useDelta=t>0.5?delta:0;
+      cars.forEach(cc=>step(cc,vx,useDelta));t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height/2,sc=2.2;
+      x.strokeStyle='#eee';for(let i=-200;i<=200;i+=20){x.beginPath();x.moveTo(cx+i,0);x.lineTo(cx+i,c.height);x.moveTo(0,cy+i);x.lineTo(c.width,cy+i);x.stroke();}
+      cars.forEach(cc=>{
+        x.strokeStyle=cc.color;x.lineWidth=2;x.beginPath();
+        cc.tr.forEach((p,i)=>{const xx=cx+p[0]*sc,yy=cy-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+        const last=cc.tr[cc.tr.length-1];if(last){x.fillStyle=cc.color;x.beginPath();x.arc(cx+last[0]*sc,cy-last[1]*sc,4,0,2*Math.PI);x.fill();}
+      });
+      x.fillStyle='#222';x.font='13px sans-serif';
+      cars.forEach((cc,i)=>{x.fillStyle=cc.color;x.fillText(cc.name+'  Cf='+cc.Cf/1000+'  Cr='+cc.Cr/1000,12,18+i*16);});
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('t='+t.toFixed(1)+'s · 0.5초 후 조향 인가',12,c.height-12);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

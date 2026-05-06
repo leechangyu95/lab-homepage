@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: PRM 로드맵 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: PRM 로드맵</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: PRM 로드맵</h4>
+    <p>점을 뽑고(샘플링), 반경 $r$ 안의 점들과 장애물을 피해 연결합니다. 그 후 시작→목표 최단 경로를 Dijkstra로 찾습니다.</p>
+    <canvas id="prm" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>샘플 수 <span class="val" id="nsV">80</span><input type="range" id="ns" min="20" max="200" value="80"></label>
+      <label>연결 반경 r <span class="val" id="rrV">90</span><input type="range" id="rr" min="40" max="160" value="90"></label>
+      <button id="prmGen">다시 샘플</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('prm'),x=c.getContext('2d');
+    const obs=[{x:220,y:140,r:40},{x:380,y:230,r:50},{x:470,y:120,r:30},{x:300,y:70,r:25}];
+    const S=[40,40],G=[600,340];
+    let nodes=[],edges=[],path=[];
+    function collide(p){return obs.some(o=>(o.x-p[0])**2+(o.y-p[1])**2<(o.r+4)*(o.r+4));}
+    function lineCol(a,b){const N=12;for(let i=0;i<=N;i++){const p=[a[0]+(b[0]-a[0])*i/N,a[1]+(b[1]-a[1])*i/N];if(collide(p))return true;}return false;}
+    function gen(){
+      const N=+document.getElementById('ns').value;
+      const r=+document.getElementById('rr').value;
+      nodes=[S,G];edges=[];
+      for(let i=0;i<N;i++){const p=[Math.random()*c.width,Math.random()*c.height];if(!collide(p))nodes.push(p);}
+      for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+        const d=Math.hypot(nodes[i][0]-nodes[j][0],nodes[i][1]-nodes[j][1]);
+        if(d<r&&!lineCol(nodes[i],nodes[j]))edges.push([i,j,d]);
+      }
+      // Dijkstra from 0 to 1
+      const dist=Array(nodes.length).fill(Infinity),prev=Array(nodes.length).fill(-1);
+      dist[0]=0;const Q=new Set(nodes.map((_,i)=>i));
+      const adj=Array.from({length:nodes.length},()=>[]);
+      edges.forEach(([a,b,d])=>{adj[a].push([b,d]);adj[b].push([a,d]);});
+      while(Q.size){let u=-1,m=Infinity;Q.forEach(i=>{if(dist[i]<m){m=dist[i];u=i;}});if(u<0||u===1)break;Q.delete(u);
+        adj[u].forEach(([v,w])=>{if(Q.has(v)&&dist[u]+w<dist[v]){dist[v]=dist[u]+w;prev[v]=u;}});}
+      path=[];let u=1;while(u>=0){path.push(nodes[u]);u=prev[u];}
+    }
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#cfd8e3';x.lineWidth=1;edges.forEach(([a,b])=>{x.beginPath();x.moveTo(nodes[a][0],nodes[a][1]);x.lineTo(nodes[b][0],nodes[b][1]);x.stroke();});
+      x.fillStyle='#0b5fff';nodes.forEach(p=>{x.beginPath();x.arc(p[0],p[1],2.5,0,Math.PI*2);x.fill();});
+      if(path.length>1&&path[path.length-1][0]===S[0]){
+        x.strokeStyle='#ff8c00';x.lineWidth=3;x.beginPath();path.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      }
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(S[0],S[1],8,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(G[0],G[1],10,0,Math.PI*2);x.fill();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('노드 '+nodes.length+' · 엣지 '+edges.length+(path.length>1&&path[path.length-1][0]===S[0]?' · 경로 발견 ✓':' · 경로 없음'),12,370);
+    }
+    function up(){['ns','rr'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);}
+    document.getElementById('prmGen').onclick=()=>{gen();draw();up();};
+    document.getElementById('ns').oninput=up;document.getElementById('rr').oninput=up;
+    gen();draw();up();
+  })();
+  </script>
+</main>
+</body>
+</html>

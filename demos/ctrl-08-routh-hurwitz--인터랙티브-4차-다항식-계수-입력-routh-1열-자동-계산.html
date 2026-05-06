@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브: 4차 다항식 계수 입력 → Routh 1열 자동 계산 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브: 4차 다항식 계수 입력 → Routh 1열 자동 계산</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/08-routh-hurwitz.html">Week 8. 안정성 — Routh-Hurwitz</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브: 4차 다항식 계수 입력 → Routh 1열 자동 계산</h4>
+    <p>$s^4 + a_3 s^3 + a_2 s^2 + a_1 s + a_0 = 0$의 계수 4개를 입력하면 Routh 표 1열을 즉시 계산하고 부호 변화 횟수와 안정 판정을 보여줍니다. 음수 계수도 허용 — 부호 일치 필요조건도 자동 점검.</p>
+    <canvas id="c8Demo3" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>$a_3$ <span class="val" id="c8A3V">2</span><input type="range" id="c8A3" min="-5" max="10" step="0.1" value="2"></label>
+      <label>$a_2$ <span class="val" id="c8A2V">3</span><input type="range" id="c8A2" min="-5" max="20" step="0.1" value="3"></label>
+      <label>$a_1$ <span class="val" id="c8A1V">4</span><input type="range" id="c8A1" min="-5" max="30" step="0.1" value="4"></label>
+      <label>$a_0$ <span class="val" id="c8A0V">5</span><input type="range" id="c8A0" min="-5" max="50" step="0.1" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c8Demo3'), x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{['c8A3','c8A2','c8A1','c8A0'].forEach(id=>$(id+'V').textContent=(+$(id).value).toFixed(2));};
+    ['c8A3','c8A2','c8A1','c8A0'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const a3=+$('c8A3').value, a2=+$('c8A2').value, a1=+$('c8A1').value, a0=+$('c8A0').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#444';x.font='14px sans-serif';
+      x.fillText('p(s) = s^4 + '+a3.toFixed(2)+' s^3 + '+a2.toFixed(2)+' s^2 + '+a1.toFixed(2)+' s + '+a0.toFixed(2),20,30);
+      // Routh table
+      const r0 = [1, a2, a0];
+      const r1 = [a3, a1, 0];
+      const b1 = (a3*a2 - 1*a1)/a3;
+      const b2 = a0;
+      const c1 = (b1*a1 - a3*b2)/b1;
+      const d1 = b2;
+      const col1 = [1, a3, b1, c1, d1];
+      // necessary condition
+      const allPos = [1,a3,a2,a1,a0].every(v=>v>0);
+      let signChanges = 0;
+      let prev = col1[0]>0?1:-1;
+      const symbols = [];
+      col1.forEach(v=>{
+        let s = isNaN(v)||!isFinite(v)?0:(v>0?1:(v<0?-1:0));
+        symbols.push(s>0?'+':(s<0?'-':'0'));
+        if(s!==0 && s!==prev && prev!==0){signChanges++;}
+        if(s!==0) prev=s;
+      });
+      x.font='13px monospace';
+      x.fillStyle='#444';
+      x.fillText('Routh 1열:',20,60);
+      const labels=['s^4','s^3','s^2','s^1','s^0'];
+      col1.forEach((v,i)=>{
+        x.fillStyle='#666';x.fillText(labels[i],20,85+i*22);
+        x.fillStyle=(v>0?'#2e7d32':v<0?'#c62828':'#999');
+        const s = isNaN(v)?'NaN':(!isFinite(v)?'∞':v.toFixed(3));
+        x.fillText(s,80,85+i*22);
+        x.fillStyle='#888';x.fillText(symbols[i],170,85+i*22);
+      });
+      // verdict
+      x.font='14px sans-serif';
+      if(!allPos){
+        x.fillStyle='#c62828';
+        x.fillText('필요조건 위반 (부호 불일치 또는 0)  → 즉시 불안정',230,90);
+      }else{
+        x.fillStyle=signChanges===0?'#2e7d32':'#c62828';
+        x.fillText('부호 변화 횟수: '+signChanges,230,90);
+        x.fillText(signChanges===0?'→ 안정 (모든 극점 좌반평면)':'→ 불안정 (우반평면 근 '+signChanges+'개)',230,115);
+      }
+      // numerical roots for verification
+      // skip — just trust col1
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('Tip:  4개 슬라이더 중 a0를 양수→음수로 떨어뜨리면 부호 변화 발생',230,155);
+      x.fillText('       a3·a2 ≤ a1 조건 위반도 시도 (Hurwitz 정리에 따른 4차 안정조건)',230,175);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

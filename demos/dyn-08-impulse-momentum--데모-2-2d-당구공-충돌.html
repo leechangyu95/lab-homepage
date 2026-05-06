@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 2D 당구공 충돌 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 2D 당구공 충돌</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/08-impulse-momentum.html">Week 8. 충격량과 운동량</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 2D 당구공 충돌</h4>
+    <p>흰 공이 빨간 공을 친다 — 충돌 위치(임팩트 파라미터)를 슬라이더로 조정해 보세요. 정면 충돌이면 흰 공이 멈추고 빨간 공이 모든 운동량을 가져갑니다(같은 질량, $e=1$). 비스듬히 치면 두 공이 90° 각도로 갈라집니다.</p>
+    <canvas id="col2C" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>충돌 옵셋 (정면=0) <span class="val" id="c2BV">0.3</span><input type="range" id="c2B" min="-0.95" max="0.95" step="0.05" value="0.3"></label>
+      <label>흰 공 속도 <span class="val" id="c2VV">3</span><input type="range" id="c2V" min="1" max="6" step="0.1" value="3"></label>
+      <button id="c2Fire">발사</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('col2C'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['c2B','c2V'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['c2B','c2V'].forEach(k=>sl(k).oninput=upd);upd();
+    const r=18;
+    let W,R,phase='ready';
+    function reset(){
+      const b=+sl('c2B').value;
+      W={x:80,y:160,vx:+sl('c2V').value,vy:0};
+      R={x:440,y:160+b*r*1.95,vx:0,vy:0};
+      phase='go';
+    }
+    sl('c2Fire').onclick=reset;
+    sl('c2B').addEventListener('input',()=>{if(phase==='ready')reset();phase='ready';});
+    reset();phase='ready';
+    function loop(){
+      const dt=0.025;
+      x.fillStyle='#0a5d2e';x.fillRect(0,0,c.width,c.height);
+      // table border
+      x.strokeStyle='#5a3a1a';x.lineWidth=8;x.strokeRect(4,4,c.width-8,c.height-8);
+      if(phase==='go'){
+        W.x+=W.vx*30*dt;W.y+=W.vy*30*dt;
+        R.x+=R.vx*30*dt;R.y+=R.vy*30*dt;
+        const dx=R.x-W.x,dy=R.y-W.y,d=Math.sqrt(dx*dx+dy*dy);
+        if(d<2*r && (W.vx*dx+W.vy*dy)>0){
+          // unit vector along centerline
+          const nx=dx/d,ny=dy/d;
+          const vrelN=W.vx*nx+W.vy*ny;
+          // elastic, equal mass — exchange normal component
+          W.vx-=vrelN*nx;W.vy-=vrelN*ny;
+          R.vx+=vrelN*nx;R.vy+=vrelN*ny;
+        }
+        if(W.x<r||W.x>c.width-r)W.vx*=-1;
+        if(W.y<r||W.y>c.height-r)W.vy*=-1;
+        if(R.x<r||R.x>c.width-r)R.vx*=-1;
+        if(R.y<r||R.y>c.height-r)R.vy*=-1;
+      }
+      // dashed line preview
+      if(phase==='ready'){
+        x.strokeStyle='#fff8';x.setLineDash([4,4]);x.beginPath();x.moveTo(W.x,W.y);x.lineTo(c.width,W.y);x.stroke();x.setLineDash([]);
+      }
+      // balls
+      x.fillStyle='#fff';x.beginPath();x.arc(W.x,W.y,r,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(R.x,R.y,r,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // info
+      x.fillStyle='#fff';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('흰 공: ('+W.vx.toFixed(2)+', '+W.vy.toFixed(2)+')',20,30);
+      x.fillText('빨강: ('+R.vx.toFixed(2)+', '+R.vy.toFixed(2)+')',20,48);
+      const dot=W.vx*R.vx+W.vy*R.vy;
+      const sw=Math.sqrt(W.vx*W.vx+W.vy*W.vy),sr=Math.sqrt(R.vx*R.vx+R.vy*R.vy);
+      const ang=(sw>0.01&&sr>0.01)?Math.acos(dot/(sw*sr))*180/Math.PI:0;
+      x.fillText('두 속도 각도: '+ang.toFixed(0)+'°  (이론: 같은 질량 탄성충돌은 90°)',20,66);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

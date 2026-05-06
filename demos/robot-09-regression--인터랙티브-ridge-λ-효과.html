@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Ridge λ 효과 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Ridge λ 효과</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/09-regression.html">Lecture 9. 선형 회귀</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Ridge λ 효과</h4>
+    <p>9점으로 9차 다항식(파라미터 10개)을 맞추면 $\lambda=0$에서 심한 과적합이 일어납니다. 슬라이더를 오른쪽으로 옮겨 $\lambda$를 키우면 곡선이 점점 매끄러워지다가 결국 평균선에 가까워집니다.</p>
+    <canvas id="ridge" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>log₁₀ λ <span class="val" id="lamV">-6.0</span><input type="range" id="lam" min="-6" max="2" step="0.1" value="-6"></label>
+      <button id="ridgeRs" class="alt">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ridge');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const CW=c.width,CH=c.height;
+    const DEG=9;
+    let pts=[];
+    function genData(){
+      pts=[];
+      // 9 sample points from a sine, with noticeable noise
+      for(let i=0;i<9;i++){
+        const xi=0.02+i*(0.96/8);
+        const yi=Math.sin(2*Math.PI*xi)+(Math.random()*2-1)*0.35;
+        pts.push([xi,yi]);
+      }
+    }
+    genData();
+    function solve(M,b,N){
+      const A=M.map((r,i)=>[...r,b[i]]);
+      for(let i=0;i<N;i++){
+        let mx=i;
+        for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;
+        [A[i],A[mx]]=[A[mx],A[i]];
+        if(Math.abs(A[i][i])<1e-14)return null;
+        const piv=A[i][i];
+        for(let j=0;j<=N;j++)A[i][j]/=piv;
+        for(let k=0;k<N;k++){
+          if(k===i)continue;
+          const f=A[k][i];
+          for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];
+        }
+      }
+      return A.map(r=>r[N]);
+    }
+    function fitRidge(lam){
+      const n=pts.length,m=DEG+1;
+      const X=pts.map(p=>{const r=[];for(let k=0;k<m;k++)r.push(Math.pow(p[0],k));return r;});
+      const Y=pts.map(p=>p[1]);
+      const XTX=Array.from({length:m},()=>Array(m).fill(0));
+      const XTY=Array(m).fill(0);
+      for(let i=0;i<m;i++){
+        for(let j=0;j<m;j++){
+          let s=0;for(let k=0;k<n;k++)s+=X[k][i]*X[k][j];
+          XTX[i][j]=s+(i===j?lam:0);
+        }
+        let s=0;for(let k=0;k<n;k++)s+=X[k][i]*Y[k];
+        XTY[i]=s;
+      }
+      return solve(XTX,XTY,m);
+    }
+    const PX=40,PY=CH/2,PW=CW-80,PH=120;
+    function toPx(u){return PX+u*PW;}
+    function toPy(v){return PY-v*PH;}
+    function draw(){
+      const logLam=parseFloat(document.getElementById('lam').value);
+      const lam=Math.pow(10,logLam);
+      document.getElementById('lamV').textContent=logLam.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,CW,CH);
+      // plot box
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;
+      ctx.strokeRect(PX,PY-PH,PW,2*PH);
+      // zero line
+      ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(PX,PY);ctx.lineTo(PX+PW,PY);ctx.stroke();
+      // true function sin(2πx)
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const u=i/200;
+        const v=Math.sin(2*Math.PI*u);
+        const px=toPx(u),py=toPy(v);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // fit
+      const beta=fitRidge(lam);
+      if(beta){
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+        for(let i=0;i<=400;i++){
+          const u=i/400;
+          let v=0;for(let k=0;k<beta.length;k++)v+=beta[k]*Math.pow(u,k);
+          v=Math.max(-1.8,Math.min(1.8,v)); // clip for visualization
+          const px=toPx(u),py=toPy(v);
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+      // data points
+      ctx.fillStyle='#c62828';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(toPx(p[0]),toPy(p[1]),5,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(toPx(p[0]),toPy(p[1]),5,0,Math.PI*2);ctx.stroke();});
+      // legend
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';
+      ctx.fillText('■ 참값 sin(2πx)',12,25);
+      ctx.fillStyle='#0b5fff';ctx.fillText('■ Ridge 9차 적합',130,25);
+      ctx.fillStyle='#c62828';ctx.fillText('● 데이터 ('+pts.length+'개)',260,25);
+      ctx.fillStyle='#555';ctx.fillText('λ = '+lam.toExponential(2),380,25);
+    }
+    document.getElementById('lam').addEventListener('input',draw);
+    document.getElementById('ridgeRs').addEventListener('click',()=>{genData();draw();});
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

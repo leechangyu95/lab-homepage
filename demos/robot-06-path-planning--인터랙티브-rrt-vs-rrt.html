@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: RRT vs RRT* — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: RRT vs RRT*</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: RRT vs RRT*</h4>
+    <canvas id="rrtstar" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>알고리즘
+        <select id="rsMode">
+          <option value="basic">RRT (vanilla)</option>
+          <option value="star" selected>RRT*</option>
+        </select>
+      </label>
+      <label>재배선 반경 r <span class="val" id="rsRV">55</span><input type="range" id="rsR" min="20" max="100" value="55"></label>
+      <button id="rsStep">+10 노드</button>
+      <button id="rsAuto">자동 진행</button>
+      <button id="rsRst" class="alt">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>관찰</strong> — 같은 노드 수라도 RRT*는 경로 비용이 점차 줄어듭니다. 반경 $r$를 너무 작게 두면 재배선이 거의 일어나지 않고, 너무 크게 두면 매번 모든 이웃을 검토해 느려집니다.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rrtstar'),x=c.getContext('2d');
+    const obs=[{x:200,y:120,r:35},{x:340,y:240,r:45},{x:460,y:120,r:30},{x:300,y:60,r:25},{x:520,y:280,r:35}];
+    const start=[40,40],goal=[600,340];
+    let tree=[],running=false,goalIdx=null,mode='star';
+    function init(){tree=[{p:start,parent:null,cost:0}];goalIdx=null;}
+    init();
+    document.getElementById('rsMode').onchange=e=>{mode=e.target.value;init();};
+    document.getElementById('rsR').oninput=()=>{document.getElementById('rsRV').textContent=document.getElementById('rsR').value;};
+    document.getElementById('rsStep').onclick=()=>{for(let i=0;i<10;i++)stepRRT();};
+    document.getElementById('rsAuto').onclick=()=>{running=!running;};
+    document.getElementById('rsRst').onclick=init;
+    function collide(p){return obs.some(o=>(o.x-p[0])**2+(o.y-p[1])**2<o.r*o.r);}
+    function lineCol(a,b){const N=12;for(let i=0;i<=N;i++){const p=[a[0]+(b[0]-a[0])*i/N,a[1]+(b[1]-a[1])*i/N];if(collide(p))return true;}return false;}
+    function pathCost(idx){let cur=idx,c=0;while(tree[cur].parent!=null){const p=tree[cur].p,q=tree[tree[cur].parent].p;c+=Math.hypot(p[0]-q[0],p[1]-q[1]);cur=tree[cur].parent;}return c;}
+    function stepRRT(){
+      const q=[Math.random()<0.1?goal[0]:Math.random()*c.width,Math.random()<0.1?goal[1]:Math.random()*c.height];
+      let bi=0,bd=Infinity;
+      tree.forEach((n,i)=>{const d=(n.p[0]-q[0])**2+(n.p[1]-q[1])**2;if(d<bd){bd=d;bi=i;}});
+      const near=tree[bi];const dx=q[0]-near.p[0],dy=q[1]-near.p[1];const dist=Math.hypot(dx,dy);
+      const STEP=22;const np=[near.p[0]+dx/dist*STEP,near.p[1]+dy/dist*STEP];
+      if(lineCol(near.p,np))return;
+      let parent=bi, cost=near.cost+STEP;
+      const RAD=+document.getElementById('rsR').value;
+      if(mode==='star'){
+        // 1) 최적 부모 선택
+        tree.forEach((n,i)=>{
+          const d=Math.hypot(n.p[0]-np[0],n.p[1]-np[1]);
+          if(d<RAD && !lineCol(n.p,np) && n.cost+d<cost){cost=n.cost+d;parent=i;}
+        });
+      }
+      const newIdx=tree.length;
+      tree.push({p:np,parent:parent,cost:cost});
+      if(mode==='star'){
+        // 2) 이웃 재배선
+        tree.forEach((n,i)=>{
+          if(i===newIdx||i===parent)return;
+          const d=Math.hypot(n.p[0]-np[0],n.p[1]-np[1]);
+          if(d<RAD && !lineCol(np,n.p) && cost+d<n.cost){
+            n.parent=newIdx;n.cost=cost+d;
+          }
+        });
+      }
+      if(Math.hypot(np[0]-goal[0],np[1]-goal[1])<25){
+        if(goalIdx===null||cost<tree[goalIdx].cost)goalIdx=newIdx;
+      }
+      // 목표 노드 비용 재계산 (재배선 후)
+      if(goalIdx!=null)tree[goalIdx].cost=pathCost(goalIdx);
+    }
+    function loop(){
+      if(running)for(let k=0;k<3;k++)stepRRT();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#9eb9ff';x.lineWidth=1;
+      tree.forEach(n=>{if(n.parent!=null){const p=tree[n.parent].p;x.beginPath();x.moveTo(p[0],p[1]);x.lineTo(n.p[0],n.p[1]);x.stroke();}});
+      tree.forEach(n=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(n.p[0],n.p[1],1.8,0,Math.PI*2);x.fill();});
+      if(goalIdx!=null){
+        x.strokeStyle='#ff8c00';x.lineWidth=3;x.beginPath();
+        let cur=goalIdx;const pts=[];while(cur!=null){pts.push(tree[cur].p);cur=tree[cur].parent;}
+        pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      }
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0],start[1],8,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0],goal[1],10,0,Math.PI*2);x.fill();
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('알고리즘: '+(mode==='basic'?'RRT (vanilla)':'RRT* (rewiring)'),12,22);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      const cstr=goalIdx!=null?pathCost(goalIdx).toFixed(0):'—';
+      x.fillText('노드 '+tree.length+' · 경로 비용 '+cstr+(goalIdx!=null?' ✓':''),12,370);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

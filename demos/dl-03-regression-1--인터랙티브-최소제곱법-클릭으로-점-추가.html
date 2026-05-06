@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 최소제곱법 — 클릭으로 점 추가 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 최소제곱법 — 클릭으로 점 추가</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/03-regression-1.html">Week 3. 회귀 1: 선형회귀와 경사하강법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 최소제곱법 — 클릭으로 점 추가</h4>
+    <p>그래프를 <strong>클릭</strong>하면 데이터 점이 추가되고, 점을 <strong>다시 클릭</strong>하면 삭제됩니다. 추가/삭제할 때마다 닫힌 해 $w^*, b^*$가 즉시 다시 계산되어 직선이 새로 그어집니다. 경사하강법처럼 반복이 없는 — 정말 "한 방에" 풀리는 모습을 확인해보세요.</p>
+    <canvas id="lsCanvas" width="640" height="340" style="cursor:crosshair"></canvas>
+    <div class="controls">
+      <button id="lsSample">예제 데이터</button>
+      <button id="lsClear">전부 지우기</button>
+      <span id="lsInfo" style="font-size:12px;color:#666"></span>
+    </div>
+    <div id="lsBreakdown" style="margin-top:10px;padding:10px;background:#f6f8fa;border-radius:6px;font-size:13px;font-family:ui-monospace,monospace;line-height:1.7"></div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lsCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const xmin=-1,xmax=9,ymin=-3,ymax=18;
+    const toPx=x=>40+(x-xmin)/(xmax-xmin)*(W-60);
+    const toPy=y=>H-30-(y-ymin)/(ymax-ymin)*(H-60);
+    const fromPx=px=>xmin+(px-40)/(W-60)*(xmax-xmin);
+    const fromPy=py=>ymin+(H-30-py)/(H-60)*(ymax-ymin);
+    let pts=[];
+    function sample(){
+      pts=[];
+      for(let i=0;i<12;i++){const x=0.5+i*0.7;pts.push({x,y:1.8*x+0.5+(Math.random()-0.5)*2.2});}
+    }
+    sample();
+    function fit(){
+      const N=pts.length;
+      if(N<2)return null;
+      let sx=0,sy=0;pts.forEach(p=>{sx+=p.x;sy+=p.y;});
+      const mx=sx/N,my=sy/N;
+      let num=0,den=0;
+      pts.forEach(p=>{num+=(p.x-mx)*(p.y-my);den+=(p.x-mx)*(p.x-mx);});
+      if(den<1e-9)return null;
+      const w=num/den,b=my-w*mx;
+      let J=0;pts.forEach(p=>{const e=w*p.x+b-p.y;J+=e*e;});J/=N;
+      return {w,b,mx,my,num,den,N,J};
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // grid
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;
+      for(let x=0;x<=8;x+=2){ctx.beginPath();ctx.moveTo(toPx(x),10);ctx.lineTo(toPx(x),H-30);ctx.stroke();}
+      for(let y=0;y<=15;y+=5){ctx.beginPath();ctx.moveTo(40,toPy(y));ctx.lineTo(W-20,toPy(y));ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,10);ctx.lineTo(40,H-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let x=0;x<=8;x+=2)ctx.fillText(x,toPx(x)-3,H-15);
+      for(let y=0;y<=15;y+=5)ctx.fillText(y,15,toPy(y)+4);
+      const r=fit();
+      const info=document.getElementById('lsInfo');
+      const bk=document.getElementById('lsBreakdown');
+      if(r){
+        // residuals
+        ctx.strokeStyle='rgba(150,150,150,0.5)';ctx.lineWidth=1;
+        pts.forEach(p=>{const yh=r.w*p.x+r.b;ctx.beginPath();ctx.moveTo(toPx(p.x),toPy(p.y));ctx.lineTo(toPx(p.x),toPy(yh));ctx.stroke();});
+        // line
+        ctx.strokeStyle='#ff8c00';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(r.w*xmin+r.b));ctx.lineTo(toPx(xmax),toPy(r.w*xmax+r.b));ctx.stroke();
+        // centroid
+        ctx.fillStyle='#22a06b';ctx.beginPath();ctx.arc(toPx(r.mx),toPy(r.my),6,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#22a06b';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(toPx(r.mx),toPy(r.my),9,0,Math.PI*2);ctx.stroke();
+        info.textContent=`N=${r.N}  w*=${r.w.toFixed(3)}  b*=${r.b.toFixed(3)}  J=${r.J.toFixed(3)}  (●=무게중심 (x̄,ȳ))`;
+        bk.innerHTML=
+          `x̄ = ${r.mx.toFixed(3)},  ȳ = ${r.my.toFixed(3)}<br>`+
+          `Σ(xᵢ−x̄)(yᵢ−ȳ) = ${r.num.toFixed(3)}<br>`+
+          `Σ(xᵢ−x̄)²       = ${r.den.toFixed(3)}<br>`+
+          `<b>w* = ${r.num.toFixed(3)} / ${r.den.toFixed(3)} = ${r.w.toFixed(4)}</b><br>`+
+          `<b>b* = ȳ − w*·x̄ = ${r.my.toFixed(3)} − ${r.w.toFixed(3)}·${r.mx.toFixed(3)} = ${r.b.toFixed(4)}</b>`;
+      }else{
+        info.textContent=pts.length<2?'점을 2개 이상 클릭으로 찍어주세요.':'점들이 같은 x 좌표에 있어 직선을 정의할 수 없습니다.';
+        bk.innerHTML='';
+      }
+      // points
+      pts.forEach(p=>{ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(toPx(p.x),toPy(p.y),4.5,0,Math.PI*2);ctx.fill();});
+    }
+    c.addEventListener('click',e=>{
+      const rect=c.getBoundingClientRect();
+      const px=(e.clientX-rect.left)*(W/rect.width);
+      const py=(e.clientY-rect.top)*(H/rect.height);
+      // delete if near existing point
+      for(let i=0;i<pts.length;i++){
+        const dx=toPx(pts[i].x)-px,dy=toPy(pts[i].y)-py;
+        if(dx*dx+dy*dy<100){pts.splice(i,1);draw();return;}
+      }
+      const x=fromPx(px),y=fromPy(py);
+      if(x>=xmin&&x<=xmax&&y>=ymin&&y<=ymax){pts.push({x,y});draw();}
+    });
+    document.getElementById('lsSample').onclick=()=>{sample();draw();};
+    document.getElementById('lsClear').onclick=()=>{pts=[];draw();};
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Receding Horizon 차량 — 매 스텝 새 계획, 첫 명령만 실행 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">Receding Horizon 차량 — 매 스텝 새 계획, 첫 명령만 실행</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/13-mpc-basics.html">Week 13. MPC 기초 — 미래를 보고 제어하는 법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>Receding Horizon 차량 — 매 스텝 새 계획, 첫 명령만 실행</h4>
+    <p>1D 위치 시스템 $x_{k+1}=x_k+u_k\Delta t$에 대해 $N$ 스텝 앞 예측 궤적(파란 점선)이 매 스텝마다
+    어떻게 다시 그려지는지 확인하세요. <span style="color:#c62828">빨강</span>은 실제 차량 경로,
+    <span style="color:#f57c00">주황</span>은 horizon 안에서 실제로 적용된 첫 명령들입니다.</p>
+    <canvas id="rh_canvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Horizon N <span class="val" id="rhN_v">10</span><input type="range" id="rhN" min="3" max="25" step="1" value="10"></label>
+      <label>목표 x_ref <span class="val" id="rhRef_v">5</span><input type="range" id="rhRef" min="-6" max="6" step="0.5" value="5"></label>
+      <label>속도 (애니메이션) <span class="val" id="rhSp_v">1.0</span><input type="range" id="rhSp" min="0.2" max="3" step="0.1" value="1.0"></label>
+      <button id="rhReset" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rh_canvas'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{
+      $('rhN_v').textContent=$('rhN').value;
+      $('rhRef_v').textContent=(+$('rhRef').value).toFixed(1);
+      $('rhSp_v').textContent=(+$('rhSp').value).toFixed(1);
+    };
+    ['rhN','rhRef','rhSp'].forEach(id=>$(id).oninput=upd);
+    let pos=-5,history=[],tick=0,acc=0;
+    $('rhReset').onclick=()=>{pos=-5;history=[];tick=0;};
+    // 1D MPC analytical: greedy step toward ref clamped by u_max
+    const dt=0.2, uMax=1.0;
+    function planHorizon(p,ref,N){
+      const traj=[p]; let cur=p;
+      for(let i=0;i<N;i++){
+        const want=(ref-cur);
+        const u=Math.max(-uMax,Math.min(uMax,want*0.6));
+        cur=cur+u*dt; traj.push(cur);
+      }
+      return traj;
+    }
+    function loop(){
+      const N=+$('rhN').value, ref=+$('rhRef').value, sp=+$('rhSp').value;
+      acc+=sp;
+      if(acc>=8){ // step
+        acc=0;
+        const tr=planHorizon(pos,ref,N);
+        const u0=(tr[1]-tr[0])/dt;
+        pos=pos+u0*dt;
+        history.push({pos,u0,tick});
+        if(history.length>120) history.shift();
+        tick++;
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // axes
+      const xToPx=v=>40+(v+7)/14*560;
+      const yMid=180;
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(40,yMid);x.lineTo(620,yMid);x.stroke();
+      // ref marker
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      x.moveTo(xToPx(ref),40);x.lineTo(xToPx(ref),300);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('목표 x_ref',xToPx(ref)-30,35);
+      // current horizon prediction
+      const tr=planHorizon(pos,ref,N);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.setLineDash([5,4]);x.beginPath();
+      tr.forEach((v,i)=>{const px=xToPx(v),py=yMid-i*4; if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});
+      x.stroke();x.setLineDash([]);
+      tr.forEach((v,i)=>{x.fillStyle=i==0?'#c62828':'#0b5fff';x.beginPath();x.arc(xToPx(v),yMid-i*4,3,0,Math.PI*2);x.fill();});
+      x.fillStyle='#0b5fff';x.fillText('예측 horizon ('+N+' steps)',xToPx(tr[Math.floor(N/2)])-50,yMid-N*4-8);
+      // executed history
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      history.forEach((h,i)=>{const px=xToPx(h.pos),py=240+i*0.4; if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});
+      x.stroke();
+      x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('실행된 실제 경로 (시간↓)',420,260);
+      // car icon
+      x.fillStyle='#c62828';x.beginPath();x.arc(xToPx(pos),yMid,7,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('현재 x = '+pos.toFixed(2)+'   step '+tick+'   적용 u₀ = '+(history.length?history[history.length-1].u0.toFixed(2):'—'),12,18);
+      x.fillText('파란 점선 = 매 스텝 새로 그려지는 미래 예측 (첫 점만 실행)',12,300);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

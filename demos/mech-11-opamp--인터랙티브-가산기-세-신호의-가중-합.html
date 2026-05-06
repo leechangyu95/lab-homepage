@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 가산기 — 세 신호의 가중 합 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 가산기 — 세 신호의 가중 합</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/11-opamp.html">Week 11. 아날로그 기초·연산증폭기 — 두 줄 규칙으로 풀리는 마법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 가산기 — 세 신호의 가중 합</h4>
+    <p>세 입력 $v_1, v_2, v_3$을 다른 가중치($R_f/R_k$)로 합쳐 출력을 계산합니다. 단순 합산기($R_1=R_2=R_3=R_f$)와 가중 평균이 어떻게 다른지 직접 실험.</p>
+    <canvas id="sumCanvas" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>v₁ <span class="val" id="sV1">1.0</span> V<input type="range" id="sV1i" min="-3" max="3" step="0.1" value="1"></label>
+      <label>v₂ <span class="val" id="sV2">0.5</span> V<input type="range" id="sV2i" min="-3" max="3" step="0.1" value="0.5"></label>
+      <label>v₃ <span class="val" id="sV3">-0.5</span> V<input type="range" id="sV3i" min="-3" max="3" step="0.1" value="-0.5"></label>
+      <label>R₁ <span class="val" id="sR1">10</span> kΩ<input type="range" id="sR1i" min="1" max="100" step="1" value="10"></label>
+      <label>R₂ <span class="val" id="sR2">10</span> kΩ<input type="range" id="sR2i" min="1" max="100" step="1" value="10"></label>
+      <label>R₃ <span class="val" id="sR3">10</span> kΩ<input type="range" id="sR3i" min="1" max="100" step="1" value="10"></label>
+      <label>R_f <span class="val" id="sRf">10</span> kΩ<input type="range" id="sRfi" min="1" max="100" step="1" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sumCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const v1=+document.getElementById('sV1i').value;
+      const v2=+document.getElementById('sV2i').value;
+      const v3=+document.getElementById('sV3i').value;
+      const R1=+document.getElementById('sR1i').value;
+      const R2=+document.getElementById('sR2i').value;
+      const R3=+document.getElementById('sR3i').value;
+      const Rf=+document.getElementById('sRfi').value;
+      [['sV1',v1],['sV2',v2],['sV3',v3],['sR1',R1],['sR2',R2],['sR3',R3],['sRf',Rf]].forEach(([id,v])=>{document.getElementById(id).textContent=typeof v==='number'?v.toFixed(v%1?1:0):v;});
+      const w1=Rf/R1,w2=Rf/R2,w3=Rf/R3;
+      const out=-(w1*v1+w2*v2+w3*v3);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const bx=80,by=120,bw=80,bh=80;
+      function bar(x,v,w,label){
+        const sign=v>=0?1:-1;
+        const h=Math.min(bh,Math.abs(v)*15);
+        ctx.fillStyle=sign>0?'#0b5fff':'#c62828';
+        ctx.fillRect(x,by-(sign>0?h:0),bw,h);
+        ctx.strokeStyle='#222';ctx.strokeRect(x,by-bh,bw,2*bh);
+        ctx.beginPath();ctx.moveTo(x,by);ctx.lineTo(x+bw,by);ctx.stroke();
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(label,x+5,by+bh+15);
+        ctx.fillText(`v=${v.toFixed(2)}V`,x+2,by+bh+30);
+        if(w!==undefined)ctx.fillText(`w=${w.toFixed(2)}`,x+2,by+bh+45);
+      }
+      bar(40,v1,w1,'v₁');
+      bar(140,v2,w2,'v₂');
+      bar(240,v3,w3,'v₃');
+      // Sum bar
+      ctx.fillStyle='#1b5e20';ctx.font='13px sans-serif';
+      ctx.fillText('= v_O (출력)',420,by-bh-10);
+      bar(420,out,undefined,'v_O');
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`v_O = −(w₁v₁ + w₂v₂ + w₃v₃) = ${out.toFixed(3)} V`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const eqWeights=Math.abs(w1-w2)<0.01&&Math.abs(w2-w3)<0.01;
+      ctx.fillText(eqWeights?'가중치 같음 → 단순 합산기 (반전)':'가중치 다름 → 각 입력에 다른 비중',40,52);
+    }
+    ['sV1i','sV2i','sV3i','sR1i','sR2i','sR3i','sRfi'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

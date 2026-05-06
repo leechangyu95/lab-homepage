@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 옴니휠 vs 자동차 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 옴니휠 vs 자동차</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/02-dynamics.html">Lecture 2. 운동학과 동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 옴니휠 vs 자동차</h4>
+    <p>두 로봇에 같은 속도 명령 $(v_x, v_y, \omega)$를 보냅니다. 옴니휠은 본체 좌표의 모든 방향으로 자유롭게 움직이지만, 자동차는 차체가 향한 방향으로만 갈 수 있어 $v_y$ 명령은 무시됩니다.
+    "옆으로 이동" 명령($v_y$만 키우기)을 시도해보고, 자동차로 평행주차를 흉내내보세요.</p>
+    <canvas id="holC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>전진 v_x <span class="val" id="hvxV">1.5</span><input type="range" id="hvx" min="-3" max="3" step="0.1" value="1.5"></label>
+      <label>좌우 v_y <span class="val" id="hvyV">0</span><input type="range" id="hvy" min="-3" max="3" step="0.1" value="0"></label>
+      <label>회전 ω <span class="val" id="hwV">0</span><input type="range" id="hw" min="-2" max="2" step="0.05" value="0"></label>
+      <button id="holReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('holC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const home=()=>{omni={x:160,y:170,th:0};car={x:480,y:170,th:0};oTrail=[];cTrail=[];};
+    let omni,car,oTrail,cTrail;home();
+    const upd=()=>['hvx','hvy','hw'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    sl('holReset').onclick=home;
+    ['hvx','hvy','hw'].forEach(k=>sl(k).oninput=upd);upd();
+    function step(s,vx,vy,w,dt){
+      const cs=Math.cos(s.th),sn=Math.sin(s.th);
+      s.x+=(cs*vx-sn*vy)*dt*40;
+      s.y+=(sn*vx+cs*vy)*dt*40;
+      s.th+=w*dt;
+    }
+    function inB(s){return s.x>10&&s.x<c.width-10&&s.y>10&&s.y<c.height-10;}
+    function drawRobot(s,trail,color,label,isOmni){
+      x.strokeStyle=color+'80';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.stroke();
+      x.save();x.translate(s.x,s.y);x.rotate(s.th);
+      if(isOmni){x.fillStyle=color;x.beginPath();x.arc(0,0,16,0,Math.PI*2);x.fill();}
+      else{x.fillStyle=color;x.fillRect(-18,-11,36,22);}
+      x.fillStyle='#fff';x.beginPath();x.moveTo(11,0);x.lineTo(2,-6);x.lineTo(2,6);x.closePath();x.fill();
+      x.restore();
+      x.fillStyle='#1a1a1a';x.font='bold 13px sans-serif';x.textAlign='center';x.fillText(label,s.x,28);
+    }
+    function loop(){
+      const vx=+sl('hvx').value,vy=+sl('hvy').value,w=+sl('hw').value,dt=0.04;
+      step(omni,vx,vy,w,dt);
+      step(car,vx,0,w,dt);
+      if(!inB(omni)){omni={x:160,y:170,th:0};oTrail=[];}
+      if(!inB(car)){car={x:480,y:170,th:0};cTrail=[];}
+      oTrail.push([omni.x,omni.y]);if(oTrail.length>250)oTrail.shift();
+      cTrail.push([car.x,car.y]);if(cTrail.length>250)cTrail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(c.width/2,40);x.lineTo(c.width/2,c.height-20);x.stroke();
+      drawRobot(omni,oTrail,'#0b5fff','옴니휠 — 모든 방향 자유',true);
+      drawRobot(car,cTrail,'#c62828','자동차 — 옆으로 못 감',false);
+      x.fillStyle='#666';x.font='11px sans-serif';x.textAlign='left';
+      const ignored=Math.abs(vy)>0.01?'⚠ 자동차에서는 v_y='+vy.toFixed(1)+' 가 무시됨':'';
+      x.fillText(ignored,c.width/2+12,c.height-12);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 가상접지의 직관 — 부궤환이 v_−를 v_+에 맞추는 과정 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 가상접지의 직관 — 부궤환이 v_−를 v_+에 맞추는 과정</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/11-opamp.html">Week 11. 아날로그 기초·연산증폭기 — 두 줄 규칙으로 풀리는 마법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 가상접지의 직관 — 부궤환이 v_−를 v_+에 맞추는 과정</h4>
+    <p>왼쪽 (+) 입력 $v_+$를 0V로 묶어두고, $v_-$가 출력 $v_o$의 영향을 받아 어떻게 0V로 수렴하는지 봅시다. 출력은 $v_o = A(v_+ - v_-)$로 정해지고, 그 출력이 다시 $R_2$를 통해 $v_-$를 끌어당깁니다. 정상상태에서는 $v_- \approx v_+ = 0$이 되고 — 이것이 "가상접지"입니다. 슬라이더로 입력 $v_S$나 이득 $A$를 바꿔보면 항상 같은 결과로 수렴해요.</p>
+    <canvas id="vgCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>입력 v_S <span class="val" id="vgVsV">1.0</span> V<input type="range" id="vgVs" min="-3" max="3" step="0.1" value="1"></label>
+      <label>R₁ <span class="val" id="vgR1V">10</span> kΩ<input type="range" id="vgR1" min="1" max="100" step="1" value="10"></label>
+      <label>R₂ <span class="val" id="vgR2V">100</span> kΩ<input type="range" id="vgR2" min="1" max="500" step="5" value="100"></label>
+      <label>이득 A <span class="val" id="vgAV">10000</span><input type="range" id="vgA" min="100" max="100000" step="100" value="10000"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vgCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Vsat=13;
+    function draw(){
+      const Vs=+document.getElementById('vgVs').value;
+      const R1=+document.getElementById('vgR1').value;
+      const R2=+document.getElementById('vgR2').value;
+      const A=+document.getElementById('vgA').value;
+      document.getElementById('vgVsV').textContent=Vs.toFixed(1);
+      document.getElementById('vgR1V').textContent=R1;
+      document.getElementById('vgR2V').textContent=R2;
+      document.getElementById('vgAV').textContent=A;
+      // Solve: v_- = (Vs*R2 + Vo*R1)/(R1+R2),  Vo = A*(0 - v_-)
+      // → v_- = (Vs*R2 + A*(-v_-)*R1)/(R1+R2)
+      // → v_- *(1 + A*R1/(R1+R2)) = Vs*R2/(R1+R2)
+      const denom=1+A*R1/(R1+R2);
+      let vMinus=Vs*R2/(R1+R2)/denom;
+      let Vo=A*(0-vMinus);
+      Vo=Math.max(-Vsat,Math.min(Vsat,Vo));
+      // Ideal limit
+      const VoIdeal=-(R2/R1)*Vs;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Draw schematic
+      // Source
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(40,180);ctx.lineTo(40,140);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';ctx.fillText(`v_S=${Vs.toFixed(2)}V`,10,135);
+      // R1
+      ctx.beginPath();ctx.moveTo(40,140);ctx.lineTo(120,140);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(120,140);ctx.lineTo(220,140);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R₁=${R1}k`,140,128);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      // (-) input node — v-
+      ctx.beginPath();ctx.moveTo(220,140);ctx.lineTo(280,140);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.font='12px sans-serif';
+      ctx.fillText(`v_− = ${vMinus.toExponential(2)} V ≈ 0`,225,128);
+      // (+) input — grounded
+      ctx.beginPath();ctx.moveTo(220,200);ctx.lineTo(280,200);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(225,210);ctx.lineTo(245,210);ctx.moveTo(228,215);ctx.lineTo(242,215);ctx.stroke();
+      ctx.fillText('v_+ = 0',230,196);
+      // Op-amp triangle
+      ctx.fillStyle='#fff';
+      ctx.beginPath();ctx.moveTo(280,110);ctx.lineTo(280,230);ctx.lineTo(380,170);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#222';ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.fillText('−',290,144);
+      ctx.fillStyle='#c62828';ctx.fillText('+',290,205);
+      // Output
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(380,170);ctx.lineTo(450,170);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.font='13px sans-serif';
+      ctx.fillText(`v_O = ${Vo.toFixed(3)} V`,395,160);
+      // Feedback R2
+      ctx.beginPath();ctx.moveTo(450,170);ctx.lineTo(450,90);ctx.lineTo(220,90);ctx.lineTo(220,140);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(280,90);ctx.lineTo(380,90);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';ctx.fillText(`R₂=${R2}k`,300,82);
+      // Conclusion
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`이상적 결과: v_O = −(R₂/R₁)v_S = ${VoIdeal.toFixed(3)} V`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const err=Math.abs(Vo-VoIdeal);
+      ctx.fillText(`A=${A} → 오차 ${err.toExponential(2)} V (A→∞이면 v_−→0, v_O→이상값)`,40,52);
+      ctx.fillText(`핵심: v_+=0이 v_−를 0으로 끌어당김 — "가상접지"`,40,H-15);
+    }
+    ['vgVs','vgR1','vgR2','vgA'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 경사하강법 자동 학습 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 경사하강법 자동 학습</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/03-regression-1.html">Week 3. 회귀 1: 선형회귀와 경사하강법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 경사하강법 자동 학습</h4>
+    <p>학습률 $\alpha$를 설정하고 "시작"을 누르면 컴퓨터가 자동으로 직선을 맞춥니다. 너무 크게 하면 발산하고, 너무 작게 하면 한참 걸립니다.</p>
+    <canvas id="gdCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>학습률 α <span class="val" id="lrV">0.02</span><input type="range" id="lr" min="0.001" max="0.1" step="0.001" value="0.02"></label>
+      <button id="gdStart">시작</button>
+      <button id="gdReset">리셋</button>
+      <span id="gdInfo" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gdCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[];
+    for(let i=0;i<30;i++){const x=Math.random()*8;data.push({x,y:1.8*x+0.5+(Math.random()-0.5)*2.5});}
+    const xmin=-1,xmax=9,ymin=-3,ymax=18;
+    const toPx=x=>40+(x-xmin)/(xmax-xmin)*(W-60);
+    const toPy=y=>H-30-(y-ymin)/(ymax-ymin)*(H-60);
+    let w=0,b=0,running=false,step=0,raf=null;
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,10);ctx.lineTo(40,H-30);ctx.stroke();
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(w*xmin+b));ctx.lineTo(toPx(xmax),toPy(w*xmax+b));ctx.stroke();
+      data.forEach(d=>{ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(toPx(d.x),toPy(d.y),4,0,Math.PI*2);ctx.fill();});
+      let J=0;data.forEach(d=>{const e=w*d.x+b-d.y;J+=e*e;});J/=data.length;
+      document.getElementById('gdInfo').textContent=`step ${step}  w=${w.toFixed(3)}  b=${b.toFixed(3)}  J=${J.toFixed(3)}`;
+    }
+    function tick(){
+      const lr=+document.getElementById('lr').value;
+      let dw=0,db=0;
+      data.forEach(d=>{const e=w*d.x+b-d.y;dw+=e*d.x;db+=e;});
+      dw*=2/data.length;db*=2/data.length;
+      w-=lr*dw;b-=lr*db;step++;
+      draw();
+      if(running&&step<400)raf=requestAnimationFrame(tick);else running=false;
+    }
+    document.getElementById('lr').addEventListener('input',()=>{document.getElementById('lrV').textContent=(+document.getElementById('lr').value).toFixed(3);});
+    document.getElementById('gdStart').onclick=()=>{if(!running){running=true;tick();}};
+    document.getElementById('gdReset').onclick=()=>{running=false;cancelAnimationFrame(raf);w=0;b=0;step=0;draw();};
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

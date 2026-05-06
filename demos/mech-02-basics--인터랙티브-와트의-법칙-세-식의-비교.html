@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 와트의 법칙 — 세 식의 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 와트의 법칙 — 세 식의 비교</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/02-basics.html">Week 2. 전기회로 기초</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 와트의 법칙 — 세 식의 비교</h4>
+    <p>전압원/전류원에 따라 같은 "$R$ 두 배"가 정반대 결과를 줍니다. <strong>전압 고정</strong>이면 $P = V^2/R$로 저항이 늘면 전력 감소, <strong>전류 고정</strong>이면 $P = I^2 R$로 저항이 늘면 전력 증가.</p>
+    <canvas id="wattCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>모드
+        <select id="wattMode"><option value="V">전압 고정 (5V)</option><option value="I">전류 고정 (1A)</option></select>
+      </label>
+      <label>저항 R <span class="val" id="wattRV">5</span> Ω<input type="range" id="wattR" min="1" max="20" step="0.5" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('wattCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Rmax=20;
+    function draw(){
+      const mode=document.getElementById('wattMode').value;
+      const R=+document.getElementById('wattR').value;
+      document.getElementById('wattRV').textContent=R.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const fix=(mode==='V')?5:1;
+      const Pmax=(mode==='V')?(fix*fix/1):(fix*fix*Rmax);
+      function x(r){return 60+(r/Rmax)*(W-90);}
+      function y(p){return H-50-(p/Pmax)*(H-90);}
+      ctx.strokeStyle='#ddd';
+      for(let r=0;r<=Rmax;r+=2){ctx.beginPath();ctx.moveTo(x(r),y(0));ctx.lineTo(x(r),y(Pmax));ctx.stroke();}
+      ctx.strokeStyle='#666';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Rmax),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(0),y(Pmax));ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      for(let r=0.5;r<=Rmax;r+=0.2){
+        const p=(mode==='V')?(fix*fix/r):(fix*fix*r);
+        if(r<=0.5)ctx.moveTo(x(r),y(p));
+        else ctx.lineTo(x(r),y(p));
+      }
+      ctx.stroke();
+      const P=(mode==='V')?(fix*fix/R):(fix*fix*R);
+      const I=(mode==='V')?(fix/R):fix;
+      const V=(mode==='V')?fix:(fix*R);
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(x(R),y(P),7,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('저항 R [Ω]',W/2-30,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('전력 P [W]',-25,0);ctx.restore();
+      ctx.fillText(`V = ${V.toFixed(2)} V, I = ${I.toFixed(2)} A, P = ${P.toFixed(2)} W`,60,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(mode==='V'?'식: P = V²/R (R↑ → P↓)':'식: P = I²R (R↑ → P↑)',60,50);
+    }
+    document.getElementById('wattMode').addEventListener('change',draw);
+    document.getElementById('wattR').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

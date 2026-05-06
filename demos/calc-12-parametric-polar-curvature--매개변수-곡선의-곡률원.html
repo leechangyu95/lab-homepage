@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 매개변수 곡선의 곡률원 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 매개변수 곡선의 곡률원</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/12-parametric-polar-curvature.html">Week 12. 매개변수·극좌표·곡률</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 매개변수 곡선의 곡률원</h4>
+    <p>곡선을 골라 매개변수 $t$ 슬라이더를 움직여 보세요. 그 점에서 가장 잘 맞는 원(접촉원, 흰색)이 함께 그려지고, 곡률 $\kappa$ 와 곡률 반경 $R$ 이 표시됩니다. 곡선이 직선에 가까울수록 원이 커집니다.</p>
+    <canvas id="cv" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>곡선
+        <select id="cvC">
+          <option value="parab" selected>포물선: y = x²/2</option>
+          <option value="ellipse">타원: 매개변수 (2cos t, sin t)</option>
+          <option value="cyc">사이클로이드</option>
+          <option value="spiral">나선: r = 0.3θ</option>
+        </select>
+      </label>
+      <label>매개변수 t <span class="val" id="cvTV">0.50</span><input type="range" id="cvT" min="-3.14" max="6.28" step="0.02" value="0.5"></label>
+    </div>
+    <p id="cvInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cv'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function pt(t){
+      const m=document.getElementById('cvC').value;
+      if(m==='parab')return{x:t,y:0.5*t*t};
+      if(m==='ellipse')return{x:2*Math.cos(t),y:Math.sin(t)};
+      if(m==='cyc')return{x:t-Math.sin(t),y:1-Math.cos(t)};
+      const r=0.3*t;return{x:r*Math.cos(t),y:r*Math.sin(t)};
+    }
+    function deriv(t){
+      const dt=0.001;const a=pt(t-dt),b=pt(t+dt),c0=pt(t);
+      const x1=(b.x-a.x)/(2*dt),y1=(b.y-a.y)/(2*dt);
+      const x2=(b.x-2*c0.x+a.x)/(dt*dt),y2=(b.y-2*c0.y+a.y)/(dt*dt);
+      return{x1,y1,x2,y2};
+    }
+    function loop(){
+      const t=+document.getElementById('cvT').value;
+      document.getElementById('cvTV').textContent=t.toFixed(2);
+      const xR=[-3.5,5],yR=[-2.5,3];
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // curve
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let s=-3.14;s<=6.28;s+=0.02){
+        const p=pt(s);
+        if(p.x<xR[0]||p.x>xR[1]||p.y<yR[0]||p.y>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(p.x),py(p.y));first=false;}else x.lineTo(px(p.x),py(p.y));
+      }
+      x.stroke();
+      // current point
+      const p=pt(t);
+      const D=deriv(t);
+      // tangent direction
+      const sp=Math.sqrt(D.x1*D.x1+D.y1*D.y1);
+      const tx=D.x1/sp,ty=D.y1/sp;
+      // normal direction (rotate 90 left)
+      const nx=-ty,ny=tx;
+      // curvature
+      const kappa=(D.x1*D.y2 - D.y1*D.x2)/Math.pow(sp,3);
+      const R=1/Math.abs(kappa);
+      // center of osculating circle
+      const sgn=kappa>=0?1:-1;
+      const cx=p.x + sgn*R*nx;
+      const cy=p.y + sgn*R*ny;
+      // draw osculating circle
+      x.strokeStyle='rgba(255,255,255,0.95)';x.lineWidth=2;
+      // radius in canvas coords (use x scale)
+      const rPx=R*(W-M.l-M.r)/(xR[1]-xR[0]);
+      x.beginPath();x.arc(px(cx),py(cy),rPx,0,Math.PI*2);x.stroke();
+      // tangent line
+      x.strokeStyle='#1b5e20';x.lineWidth=1.5;x.setLineDash([5,4]);
+      x.beginPath();x.moveTo(px(p.x-tx*2),py(p.y-ty*2));x.lineTo(px(p.x+tx*2),py(p.y+ty*2));x.stroke();x.setLineDash([]);
+      // point
+      x.fillStyle='#c62828';x.beginPath();x.arc(px(p.x),py(p.y),5,0,Math.PI*2);x.fill();
+      // info
+      document.getElementById('cvInfo').textContent='점 ('+p.x.toFixed(2)+', '+p.y.toFixed(2)+')   ·   κ ≈ '+kappa.toFixed(3)+'   ·   R ≈ '+(isFinite(R)?R.toFixed(3):'∞');
+      requestAnimationFrame(()=>setTimeout(loop,40));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

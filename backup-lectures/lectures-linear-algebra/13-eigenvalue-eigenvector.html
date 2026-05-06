@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 13. 고윳값·고유벡터 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html" class="active">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../linear-algebra.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 13. 고윳값·고유벡터</h1>
+  <p class="lead">거의 모든 변환에는 "방향이 안 바뀌는 특별한 벡터" 가 있다. 그 본질적 축을 찾는 도구가 고유값·고유벡터.</p>
+
+  <h2>🔁 복습</h2>
+
+  <h3>행렬 = 변환</h3>
+  <ul>
+    <li>회전·반사·스케일·전단 등이 모두 행렬 한 개로 표현됨.</li>
+    <li>변환은 보통 벡터의 <strong>방향과 크기 모두</strong>를 바꿈.</li>
+  </ul>
+
+  <h3>그런데 — 어떤 변환이든, 거의 모든 경우에</h3>
+  <ul>
+    <li>"<strong>방향이 안 바뀌는 특별한 벡터</strong>" 가 존재함.</li>
+    <li>그 벡터 위에서는 변환이 단순한 "$c$ 배 늘이기" 처럼 동작함.</li>
+    <li>그 특별한 벡터 = <strong>고유벡터</strong>, 그 배율 $c$ = <strong>고윳값</strong>.</li>
+  </ul>
+
+<div class="tip">고윳값·고유벡터는 변환의 "<b>본질적인 축</b>" 을 찾는 도구. 진동·안정성·압축 등 거의 모든 응용의 핵심 개념입니다.</div>
+
+
+  <h2>🎯 오늘의 학습 목표</h2>
+
+  <h3>🔹 <strong>고윳값·고유벡터</strong>의 정의를 이해한다 ($A\mathbf{v} = \lambda\mathbf{v}$)</h3>
+
+  <h3>🔸 <strong>특성다항식</strong> $\det(A - \lambda I) = 0$ 으로 고윳값을 구할 수 있다</h3>
+
+  <h3>🔸 각 고윳값에 대한 고유벡터를 영공간으로 구할 수 있다</h3>
+
+  <h3>🔸 $2\times 2$, $3\times 3$ 행렬에 대해 손계산을 수행한다</h3>
+
+  <h3>🔸 기하적 의미와 응용(회전축·진동 모드)을 직관적으로 설명한다</h3>
+
+
+  <h2>⭐ 정의</h2>
+
+  <h3>정의</h3>
+  <p>정사각행렬 $A$ 와 영이 아닌 벡터 $\mathbf{v}$ 가 어떤 스칼라 $\lambda$ 에 대해</p>
+  <p>$$A\mathbf{v} = \lambda\mathbf{v}$$</p>
+  <p>를 만족하면, $\lambda$ 는 $A$ 의 <strong>고윳값(eigenvalue)</strong>, $\mathbf{v}$ 는 그에 대응하는 <strong>고유벡터(eigenvector)</strong>.</p>
+
+  <h3>그림으로</h3>
+  <ul>
+    <li>$A$ 가 일반적으로는 벡터를 회전·왜곡함.</li>
+    <li>그런데 <strong>고유벡터 방향</strong>으로는 단순히 $\lambda$ 배 늘리거나 줄이기만 함 (또는 $\lambda < 0$ 이면 뒤집기).</li>
+  </ul>
+
+  <h3>주의</h3>
+  <ul>
+    <li>고유벡터는 <strong>영벡터가 아닌 것</strong>으로 약속 (영벡터는 항상 위 식을 만족하지만 의미 없음).</li>
+    <li>$\mathbf{v}$ 가 고유벡터면 $c\mathbf{v}$ 도 고유벡터 (같은 방향) — <strong>방향만 의미</strong>.</li>
+  </ul>
+
+
+  <h2>🖼️ 그림 — 고유벡터 vs 일반 벡터</h2>
+
+<svg width="900" height="280" viewBox="0 0 900 280" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <!-- before -->
+  <text x="200" y="30" font-size="15" fill="#333" font-weight="bold" text-anchor="middle">변환 전</text>
+  <line x1="60" y1="200" x2="380" y2="200" stroke="#ccc"/>
+  <line x1="200" y1="60" x2="200" y2="240" stroke="#ccc"/>
+  <line x1="200" y1="200" x2="320" y2="120" stroke="#1677ff" stroke-width="3"/>
+  <polygon points="320,120 309,123 313,132" fill="#1677ff"/>
+  <text x="270" y="150" font-size="14" fill="#1677ff" font-weight="bold">v (일반)</text>
+  <line x1="200" y1="200" x2="280" y2="200" stroke="#cf1322" stroke-width="3"/>
+  <polygon points="280,200 268,196 268,204" fill="#cf1322"/>
+  <text x="230" y="222" font-size="14" fill="#cf1322" font-weight="bold">e (고유)</text>
+  <!-- arrow -->
+  <line x1="430" y1="150" x2="500" y2="150" stroke="#333" stroke-width="2"/>
+  <polygon points="500,150 488,145 488,155" fill="#333"/>
+  <text x="465" y="140" font-size="13" fill="#333">A 적용</text>
+  <!-- after -->
+  <text x="700" y="30" font-size="15" fill="#333" font-weight="bold" text-anchor="middle">변환 후</text>
+  <line x1="540" y1="200" x2="860" y2="200" stroke="#ccc"/>
+  <line x1="700" y1="60" x2="700" y2="240" stroke="#ccc"/>
+  <line x1="700" y1="200" x2="780" y2="80" stroke="#1677ff" stroke-width="3"/>
+  <polygon points="780,80 769,84 773,93" fill="#1677ff"/>
+  <text x="780" y="125" font-size="14" fill="#1677ff" font-weight="bold">Av (방향 바뀜)</text>
+  <line x1="700" y1="200" x2="860" y2="200" stroke="#cf1322" stroke-width="3"/>
+  <polygon points="860,200 848,196 848,204" fill="#cf1322"/>
+  <text x="780" y="222" font-size="14" fill="#cf1322" font-weight="bold">Ae = 2e (방향 동일!)</text>
+</svg>
+
+<div class="demo">
+    <h4>🎮 인터랙티브: 고유벡터 직접 찾아보기</h4>
+    <p>회전+스케일 행렬 $A$ 가 단위원 위 모든 점을 어디로 보내는지 보여줍니다.
+       파란 입력 화살표를 마우스로 끌어 보세요. 입력과 출력이 <strong>같은 직선 위에 있을 때</strong>
+       (즉, $A\mathbf{v}$ 가 $\mathbf{v}$ 와 평행) 그 방향이 바로 <strong>고유벡터</strong>입니다.
+       녹색 점선은 진짜 고유벡터의 방향. 슬라이더로 $A$ 의 원소를 바꿔도 보세요.</p>
+    <canvas id="eigDemo" width="780" height="380"></canvas>
+    <div class="controls">
+      <label>a₁₁ <span class="val" id="ea11V">2</span><input type="range" id="ea11" min="-3" max="3" step="0.1" value="2"></label>
+      <label>a₁₂ <span class="val" id="ea12V">1</span><input type="range" id="ea12" min="-3" max="3" step="0.1" value="1"></label>
+      <label>a₂₁ <span class="val" id="ea21V">0</span><input type="range" id="ea21" min="-3" max="3" step="0.1" value="0"></label>
+      <label>a₂₂ <span class="val" id="ea22V">3</span><input type="range" id="ea22" min="-3" max="3" step="0.1" value="3"></label>
+    </div>
+    <p id="eigInfo" style="margin-top:8px;font-size:13px;font-family:Consolas,monospace"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('eigDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=200,oy=190,scale=55;
+    let v={x:1,y:0.5};
+    let dragging=false;
+    function getMouse(e){const r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)};}
+    function px(p){return [ox+p.x*scale,oy-p.y*scale];}
+    function getA(){return [[+document.getElementById('ea11').value,+document.getElementById('ea12').value],
+                            [+document.getElementById('ea21').value,+document.getElementById('ea22').value]];}
+    function arrow(p,col,lw=3){const [x,y]=px(p);
+      ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x,y);ctx.stroke();
+      const ang=Math.atan2(y-oy,x-ox);
+      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y);
+      ctx.lineTo(x-12*Math.cos(ang-0.4),y-12*Math.sin(ang-0.4));
+      ctx.lineTo(x-12*Math.cos(ang+0.4),y-12*Math.sin(ang+0.4));ctx.closePath();ctx.fill();}
+    function eigenvalues(A){
+      const a=A[0][0],b=A[0][1],c2=A[1][0],d=A[1][1];
+      const tr=a+d,det=a*d-b*c2;
+      const disc=tr*tr-4*det;
+      if(disc<0) return null;
+      const s=Math.sqrt(disc);return [(tr+s)/2,(tr-s)/2];
+    }
+    function eigenvectors(A,evs){
+      // for each eigenvalue, solve (A - lambda I) v = 0
+      return evs.map(lam=>{
+        const a=A[0][0]-lam,b=A[0][1],c2=A[1][0],d=A[1][1]-lam;
+        // null space: pick v from one row
+        let v;
+        if(Math.abs(b)>1e-9||Math.abs(a)>1e-9) v={x:b,y:-a};
+        else v={x:d,y:-c2};
+        const n=Math.hypot(v.x,v.y);
+        return n>1e-9?{x:v.x/n,y:v.y/n}:null;
+      });
+    }
+    function draw(){
+      ['ea11','ea12','ea21','ea22'].forEach(k=>document.getElementById(k+'V').textContent=(+document.getElementById(k).value).toFixed(1));
+      const A=getA();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let i=-4;i<=4;i++){if(ox+i*scale>5&&ox+i*scale<400){ctx.beginPath();ctx.moveTo(ox+i*scale,10);ctx.lineTo(ox+i*scale,H-10);ctx.stroke();}}
+      for(let i=-4;i<=4;i++){if(oy+i*scale>10&&oy+i*scale<H-10){ctx.beginPath();ctx.moveTo(20,oy+i*scale);ctx.lineTo(380,oy+i*scale);ctx.stroke();}}
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(380,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,10);ctx.lineTo(ox,H-10);ctx.stroke();
+      // eigenvector lines (faint dashed green)
+      const evs=eigenvalues(A);
+      if(evs){
+        const eigvecs=eigenvectors(A,evs);
+        ctx.strokeStyle='#2e7d32';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+        eigvecs.forEach(ev=>{if(!ev)return;
+          ctx.beginPath();ctx.moveTo(ox-ev.x*200,oy+ev.y*200);ctx.lineTo(ox+ev.x*200,oy-ev.y*200);ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      }
+      // input v (blue) and Av (orange)
+      const Av={x:A[0][0]*v.x+A[0][1]*v.y,y:A[1][0]*v.x+A[1][1]*v.y};
+      arrow(Av,'#fa8c16',3.5);
+      arrow(v,'#1677ff',3);
+      // labels
+      const [vx,vy]=px(v),[avx,avy]=px(Av);
+      ctx.fillStyle='#1677ff';ctx.font='bold 14px sans-serif';ctx.fillText('v (입력)',vx+8,vy-5);
+      ctx.fillStyle='#fa8c16';ctx.fillText('Av',avx+8,avy-5);
+      // angle between v and Av
+      const cosAng=(v.x*Av.x+v.y*Av.y)/(Math.hypot(v.x,v.y)*Math.hypot(Av.x,Av.y));
+      const isAligned=Math.abs(Math.abs(cosAng)-1)<0.02;
+      // info panel
+      ctx.fillStyle='#0b5fff';ctx.font='bold 15px sans-serif';
+      ctx.fillText('현재 입력 v 와 출력 Av',420,40);
+      ctx.fillStyle='#222';ctx.font='13px Consolas,monospace';
+      ctx.fillText(`v  = (${v.x.toFixed(2)}, ${v.y.toFixed(2)})`,420,65);
+      ctx.fillText(`Av = (${Av.x.toFixed(2)}, ${Av.y.toFixed(2)})`,420,85);
+      ctx.fillText(`방향 일치 정도 (|cos|): ${Math.abs(cosAng).toFixed(3)}`,420,108);
+      ctx.fillStyle=isAligned?'#2e7d32':'#cf1322';ctx.font='bold 13px sans-serif';
+      ctx.fillText(isAligned?'✓ v 가 고유벡터에 거의 정렬됨':'✗ 아직 고유벡터 아님 — 입력 화살표를 끌어 평행하게 만들어 보세요',420,130);
+      // eigenvalues panel
+      ctx.fillStyle='#0b5fff';ctx.font='bold 15px sans-serif';
+      ctx.fillText('이 행렬 A 의 고윳값',420,170);
+      ctx.fillStyle='#222';ctx.font='13px Consolas,monospace';
+      ctx.fillText(`A = [${A[0][0].toFixed(1)}, ${A[0][1].toFixed(1)}]`,420,195);
+      ctx.fillText(`    [${A[1][0].toFixed(1)}, ${A[1][1].toFixed(1)}]`,420,213);
+      const tr=A[0][0]+A[1][1],det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+      ctx.fillText(`tr A = ${tr.toFixed(2)},  det A = ${det.toFixed(2)}`,420,235);
+      ctx.fillText(`특성식: λ² − ${tr.toFixed(2)}λ + ${det.toFixed(2)} = 0`,420,255);
+      if(evs){
+        ctx.fillStyle='#2e7d32';ctx.fillText(`λ₁ = ${evs[0].toFixed(3)},  λ₂ = ${evs[1].toFixed(3)}`,420,278);
+        ctx.fillStyle='#666';ctx.fillText('녹색 점선 = 고유벡터의 방향',420,300);
+        ctx.fillStyle='#666';ctx.fillText('확인: tr = λ₁+λ₂, det = λ₁·λ₂',420,320);
+      } else {
+        ctx.fillStyle='#cf1322';ctx.fillText('실수 고윳값 없음 (회전 효과)',420,278);
+      }
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('● 파란 화살표 끝점을 마우스로 끌어 v 를 바꿔 보세요',30,H-10);
+    }
+    c.addEventListener('mousedown',e=>{
+      const m=getMouse(e);const [vx,vy]=px(v);
+      if((m.x-vx)**2+(m.y-vy)**2<400) dragging=true;
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!dragging) return;
+      const m=getMouse(e);v={x:(m.x-ox)/scale,y:(oy-m.y)/scale};draw();
+    });
+    window.addEventListener('mouseup',()=>dragging=false);
+    ['ea11','ea12','ea21','ea22'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+<div class="tip">
+
+🌱 <b>핵심</b>: <span style="color:#cf1322">빨간 화살표</span>는 변환 후에도 같은 직선 위에 있다 → "고유벡터". 길이만 2배 늘어남 → 고윳값 $\lambda = 2$.
+
+</div>
+
+
+  <h2>🔢 고윳값 찾기 — 특성다항식</h2>
+
+  <h3>식 변형</h3>
+  <p>$$A\mathbf{v} = \lambda\mathbf{v} \;\Longleftrightarrow\; A\mathbf{v} - \lambda\mathbf{v} = \mathbf{0} \;\Longleftrightarrow\; (A - \lambda I)\mathbf{v} = \mathbf{0}$$</p>
+  <p>(중간 단계: $\lambda \mathbf{v}$ 를 $\lambda I \mathbf{v}$ 로 적어서 인수분해)</p>
+
+  <h3>🌱 왜 $\det(A - \lambda I) = 0$ 이 핵심 조건인가?</h3>
+  <p>위 식은 $\mathbf{v} \neq \mathbf{0}$ 인 해를 찾는 문제 = "$(A - \lambda I)$ 의 <strong>영공간</strong>이 영벡터 외에 다른 점을 갖는다" 와 같습니다.</p>
+  <ul>
+    <li>$A - \lambda I$ 가 <strong>가역</strong>이라면? → $\mathbf{v} = (A-\lambda I)^{-1} \mathbf{0} = \mathbf{0}$ 만 해. 고유벡터 후보 없음.</li>
+    <li>$A - \lambda I$ 가 <strong>특이</strong>라면? → 영공간이 0차원보다 커짐 → 영이 아닌 $\mathbf{v}$ 존재 → 고유벡터 등장!</li>
+  </ul>
+  <p>"특이"의 판정은 7주차에 본 것처럼 <strong>$\det = 0$</strong>. 그래서 $\det(A - \lambda I) = 0$ 을 만족하는 $\lambda$ 만이
+     고윳값이 됩니다. 이 사슬을 머릿속에 넣어두면 특성방정식이 외울 공식이 아니라 자연스러운 결론으로 보입니다.</p>
+
+  <p>영이 아닌 $\mathbf{v}$ 가 존재할 조건:</p>
+  <p>$$\boxed{\det(A - \lambda I) = 0}$$</p>
+
+  <h3>특성다항식 (characteristic polynomial)</h3>
+  <ul>
+    <li>$\det(A - \lambda I)$ 는 $\lambda$ 에 대한 $n$ 차 다항식.</li>
+    <li>이 다항식의 근(roots) 이 곧 $A$ 의 고윳값들.</li>
+    <li>$n \times n$ 행렬은 (중복 포함) <strong>고윳값을 정확히 $n$ 개</strong> 갖는다 (복소수 포함).</li>
+  </ul>
+
+
+  <h2>🔢 절차 — 손계산 흐름</h2>
+
+  <h3>1단계 : 고윳값 찾기</h3>
+  <ul>
+    <li>$\det(A - \lambda I) = 0$ 을 $\lambda$ 의 다항식으로 풀어낸다.</li>
+  </ul>
+
+  <h3>2단계 : 각 고윳값에 대한 고유벡터 찾기</h3>
+  <ul>
+    <li>$\lambda$ 를 대입한 $(A - \lambda I)\mathbf{v} = \mathbf{0}$ 의 영공간을 가우스 소거로 구한다.</li>
+    <li>영공간의 기저 = 고유벡터.</li>
+  </ul>
+
+  <h3>3단계 : 검산</h3>
+  <ul>
+    <li>$A\mathbf{v} = \lambda\mathbf{v}$ 가 진짜 성립하는지 확인.</li>
+  </ul>
+
+<div class="warn">고유벡터는 <b>영벡터</b>가 아니어야 합니다. 영공간을 풀고 나서 0이 아닌 해를 골라 쓰세요.</div>
+
+
+  <h2>🧮 예제 1 — $2\times 2$</h2>
+
+  <h3>행렬</h3>
+  <p>$$A = \begin{pmatrix} 4 & 1 \\ 2 & 3 \end{pmatrix}$$</p>
+
+  <h3>Step 1 — 특성다항식</h3>
+  <p>$$\det\begin{pmatrix} 4-\lambda & 1 \\ 2 & 3-\lambda \end{pmatrix} = (4-\lambda)(3-\lambda) - 2 = \lambda^2 - 7\lambda + 10$$</p>
+
+  <p>$\lambda^2 - 7\lambda + 10 = 0 \Rightarrow (\lambda - 2)(\lambda - 5) = 0$</p>
+
+  <p>→ <strong>고윳값</strong> $\lambda_1 = 2,\ \lambda_2 = 5$</p>
+
+  <h3>Step 2 — 고유벡터 ($\lambda = 5$)</h3>
+  <p>$(A - 5I)\mathbf{v} = \mathbf{0}$ → $\begin{pmatrix} -1 & 1 \\ 2 & -2 \end{pmatrix}\binom{x}{y} = \binom{0}{0}$ → $-x + y = 0$ → $y = x$. 기저: $\binom{1}{1}$.</p>
+
+  <h3>Step 2 — 고유벡터 ($\lambda = 2$)</h3>
+  <p>$(A - 2I)\mathbf{v} = \mathbf{0}$ → $\begin{pmatrix} 2 & 1 \\ 2 & 1 \end{pmatrix}\binom{x}{y} = \binom{0}{0}$ → $2x + y = 0$ → $y = -2x$. 기저: $\binom{1}{-2}$.</p>
+
+  <h3>검산</h3>
+  <p>$A\binom{1}{1} = \binom{5}{5} = 5\binom{1}{1}$ ✓ / $A\binom{1}{-2} = \binom{2}{-4} = 2\binom{1}{-2}$ ✓</p>
+
+
+  <h2>🧮 예제 2 — $3\times 3$ (대각행렬)</h2>
+
+  <h3>행렬</h3>
+  <p>$$D = \begin{pmatrix} 3 & 0 & 0 \\ 0 & -1 & 0 \\ 0 & 0 & 5 \end{pmatrix}$$</p>
+
+  <h3>특성다항식</h3>
+  <p>$\det(D - \lambda I) = (3-\lambda)(-1-\lambda)(5-\lambda) = 0$ → 고윳값 $\lambda = 3,\ -1,\ 5$.</p>
+
+  <h3>고유벡터</h3>
+  <ul>
+    <li>$\lambda = 3$ → $(1, 0, 0)$</li>
+    <li>$\lambda = -1$ → $(0, 1, 0)$</li>
+    <li>$\lambda = 5$ → $(0, 0, 1)$</li>
+  </ul>
+
+<div class="tip">
+
+🌱 <b>관찰</b>: 대각행렬의 고윳값 = <b>대각 원소 그 자체</b>, 고유벡터 = 표준기저. 가장 단순한 형태!
+
+</div>
+
+
+  <h2>🧮 예제 3 — 회전 행렬 (실수 고윳값 없음)</h2>
+
+  <h3>행렬</h3>
+  <p>$R_{90°} = \begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$</p>
+
+  <h3>특성다항식</h3>
+  <p>$\det\begin{pmatrix} -\lambda & -1 \\ 1 & -\lambda \end{pmatrix} = \lambda^2 + 1 = 0$</p>
+
+  <p>→ $\lambda = \pm i$ — <strong>실수 고윳값 없음</strong>.</p>
+
+  <h3>🌱 직관 — "왜 회전은 실수 고유벡터가 없을까"</h3>
+  <p>고유벡터는 정의상 "변환 후에도 같은 방향(또는 정반대 방향)에 있는 벡터" 입니다.
+     그런데 90° 회전은 평면의 <strong>모든 방향을</strong> 90° 다른 방향으로 보냅니다 — 어떤 화살표를 그려도
+     변환 후에는 원래 직선 위에 있을 수가 없습니다. 그래서 실수 고유벡터가 존재하지 않는 것이 자연스러운 결론.</p>
+  <ul>
+    <li>$0°$ 또는 $180°$ 회전은 예외 — 이때는 모든 방향이 고유벡터(같은 방향 또는 반대 방향).</li>
+    <li>$90°, 60°$ 같은 회전은 어떤 방향도 보존하지 않으므로 실수 고윳값 없음.</li>
+    <li>위 인터랙티브에서 $A = R_{90°} = \begin{pmatrix}0 & -1 \\ 1 & 0\end{pmatrix}$ 을 입력해 보면
+        파란 입력과 주황 출력이 절대 정렬되지 않음을 직접 확인할 수 있습니다.</li>
+    <li>복소수 영역에서는 $\lambda = \pm i$ 라는 고윳값이 존재 (이 강의 범위 외).
+        나중에 신호처리·자동제어에서 다시 만나는 사실이며, "회전 = 복소 평면의 곱셈"이라는 깊은 연결의 출발점입니다.</li>
+  </ul>
+
+<div class="note">3D 회전은 다름: <b>회전축 방향 벡터</b>가 항상 고유벡터(고윳값 1). 그래서 3D 회전은 항상 실수 고윳값을 적어도 한 개 가진다.</div>
+
+
+  <h2>🌟 고유공간 (Eigenspace)</h2>
+
+  <h3>정의</h3>
+  <p>고윳값 $\lambda$ 에 대응하는 <strong>고유공간</strong> = $\text{Ker}(A - \lambda I)$ = "그 고윳값에 대응하는 모든 고유벡터들의 집합 + 영벡터".</p>
+
+  <h3>성질</h3>
+  <ul>
+    <li>부분공간이다.</li>
+    <li>차원 = "그 고윳값의 <strong>기하적 중복도(geometric multiplicity)</strong>".</li>
+    <li>특성다항식 인수의 차수 = "<strong>대수적 중복도(algebraic multiplicity)</strong>".</li>
+    <li>항상 기하 ≤ 대수.</li>
+  </ul>
+
+  <h3>예</h3>
+  <p>$A = \begin{pmatrix} 2 & 0 \\ 0 & 2 \end{pmatrix}$ → $\lambda = 2$ (대수 중복도 2). 고유공간 = $\mathbb{R}^2$ 전체 (기하 중복도도 2).</p>
+
+
+  <h2>🧰 고윳값의 유용한 성질</h2>
+
+  <h3>성질</h3>
+  <ol>
+    <li>$A$ 의 <strong>대각합(trace)</strong> = 고윳값들의 <strong>합</strong>.</li>
+  </ol>
+  <p>   $$\text{tr}(A) = a_{11} + a_{22} + \cdots + a_{nn} = \lambda_1 + \cdots + \lambda_n$$</p>
+  <ol>
+    <li>$A$ 의 <strong>행렬식</strong> = 고윳값들의 <strong>곱</strong>.</li>
+  </ol>
+  <p>   $$\det A = \lambda_1 \lambda_2 \cdots \lambda_n$$</p>
+  <ol>
+    <li>$A$ 가역 ↔ 고윳값에 0 이 없음.</li>
+    <li>$A^k$ 의 고윳값 = $\lambda^k$, 고유벡터 동일.</li>
+    <li>$A^{-1}$ 의 고윳값 = $1/\lambda$ (가역일 때).</li>
+  </ol>
+
+  <h3>검산 활용</h3>
+  <p>예제 1: $A = \begin{pmatrix} 4 & 1 \\ 2 & 3 \end{pmatrix}$, 고윳값 $2, 5$.</p>
+  <ul>
+    <li>합: $2 + 5 = 7 = \text{tr}(A) = 4 + 3$ ✓</li>
+    <li>곱: $2 \cdot 5 = 10 = \det A = 12 - 2$ ✓</li>
+  </ul>
+
+<div class="tip">고윳값 계산 후 trace/det 로 즉시 검산 가능 — 시험에서 부호 실수 잡는 빠른 방법.</div>
+
+  <h2>🌱 왜 합 = trace, 곱 = det 인가?</h2>
+
+  <h3>$2\times 2$ 의 경우 — 직접 보기</h3>
+  <p>$A = \begin{pmatrix}a & b \\ c & d\end{pmatrix}$ 의 특성다항식:</p>
+  <p>$$\det(A - \lambda I) = (a-\lambda)(d-\lambda) - bc = \lambda^2 - (a+d)\lambda + (ad - bc)$$</p>
+  <p>이 다항식의 두 근 $\lambda_1, \lambda_2$ 에 대해 비에타(Vieta) 공식:</p>
+  <ul>
+    <li>$\lambda_1 + \lambda_2$ = $\lambda$ 의 일차 계수의 부호 반대 = $a + d$ = $\text{tr}(A)$.</li>
+    <li>$\lambda_1 \cdot \lambda_2$ = 상수항 = $ad - bc$ = $\det A$.</li>
+  </ul>
+
+  <h3>$n\times n$ 으로 일반화</h3>
+  <p>특성다항식 $p(\lambda) = (-1)^n\lambda^n + c_{n-1}\lambda^{n-1} + \cdots + c_0$ 에서:</p>
+  <ul>
+    <li>$\lambda^{n-1}$ 의 계수에서 → $\lambda_i$ 들의 합 = $\text{tr}(A)$ (대각합).</li>
+    <li>상수항 ($\lambda = 0$ 대입) → $\det(A) = \lambda_1 \lambda_2 \cdots \lambda_n$.</li>
+  </ul>
+
+<div class="note">"trace = 대각의 합", "det = 모든 고유값의 곱" 두 사실은 시험에서 자주 함께 등장합니다 — 외울 만합니다.</div>
+
+
+  <h2>🧮 예제 — $3 \times 3$ 일반 행렬</h2>
+
+  <h3>문제</h3>
+  <p>$A = \begin{pmatrix} 2 & 0 & 1 \\ 0 & 3 & 0 \\ 1 & 0 & 2 \end{pmatrix}$ 의 고윳값과 고유벡터를 구하시오.</p>
+
+  <h3>Step 1 — 특성다항식</h3>
+  <p>$$\det(A - \lambda I) = \det\begin{pmatrix} 2-\lambda & 0 & 1 \\ 0 & 3-\lambda & 0 \\ 1 & 0 & 2-\lambda \end{pmatrix}$$</p>
+  <p>2행이 0 외에 $3-\lambda$ 만 있으므로 그 행으로 여인수 전개:</p>
+  <p>$$= (3-\lambda)\cdot \det\begin{pmatrix} 2-\lambda & 1 \\ 1 & 2-\lambda \end{pmatrix} = (3-\lambda)\bigl((2-\lambda)^2 - 1\bigr)$$</p>
+  <p>$(2-\lambda)^2 - 1 = (2-\lambda-1)(2-\lambda+1) = (1-\lambda)(3-\lambda)$.</p>
+  <p>$$\det(A - \lambda I) = (3-\lambda)(1-\lambda)(3-\lambda) = (3-\lambda)^2(1-\lambda)$$</p>
+  <p>고윳값: $\lambda_1 = 3$ (중복도 2), $\lambda_2 = 1$.</p>
+
+  <h3>Step 2 — 고유벡터</h3>
+  <p><strong>$\lambda = 1$</strong>: $(A - I)\mathbf{v} = \mathbf{0}$.</p>
+  <p>$\begin{pmatrix} 1 & 0 & 1 \\ 0 & 2 & 0 \\ 1 & 0 & 1 \end{pmatrix}\mathbf{v} = \mathbf{0}$ → $x_1 + x_3 = 0,\ x_2 = 0$. 기저: $(1, 0, -1)$.</p>
+
+  <p><strong>$\lambda = 3$</strong>: $(A - 3I)\mathbf{v} = \mathbf{0}$.</p>
+  <p>$\begin{pmatrix} -1 & 0 & 1 \\ 0 & 0 & 0 \\ 1 & 0 & -1 \end{pmatrix}\mathbf{v} = \mathbf{0}$ → $x_1 = x_3$, $x_2$ 자유. 기저 2개: $(1, 0, 1),\ (0, 1, 0)$.</p>
+
+  <h3>Step 3 — 검산</h3>
+  <ul>
+    <li>합: $3 + 3 + 1 = 7$. $\text{tr}(A) = 2 + 3 + 2 = 7$ ✓</li>
+    <li>곱: $3 \cdot 3 \cdot 1 = 9$. $\det A$ = ? 계산해 봅시다: 중간 행 전개 → $3 \cdot (4-1) = 9$ ✓</li>
+  </ul>
+
+  <h3>관찰 — 대각화 가능?</h3>
+  <p>$\lambda = 3$ 에 대해 일차독립 고유벡터가 2개($\mathbf{v}_2, \mathbf{v}_3$), $\lambda = 1$ 에 대해 1개. 합 3개 = 차원 → <strong>대각화 가능</strong>.
+     일반적으로 중복도가 있어도 충분히 많은 일차독립 고유벡터가 있으면 OK.</p>
+
+
+  <h2>🌍 응용 (1) — 변환의 "본질적 축"</h2>
+
+  <h3>회전 + 스케일 = 어떤 행렬</h3>
+  <ul>
+    <li>일반적인 행렬은 "기울이고 늘리고 회전" 같은 복합 동작.</li>
+    <li>그러나 <strong>고유벡터 방향</strong>으로는 단순히 "$\lambda$ 배 늘이기".</li>
+    <li>즉, 행렬의 효과를 가장 잘 이해하려면 <strong>고유벡터 방향</strong>으로 좌표계를 잡으면 됨.</li>
+  </ul>
+
+  <h3>응용</h3>
+  <ul>
+    <li>3D 회전의 회전축 = 고윳값 1의 고유벡터.</li>
+    <li>압축/팽창 변환의 주요 방향 분석.</li>
+    <li>사진의 주성분 분석(PCA) — 가장 분산이 큰 방향이 고유벡터.</li>
+  </ul>
+
+
+  <h2>🌍 응용 (2) — 진동 모드</h2>
+
+  <h3>시나리오 — 두 질량–스프링 시스템</h3>
+  <ul>
+    <li>두 물체가 스프링으로 연결되어 진동.</li>
+    <li>운동 방정식: $\ddot{\mathbf{x}} = -K\mathbf{x}$ (어떤 행렬 $K$).</li>
+    <li>$K$ 의 고유벡터 = 시스템의 "<strong>자연 진동 모드</strong>".</li>
+    <li>모드 1: 두 물체가 같은 방향으로 진동.</li>
+    <li>모드 2: 두 물체가 반대 방향으로 진동.</li>
+    <li>고윳값 = 그 모드의 진동 주파수의 제곱.</li>
+  </ul>
+
+  <h3>일반화</h3>
+  <ul>
+    <li>다리·건물·기타 줄 모두 "고유 진동수"를 가짐.</li>
+    <li>외력의 주파수가 고유진동수와 같으면 <strong>공진</strong> 발생 (타코마 다리 붕괴 등).</li>
+  </ul>
+
+<div class="tip">"<b>이 구조물의 자연스러운 떨림 패턴은?</b>" 이라는 공학 질문이 곧 고유값 문제.</div>
+
+
+  <h2>🌍 응용 (3) — 페이지랭크의 직관</h2>
+
+  <h3>구글 검색의 기본 아이디어</h3>
+  <ul>
+    <li>모든 웹페이지를 노드로 보고, 링크를 통해 "중요도"가 흘러간다고 모델링.</li>
+    <li>한 페이지의 중요도 = 들어오는 링크들의 중요도의 합 (가중치 포함).</li>
+  </ul>
+
+  <h3>수식</h3>
+  <p>$$\mathbf{r} = M\mathbf{r}$$</p>
+  <ul>
+    <li>$\mathbf{r}$ : 모든 페이지의 중요도 벡터.</li>
+    <li>$M$ : 링크 구조를 인코딩한 행렬.</li>
+    <li>즉 $\mathbf{r}$ 은 <strong>$M$ 의 고윳값 1에 대응하는 고유벡터</strong>.</li>
+  </ul>
+
+<div class="note">초창기 구글의 검색 알고리즘이 사실상 "큰 행렬의 고유벡터를 빠르게 구하기" 였습니다.</div>
+
+
+  <h2>📝 정리 — 오늘의 핵심</h2>
+
+  <h3>1️⃣ 정의</h3>
+  <ul>
+    <li>$A\mathbf{v} = \lambda\mathbf{v},\ \mathbf{v} \neq \mathbf{0}$.</li>
+  </ul>
+
+  <h3>2️⃣ 계산 절차</h3>
+  <ol>
+    <li>$\det(A - \lambda I) = 0$ → 고윳값.</li>
+    <li>각 $\lambda$ 에 대해 $(A - \lambda I)\mathbf{v} = \mathbf{0}$ 의 영공간 → 고유벡터.</li>
+  </ol>
+
+  <h3>3️⃣ 검산 도구</h3>
+  <ul>
+    <li>$\sum \lambda_i = \text{tr}(A)$, $\prod \lambda_i = \det A$.</li>
+  </ul>
+
+  <h3>4️⃣ 의미</h3>
+  <ul>
+    <li>변환의 "본질적인 방향" 과 "그 방향의 배율".</li>
+    <li>진동 모드, 회전축, 페이지랭크 등 광범위 응용.</li>
+  </ul>
+
+<div class="tip">다음(마지막) 강의에서는 고유벡터를 모아 "<b>대각화</b>" 하고, 한 벡터를 다른 벡터에 "<b>정사영</b>" 하는 도구를 배웁니다.</div>
+
+
+  <h2>📚 연습문제</h2>
+
+  <h3>문제 1 ($2\times 2$)</h3>
+  <p>$A = \begin{pmatrix} 3 & 1 \\ 0 & 2 \end{pmatrix}$ 의 고윳값과 고유벡터를 구하시오.</p>
+
+  <h3>문제 2 ($2\times 2$ 대칭)</h3>
+  <p>$A = \begin{pmatrix} 5 & 4 \\ 4 & 5 \end{pmatrix}$ 의 고윳값과 고유벡터를 구하시오.</p>
+
+  <h3>문제 3 (검산)</h3>
+  <p>문제 2에서 $\sum\lambda_i = \text{tr}(A)$ 와 $\prod \lambda_i = \det A$ 를 확인하시오.</p>
+
+  <h3>문제 4 ($3\times 3$ 대각)</h3>
+  <p>$D = \begin{pmatrix} 1 & 0 & 0 \\ 0 & 2 & 0 \\ 0 & 0 & 3 \end{pmatrix}$ 의 고윳값과 고유벡터를 모두 구하시오.</p>
+
+  <h3>문제 5 (개념)</h3>
+  <p>$A$ 의 고윳값 중 하나가 0이라는 것은 $A$ 에 대해 어떤 사실을 말해 주는지 답하시오.</p>
+
+  <h3>문제 6 ($A^k$)</h3>
+  <p>$A$ 의 고윳값이 $\lambda = 2$ 라면 $A^{10}$ 의 고윳값 중 하나는 무엇인지 답하시오.</p>
+
+  <h3>문제 7 (대칭행렬)</h3>
+  <p>$A = \begin{pmatrix} 4 & 2 \\ 2 & 1 \end{pmatrix}$ 의 고윳값과 고유벡터를 구하고, 두 고유벡터가 서로 직교함을 확인하시오 (대칭행렬의 성질).</p>
+
+  <h3>문제 8 (응용 — 회전)</h3>
+  <p>3D 회전 행렬 $R_z(\theta) = \begin{pmatrix} \cos\theta & -\sin\theta & 0 \\ \sin\theta & \cos\theta & 0 \\ 0 & 0 & 1 \end{pmatrix}$ 의 실수 고윳값을
+     찾고 그 고유벡터가 회전축임을 확인하시오.</p>
+
+  <h3>문제 9 (검산)</h3>
+  <p>$A$ 의 trace = 6, det = 5 일 때 두 고윳값을 (이차방정식을 풀어) 구하시오.</p>
+
+  <h3>문제 10 (응용 — 마르코프)</h3>
+  <p>전이 행렬 $M = \begin{pmatrix} 0.7 & 0.4 \\ 0.3 & 0.6 \end{pmatrix}$ 의 고윳값이 $1, 0.3$ 임을 보이고,
+     $\lambda = 1$ 에 대응하는 고유벡터(정상 분포)를 구하시오.</p>
+
+
+
+
+  <h3>오늘 배운 내용에 대해 궁금한 점이 있으면 언제든지 질문해 주세요.</h3>
+
+  <ul>
+    <li>이메일 : <strong>leeck@kongju.ac.kr</strong></li>
+    <li>사무실 : 1공학관 609호</li>
+  </ul>
+
+  <p><br></p>
+
+<div class="tip" style="text-align:center; font-size:1.1em;">
+다음 강의: 대각화와 정사영 — 응용 맛보기 🎁
+</div>
+
+
+  <div class="prevnext">
+    <a href="12-kernel-range-rank.html"><small>← 이전</small>Week 12. 선형변환 (2)</a>
+    <a class="next" href="14-diagonalization-projection.html"><small>다음 →</small>Week 14. 대각화·정사영</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

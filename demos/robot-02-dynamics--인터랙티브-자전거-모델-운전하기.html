@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 자전거 모델 운전하기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 자전거 모델 운전하기</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/02-dynamics.html">Lecture 2. 운동학과 동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 자전거 모델 운전하기</h4>
+    <p>속도와 조향각을 조절하면 차가 어떻게 움직이는지 확인하세요.</p>
+    <canvas id="bike" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>속도 v (m/s) <span class="val" id="vV">5</span><input type="range" id="v" min="0" max="15" step="0.1" value="5"></label>
+      <label>조향각 δ (도) <span class="val" id="dV">15</span><input type="range" id="d" min="-35" max="35" value="15"></label>
+      <label>축거 L (m) <span class="val" id="lV">2.5</span><input type="range" id="l" min="1" max="5" step="0.1" value="2.5"></label>
+      <button id="reset">리셋</button>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const c=document.getElementById('bike'),x=c.getContext('2d');
+    let s={x:60,y:160,th:0};
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{['v','d','l'].forEach(k=>sl(k+'V').textContent=sl(k).value);};
+    sl('reset').onclick=()=>{s={x:60,y:160,th:0};};
+    ['v','d','l'].forEach(k=>sl(k).oninput=upd);
+    let trail=[];
+    function loop(){
+      const v=+sl('v').value, d=+sl('d').value*Math.PI/180, L=+sl('l').value, dt=0.05;
+      // 1 m = 8 px (둘 다 같은 스케일)
+      const SCALE=8;
+      s.x+=v*Math.cos(s.th)*dt*SCALE;
+      s.y+=v*Math.sin(s.th)*dt*SCALE;
+      s.th+=v/L*Math.tan(d)*dt;
+      if(s.x>c.width||s.x<0||s.y>c.height||s.y<0){s={x:60,y:160,th:0};trail=[];}
+      trail.push([s.x,s.y]);if(trail.length>400)trail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#e3e6ea';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      // 회전 반경 가이드 원 (R = L / tan(δ))
+      if(Math.abs(d)>0.01){
+        const R=L/Math.tan(d)*SCALE;       // 픽셀 단위
+        const cx=s.x-R*Math.sin(s.th), cy=s.y+R*Math.cos(s.th);
+        x.strokeStyle='rgba(255,140,0,0.4)';x.setLineDash([5,5]);x.lineWidth=1.5;
+        x.beginPath();x.arc(cx,cy,Math.abs(R),0,Math.PI*2);x.stroke();x.setLineDash([]);
+        x.fillStyle='#ff8c00';x.beginPath();x.arc(cx,cy,3,0,Math.PI*2);x.fill();
+        x.fillStyle='#666';x.font='12px sans-serif';
+        x.fillText('회전 반경 R = L/tan δ ≈ '+Math.abs(L/Math.tan(d)).toFixed(2)+' m',12,30);
+      }else{
+        x.fillStyle='#666';x.font='12px sans-serif';x.fillText('직진 (δ ≈ 0)',12,30);
+      }
+      // 자취
+      x.strokeStyle='#9eb9ff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.stroke();
+      // 차체: L에 비례한 크기
+      x.save();x.translate(s.x,s.y);x.rotate(s.th);
+      const halfL=L*SCALE/2, halfW=Math.max(6,L*SCALE/4);
+      x.fillStyle='#0b5fff';x.fillRect(-halfL,-halfW,halfL*2,halfW*2);
+      // 바퀴 (앞·뒷 동일 크기, 차축 중심에 정렬)
+      const wheelLen=Math.max(8,halfL*0.5), wheelWid=3;
+      const wheelY=halfW+wheelWid/2;
+      x.fillStyle='#222';
+      // 뒷바퀴 (좌·우)
+      x.fillRect(-halfL-wheelLen/2,-wheelY-wheelWid/2,wheelLen,wheelWid);
+      x.fillRect(-halfL-wheelLen/2, wheelY-wheelWid/2,wheelLen,wheelWid);
+      // 앞바퀴 (좌·우, 조향각만큼 자기 중심 기준으로 회전)
+      [-wheelY,wheelY].forEach(wy=>{
+        x.save();x.translate(halfL,wy);x.rotate(d);
+        x.fillRect(-wheelLen/2,-wheelWid/2,wheelLen,wheelWid);
+        x.restore();
+      });
+      x.restore();
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

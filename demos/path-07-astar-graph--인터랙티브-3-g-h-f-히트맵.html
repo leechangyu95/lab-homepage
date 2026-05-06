@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브 #3 — $g$, $h$, $f$ 히트맵 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브 #3 — $g$, $h$, $f$ 히트맵</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/07-astar-graph.html">Week 7. A* 알고리즘 — &quot;나침반을 가진 탐색자&quot;</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브 #3 — $g$, $h$, $f$ 히트맵</h4>
+    <p>A*가 우선순위를 매기는 기준 $f = g + h$가 격자 위에 어떻게 분포하는지 한눈에 보세요.
+    <strong>표시</strong>를 바꿔 가며 $g$(시작에서의 거리), $h$(목표까지 거리 추정), $f$(둘의 합)이
+    어떻게 다른지 직접 비교할 수 있습니다.</p>
+    <canvas id="grid3" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>표시
+        <select id="m3">
+          <option value="g">g(n) — 시작에서의 거리</option>
+          <option value="h">h(n) — 목표까지 추정</option>
+          <option value="f" selected>f(n) = g + h</option>
+        </select>
+      </label>
+      <label>가중치 w <span class="val" id="wV">1.0</span><input type="range" id="w3" min="1.0" max="3.0" step="0.1" value="1.0"></label>
+      <button id="redraw3">다시 그리기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('grid3'),x=c.getContext('2d');
+    const W=40,H=24,SZ=16;
+    const start=[3,12],goal=[36,12];
+    const obs=[];
+    for(let i=4;i<20;i++){obs.push([15,i]);obs.push([25,H-1-i]);}
+    function inObs(j,i){return obs.some(p=>p[0]===j&&p[1]===i);}
+    function bfsDist(src){
+      const dist=Array.from({length:H},()=>Array(W).fill(Infinity));
+      dist[src[1]][src[0]]=0;
+      const q=[src];
+      while(q.length){
+        const[j,i]=q.shift();
+        for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+          const nx=j+dx,ny=i+dy;
+          if(nx<0||ny<0||nx>=W||ny>=H||inObs(nx,ny))continue;
+          const nd=dist[i][j]+Math.hypot(dx,dy);
+          if(nd<dist[ny][nx]){dist[ny][nx]=nd;q.push([nx,ny]);}
+        }
+      }
+      return dist;
+    }
+    const gMap=bfsDist(start);
+    function eucl(j,i){return Math.hypot(j-goal[0],i-goal[1]);}
+    function draw(){
+      const mode=document.getElementById('m3').value;
+      const w=+document.getElementById('w3').value;
+      document.getElementById('wV').textContent=w.toFixed(1);
+      let mx=0;
+      const vals=Array.from({length:H},()=>Array(W).fill(0));
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        if(inObs(j,i)){vals[i][j]=-1;continue;}
+        const g=gMap[i][j],h=eucl(j,i)*w;
+        const v=mode==='g'?g:mode==='h'?h:g+h;
+        vals[i][j]=v;
+        if(isFinite(v)&&v>mx)mx=v;
+      }
+      x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        const v=vals[i][j];
+        if(v<0){x.fillStyle='#222';}
+        else if(!isFinite(v)){x.fillStyle='#eee';}
+        else{
+          const t=v/Math.max(1,mx);
+          const r=Math.floor(40+215*t),g=Math.floor(80+(1-t)*120),b=Math.floor(255*(1-t));
+          x.fillStyle=`rgb(${r},${g},${b})`;
+        }
+        x.fillRect(j*SZ,i*SZ,SZ,SZ);
+      }
+      x.fillStyle='#2e7d32';x.fillRect(start[0]*SZ,start[1]*SZ,SZ,SZ);
+      x.fillStyle='#c62828';x.fillRect(goal[0]*SZ,goal[1]*SZ,SZ,SZ);
+      x.fillStyle='#fff';x.font='bold 12px sans-serif';
+      const t=mode==='g'?'g(n)':mode==='h'?'w·h(n)':'f(n) = g + w·h';
+      x.fillText(t+'  (파랑=낮음 · 빨강=높음)',12,16);
+      x.fillText('🟢 시작 · 🔴 목표 · ⬛ 장애물',12,c.height-12);
+    }
+    document.getElementById('m3').onchange=draw;
+    document.getElementById('w3').oninput=draw;
+    document.getElementById('redraw3').onclick=draw;
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

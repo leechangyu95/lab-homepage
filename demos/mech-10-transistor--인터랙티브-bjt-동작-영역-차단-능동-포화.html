@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: BJT 동작 영역 — 차단/능동/포화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: BJT 동작 영역 — 차단/능동/포화</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/10-transistor.html">Week 10. 트랜지스터 — 작은 신호로 큰 전류를 다루는 3단자 소자</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: BJT 동작 영역 — 차단/능동/포화</h4>
+    <p>$V_{BE}$로 베이스 전류를 결정하고 $R_C$로 컬렉터 회로를 풀어 $V_{CE}$를 봅니다. $V_{CE} > 0.1$이면 능동, 그 이하로 떨어지면 포화 — 영역에 따라 색이 바뀝니다.</p>
+    <canvas id="bjtCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>V_BB <span class="val" id="bjtVbV">3.0</span> V<input type="range" id="bjtVb" min="0" max="5" step="0.1" value="3"></label>
+      <label>R_B <span class="val" id="bjtRBV">100</span> kΩ<input type="range" id="bjtRB" min="10" max="500" step="10" value="100"></label>
+      <label>R_C <span class="val" id="bjtRCV">1.0</span> kΩ<input type="range" id="bjtRC" min="0.1" max="20" step="0.1" value="1"></label>
+      <label>β <span class="val" id="bjtBV">100</span><input type="range" id="bjtB" min="20" max="300" step="10" value="100"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bjtCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Vcc=5;
+    function draw(){
+      const Vbb=+document.getElementById('bjtVb').value;
+      const RB=+document.getElementById('bjtRB').value*1000;
+      const RC=+document.getElementById('bjtRC').value*1000;
+      const beta=+document.getElementById('bjtB').value;
+      document.getElementById('bjtVbV').textContent=Vbb.toFixed(1);
+      document.getElementById('bjtRBV').textContent=(RB/1000).toFixed(0);
+      document.getElementById('bjtRCV').textContent=(RC/1000).toFixed(1);
+      document.getElementById('bjtBV').textContent=beta;
+      let region='cutoff',IB=0,IC=0,Vce=Vcc;
+      if(Vbb<0.7){region='cutoff';IB=0;IC=0;Vce=Vcc;}
+      else{
+        IB=(Vbb-0.7)/RB;
+        const ICactive=beta*IB;
+        const VceActive=Vcc-ICactive*RC;
+        if(VceActive>0.1){region='active';IC=ICactive;Vce=VceActive;}
+        else{region='saturation';Vce=0.1;IC=(Vcc-0.1)/RC;}
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Bar chart of IC and Vce
+      const tx=60,ty=70;
+      // Region indicator
+      const colors={cutoff:'#999',active:'#0b5fff',saturation:'#c62828'};
+      const labels={cutoff:'차단 (Cutoff) — OFF',active:'능동 (Active) — 비례 증폭',saturation:'포화 (Saturation) — ON'};
+      ctx.fillStyle=colors[region];ctx.font='15px sans-serif';
+      ctx.fillText('동작 영역: '+labels[region],tx,40);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`I_B = ${(IB*1e6).toFixed(2)} μA`,tx,ty);
+      ctx.fillText(`I_C = ${(IC*1000).toFixed(2)} mA`,tx,ty+22);
+      ctx.fillText(`β·I_B = ${(beta*IB*1000).toFixed(2)} mA  (능동 가정값)`,tx,ty+44);
+      ctx.fillText(`V_CE = ${Vce.toFixed(2)} V`,tx,ty+66);
+      // Visual: IC vs theoretical
+      const Wbar=400,Hbar=20,bx=60,by=200;
+      const ICmax=Vcc/RC*1.05;
+      ctx.fillStyle='#eee';ctx.fillRect(bx,by,Wbar,Hbar);
+      ctx.fillStyle=colors[region];
+      ctx.fillRect(bx,by,Wbar*Math.min(1,IC/ICmax),Hbar);
+      ctx.strokeStyle='#222';ctx.strokeRect(bx,by,Wbar,Hbar);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`I_C 막대 (포화 한계 = (V_CC−0.1)/R_C = ${((Vcc-0.1)/RC*1000).toFixed(2)} mA)`,bx,by-10);
+      ctx.fillText(`R_C↑ → 능동에서 포화로 옮겨감.  V_BB↓ 0.7 미만이면 차단.`,bx,by+45);
+    }
+    ['bjtVb','bjtRB','bjtRC','bjtB'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

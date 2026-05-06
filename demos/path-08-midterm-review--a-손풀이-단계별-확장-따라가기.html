@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 A* 손풀이 — 단계별 확장 따라가기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 A* 손풀이 — 단계별 확장 따라가기</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/08-midterm-review.html">Week 8. 중간고사 범위 정리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 A* 손풀이 — 단계별 확장 따라가기</h4>
+    <p>5×5 격자에서 S(시작)→G(목표) 경로를 A*가 어떻게 찾는지 한 단계씩 진행해 보세요.
+    <span style="color:#0b5fff">파랑 = 닫힌 집합</span>, <span style="color:#f57c00">주황 = 열린 집합</span>, <span style="color:#c62828">빨강 = 벽</span>.</p>
+    <canvas id="astarCv" width="540" height="320"></canvas>
+    <div class="controls">
+      <button id="stepA">한 단계</button>
+      <button id="autoA">자동</button>
+      <button id="rstA" class="alt">리셋</button>
+      <label>휴리스틱
+        <select id="heur">
+          <option value="manhattan">Manhattan</option>
+          <option value="euclidean" selected>Euclidean</option>
+          <option value="zero">0 (Dijkstra)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('astarCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const W=5,H=5,sc=Math.min((c.width-200)/W,c.height/H);
+    const start=[0,4],goal=[4,0];
+    const walls=[[1,3],[2,3],[2,2]];
+    let open,closed,parent,gscore,running=false,done=false;
+    function reset(){
+      open=new Map();closed=new Set();parent=new Map();gscore=new Map();done=false;
+      const k=start[0]+','+start[1];gscore.set(k,0);open.set(k,{x:start[0],y:start[1],g:0,h:hcost(start[0],start[1]),f:hcost(start[0],start[1])});
+      draw();
+    }
+    function hcost(i,j){const m=$('heur').value;const dx=Math.abs(i-goal[0]),dy=Math.abs(j-goal[1]);
+      if(m==='manhattan')return dx+dy;if(m==='zero')return 0;return Math.hypot(dx,dy);}
+    function step(){
+      if(done||open.size===0)return;
+      let bestK=null,bestF=1e9;for(const[k,n]of open){if(n.f<bestF){bestF=n.f;bestK=k;}}
+      const cur=open.get(bestK);open.delete(bestK);closed.add(bestK);
+      if(cur.x===goal[0]&&cur.y===goal[1]){done=true;draw();return;}
+      const nbs=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,Math.SQRT2],[-1,1,Math.SQRT2],[1,-1,Math.SQRT2],[-1,-1,Math.SQRT2]];
+      for(const[dx,dy,cost]of nbs){const nx=cur.x+dx,ny=cur.y+dy;
+        if(nx<0||nx>=W||ny<0||ny>=H)continue;
+        if(walls.some(w=>w[0]===nx&&w[1]===ny))continue;
+        const nk=nx+','+ny;if(closed.has(nk))continue;
+        const ng=cur.g+cost;
+        if(!gscore.has(nk)||ng<gscore.get(nk)){gscore.set(nk,ng);parent.set(nk,bestK);
+          open.set(nk,{x:nx,y:ny,g:ng,h:hcost(nx,ny),f:ng+hcost(nx,ny)});}
+      }
+      draw();
+    }
+    $('stepA').onclick=step;$('rstA').onclick=reset;$('heur').onchange=reset;
+    $('autoA').onclick=()=>{if(running)return;running=true;const id=setInterval(()=>{step();if(done||open.size===0){clearInterval(id);running=false;}},150);};
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<W;i++)for(let j=0;j<H;j++){const k=i+','+j;
+        let fill='#fff';if(walls.some(w=>w[0]===i&&w[1]===j))fill='#fce4ec';
+        else if(closed.has(k))fill='#cfe0ff';else if(open.has(k))fill='#ffe0b2';
+        x.fillStyle=fill;x.fillRect(i*sc,(H-1-j)*sc,sc-1,sc-1);x.strokeStyle='#bbb';x.strokeRect(i*sc,(H-1-j)*sc,sc-1,sc-1);
+        if(open.has(k)){const n=open.get(k);x.fillStyle='#444';x.font='10px sans-serif';
+          x.fillText('g='+n.g.toFixed(1),i*sc+4,(H-1-j)*sc+12);
+          x.fillText('h='+n.h.toFixed(1),i*sc+4,(H-1-j)*sc+24);
+          x.fillText('f='+n.f.toFixed(1),i*sc+4,(H-1-j)*sc+36);}
+      }
+      const tx=W*sc+10;
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('Open: '+open.size,tx,18);x.fillText('Closed: '+closed.size,tx,36);
+      x.fillText(done?'✓ 목표 도달':'진행 중',tx,54);
+      // start/goal markers
+      x.fillStyle='#2e7d32';x.fillRect(start[0]*sc+sc/2-6,(H-1-start[1])*sc+sc/2-6,12,12);
+      x.fillStyle='#c62828';x.fillRect(goal[0]*sc+sc/2-6,(H-1-goal[1])*sc+sc/2-6,12,12);
+      // path if done
+      if(done){x.strokeStyle='#0b5fff';x.lineWidth=3;x.beginPath();
+        let k=goal[0]+','+goal[1];const pts=[];while(k){const[ix,iy]=k.split(',').map(Number);pts.push([ix,iy]);k=parent.get(k);}
+        pts.forEach((p,i)=>{const xx=p[0]*sc+sc/2,yy=(H-1-p[1])*sc+sc/2;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+    }
+    reset();
+  })();
+  </script>
+</main>
+</body>
+</html>

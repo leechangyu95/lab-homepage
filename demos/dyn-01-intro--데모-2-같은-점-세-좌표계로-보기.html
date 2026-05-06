@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 같은 점, 세 좌표계로 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 같은 점, 세 좌표계로 보기</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/01-intro.html">Week 1. 강의 소개 (OT)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 같은 점, 세 좌표계로 보기</h4>
+    <p>커서를 캔버스 위로 움직여 점을 옮겨보세요. 같은 위치를 <strong>직각 $(x,y)$ · 극 $(r,\theta)$ · 접선/법선</strong> 세 좌표계로 동시에 표시합니다. 좌표계가 달라도 점의 위치는 같다는 게 핵심 — 식의 모양만 달라질 뿐입니다.</p>
+    <canvas id="coordC" width="640" height="320"></canvas>
+    <div class="controls" id="coordInfo" style="font-family:Consolas,monospace;font-size:12px;color:#444"></div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('coordC'),x=c.getContext('2d'),info=document.getElementById('coordInfo');
+    let mx=180,my=80;
+    c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;});
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=320,oy=160;
+      // axes
+      x.strokeStyle='#d0d4d9';x.lineWidth=1;
+      x.beginPath();x.moveTo(0,oy);x.lineTo(c.width,oy);x.moveTo(ox,0);x.lineTo(ox,c.height);x.stroke();
+      // grid every 40
+      x.strokeStyle='#ececec';
+      for(let i=-7;i<=7;i++){x.beginPath();x.moveTo(ox+i*40,0);x.lineTo(ox+i*40,c.height);x.stroke();}
+      for(let i=-4;i<=4;i++){x.beginPath();x.moveTo(0,oy+i*40);x.lineTo(c.width,oy+i*40);x.stroke();}
+      // point
+      const px=mx,py=my;
+      const X=(px-ox)/40,Y=-(py-oy)/40;
+      const r=Math.sqrt(X*X+Y*Y),th=Math.atan2(Y,X);
+      // r vector
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();x.moveTo(ox,oy);x.lineTo(px,py);x.stroke();
+      // x component
+      x.strokeStyle='#2e7d32';x.setLineDash([4,3]);x.beginPath();x.moveTo(ox,oy);x.lineTo(px,oy);x.lineTo(px,py);x.stroke();x.setLineDash([]);
+      // angle arc
+      x.strokeStyle='#c62828';x.beginPath();x.arc(ox,oy,30,0,-th,th>0);x.stroke();
+      // tangent/normal direction (assume motion CCW around origin)
+      const tlen=40;
+      const tx=-Math.sin(th)*tlen,ty=Math.cos(th)*tlen;
+      x.strokeStyle='#9e35b8';x.lineWidth=2;x.beginPath();x.moveTo(px,py);x.lineTo(px+tx,py-ty);x.stroke();
+      x.fillStyle='#9e35b8';x.font='11px sans-serif';x.fillText('t̂ (접선, 가상 원운동 가정)',px+tx+5,py-ty);
+      // point
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px,py,5,0,Math.PI*2);x.fill();
+      // legend
+      x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('r (극좌표 거리)',(ox+px)/2+8,(oy+py)/2);
+      x.fillStyle='#2e7d32';x.fillText('x (직각좌표)',(ox+px)/2-30,oy-6);
+      x.fillStyle='#2e7d32';x.fillText('y',px+6,(oy+py)/2);
+      x.fillStyle='#c62828';x.font='11px sans-serif';x.fillText('θ',ox+34,oy-4);
+      info.innerHTML='<strong>직각:</strong> x = '+X.toFixed(2)+',  y = '+Y.toFixed(2)+
+        '   <strong>극:</strong> r = '+r.toFixed(2)+',  θ = '+(th*180/Math.PI).toFixed(0)+'°'+
+        '   <strong>접선 방향:</strong> (−sin θ, cos θ) — CCW 원운동 가정 시';
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

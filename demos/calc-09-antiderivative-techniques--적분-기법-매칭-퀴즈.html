@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 적분 기법 매칭 퀴즈 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 적분 기법 매칭 퀴즈</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/09-antiderivative-techniques.html">Week 9. 부정적분·치환·부분적분</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 적분 기법 매칭 퀴즈</h4>
+    <p>각 적분에 가장 적합한 첫 기법을 선택. 정답 표기와 짧은 풀이 힌트가 함께 나옵니다.</p>
+    <div id="qzCont"></div>
+    <button id="qzNew" class="alt" style="margin-top:10px">새 문제 8개</button>
+    <p id="qzScore" style="margin-top:8px;font-weight:600"></p>
+  </div>
+  <script>
+  (function(){
+    const bank=[
+      {q:'∫ x cos(x²) dx', tech:'sub', hint:'u = x², du = 2x dx'},
+      {q:'∫ x eˣ dx', tech:'parts', hint:'u = x, dv = eˣ dx'},
+      {q:'∫ √(1−x²) dx', tech:'trig', hint:'x = sin θ'},
+      {q:'∫ 1/(x²−1) dx', tech:'partial', hint:'1/((x−1)(x+1)) 분해'},
+      {q:'∫ ln x dx', tech:'parts', hint:'u = ln x, dv = dx'},
+      {q:'∫ 2x/(x²+1) dx', tech:'sub', hint:'u = x²+1, 답은 ln'},
+      {q:'∫ x ln x dx', tech:'parts', hint:'u = ln x, dv = x dx (LIATE)'},
+      {q:'∫ 1/√(4−x²) dx', tech:'trig', hint:'x = 2 sin θ'},
+      {q:'∫ x³/(x²+1) dx', tech:'sub', hint:'장 분할 후 u = x²+1, 또는 다항식 나눗셈'},
+      {q:'∫ eˣ sin x dx', tech:'parts', hint:'두 번 부분적분 + 순환'},
+      {q:'∫ sin³ x cos x dx', tech:'sub', hint:'u = sin x'},
+      {q:'∫ (3x+5)/((x−1)(x+2)) dx', tech:'partial', hint:'A/(x−1) + B/(x+2)'},
+    ];
+    const labels={sub:'u-치환',parts:'부분적분',trig:'삼각치환',partial:'부분분수'};
+    let problems=[],answers=[];
+    function newQuiz(){
+      problems=bank.slice().sort(()=>Math.random()-0.5).slice(0,8);
+      answers=problems.map(()=>null);
+      render();
+    }
+    function render(){
+      const cont=document.getElementById('qzCont');cont.innerHTML='';
+      problems.forEach((p,i)=>{
+        const div=document.createElement('div');div.style.cssText='padding:10px;border-bottom:1px solid #eee';
+        const html=['<div style="font-family:Consolas,monospace;font-size:14px;margin-bottom:6px"><strong>Q'+(i+1)+'.</strong> '+p.q+'</div>',
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">'];
+        ['sub','parts','trig','partial'].forEach(k=>{
+          const sel=answers[i]===k;
+          let bg='#fff',color='#444',border='#bbb';
+          if(sel){
+            if(k===p.tech){bg='#c8e6c9';color='#1b5e20';border='#1b5e20';}
+            else{bg='#ffcdd2';color='#c62828';border='#c62828';}
+          }
+          html.push('<button data-i="'+i+'" data-k="'+k+'" style="padding:6px 10px;border:1px solid '+border+';background:'+bg+';color:'+color+';border-radius:4px;cursor:pointer;font-size:12px">'+labels[k]+'</button>');
+        });
+        html.push('</div>');
+        if(answers[i]!==null){
+          const correct=answers[i]===p.tech;
+          html.push('<div style="font-size:12px;color:'+(correct?'#1b5e20':'#c62828')+';margin-top:6px">'+(correct?'✓ 정답':'✗ 오답')+' · 정답: <strong>'+labels[p.tech]+'</strong> · 힌트: '+p.hint+'</div>');
+        }
+        div.innerHTML=html.join('');
+        cont.appendChild(div);
+      });
+      cont.querySelectorAll('button').forEach(btn=>{
+        btn.onclick=()=>{const i=+btn.dataset.i;answers[i]=btn.dataset.k;render();updateScore();};
+      });
+      updateScore();
+    }
+    function updateScore(){
+      const done=answers.filter(a=>a!==null).length;
+      const correct=answers.filter((a,i)=>a===problems[i].tech).length;
+      document.getElementById('qzScore').textContent='진행 '+done+'/'+problems.length+'  ·  정답 '+correct+'/'+done;
+    }
+    document.getElementById('qzNew').onclick=newQuiz;
+    newQuiz();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 4가지 표준 입력 한눈에 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 4가지 표준 입력 한눈에 비교</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/09-dynamic-response.html">Week 9. 동적 응답 — 1차·2차 시스템의 시간 응답</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 4가지 표준 입력 한눈에 비교</h4>
+    <p>입력의 모양만 봐도 머릿속 직관이 다릅니다. 임펄스는 "한 방 때리기", 스텝은 "갑자기 일정값 유지", 램프는 "꾸준히 증가", 정현파는 "주기적으로 흔들기". 각 입력에 대한 응답이 다음 절부터 어떻게 다른지를 비교해 보세요.</p>
+    <canvas id="inputDemo" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>입력 종류
+        <select id="inSel">
+          <option value="impulse">임펄스</option>
+          <option value="step" selected>스텝</option>
+          <option value="ramp">램프</option>
+          <option value="sin">정현파</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('inputDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const k=document.getElementById('inSel').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-30,w=W-70,h=H-60;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';ctx.fillText('시간 t →',ox+w-50,oy+18);ctx.fillText('입력',ox-25,40);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      const T=10;
+      for(let i=0;i<=600;i++){const t=i/600*T;
+        let v=0;
+        if(k==='impulse') v = (t>0.5 && t<0.7) ? 4 : 0;
+        else if(k==='step') v = t<0.5 ? 0 : 1;
+        else if(k==='ramp') v = t<0.5 ? 0 : (t-0.5)*0.2;
+        else if(k==='sin') v = Math.sin(2*Math.PI*0.4*t);
+        const xx=ox+t/T*w, yy=oy-h*0.45-v*h*0.3;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      const desc={impulse:'아주 짧은 시간에 큰 에너지 한 방 → 시스템의 "고유" 진동을 그대로 노출',
+        step:'갑자기 1로 올라가서 유지 → 시스템이 새 평형으로 어떻게 가는지',
+        ramp:'시간에 비례해 증가 → 일정 속도 추적 능력',
+        sin:'주기적 진동 → 주파수마다 진폭·위상 응답이 어떻게 달라지나'};
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(desc[k],ox,25);
+    }
+    document.getElementById('inSel').addEventListener('change',draw);draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 소프트맥스 막대그래프 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 소프트맥스 막대그래프</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/04-regression-2.html">Week 4. 회귀 2: 다중회귀, 로지스틱, 소프트맥스</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 소프트맥스 막대그래프</h4>
+    <p>세 클래스의 점수 $z$를 슬라이더로 조절하면 소프트맥스 확률이 어떻게 변하는지 보입니다.</p>
+    <canvas id="smCanvas" width="640" height="260"></canvas>
+    <div class="controls">
+      <label>z₁ <span class="val" id="z1V">2</span><input type="range" id="z1" min="-5" max="5" step="0.1" value="2"></label>
+      <label>z₂ <span class="val" id="z2V">1</span><input type="range" id="z2" min="-5" max="5" step="0.1" value="1"></label>
+      <label>z₃ <span class="val" id="z3V">0</span><input type="range" id="z3" min="-5" max="5" step="0.1" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('smCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const z=[+document.getElementById('z1').value,+document.getElementById('z2').value,+document.getElementById('z3').value];
+      ['z1','z2','z3'].forEach((id,i)=>document.getElementById(id+'V').textContent=z[i].toFixed(1));
+      const m=Math.max(...z),ex=z.map(v=>Math.exp(v-m)),s=ex.reduce((a,b)=>a+b);
+      const p=ex.map(v=>v/s);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const colors=['#0b5fff','#ff8c00','#2e7d32'];
+      const bw=120,gap=40,baseY=H-40;
+      p.forEach((pi,i)=>{
+        const x=80+i*(bw+gap),h=pi*(H-80);
+        ctx.fillStyle=colors[i];ctx.fillRect(x,baseY-h,bw,h);
+        ctx.fillStyle='#333';ctx.font='14px sans-serif';
+        ctx.fillText(`p${i+1}=${pi.toFixed(3)}`,x+10,baseY-h-8);
+        ctx.fillText(`클래스${i+1}`,x+25,baseY+18);
+      });
+    }
+    ['z1','z2','z3'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,1068 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W1. 강의 소개 — 동역학</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html" class="active">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 1. 강의 소개 (OT)</h1>
+  <p class="lead">정역학과 무엇이 다른가? 시간이 들어오면 무엇이 바뀌는가? 좌표계는 왜 여러 개나 필요한가?</p>
+
+  <h2>0-A. 동역학의 짧은 역사 — 누가, 언제, 무엇을 만들었나</h2>
+  <p>이 강의의 핵심 아이디어는 모두 17~19세기에 정립되었습니다. 한 학기 내내 우리가 만질 식들의 출처를 한 번 짚어두면 직관이 생깁니다.</p>
+  <table>
+    <thead><tr><th>시기</th><th>인물</th><th>기여</th></tr></thead>
+    <tbody>
+      <tr><td>1564–1642</td><td>갈릴레오 갈릴레이</td><td>경사면 실험으로 등가속도 운동 규명, 자유낙하 시간 독립 입증</td></tr>
+      <tr><td>1642–1727</td><td>아이작 뉴턴</td><td>운동 3법칙(Principia, 1687), 미적분, 만유인력 — 이 강의의 절반이 그의 업적</td></tr>
+      <tr><td>1700–1782</td><td>다니엘 베르누이</td><td>유체 동역학, 분자 운동론의 토대</td></tr>
+      <tr><td>1707–1783</td><td>레온하르트 오일러</td><td>강체 운동학·운동방정식 정립(W9~W11이 이 사람의 작업)</td></tr>
+      <tr><td>1736–1813</td><td>조제프-루이 라그랑주</td><td>일반화 좌표계로 본 라그랑주 역학 — 학부 동역학을 졸업한 다음에 만나는 형식</td></tr>
+      <tr><td>1788</td><td>—</td><td><em>Mécanique analytique</em> 출간 — 동역학을 미적분 식으로 재구성</td></tr>
+      <tr><td>1805–1865</td><td>윌리엄 해밀턴</td><td>해밀턴 역학 — 양자역학·통계역학으로 가는 다리</td></tr>
+    </tbody>
+  </table>
+  <div class="tip">
+    <strong>현대로 가는 다리</strong> — 뉴턴 역학은 빛 속도에 가까울 때(특수상대성)·원자 크기에서(양자역학) 깨지지만, 학부 공학에서 만나는 거의 모든 상황(자동차, 비행기, 로봇, 다리)에서는 여전히 매우 정확합니다. 그래서 이 한 학기가 평생 가는 도구가 됩니다.
+  </div>
+
+  <h2>0-A2. "왜 17세기에야 동역학이 가능했나" — 도구가 갖춰지기까지</h2>
+  <p>아리스토텔레스 이후 약 2000년 동안 사람들은 "무거운 물체가 더 빨리 떨어진다", "운동을 유지하려면 힘이 계속 필요하다"고 믿었습니다. 갈릴레오와 뉴턴이 이를 뒤집을 수 있었던 건 두 가지 도구가 17세기에 함께 등장했기 때문입니다.</p>
+  <ul>
+    <li><strong>정확한 시간 측정</strong> — 갈릴레오가 사용한 진자 시계, 17세기 후반에 등장한 추 시계는 자유낙하 같은 짧은 시간 현상을 분석할 수 있게 만들었습니다. 시간을 잴 수 없으면 "운동의 변화율"이라는 개념 자체가 의미가 없죠.</li>
+    <li><strong>미적분(미분과 적분)</strong> — 뉴턴(영국)과 라이프니츠(독일)가 거의 동시에 독립적으로 발견했습니다. "순간 속도", "순간 가속도"는 미분 없이는 정의할 수 없습니다. 이 강의가 본질적으로 미분방정식인 이유.</li>
+  </ul>
+  <p>이 두 도구가 갖춰진 후에야 "위치 → 속도 → 가속도 → 힘"이라는 인과 사슬을 수식으로 쓸 수 있게 됐습니다. 우리는 그 사슬을 한 학기 동안 거꾸로 따라가며 풀게 됩니다.</p>
+
+  <div class="note">
+    <strong>"운동을 유지하려면 힘이 필요하다"가 왜 그토록 끈질겼나</strong> — 일상에서 보는 거의 모든 운동에는 마찰이 있습니다. 책상 위로 책을 밀면 손을 떼는 순간 멈추죠. 그래서 마찰이 있는 세계에서 살던 아리스토텔레스는 합리적으로 "운동에는 힘이 필요"라고 결론을 내린 겁니다. 갈릴레오는 경사면 실험으로 마찰을 점점 줄여보며 "마찰이 없으면 영원히 굴러간다"는 한계를 추정해내야 했습니다 — 우리가 W6에서 다시 만나게 될 관성의 발견.
+  </div>
+
+  <h2>0-A3. 동역학의 큰 그림 — 한 학기 식들의 가계도</h2>
+  <p>이 강의에서 외울 식은 결국 다섯 종류로 분류됩니다. 한 번 큰 가계도를 그려두면 매주 어디쯤 있는지 알 수 있어요.</p>
+  <svg viewBox="0 0 720 320" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:6px">
+    <text x="360" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0b5fff">동역학 식의 가계도 — 5가지 큰 갈래</text>
+    <!-- root -->
+    <rect x="280" y="40" width="160" height="36" rx="6" fill="#0b5fff"/>
+    <text x="360" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">F = m a (뉴턴 2법칙)</text>
+    <!-- branches -->
+    <line x1="360" y1="76" x2="120" y2="120" stroke="#888"/>
+    <line x1="360" y1="76" x2="270" y2="120" stroke="#888"/>
+    <line x1="360" y1="76" x2="450" y2="120" stroke="#888"/>
+    <line x1="360" y1="76" x2="600" y2="120" stroke="#888"/>
+    <rect x="40" y="120" width="160" height="40" rx="4" fill="#fff" stroke="#0b5fff"/>
+    <text x="120" y="138" text-anchor="middle" font-size="11" font-weight="bold" fill="#0b5fff">운동학 (W2~W5)</text>
+    <text x="120" y="153" text-anchor="middle" font-size="10" fill="#444">a, v, s 미적분 관계</text>
+    <rect x="200" y="120" width="140" height="40" rx="4" fill="#fff" stroke="#c62828"/>
+    <text x="270" y="138" text-anchor="middle" font-size="11" font-weight="bold" fill="#c62828">F=ma 직접 (W6)</text>
+    <text x="270" y="153" text-anchor="middle" font-size="10" fill="#444">시간 미분방정식</text>
+    <rect x="380" y="120" width="140" height="40" rx="4" fill="#fff" stroke="#2e7d32"/>
+    <text x="450" y="138" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e7d32">일·에너지 (W7)</text>
+    <text x="450" y="153" text-anchor="middle" font-size="10" fill="#444">위치 ↔ 속도</text>
+    <rect x="540" y="120" width="160" height="40" rx="4" fill="#fff" stroke="#9e35b8"/>
+    <text x="620" y="138" text-anchor="middle" font-size="11" font-weight="bold" fill="#9e35b8">충격량·운동량 (W8)</text>
+    <text x="620" y="153" text-anchor="middle" font-size="10" fill="#444">시간 ↔ 속도</text>
+    <!-- second tier -->
+    <line x1="270" y1="160" x2="200" y2="200" stroke="#888"/>
+    <line x1="270" y1="160" x2="340" y2="200" stroke="#888"/>
+    <rect x="120" y="200" width="160" height="40" rx="4" fill="#fff" stroke="#ff9800"/>
+    <text x="200" y="218" text-anchor="middle" font-size="11" font-weight="bold" fill="#ff9800">강체 운동방정식 (W9~W11)</text>
+    <text x="200" y="233" text-anchor="middle" font-size="10" fill="#444">F=ma + M = Iα</text>
+    <rect x="290" y="200" width="160" height="40" rx="4" fill="#fff" stroke="#00838f"/>
+    <text x="370" y="218" text-anchor="middle" font-size="11" font-weight="bold" fill="#00838f">진동 (W12)</text>
+    <text x="370" y="233" text-anchor="middle" font-size="10" fill="#444">SHM, m ẍ + k x = 0</text>
+    <text x="360" y="280" text-anchor="middle" font-size="11" fill="#555">"문제마다 어떤 도구를 쓸지 고르는 것"이 학부 동역학의 진짜 기술</text>
+    <text x="360" y="298" text-anchor="middle" font-size="10" fill="#888">시간이 주어졌나? → 운동학  /  힘이 위치 함수? → 일·에너지  /  충돌·짧은 충격? → 운동량</text>
+  </svg>
+
+  <h2>0. 동역학은 어디서 쓰이나 — 한 학기를 견디게 해 줄 동기</h2>
+  <p>"이 과목 왜 배우는가"에 대한 답을 먼저. 동역학은 <strong>"움직이는 것"이 들어간 모든 공학</strong>의 공통 언어입니다. 학생 본인이 졸업 후 어떤 진로를 가든, 이 한 학기가 직접·간접으로 다시 등장합니다.</p>
+  <ul>
+    <li><strong>자동차 / 항공우주</strong> — 차량의 코너링 한계, 비행기의 받음각 변화, 로켓의 단 분리 후 운동 모두 동역학.</li>
+    <li><strong>로봇·드론</strong> — 매니퓰레이터 팔의 관성, 드론의 자세 제어, 휴머노이드의 균형 — 강체의 회전 운동학+운동역학(W9~W11)이 그대로.</li>
+    <li><strong>제조 기계</strong> — 4절 링크(W10), 캠, 기어 비, 진동(W12)으로 인한 정밀도 저하.</li>
+    <li><strong>생체역학</strong> — 사람의 보행, 심장 판막, 혈류는 모두 동역학 모델로 분석.</li>
+    <li><strong>스포츠 / 게임 / 영화 CG</strong> — 발사체(W3), 충돌(W8), 진자(W11) — 게임 엔진의 물리 코드는 거의 학부 동역학 식 그대로.</li>
+    <li><strong>구조물·건축</strong> — 다리·고층빌딩의 풍하중·지진하중에서 진동(W12)이 핵심.</li>
+  </ul>
+  <div class="tip">실제로 우리 연구실에서 다루는 주제는 자율주행차(<a href="../../path-planning.html">경로계획·추종</a>), 메카트로닉스 시스템(<a href="../../mechatronics.html">메카트로닉스</a>), 모델예측제어(<a href="../../mpc.html">MPC</a>) 모두 이 강의의 후속편입니다. 즉, <strong>이 강의는 졸업 직후 산업/연구 현장에서 가장 먼저 다시 만나는 과목</strong>이라고 보면 됩니다.</div>
+
+
+  <div class="note">
+    <strong>📚 사전 지식 점검</strong> — 동역학을 따라가려면 다음 세 가지가 익숙해야 합니다. 부족하다 싶으면 옆에 둔 링크를 함께 펼쳐두세요.
+    <ul style="margin:8px 0 0 0">
+      <li><strong>미분·적분 기초</strong>: $\dfrac{d}{dt}$가 "시간에 대한 변화율"이라는 감각, 적분이 "면적"이라는 감각. 약하면 <a href="../../calculus.html">미분적분학</a> W1~W3.</li>
+      <li><strong>벡터의 기본</strong>: 두 벡터의 합, 성분 분해, 내적. 약하면 <a href="../../linear-algebra.html">선형대수학</a> W2~W3.</li>
+      <li><strong>고등학교 물리</strong>: $F=ma$, 등가속도 운동, 자유낙하. 약해도 W2부터 차근차근 다시 다룹니다.</li>
+    </ul>
+  </div>
+
+  <div class="tip">
+    <strong>이 강의에서 자주 쓸 표기</strong>
+    <ul style="margin:8px 0 0 0">
+      <li>굵은 글씨 $\mathbf{r}$, $\mathbf{v}$, $\mathbf{a}$ — <em>벡터</em>(크기와 방향). 화살표 $\vec r$로 쓰기도 함.</li>
+      <li>$\hat{\mathbf{i}}, \hat{\mathbf{j}}, \hat{\mathbf{k}}$ — $x, y, z$ 방향 <em>단위 벡터</em>(길이 1, 방향만 표시).</li>
+      <li>점 표기 $\dot x = \dfrac{dx}{dt}$, $\ddot x = \dfrac{d^2 x}{dt^2}$ — 뉴턴이 시작한 줄임 표기. 점 한 개는 1차 미분, 점 두 개는 2차 미분.</li>
+      <li>$\sum$ — "전부 합한다"의 기호. $\sum \mathbf{F}$ = "물체에 작용하는 모든 힘의 합".</li>
+    </ul>
+  </div>
+
+  <h2>0-A4. 한국적 사례 — 일상에서 마주치는 동역학</h2>
+  <p>한국 학생이 매일 마주치는 장면들이 사실은 모두 동역학 교과서의 그림과 같다는 걸 보여드립니다.</p>
+  <ul>
+    <li><strong>지하철 출발·정지</strong> — 한국 도시철도는 가속/감속을 약 1.0 m/s²로 제어합니다(승객 편의 한계). 9호선 급행은 등속 구간 속도 90 km/h. W2의 등가속도 식 그대로.</li>
+    <li><strong>KTX의 곡선 통과</strong> — 시속 300 km로 곡률 반경 7000 m인 곡선을 통과할 때 구심가속도 $v^2/\rho \approx 0.99$ m/s² ≈ 0.10 g. 객차 한쪽이 살짝 들리는 캔트 각도가 이걸 상쇄합니다(W4).</li>
+    <li><strong>롯데월드 자이로드롭</strong> — 71 m 높이에서 거의 자유낙하. 약 3.8 s 동안 무중력감, 도착 직전 속도 약 38 m/s ≈ 137 km/h. 자기력 브레이크가 운동에너지를 흡수(W7).</li>
+    <li><strong>야구의 직구·변화구</strong> — 직구는 W3 발사체+공기저항. 슬라이더·커브는 마그누스 효과(회전이 만드는 횡력)로 궤적이 휨 — 학부 다음 단계 유체역학.</li>
+    <li><strong>축구공 페널티킥</strong> — 11 m 거리 골대 앞 골키퍼. 공이 시속 100 km로 차이면 도달 시간 0.4 s. 인간 반응 시간 0.3 s — 키퍼는 사실상 "찍어서" 막아야 하는 이유.</li>
+    <li><strong>엘리베이터의 출발·정지</strong> — 출발 시 발이 무거워지고(가속도 위쪽 → 수직항력 증가), 도착 직전 가벼워짐(감속). $N = m(g + a)$ — W6의 첫 예제.</li>
+    <li><strong>스마트폰 자이로 센서</strong> — IMU(관성측정장치)는 가속도와 각속도를 직접 측정. 이걸 적분해서 위치·자세를 복원하는 게 자율주행·드론의 출발점.</li>
+  </ul>
+  <p>이 강의에서 만나는 식이 추상적으로 느껴진다면, 매주 한 가지 일상 사례를 골라 그 식을 적용해 보세요. "지하철이 1 m/s²로 10초 가속하면 어디까지 가나" — 이런 한 줄 문제만 풀어도 이미 W2의 핵심을 잡은 겁니다.</p>
+
+  <h2>0-B. 뉴턴의 운동 3법칙 — 한 페이지로 다시 보기</h2>
+  <p>이 강의의 모든 식이 결국 이 세 줄로 환원됩니다. 미리 한 번 깔끔히 짚어두면 W6 이후 흐름이 매끄럽습니다.</p>
+  <ol>
+    <li><strong>제1법칙(관성의 법칙)</strong>: 외력의 합이 0이면 물체는 정지하거나 등속 직선 운동을 유지한다. — 정역학(전 학기)이 다루던 영역, 그리고 "기준이 되는 좌표계(관성계)"를 정의하는 법칙.</li>
+    <li><strong>제2법칙(가속의 법칙)</strong>: $\sum \mathbf{F} = m\mathbf{a}$. — 동역학의 본체. W6~W11이 이 식의 다양한 적용.</li>
+    <li><strong>제3법칙(작용·반작용)</strong>: 두 물체 사이의 힘은 항상 크기가 같고 방향이 반대다. — 운동량 보존(W8)·다체 시스템·도르래 장력 분석의 토대.</li>
+  </ol>
+  <div class="warn">
+    <strong>주의 — 작용·반작용은 "같은 물체에 작용하지 않는다"</strong>: 책상 위 책의 무게 $mg$(지구가 책에 작용)와 책상이 책을 미는 수직항력 $N$은 작용·반작용 쌍이 <em>아닙니다</em>. 두 힘 모두 책에 작용하니까요. 책의 무게 $mg$의 진짜 짝은 "책이 지구를 끌어당기는 힘". 이걸 구별 못 하면 FBD가 꼬입니다.
+  </div>
+
+  <h2>0-B2. 3법칙 시각화 — FBD로 보면 보이는 것</h2>
+  <p>제3법칙(작용·반작용)에서 학생들이 가장 많이 헷갈리는 부분: "왜 책상 위 책의 무게와 수직항력이 작용·반작용 쌍이 아닌가?" 그림으로 한 번 정리합니다.</p>
+  <svg viewBox="0 0 720 280" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:6px">
+    <text x="360" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0b5fff">"책 vs 책상"의 진짜 작용·반작용 쌍</text>
+    <!-- left: WRONG pair -->
+    <text x="180" y="50" text-anchor="middle" font-size="12" font-weight="bold" fill="#c62828">잘못된 짝 (둘 다 책에 작용)</text>
+    <rect x="120" y="120" width="120" height="40" fill="#deb887" stroke="#333"/>
+    <text x="180" y="145" text-anchor="middle" font-size="11">책</text>
+    <line x1="80" y1="180" x2="280" y2="180" stroke="#666" stroke-width="2"/>
+    <text x="290" y="184" font-size="10" fill="#666">책상 표면</text>
+    <!-- weight (down) -->
+    <line x1="180" y1="160" x2="180" y2="220" stroke="#c62828" stroke-width="2"/>
+    <polygon points="175,215 180,225 185,215" fill="#c62828"/>
+    <text x="195" y="210" font-size="11" fill="#c62828">mg (지구→책)</text>
+    <!-- normal (up) -->
+    <line x1="180" y1="120" x2="180" y2="80" stroke="#0b5fff" stroke-width="2"/>
+    <polygon points="175,85 180,75 185,85" fill="#0b5fff"/>
+    <text x="195" y="95" font-size="11" fill="#0b5fff">N (책상→책)</text>
+    <text x="180" y="265" text-anchor="middle" font-size="10" fill="#c62828">크기는 같지만 같은 물체에 작용 → 작용·반작용 아님</text>
+    <!-- right: RIGHT pair -->
+    <text x="540" y="50" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e7d32">진짜 짝 (서로 다른 두 물체)</text>
+    <rect x="480" y="120" width="120" height="40" fill="#deb887" stroke="#333"/>
+    <text x="540" y="145" text-anchor="middle" font-size="11">책</text>
+    <circle cx="540" cy="240" r="22" fill="#cfe9ff" stroke="#333"/>
+    <text x="540" y="245" text-anchor="middle" font-size="11">지구</text>
+    <!-- pair: book pulls earth up, earth pulls book down -->
+    <line x1="540" y1="160" x2="540" y2="218" stroke="#c62828" stroke-width="2"/>
+    <polygon points="535,213 540,223 545,213" fill="#c62828"/>
+    <text x="555" y="195" font-size="10" fill="#c62828">mg (지구→책)</text>
+    <line x1="540" y1="120" x2="540" y2="60" stroke="#2e7d32" stroke-width="2"/>
+    <polygon points="535,65 540,55 545,65" fill="#2e7d32"/>
+    <text x="555" y="80" font-size="10" fill="#2e7d32">mg (책→지구)</text>
+    <text x="540" y="265" text-anchor="middle" font-size="10" fill="#2e7d32">서로 다른 물체에 작용 → 진짜 작용·반작용</text>
+  </svg>
+  <p>이 구분이 W6 자유물체도(FBD)에서 결정적입니다. FBD는 "한 물체에 작용하는 모든 힘"만 그리는 그림이므로, 작용·반작용 쌍의 다른 한쪽은 절대 같은 FBD에 등장하지 않습니다.</p>
+
+  <h2>0-B3. 3법칙으로 풀어보는 일상 — 작은 손계산 예제</h2>
+  <p>세 법칙이 그림에서 어떻게 식으로 옮겨지는지 한 번씩 따라가 봅시다.</p>
+
+  <div class="note">
+    <strong>예제 1 — 1법칙 점검</strong>: 매끄러운 얼음판 위에서 70 kg 스케이터가 10 m/s로 미끄러져 간다. 외부 힘이 0이라면 50 m 후 속도는?
+    <br><br>
+    <strong>풀이</strong> — 외력 합이 0이므로 1법칙(관성)에 의해 등속. 답은 그대로 <strong>10 m/s</strong>. 거리는 의미가 없습니다(시간이 얼마나 걸렸는지가 아니라 속도가 얼마인지를 묻는 문제). "왜 안 멈추지?" 일상 직관이 묻는 질문 — 답: 마찰이 0이라고 가정했기 때문에 멈출 이유가 없음.
+  </div>
+
+  <div class="note">
+    <strong>예제 2 — 2법칙 점검</strong>: 1500 kg 자동차가 0.3g로 가속한다. 엔진이 만드는 힘은? (마찰 무시)
+    <br><br>
+    <strong>풀이</strong> — $F = ma = 1500 \times 0.3 \times 9.81 \approx \mathbf{4414 \text{ N}}$. 약 4.4 kN — 일반 가솔린 차량의 출발 토크에 가까운 값. 차원: [kg][m/s²] = [N] ✓.
+  </div>
+
+  <div class="note">
+    <strong>예제 3 — 3법칙 점검</strong>: 80 kg 사람이 200 kg 보트 위에 서서 보트 위를 4 m/s로 걸어가기 시작한다. 보트의 속도는?
+    <br><br>
+    <strong>풀이</strong> — 외부 수평력 0(물의 마찰 무시) → 운동량 보존(W8 미리보기). 사람이 +x 방향으로 걸어가면 보트는 −x 방향으로 밀려야 합니다. $80(4) + 200(-v_b) = 0 \Rightarrow v_b = \mathbf{1.6 \text{ m/s 후진}}$. "사람이 보트를 미는 힘 = 보트가 사람을 미는 힘" — 3법칙이 두 물체의 운동을 묶어줍니다.
+  </div>
+
+  <h2>0-C. 미분의 직관 회복 — 평균에서 순간으로</h2>
+  <p>동역학이 미분방정식이라고 했죠. 미분이 무엇인지 한 번 더 그림으로 짚어두면 한 학기가 한결 편합니다.</p>
+  $$ v_{\text{평균}} = \frac{\Delta s}{\Delta t}, \qquad v_{\text{순간}} = \lim_{\Delta t \to 0}\frac{\Delta s}{\Delta t} = \frac{ds}{dt} $$
+  <p>"평균 속도가 두 점을 잇는 직선의 기울기, 순간 속도는 한 점에서의 접선 기울기" — 이 한 문장이 W2의 거의 모든 그래프 문제의 핵심입니다.</p>
+  <svg viewBox="0 0 640 240" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:6px">
+    <text x="320" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0b5fff">평균(secant) vs 순간(tangent)</text>
+    <!-- axes -->
+    <line x1="60" y1="200" x2="600" y2="200" stroke="#888"/>
+    <line x1="60" y1="200" x2="60" y2="40" stroke="#888"/>
+    <text x="610" y="205" font-size="11" fill="#444">t</text>
+    <text x="50" y="40" font-size="11" fill="#444">s</text>
+    <!-- curve s = 0.005 t^2 ... mapped: from t=0..540 -->
+    <path d="M 60 200 Q 240 195 360 130 T 600 50" fill="none" stroke="#0b5fff" stroke-width="2"/>
+    <!-- two points for secant -->
+    <circle cx="180" cy="195" r="4" fill="#c62828"/>
+    <text x="180" y="218" text-anchor="middle" font-size="10" fill="#c62828">t₁</text>
+    <circle cx="450" cy="95" r="4" fill="#c62828"/>
+    <text x="450" y="88" text-anchor="middle" font-size="10" fill="#c62828">t₂</text>
+    <!-- secant -->
+    <line x1="120" y1="218" x2="540" y2="55" stroke="#c62828" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="320" y="160" text-anchor="middle" font-size="11" fill="#c62828">평균 속도 = secant 기울기</text>
+    <!-- tangent at one point -->
+    <circle cx="320" cy="160" r="4" fill="#2e7d32"/>
+    <line x1="200" y1="225" x2="440" y2="95" stroke="#2e7d32" stroke-width="1.5"/>
+    <text x="320" y="195" text-anchor="middle" font-size="11" fill="#2e7d32">순간 속도 = tangent 기울기</text>
+  </svg>
+
+  <h2>1. 정역학 vs 동역학 — 한 줄 차이</h2>
+  <p><strong>정역학(Statics)</strong>은 "물체가 가만히 있을 때 힘이 어떻게 균형을 이루는가"를 다룹니다. 멈춰 있는 다리, 서 있는 사람, 책상 위의 책. 합력이 0이고 합모멘트가 0이라는 두 식이 전부입니다.</p>
+  <p><strong>동역학(Dynamics)</strong>은 시간이 들어옵니다. 합력이 0이 아닐 때 물체는 가속하고, 그 가속도가 시간을 따라 속도와 위치를 만듭니다. 정역학의 두 식이 미분방정식으로 바뀌는 거예요.</p>
+  $$ \text{정역학: } \sum \mathbf{F} = \mathbf{0} \qquad \Longrightarrow \qquad \text{동역학: } \sum \mathbf{F} = m\mathbf{a} = m\ddot{\mathbf{r}} $$
+
+  <div class="tip"><strong>비유</strong> — 정역학이 "사진"이라면 동역학은 "영상"입니다. 사진은 한 장으로 답이 나오지만, 영상은 매 순간이 다음 순간을 만듭니다. 그래서 동역학은 본질적으로 미분방정식 — "지금 상태가 다음 상태를 어떻게 만드는가"의 규칙입니다.</div>
+
+  <h2>1-A. 정역학 → 동역학 전환의 다섯 가지 풍경</h2>
+  <p>정역학을 한 학기 마치고 동역학으로 들어오면 익숙한 그림이 어떻게 변하는지 한눈에 비교해봅시다.</p>
+  <table>
+    <thead><tr><th>장면</th><th>정역학(Statics)</th><th>동역학(Dynamics)</th></tr></thead>
+    <tbody>
+      <tr><td>책상 위 책</td><td>$N = mg$ — 균형</td><td>책상이 흔들리면 책이 미끄러짐, $N \ne mg$</td></tr>
+      <tr><td>로프에 매달린 추</td><td>$T = mg$ — 정지</td><td>줄을 끊으면 자유낙하, $T = 0$, $a = -g$</td></tr>
+      <tr><td>경사면 위 박스</td><td>$\mu \ge \tan\theta$이면 정지</td><td>$\mu < \tan\theta$이면 가속, $a = g(\sin\theta - \mu\cos\theta)$</td></tr>
+      <tr><td>두 줄로 매달린 신호등</td><td>장력 분배 ($\sum F = 0$)</td><td>한 줄을 끊으면 진자 운동(W11)</td></tr>
+      <tr><td>다리의 트러스</td><td>각 부재의 하중 분배</td><td>지진·풍하중 시 진동 응답(W12)</td></tr>
+    </tbody>
+  </table>
+  <p>핵심 변화는 단 하나 — <strong>$\sum F = 0$ 대신 $\sum F = m a$</strong>. 그러나 이 한 글자가 더해지면서, 정적인 그림이 시간을 가진 영상으로 바뀝니다.</p>
+
+  <h2>2. 좌표계가 여러 개인 이유</h2>
+  <p>같은 운동도 좌표계를 어떻게 잡느냐에 따라 식의 모양이 완전히 달라집니다. 동역학 한 학기는 사실 <strong>"같은 운동을 세 가지 좌표계로 묘사하는 연습"</strong>입니다.</p>
+  <ul>
+    <li><strong>직각좌표 $(x, y)$</strong> — 발사체처럼 중력이 한 방향으로 일정할 때. 두 축이 독립적으로 움직임. (W3)</li>
+    <li><strong>접선·법선 $(t, n)$</strong> — 곡선을 따라 움직일 때, "앞으로 가속" vs "옆으로 휨"을 분리하고 싶을 때. (W4)</li>
+    <li><strong>극좌표 $(r, \theta)$</strong> — 회전축이나 중심점이 있는 운동. 행성, 회전 그네. (W4)</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 정역학 → 동역학 — 시간이 들어오면 무엇이 바뀌나</h4>
+    <p>왼쪽은 정역학 — 블록이 정지해 있고, 슬라이더로 외력 $F$를 주면 마찰력이 같은 크기로 반대 방향으로 작용해 균형을 이룹니다($F \le \mu N$일 때만). 오른쪽은 동역학 — 같은 외력이지만 마찰을 이기면 가속합니다. <strong>$F$를 천천히 키워보세요.</strong> 어느 순간 정적 마찰 한계를 넘어서면 정역학의 답은 사라지고, 동역학에서는 가속이 시작됩니다.</p>
+    <canvas id="staticDynC" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>외력 F (N) <span class="val" id="sdFV">8</span><input type="range" id="sdF" min="0" max="40" step="0.5" value="8"></label>
+      <label>마찰계수 μ <span class="val" id="sdMV">0.3</span><input type="range" id="sdM" min="0" max="0.6" step="0.02" value="0.3"></label>
+      <button id="sdReset">동역학 재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('staticDynC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['sdF','sdM'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    let dyn={x:480,v:0};
+    sl('sdReset').onclick=()=>{dyn={x:480,v:0};};
+    ['sdF','sdM'].forEach(k=>sl(k).oninput=upd);upd();
+    const m=2,g=9.81;
+    function drawBlock(cx,cy,col,arrowF,arrowFr,label){
+      x.fillStyle='#e8e8e8';x.fillRect(40,cy+30,560,4);
+      x.fillStyle=col;x.fillRect(cx-30,cy-10,60,40);
+      x.strokeStyle='#333';x.strokeRect(cx-30,cy-10,60,40);
+      // F arrow (right)
+      if(arrowF>0.1){
+        x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();x.moveTo(cx+30,cy+10);x.lineTo(cx+30+arrowF,cy+10);
+        x.lineTo(cx+25+arrowF,cy+5);x.moveTo(cx+30+arrowF,cy+10);x.lineTo(cx+25+arrowF,cy+15);x.stroke();
+        x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('F',cx+30+arrowF/2-4,cy+4);
+      }
+      // friction arrow (left)
+      if(arrowFr>0.1){
+        x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();x.moveTo(cx-30,cy+22);x.lineTo(cx-30-arrowFr,cy+22);
+        x.lineTo(cx-25-arrowFr,cy+17);x.moveTo(cx-30-arrowFr,cy+22);x.lineTo(cx-25-arrowFr,cy+27);x.stroke();
+        x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('f',cx-30-arrowFr/2-2,cy+18);
+      }
+      x.fillStyle='#333';x.font='bold 13px sans-serif';x.textAlign='center';x.fillText(label,cx,cy-22);
+    }
+    function loop(){
+      const F=+sl('sdF').value, mu=+sl('sdM').value;
+      const fmax=mu*m*g;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // Static side (left)
+      x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='left';
+      x.fillText('정역학 (a=0 가정)',60,30);
+      const fStatic=Math.min(F,fmax);
+      const moving=F>fmax;
+      drawBlock(160,140,moving?'#fff5f5':'#cfe9ff',F*2,fStatic*2, moving?'한계 초과 — 균형 불가':'정적 균형');
+      x.fillStyle='#666';x.font='11px Consolas,monospace';x.textAlign='center';
+      x.fillText('f_max = μmg = '+fmax.toFixed(1)+' N',160,205);
+      x.fillText(moving?'F > f_max ⇒ 정지 안 됨':('F = '+F.toFixed(1)+', f = '+fStatic.toFixed(1)),160,220);
+      // Dynamic side (right)
+      x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='left';
+      x.fillText('동역학 (a = (F − μmg)/m)',360,30);
+      const a=Math.max(0,(F-fmax)/m);
+      dyn.v+=a*0.03;dyn.v*=0.999;
+      dyn.x+=dyn.v;
+      if(dyn.x>590){dyn.x=590;dyn.v=0;}
+      drawBlock(dyn.x,140,'#ffd7d7',F*2,fmax*2,'가속 중');
+      x.fillStyle='#666';x.font='11px Consolas,monospace';x.textAlign='center';
+      x.fillText('a = '+a.toFixed(2)+' m/s²,  v = '+dyn.v.toFixed(2),480,205);
+      x.fillText('F='+F.toFixed(1)+'  −  μmg='+fmax.toFixed(1),480,220);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>1-B. "관성계"란 무엇인가 — 1법칙이 정의하는 것</h2>
+  <p>학생들이 W6에서 갑자기 마주치는 단어 "관성계(inertial frame)"를 미리 한 번 짚어둡니다. 1법칙은 사실 정의입니다 — "외력이 0인데도 가속하는 좌표계는 관성계가 아니다."</p>
+  <ul>
+    <li><strong>관성계의 예</strong>: 정지한 지면(짧은 시간 척도에서). 등속 직선운동하는 기차 안. 우주 깊은 곳의 자유낙하 우주선.</li>
+    <li><strong>비관성계의 예</strong>: 가속하는 자동차 안. 회전하는 회전목마 위. 지구 표면(엄밀히는 자전 때문에 약간 비관성).</li>
+  </ul>
+  <p>비관성계에서도 운동 식을 쓸 수는 있지만, "관성력(가짜 힘)"을 추가해야 합니다. 가속하는 버스가 출발할 때 몸이 뒤로 쏠리는 느낌 — 그게 관성력. 학부 동역학에서는 거의 모든 문제를 관성계에서 풀고, 비관성계는 W11~W12에서 잠깐 다룹니다.</p>
+
+  <div class="tip">
+    <strong>일상 점검</strong> — 엘리베이터가 위로 막 출발할 때 몸이 무거워지는 느낌은 비관성계 효과입니다. 엘리베이터 안에서 보면 추가로 아래쪽 관성력이 작용한 것처럼 보이고, 지면에서 보면 내가 위로 가속하는 것뿐. 같은 사건 두 가지 묘사 — 어떤 좌표계를 잡느냐의 문제.
+  </div>
+
+  <h2>2-A. 좌표계 선택이 풀이를 어떻게 바꾸나 — 같은 문제, 세 풀이</h2>
+  <p>"수평 지면을 따라 미끄러지는 줄에 매달린 추"라는 문제를 세 좌표계로 풀어보면, 어느 것이 식을 가장 단순하게 만드는지 한눈에 보입니다.</p>
+  <div class="note">
+    <strong>예시 — 길이 $L$인 줄에 매달린 진자, 작은 각도 $\theta$ 운동</strong>
+    <ul style="margin:6px 0 0 0">
+      <li><strong>직각좌표 (x, y)</strong> — 추의 위치를 $(x, y) = (L\sin\theta, -L\cos\theta)$로 두면 두 식이 모두 $\theta$의 함수로 얽힙니다. 해석이 어렵습니다.</li>
+      <li><strong>접선·법선 (n, t)</strong> — 추가 호를 따라가니 자연스러움. 접선 방향: $m L \ddot\theta = -mg\sin\theta$, 법선 방향: $m L \dot\theta^2 = T - mg\cos\theta$. 두 방향이 명확히 분리.</li>
+      <li><strong>극좌표 (r, θ)</strong> — $r = L$ 고정, $\theta$만 변수. 한 변수 미분방정식으로 끝.</li>
+    </ul>
+    같은 운동이지만 좌표계 선택에 따라 식의 모양이 1줄에서 5줄까지 차이가 납니다. <strong>"운동이 어떤 곡선을 따라가는가"를 보고 좌표계를 정한다</strong>는 게 W3~W5의 첫 번째 결정.
+  </div>
+
+  <h2>3. 차원과 단위 — 식이 맞는지 1초 만에 확인</h2>
+  <p>동역학 식에서 가장 흔한 실수가 단위 혼동입니다. 항상 양변의 차원을 맞춰보세요.</p>
+  <table>
+    <thead><tr><th>양</th><th>SI 단위</th><th>분해</th><th>흔한 변환</th></tr></thead>
+    <tbody>
+      <tr><td>위치 $s$, $r$</td><td>m</td><td>—</td><td>1 km = 10³ m, 1 mile ≈ 1609 m</td></tr>
+      <tr><td>속도 $v$</td><td>m/s</td><td>—</td><td>1 km/h = 1/3.6 m/s; 100 km/h ≈ 27.8 m/s</td></tr>
+      <tr><td>가속도 $a$</td><td>m/s²</td><td>—</td><td>1 g ≈ 9.81 m/s²</td></tr>
+      <tr><td>각도 $\theta$</td><td>rad</td><td>무차원</td><td>180° = π rad ≈ 3.1416 rad</td></tr>
+      <tr><td>각속도 $\omega$</td><td>rad/s</td><td>—</td><td>1 rpm = 2π/60 ≈ 0.105 rad/s</td></tr>
+      <tr><td>힘 $F$</td><td>N</td><td>kg·m/s²</td><td>1 kgf = 9.81 N, 1 lbf ≈ 4.45 N</td></tr>
+      <tr><td>토크 $M$</td><td>N·m</td><td>kg·m²/s²</td><td>(에너지와 단위 같지만 의미는 다름)</td></tr>
+      <tr><td>에너지 $E$</td><td>J</td><td>N·m = kg·m²/s²</td><td>1 cal ≈ 4.184 J, 1 kWh = 3.6 MJ</td></tr>
+      <tr><td>일률 $P$</td><td>W</td><td>J/s = kg·m²/s³</td><td>1 HP ≈ 746 W</td></tr>
+      <tr><td>운동량 $p$</td><td>kg·m/s</td><td>N·s</td><td>충격량과 같은 단위</td></tr>
+      <tr><td>관성모멘트 $I$</td><td>kg·m²</td><td>—</td><td>(질량 × 거리²)</td></tr>
+    </tbody>
+  </table>
+  <p>"답을 적었는데 단위가 [s/m]이다" → 식이 틀렸다는 뜻. 먼저 그것부터 점검합니다.</p>
+
+  <div class="note">
+    <strong>차원 분석 자가점검 — 답이 떠오르는지?</strong>
+    <ol style="margin:6px 0 0 0">
+      <li>$F = mv^2/r$의 좌·우변 단위는? 일치하는가? <em>(답: 좌 [N], 우 [kg][m/s]²/[m] = [kg·m/s²] = [N], 일치 ✓)</em></li>
+      <li>$T = 2\pi\sqrt{m/k}$ — $k$ 단위가 N/m일 때 $T$ 단위는? <em>([kg]/[N/m] = [kg·m/N] = [kg·m·s²/(kg·m)] = [s²] → √ → [s] ✓)</em></li>
+      <li>운동에너지 $\tfrac{1}{2}mv^2$의 단위는? <em>([kg][m/s]² = [kg·m²/s²] = [N·m] = [J] ✓)</em></li>
+      <li>식 $E = mc^2$이 차원적으로 맞는지 1초 안에 보일 수 있나? <em>(c는 속도 [m/s] → c²은 [m²/s²] → m·c²은 [kg·m²/s²] = [J] ✓)</em></li>
+    </ol>
+    이 습관이 시험에서 가장 잘 통합니다 — 답을 적기 전 단위가 맞아야 채점자가 다음 줄을 봐 줍니다.
+  </div>
+
+
+  <div class="demo">
+    <h4>🎮 데모 2: 같은 점, 세 좌표계로 보기</h4>
+    <p>커서를 캔버스 위로 움직여 점을 옮겨보세요. 같은 위치를 <strong>직각 $(x,y)$ · 극 $(r,\theta)$ · 접선/법선</strong> 세 좌표계로 동시에 표시합니다. 좌표계가 달라도 점의 위치는 같다는 게 핵심 — 식의 모양만 달라질 뿐입니다.</p>
+    <canvas id="coordC" width="640" height="320"></canvas>
+    <div class="controls" id="coordInfo" style="font-family:Consolas,monospace;font-size:12px;color:#444"></div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('coordC'),x=c.getContext('2d'),info=document.getElementById('coordInfo');
+    let mx=180,my=80;
+    c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;});
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=320,oy=160;
+      // axes
+      x.strokeStyle='#d0d4d9';x.lineWidth=1;
+      x.beginPath();x.moveTo(0,oy);x.lineTo(c.width,oy);x.moveTo(ox,0);x.lineTo(ox,c.height);x.stroke();
+      // grid every 40
+      x.strokeStyle='#ececec';
+      for(let i=-7;i<=7;i++){x.beginPath();x.moveTo(ox+i*40,0);x.lineTo(ox+i*40,c.height);x.stroke();}
+      for(let i=-4;i<=4;i++){x.beginPath();x.moveTo(0,oy+i*40);x.lineTo(c.width,oy+i*40);x.stroke();}
+      // point
+      const px=mx,py=my;
+      const X=(px-ox)/40,Y=-(py-oy)/40;
+      const r=Math.sqrt(X*X+Y*Y),th=Math.atan2(Y,X);
+      // r vector
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();x.moveTo(ox,oy);x.lineTo(px,py);x.stroke();
+      // x component
+      x.strokeStyle='#2e7d32';x.setLineDash([4,3]);x.beginPath();x.moveTo(ox,oy);x.lineTo(px,oy);x.lineTo(px,py);x.stroke();x.setLineDash([]);
+      // angle arc
+      x.strokeStyle='#c62828';x.beginPath();x.arc(ox,oy,30,0,-th,th>0);x.stroke();
+      // tangent/normal direction (assume motion CCW around origin)
+      const tlen=40;
+      const tx=-Math.sin(th)*tlen,ty=Math.cos(th)*tlen;
+      x.strokeStyle='#9e35b8';x.lineWidth=2;x.beginPath();x.moveTo(px,py);x.lineTo(px+tx,py-ty);x.stroke();
+      x.fillStyle='#9e35b8';x.font='11px sans-serif';x.fillText('t̂ (접선, 가상 원운동 가정)',px+tx+5,py-ty);
+      // point
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px,py,5,0,Math.PI*2);x.fill();
+      // legend
+      x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('r (극좌표 거리)',(ox+px)/2+8,(oy+py)/2);
+      x.fillStyle='#2e7d32';x.fillText('x (직각좌표)',(ox+px)/2-30,oy-6);
+      x.fillStyle='#2e7d32';x.fillText('y',px+6,(oy+py)/2);
+      x.fillStyle='#c62828';x.font='11px sans-serif';x.fillText('θ',ox+34,oy-4);
+      info.innerHTML='<strong>직각:</strong> x = '+X.toFixed(2)+',  y = '+Y.toFixed(2)+
+        '   <strong>극:</strong> r = '+r.toFixed(2)+',  θ = '+(th*180/Math.PI).toFixed(0)+'°'+
+        '   <strong>접선 방향:</strong> (−sin θ, cos θ) — CCW 원운동 가정 시';
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>2-B. 좌표축 잡기 — "양의 방향"의 결정이 식의 부호를 정한다</h2>
+  <p>풀이에서 가장 흔한 실수가 부호 혼동입니다. 그 시작은 "어느 방향을 양으로 잡을까"의 결정.</p>
+  <ul>
+    <li><strong>수직 운동</strong>: 위를 +로 잡으면 중력가속도는 $-g$. 아래를 +로 잡으면 $+g$. 어느 쪽이든 OK, <em>일관성</em>만 지키면 됩니다.</li>
+    <li><strong>경사면</strong>: 경사 방향을 양으로 잡는 게 보통. 그러면 중력의 경사 방향 성분은 $+g\sin\theta$, 마찰은 운동 반대 방향이라 $-\mu g\cos\theta$ (운동이 +방향일 때).</li>
+    <li><strong>회전</strong>: 반시계(CCW)를 양으로 잡는 게 수학 관례. 시계 방향 토크는 음수.</li>
+  </ul>
+  <div class="warn">
+    <strong>주의</strong> — 한 문제 안에서 좌표축을 절대 바꾸지 마세요. 처음에 위를 +로 잡았다면 끝까지 그렇게. 풀이 중 부호가 헷갈리면 처음 잡은 좌표축으로 돌아와 다시 한 줄씩 점검합니다. "음의 답이 나왔다"는 게 틀린 게 아니라, "내가 잡은 양의 방향과 반대"라는 의미일 뿐.
+  </div>
+
+  <h2>3-A. 차원 분석으로 새 식 추측하기 — 단진자의 주기</h2>
+  <p>차원 분석은 단지 점검 도구가 아닙니다. 식의 모양을 추측하는 강력한 도구입니다. 단진자의 주기가 $T = f(L, m, g)$의 어떤 함수일 거라고 가정해 봅시다.</p>
+  <p>$T$의 단위는 [s]. $L$은 [m], $m$은 [kg], $g$는 [m/s²]. 단위 [s]를 만드는 조합은 $\sqrt{L/g}$밖에 없습니다 ([m]/[m/s²] = [s²], 제곱근 = [s]). 질량 $m$은 어떻게 조합해도 [s]를 못 만들죠. 그래서 <strong>단진자 주기는 질량과 무관</strong>이라는 결론이 식 하나 풀지 않고도 나옵니다.</p>
+  $$ T = C\sqrt{L/g} \quad \text{(C는 무차원 상수, 실제로는 } 2\pi) $$
+  <p>이런 추측을 W12 진동에서 다시 만나게 됩니다. 차원 분석은 무차원 계수($2\pi$)는 못 알려주지만, 식의 골격은 거의 다 알려줍니다.</p>
+
+  <div class="note">
+    <strong>응용 자가점검</strong> — 다음 양들을 차원 분석으로 추측해 보세요.
+    <ol style="margin:6px 0 0 0">
+      <li>스프링 진자 $T = ?(m, k)$ — 답: $T = 2\pi\sqrt{m/k}$</li>
+      <li>지구 표면 탈출속도 $v_e = ?(G, M, R)$ — 답: $v_e = \sqrt{2GM/R}$</li>
+      <li>점성 유체 속 작은 공의 종단속도 $v_t = ?(m, g, \mu, r)$ — 답: $v_t \propto mg/(\mu r)$ (Stokes)</li>
+    </ol>
+  </div>
+
+  <h2>4. 한 학기 로드맵</h2>
+  <ol>
+    <li><strong>W2–W5 운동학(kinematics)</strong>: 힘 <em>없이</em>, 좌표계 위에서 운동을 묘사하는 법. "무엇이 어떻게 움직이나"만 본다.</li>
+    <li><strong>W6–W8 입자 운동역학(kinetics)</strong>: 힘이 들어옴. 같은 문제를 푸는 세 도구(F=ma · 일-에너지 · 충격량-운동량).</li>
+    <li><strong>W9–W11 강체(rigid body)</strong>: 점이 아니라 회전하는 덩어리. 관성모멘트와 순간중심.</li>
+    <li><strong>W12 진동(vibration)</strong>: 동역학으로 가장 자주 마주치는 운동의 패턴.</li>
+  </ol>
+
+  <div class="tip">
+    <strong>운동학(kinematics) vs 운동역학(kinetics)</strong> — 영어가 헷갈리는 두 단어. <em>kinematics</em>는 "<u>어떻게</u> 움직이나"(위치·속도·가속도), <em>kinetics</em>는 "<u>왜</u> 그렇게 움직이나"(힘이 만든다). 운동학을 먼저 4주 다지고, 그 위에 힘을 얹는 순서입니다.
+  </div>
+
+  <h2>4-1. 좌표계 비교표 — 한눈에</h2>
+  <table>
+    <thead><tr><th>좌표계</th><th>위치</th><th>속도</th><th>가속도</th><th>잘 맞는 상황</th></tr></thead>
+    <tbody>
+      <tr><td>직각 (x, y, z)</td><td>$x\hat i + y\hat j$</td><td>$\dot x\hat i + \dot y\hat j$</td><td>$\ddot x\hat i + \ddot y\hat j$</td><td>중력 같은 일정 방향 힘, 두 축 독립</td></tr>
+      <tr><td>접선·법선 (n, t)</td><td>경로변수 $s$</td><td>$v\hat e_t$</td><td>$\dot v\hat e_t + \tfrac{v^2}{\rho}\hat e_n$</td><td>경로가 곡선, 진행/휨 분리</td></tr>
+      <tr><td>극 (r, θ)</td><td>$r\hat e_r$</td><td>$\dot r\hat e_r + r\dot\theta\hat e_\theta$</td><td>$(\ddot r - r\dot\theta^2)\hat e_r + (r\ddot\theta + 2\dot r\dot\theta)\hat e_\theta$</td><td>중심점 둘레 운동, 회전체</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:14px;color:#555">한 학기 내내 이 표를 곁에 두세요. 같은 점·같은 운동을 보는 세 가지 방식이고, 어느 좌표계가 식을 가장 단순하게 만들지가 풀이의 첫 결정입니다.</p>
+
+  <h2>4-A. 한 학기를 한 장 그림으로 — 강의별 핵심 도구</h2>
+  <svg viewBox="0 0 720 360" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:6px">
+    <text x="360" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0b5fff">동역학 14주 흐름도</text>
+    <!-- W1 -->
+    <rect x="20" y="40" width="80" height="40" rx="4" fill="#0b5fff"/>
+    <text x="60" y="58" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">W1 OT</text>
+    <text x="60" y="72" text-anchor="middle" font-size="9" fill="#fff">큰 그림</text>
+    <!-- W2-5 kinematics -->
+    <rect x="120" y="40" width="280" height="40" rx="4" fill="#cfe9ff" stroke="#0b5fff"/>
+    <text x="260" y="58" text-anchor="middle" font-size="11" font-weight="bold" fill="#0b5fff">W2~W5 운동학 (kinematics)</text>
+    <text x="260" y="72" text-anchor="middle" font-size="9" fill="#444">직선·곡선·다체상대 — 좌표계 적응</text>
+    <!-- W6-8 kinetics -->
+    <rect x="420" y="40" width="280" height="40" rx="4" fill="#ffd7d7" stroke="#c62828"/>
+    <text x="560" y="58" text-anchor="middle" font-size="11" font-weight="bold" fill="#c62828">W6~W8 입자 운동역학</text>
+    <text x="560" y="72" text-anchor="middle" font-size="9" fill="#444">F=ma · 일에너지 · 충격량운동량</text>
+    <!-- W2 -->
+    <rect x="120" y="100" width="60" height="40" rx="4" fill="#fff" stroke="#0b5fff"/>
+    <text x="150" y="118" text-anchor="middle" font-size="10" font-weight="bold">W2</text>
+    <text x="150" y="132" text-anchor="middle" font-size="9">직선</text>
+    <rect x="190" y="100" width="60" height="40" rx="4" fill="#fff" stroke="#0b5fff"/>
+    <text x="220" y="118" text-anchor="middle" font-size="10" font-weight="bold">W3</text>
+    <text x="220" y="132" text-anchor="middle" font-size="9">발사체</text>
+    <rect x="260" y="100" width="60" height="40" rx="4" fill="#fff" stroke="#0b5fff"/>
+    <text x="290" y="118" text-anchor="middle" font-size="10" font-weight="bold">W4</text>
+    <text x="290" y="132" text-anchor="middle" font-size="9">n-t, 극</text>
+    <rect x="330" y="100" width="60" height="40" rx="4" fill="#fff" stroke="#0b5fff"/>
+    <text x="360" y="118" text-anchor="middle" font-size="10" font-weight="bold">W5</text>
+    <text x="360" y="132" text-anchor="middle" font-size="9">상대운동</text>
+    <!-- W6,7,8 -->
+    <rect x="420" y="100" width="80" height="40" rx="4" fill="#fff" stroke="#c62828"/>
+    <text x="460" y="118" text-anchor="middle" font-size="10" font-weight="bold">W6</text>
+    <text x="460" y="132" text-anchor="middle" font-size="9">F=ma 직접</text>
+    <rect x="510" y="100" width="80" height="40" rx="4" fill="#fff" stroke="#c62828"/>
+    <text x="550" y="118" text-anchor="middle" font-size="10" font-weight="bold">W7</text>
+    <text x="550" y="132" text-anchor="middle" font-size="9">일·에너지</text>
+    <rect x="600" y="100" width="80" height="40" rx="4" fill="#fff" stroke="#c62828"/>
+    <text x="640" y="118" text-anchor="middle" font-size="10" font-weight="bold">W8</text>
+    <text x="640" y="132" text-anchor="middle" font-size="9">충격량·운동량</text>
+    <!-- W9-11 rigid -->
+    <rect x="120" y="180" width="380" height="40" rx="4" fill="#fff5dd" stroke="#ff9800"/>
+    <text x="310" y="198" text-anchor="middle" font-size="11" font-weight="bold" fill="#ff9800">W9~W11 강체(rigid body)</text>
+    <text x="310" y="212" text-anchor="middle" font-size="9" fill="#444">회전 운동학 + 모멘트 + 일에너지/운동량 강체버전</text>
+    <rect x="510" y="180" width="190" height="40" rx="4" fill="#e0f2f1" stroke="#00838f"/>
+    <text x="605" y="198" text-anchor="middle" font-size="11" font-weight="bold" fill="#00838f">W12 진동(vibration)</text>
+    <text x="605" y="212" text-anchor="middle" font-size="9" fill="#444">SHM, 감쇠, 강제진동</text>
+    <!-- exam markers -->
+    <line x1="400" y1="240" x2="400" y2="290" stroke="#c62828" stroke-width="2" stroke-dasharray="4,3"/>
+    <text x="400" y="260" text-anchor="middle" font-size="11" font-weight="bold" fill="#c62828">중간고사</text>
+    <text x="400" y="276" text-anchor="middle" font-size="9" fill="#c62828">(W2~W6 위주)</text>
+    <line x1="700" y1="240" x2="700" y2="290" stroke="#c62828" stroke-width="2" stroke-dasharray="4,3"/>
+    <text x="690" y="260" text-anchor="end" font-size="11" font-weight="bold" fill="#c62828">기말고사</text>
+    <text x="690" y="276" text-anchor="end" font-size="9" fill="#c62828">(W7~W12)</text>
+    <!-- bottom note -->
+    <text x="360" y="320" text-anchor="middle" font-size="10" fill="#555">색깔이 같은 칸은 "같은 종류의 식"을 다른 상황에 적용한 것 — 매주 새 식 외우는 게 아니라, 같은 식을 다른 좌표계·다른 물체에 적용</text>
+    <text x="360" y="340" text-anchor="middle" font-size="10" fill="#555">전체적으로 "운동학(kinematics) → 운동역학(kinetics) → 강체 → 진동" 4단계가 한 학기의 큰 흐름</text>
+  </svg>
+
+  <h2>5. 공부 팁 — 매주 이 순서로</h2>
+  <ol>
+    <li><strong>그림부터</strong>: 무엇이 움직이는지 종이에 스케치. 좌표축을 잡고 양의 방향을 표시.</li>
+    <li><strong>아는 것/모르는 것 정리</strong>: 주어진 양과 구해야 할 양을 분리.</li>
+    <li><strong>적용할 식 고르기</strong>: 운동학(W2~W5) — 식만으로 풀림 / 힘이 등장 — F=ma·일-에너지·충격량 중 선택.</li>
+    <li><strong>단위 점검</strong>: 답이 나왔으면 차원이 맞는지 한 번 확인. m/s²인가, m/s인가?</li>
+    <li><strong>극단값 확인</strong>: 질량을 0으로, 마찰을 0으로, 시간을 0으로 보내보면 식이 직관적인 답을 주는가?</li>
+  </ol>
+
+  <h2>4-B. "왜 같은 문제를 세 도구로 푸는가" — 도구 선택의 직관</h2>
+  <p>W6, W7, W8에서 같은 문제를 F=ma, 일·에너지, 충격량·운동량 셋으로 풀게 합니다. "굳이?"라는 질문이 자연스러운데, 답은 간단해요 — 상황마다 한 도구가 압도적으로 쉽습니다.</p>
+  <table>
+    <thead><tr><th>상황</th><th>가장 쉬운 도구</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>"5초 후 속도?"</td><td>F = ma + 시간 적분</td><td>시간이 주어졌고 시간 답을 묻는다</td></tr>
+      <tr><td>"50 m 끝에서 속도?" (시간 없음)</td><td>일·에너지</td><td>위치만 알면 속도가 나옴, 시간 미적분 불필요</td></tr>
+      <tr><td>"공이 벽에 부딪힌 후 속도?" (짧은 충돌)</td><td>충격량·운동량</td><td>충돌 동안 힘 모양 모르지만 충격량은 안다</td></tr>
+      <tr><td>"두 물체 충돌"</td><td>운동량 보존 + 에너지</td><td>외력 없으면 운동량 보존이 식 한 줄로 끝</td></tr>
+      <tr><td>"마찰 있는 경사면 가속도"</td><td>F = ma 직접</td><td>가속도 자체를 묻는다 — 시간 적분 불필요</td></tr>
+      <tr><td>"풀어주는 줄에 매달린 추 — 흔들림 끝 속도"</td><td>일·에너지</td><td>장력은 일을 안 함(수직), 중력만 일</td></tr>
+    </tbody>
+  </table>
+  <p>시험에서 한 문제를 세 도구로 다 풀라고 하지 않습니다. 가장 쉬운 도구를 고르는 안목이 학부 동역학의 진짜 실력 — 그래서 도구 셋 다 익혀두는 겁니다.</p>
+
+  <h2>5-A. 데모 3 — 단위·차원 자가 변환기</h2>
+  <p>슬라이더로 값을 흔들면, 자주 쓰는 단위 환산이 실시간으로 바뀝니다. 시험에서 단위 환산이 막힐 때마다 이 데모를 다시 열어 직관을 회복하세요.</p>
+  <div class="demo">
+    <h4>데모 3 — 일상 단위 ↔ SI 환산</h4>
+    <canvas id="d1UnitC" width="640" height="220"></canvas>
+    <div class="controls">
+      <label>속도 (km/h) <span class="val" id="d1KmhV">100</span><input type="range" id="d1Kmh" min="0" max="300" step="1" value="100"></label>
+      <label>가속도 (g) <span class="val" id="d1GgV">1.0</span><input type="range" id="d1Gg" min="0" max="9" step="0.1" value="1.0"></label>
+      <label>회전수 (rpm) <span class="val" id="d1RpmV">600</span><input type="range" id="d1Rpm" min="0" max="6000" step="10" value="600"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d1UnitC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['d1Kmh','d1Gg','d1Rpm'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['d1Kmh','d1Gg','d1Rpm'].forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const kmh=+sl('d1Kmh').value,gg=+sl('d1Gg').value,rpm=+sl('d1Rpm').value;
+      const ms=kmh/3.6, mph=kmh/1.609;
+      const ams=gg*9.81;
+      const rads=rpm*2*Math.PI/60, hz=rpm/60;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#0b5fff';x.font='bold 13px sans-serif';x.textAlign='left';
+      x.fillText('일상 단위 → SI 단위 환산',20,30);
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';
+      x.fillText('속도: '+kmh.toFixed(1)+' km/h  =  '+ms.toFixed(2)+' m/s  =  '+mph.toFixed(1)+' mph',20,60);
+      x.fillText('가속도: '+gg.toFixed(2)+' g     =  '+ams.toFixed(2)+' m/s²',20,84);
+      x.fillText('회전: '+rpm.toFixed(0)+' rpm   =  '+rads.toFixed(2)+' rad/s   =  '+hz.toFixed(2)+' Hz',20,108);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('• 100 km/h ≈ 27.8 m/s — 시속을 3.6으로 나누면 m/s',20,140);
+      x.fillText('• 1 g ≈ 9.81 m/s² — 자유낙하 가속도',20,158);
+      x.fillText('• 60 rpm = 1 Hz = 1 회전/초 = 2π rad/s',20,176);
+      x.fillText('• 1 rad/s ≈ 9.55 rpm — rpm을 9.55로 나누면 rad/s',20,194);
+    }
+    setInterval(loop,80);loop();
+  })();
+  </script>
+
+  <h2>6. 자가 점검 — 다음 강의로 가기 전에</h2>
+  <div class="note">
+    <strong>1주차 점검 (답이 바로 떠오르면 W2로!)</strong>
+    <ol style="margin:6px 0 0 0">
+      <li>정역학과 동역학의 한 줄 차이는?</li>
+      <li>$\dot x$, $\ddot x$는 무엇을 의미하나?</li>
+      <li>좌표계 세 가지를 들고 각각 잘 맞는 상황을 한 줄씩.</li>
+      <li>$F = ma$의 양변 단위를 SI 기본 단위로 분해해 보라.</li>
+      <li>1 g, 100 km/h, 1 마력을 SI 단위로 환산하면?</li>
+      <li>"속도가 0이면 가속도도 0"이 왜 틀린지 1초 안에 반례를 들 수 있나?</li>
+    </ol>
+    답이 막히면 해당 섹션을 한 번 더 읽고, 그래도 안 풀리면 다음 강의를 읽다가 자연스럽게 채워집니다 — 첫 강의는 큰 그림을 그리는 데 의미가 있습니다.
+  </div>
+
+  <h2>6-A. 평가와 학습 흐름 안내</h2>
+  <p>학생이 한 학기 동안 어떤 흐름으로 무엇을 만들어 가야 하는지 미리 보여드립니다.</p>
+  <ul>
+    <li><strong>매주 진도</strong>: 한 단원 = 한 주. 강의 자료 → 데모 직접 흔들기 → 연습문제 → 흔한 오개념 점검 순서.</li>
+    <li><strong>중간고사 (W7~W8 사이)</strong>: 운동학(W2~W5) + 입자 운동역학(W6) 중심. 자유물체도 그리기·등가속도식·발사체·마찰 경사면이 단골.</li>
+    <li><strong>기말고사 (W12 후)</strong>: 일·에너지·운동량(W7~W8), 강체(W9~W11), 진동(W12). 굴림 가속도·관성모멘트·SHM 주기가 단골.</li>
+    <li><strong>주차마다 수행</strong>: 데모 슬라이더를 끝까지 흔들어 보기 → 식이 어떻게 답하는지 직관 잡기. 시험 전 복습 시간이 1/3로 줄어듭니다.</li>
+  </ul>
+
+  <h2>6-B. 학생들이 자주 하는 질문(FAQ)</h2>
+  <div class="note">
+    <strong>Q. 미적분 약한데 따라갈 수 있나요?</strong><br>
+    A. 강의에서 다시 짚어줍니다. $dx/dt$가 "미세한 시간에 미세하게 변한 위치 = 속도"라는 직관만 있어도 충분.
+    <br><br>
+    <strong>Q. 식 외워야 하나요?</strong><br>
+    A. 등가속도 세 식과 $F=ma$, 일-에너지, 운동량 보존 정도면 충분. 나머지는 "어디서 어떻게 도출했는지"가 더 중요.
+    <br><br>
+    <strong>Q. 풀이가 막힐 때 어떻게?</strong><br>
+    A. ① 단위 점검 → ② 자유물체도 다시 → ③ 좌표계 바꿔보기 → ④ 극단값 점검. 이 순서로 거의 다 풀립니다.
+    <br><br>
+    <strong>Q. 왜 같은 문제를 F=ma·일에너지·충격량 셋으로 풀게 하나요?</strong><br>
+    A. 상황에 따라 한 도구가 압도적으로 쉽기 때문. 시간이 주어지지 않은 문제에 시간 미분방정식을 풀면 손해. 셋 다 익혀두면 시험에서 가장 빠른 길을 고를 수 있습니다.
+  </div>
+
+  <h2>6-B. 빠른 손계산 연습 — 식 없이 직관으로 답하기</h2>
+  <p>다음 문제들은 식을 굳이 풀지 않고 단위·극단·대칭으로 답에 가까이 갈 수 있습니다. 답을 보기 전에 30초씩 생각해보세요.</p>
+  <div class="note">
+    <strong>직관 연습</strong>
+    <ol style="margin:6px 0 0 0">
+      <li>5층 옥상(약 15 m)에서 떨어진 공의 충돌 직전 속도는? <em>대략 $v = \sqrt{2gh} \approx \sqrt{2 \times 10 \times 15} \approx 17$ m/s ≈ 60 km/h. 시속 60 km로 벽에 부딪히는 셈 — 사람 사망 사고에 가까운 속도.</em></li>
+      <li>1톤 차가 시속 50 km로 달리다 단단한 벽에 정면 충돌, 0.1초 만에 정지. 평균 충격력은? <em>$\Delta p = m\Delta v = 1000 \times 13.9 = 13900$ kg·m/s. 평균력 $F = \Delta p/\Delta t = 139000$ N ≈ 14톤 무게에 해당하는 힘. 에어백·범퍼가 충돌 시간을 늘려 이 힘을 줄여줌.</em></li>
+      <li>0-100 km/h 4초인 스포츠카의 평균 가속도는? <em>$a = 27.8/4 \approx 7$ m/s² ≈ 0.7g. 마찰계수 0.7 정도면 도로가 만들 수 있는 한계.</em></li>
+      <li>지구 한 바퀴(40000 km) 도는 데 시속 1000 km 비행기로 몇 시간? <em>40시간. 지구가 의외로 작죠.</em></li>
+      <li>1 g 가속도로 1년간 가속하면 빛속도에 얼마나 가까워지나? <em>$v = at = 9.81 \times 3.15\times 10^7 \approx 3.1 \times 10^8$ m/s — 광속(3×10⁸ m/s)에 거의 도달! 단 비상대성 계산이고, 실제로는 광속에 점근.</em></li>
+    </ol>
+    이런 어림 계산이 시험에서 답이 합리적인지 빠르게 점검하는 도구입니다.
+  </div>
+
+  <h2>6-C. 한 문제로 보는 한 학기 — "공이 굴러내려와 절벽에서 떨어진다"</h2>
+  <p>한 강의 끝마다 같은 문제가 어떻게 점점 풍부해지는지 미리 보여드립니다. 같은 공의 같은 운동을 매주 새 도구로 다시 풉니다.</p>
+  <table>
+    <thead><tr><th>주차</th><th>이 문제에 무엇을 더 묻나</th><th>새로 도입되는 도구</th></tr></thead>
+    <tbody>
+      <tr><td>W2</td><td>경사면을 따라 등가속도로 내려올 때 끝에서의 속도</td><td>등가속도 세 식</td></tr>
+      <tr><td>W3</td><td>절벽을 떠난 후 어디에 떨어지나, 충돌 직전 속도</td><td>발사체 (등속×등가속도)</td></tr>
+      <tr><td>W4</td><td>경사면 끝에서 곡선을 돌 때 받는 구심력</td><td>접선·법선 좌표</td></tr>
+      <tr><td>W6</td><td>마찰 있는 경사면이라면 가속도는 얼마</td><td>F = ma + 마찰 모형</td></tr>
+      <tr><td>W7</td><td>지면 도달 시 운동에너지·속력 (시간 없이도 풀림)</td><td>일·에너지 정리</td></tr>
+      <tr><td>W8</td><td>지면과 충돌해 튀어 오를 때 속도 변화</td><td>충격량·운동량, 충돌</td></tr>
+      <tr><td>W9~10</td><td>공이 사실 원반이라면 — 굴림 가속도는 다름</td><td>관성모멘트, 굴림 운동</td></tr>
+      <tr><td>W12</td><td>지면이 스프링이라면 충돌 후 진동 주기</td><td>SHM</td></tr>
+    </tbody>
+  </table>
+  <p>이렇게 한 장면이 매주 한 도구씩 더 정교해집니다. 시험 직전에 막막하면 이 표를 펼쳐, "내가 이 강의에서 배운 도구가 결국 같은 공을 점점 자세히 보는 방법이었구나"라는 큰 그림을 다시 떠올려 보세요.</p>
+
+  <h2>7. 추천 학습 자원</h2>
+  <ul>
+    <li><strong>교재</strong> — Hibbeler, <em>Engineering Mechanics: Dynamics</em> (한글판: 동역학) — 학부 표준. 14판/15판 어느 것이나 OK.</li>
+    <li><strong>참고</strong> — Meriam & Kraige, <em>Engineering Mechanics: Dynamics</em> — 좀 더 수학적으로 단단함.</li>
+    <li><strong>비디오</strong> — MIT OCW 8.01 (역학), Khan Academy 물리 — 단원별 막힐 때 한 강의씩.</li>
+    <li><strong>도구</strong> — <em>Desmos</em>·<em>GeoGebra</em>로 함수와 궤적을 직접 만져보면 직관이 빨리 잡힙니다.</li>
+  </ul>
+
+  <h2>8. 흔한 오개념 — 학기 첫 주에 짚어둘 것들</h2>
+  <p>매년 W1~W2에서 학생들이 가장 많이 헷갈리는 부분을 미리 짚어두면, 한 학기가 한결 매끄럽습니다.</p>
+  <ul>
+    <li><strong>"속도 = 빠르기"</strong> — 일상에서 '빠르다'는 속력(scalar)을 말하지만, 동역학의 속도(vector)는 방향까지 포함합니다. 등속 원운동에서 속력은 일정하지만 속도는 매 순간 바뀝니다(방향이 변하니까) → 가속도가 0이 아닙니다.</li>
+    <li><strong>"중력은 무게다"</strong> — 정확히는 무게 $W = mg$이지만, 무게는 중력가속도가 작용한 결과의 힘이고, 질량 $m$은 물체 고유의 양입니다. 달에서 무게는 줄어들지만 질량은 그대로.</li>
+    <li><strong>"가속도 = 속도의 크기 변화율"</strong> — 절반만 맞습니다. 가속도는 속도 벡터의 변화율이고, 방향이 바뀌어도 가속도가 0이 아닙니다(원운동의 구심가속도). W4에서 다시 만나요.</li>
+    <li><strong>"움직이려면 힘이 필요"</strong> — 아리스토텔레스 시대 직관. 1법칙(관성)이 가르치는 것: <em>속도를 바꾸려면</em> 힘이 필요. 등속 운동에는 힘이 0이어도 됩니다.</li>
+    <li><strong>"무거우면 빨리 떨어진다"</strong> — 갈릴레오가 깨뜨린 직관. 공기 저항을 무시하면 모든 물체가 같은 가속도 $g$로 떨어집니다. 깃털과 쇠공이 진공에서 같은 시간에 떨어진다는 그 유명한 데모.</li>
+    <li><strong>"가속도가 음수면 감속"</strong> — 좌표축의 양 방향에 따라 다릅니다. 위 방향을 +로 잡았을 때 떨어지는 공의 가속도는 −9.81 m/s²인데, 이게 감속이라고 말하면 틀립니다(아래로 떨어지며 빨라지니까). <em>가속도와 속도의 부호가 반대일 때만</em> 감속.</li>
+    <li><strong>"마찰은 항상 운동을 방해"</strong> — 미끄러질 때만 운동 반대. 정지 마찰은 운동을 만들기도 합니다(걸을 때 발이 미끄러지지 않게 하는 마찰이 우리를 앞으로 밀어줌, 자동차 구동도 마찬가지).</li>
+  </ul>
+
+  <div class="warn">
+    <strong>한 학기 동안 기억할 한 줄</strong> — "가속도는 속도의 변화율이고, 속도는 위치의 변화율이다." 식이 막히고 그래프가 헷갈릴 때 이 한 문장으로 돌아오세요. 거기에 $F = ma$ 한 줄이 더해지면 학부 동역학의 절반이 끝납니다.
+  </div>
+
+  <h2>7-A. 한 학기 학습 일정 — 주차별 체크리스트</h2>
+  <p>학생 본인이 매주 어디까지 도달했는지 점검할 체크리스트입니다. 한 항목당 "5초 안에 답이 떠오르는가"로 자가 평가하세요.</p>
+  <table>
+    <thead><tr><th>주차</th><th>핵심 개념</th><th>꼭 외워야 할 식</th><th>대표 응용</th></tr></thead>
+    <tbody>
+      <tr><td>W1</td><td>OT, 좌표계 개념, 단위</td><td>—</td><td>일상 운동 단위 환산</td></tr>
+      <tr><td>W2</td><td>직선 운동, a-v-s 미적분</td><td>$v = v_0+at$, $s = v_0 t + \tfrac{1}{2}at^2$, $v^2 = v_0^2 + 2as$</td><td>제동거리, 자유낙하</td></tr>
+      <tr><td>W3</td><td>발사체, 두 축 독립</td><td>$R = v_0^2\sin 2\theta/g$, $H = v_0^2\sin^2\theta/(2g)$</td><td>야구공, 농구 슛</td></tr>
+      <tr><td>W4</td><td>n-t와 극좌표</td><td>$a_n = v^2/\rho$, $a_t = \dot v$</td><td>곡선 도로, 회전 그네</td></tr>
+      <tr><td>W5</td><td>상대 속도·가속도</td><td>$\mathbf{v}_{A/B} = \mathbf{v}_A - \mathbf{v}_B$</td><td>비, 강 건너기</td></tr>
+      <tr><td>W6</td><td>F = ma 직접 적용</td><td>$\sum \mathbf{F} = m\mathbf{a}$, FBD</td><td>경사면, 마찰</td></tr>
+      <tr><td>W7</td><td>일·에너지 정리</td><td>$U_{1\to 2} = T_2 - T_1$, $T = \tfrac{1}{2}mv^2$</td><td>롤러코스터, 스프링</td></tr>
+      <tr><td>W8</td><td>충격량·운동량</td><td>$\int F\,dt = m\Delta v$, $p_1+p_2 = $const</td><td>충돌, 폭발</td></tr>
+      <tr><td>W9</td><td>강체 운동학</td><td>$v_B = v_A + \omega \times r_{B/A}$</td><td>4절 링크, 기어</td></tr>
+      <tr><td>W10</td><td>강체 F=ma + M=Iα</td><td>$\sum M = I_G\alpha$</td><td>회전체 토크</td></tr>
+      <tr><td>W11</td><td>강체 일에너지·운동량</td><td>$T = \tfrac{1}{2}I\omega^2$</td><td>자이로, 굴림</td></tr>
+      <tr><td>W12</td><td>진동, SHM</td><td>$\omega_n = \sqrt{k/m}$, $T = 2\pi/\omega_n$</td><td>지진 격리, 자동차 서스펜션</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>매주 끝낼 자가점검 한 줄</strong> — "이번 주 식 한 줄을 안 보고 종이에 쓸 수 있나?" 그리고 "그 식을 한 일상 사례에 한 번 적용해 봤나?" 이 두 질문에 다 'Yes'면 다음 주 진도에 막힘이 없습니다.
+  </div>
+
+  <h2>7-B. 학기 중 참고 흐름도 — 막힐 때 어디로?</h2>
+  <p>풀이가 막혔을 때 다음 흐름도를 따라가면 거의 모든 문제가 풀립니다.</p>
+  <svg viewBox="0 0 720 380" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:6px">
+    <text x="360" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0b5fff">동역학 문제 풀이 흐름도</text>
+    <!-- start -->
+    <rect x="280" y="40" width="160" height="36" rx="18" fill="#0b5fff"/>
+    <text x="360" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">문제 시작</text>
+    <line x1="360" y1="76" x2="360" y2="100" stroke="#888"/>
+    <!-- step 1: FBD -->
+    <rect x="240" y="100" width="240" height="36" fill="#fff" stroke="#0b5fff"/>
+    <text x="360" y="122" text-anchor="middle" font-size="11">1. 그림 + 좌표축 + 자유물체도(FBD)</text>
+    <line x1="360" y1="136" x2="360" y2="160" stroke="#888"/>
+    <!-- step 2: knowns -->
+    <rect x="240" y="160" width="240" height="36" fill="#fff" stroke="#0b5fff"/>
+    <text x="360" y="182" text-anchor="middle" font-size="11">2. 아는 것/모르는 것 정리</text>
+    <line x1="360" y1="196" x2="360" y2="220" stroke="#888"/>
+    <!-- step 3: tool decision -->
+    <polygon points="240,220 480,220 440,260 280,260" fill="#fff5dd" stroke="#ff9800"/>
+    <text x="360" y="244" text-anchor="middle" font-size="11" font-weight="bold" fill="#ff9800">시간이 주어졌나?</text>
+    <!-- branches -->
+    <line x1="280" y1="260" x2="160" y2="290" stroke="#888"/>
+    <line x1="440" y1="260" x2="560" y2="290" stroke="#888"/>
+    <text x="200" y="280" font-size="10" fill="#444">YES</text>
+    <text x="500" y="280" font-size="10" fill="#444">NO</text>
+    <rect x="60" y="290" width="200" height="40" fill="#cfe9ff" stroke="#0b5fff"/>
+    <text x="160" y="308" text-anchor="middle" font-size="11" font-weight="bold" fill="#0b5fff">F = ma + 시간적분</text>
+    <text x="160" y="322" text-anchor="middle" font-size="10" fill="#444">또는 충격량·운동량</text>
+    <rect x="460" y="290" width="200" height="40" fill="#ffd7d7" stroke="#c62828"/>
+    <text x="560" y="308" text-anchor="middle" font-size="11" font-weight="bold" fill="#c62828">일·에너지 정리</text>
+    <text x="560" y="322" text-anchor="middle" font-size="10" fill="#444">위치 ↔ 속도 직접</text>
+    <!-- final check -->
+    <rect x="240" y="346" width="240" height="30" fill="#e0f2f1" stroke="#00838f"/>
+    <text x="360" y="365" text-anchor="middle" font-size="11" font-weight="bold" fill="#00838f">마지막 점검: 단위·극단값·부호</text>
+  </svg>
+  <p>"단위·극단값·부호" 점검은 답을 적은 후 30초만 들이면 시험 점수를 1~2단계 올려줍니다. 마찰을 0으로, 질량을 0으로, 시간을 0으로 보내봤을 때 식이 직관에 맞는가? 이 한 가지 습관이 시험 답안의 신뢰도를 결정합니다.</p>
+
+  <h2>8-A. 추가 연습 문제 — 한 학기 입구 점검</h2>
+  <div class="note" style="background:#f5f8fc;border-color:#0b5fff">
+    <strong>이번 주 핵심을 잡았는지 확인하는 문제 (수치 답 가능)</strong>
+    <ol style="margin:6px 0 0 0">
+      <li>1500 kg 자동차가 100 km/h(=27.78 m/s)에서 6초 만에 정지했다. 평균 감가속도와 평균 제동력은? <em>(답: $a = -4.63$ m/s², $F \approx -6944$ N)</em></li>
+      <li>건물 5층 옥상(높이 18 m)에서 공을 떨어뜨렸다. 지면 도달 시간과 충돌 직전 속도는? <em>(답: $t \approx 1.92$ s, $v \approx 18.8$ m/s ≈ 67.7 km/h)</em></li>
+      <li>달 표면(g = 1.62 m/s²)에서 같은 18 m 옥상의 답은? <em>(답: $t \approx 4.71$ s, $v \approx 7.64$ m/s)</em></li>
+      <li>50 kg 사람이 가속도 2 m/s²로 위로 가속하는 엘리베이터 안에서 체중계 위에 서 있다. 체중계 눈금은? <em>(답: $N = m(g+a) = 50(9.81+2) = 590.5$ N ≈ 60.2 kgf — 평소보다 약 10 kg 무거워 보임)</em></li>
+      <li>같은 사람이 자유낙하하는 엘리베이터에 있다면? <em>(답: $a = -g$, $N = 0$ — 무중력 상태)</em></li>
+      <li>2 kg 물체가 4 m/s에서 8 m/s로 0.5초 만에 가속했다. 평균 힘과 그 동안의 변위는? <em>(답: $a = 8$ m/s², $F = 16$ N, $s = 4(0.5) + \tfrac{1}{2}(8)(0.25) = 3$ m)</em></li>
+      <li>1 mol의 이상기체 분자(M ≈ 29 g/mol)가 평균속력 500 m/s로 운동. 1개 분자의 운동에너지는? <em>(답: $\tfrac{1}{2}(29\times10^{-3}/6.02\times10^{23})(500)^2 \approx 6.0\times10^{-21}$ J — 분자 운동의 스케일)</em></li>
+      <li>지구 자전 때문에 적도에서 1 kg 물체가 받는 구심가속도는? <em>(답: $\omega = 2\pi/86400$ rad/s, $a = \omega^2 R = (7.27\times 10^{-5})^2 \times 6.37\times 10^6 \approx 0.034$ m/s² ≈ 0.0034 g — 무게가 약 0.34% 줄어들게 보임)</em></li>
+    </ol>
+    <strong>이 8문제 중 6개 이상 즉답이 나오면 W2 진도가 매끄럽습니다.</strong> 막히는 게 있으면 위 데모 1·2를 한 번 더 흔들어 보고, 단위가 헷갈렸던 문제는 데모 3에서 환산 감각을 회복하세요.
+  </div>
+
+  <h2>8-B. 데모 4 — 한 학기 식의 가족 미리보기</h2>
+  <p>한 학기 동안 만날 5가지 큰 식의 그래프를 한 곳에 모았습니다. 슬라이더로 조건을 바꾸며 "이 식들이 어떤 모양으로 답하는가"의 직관을 미리 잡아두세요.</p>
+  <div class="demo">
+    <h4>데모 4 — 운동학·동역학·진동의 식 모양 비교</h4>
+    <canvas id="d1FamC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>초속 v₀ (m/s) <span class="val" id="d1V0V">10</span><input type="range" id="d1V0" min="0" max="30" step="0.5" value="10"></label>
+      <label>가속도 a (m/s²) <span class="val" id="d1AaV">2</span><input type="range" id="d1Aa" min="-5" max="5" step="0.1" value="2"></label>
+      <label>감쇠 k (1/s) <span class="val" id="d1KkV">0.3</span><input type="range" id="d1Kk" min="0" max="1.5" step="0.05" value="0.3"></label>
+      <label>고유진동수 ω (rad/s) <span class="val" id="d1OmV">2.0</span><input type="range" id="d1Om" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d1FamC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['d1V0','d1Aa','d1Kk','d1Om'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['d1V0','d1Aa','d1Kk','d1Om'].forEach(k=>sl(k).oninput=upd);upd();
+    function plot(arr,col,yo,sc){
+      x.strokeStyle=col;x.lineWidth=1.8;x.beginPath();
+      arr.forEach((v,i)=>{const px=40+i/(arr.length-1)*580;const py=yo - v*sc;if(i===0)x.moveTo(px,py);else x.lineTo(px,py);});
+      x.stroke();
+    }
+    function loop(){
+      const v0=+sl('d1V0').value,a=+sl('d1Aa').value,k=+sl('d1Kk').value,om=+sl('d1Om').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // axes for 4 panels
+      x.strokeStyle='#d0d4d9';
+      [60,140,220,300].forEach(y=>{x.beginPath();x.moveTo(40,y);x.lineTo(620,y);x.stroke();});
+      // labels
+      x.fillStyle='#0b5fff';x.font='bold 11px sans-serif';x.textAlign='left';
+      x.fillText('① 등속: s = v₀ t (W2)',46,52);
+      x.fillStyle='#c62828';x.fillText('② 등가속: s = v₀ t + ½ a t² (W2)',46,132);
+      x.fillStyle='#2e7d32';x.fillText('③ 지수감쇠: v = v₀ e^(−k t) (W2 후반)',46,212);
+      x.fillStyle='#9e35b8';x.fillText('④ 진동: x = v₀/ω · sin(ω t) e^(−k t) (W12)',46,292);
+      const N=200,T=8;
+      const a1=[],a2=[],a3=[],a4=[];
+      for(let i=0;i<N;i++){
+        const t=i/(N-1)*T;
+        a1.push(v0*t);
+        a2.push(v0*t+0.5*a*t*t);
+        a3.push(v0*Math.exp(-k*t));
+        a4.push((v0/om)*Math.sin(om*t)*Math.exp(-k*t));
+      }
+      plot(a1,'#0b5fff',60,0.6);
+      plot(a2,'#c62828',140,0.4);
+      plot(a3,'#2e7d32',220,2);
+      plot(a4,'#9e35b8',300,5);
+      x.fillStyle='#666';x.font='10px sans-serif';x.fillText('t = 0~8 s →',560,316);
+    }
+    setInterval(loop,80);loop();
+  })();
+  </script>
+  <p>네 가지 곡선이 한 학기에 만날 식의 핵심 모양입니다 — 직선(등속), 포물선(등가속), 지수감쇠(공기저항·감쇠), 사인 진동(SHM). 각각이 "어떤 미분방정식의 해"인지가 W2~W12의 흐름이에요.</p>
+
+  <h2>8-C. 시각자료 — 과학자 가계도</h2>
+  <p>이 강의 식들을 만든 사람들의 시간선을 한 눈에 보면, 우리가 "어떤 학문 전통 위에 서 있는지"가 분명해집니다.</p>
+  <svg viewBox="0 0 720 220" style="width:100%;height:auto;background:#fafbfc;border:1px solid #e3e6ea;border-radius:6px">
+    <text x="360" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0b5fff">동역학 거장들의 시간선 (1500~1900)</text>
+    <!-- timeline axis -->
+    <line x1="40" y1="180" x2="700" y2="180" stroke="#444" stroke-width="2"/>
+    <!-- year ticks -->
+    <g font-size="9" fill="#666">
+      <line x1="40" y1="180" x2="40" y2="186" stroke="#444"/>
+      <text x="40" y="200" text-anchor="middle">1500</text>
+      <line x1="205" y1="180" x2="205" y2="186" stroke="#444"/>
+      <text x="205" y="200" text-anchor="middle">1600</text>
+      <line x1="370" y1="180" x2="370" y2="186" stroke="#444"/>
+      <text x="370" y="200" text-anchor="middle">1700</text>
+      <line x1="535" y1="180" x2="535" y2="186" stroke="#444"/>
+      <text x="535" y="200" text-anchor="middle">1800</text>
+      <line x1="700" y1="180" x2="700" y2="186" stroke="#444"/>
+      <text x="700" y="200" text-anchor="middle">1900</text>
+    </g>
+    <!-- bars: x = 40 + (year-1500)*0.66 ; width = years*0.66 -->
+    <!-- Galileo 1564-1642 -->
+    <rect x="146" y="50" width="129" height="14" fill="#0b5fff"/>
+    <text x="210" y="61" text-anchor="middle" font-size="10" fill="#fff">갈릴레오</text>
+    <text x="210" y="80" text-anchor="middle" font-size="9" fill="#0b5fff">자유낙하·관성</text>
+    <!-- Newton 1642-1727 -->
+    <rect x="234" y="90" width="141" height="14" fill="#c62828"/>
+    <text x="305" y="101" text-anchor="middle" font-size="10" fill="#fff">뉴턴</text>
+    <text x="305" y="120" text-anchor="middle" font-size="9" fill="#c62828">3법칙·미적분</text>
+    <!-- Bernoulli D 1700-1782 -->
+    <rect x="370" y="50" width="54" height="14" fill="#2e7d32"/>
+    <text x="397" y="61" text-anchor="middle" font-size="9" fill="#fff">베르누이</text>
+    <text x="397" y="80" text-anchor="middle" font-size="9" fill="#2e7d32">유체동역학</text>
+    <!-- Euler 1707-1783 -->
+    <rect x="376" y="130" width="50" height="14" fill="#ff9800"/>
+    <text x="401" y="141" text-anchor="middle" font-size="9" fill="#fff">오일러</text>
+    <text x="401" y="160" text-anchor="middle" font-size="9" fill="#ff9800">강체역학</text>
+    <!-- Lagrange 1736-1813 -->
+    <rect x="396" y="90" width="51" height="14" fill="#9e35b8"/>
+    <text x="421" y="101" text-anchor="middle" font-size="9" fill="#fff">라그랑주</text>
+    <text x="421" y="120" text-anchor="middle" font-size="9" fill="#9e35b8">해석역학</text>
+    <!-- Hamilton 1805-1865 -->
+    <rect x="498" y="130" width="40" height="14" fill="#00838f"/>
+    <text x="518" y="141" text-anchor="middle" font-size="9" fill="#fff">해밀턴</text>
+    <text x="518" y="160" text-anchor="middle" font-size="9" fill="#00838f">해밀턴역학</text>
+  </svg>
+  <p>특히 1700년대 중반에 베르누이·오일러·라그랑주가 서로 영향을 주고받으며 동역학을 거의 완성했다는 점에 주목하세요. 우리가 한 학기 다루는 거의 모든 식이 이 100년 사이에 정리된 것입니다.</p>
+
+  <h2>9. 다음 주 예고 — W2 직선 운동학</h2>
+  <p>다음 강의에서는 1차원(직선) 운동을 본격적으로 다룹니다. 위치 $s(t)$ 하나로 운동이 완전히 결정되고, 그 미분이 속도, 또 미분이 가속도라는 관계를 그래프로 직접 흔들어 봅니다.</p>
+  <ul>
+    <li>등가속도 운동의 세 공식이 어디서 나왔는지</li>
+    <li>$v$-$t$, $a$-$t$ 그래프가 어떻게 연결되는지</li>
+    <li>가속도가 시간/속도/위치의 함수일 때 적분으로 어떻게 푸는지</li>
+    <li>제동거리·자유낙하·엘리베이터 — 일상 사례로 식 익히기</li>
+  </ul>
+  <p>이번 주 자가점검 6번까지 술술 나오면 다음 주 진도가 매끄럽습니다. 막혔다면 이 강의의 데모 두 개를 한 번 더 흔들어 보세요 — 슬라이더가 만든 직관이 식보다 오래 갑니다.</p>
+
+  <h2>9-A. 풀이 절차 표준 — 한 학기 내내 이 다섯 단계로</h2>
+  <p>매번 새로 절차를 짜지 마세요. 이 다섯 단계가 학부 동역학 문제 99%의 풀이 골격입니다.</p>
+  <ol>
+    <li><strong>STEP 1 — 그림</strong>: 무엇이 움직이는지, 좌표축 어디에 둘지, 양의 방향은 어디인지 종이에 작도. 이 한 단계에 시간 30초 들이면 다음 4단계에서 부호 헷갈릴 일이 거의 없어집니다.</li>
+    <li><strong>STEP 2 — 자유물체도(FBD)</strong>: 한 물체에 작용하는 모든 힘을 화살표로. 작용·반작용 쌍은 절대 같은 FBD에 그리지 않음. 마찰·장력·수직항력·중력·외력만.</li>
+    <li><strong>STEP 3 — 주어진 양/구할 양 정리</strong>: 종이에 두 줄로 분리. 단위까지 적기. "주어진 것: $v_0 = 20$ m/s, $a = -3$ m/s². 구할 것: 정지까지 걸리는 시간 $t$ [s], 이동 거리 $s$ [m]."</li>
+    <li><strong>STEP 4 — 식 선택과 풀이</strong>: "시간이 주어졌나/구할 것인가?" "위치-속도 관계만 묻나?" "충돌·짧은 시간 충격인가?" 답에 따라 운동학·일에너지·운동량 중 선택. 식을 골랐으면 대수 정리 → 수치 계산.</li>
+    <li><strong>STEP 5 — 점검</strong>: ① 단위 ② 부호 ③ 극단값(질량 0, 마찰 0 등에서 식이 직관에 맞나) ④ 합리성(시속 60 km로 6초 가속한 차의 속도가 시속 200 km라면 어딘가 틀림).</li>
+  </ol>
+
+  <div class="warn">
+    <strong>가장 흔한 실수 4가지</strong>
+    <ol style="margin:6px 0 0 0">
+      <li><strong>등가속도 식을 등가속도 아닌 곳에 적용</strong> — 마찰계수가 도중에 바뀌거나 추력이 끊기는 순간에는 구간을 나눠야 합니다.</li>
+      <li><strong>FBD에 작용·반작용 함께 그림</strong> — 책에 작용하는 무게 $mg$만 그리고, "책이 지구를 끌어당기는 힘"은 절대 같은 FBD에 그리지 않습니다.</li>
+      <li><strong>단위 환산 누락</strong> — 시속을 초속으로(÷3.6), rpm을 rad/s로(×2π/60), kgf를 N으로(×9.81). 한 번 환산을 빼먹으면 답이 3.6배 틀립니다.</li>
+      <li><strong>각도 단위 혼동</strong> — 삼각함수 인자는 라디안. $\sin 30$이라고 쓰면 컴퓨터는 30 rad ≈ 1719°로 계산해 −0.99를 답합니다(우리가 원한 0.5가 아니라).</li>
+    </ol>
+  </div>
+
+  <h2>9-B. 한 학기 모범 답안 양식 — 시험에서 점수 잘 받는 형식</h2>
+  <p>풀이 과정이 채점자에게 보이도록 다음 양식으로 답안을 작성하세요. 답만 적은 학생과 과정을 적은 학생의 점수 차이는 평균 30~40%입니다.</p>
+  <ol>
+    <li><strong>① 그림 + 좌표축</strong> — 1~2분, 답안지 상단에 작게.</li>
+    <li><strong>② FBD</strong> — 별도 박스 안에 깔끔하게.</li>
+    <li><strong>③ 주어진 양 / 구할 양</strong> — "Given:", "Find:" 두 줄로.</li>
+    <li><strong>④ 적용 식 명시</strong> — "Apply: $\sum F = ma$ in x-direction" 식을 쓰기 전에 한 줄로 어떤 식인지 선언.</li>
+    <li><strong>⑤ 대수 풀이 → 수치 대입 → 답</strong> — 답에 단위까지. <strong>박스로 강조</strong>.</li>
+    <li><strong>⑥ 검증</strong> — "Check: 단위 [N] = [kg][m/s²] ✓"</li>
+  </ol>
+
+  <h2>10. 부록 — 자주 쓰이는 상수와 기본 데이터</h2>
+  <p>강의 노트 옆에 둬도 좋은 표. 시험·과제 시 단위 환산이나 어림 계산에서 바로 꺼내 씁니다.</p>
+  <table>
+    <thead><tr><th>양</th><th>기호</th><th>값</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>지구 표면 중력가속도</td><td>$g$</td><td>9.80665 m/s² (≈ 9.81)</td><td>위도·고도에 따라 ±0.5%</td></tr>
+      <tr><td>달 표면 중력가속도</td><td>$g_M$</td><td>1.62 m/s²</td><td>지구의 약 1/6</td></tr>
+      <tr><td>화성 표면 중력가속도</td><td>$g_{Mars}$</td><td>3.72 m/s²</td><td>지구의 약 38%</td></tr>
+      <tr><td>지구 반지름</td><td>$R_E$</td><td>6.37 × 10⁶ m</td><td>적도 기준</td></tr>
+      <tr><td>지구 질량</td><td>$M_E$</td><td>5.97 × 10²⁴ kg</td><td>—</td></tr>
+      <tr><td>만유인력 상수</td><td>$G$</td><td>6.674 × 10⁻¹¹ N·m²/kg²</td><td>$g = GM_E/R_E^2$</td></tr>
+      <tr><td>지구 자전 각속도</td><td>$\omega_E$</td><td>7.27 × 10⁻⁵ rad/s</td><td>2π/86400 s</td></tr>
+      <tr><td>광속</td><td>$c$</td><td>2.998 × 10⁸ m/s</td><td>관성계 제한</td></tr>
+      <tr><td>표준대기압</td><td>$P_0$</td><td>1.013 × 10⁵ Pa</td><td>—</td></tr>
+      <tr><td>공기 밀도(15°C, 1 atm)</td><td>$\rho_a$</td><td>1.225 kg/m³</td><td>공기저항 계산</td></tr>
+      <tr><td>물 밀도(4°C)</td><td>$\rho_w$</td><td>1000 kg/m³</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h2>11. 부록 — 자주 쓰이는 수학 공식</h2>
+  <ul>
+    <li><strong>이차방정식 해</strong>: $ax^2 + bx + c = 0 \Rightarrow x = \dfrac{-b \pm \sqrt{b^2 - 4ac}}{2a}$ — 등가속도 식의 시간 풀이에서 자주 등장.</li>
+    <li><strong>삼각함수 항등식</strong>: $\sin^2\theta + \cos^2\theta = 1$, $\sin 2\theta = 2\sin\theta\cos\theta$, $\cos 2\theta = 1 - 2\sin^2\theta$.</li>
+    <li><strong>미분 기본</strong>: $(t^n)' = nt^{n-1}$, $(\sin\omega t)' = \omega\cos\omega t$, $(e^{kt})' = ke^{kt}$.</li>
+    <li><strong>적분 기본</strong>: $\int t^n\,dt = \dfrac{t^{n+1}}{n+1}+C$ ($n \ne -1$), $\int e^{kt}\,dt = \dfrac{e^{kt}}{k}+C$, $\int \sin\omega t\,dt = -\dfrac{\cos\omega t}{\omega}+C$.</li>
+    <li><strong>벡터 내적</strong>: $\mathbf{a}\cdot\mathbf{b} = a_x b_x + a_y b_y + a_z b_z = |a||b|\cos\theta$. 일·에너지에서 활약.</li>
+    <li><strong>벡터 외적(2D 결과)</strong>: $\mathbf{a}\times\mathbf{b}$의 크기 $|a||b|\sin\theta$. 토크와 각운동량의 핵심.</li>
+    <li><strong>테일러 전개(소각도)</strong>: $\sin\theta \approx \theta$, $\cos\theta \approx 1 - \theta^2/2$ ($\theta$가 작을 때, rad). 진자 식 단순화.</li>
+  </ul>
+
+  <h2>12. 부록 — 강의 자료 사용법</h2>
+  <ul>
+    <li><strong>데모(인터랙티브 그래프)</strong>: 슬라이더를 양 끝까지 흔들어보며 식이 어떻게 답하는지 직관 잡기. "그래프가 사라지면" 보통 슬라이더가 극단값(0 또는 음수)이라 그렇습니다.</li>
+    <li><strong>예제(.note 박스)</strong>: 한 번은 손으로 따라 풀어보세요. 답이 맞아도 풀이 과정 한 줄을 빠뜨리면 비슷한 시험 문제에서 막힙니다.</li>
+    <li><strong>오개념 박스</strong>: 시험 직전에 한 번 더 훑어보세요. 학생들이 가장 자주 잃는 부분 점수가 여기서 결정됩니다.</li>
+    <li><strong>연습 문제</strong>: 답이 함께 있으니 풀고 바로 점검. 약식 답이라 풀이가 다를 수 있지만 수치는 일치해야 합니다.</li>
+    <li><strong>차원 점검 습관</strong>: 답이 나왔으면 단위가 맞는지 한 번. 30초 점검이 시험 점수를 좌우합니다.</li>
+  </ul>
+
+  <h2>11-A. 자주 등장하는 적분 결과 — 동역학용 빠른 참조</h2>
+  <p>한 학기 동안 반복적으로 등장하는 적분 결과 모음. 외울 필요는 없지만 즉시 인식할 수 있어야 풀이 속도가 빨라집니다.</p>
+  <table>
+    <thead><tr><th>적분</th><th>결과</th><th>등장 상황</th></tr></thead>
+    <tbody>
+      <tr><td>$\int a\,dt$ (a 상수)</td><td>$at + C$</td><td>등가속도, 속도 변화</td></tr>
+      <tr><td>$\int (v_0 + at)\,dt$</td><td>$v_0 t + \tfrac{1}{2}at^2 + C$</td><td>등가속도, 위치</td></tr>
+      <tr><td>$\int t^n\,dt$</td><td>$\dfrac{t^{n+1}}{n+1}+C$ ($n\ne -1$)</td><td>가변 가속 $a = ct^n$</td></tr>
+      <tr><td>$\int e^{-kt}\,dt$</td><td>$-\dfrac{e^{-kt}}{k}+C$</td><td>공기저항, 감쇠</td></tr>
+      <tr><td>$\int \cos\omega t\,dt$</td><td>$\dfrac{\sin\omega t}{\omega}+C$</td><td>SHM, 진동</td></tr>
+      <tr><td>$\int \dfrac{dv}{a-bv}$</td><td>$-\dfrac{1}{b}\ln|a-bv|+C$</td><td>속도 의존 마찰</td></tr>
+      <tr><td>$\int v\,dv$</td><td>$\tfrac{1}{2}v^2 + C$</td><td>일·에너지 정리</td></tr>
+      <tr><td>$\int F(s)\,ds$</td><td>일 = 위치 함수 힘의 적분</td><td>스프링, 만유인력</td></tr>
+    </tbody>
+  </table>
+  <p>특히 마지막 두 줄이 W7(일·에너지)에서 결정적입니다. "시간을 지우고 위치-속도 관계로 직접" 푸는 길이거든요.</p>
+
+  <h2>12-A. 한국 학부 시험 전형 문제 — 첫 강의 응용편</h2>
+  <p>실제 한국 공대 시험에서 W1~W2 범위 첫 문제로 자주 나오는 유형 4가지. 풀어보고 답이 안 나오면 W2를 천천히 다시 읽으세요.</p>
+  <div class="note">
+    <strong>유형 1 (단위 환산 + 기초 운동학)</strong> — 시속 72 km로 달리던 자동차가 일정 가속도 4 m/s²로 가속한다. 5초 후의 속도(km/h)와 그 동안의 이동 거리(m)는?
+    <br><strong>풀이 골격</strong>: $v_0 = 72/3.6 = 20$ m/s. $v = 20 + 4(5) = 40$ m/s = 144 km/h. $s = 20(5) + \tfrac{1}{2}(4)(25) = 150$ m.
+  </div>
+  <div class="note">
+    <strong>유형 2 (자유낙하)</strong> — 높이 45 m 옥상에서 공을 5 m/s로 위로 던졌다. 지면에 닿는 시간과 그때의 속도는? ($g = 9.81$)
+    <br><strong>풀이 골격</strong>: 위 +로, $y(t) = 45 + 5t - \tfrac{1}{2}(9.81)t^2 = 0 \Rightarrow$ 이차방정식 → $t \approx 3.61$ s. $v = 5 - 9.81(3.61) \approx -30.4$ m/s.
+  </div>
+  <div class="note">
+    <strong>유형 3 (제동 거리)</strong> — 시속 100 km로 달리던 차가 반응시간 0.8 s 후 감속 7 m/s²로 정지한다. 총 정지거리는?
+    <br><strong>풀이 골격</strong>: $v_0 = 27.78$ m/s. 반응 거리 $= v_0(0.8) = 22.2$ m. 제동 거리 $= v_0^2/(2 \cdot 7) = 55.1$ m. 총합 $\approx 77.3$ m.
+  </div>
+  <div class="note">
+    <strong>유형 4 (가변 가속도)</strong> — 입자가 정지에서 출발해 $a(t) = 6t - 12$ m/s²로 운동. (a) 가속도 = 0이 되는 시간 (b) 그때까지의 변위.
+    <br><strong>풀이 골격</strong>: $a = 0 \Rightarrow t = 2$ s. $v(t) = \int_0^t (6\tau - 12)\,d\tau = 3t^2 - 12t$. $v(2) = 12 - 24 = -12$ m/s. $s(t) = \int_0^t (3\tau^2 - 12\tau)\,d\tau = t^3 - 6t^2$. $s(2) = 8 - 24 = -16$ m.
+  </div>
+
+  <h2>12-B. 이 강의의 한국적 응용 사례 한 줄씩</h2>
+  <p>한국 산업·일상에서 우리 강의가 직접 등장하는 장면들을 한 줄씩 정리. 추후 W2~W12에서 이 항목 하나씩이 깊이 있게 다뤄집니다.</p>
+  <ul>
+    <li><strong>현대·기아 자동차</strong> — 차량 동역학(차량의 코너링 한계, 종방향 안정성)이 W4·W6의 직접 응용. 자율주행 인지·제어는 W5의 상대운동 + 자동제어 강의 후속편.</li>
+    <li><strong>한국항공우주산업(KAI)</strong> — KF-21 보라매의 비행 제어, 6자유도 강체 운동(W9~W11). 항공기 자세 제어가 핵심.</li>
+    <li><strong>한화에어로스페이스</strong> — 누리호의 단 분리, 추력 제어, 페어링 분리 — W2 직선 운동학 + W8 운동량 보존의 종합.</li>
+    <li><strong>두산로보틱스·HD현대로보틱스</strong> — 매니퓰레이터 팔의 관성, 토크 계산(W10·W11). 충돌 안전성은 W8.</li>
+    <li><strong>삼성전자 반도체</strong> — 노광 장비의 정밀 위치 제어(서브 나노미터). 진동(W12)이 정밀도 한계 결정.</li>
+    <li><strong>롯데월드·에버랜드</strong> — 모든 놀이기구의 안전 설계는 일·에너지(W7)와 구심가속도(W4)의 한계로부터.</li>
+    <li><strong>지하철·KTX·SRT</strong> — 차량 가속·제동 곡선, 곡선 통과 시 캔트 각, 충돌 안전성 — W2~W6 종합.</li>
+    <li><strong>K-게임 산업(NCsoft·Krafton)</strong> — 모든 액션 게임의 물리 엔진은 학부 동역학 식 그대로. 발사체·충돌·중력이 핵심.</li>
+    <li><strong>K-스포츠</strong> — 프로야구 직구 회전수 분석, 양궁 화살 비행, 컬링 스톤 충돌 — W3·W4·W8.</li>
+  </ul>
+
+  <h2>13. 마무리 — 첫 강의를 닫으며</h2>
+  <p>한 학기 동안 우리는 "사진"이었던 정역학을 "영상"으로 확장합니다. 그 영상의 매 순간을 결정하는 규칙이 $F = ma$ 한 줄, 그것을 좌표계에 따라 풀어내는 도구가 운동학·일에너지·운동량 셋. 이 큰 그림을 잡고 가면 매주 만나는 새 식이 "또 외울 게 늘었네"가 아니라 "이 자리에 들어가는 한 칸"으로 보일 겁니다.</p>
+  <p>다음 강의 W2부터는 본격적인 식과 그래프, 손계산이 시작됩니다. 첫 강의의 데모 두 개와 단위 환산 데모 한 개를 한 번씩 다시 흔들어 보고, 자가점검 6번까지 무난히 답해지면 W2 진도가 매끄럽습니다.</p>
+
+  <div class="tip">
+    <strong>한 학기를 견디는 한 줄</strong> — "막히면 단위 점검 → FBD 다시 → 좌표계 바꿔보기 → 극단값 점검." 이 네 단계 순서로 거의 모든 문제가 풀립니다. 이 한 학기에서 평생 가는 도구를 챙겨 가세요.
+  </div>
+
+  <h2>13-A. 강의 마무리 자가테스트 — 10분 안에</h2>
+  <p>이 강의 마지막 자가점검. 답이 막히면 해당 섹션을 열고 5분간 다시 읽으세요.</p>
+  <div class="note" style="background:#fffaf0;border-color:#ff9800">
+    <strong>10분 자가테스트 (각 문항 1분 이내)</strong>
+    <ol style="margin:6px 0 0 0">
+      <li>$\sum F = ma$의 양변 단위를 SI 기본 단위 [kg], [m], [s]로 분해하시오.</li>
+      <li>같은 운동을 직각·접선법선·극 좌표 셋으로 표현할 때, 각각 어떤 상황에서 가장 단순한가? 한 줄씩.</li>
+      <li>"속도가 0이면 가속도가 0"이 왜 틀린지, 위로 던진 공의 최고점을 예로 설명하시오.</li>
+      <li>책상 위 책의 무게와 수직항력은 왜 작용·반작용 쌍이 아닌가? 진짜 짝은 무엇인가?</li>
+      <li>차량 정지거리가 속도의 몇 제곱에 비례하는가? 30 km/h와 60 km/h의 정지거리 비율은?</li>
+      <li>1 g 가속도, 100 km/h 속도, 1 마력 출력을 모두 SI 기본 단위로 환산하시오.</li>
+      <li>관성계와 비관성계의 차이를 한 줄로 설명하시오.</li>
+      <li>일·에너지 정리는 어떤 상황에서 F=ma 직접 풀이보다 빠른가? 충격량·운동량은?</li>
+      <li>차원 분석으로 단진자 주기가 왜 질량과 무관한지 설명하시오.</li>
+      <li>풀이가 막혔을 때 어떤 4단계 점검을 거치는가?</li>
+    </ol>
+    <strong>채점</strong>: 8개 이상 답해지면 W2 시작 준비 완료. 5~7개면 막힌 섹션 한 번 더 정독. 4개 이하면 처음부터 차근차근 데모와 함께 다시.
+  </div>
+
+  <h2>14. 개인 학습 일지 양식 (선택 사항)</h2>
+  <p>매주 강의를 들은 직후 5분 동안 다음 4줄을 채우는 습관을 추천합니다. 시험 직전 복습 시간이 1/3로 줄어듭니다.</p>
+  <ol>
+    <li><strong>이번 주 한 줄 요약</strong>: "이 강의의 핵심 식 한 줄과 그것이 답하는 질문 한 줄."</li>
+    <li><strong>가장 헷갈렸던 점</strong>: "내가 멈칫했던 부분 + 어떻게 풀렸는지(또는 못 풀었는지)."</li>
+    <li><strong>일상 사례 1가지</strong>: 이번 주 식이 어디에 적용되는지 한 줄. 본인이 직접 떠올린 예시일수록 오래 갑니다.</li>
+    <li><strong>다음 주에 대비할 한 가지</strong>: 막혔던 미적분이라면 짧은 복습. 그래프 해석이라면 데모 다시 돌려보기.</li>
+  </ol>
+
+  <h2>15. 강의 자료 인용·재사용 안내</h2>
+  <p>이 강의 자료(텍스트·SVG·코드 데모 모두)는 SAIL 연구실(공주대학교)에서 학부 동역학 교육 목적으로 제작되었습니다. 다음을 권장합니다.</p>
+  <ul>
+    <li><strong>학습용</strong>: 자유롭게 다운로드·인쇄·필기. 데모 코드 수정해 본인 직관에 맞게 변형하기 적극 권장.</li>
+    <li><strong>강의용 재사용</strong>: 출처 표기(SAIL Lab, KNU)와 함께 자유 사용. 변형판은 GitHub에 PR 환영.</li>
+    <li><strong>연습 문제 답</strong>: 본 노트의 약식 답은 검증되었으나 풀이 한 줄 차이로 살짝 다른 답이 나올 수 있음. 수치가 ±5% 이내면 정답으로 봐도 무방.</li>
+  </ul>
+  <p>다음 강의 W2부터는 본격적인 미분방정식과 그래프가 시작됩니다. 첫 강의의 큰 그림이 머릿속에 자리잡았다면, 한 학기 동안 만날 모든 식이 이 그림 위 어딘가에 들어갈 자리가 있습니다. 다음 주에 만나요.</p>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="../../dynamics.html">← 강의 목록</a> · <a href="02-particle-rectilinear.html">다음: W2 직선 운동학 →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

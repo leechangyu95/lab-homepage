@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: KNN 회귀 — K가 곡선 모양을 어떻게 바꾸나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: KNN 회귀 — K가 곡선 모양을 어떻게 바꾸나</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/01-ai-intro.html">Week 1. AI의 세계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: KNN 회귀 — K가 곡선 모양을 어떻게 바꾸나</h4>
+    <p>점들에 노이즈가 있는 사인파 데이터를 KNN으로 회귀합니다. K가 작으면 점 하나하나 따라가는 들쭉날쭉한 곡선이, K가 크면 평탄하게 펴진 곡선이 나옵니다. <strong>편향-분산 균형</strong>을 눈으로 직접 볼 수 있는 좋은 데모입니다.</p>
+    <canvas id="knnReg" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>K <span class="val" id="krK">5</span><input type="range" id="krk" min="1" max="30" step="1" value="5"></label>
+      <label>노이즈 <span class="val" id="krN">0.3</span><input type="range" id="krn" min="0" max="1" step="0.05" value="0.3"></label>
+      <button id="krReg">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('knnReg');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      const noise=+document.getElementById('krn').value;
+      pts=[];
+      for(let i=0;i<60;i++){
+        const x=i/59;
+        const y=Math.sin(x*Math.PI*2)+(Math.random()-0.5)*noise*2;
+        pts.push({x,y});
+      }
+      draw();
+    }
+    function draw(){
+      const K=+document.getElementById('krk').value;
+      document.getElementById('krK').textContent=K;
+      document.getElementById('krN').textContent=(+document.getElementById('krn').value).toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const PL=40,PR=20,PT=20,PB=30;
+      const plotW=W-PL-PR,plotH=H-PT-PB;
+      const ymn=-1.6,ymx=1.6;
+      function px(x){return PL+x*plotW;}
+      function py(y){return PT+plotH*(1-(y-ymn)/(ymx-ymn));}
+      // axes
+      ctx.strokeStyle='#ccc';ctx.beginPath();ctx.moveTo(PL,py(0));ctx.lineTo(PL+plotW,py(0));ctx.stroke();
+      // truth
+      ctx.strokeStyle='#bbb';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+      ctx.beginPath();
+      for(let i=0;i<=200;i++){const x=i/200;const y=Math.sin(x*Math.PI*2);if(i===0)ctx.moveTo(px(x),py(y));else ctx.lineTo(px(x),py(y));}
+      ctx.stroke();ctx.setLineDash([]);
+      // KNN regression curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const x=i/200;
+        const ds=pts.map(p=>({d:Math.abs(p.x-x),y:p.y})).sort((a,b)=>a.d-b.d).slice(0,K);
+        const yhat=ds.reduce((s,d)=>s+d.y,0)/ds.length;
+        if(i===0)ctx.moveTo(px(x),py(yhat));else ctx.lineTo(px(x),py(yhat));
+      }
+      ctx.stroke();
+      // points
+      ctx.fillStyle='#ff8c00';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(px(p.x),py(p.y),3,0,Math.PI*2);ctx.fill();});
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText(`K=${K}: 작을수록 점에 들러붙고, 클수록 평탄해짐 (점선=참 함수)`,PL,14);
+    }
+    document.getElementById('krk').addEventListener('input',draw);
+    document.getElementById('krn').addEventListener('input',gen);
+    document.getElementById('krReg').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

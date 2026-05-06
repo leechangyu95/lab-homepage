@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🔌 직렬 vs 병렬 — 합성저항 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🔌 직렬 vs 병렬 — 합성저항 시각화</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/12-circuits.html">Week 12. 회로</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🔌 직렬 vs 병렬 — 합성저항 시각화</h4>
+    <p>직렬에서는 전류가 어디서나 같고 전압이 분배됩니다. 병렬에서는 전압이 같고 전류가 갈라집니다. <strong>옴 법칙 $V = IR$</strong>은 두 경우 모두 똑같이 성립합니다.</p>
+    <canvas id="w12_rrDemo" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>$R_1$ <span class="val" id="w12_rrR1V">100</span> Ω
+        <input type="range" id="w12_rrR1" min="10" max="500" step="10" value="100"></label>
+      <label>$R_2$ <span class="val" id="w12_rrR2V">200</span> Ω
+        <input type="range" id="w12_rrR2" min="10" max="500" step="10" value="200"></label>
+      <label>배터리 $V$ <span class="val" id="w12_rrVV">12</span> V
+        <input type="range" id="w12_rrV" min="1.5" max="24" step="0.5" value="12"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>발견할 것</strong>
+      <ul>
+        <li>$R_1 = R_2$이면 직렬 합성은 $2R$, 병렬은 $R/2$ → <strong>4배 차이</strong></li>
+        <li>$R_1 \ll R_2$이면 병렬 합성 $\approx R_1$ — 작은 쪽이 거의 다 결정</li>
+        <li>직렬에서 큰 저항에 큰 전압이 걸린다(전압 분배기)</li>
+        <li>병렬에서 작은 저항에 큰 전류가 흐른다(전류 분배기)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w12_rrDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function box(x,y,w,h,label,col){
+      ctx.fillStyle='#fff';ctx.strokeStyle=col;ctx.lineWidth=2;
+      ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);
+      ctx.fillStyle=col;ctx.font='12px sans-serif';
+      ctx.fillText(label,x+w/2-22,y+h/2+4);
+    }
+    function draw(){
+      const R1=+document.getElementById('w12_rrR1').value;
+      const R2=+document.getElementById('w12_rrR2').value;
+      const V =+document.getElementById('w12_rrV').value;
+      document.getElementById('w12_rrR1V').textContent=R1;
+      document.getElementById('w12_rrR2V').textContent=R2;
+      document.getElementById('w12_rrVV').textContent=V.toFixed(1);
+      const Rs=R1+R2,Rp=(R1*R2)/(R1+R2);
+      const Is=V/Rs, V1s=Is*R1, V2s=Is*R2;
+      const I1p=V/R1, I2p=V/R2, Ip=I1p+I2p;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // 좌측: 직렬
+      ctx.fillStyle='#222';ctx.font='bold 14px sans-serif';
+      ctx.fillText('직렬 (Series)',60,28);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      // 배터리 표시
+      ctx.beginPath();ctx.moveTo(60,180);ctx.lineTo(60,80);ctx.lineTo(110,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillRect(55,178,12,4);
+      ctx.fillStyle='#222';ctx.fillText('+',45,178);ctx.fillText('−',45,200);
+      box(110,65,50,30,'R1',(R1>R2?'#c62828':'#0b5fff'));
+      ctx.strokeStyle='#0b5fff';ctx.beginPath();ctx.moveTo(160,80);ctx.lineTo(210,80);ctx.stroke();
+      box(210,65,50,30,'R2',(R2>R1?'#c62828':'#0b5fff'));
+      ctx.beginPath();ctx.moveTo(260,80);ctx.lineTo(290,80);ctx.lineTo(290,180);ctx.lineTo(60,180);ctx.stroke();
+      // 결과창 직렬
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(40,210,260,128);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(40,210,260,128);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('합성 R = R1 + R2 = '+Rs+' Ω',50,228);
+      ctx.fillText('I = V/R = '+(Is*1000).toFixed(2)+' mA (어디서나 같음)',50,246);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('V1 = I·R1 = '+V1s.toFixed(2)+' V',50,266);
+      ctx.fillText('V2 = I·R2 = '+V2s.toFixed(2)+' V',50,284);
+      ctx.fillStyle='#2e7d32';
+      ctx.fillText('확인: V1 + V2 = '+(V1s+V2s).toFixed(2)+' V ≈ '+V.toFixed(1)+' V',50,304);
+      ctx.fillStyle='#666';
+      ctx.fillText('전력: P1 = '+(V1s*Is*1000).toFixed(1)+' mW, P2 = '+(V2s*Is*1000).toFixed(1)+' mW',50,322);
+      // 우측: 병렬
+      ctx.fillStyle='#222';ctx.font='bold 14px sans-serif';
+      ctx.fillText('병렬 (Parallel)',400,28);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(360,180);ctx.lineTo(360,80);ctx.lineTo(600,80);ctx.lineTo(600,180);ctx.lineTo(360,180);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillRect(355,178,12,4);
+      box(420,65,50,30,'R1',(I1p>I2p?'#c62828':'#0b5fff'));
+      ctx.strokeStyle='#0b5fff';
+      ctx.beginPath();ctx.moveTo(445,95);ctx.lineTo(445,130);ctx.lineTo(515,130);ctx.lineTo(515,95);ctx.stroke();
+      box(490,80,50,30,'R2',(I2p>I1p?'#c62828':'#0b5fff'));
+      // 결과창 병렬
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(340,210,280,128);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(340,210,280,128);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('1/R = 1/R1 + 1/R2 → R = '+Rp.toFixed(2)+' Ω',350,228);
+      ctx.fillText('V = '+V.toFixed(1)+' V (양쪽 같음)',350,246);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('I1 = V/R1 = '+(I1p*1000).toFixed(2)+' mA',350,266);
+      ctx.fillText('I2 = V/R2 = '+(I2p*1000).toFixed(2)+' mA',350,284);
+      ctx.fillStyle='#2e7d32';
+      ctx.fillText('총 I = I1 + I2 = '+(Ip*1000).toFixed(2)+' mA',350,304);
+      ctx.fillStyle='#666';
+      ctx.fillText('총 P = V·I = '+(V*Ip*1000).toFixed(1)+' mW',350,322);
+    }
+    ['w12_rrR1','w12_rrR2','w12_rrV'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

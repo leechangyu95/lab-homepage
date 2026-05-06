@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브: 클릭으로 장애물 그리기 + inflation — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브: 클릭으로 장애물 그리기 + inflation</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/05-map-frenet.html">Week 5. Map 표현 &amp; Frenet 좌표</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브: 클릭으로 장애물 그리기 + inflation</h4>
+    <p>왼쪽 그리드를 <strong>클릭/드래그</strong>해서 장애물(검정)을 그리거나 지우세요. 오른쪽은 같은 장애물을
+    inflation 반경만큼 부풀린 <strong>costmap</strong>입니다. inflation을 키우면 좁은 통로가 막히는 걸 볼 수 있어요.</p>
+    <canvas id="grid" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>inflation 반경 (m) <span class="val" id="infV">0.6</span><input type="range" id="inf" min="0.0" max="2.0" step="0.1" value="0.6"></label>
+      <label>모드
+        <select id="mode"><option value="add">장애물 추가</option><option value="del">장애물 지우기</option></select>
+      </label>
+      <button id="seed1">샘플 1</button>
+      <button id="seed2">샘플 2</button>
+      <button id="clr" class="alt">전체 지우기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('grid'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    const N=20, M=20;          // grid cells
+    const cell=14;             // px per cell
+    const padL=10, padR=W/2+10;
+    const res=0.4;             // m per cell
+    let occ=Array.from({length:M},()=>Array(N).fill(0));
+    const upd=()=>{$('infV').textContent=(+$('inf').value).toFixed(1);};
+    $('inf').oninput=()=>{upd();draw();};
+    function clear(){occ=Array.from({length:M},()=>Array(N).fill(0));draw();}
+    function seed1(){clear();
+      for(let i=4;i<10;i++)for(let j=6;j<10;j++)occ[i][j]=1;
+      for(let i=12;i<17;i++)for(let j=12;j<16;j++)occ[i][j]=1;
+      draw();}
+    function seed2(){clear();
+      // narrow corridor
+      for(let i=0;i<M;i++){if(i<7||i>11){for(let j=8;j<12;j++)occ[i][j]=1;}}
+      for(let i=4;i<7;i++)for(let j=2;j<5;j++)occ[i][j]=1;
+      draw();}
+    $('clr').onclick=clear;$('seed1').onclick=seed1;$('seed2').onclick=seed2;
+    let dragging=false;
+    function pickCell(ev){
+      const r=c.getBoundingClientRect();
+      const px=ev.clientX-r.left, py=ev.clientY-r.top;
+      if(px<padL||px>padL+N*cell||py<10||py>10+M*cell)return null;
+      const j=Math.floor((px-padL)/cell), i=Math.floor((py-10)/cell);
+      if(i<0||i>=M||j<0||j>=N)return null;
+      return [i,j];
+    }
+    c.addEventListener('mousedown',e=>{
+      const p=pickCell(e); if(!p)return;
+      dragging=true; const v=$('mode').value=='add'?1:0;
+      occ[p[0]][p[1]]=v; draw();
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!dragging)return;
+      const p=pickCell(e); if(!p)return;
+      const v=$('mode').value=='add'?1:0;
+      occ[p[0]][p[1]]=v; draw();
+    });
+    window.addEventListener('mouseup',()=>{dragging=false;});
+    function distMap(){
+      const inf=+$('inf').value, maxC=inf/res; // cells
+      const dist=Array.from({length:M},()=>Array(N).fill(99));
+      // brute force BFS-style multi-source
+      const q=[];
+      for(let i=0;i<M;i++)for(let j=0;j<N;j++){
+        if(occ[i][j]==1){dist[i][j]=0;q.push([i,j]);}
+      }
+      while(q.length){
+        const [i,j]=q.shift();
+        for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+          const ni=i+di,nj=j+dj;
+          if(ni<0||ni>=M||nj<0||nj>=N)continue;
+          const step=(di*dj==0)?1:1.414;
+          if(dist[ni][nj]>dist[i][j]+step){
+            dist[ni][nj]=dist[i][j]+step; q.push([ni,nj]);
+          }
+        }
+      }
+      return {dist, maxC};
+    }
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // left: occupancy
+      x.fillStyle='#fff';x.fillRect(padL,10,N*cell,M*cell);
+      x.strokeStyle='#ddd';
+      for(let i=0;i<=M;i++){x.beginPath();x.moveTo(padL,10+i*cell);x.lineTo(padL+N*cell,10+i*cell);x.stroke();}
+      for(let j=0;j<=N;j++){x.beginPath();x.moveTo(padL+j*cell,10);x.lineTo(padL+j*cell,10+M*cell);x.stroke();}
+      for(let i=0;i<M;i++)for(let j=0;j<N;j++){
+        if(occ[i][j]==1){x.fillStyle='#222';x.fillRect(padL+j*cell+1,10+i*cell+1,cell-1,cell-1);}
+      }
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('Occupancy Grid (클릭/드래그)',padL,H-12);
+      x.fillText('해상도 0.4 m/칸  ·  '+N+'×'+M+' 칸 = '+(N*res)+'×'+(M*res)+' m',padL,H-30);
+      // right: costmap
+      x.fillStyle='#fff';x.fillRect(padR,10,N*cell,M*cell);
+      const {dist,maxC}=distMap();
+      for(let i=0;i<M;i++)for(let j=0;j<N;j++){
+        let cv;
+        if(maxC<=0){cv=occ[i][j]==1?1:0;}
+        else cv=1.0-Math.min(1,dist[i][j]/maxC);
+        if(cv>0.001){
+          const r=Math.floor(50+205*cv), g=Math.floor(50+50*(1-cv)), b=Math.floor(50+50*(1-cv));
+          x.fillStyle=`rgb(${r},${g},${b})`;
+          x.fillRect(padR+j*cell+1,10+i*cell+1,cell-1,cell-1);
+        }
+      }
+      x.strokeStyle='#ddd';
+      for(let i=0;i<=M;i++){x.beginPath();x.moveTo(padR,10+i*cell);x.lineTo(padR+N*cell,10+i*cell);x.stroke();}
+      for(let j=0;j<=N;j++){x.beginPath();x.moveTo(padR+j*cell,10);x.lineTo(padR+j*cell+0,10+M*cell);x.stroke();}
+      x.fillStyle='#444';
+      x.fillText('Costmap (inflation = '+(+$('inf').value).toFixed(1)+' m)',padR,H-12);
+      x.fillText('어두울수록 위험 / 밝을수록 안전',padR,H-30);
+    }
+    upd();seed1();
+  })();
+  </script>
+</main>
+</body>
+</html>

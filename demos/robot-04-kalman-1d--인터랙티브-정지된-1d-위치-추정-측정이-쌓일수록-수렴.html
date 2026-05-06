@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 정지된 1D 위치 추정 — 측정이 쌓일수록 수렴 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 정지된 1D 위치 추정 — 측정이 쌓일수록 수렴</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/04-kalman-1d.html">Lecture 4. 칼만 필터 (1D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정지된 1D 위치 추정 — 측정이 쌓일수록 수렴</h4>
+    <p>진짜 거리는 50 m로 고정. 칼만 필터가 측정 한 개씩 받으며 추정값 $\hat x$와 불확실성 $P$를 어떻게 줄여나가는지 시간축으로 펼쳐서 봅니다. 일부러 <strong>틀린 초기 추정</strong>($\hat x_0=20$)에서 시작해도, 측정이 쌓이면 빠르게 50으로 수렴하고 <strong>±2σ 신뢰 구간(연한 파란 띠)</strong>이 좁아지는 게 보입니다. 같은 데이터를 단순 평균낸 값과도 비교됩니다.</p>
+    <canvas id="static" width="720" height="340"></canvas>
+    <div class="controls">
+      <label>측정 잡음 R <span class="val" id="srV">25</span><input type="range" id="sr" min="1" max="100" step="1" value="25"></label>
+      <label>초기 추정 x̂₀ <span class="val" id="sx0V">20</span><input type="range" id="sx0" min="10" max="90" step="1" value="20"></label>
+      <label>초기 분산 P₀ <span class="val" id="sp0V">400</span><input type="range" id="sp0" min="10" max="1000" step="10" value="400"></label>
+      <button id="sPlay">▶ 재생</button>
+      <button id="sStep" class="alt">한 스텝</button>
+      <button id="sNew" class="alt">새 시퀀스</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('static');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const ml=46,mr=196,mt=24,mb=34;
+    const pw=W-ml-mr,ph=H-mt-mb;
+    const truth=50,Nmax=20;
+    const yMin=10,yMax=90;
+    let xh0=20,P0=400,R=25;
+    let xh=xh0,P=P0;
+    let meas=[],hist=[];
+    let playing=false,lastTick=0;
+    const SPEED=380;
+    function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    const X=k=>ml+(k/Nmax)*pw;
+    const Y=y=>mt+ph-((y-yMin)/(yMax-yMin))*ph;
+    const clip=y=>Math.max(yMin,Math.min(yMax,y));
+    function newSeq(){
+      R=+document.getElementById('sr').value;
+      meas=[];
+      const sg=Math.sqrt(R);
+      for(let i=0;i<Nmax;i++)meas.push(truth+sg*gauss());
+      reset();
+    }
+    function reset(){
+      xh0=+document.getElementById('sx0').value;
+      P0=+document.getElementById('sp0').value;
+      xh=xh0;P=P0;hist=[];
+    }
+    function step(){
+      if(hist.length>=Nmax)return;
+      const k=hist.length;
+      const z=meas[k];
+      const K=P/(P+R);
+      xh=xh+K*(z-xh);
+      P=(1-K)*P;
+      hist.push({k,z,xh,P,K});
+    }
+    function draw(){
+      document.getElementById('srV').textContent=R.toFixed(0);
+      document.getElementById('sx0V').textContent=xh0.toFixed(0);
+      document.getElementById('sp0V').textContent=P0.toFixed(0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+      for(let y=yMin;y<=yMax;y+=10){ctx.beginPath();ctx.moveTo(ml,Y(y));ctx.lineTo(ml+pw,Y(y));ctx.stroke();}
+      for(let k=0;k<=Nmax;k+=5){ctx.beginPath();ctx.moveTo(X(k),mt);ctx.lineTo(X(k),mt+ph);ctx.stroke();}
+      ctx.strokeStyle='#999';
+      ctx.beginPath();ctx.moveTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.stroke();
+      ctx.fillStyle='#555';ctx.font='11px sans-serif';
+      for(let k=0;k<=Nmax;k+=5){ctx.fillText(k,X(k)-4,mt+ph+15);}
+      for(let y=yMin;y<=yMax;y+=10){ctx.fillText(y,ml-22,Y(y)+4);}
+      ctx.fillText('스텝 k',ml+pw/2-15,mt+ph+28);
+      ctx.save();ctx.translate(12,mt+ph/2+22);ctx.rotate(-Math.PI/2);ctx.fillText('거리 (m)',0,0);ctx.restore();
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.moveTo(ml,Y(truth));ctx.lineTo(ml+pw,Y(truth));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';
+      ctx.fillText('진짜 거리 = '+truth,ml+pw-92,Y(truth)-6);
+      const pts=[{k:0,xh:xh0,P:P0},...hist.map(h=>({k:h.k+1,xh:h.xh,P:h.P}))];
+      ctx.fillStyle='rgba(11,95,255,0.13)';
+      ctx.beginPath();
+      pts.forEach((p,i)=>{const sg=Math.sqrt(p.P);const py=Y(clip(p.xh+2*sg));if(i===0)ctx.moveTo(X(p.k),py);else ctx.lineTo(X(p.k),py);});
+      for(let i=pts.length-1;i>=0;i--){const sg=Math.sqrt(pts[i].P);ctx.lineTo(X(pts[i].k),Y(clip(pts[i].xh-2*sg)));}
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle='#c62828';
+      hist.forEach(h=>{ctx.beginPath();ctx.arc(X(h.k+1),Y(clip(h.z)),2.8,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      pts.forEach((p,i)=>{if(i===0)ctx.moveTo(X(p.k),Y(p.xh));else ctx.lineTo(X(p.k),Y(p.xh));});
+      ctx.stroke();
+      const cur=pts[pts.length-1];
+      ctx.fillStyle='#0b5fff';
+      ctx.beginPath();ctx.arc(X(cur.k),Y(cur.xh),4.5,0,Math.PI*2);ctx.fill();
+      const px=ml+pw+14,py=mt+4;
+      ctx.fillStyle='#fff';ctx.fillRect(px-6,py-2,180,ph+8);
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.strokeRect(px-6,py-2,180,ph+8);
+      ctx.fillStyle='#333';ctx.font='bold 13px sans-serif';
+      ctx.fillText('현재 상태',px,py+14);
+      ctx.font='12px Consolas,monospace';
+      let yy=py+34;
+      const last=hist.length>0?hist[hist.length-1]:null;
+      ctx.fillStyle='#555';
+      ctx.fillText('k = '+(last?last.k+1:0)+' / '+Nmax,px,yy);yy+=22;
+      if(last){
+        ctx.fillStyle='#c62828';ctx.fillText('z_k  = '+last.z.toFixed(2),px,yy);yy+=20;
+        ctx.fillStyle='#0b5fff';ctx.fillText('x̂_k  = '+last.xh.toFixed(2),px,yy);yy+=18;
+        ctx.fillText('P_k  = '+last.P.toFixed(2),px,yy);yy+=18;
+        ctx.fillText('σ_k  = '+Math.sqrt(last.P).toFixed(2),px,yy);yy+=18;
+        ctx.fillStyle='#7c3aed';ctx.fillText('K_k  = '+last.K.toFixed(3),px,yy);yy+=24;
+        let s=0;hist.forEach(h=>s+=h.z);const naive=s/hist.length;
+        ctx.fillStyle='#666';ctx.font='11px Consolas,monospace';
+        ctx.fillText('단순평균 = '+naive.toFixed(2),px,yy);yy+=16;
+        ctx.fillText('KF오차   = '+(last.xh-truth>=0?'+':'')+(last.xh-truth).toFixed(2),px,yy);
+      }else{
+        ctx.fillStyle='#0b5fff';ctx.fillText('x̂_0 = '+xh0.toFixed(0),px,yy);yy+=18;
+        ctx.fillText('P_0 = '+P0.toFixed(0),px,yy);yy+=18;
+        ctx.fillText('σ_0 = '+Math.sqrt(P0).toFixed(2),px,yy);yy+=22;
+        ctx.fillStyle='#999';ctx.font='11px sans-serif';
+        ctx.fillText('▶ 재생을 눌러 측정',px,yy);yy+=14;
+        ctx.fillText('   하나씩 받아보세요',px,yy);
+      }
+    }
+    function tick(now){
+      if(playing&&now-lastTick>=SPEED){
+        step();lastTick=now;
+        if(hist.length>=Nmax){playing=false;document.getElementById('sPlay').textContent='▶ 재생';}
+      }
+      draw();
+      requestAnimationFrame(tick);
+    }
+    document.getElementById('sr').addEventListener('input',()=>{playing=false;document.getElementById('sPlay').textContent='▶ 재생';newSeq();});
+    document.getElementById('sx0').addEventListener('input',reset);
+    document.getElementById('sp0').addEventListener('input',reset);
+    document.getElementById('sStep').addEventListener('click',()=>{playing=false;document.getElementById('sPlay').textContent='▶ 재생';if(hist.length>=Nmax)reset();step();});
+    document.getElementById('sPlay').addEventListener('click',()=>{
+      if(hist.length>=Nmax)reset();
+      playing=!playing;
+      document.getElementById('sPlay').textContent=playing?'⏸ 일시정지':'▶ 재생';
+      lastTick=performance.now();
+    });
+    document.getElementById('sNew').addEventListener('click',()=>{playing=false;document.getElementById('sPlay').textContent='▶ 재생';newSeq();});
+    newSeq();
+    requestAnimationFrame(tick);
+  })();
+  </script>
+</main>
+</body>
+</html>

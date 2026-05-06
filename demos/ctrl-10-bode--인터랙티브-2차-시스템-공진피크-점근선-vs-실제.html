@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 2차 시스템 공진피크 — 점근선 vs 실제 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 2차 시스템 공진피크 — 점근선 vs 실제</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/10-bode.html">Week 10. Bode 선도 — 주파수 응답</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2차 시스템 공진피크 — 점근선 vs 실제</h4>
+    <p>$G(s) = \omega_n^2/(s^2 + 2\zeta\omega_n s + \omega_n^2)$의 Bode 크기 곡선입니다.
+    <span style="color:#888;font-weight:600">회색 점선</span>은 손그림 점근선(0 dB → −40 dB/decade), <span style="color:#0b5fff;font-weight:600">파란선</span>은 실제 곡선.
+    ζ를 줄여가며 ωₙ 근처의 봉우리가 어떻게 자라는지 보세요.</p>
+    <canvas id="reso" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>감쇠비 ζ <span class="val" id="rzV">0.3</span><input type="range" id="rz" min="0.05" max="2" step="0.02" value="0.3"></label>
+      <label>고유진동수 ωₙ <span class="val" id="rwV">1.0</span><input type="range" id="rw" min="0.5" max="5" step="0.1" value="1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('reso'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('rzV').textContent=(+$('rz').value).toFixed(2);$('rwV').textContent=(+$('rw').value).toFixed(1);};
+    ['rz','rw'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const z=+$('rz').value, wn=+$('rw').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const wmin=-1, wmax=2, ox=60, mw=560, myT=20, myB=240;
+      const xOf=lw=>ox + (lw-wmin)/(wmax-wmin)*mw;
+      const mTop=25, mBot=-50;
+      const yMof=db=>myT + (mTop-db)/(mTop-mBot)*(myB-myT);
+      // grid
+      for(let dec=wmin;dec<=wmax;dec++){const xx=xOf(dec);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(xx,myT);x.lineTo(xx,myB);x.stroke();
+        x.fillStyle='#777';x.font='10px sans-serif';x.fillText('10^'+dec,xx-12,myB+12);}
+      for(let db=mTop;db>=mBot;db-=10){const yy=yMof(db);
+        x.strokeStyle='#eee';x.beginPath();x.moveTo(ox,yy);x.lineTo(ox+mw,yy);x.stroke();
+        x.fillStyle='#777';x.fillText(db+' dB',ox-40,yy+3);}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,myT);x.lineTo(ox,myB);x.lineTo(ox+mw,myB);x.stroke();
+      // 0 dB
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,yMof(0));x.lineTo(ox+mw,yMof(0));x.stroke();x.setLineDash([]);
+      // asymptotic line: 0 dB until wn, then -40 dB/decade
+      x.strokeStyle='#888';x.lineWidth=2;x.setLineDash([5,4]);x.beginPath();
+      const lwn=Math.log10(wn);
+      x.moveTo(xOf(wmin),yMof(0));
+      x.lineTo(xOf(lwn),yMof(0));
+      const endW=wmax, endDB=-40*(endW-lwn);
+      x.lineTo(xOf(endW),yMof(endDB));
+      x.stroke();x.setLineDash([]);
+      // actual curve
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      let peakDB=-1e9, peakW=0;
+      for(let i=0;i<=400;i++){
+        const lw=wmin+i/400*(wmax-wmin), w=Math.pow(10,lw);
+        const u=w/wn;
+        const re=1-u*u, im=2*z*u;
+        const mag=1/Math.sqrt(re*re+im*im);
+        const db=20*Math.log10(mag);
+        if(db>peakDB){peakDB=db; peakW=w;}
+        const xx=xOf(lw), yy=yMof(Math.max(mBot,Math.min(mTop,db)));
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      // peak marker
+      if(z<0.707){
+        const wr = wn*Math.sqrt(1-2*z*z);
+        const Mr = 1/(2*z*Math.sqrt(1-z*z));
+        const dbR = 20*Math.log10(Mr);
+        const xx=xOf(Math.log10(wr)), yy=yMof(dbR);
+        x.fillStyle='#c62828';x.beginPath();x.arc(xx,yy,5,0,Math.PI*2);x.fill();
+        x.fillStyle='#c62828';x.font='12px sans-serif';
+        x.fillText('피크 '+dbR.toFixed(1)+' dB @ ω='+wr.toFixed(2),xx+8,yy-4);
+      }
+      // legend
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('|G(jω)| dB',10,15);
+      x.fillStyle='#888';x.fillText('회색 점선: 점근선  ',ox+10,265);
+      x.fillStyle='#0b5fff';x.fillText('파란선: 실제',ox+170,265);
+      x.fillStyle=z<0.707?'#c62828':'#2e7d32';
+      x.fillText(z<0.707?'공진 발생 (ζ < 0.707)':'공진 없음 (점근선이 잘 맞음)',ox+300,265);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

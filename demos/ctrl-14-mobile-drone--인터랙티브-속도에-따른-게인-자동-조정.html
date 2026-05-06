@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 속도에 따른 게인 자동 조정 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 속도에 따른 게인 자동 조정</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/14-mobile-drone.html">Week 14. PID 응용 ② — 모바일 로봇·드론</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 속도에 따른 게인 자동 조정</h4>
+    <p>속도가 빨라지면 헤딩 게인이 자동으로 줄어들도록 스케줄. 고정 게인 vs 적응 게인 비교.</p>
+    <canvas id="c14gs" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>기본 헤딩 Kp <span class="val" id="c14gsKpV">3.0</span><input type="range" id="c14gsKp" min="0.5" max="10" step="0.1" value="3.0"></label>
+      <label>속도 [m/s] <span class="val" id="c14gsVV">2.0</span><input type="range" id="c14gsV" min="0.2" max="8" step="0.1" value="2.0"></label>
+      <label><input type="checkbox" id="c14gsAd" checked> 게인 스케줄 ON</label>
+      <button id="c14gsRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c14gs'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c14gsKpV').textContent=(+$('c14gsKp').value).toFixed(2);$('c14gsVV').textContent=(+$('c14gsV').value).toFixed(2);};
+    ['c14gsKp','c14gsV'].forEach(id=>$(id).oninput=upd);
+    let psi=0, ePsi=0.5, hist=[];
+    $('c14gsRst').onclick=()=>{ePsi=0.5;hist=[];};
+    function loop(){
+      const Kp0=+$('c14gsKp').value, v=+$('c14gsV').value;
+      const ad=$('c14gsAd').checked;
+      // adaptive: Kp scaled inversely with v
+      const Kp = ad ? Kp0/(v/2.0) : Kp0;
+      const dt=0.02;
+      // simulated bicycle lateral dynamics (simplified): edot = v*epsi, epsidot = -Kp*epsi - K2*ey
+      const om = -Kp*ePsi;
+      ePsi += om*dt;
+      hist.push(ePsi); if(hist.length>500)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40, oy=240, w=560, h=180;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,oy-h*0.5);x.lineTo(ox+w,oy-h*0.5);x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((vv,i)=>{const xx=ox+i*w/500, yy=oy-h*0.5-vv*h*0.4;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('헤딩 오차 e_ψ',ox,oy+18);
+      x.fillText('실효 Kp = '+Kp.toFixed(2)+',   속도 v = '+v.toFixed(2),ox,oy+34);
+      x.fillStyle=ad?'#2e7d32':'#c62828';
+      x.fillText(ad?'스케줄 ON (속도와 함께 Kp 감소)':'고정 게인',ox,oy+52);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

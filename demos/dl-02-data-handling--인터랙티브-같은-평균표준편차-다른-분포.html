@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 같은 평균·표준편차, 다른 분포 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 같은 평균·표준편차, 다른 분포</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/02-data-handling.html">Week 2. 데이터 핸들링</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 같은 평균·표준편차, 다른 분포</h4>
+    <p>네 분포 모두 평균 0, 표준편차 1로 정규화했지만 모양은 완전히 다릅니다. <strong>요약 통계만 보지 말고 항상 그림으로 보세요</strong>는 이번 주의 핵심 메시지입니다.</p>
+    <canvas id="distComp" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>분포 종류
+      <select id="distType">
+        <option value="normal" selected>정규분포</option>
+        <option value="uniform">균등분포</option>
+        <option value="bimodal">이봉(쌍봉)분포</option>
+        <option value="skewed">치우친 분포</option>
+      </select></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('distComp');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(type){
+      const N=400;let data=[];
+      if(type==='normal'){for(let i=0;i<N;i++)data.push(gauss());}
+      else if(type==='uniform'){for(let i=0;i<N;i++)data.push((Math.random()-0.5)*2*Math.sqrt(3));}
+      else if(type==='bimodal'){for(let i=0;i<N;i++){data.push(gauss()*0.5+(Math.random()<0.5?-1:1));}}
+      else{for(let i=0;i<N;i++){const u=Math.random();data.push(-Math.log(1-u)-1);}}
+      // standardize
+      const mu=data.reduce((a,b)=>a+b,0)/data.length;
+      const sd=Math.sqrt(data.reduce((a,b)=>a+(b-mu)**2,0)/data.length);
+      return data.map(x=>(x-mu)/sd);
+    }
+    function draw(){
+      const type=document.getElementById('distType').value;
+      const data=gen(type);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const PL=40,PR=20,PT=30,PB=40;
+      const plotW=W-PL-PR,plotH=H-PT-PB;
+      const mn=-3.5,mx=3.5,B=40,bw=(mx-mn)/B;
+      const bins=new Array(B).fill(0);
+      data.forEach(d=>{const i=Math.min(B-1,Math.max(0,Math.floor((d-mn)/bw)));bins[i]++;});
+      const peak=Math.max(...bins);
+      ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(PL,PT+plotH);ctx.lineTo(PL+plotW,PT+plotH);ctx.stroke();
+      bins.forEach((v,i)=>{
+        const x=PL+i*plotW/B;const h=(v/peak)*plotH;
+        ctx.fillStyle='#0b5fff';
+        ctx.fillRect(x,PT+plotH-h,plotW/B-1,h);
+      });
+      const sum=data.reduce((a,b)=>a+b,0);const n=data.length;
+      const mu=sum/n,sd=Math.sqrt(data.reduce((a,b)=>a+(b-mu)**2,0)/n);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`표준화 후: 평균 ${mu.toFixed(2)}, 표준편차 ${sd.toFixed(2)}`,PL,20);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('표준화로 평균/표준편차는 같아지지만 모양은 그대로! 모델 성능에 큰 차이를 만듭니다',PL,H-12);
+    }
+    document.getElementById('distType').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

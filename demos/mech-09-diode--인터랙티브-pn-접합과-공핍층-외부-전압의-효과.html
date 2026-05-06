@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: PN 접합과 공핍층 — 외부 전압의 효과 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: PN 접합과 공핍층 — 외부 전압의 효과</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/09-diode.html">Week 9. 반도체와 다이오드 — 한 방향만 흐르는 전기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: PN 접합과 공핍층 — 외부 전압의 효과</h4>
+    <p>슬라이더로 인가 전압을 좌우로 움직여 보세요. <strong>양수(순방향)</strong>면 공핍층이 좁아지고 전류가 흐릅니다. <strong>음수(역방향)</strong>면 공핍층이 넓어지며 전류가 막힙니다. 색깔의 진하기로 캐리어 농도를, 가운데 회색 띠의 폭으로 공핍층을 표현했어요.</p>
+    <canvas id="pnCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>인가 전압 V_D <span class="val" id="pnVV">0.0</span> V<input type="range" id="pnV" min="-2" max="1" step="0.05" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pnCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Is=1e-12,VT=0.0259,n=1.5;
+    function draw(){
+      const V=+document.getElementById('pnV').value;
+      document.getElementById('pnVV').textContent=V.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Depletion width: shrinks for forward bias, expands for reverse bias
+      // Use a heuristic mapping: w0=40, w = w0 * sqrt(max(0.05, 0.7 - V)/0.7) (clamped)
+      const w0=40;
+      const wRel=Math.sqrt(Math.max(0.05,(0.7-V)/0.7));
+      const w=Math.min(140,w0*wRel);
+      const cx=W/2;
+      const top=60,bot=200;
+      // p-region (left) — color intensity reflects how many holes are NOT pulled away
+      // Reverse bias depletes more, forward bias keeps carriers near junction
+      const carrierAlpha=Math.min(1,Math.max(0.3,1-Math.abs(V)*0.2+V*0.3));
+      ctx.fillStyle=`rgba(245,124,0,${carrierAlpha*0.35})`;
+      ctx.fillRect(40,top,cx-w/2-40,bot-top);
+      ctx.strokeStyle='#f57c00';ctx.lineWidth=2;
+      ctx.strokeRect(40,top,cx-w/2-40,bot-top);
+      // n-region (right)
+      ctx.fillStyle=`rgba(25,118,210,${carrierAlpha*0.35})`;
+      ctx.fillRect(cx+w/2,top,W-40-(cx+w/2),bot-top);
+      ctx.strokeStyle='#1976d2';
+      ctx.strokeRect(cx+w/2,top,W-40-(cx+w/2),bot-top);
+      // Depletion (gray)
+      ctx.fillStyle='#e0e0e0';
+      ctx.fillRect(cx-w/2,top,w,bot-top);
+      ctx.strokeStyle='#999';ctx.setLineDash([3,3]);
+      ctx.strokeRect(cx-w/2,top,w,bot-top);
+      ctx.setLineDash([]);
+      // Carriers (+ in p, - in n) - density depends on bias
+      ctx.font='14px sans-serif';
+      const nC=Math.round(4+(V>0?V*4:0));
+      ctx.fillStyle='#e65100';
+      for(let i=0;i<5;i++){const px=60+i*((cx-w/2-60)/5);ctx.fillText('+',px,(top+bot)/2);}
+      ctx.fillStyle='#0d47a1';
+      for(let i=0;i<5;i++){const px=cx+w/2+10+i*((W-60-cx-w/2-20)/5);ctx.fillText('−',px,(top+bot)/2);}
+      // Labels
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('p형 (홀)',60,top-10);
+      ctx.fillText('n형 (전자)',W-130,top-10);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText(`공핍층 폭 ≈ ${w.toFixed(0)} (단위 임의)`,cx-60,bot+18);
+      // External battery indicator
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      let mode='',col='#666';
+      if(V>0.05){mode='순방향 바이어스 — 공핍층 좁아짐, 전류 흐름';col='#1b5e20';}
+      else if(V<-0.05){mode='역방향 바이어스 — 공핍층 넓어짐, 전류 차단';col='#c62828';}
+      else{mode='평형 — 외부 전압 없음, 내부 전기장만 존재';col='#666';}
+      ctx.fillStyle=col;
+      ctx.fillText(mode,30,30);
+      // Approximate current
+      const I=V>0?Is*(Math.exp(V/(n*VT))-1)*1000:V<0?-1e-6*1000:0;
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`다이오드 전류 ≈ ${Math.abs(I)<0.01?I.toFixed(4):I.toFixed(2)} mA`,30,52);
+      ctx.fillStyle='#666';
+      ctx.fillText(`(0.7V 부근에서 급격히 흐르기 시작 — 정전압 모델의 근거)`,30,H-15);
+    }
+    document.getElementById('pnV').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

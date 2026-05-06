@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 어텐션 가중치 히트맵 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 어텐션 가중치 히트맵</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/12-rnn-advanced.html">Week 12. Seq2Seq와 Attention</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 어텐션 가중치 히트맵</h4>
+    <p>한→영 번역의 가상 어텐션 행렬입니다. 행은 출력 단어, 열은 입력 단어. 진할수록 큰 가중치입니다. 슬라이더로 패턴을 바꿔보세요.</p>
+    <canvas id="attCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>대각 강도 <span class="val" id="dgV">3</span><input type="range" id="dg" min="0" max="6" step="0.1" value="3"></label>
+      <button id="attRegen">새 패턴</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('attCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ko=['나는','오늘','학교에','갔다','.'],en=['I','went','to','school','today'];
+    let perm=[0,3,2,3,1];
+    function draw(){
+      const dg=+document.getElementById('dg').value;
+      document.getElementById('dgV').textContent=dg.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cell=44,x0=120,y0=50;
+      const N=5;
+      // header
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      for(let i=0;i<N;i++)ctx.fillText(ko[i],x0+i*cell+5,y0-8);
+      for(let j=0;j<N;j++)ctx.fillText(en[j],x0-80,y0+j*cell+25);
+      // matrix
+      const M=[];
+      for(let j=0;j<N;j++){const r=[];for(let i=0;i<N;i++){r.push(Math.exp(-Math.pow(i-perm[j],2)*0.5/Math.max(0.1,dg)));}
+        const s=r.reduce((a,b)=>a+b);M.push(r.map(v=>v/s));}
+      for(let j=0;j<N;j++)for(let i=0;i<N;i++){
+        const v=M[j][i];const t=Math.floor(255-v*255);
+        ctx.fillStyle=`rgb(${t},${t},255)`;
+        ctx.fillRect(x0+i*cell,y0+j*cell,cell-2,cell-2);
+        ctx.fillStyle=v>0.5?'#fff':'#333';ctx.font='11px sans-serif';
+        ctx.fillText(v.toFixed(2),x0+i*cell+8,y0+j*cell+25);
+      }
+    }
+    document.getElementById('dg').addEventListener('input',draw);
+    document.getElementById('attRegen').onclick=()=>{perm=Array.from({length:5},()=>Math.floor(Math.random()*5));draw();};
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

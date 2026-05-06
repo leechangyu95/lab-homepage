@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 활성화 함수와 그 도함수(=그래디언트) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 활성화 함수와 그 도함수(=그래디언트)</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/12-deep-learning.html">Week 12. 딥러닝 in 메카트로닉스</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 활성화 함수와 그 도함수(=그래디언트)</h4>
+    <p>같은 입력에 대해 세 활성화의 모양과 도함수를 비교하세요. 도함수가 학습에 직결됩니다 — <strong>도함수가 0이 되는 영역</strong>이 많으면 그래디언트가 사라져(vanishing gradient) 학습이 멈춰요.</p>
+    <ul style="font-size:13px;color:#444;margin:6px 0">
+      <li>Sigmoid: 양 끝(|x|>4)에서 도함수 ≈ 0 → 깊은 망에서 학습 멈춤. 1986년 이후 한참 사용했지만 ReLU에 밀림.</li>
+      <li>Tanh: 0 중심, sigmoid보다 좋음. 하지만 여전히 양 끝에서 saturate.</li>
+      <li>ReLU: 양수 영역에서 도함수가 1 → 그래디언트가 살아 있음. 음수 영역에선 도함수 0 ("Dying ReLU" 문제).</li>
+    </ul>
+    <canvas id="actDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>활성화
+        <select id="actSel">
+          <option value="sigmoid">Sigmoid</option>
+          <option value="tanh">Tanh</option>
+          <option value="relu" selected>ReLU</option>
+          <option value="leaky">Leaky ReLU</option>
+        </select>
+      </label>
+      <label>입력 x <span class="val" id="actXV">0</span><input type="range" id="actX" min="-5" max="5" step="0.05" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('actDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const fns={
+      sigmoid: x=>1/(1+Math.exp(-x)),
+      tanh: x=>Math.tanh(x),
+      relu: x=>Math.max(0,x),
+      leaky: x=>x>0?x:0.1*x
+    };
+    const dfns={
+      sigmoid: x=>{const s=1/(1+Math.exp(-x));return s*(1-s);},
+      tanh: x=>1-Math.tanh(x)*Math.tanh(x),
+      relu: x=>x>0?1:0,
+      leaky: x=>x>0?1:0.1
+    };
+    function draw(){
+      const k=document.getElementById('actSel').value;
+      const x0=+document.getElementById('actX').value;
+      document.getElementById('actXV').textContent=x0.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // two side-by-side panels
+      const pW=W/2-30, panels=[
+        {ox:30,title:'활성화 f(x)',fn:fns[k],col:'#0b5fff',ymax:1.5,ymin:-1.2},
+        {ox:W/2+10,title:"도함수 f'(x)",fn:dfns[k],col:'#c62828',ymax:1.2,ymin:-0.2}
+      ];
+      panels.forEach(p=>{
+        const oy=H-40, h=H-70;
+        ctx.strokeStyle='#999';ctx.beginPath();
+        ctx.moveTo(p.ox,oy);ctx.lineTo(p.ox+pW,oy);
+        ctx.moveTo(p.ox+pW/2,30);ctx.lineTo(p.ox+pW/2,oy);ctx.stroke();
+        ctx.fillStyle='#222';ctx.font='13px sans-serif';ctx.fillText(p.title,p.ox+5,22);
+        // x = 0 line is the vertical axis
+        const xMin=-5,xMax=5;
+        function px(x){return p.ox+(x-xMin)/(xMax-xMin)*pW;}
+        function py(v){return oy-(v-p.ymin)/(p.ymax-p.ymin)*h;}
+        // grid
+        ctx.strokeStyle='#eee';
+        for(let xv=-4;xv<=4;xv+=2){const xx=px(xv);ctx.beginPath();ctx.moveTo(xx,30);ctx.lineTo(xx,oy);ctx.stroke();}
+        // 0 line
+        ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(p.ox,py(0));ctx.lineTo(p.ox+pW,py(0));ctx.stroke();
+        // curve
+        ctx.strokeStyle=p.col;ctx.lineWidth=2.5;ctx.beginPath();
+        for(let i=0;i<=200;i++){const x=xMin+(xMax-xMin)*i/200;const v=p.fn(x);
+          const xx=px(x),yy=py(Math.max(p.ymin,Math.min(p.ymax,v)));
+          if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+        ctx.stroke();
+        // current point
+        const v0=p.fn(x0);
+        const xx=px(x0),yy=py(v0);
+        ctx.fillStyle='#222';ctx.beginPath();ctx.arc(xx,yy,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.setLineDash([2,2]);
+        ctx.beginPath();ctx.moveTo(xx,oy);ctx.lineTo(xx,yy);ctx.moveTo(p.ox,yy);ctx.lineTo(xx,yy);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle=p.col;ctx.font='12px sans-serif';
+        ctx.fillText(`= ${v0.toFixed(3)}`,xx+8,yy-6);
+        // x label
+        ctx.fillStyle='#666';ctx.font='11px sans-serif';
+        ctx.fillText('x',p.ox+pW-12,oy-4);
+      });
+    }
+    document.getElementById('actSel').addEventListener('change',draw);
+    document.getElementById('actX').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

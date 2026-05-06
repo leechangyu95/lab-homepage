@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 3. 벡터 (2) — 내적·길이·각도 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html" class="active">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../linear-algebra.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 3. 벡터 (2) — 내적·길이·각도</h1>
+  <p class="lead">벡터의 길이(노름), 내적의 두 가지 정의(좌표·기하), 각도와 직교 판정. 내적 한 줄로 거의 모든 도형 문제가 풀린다.</p>
+
+  <h2>🔁 복습 — 지난 시간</h2>
+
+  <h3>벡터 = 화살표 = 숫자 묶음</h3>
+  <ul>
+    <li>표현: $\mathbf{v} = (v_1, v_2)$ 또는 $\begin{pmatrix} v_1 \\ v_2 \end{pmatrix}$</li>
+    <li>두 가지 연산:</li>
+    <li><strong>덧셈</strong>: 같은 자리끼리 → 삼각형/평행사변형 법칙</li>
+    <li><strong>스칼라곱</strong>: 모든 성분에 $c$ 곱 → 길이 조절</li>
+  </ul>
+
+  <h3>아직 못 한 것</h3>
+  <ul>
+    <li>벡터의 <strong>길이</strong>가 얼마인가?</li>
+    <li>두 벡터 사이 <strong>각도</strong>가 몇 도인가?</li>
+    <li>두 벡터가 <strong>수직(직교)</strong> 인지 어떻게 알지?</li>
+  </ul>
+
+<div class="tip">오늘 핵심 도구 = <b>내적(dot product)</b>. 길이·각도·수직 판정을 모두 한 식으로 해결합니다.</div>
+
+
+
+  <h2>🎯 오늘의 학습 목표</h2>
+
+  <h3>🔹 벡터의 <strong>길이(노름)</strong> 를 계산할 수 있다 — 피타고라스의 일반화</h3>
+
+  <h3>🔸 <strong>내적</strong>을 좌표(대수적)와 그림(기하적) 두 가지로 정의·계산할 수 있다</h3>
+
+  <h3>🔸 내적으로 두 벡터 사이 <strong>각도</strong>를 구할 수 있다</h3>
+
+  <h3>🔸 두 벡터가 <strong>직교</strong>인지 판정할 수 있다 ($\mathbf{a}\cdot\mathbf{b} = 0$)</h3>
+
+  <h3>🔸 응용: <strong>일(work)</strong>, <strong>유사도(similarity)</strong> 같은 실제 예시에 연결할 수 있다</h3>
+
+
+
+  <h2>📏 벡터의 길이 (노름, norm)</h2>
+
+  <h3>2D — 피타고라스</h3>
+  <p>$\mathbf{v} = (v_1, v_2)$ 의 길이는 직각삼각형의 빗변.</p>
+
+  <p>$$\|\mathbf{v}\| = \sqrt{v_1^2 + v_2^2}$$</p>
+
+<svg width="900" height="220" viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <line x1="60" y1="180" x2="500" y2="180" stroke="#888" stroke-width="1"/>
+  <line x1="100" y1="20" x2="100" y2="200" stroke="#888" stroke-width="1"/>
+  <line x1="100" y1="180" x2="340" y2="180" stroke="#fa8c16" stroke-width="2.5"/>
+  <line x1="340" y1="180" x2="340" y2="60" stroke="#fa8c16" stroke-width="2.5"/>
+  <line x1="100" y1="180" x2="340" y2="60" stroke="#1677ff" stroke-width="3.5"/>
+  <polygon points="340,60 329,64 333,73" fill="#1677ff"/>
+  <text x="200" y="200" font-size="14" fill="#fa8c16">v₁ = 3</text>
+  <text x="350" y="125" font-size="14" fill="#fa8c16">v₂ = 4</text>
+  <text x="180" y="115" font-size="18" font-weight="bold" fill="#1677ff">v</text>
+  <text x="220" y="135" font-size="14" fill="#1677ff">‖v‖ = √(3² + 4²) = 5</text>
+  <!-- right text -->
+  <text x="560" y="60" font-size="15" fill="#333" font-weight="bold">3D / nD 일반화</text>
+  <text x="560" y="95" font-size="16" fill="#333">‖v‖ = √(v₁² + v₂² + ⋯ + vₙ²)</text>
+  <text x="560" y="135" font-size="13" fill="#666">차원이 늘어도 같은 공식.</text>
+  <text x="560" y="155" font-size="13" fill="#666">제곱해서 다 더하고 √ 씌우기.</text>
+</svg>
+
+  <h3>nD — 일반화</h3>
+  <p>$$\|\mathbf{v}\| = \sqrt{v_1^2 + v_2^2 + \cdots + v_n^2}$$</p>
+
+<div class="note">"<b>노름(norm)</b>" = "길이"의 정식 명칭. 표기는 $\|\mathbf{v}\|$ (절댓값 두 줄). $|v|$ 와 헷갈리지 말 것.</div>
+
+
+
+  <h2>📏 단위벡터로 정규화하기</h2>
+
+  <h3>정규화 (normalization)</h3>
+  <p>0이 아닌 벡터 $\mathbf{v}$ 를 그 길이로 나누면 <strong>길이 1짜리 단위벡터</strong>가 된다.</p>
+
+  <p>$$\hat{\mathbf{v}} = \frac{\mathbf{v}}{\|\mathbf{v}\|}$$</p>
+
+  <h3>예</h3>
+  <p>$\mathbf{v} = (3,\,4),\ \|\mathbf{v}\| = 5$</p>
+  <p>$$\hat{\mathbf{v}} = \tfrac{1}{5}(3,\,4) = (0.6,\,0.8)$$</p>
+
+  <p>확인: $0.6^2 + 0.8^2 = 0.36 + 0.64 = 1$ ✓</p>
+
+<div class="tip">
+
+🌱 <b>왜 정규화?</b>: "방향만 알고 싶고 크기는 표준화하고 싶을 때". 예를 들어 GPS에서 "북쪽 방향" 처럼 단위 길이로 표현된 방향만 필요할 때.
+
+</div>
+
+
+
+  <h2>📐 두 점 사이 거리</h2>
+
+  <h3>점 $A,\,B$ 사이 거리</h3>
+  <p>변위벡터 $\overrightarrow{AB} = B - A$ 의 길이.</p>
+
+  <p>$$d(A,\,B) = \|B - A\| = \sqrt{(b_1 - a_1)^2 + (b_2 - a_2)^2}$$</p>
+
+  <h3>예</h3>
+  <p>$A = (1,\,2),\ B = (4,\,6)$</p>
+  <p>$$d = \sqrt{(4-1)^2 + (6-2)^2} = \sqrt{9 + 16} = 5$$</p>
+
+<div class="tip">
+
+🌱 고등학교에서 본 <b>두 점 사이 거리 공식</b>이 사실은 "변위벡터의 노름" 이었습니다.
+
+</div>
+
+
+
+  <h2>✖️ 내적 (Dot Product) — 정의</h2>
+
+  <h3>대수적 정의 (좌표로 계산)</h3>
+  <p>같은 자리끼리 곱한 후 모두 더한다. 결과는 <strong>숫자(스칼라)</strong>.</p>
+
+  <p>$$
+\mathbf{a} \cdot \mathbf{b}
+= \begin{pmatrix} a_1 \\ a_2 \end{pmatrix} \cdot \begin{pmatrix} b_1 \\ b_2 \end{pmatrix}
+= a_1 b_1 + a_2 b_2
+$$</p>
+
+  <h3>일반 (n차원)</h3>
+  <p>$$\mathbf{a} \cdot \mathbf{b} = a_1 b_1 + a_2 b_2 + \cdots + a_n b_n$$</p>
+
+  <h3>예</h3>
+  <p>$\mathbf{a} = (3,\,2),\ \mathbf{b} = (4,\,-1)$</p>
+  <p>$$\mathbf{a}\cdot\mathbf{b} = 3\cdot 4 + 2\cdot(-1) = 12 - 2 = 10$$</p>
+
+<div class="warn">결과는 <b>스칼라 한 개</b>. 벡터가 아닙니다! 외적(다음 강의)과 헷갈리지 마세요.</div>
+
+
+
+  <h2>✖️ 내적 — 기하학적 의미</h2>
+
+  <h3>또 하나의 식 (그림으로 본 정의)</h3>
+  <p>$$\boxed{\mathbf{a}\cdot\mathbf{b} = \|\mathbf{a}\|\,\|\mathbf{b}\|\,\cos\theta}$$</p>
+
+  <p>여기서 $\theta$ 는 <strong>두 벡터 사이의 각도</strong> (0 ≤ θ ≤ π).</p>
+
+<svg width="900" height="240" viewBox="0 0 900 240" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <line x1="60" y1="200" x2="500" y2="200" stroke="#bbb" stroke-width="1"/>
+  <line x1="100" y1="40" x2="100" y2="220" stroke="#bbb" stroke-width="1"/>
+  <line x1="100" y1="200" x2="320" y2="200" stroke="#1677ff" stroke-width="3.5"/>
+  <polygon points="320,200 308,196 308,204" fill="#1677ff"/>
+  <text x="200" y="220" font-size="18" font-weight="bold" fill="#1677ff">a</text>
+  <line x1="100" y1="200" x2="280" y2="80" stroke="#fa8c16" stroke-width="3.5"/>
+  <polygon points="280,80 269,84 273,93" fill="#fa8c16"/>
+  <text x="170" y="125" font-size="18" font-weight="bold" fill="#fa8c16">b</text>
+  <path d="M 150 200 A 50 50 0 0 0 130 165" fill="none" stroke="#cf1322" stroke-width="2"/>
+  <text x="135" y="190" font-size="14" font-weight="bold" fill="#cf1322">θ</text>
+  <!-- right text -->
+  <text x="560" y="80" font-size="15" fill="#333" font-weight="bold">두 정의는 같다!</text>
+  <text x="560" y="115" font-size="14" fill="#333">a₁b₁ + a₂b₂ = ‖a‖‖b‖ cos θ</text>
+  <text x="560" y="155" font-size="14" fill="#666">→ 코사인을 직접 계산하지 않아도</text>
+  <text x="560" y="175" font-size="14" fill="#666">  좌표만으로 같은 값이 나온다.</text>
+  <text x="560" y="210" font-size="13" fill="#666">증명: 코사인법칙으로 가능 (생략)</text>
+</svg>
+
+<div class="tip">두 정의는 <b>완전히 동치</b>. 그래서 내적은 "<b>좌표 계산</b>" 과 "<b>각도·길이</b>" 라는 서로 다른 두 세계를 연결하는 다리 역할을 합니다.</div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 정의가 정말 같은지 직접 확인</h4>
+    <p>두 화살표를 마우스로 끌어서 움직여 보세요. 좌측 그림 위쪽의
+       <strong>좌표식 $a_1b_1+a_2b_2$</strong> 값과 아래쪽의
+       <strong>기하식 $\|\mathbf{a}\|\|\mathbf{b}\|\cos\theta$</strong> 값이 항상 같다는 걸
+       눈으로 확인할 수 있습니다. 또한 각도가 90°에 가까워지면 두 값이 어떻게 0으로 수렴하는지도 보입니다.</p>
+    <canvas id="dotDemo" width="780" height="360"></canvas>
+    <p style="margin-top:8px;color:#666;font-size:13px">파랑·주황 화살표의 끝점을 마우스로 끌어 보세요.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dotDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=200,oy=200,scale=30;
+    let A={x:5,y:1},B={x:2,y:3};
+    let dragging=null;
+    function px(p){return [ox+p.x*scale,oy-p.y*scale];}
+    function getMouse(e){const r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)};}
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#eee';
+      for(let i=-7;i<=7;i++){ctx.beginPath();ctx.moveTo(ox+i*scale,20);ctx.lineTo(ox+i*scale,H-20);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(20,oy+i*scale);ctx.lineTo(2*ox-20,oy+i*scale);ctx.stroke();}
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(2*ox-20,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,20);ctx.lineTo(ox,H-20);ctx.stroke();
+      function arrow(p,col){const [x,y]=px(p);
+        ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x,y);ctx.stroke();
+        const ang=Math.atan2(y-oy,x-ox);
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-12*Math.cos(ang-0.4),y-12*Math.sin(ang-0.4));
+        ctx.lineTo(x-12*Math.cos(ang+0.4),y-12*Math.sin(ang+0.4));ctx.closePath();ctx.fillStyle=col;ctx.fill();
+        ctx.fillStyle='#fff';ctx.strokeStyle=col;ctx.beginPath();ctx.arc(x,y,5,0,2*Math.PI);ctx.fill();ctx.stroke();}
+      arrow(A,'#1677ff');arrow(B,'#fa8c16');
+      const [ax,ay]=px(A),[bx,by]=px(B);
+      ctx.fillStyle='#1677ff';ctx.font='bold 16px sans-serif';ctx.fillText('a',ax+10,ay-5);
+      ctx.fillStyle='#fa8c16';ctx.fillText('b',bx+10,by-5);
+      const dot=A.x*B.x+A.y*B.y;
+      const na=Math.sqrt(A.x*A.x+A.y*A.y),nb=Math.sqrt(B.x*B.x+B.y*B.y);
+      const cosT=dot/(na*nb);const theta=Math.acos(Math.max(-1,Math.min(1,cosT)));
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      const px2=420;
+      ctx.fillStyle='#0b5fff';ctx.font='bold 15px sans-serif';
+      ctx.fillText('① 좌표식', px2, 50);
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      ctx.fillText(`a·b = ${A.x.toFixed(1)}·${B.x.toFixed(1)} + ${A.y.toFixed(1)}·${B.y.toFixed(1)}`, px2, 75);
+      ctx.fillText(`     = ${(A.x*B.x).toFixed(2)} + ${(A.y*B.y).toFixed(2)}`, px2, 95);
+      ctx.fillStyle='#0b5fff';ctx.font='bold 16px Consolas,monospace';
+      ctx.fillText(`     = ${dot.toFixed(3)}`, px2, 118);
+      ctx.fillStyle='#fa8c16';ctx.font='bold 15px sans-serif';
+      ctx.fillText('② 기하식', px2, 165);
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      ctx.fillText(`‖a‖ = ${na.toFixed(3)},  ‖b‖ = ${nb.toFixed(3)}`, px2, 190);
+      ctx.fillText(`θ = ${(theta*180/Math.PI).toFixed(1)}°,  cos θ = ${cosT.toFixed(3)}`, px2, 210);
+      ctx.fillText(`‖a‖‖b‖ cos θ = ${na.toFixed(2)} × ${nb.toFixed(2)} × ${cosT.toFixed(2)}`, px2, 232);
+      ctx.fillStyle='#fa8c16';ctx.font='bold 16px Consolas,monospace';
+      ctx.fillText(`             = ${(na*nb*cosT).toFixed(3)}`, px2, 254);
+      ctx.fillStyle=Math.abs(dot)<0.5?'#cf1322':(dot>0?'#2e7d32':'#7b1fa2');
+      ctx.font='bold 14px sans-serif';
+      let verdict;
+      if(Math.abs(dot)<0.3) verdict='≈ 0  →  거의 직교 (90°)';
+      else if(dot>0) verdict='> 0  →  같은 방향 쪽 (예각)';
+      else verdict='< 0  →  반대 방향 쪽 (둔각)';
+      ctx.fillText('판정: a·b ' + verdict, px2, 295);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('두 값이 항상 정확히 같음 → 두 정의는 동치', px2, 325);
+    }
+    c.addEventListener('mousedown',e=>{
+      const m=getMouse(e);
+      const [ax,ay]=px(A),[bx,by]=px(B);
+      if((m.x-ax)**2+(m.y-ay)**2<400) dragging='A';
+      else if((m.x-bx)**2+(m.y-by)**2<400) dragging='B';
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!dragging) return;
+      const m=getMouse(e);
+      const nv={x:(m.x-ox)/scale,y:(oy-m.y)/scale};
+      if(dragging==='A') A=nv; else B=nv;draw();
+    });
+    window.addEventListener('mouseup',()=>dragging=null);
+    draw();
+  })();
+  </script>
+
+  <h2>📐 내적으로 각도 구하기</h2>
+
+  <h3>공식 뒤집기</h3>
+  <p>$$\cos\theta = \frac{\mathbf{a}\cdot\mathbf{b}}{\|\mathbf{a}\|\,\|\mathbf{b}\|}$$</p>
+
+  <h3>절차</h3>
+  <ol>
+    <li>좌표로 $\mathbf{a}\cdot\mathbf{b}$ 계산</li>
+    <li>$\|\mathbf{a}\|,\,\|\mathbf{b}\|$ 계산</li>
+    <li>위 식에 대입 → $\cos\theta$ → $\theta = \arccos(\cdots)$</li>
+  </ol>
+
+  <h3>예</h3>
+  <p>$\mathbf{a} = (1,\,0),\ \mathbf{b} = (1,\,1)$</p>
+  <ul>
+    <li>$\mathbf{a}\cdot\mathbf{b} = 1\cdot 1 + 0\cdot 1 = 1$</li>
+    <li>$\|\mathbf{a}\| = 1,\ \|\mathbf{b}\| = \sqrt{2}$</li>
+    <li>$\cos\theta = \dfrac{1}{1\cdot\sqrt{2}} = \dfrac{1}{\sqrt{2}}$</li>
+    <li>$\theta = 45°$ ✓</li>
+  </ul>
+
+
+
+  <h2>⊥ 직교 (orthogonality)</h2>
+
+  <h3>핵심 사실</h3>
+  <ul>
+    <li>$\theta = 90°$ ↔ $\cos\theta = 0$ ↔ $\mathbf{a}\cdot\mathbf{b} = 0$.</li>
+  </ul>
+
+  <p>$$\boxed{\mathbf{a} \perp \mathbf{b} \iff \mathbf{a}\cdot\mathbf{b} = 0}$$</p>
+
+  <h3>예</h3>
+  <ul>
+    <li>$\mathbf{a} = (1,\,0),\ \mathbf{b} = (0,\,1)$ → $\mathbf{a}\cdot\mathbf{b} = 0$ → 직교 ✓</li>
+    <li>$\mathbf{a} = (1,\,2),\ \mathbf{b} = (2,\,-1)$ → $\mathbf{a}\cdot\mathbf{b} = 2 - 2 = 0$ → 직교 ✓</li>
+    <li>$\mathbf{a} = (3,\,2),\ \mathbf{b} = (1,\,1)$ → $\mathbf{a}\cdot\mathbf{b} = 5$ → 직교 ✗</li>
+  </ul>
+
+<div class="tip">"직교 판정"은 선형대수 전체에서 가장 자주 쓰는 도구 중 하나. <b>내적이 0인지만 확인하면 끝</b>.</div>
+
+
+
+  <h2>🔄 내적과 각도의 부호</h2>
+
+  <table>
+    <thead><tr><th>부호</th><th>$\cos\theta$</th><th>$\theta$</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>$\mathbf{a}\cdot\mathbf{b} > 0$</td><td>$> 0$</td><td>$0 \le \theta < 90°$</td><td><strong>같은 방향</strong>에 가깝다</td></tr>
+      <tr><td>$\mathbf{a}\cdot\mathbf{b} = 0$</td><td>$= 0$</td><td>$\theta = 90°$</td><td><strong>수직</strong></td></tr>
+      <tr><td>$\mathbf{a}\cdot\mathbf{b} < 0$</td><td>$< 0$</td><td>$90° < \theta \le 180°$</td><td><strong>반대 방향</strong>에 가깝다</td></tr>
+    </tbody>
+  </table>
+
+<svg width="900" height="200" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <!-- 3 panes -->
+  <line x1="100" y1="160" x2="220" y2="160" stroke="#1677ff" stroke-width="3.5"/>
+  <polygon points="220,160 208,156 208,164" fill="#1677ff"/>
+  <line x1="100" y1="160" x2="200" y2="100" stroke="#fa8c16" stroke-width="3.5"/>
+  <polygon points="200,100 189,103 192,112" fill="#fa8c16"/>
+  <text x="150" y="190" font-size="14" font-weight="bold" fill="#1677ff" text-anchor="middle">a·b > 0</text>
+  <line x1="400" y1="160" x2="520" y2="160" stroke="#1677ff" stroke-width="3.5"/>
+  <polygon points="520,160 508,156 508,164" fill="#1677ff"/>
+  <line x1="400" y1="160" x2="400" y2="60" stroke="#fa8c16" stroke-width="3.5"/>
+  <polygon points="400,60 396,72 404,72" fill="#fa8c16"/>
+  <text x="450" y="190" font-size="14" font-weight="bold" fill="#fa8c16" text-anchor="middle">a·b = 0</text>
+  <line x1="700" y1="160" x2="820" y2="160" stroke="#1677ff" stroke-width="3.5"/>
+  <polygon points="820,160 808,156 808,164" fill="#1677ff"/>
+  <line x1="700" y1="160" x2="620" y2="80" stroke="#fa8c16" stroke-width="3.5"/>
+  <polygon points="620,80 631,80 627,89" fill="#fa8c16"/>
+  <text x="710" y="190" font-size="14" font-weight="bold" fill="#cf1322" text-anchor="middle">a·b < 0</text>
+</svg>
+
+
+
+  <h2>🧮 내적의 성질</h2>
+
+  <h3>성질 (보통 수의 곱셈과 비슷)</h3>
+  <ol>
+    <li><strong>교환법칙</strong>: $\mathbf{a}\cdot\mathbf{b} = \mathbf{b}\cdot\mathbf{a}$</li>
+    <li><strong>분배법칙</strong>: $\mathbf{a}\cdot(\mathbf{b}+\mathbf{c}) = \mathbf{a}\cdot\mathbf{b} + \mathbf{a}\cdot\mathbf{c}$</li>
+    <li><strong>스칼라 결합</strong>: $(c\mathbf{a})\cdot\mathbf{b} = c(\mathbf{a}\cdot\mathbf{b})$</li>
+    <li><strong>자기 자신과 내적 = 길이 제곱</strong>: $\mathbf{a}\cdot\mathbf{a} = \|\mathbf{a}\|^2$</li>
+  </ol>
+
+  <h3>4번 확인</h3>
+  <p>$$\mathbf{a}\cdot\mathbf{a} = a_1^2 + a_2^2 + \cdots + a_n^2 = \|\mathbf{a}\|^2 \;\;\checkmark$$</p>
+
+<div class="note">노름은 사실 "<b>자기 자신과의 내적의 제곱근</b>" $\|\mathbf{a}\| = \sqrt{\mathbf{a}\cdot\mathbf{a}}$ 입니다. 노름과 내적이 분리된 개념이 아님!</div>
+
+
+
+  <h2>📊 코시–슈바르츠 부등식 (직관)</h2>
+
+  <h3>식</h3>
+  <p>$$|\mathbf{a}\cdot\mathbf{b}| \le \|\mathbf{a}\|\,\|\mathbf{b}\|$$</p>
+
+  <h3>🌱 한 줄 직관 — "내적은 길이의 곱이 한계다"</h3>
+  <p>두 화살표가 <strong>완전히 같은 방향</strong>일 때 내적값이 가장 커집니다.
+     이때 $\cos\theta = 1$ 이므로 내적은 정확히 $\|\mathbf{a}\|\|\mathbf{b}\|$.
+     방향이 어긋날수록 코사인이 작아져서 내적값도 줄어듭니다.
+     즉 <strong>"길이의 곱"</strong>이 내적이 가질 수 있는 <strong>최댓값의 한계</strong>입니다.
+     위 인터랙티브에서 두 벡터를 평행하게 만들어 보면 좌표식 값이 정확히 두 길이의 곱이 됩니다.</p>
+
+  <h3>왜 성립하나 (정식 증명)</h3>
+  <ul>
+    <li>$\mathbf{a}\cdot\mathbf{b} = \|\mathbf{a}\|\|\mathbf{b}\|\cos\theta$ 에서 $|\cos\theta| \le 1$ 이므로 자명.</li>
+    <li>등호 $|\mathbf{a}\cdot\mathbf{b}| = \|\mathbf{a}\|\|\mathbf{b}\|$ 는 두 벡터가 <strong>평행</strong>(같은 방향 또는 반대 방향)일 때만 성립.</li>
+  </ul>
+
+  <h3>의미</h3>
+  <ul>
+    <li>내적값은 절대 두 길이의 곱을 넘을 수 없다.</li>
+    <li>"두 벡터 사이 코사인은 ±1을 넘을 수 없다"의 다른 표현.</li>
+    <li><strong>유사도 측정</strong>에서 코사인 유사도 $\dfrac{\mathbf{a}\cdot\mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}$ 가 항상 [−1, +1]에 머무는 보장이 바로 이 부등식.</li>
+  </ul>
+
+<div class="tip">이 부등식은 단순해 보이지만, 통계의 <b>상관계수</b>가 항상 [−1, +1] 범위에 있는 이유의 출발점이고,
+   딥러닝 임베딩의 <b>코사인 유사도</b>가 의미를 가지는 근거이기도 합니다.</div>
+
+
+
+  <h2>🧮 종합 예제</h2>
+
+  <h3>예제</h3>
+  <p>$\mathbf{a} = (2,\,1,\,2),\ \mathbf{b} = (1,\,-2,\,2)$</p>
+  <ol>
+    <li>$\mathbf{a}\cdot\mathbf{b}$</li>
+    <li>$\|\mathbf{a}\|,\,\|\mathbf{b}\|$</li>
+    <li>두 벡터 사이 각도</li>
+    <li>직교 여부</li>
+  </ol>
+
+  <h3>풀이</h3>
+  <ol>
+    <li>$\mathbf{a}\cdot\mathbf{b} = 2\cdot 1 + 1\cdot(-2) + 2\cdot 2 = 2 - 2 + 4 = 4$</li>
+    <li>$\|\mathbf{a}\| = \sqrt{4+1+4} = 3$, $\|\mathbf{b}\| = \sqrt{1+4+4} = 3$</li>
+    <li>$\cos\theta = \dfrac{4}{3\cdot 3} = \dfrac{4}{9} \approx 0.444$ → $\theta \approx 63.6°$</li>
+    <li>$\mathbf{a}\cdot\mathbf{b} = 4 \neq 0$ → <strong>직교 아님</strong></li>
+  </ol>
+
+
+
+  <h2>🌍 응용 (1) — 일(work)</h2>
+
+  <h3>물리 시간에 본 일 공식</h3>
+  <p>물체에 일정한 힘 $\mathbf{F}$ 가 작용하여 변위 $\mathbf{d}$ 만큼 이동했다면, 한 일은:</p>
+  <p>$$W = \|\mathbf{F}\|\,\|\mathbf{d}\|\,\cos\theta = \mathbf{F}\cdot\mathbf{d}$$</p>
+
+  <h3>직관</h3>
+  <ul>
+    <li>힘과 이동 방향이 <strong>같으면</strong> ($\theta = 0°$) → $W$ 가 최대.</li>
+    <li>힘이 이동 방향에 <strong>수직이면</strong> ($\theta = 90°$) → $W = 0$ (예: 가방을 들고 수평으로 걷기).</li>
+    <li>힘이 <strong>반대 방향</strong>이면 → $W < 0$ (마찰력의 일).</li>
+  </ul>
+
+<div class="tip">고등학교 물리의 "일 = 힘 × 거리 × cosθ" 공식이 사실은 <b>벡터의 내적</b>이었습니다.</div>
+
+
+
+  <h2>🌍 응용 (2) — 추천시스템의 "유사도"</h2>
+
+  <h3>사람의 영화 취향을 벡터로</h3>
+  <ul>
+    <li>5개 영화 각각에 1~5점 평점.</li>
+    <li>한 사람의 취향 = 5차원 벡터, 예: $\mathbf{u}_A = (5,\,3,\,1,\,4,\,2)$.</li>
+  </ul>
+
+  <h3>두 사람 취향이 비슷한가?</h3>
+  <p><strong>코사인 유사도</strong> = 두 벡터 사이 각도의 코사인.</p>
+  <p>$$\text{sim}(\mathbf{u}_A,\,\mathbf{u}_B) = \frac{\mathbf{u}_A \cdot \mathbf{u}_B}{\|\mathbf{u}_A\|\,\|\mathbf{u}_B\|}$$</p>
+
+  <ul>
+    <li>1에 가까우면 <strong>취향이 비슷</strong> → 같은 영화 추천.</li>
+    <li>0에 가까우면 <strong>무관</strong>.</li>
+    <li>−1에 가까우면 <strong>정반대 취향</strong>.</li>
+  </ul>
+
+<div class="note">넷플릭스·유튜브 추천의 가장 단순한 버전이 바로 이 공식. "당신과 비슷한 사람들이 좋아한 영화" 의 수학적 정의.</div>
+
+
+
+  <h2>🌍 응용 (3) — "이 두 신호가 닮았는가?"</h2>
+
+  <h3>신호 = 시간에 따라 측정된 숫자열</h3>
+  <ul>
+    <li>1초씩 100번 측정하면 100차원 벡터.</li>
+    <li>두 신호가 닮았는지 = 두 벡터 사이 코사인 유사도.</li>
+  </ul>
+
+  <h3>활용</h3>
+  <ul>
+    <li>음성 인식: 입력 음성과 사전 단어 음성의 유사도.</li>
+    <li>이미지 검색: 두 사진의 픽셀 벡터 유사도.</li>
+    <li>챗봇: 질문 문장과 답변 후보 문장의 유사도.</li>
+  </ul>
+
+<div class="tip">"닮았다"는 모호한 개념을 <b>내적 한 줄로 수치화</b>할 수 있다는 것이 선형대수의 위력.</div>
+
+
+
+  <h2>📝 정리 — 오늘의 핵심</h2>
+
+  <h3>1️⃣ 길이 (노름)</h3>
+  <p>$$\|\mathbf{v}\| = \sqrt{v_1^2 + \cdots + v_n^2} = \sqrt{\mathbf{v}\cdot\mathbf{v}}$$</p>
+
+  <h3>2️⃣ 내적 (두 가지 정의, 같은 값)</h3>
+  <p>$$\mathbf{a}\cdot\mathbf{b} = a_1 b_1 + \cdots + a_n b_n = \|\mathbf{a}\|\|\mathbf{b}\|\cos\theta$$</p>
+
+  <h3>3️⃣ 각도</h3>
+  <p>$$\cos\theta = \frac{\mathbf{a}\cdot\mathbf{b}}{\|\mathbf{a}\|\,\|\mathbf{b}\|}$$</p>
+
+  <h3>4️⃣ 직교 판정</h3>
+  <p>$$\mathbf{a} \perp \mathbf{b} \iff \mathbf{a}\cdot\mathbf{b} = 0$$</p>
+
+<div class="tip">다음 강의에서는 <b>외적(3D 전용)</b> 으로 평면의 법선벡터·평행사변형 면적을 구하고, <b>직선·평면의 방정식</b>을 다룹니다.</div>
+
+
+
+  <h2>📚 연습문제</h2>
+
+  <h3>문제 1 (계산)</h3>
+  <p>$\mathbf{a} = (1,\,2,\,2),\ \mathbf{b} = (2,\,-1,\,2)$ 일 때:</p>
+  <ol>
+    <li>$\mathbf{a}\cdot\mathbf{b}$</li>
+    <li>$\|\mathbf{a}\|,\,\|\mathbf{b}\|$</li>
+    <li>두 벡터 사이 각도 (도 단위)</li>
+    <li>직교 여부 판단</li>
+  </ol>
+
+  <h3>문제 2 (정규화)</h3>
+  <p>$\mathbf{v} = (6,\,8)$ 의 단위벡터 $\hat{\mathbf{v}}$ 를 구하시오.</p>
+
+  <h3>문제 3 (직교 판정)</h3>
+  <p>다음 두 벡터가 직교하는지 판단하시오.</p>
+  <ol>
+    <li>$(2,\,-3),\ (3,\,2)$</li>
+    <li>$(1,\,1,\,1),\ (1,\,-2,\,1)$</li>
+  </ol>
+
+  <h3>문제 4 (응용 — 일)</h3>
+  <p>힘 $\mathbf{F} = (10,\,0)$ N 이 작용하여 물체가 변위 $\mathbf{d} = (3,\,4)$ m 이동하였다. 힘이 한 일을 구하시오.</p>
+
+  <h3>문제 5 (개념)</h3>
+  <p>$\mathbf{a}\cdot\mathbf{a} = 0$ 이면 $\mathbf{a}$ 는 어떤 벡터인지 답하시오.</p>
+
+  <h3>문제 6 (응용 — 코사인 유사도)</h3>
+  <p>두 사용자의 영화 평점 벡터 $\mathbf{u}_A = (5, 4, 1, 2),\ \mathbf{u}_B = (4, 5, 2, 1)$ 의 코사인 유사도를 구하시오.</p>
+
+  <h3>문제 7 (3D 벡터)</h3>
+  <p>$\mathbf{a} = (3, 0, 4),\ \mathbf{b} = (1, 2, 2)$ 일 때 $\mathbf{a} - \mathbf{b}$ 의 길이와, $\mathbf{a}, \mathbf{b}$ 사이 각도를 구하시오.</p>
+
+  <h3>문제 8 (직교 결정)</h3>
+  <p>$\mathbf{a} = (1, 2, 3)$ 에 직교하는 벡터를 하나 구하시오 (영벡터 제외).</p>
+
+  <h3>문제 9 (개념 — 코시-슈바르츠)</h3>
+  <p>$\|\mathbf{a}\| = 5,\ \|\mathbf{b}\| = 3$ 일 때 $\mathbf{a}\cdot\mathbf{b}$ 가 가질 수 있는 값의 범위를 답하시오.</p>
+
+  <h3>문제 10 (응용 — 신호)</h3>
+  <p>두 1차원 신호 $\mathbf{x} = (1, 2, 3, 4),\ \mathbf{y} = (4, 3, 2, 1)$ 의 코사인 유사도와, 정확히 같은 신호 $\mathbf{x}$ 와 $\mathbf{x}$ 사이의
+     코사인 유사도를 비교하시오.</p>
+
+  <h3>문제 11 (응용 — 물리)</h3>
+  <p>한 사람이 30° 위로 줄을 잡아당기며 물체를 5m 끌었다. 줄에 작용한 힘이 50 N 이라면 한 일을 구하시오.</p>
+
+
+  <h2>🌍 응용 (4) — 그래픽스에서의 조명 계산</h2>
+
+  <h3>램버트 모델 (Lambertian shading)</h3>
+  <p>3D 모델 표면이 빛을 받았을 때 얼마나 밝게 보이는가? 표면 법선 $\mathbf{n}$ 과 빛 방향 $\mathbf{l}$ 의 내적으로 계산:</p>
+  <p>$$I = \max(0,\ \hat{\mathbf{n}} \cdot \hat{\mathbf{l}})$$</p>
+  <p>(단위벡터로 정규화한 후 내적)</p>
+
+  <h3>해석</h3>
+  <ul>
+    <li>$\hat{\mathbf{n}} \cdot \hat{\mathbf{l}} = 1$: 빛이 정면에서 → 가장 밝음.</li>
+    <li>$\hat{\mathbf{n}} \cdot \hat{\mathbf{l}} = 0$: 빛이 표면에 평행 → 그림자.</li>
+    <li>$\hat{\mathbf{n}} \cdot \hat{\mathbf{l}} < 0$: 표면이 빛 반대편 → 0으로 클램핑.</li>
+  </ul>
+
+  <h3>왜 cosθ?</h3>
+  <p>같은 양의 빛이라도 표면이 비스듬하면 더 넓은 영역에 분산되어 단위 면적당 밝기가 줄어듭니다 (코사인 법칙).
+     실제 게임 엔진의 셰이더 코드 한 줄이 정확히 이 내적입니다.</p>
+
+<div class="tip">3D 게임의 모든 음영(shadow)·반사·하이라이트의 가장 단순한 형태가 "법선 · 빛 방향 = 내적".</div>
+
+
+  <h2>🌍 응용 (5) — 임베딩 벡터와 의미 검색</h2>
+
+  <h3>단어를 벡터로 (Word Embedding)</h3>
+  <ul>
+    <li>현대 NLP는 단어 하나를 100~1024차원 실수 벡터로 표현.</li>
+    <li>의미가 비슷한 단어 → 가까운 벡터 (코사인 유사도 큼).</li>
+    <li>"왕 - 남자 + 여자 ≈ 여왕" 같은 벡터 연산이 실제 가능.</li>
+  </ul>
+
+  <h3>검색 시스템</h3>
+  <ul>
+    <li>질문 문장 → 임베딩 벡터.</li>
+    <li>답변 후보 문장들의 임베딩 벡터들과 코사인 유사도 계산.</li>
+    <li>가장 유사도 높은 답변 반환.</li>
+  </ul>
+
+<div class="note">ChatGPT 같은 LLM 서비스의 "관련 문서 검색" 기능이 본질적으로 이 한 줄 — 내적 한 번이 전부입니다.</div>
+
+
+
+
+  <h3>오늘 배운 내용에 대해 궁금한 점이 있으면 언제든지 질문해 주세요.</h3>
+
+  <ul>
+    <li>이메일 : <strong>leeck@kongju.ac.kr</strong></li>
+    <li>사무실 : 1공학관 609호</li>
+  </ul>
+
+  <p><br></p>
+
+<div class="tip" style="text-align:center; font-size:1.1em;">
+다음 강의: 벡터 (3) — 외적, 직선·평면의 방정식 ✈️
+</div>
+
+
+  <div class="prevnext">
+    <a href="02-vector-arrows.html"><small>← 이전</small>Week 2. 벡터 (1) — 화살표·연산</a>
+    <a class="next" href="04-vector-cross-line-plane.html"><small>다음 →</small>Week 4. 벡터 (3) — 외적·직선·평면</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

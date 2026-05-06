@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>스프링-질량 SHM 실시간 그래프 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">스프링-질량 SHM 실시간 그래프</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/06-shm.html">Week 6. 단진동 (SHM)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>스프링-질량 SHM 실시간 그래프</h4>
+    <p>왼쪽: 스프링과 질량의 시각화(평형점 = 회색 점선). 오른쪽 위: $x(t)$ (파랑) 와 $v(t)$(주황). 오른쪽 아래: KE(빨강), PE(초록) 막대. 두 막대의 합 = 총에너지 $\tfrac{1}{2}kA^2$로 일정.</p>
+    <canvas id="w6_spring_canvas" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>스프링 상수 $k$ <span class="val" id="w6_kV">20</span> N/m
+        <input type="range" id="w6_k" min="5" max="80" step="1" value="20"></label>
+      <label>질량 $m$ <span class="val" id="w6_mV">0.5</span> kg
+        <input type="range" id="w6_m" min="0.1" max="2.0" step="0.1" value="0.5"></label>
+      <label>진폭 $A$ <span class="val" id="w6_AV">0.4</span> m
+        <input type="range" id="w6_A" min="0.1" max="0.8" step="0.05" value="0.4"></label>
+      <label>속도 배율 <span class="val" id="w6_spdV">1.0</span>×
+        <input type="range" id="w6_spd" min="0.2" max="3.0" step="0.1" value="1.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$k$를 4배(예: 20→80) → 각진동수 $\omega = \sqrt{k/m}$가 2배 → 주기는 절반.</li>
+        <li>$m$을 4배 → 주기가 2배로 길어짐. ($\sqrt{m}$ 의존)</li>
+        <li>$A$를 바꿔도 <strong>주기는 변하지 않음</strong> — 진폭과 주기가 무관한 게 SHM의 신비.</li>
+        <li>평형점에서 KE 막대가 최대, 양 끝에서 PE 막대가 최대. 합은 항상 동일.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w6_spring_canvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t0=performance.now();
+    function getP(){
+      const k=+document.getElementById('w6_k').value;
+      const m=+document.getElementById('w6_m').value;
+      const A=+document.getElementById('w6_A').value;
+      const spd=+document.getElementById('w6_spd').value;
+      document.getElementById('w6_kV').textContent=k;
+      document.getElementById('w6_mV').textContent=m.toFixed(1);
+      document.getElementById('w6_AV').textContent=A.toFixed(2);
+      document.getElementById('w6_spdV').textContent=spd.toFixed(1);
+      return {k,m,A,spd,w:Math.sqrt(k/m)};
+    }
+    function drawSpring(x0,y0,x1,coils){
+      ctx.strokeStyle='#666';ctx.lineWidth=1.8;ctx.beginPath();
+      ctx.moveTo(x0,y0);
+      const total=x1-x0,seg=total/(coils*2+2);
+      ctx.lineTo(x0+seg,y0);
+      for(let i=0;i<coils;i++){
+        const xa=x0+seg+seg*2*i;
+        ctx.lineTo(xa+seg,y0-12);
+        ctx.lineTo(xa+seg*2,y0+12);
+      }
+      ctx.lineTo(x1,y0);
+      ctx.stroke();
+    }
+    function frame(now){
+      const p=getP();
+      const t=(now-t0)*0.001*p.spd;
+      const x=p.A*Math.cos(p.w*t);
+      const v=-p.A*p.w*Math.sin(p.w*t);
+      const T=2*Math.PI/p.w;
+      const E=0.5*p.k*p.A*p.A;
+      const PE=0.5*p.k*x*x;
+      const KE=E-PE;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Spring panel (left half top)
+      const lx=20,ly=70,lw=300,lh=120;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(lx,ly,lw,lh);
+      ctx.fillStyle='#444';ctx.font='bold 12px sans-serif';
+      ctx.fillText('스프링-질량',lx+8,ly-6);
+      const wallX=lx+25,blockY=ly+lh/2;
+      ctx.fillStyle='#888';ctx.fillRect(wallX-12,ly+12,12,lh-24);
+      const eqX=wallX+150;
+      ctx.strokeStyle='#bbb';ctx.setLineDash([4,4]);ctx.beginPath();
+      ctx.moveTo(eqX,ly+10);ctx.lineTo(eqX,ly+lh-10);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#999';ctx.font='10px sans-serif';
+      ctx.fillText('평형',eqX-10,ly+lh-2);
+      const pixPerM=120;
+      const blockX=eqX+x*pixPerM;
+      drawSpring(wallX,blockY,blockX-22,8);
+      ctx.fillStyle='#0b5fff';ctx.fillRect(blockX-22,blockY-22,44,44);
+      ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';
+      ctx.fillText('m',blockX-5,blockY+4);
+      // x(t), v(t) graph (right top)
+      const gx=340,gy=10,gw=290,gh=180;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(gx,gy,gw,gh);
+      ctx.fillStyle='#444';ctx.font='bold 12px sans-serif';
+      ctx.fillText('x(t) 파랑 / v(t) 주황',gx+8,gy+14);
+      const cx0=gx+10,cy0=gy+gh/2,cw=gw-20;
+      ctx.strokeStyle='#eef0f4';ctx.beginPath();
+      ctx.moveTo(cx0,cy0);ctx.lineTo(cx0+cw,cy0);ctx.stroke();
+      const TS=Math.max(2*T,4);
+      function drawCurve(fn,col,scale){
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+        for(let i=0;i<=cw;i++){
+          const tt=t-TS+(i/cw)*TS;
+          const yy=fn(tt)*scale;
+          const px=cx0+i,py=cy0-yy;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+      const xsc=(gh/2-8)/p.A;
+      const vsc=(gh/2-8)/(p.A*p.w+0.01);
+      drawCurve(tt=>p.A*Math.cos(p.w*tt),'#0b5fff',xsc);
+      drawCurve(tt=>-p.A*p.w*Math.sin(p.w*tt),'#ff8c00',vsc);
+      // Current marker
+      const px=cx0+cw;
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(px,cy0-x*xsc,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ff8c00';ctx.beginPath();ctx.arc(px,cy0-v*vsc,4,0,Math.PI*2);ctx.fill();
+      // Energy bars (bottom)
+      const bx=20,by=210,bw=600,bh=130;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(bx,by,bw,bh);
+      ctx.fillStyle='#444';ctx.font='bold 12px sans-serif';
+      ctx.fillText('에너지 분배 — 빨강 KE / 초록 PE / 합 = E_total',bx+8,by+14);
+      const barMaxH=bh-50;
+      const baseY=by+bh-15;
+      const w1=180,w2=180,w3=180,gap=15;
+      function bar(xx,frac,col,label,val){
+        const hh=barMaxH*frac;
+        ctx.fillStyle=col;ctx.fillRect(xx,baseY-hh,w1,hh);
+        ctx.strokeStyle='#222';ctx.strokeRect(xx,baseY-hh,w1,hh);
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(label+' = '+val.toFixed(3)+' J',xx+10,baseY+12);
+      }
+      bar(bx+15,KE/E,'#e74c3c','KE',KE);
+      bar(bx+15+w1+gap,PE/E,'#27ae60','PE',PE);
+      bar(bx+15+w1*2+gap*2,1,'#7b1fa2','E_total',E);
+      // Info box
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(20,20,200,42);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(20,20,200,42);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('ω = '+p.w.toFixed(2)+' rad/s',28,38);
+      ctx.fillText('T = '+T.toFixed(3)+' s, f = '+(1/T).toFixed(2)+' Hz',28,54);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</main>
+</body>
+</html>

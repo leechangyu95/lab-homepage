@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📈 P-V 사이클 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">📈 P-V 사이클 시뮬레이터</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/09-thermodynamics.html">Week 9. 열역학 핵심</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>📈 P-V 사이클 시뮬레이터</h4>
+    <p>이상기체 한 묶음(고정된 $n$ 몰)이 4가지 과정 중 하나로 상태를 바꿉니다. 같은 $T_1$에서 $V_1 \to V_2$로 팽창할 때 등온/단열의 곡선 차이를 눈으로 비교해 보세요. <strong>단열($PV^\gamma$ 일정)이 등온($PV$ 일정)보다 더 가파르게 떨어진다</strong>는 점이 핵심.</p>
+    <canvas id="w9_pvDemo" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>온도 $T$ <span class="val" id="w9_pvTV">300</span> K
+        <input type="range" id="w9_pvT" min="100" max="900" step="10" value="300"></label>
+      <label>몰수 $n$ <span class="val" id="w9_pvNV">1.0</span> mol
+        <input type="range" id="w9_pvN" min="0.2" max="3.0" step="0.1" value="1.0"></label>
+      <label>초기 부피 $V_1$ <span class="val" id="w9_pvVV">10</span> L
+        <input type="range" id="w9_pvV" min="5" max="25" step="0.5" value="10"></label>
+      <label>최종 부피 $V_2$ <span class="val" id="w9_pvV2V">20</span> L
+        <input type="range" id="w9_pvV2" min="5" max="40" step="0.5" value="20"></label>
+      <label>과정
+        <select id="w9_pvProc">
+          <option value="iso">등온 (Isothermal)</option>
+          <option value="adi">단열 (Adiabatic)</option>
+          <option value="bar">등압 (Isobaric)</option>
+          <option value="vol">등적 (Isochoric)</option>
+        </select>
+      </label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>등온과 단열을 같은 $V_1, V_2$로 비교 → 단열 팽창이 더 빨리 압력이 떨어짐 ($PV^{1.4}$ vs $PV$)</li>
+        <li>등압 과정에서 $V_2$ 슬라이더를 키우면 PV그림에서 수평선, 한 일 = $P\Delta V$(직사각형 면적)</li>
+        <li>등적 과정에서는 $V$를 바꿔도 가로축에서 점만 위아래로 이동 → $W = 0$</li>
+        <li>$T$를 두 배로 → 같은 부피에서 압력도 두 배 (이상기체 법칙 직접 확인)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w9_pvDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const R=8.314,GAMMA=1.4;
+    function draw(){
+      const T=+document.getElementById('w9_pvT').value;
+      const n=+document.getElementById('w9_pvN').value;
+      const V1=+document.getElementById('w9_pvV').value;
+      const V2=+document.getElementById('w9_pvV2').value;
+      const proc=document.getElementById('w9_pvProc').value;
+      document.getElementById('w9_pvTV').textContent=T;
+      document.getElementById('w9_pvNV').textContent=n.toFixed(1);
+      document.getElementById('w9_pvVV').textContent=V1.toFixed(1);
+      document.getElementById('w9_pvV2V').textContent=V2.toFixed(1);
+      // pressure in kPa using PV=nRT, V in L => V*1e-3 m^3, P = nRT/V (Pa) -> /1000 (kPa)
+      function P_iso(V){return n*R*T/(V*1e-3)/1000;}
+      function P_adi(V){const P1=P_iso(V1);return P1*Math.pow(V1/V,GAMMA);}
+      function P_bar(V){return P_iso(V1);} // constant pressure
+      function P_vol(V){return P_iso(V1);} // not used, V1 fixed
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=52;
+      const Vmin=2,Vmax=42;
+      const Pmax=Math.max(P_iso(Vmin),P_adi(Vmin)*1.1,P_iso(V1)*1.5,500);
+      const sx=(W-margin-20)/(Vmax-Vmin);
+      const sy=(H-margin-20)/Pmax;
+      // axes
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;ctx.beginPath();
+      ctx.moveTo(margin,H-margin);ctx.lineTo(W-20,H-margin);
+      ctx.moveTo(margin,H-margin);ctx.lineTo(margin,20);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('부피 V (L)',W-100,H-12);
+      ctx.save();ctx.translate(14,H/2);ctx.rotate(-Math.PI/2);
+      ctx.fillText('압력 P (kPa)',0,0);ctx.restore();
+      // gridlines + ticks
+      ctx.strokeStyle='#eef0f4';
+      for(let v=10;v<=40;v+=10){
+        const px=margin+(v-Vmin)*sx;
+        ctx.beginPath();ctx.moveTo(px,H-margin);ctx.lineTo(px,20);ctx.stroke();
+        ctx.fillStyle='#999';ctx.fillText(v,px-6,H-margin+14);
+      }
+      const Pstep=Pmax<800?100:Pmax<2000?200:500;
+      for(let p=Pstep;p<Pmax;p+=Pstep){
+        const py=H-margin-p*sy;if(py<20)break;
+        ctx.beginPath();ctx.moveTo(margin,py);ctx.lineTo(W-20,py);ctx.stroke();
+        ctx.fillStyle='#999';ctx.fillText(p,margin-30,py+4);
+      }
+      // background isotherm at current T (light dashed)
+      ctx.strokeStyle='#dde7f5';ctx.setLineDash([4,4]);ctx.lineWidth=1.5;
+      ctx.beginPath();let started=false;
+      for(let v=Vmin;v<=Vmax;v+=0.3){
+        const p=P_iso(v);if(p>Pmax||p<0)continue;
+        const px=margin+(v-Vmin)*sx,py=H-margin-p*sy;
+        if(!started){ctx.moveTo(px,py);started=true;}else ctx.lineTo(px,py);
+      }
+      ctx.stroke();ctx.setLineDash([]);
+      // process curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=3;
+      ctx.beginPath();
+      const Va=Math.min(V1,V2),Vb=Math.max(V1,V2);
+      let area=0;
+      const steps=100;
+      for(let i=0;i<=steps;i++){
+        const v=Va+(Vb-Va)*i/steps;
+        let p;
+        if(proc==='iso')p=P_iso(v);
+        else if(proc==='adi')p=P_adi(v);
+        else if(proc==='bar')p=P_iso(V1);
+        else p=null;
+        if(proc==='vol'){
+          // vertical line at V1 from P_iso(V1) to current T*V2/V1 imagined; here just show ramp on P axis
+          if(i===0){
+            const px=margin+(V1-Vmin)*sx;
+            const p1=P_iso(V1);
+            // we represent isochoric by ramping P from p1 to p1*(V2/V1)? Use ratio T2/T1=P2/P1; we'll just draw a vertical of length proportional to V2/V1
+            const p2=p1*(V2/V1);
+            const py1=H-margin-p1*sy,py2=H-margin-Math.min(p2,Pmax)*sy;
+            ctx.moveTo(px,py1);ctx.lineTo(px,py2);
+          }
+          break;
+        }
+        const px=margin+(v-Vmin)*sx,py=H-margin-p*sy;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        if(i>0&&proc!=='vol'){const dV=(Vb-Va)/steps;area+=p*dV;}
+      }
+      ctx.stroke();
+      // shade work area for non-isochoric
+      if(proc!=='vol'){
+        ctx.fillStyle='rgba(11,95,255,0.10)';
+        ctx.beginPath();
+        const px0=margin+(Va-Vmin)*sx;
+        ctx.moveTo(px0,H-margin);
+        for(let i=0;i<=steps;i++){
+          const v=Va+(Vb-Va)*i/steps;
+          let p;
+          if(proc==='iso')p=P_iso(v);
+          else if(proc==='adi')p=P_adi(v);
+          else p=P_iso(V1);
+          const px=margin+(v-Vmin)*sx,py=H-margin-p*sy;
+          ctx.lineTo(px,py);
+        }
+        const pxN=margin+(Vb-Vmin)*sx;
+        ctx.lineTo(pxN,H-margin);ctx.closePath();ctx.fill();
+      }
+      // markers V1, V2
+      ctx.fillStyle='#c62828';
+      let p1plot=proc==='vol'?P_iso(V1):(proc==='adi'?P_adi(V1):P_iso(V1));
+      let p2plot;
+      if(proc==='iso')p2plot=P_iso(V2);
+      else if(proc==='adi')p2plot=P_adi(V2);
+      else if(proc==='bar')p2plot=P_iso(V1);
+      else p2plot=P_iso(V1)*(V2/V1);
+      ctx.beginPath();ctx.arc(margin+(V1-Vmin)*sx,H-margin-p1plot*sy,5,0,Math.PI*2);ctx.fill();
+      ctx.fillText('1',margin+(V1-Vmin)*sx+8,H-margin-p1plot*sy-4);
+      ctx.fillStyle='#2e7d32';
+      const v2plotX=proc==='vol'?V1:V2;
+      ctx.beginPath();ctx.arc(margin+(v2plotX-Vmin)*sx,H-margin-Math.min(p2plot,Pmax)*sy,5,0,Math.PI*2);ctx.fill();
+      ctx.fillText('2',margin+(v2plotX-Vmin)*sx+8,H-margin-Math.min(p2plot,Pmax)*sy-4);
+      // info box
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(W-220,30,200,108);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,30,200,108);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      const procName={iso:'등온',adi:'단열',bar:'등압',vol:'등적'}[proc];
+      ctx.fillText('과정: '+procName,W-210,50);
+      ctx.fillText('P₁ = '+p1plot.toFixed(1)+' kPa',W-210,68);
+      ctx.fillText('P₂ = '+p2plot.toFixed(1)+' kPa',W-210,86);
+      let Wj=0;
+      if(proc==='iso')Wj=n*R*T*Math.log(V2/V1);
+      else if(proc==='bar')Wj=p1plot*1000*(V2-V1)*1e-3;
+      else if(proc==='adi')Wj=(p1plot*V1-p2plot*V2)/(GAMMA-1)*1000*1e-3;
+      else Wj=0;
+      ctx.fillText('한 일 W ≈ '+Wj.toFixed(0)+' J',W-210,104);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText('— 곡선: 현재 과정',W-210,122);
+    }
+    ['w9_pvT','w9_pvN','w9_pvV','w9_pvV2','w9_pvProc'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.addEventListener('input',draw);el.addEventListener('change',draw);
+    });
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

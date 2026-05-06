@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 이력 곡선 그려보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 이력 곡선 그려보기</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/02-sensor.html">Week 2. 센서와 트랜스듀서</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 이력 곡선 그려보기</h4>
+    <p>입력 슬라이더를 좌우로 천천히 움직여 보세요. 입력을 키울 때와 줄일 때 출력이 다른 경로를 그리며, 닫힌 고리가 만들어집니다. <strong>이력 폭</strong>이 클수록 같은 입력에 대한 출력 차이가 큽니다.</p>
+    <canvas id="hyDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>입력 <span class="val" id="hyXV">0.0</span><input type="range" id="hyX" min="-1" max="1" step="0.02" value="0"></label>
+      <label>이력 폭 <span class="val" id="hyHV">0.3</span><input type="range" id="hyH" min="0" max="0.6" step="0.02" value="0.3"></label>
+      <button id="hyRst">곡선 지우기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('hyDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let prevX=0,direction=1,trail=[];
+    let yState=0;
+    function f(x,h){
+      // simple play/backlash hysteresis: output lags by h depending on direction
+      if(direction>0) return Math.tanh(2*(x-h/2));
+      return Math.tanh(2*(x+h/2));
+    }
+    document.getElementById('hyRst').onclick=()=>{trail=[];};
+    function draw(){
+      const x=+document.getElementById('hyX').value;
+      const h=+document.getElementById('hyH').value;
+      document.getElementById('hyXV').textContent=x.toFixed(2);
+      document.getElementById('hyHV').textContent=h.toFixed(2);
+      if(x>prevX+1e-4)direction=1;else if(x<prevX-1e-4)direction=-1;
+      prevX=x;
+      const target=f(x,h);
+      // smooth follow with rate limit (small)
+      yState += 0.4*(target-yState);
+      trail.push([x,yState,direction]);
+      if(trail.length>800)trail.shift();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,SC=110;
+      // axes
+      ctx.strokeStyle='#999';
+      ctx.beginPath();ctx.moveTo(50,cy);ctx.lineTo(W-30,cy);ctx.moveTo(cx,30);ctx.lineTo(cx,H-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('입력 x →',W-90,cy-6);ctx.fillText('출력 y',cx+6,40);
+      // ideal line (no hysteresis)
+      ctx.strokeStyle='#cfd8e3';ctx.setLineDash([4,3]);ctx.beginPath();
+      for(let xx=-1;xx<=1;xx+=0.02){const yy=Math.tanh(2*xx);
+        const px=cx+xx*SC,py=cy-yy*SC;if(xx===-1)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+      ctx.stroke();ctx.setLineDash([]);
+      // trail
+      trail.forEach(t=>{const px=cx+t[0]*SC,py=cy-t[1]*SC;
+        ctx.fillStyle=t[2]>0?'rgba(11,95,255,0.6)':'rgba(198,40,40,0.6)';
+        ctx.beginPath();ctx.arc(px,py,2,0,Math.PI*2);ctx.fill();});
+      // current point
+      ctx.fillStyle='#222';ctx.beginPath();ctx.arc(cx+x*SC,cy-yState*SC,5,0,Math.PI*2);ctx.fill();
+      ctx.font='12px sans-serif';
+      ctx.fillStyle='#0b5fff';ctx.fillText('🔵 입력 증가 중',W-180,40);
+      ctx.fillStyle='#c62828';ctx.fillText('🔴 입력 감소 중',W-180,58);
+      ctx.fillStyle='#999';ctx.fillText('-- 이상적 (이력 없음)',W-180,76);
+    }
+    document.getElementById('hyX').addEventListener('input',draw);
+    document.getElementById('hyH').addEventListener('input',draw);
+    setInterval(draw,30);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

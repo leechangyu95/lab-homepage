@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 작은 자동차가 길을 따라간다 — 파이프라인이 돌아가는 모습 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 작은 자동차가 길을 따라간다 — 파이프라인이 돌아가는 모습</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/01-intro.html">Week 1. 강의 개요 &amp; 자율주행 개론</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 작은 자동차가 길을 따라간다 — 파이프라인이 돌아가는 모습</h4>
+    <p>파란 차량이 회색 참조 경로를 따라가고 있습니다. 매 프레임마다
+    <span style="color:#1976d2;font-weight:600">①Perception</span>이 가장 가까운 길점을 찾고,
+    <span style="color:#f57c00;font-weight:600">②Planning</span>이 앞쪽 lookahead 점을 골라,
+    <span style="color:#c62828;font-weight:600">③Control</span>이 그 점을 향해 조향각을 만듭니다.
+    슬라이더로 속도와 lookahead 거리를 바꿔 보세요.</p>
+    <canvas id="mini" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>속도 v <span class="val" id="vV">10</span><input type="range" id="v" min="2" max="25" step="1" value="10"></label>
+      <label>Lookahead Ld <span class="val" id="ldV">2.5</span><input type="range" id="ld" min="0.5" max="6" step="0.1" value="2.5"></label>
+      <button id="rstM" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mini'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    // build a sinuous reference path in world meters
+    const path=[];
+    for(let s=0;s<60;s+=0.2){
+      path.push({x:s, y:3*Math.sin(s*0.25)});
+    }
+    const L=2.5; // wheelbase
+    let car={x:0,y:0,psi:0};
+    function reset(){car={x:0,y:0,psi:0};}
+    $('rstM').onclick=reset;
+    function w2s(p){ // world to screen
+      return {x:30+p.x*10, y:200-p.y*16};
+    }
+    function nearest(){
+      let bi=0,bd=1e9;
+      for(let i=0;i<path.length;i++){
+        const dx=path[i].x-car.x, dy=path[i].y-car.y;
+        const d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;}
+      }
+      return bi;
+    }
+    function loop(){
+      const v=+$('v').value, Ld=+$('ld').value;
+      $('vV').textContent=v; $('ldV').textContent=Ld.toFixed(1);
+      // ① perception: nearest point
+      const ni=nearest();
+      // ② planning: walk forward by Ld
+      let target=path[path.length-1];
+      let acc=0;
+      for(let i=ni;i<path.length-1;i++){
+        const dx=path[i+1].x-path[i].x, dy=path[i+1].y-path[i].y;
+        acc+=Math.hypot(dx,dy);
+        if(acc>=Ld){target=path[i+1];break;}
+      }
+      // ③ control: pure pursuit-like
+      const dx=target.x-car.x, dy=target.y-car.y;
+      const alpha=Math.atan2(dy,dx)-car.psi;
+      const delta=Math.atan2(2*L*Math.sin(alpha), Ld);
+      // step
+      const dt=0.04;
+      car.x+=v*Math.cos(car.psi)*dt;
+      car.y+=v*Math.sin(car.psi)*dt;
+      car.psi+=v/L*Math.tan(delta)*dt;
+      if(car.x>58) reset();
+
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      // path
+      x.strokeStyle='#bbb'; x.lineWidth=2; x.beginPath();
+      path.forEach((p,i)=>{const s=w2s(p); if(i===0)x.moveTo(s.x,s.y); else x.lineTo(s.x,s.y);});
+      x.stroke();
+      // nearest (perception result)
+      const sn=w2s(path[ni]);
+      x.fillStyle='#1976d2'; x.beginPath(); x.arc(sn.x,sn.y,5,0,Math.PI*2); x.fill();
+      // target (planning)
+      const st=w2s(target);
+      x.fillStyle='#f57c00'; x.beginPath(); x.arc(st.x,st.y,6,0,Math.PI*2); x.fill();
+      // car
+      const sc=w2s(car);
+      x.save(); x.translate(sc.x,sc.y); x.rotate(-car.psi);
+      x.fillStyle='#0b5fff'; x.fillRect(-12,-7,24,14);
+      x.fillStyle='#fff'; x.fillRect(7,-5,4,10);
+      x.restore();
+      // line car→target (control)
+      x.strokeStyle='#c62828'; x.setLineDash([4,3]); x.beginPath();
+      x.moveTo(sc.x,sc.y); x.lineTo(st.x,st.y); x.stroke(); x.setLineDash([]);
+      // labels
+      x.fillStyle='#444'; x.font='12px sans-serif';
+      x.fillText('① Perception: 가장 가까운 길점',20,260);
+      x.fillStyle='#1976d2'; x.fillRect(180,251,12,8);
+      x.fillStyle='#444';
+      x.fillText('② Planning: lookahead 거리만큼 앞 점',20,282);
+      x.fillStyle='#f57c00'; x.fillRect(220,273,12,8);
+      x.fillStyle='#444';
+      x.fillText('③ Control: 그 점을 향한 조향각 δ 계산',20,304);
+      x.fillStyle='#c62828'; x.fillRect(220,295,12,8);
+      x.fillStyle='#666'; x.font='11px sans-serif';
+      x.fillText('이 루프가 50Hz로 반복 → 자율주행 한 사이클',20,328);
+      x.fillStyle='#444'; x.font='12px sans-serif';
+      x.fillText('현재 조향 δ = '+(delta*180/Math.PI).toFixed(1)+'°',440,260);
+      x.fillText('헤딩 ψ = '+(car.psi*180/Math.PI).toFixed(1)+'°',440,282);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

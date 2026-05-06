@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Tube MPC — 외란이 부풀리는 튜브, 타이트닝된 제약 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Tube MPC — 외란이 부풀리는 튜브, 타이트닝된 제약</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/12-advanced-mpc.html">Lecture 12. MPC 고급 주제</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Tube MPC — 외란이 부풀리는 튜브, 타이트닝된 제약</h4>
+    <p>1D 시스템 $x_{k+1} = x_k + u_k + w_k$, $w \in [-w_\max, w_\max]$. <span style="color:#0b5fff">파란 명목 궤적</span>은 보조 제어기 $u = \bar u + K(x - \bar x)$의 폐루프 응답으로 정해지는 <span style="color:#9eb9ff">하늘색 튜브</span>에 둘러싸여 있고, 그 폭만큼 <span style="color:#c62828">원래 제약(빨강)</span>이 안쪽으로 <span style="color:#ff8c00">타이트닝(주황)</span>됩니다. "외란 샘플" 궤적이 어떻게 와도 튜브 안에 머무는 게 보입니다.</p>
+    <canvas id="tube" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>외란 w_max <span class="val" id="tWV">0.30</span><input type="range" id="tW" min="0" max="0.7" step="0.02" value="0.3"></label>
+      <label>피드백 게인 |K| <span class="val" id="tKV">0.6</span><input type="range" id="tK" min="0.1" max="0.95" step="0.05" value="0.6"></label>
+      <button id="tSamp">샘플 재추출</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tube'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const N=40;
+    const Xmax=4;
+    function px(k){return 30+k/N*(W-60);}
+    function py(v){return H-30-(v+1)/(Xmax+2)*(H-60);}
+    let samples=[];
+    function resample(){
+      samples=[];
+      const wmax=+document.getElementById('tW').value;
+      for(let s=0;s<8;s++){
+        const tr=[0];
+        let xs=0;
+        const xb=[0];
+        let xbar=0;
+        const K=+document.getElementById('tK').value;
+        for(let k=0;k<N;k++){
+          // nominal evolution: xbar grows toward (Xmax - tube)
+          const tube=wmax*(1-Math.pow(1-K,k+1))/Math.max(K,0.001);
+          const target=Xmax-tube;
+          const ubar=0.15*(target-xbar);
+          xbar=xbar+ubar;
+          xb.push(xbar);
+          // actual
+          const w=(Math.random()*2-1)*wmax;
+          const u=ubar+K*(xbar-xs);
+          xs=xs+u+w;
+          tr.push(xs);
+        }
+        samples.push({tr,xb});
+      }
+    }
+    resample();
+    document.getElementById('tSamp').onclick=resample;
+    function loop(){
+      const wmax=+document.getElementById('tW').value;
+      const K=+document.getElementById('tK').value;
+      document.getElementById('tWV').textContent=wmax.toFixed(2);
+      document.getElementById('tKV').textContent=K.toFixed(2);
+      // nominal trajectory
+      const xb=[0];let xbar=0;
+      const tubeArr=[0];
+      for(let k=0;k<N;k++){
+        const tube=wmax*(1-Math.pow(1-K,k+1))/Math.max(K,0.001);
+        tubeArr.push(tube);
+        const target=Xmax-tube;
+        const ubar=0.15*(target-xbar);
+        xbar=xbar+ubar;
+        xb.push(xbar);
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';
+      for(let k=0;k<=N;k+=5){const xx=px(k);x.beginPath();x.moveTo(xx,30);x.lineTo(xx,H-30);x.stroke();}
+      // x_max constraint
+      x.strokeStyle='#c62828';x.lineWidth=2;x.setLineDash([6,4]);
+      x.beginPath();x.moveTo(30,py(Xmax));x.lineTo(W-30,py(Xmax));x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('x_max (제약)',W-110,py(Xmax)-4);
+      // tightened constraint x_max - tube(k)
+      x.strokeStyle='#ff8c00';x.lineWidth=2;x.setLineDash([3,3]);x.beginPath();
+      for(let k=0;k<=N;k++){const v=Xmax-tubeArr[k];if(k===0)x.moveTo(px(k),py(v));else x.lineTo(px(k),py(v));}
+      x.stroke();x.setLineDash([]);
+      x.fillStyle='#ff8c00';x.fillText('타이트닝된 제약',W-130,py(Xmax-tubeArr[N])-4);
+      // tube band around nominal
+      x.fillStyle='rgba(11,95,255,0.13)';x.beginPath();
+      for(let k=0;k<=N;k++) x.lineTo(px(k),py(xb[k]+tubeArr[k]));
+      for(let k=N;k>=0;k--) x.lineTo(px(k),py(xb[k]-tubeArr[k]));
+      x.closePath();x.fill();
+      x.strokeStyle='#9eb9ff';x.lineWidth=1.5;x.setLineDash([4,3]);
+      x.beginPath();for(let k=0;k<=N;k++){if(k===0)x.moveTo(px(k),py(xb[k]+tubeArr[k]));else x.lineTo(px(k),py(xb[k]+tubeArr[k]));}x.stroke();
+      x.beginPath();for(let k=0;k<=N;k++){if(k===0)x.moveTo(px(k),py(xb[k]-tubeArr[k]));else x.lineTo(px(k),py(xb[k]-tubeArr[k]));}x.stroke();
+      x.setLineDash([]);
+      // samples
+      x.strokeStyle='rgba(100,100,100,0.5)';x.lineWidth=1;
+      samples.forEach(s=>{
+        x.beginPath();
+        s.tr.forEach((v,k)=>{if(k===0)x.moveTo(px(k),py(v));else x.lineTo(px(k),py(v));});
+        x.stroke();
+      });
+      // nominal
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      xb.forEach((v,k)=>{if(k===0)x.moveTo(px(k),py(v));else x.lineTo(px(k),py(v));});x.stroke();
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('명목 x̄  (파랑)  ·  튜브 폭(끝) ≈ '+tubeArr[N].toFixed(2)+'  ·  샘플 8개 모두 튜브 내부',12,H-10);
+      requestAnimationFrame(()=>setTimeout(loop,150));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

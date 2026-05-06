@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 1차 센서의 스텝 응답과 시정수 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 1차 센서의 스텝 응답과 시정수</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/02-sensor.html">Week 2. 센서와 트랜스듀서</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 센서의 스텝 응답과 시정수</h4>
+    <p>$\tau$를 바꿔보세요. $t = \tau$에서 정확히 63.2%, $5\tau$에서 약 99% 도달. <strong>참값(스텝)은 즉시</strong>이지만 센서 출력은 시정수만큼 늦게 따라갑니다. 빠른 변화를 측정하려면 $\tau$가 작은 센서가 필요합니다.</p>
+    <canvas id="tauDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>시정수 τ <span class="val" id="tauV">0.5</span> s<input type="range" id="tau" min="0.1" max="3" step="0.1" value="0.5"></label>
+      <label>최종값 y∞ <span class="val" id="yfV">10</span><input type="range" id="yf" min="1" max="20" step="0.5" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tauDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const tau=+document.getElementById('tau').value;
+      const yf=+document.getElementById('yf').value;
+      document.getElementById('tauV').textContent=tau.toFixed(1);
+      document.getElementById('yfV').textContent=yf.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=60,oy=H-40,w=W-90,h=H-80,T=Math.max(5*tau,3);
+      // grid
+      ctx.strokeStyle='#eee';for(let g=0;g<=5;g++){const yy=oy-g/5*h;ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      // step (truth)
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w*0.05,oy);ctx.lineTo(ox+w*0.05,oy-yf/20*h);ctx.lineTo(ox+w,oy-yf/20*h);ctx.stroke();
+      ctx.setLineDash([]);
+      // sensor curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=400;i++){
+        const t=i/400*T;
+        const y = t<T*0.05 ? 0 : yf*(1-Math.exp(-(t-T*0.05)/tau));
+        const xx=ox+(t/T)*w, yy=oy-y/20*h;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      // mark τ, 2τ, 5τ
+      [[1,'τ',0.632],[2,'2τ',0.865],[5,'5τ',0.993]].forEach(([k,lbl,frac])=>{
+        const t=T*0.05+k*tau;if(t>T)return;
+        const xx=ox+(t/T)*w, yy=oy-yf*frac/20*h;
+        ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(xx,yy,4,0,Math.PI*2);ctx.fill();
+        ctx.font='11px sans-serif';ctx.fillText(`${lbl} (${(frac*100).toFixed(1)}%)`,xx+5,yy-4);
+        ctx.strokeStyle='#c62828';ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(xx,oy);ctx.lineTo(xx,yy);ctx.stroke();ctx.setLineDash([]);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 t (s)',W-80,oy+25);ctx.fillText('출력',12,40);
+      ctx.fillStyle='#2e7d32';ctx.fillText('— 참값 (스텝)',ox+10,55);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 센서 출력',ox+10,75);
+    }
+    document.getElementById('tau').addEventListener('input',draw);
+    document.getElementById('yf').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

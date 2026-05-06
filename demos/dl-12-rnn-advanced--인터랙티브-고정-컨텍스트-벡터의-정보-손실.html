@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 고정 컨텍스트 벡터의 정보 손실 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 고정 컨텍스트 벡터의 정보 손실</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/12-rnn-advanced.html">Week 12. Seq2Seq와 Attention</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 고정 컨텍스트 벡터의 정보 손실</h4>
+    <p>입력 문장의 단어 수에 따라 <strong>한 개의 컨텍스트 벡터</strong>가 어떻게 정보가 흐려지는지 봅니다. 단어가 많을수록 각 단어가 평균에 묻히고, 디코더는 출력 첫 단어를 만들 때 이미 입력 앞부분을 거의 잊습니다.</p>
+    <canvas id="bottle" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>입력 길이 <span class="val" id="bnLV">5</span><input type="range" id="bnL" min="3" max="30" step="1" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bottle');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const L=+document.getElementById('bnL').value;
+      document.getElementById('bnLV').textContent=L;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // input boxes
+      const cell=Math.min(40,(W-100)/L);
+      const y0=60;
+      const colors=['#0b5fff','#ff8c00','#2e7d32','#c62828','#6a1b9a','#00838f'];
+      for(let i=0;i<L;i++){
+        const col=colors[i%6];
+        ctx.fillStyle=col;
+        ctx.fillRect(40+i*cell,y0,cell-2,30);
+      }
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`입력 ${L}개 단어 (각각 정보 100%)`,40,y0-8);
+      // arrows
+      for(let i=0;i<L;i++){
+        ctx.strokeStyle='#666';ctx.beginPath();
+        ctx.moveTo(40+i*cell+cell/2,y0+30);
+        ctx.lineTo(W/2,170);
+        ctx.stroke();
+      }
+      // bottleneck circle
+      const ctxR=40;
+      ctx.beginPath();ctx.arc(W/2,180,ctxR,0,Math.PI*2);
+      ctx.fillStyle='#fff3e0';ctx.fill();ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.stroke();
+      // mixed-color blob inside
+      for(let i=0;i<L;i++){
+        const a=2*Math.PI*i/L;
+        ctx.fillStyle=colors[i%6];ctx.globalAlpha=Math.max(0.15,1/L);
+        ctx.beginPath();ctx.arc(W/2+Math.cos(a)*15,180+Math.sin(a)*15,15,0,Math.PI*2);ctx.fill();
+      }
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('컨텍스트 c (고정 크기)',W/2-70,135);
+      // info per word
+      ctx.fillStyle='#c62828';ctx.font='bold 16px sans-serif';
+      const perW=(100/L).toFixed(1);
+      ctx.fillText(`단어당 평균 정보 ≈ ${perW}%`,W/2-100,250);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('→ 길어질수록 각 단어의 정보가 희석되어 디코더가 첫 부분을 잊음',12,270);
+    }
+    document.getElementById('bnL').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

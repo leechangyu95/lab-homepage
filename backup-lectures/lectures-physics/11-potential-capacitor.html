@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W11. 전위와 축전기 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html" class="active">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../physics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 11. 전위와 축전기</h1>
+  <p class="lead">이번 주 한 줄 요약 — <strong>"전위는 전기장을 높이처럼 본 것. 축전기는 전기 에너지의 통."</strong></p>
+
+  <div class="note"><strong>📌 들어가기 전에 — 지난 주에서 가져올 것</strong>
+    <ul>
+      <li>쿨롱 법칙·전기장 $\vec E$(10주). 오늘은 그 위치에너지 버전.</li>
+      <li>위치에너지 $U_g = mgh$(3주). 오늘 $V$가 1 C당 위치에너지임을 비교.</li>
+      <li>일 $W = \vec F\cdot\vec d$(3주). $\Delta V$의 정의에 그대로 등장.</li>
+    </ul>
+    가장 중요한 비유: <strong>전기 = 산. 전위 = 높이. 전하 = 공.</strong>
+  </div>
+
+  <div class="toc"><h4>학습 목표</h4><ul>
+    <li>전위 $V$의 의미를 위치에너지 비유로 설명한다.</li>
+    <li>전기장과 전위 관계 ($\vec{E}=-\nabla V$)를 1D에서 적용한다.</li>
+    <li>등전위면을 그리고 전기장과 수직임을 안다.</li>
+    <li>평행판 축전기의 $C$, 저장 에너지를 계산한다.</li>
+  </ul></div>
+
+  <h2>도입 훅 — "9V 건전지 vs 220V 콘센트 vs 번개의 1억 V"</h2>
+  <p>9V 건전지에 손 대면 안 죽고, 220V 콘센트는 위험하고, 번개는 치명적. 그러나 번개는 0.0001초만 지속, 9V 건전지는 1년을 끼고 살아도 안 죽음. <strong>전압(전위차)은 1 C당 에너지</strong>고, 흐르는 양은 별개. 오늘 둘을 분리한다.</p>
+
+  <h2>1. 전위(전기 위치에너지)</h2>
+  <p>비유: 산의 높이. 중력 $U=mgh$에서 $h$가 ‘높이' = 위치에너지/질량. 전기는 $V$ = 위치에너지/전하.</p>
+  $$ V = \frac{U_{\text{electric}}}{q},\qquad V_{\text{point}} = k\frac{Q}{r} $$
+  <p>전위 자체에 $q$를 곱하면 진짜 에너지.</p>
+  <h3>전위차 (Voltage)</h3>
+  $$ \Delta V = V_B - V_A = \frac{W_{A\to B}}{q} $$
+  <h3>데모 1 — 등고선 vs 등전위</h3>
+  <p>산 그림과 등전위면 그림을 나란히. 등고선이 빽빽 = 경사 가파름 = 큰 힘. 등전위가 빽빽 = 전기장 강함.</p>
+
+  <h2>2. 전기장과 전위의 관계</h2>
+  $$ E_x = -\frac{dV}{dx} $$
+
+  <h3>1차원으로 충분히 이해하기 (∇ 기호는 미뤄도 됨)</h3>
+  <pre><code>   V(x)│
+       │ ╲
+       │   ╲              ← 전위가 떨어지는 곳
+       │     ╲╲           ← 기울기 |dV/dx|이 클수록 |E|가 큼
+       │       ╲╲╲╲
+       │            ╲╲╲
+       └────────────────→ x
+
+   E = −dV/dx  (이 그림에선 양의 방향)</code></pre>
+  <p>핵심: 전위는 산이고, 전기장은 그 산이 가장 가파르게 내려가는 방향. 1D에서는 그래프의 <em>기울기에 마이너스 부호</em>.</p>
+  <p><em>3D 일반형</em>은 $\vec E = -\nabla V$. 이 학기에는 1D만 계산.</p>
+
+  <h3>등전위면의 성질</h3>
+  <ul>
+    <li>$V$가 일정한 면 → 따라 움직여도 일이 들지 않음.</li>
+    <li>점전하 주변: 동심구</li>
+    <li>평행판 사이: 평행 평면</li>
+    <li><strong>항상 전기장선과 수직</strong></li>
+  </ul>
+
+  <h3>데모 2 — 등전위 측정</h3>
+  <p>전도성 종이 위 두 전극에 전압 → 전압계로 등전위 점 찾아 연결 → 등전위 곡선이 전기장선과 수직.</p>
+
+  <h2>3. 축전기 (Capacitor)</h2>
+  $$ C = \frac{Q}{V},\qquad C_{\text{평행판}} = \frac{\varepsilon_0 A}{d} $$
+  <p>면적 클수록, 거리 가까울수록 $C$ 큼. 단위 패럿(F) — 1 F는 어마어마하게 큼.</p>
+  $$ U = \tfrac{1}{2}CV^2 = \tfrac{1}{2}\frac{Q^2}{C} = \tfrac{1}{2}QV $$
+  <p>전압 2배 → 에너지 4배.</p>
+  <h3>데모 3 — 카메라 플래시</h3>
+  <p>일회용 카메라의 큰 캐패시터(80–300 μF, 330 V). 1.5 V 건전지로 천천히 충전 후 1 ms에 모든 에너지를 전구에 쏟음. <strong>천천히 모았다 한순간에 풀어주는</strong> 도구.</p>
+  <h3>데모 4 — 슈퍼커패시터 + LED</h3>
+  <p>1 F 슈퍼캡을 5 V로 충전 후 LED에 연결하면 수 초 동안 빛난다. 1 F가 얼마나 큰지 직관적.</p>
+  <h3>유전체</h3>
+  <p>판 사이 절연체 끼우면 $C$가 $\kappa$배 증가. 종이 ≈3, 물 ≈80. 실용 캐패시터의 비밀.</p>
+
+  <h2>4. 직렬·병렬</h2>
+  <table>
+    <thead><tr><th></th><th>저항</th><th>캐패시터</th></tr></thead>
+    <tbody>
+      <tr><td>직렬</td><td>합</td><td>역수 합</td></tr>
+      <tr><td>병렬</td><td>역수 합</td><td>합</td></tr>
+    </tbody>
+  </table>
+  <p>저항과 <strong>반대 모양</strong>임에 주의.</p>
+
+  <h2>흔한 오개념</h2>
+  <table>
+    <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
+    <tbody>
+      <tr><td>"전압이 흐른다"</td><td>전압은 차이. 흐르는 건 전류.</td></tr>
+      <tr><td>"축전기가 전류를 저장"</td><td>전하·에너지 저장</td></tr>
+      <tr><td>"전위는 절대값 의미"</td><td>기준점에 따라 달라짐. 차이만 의미</td></tr>
+      <tr><td>"축전기 안에 전류 흐름"</td><td>변화할 때만(변위 전류, 14주)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. 에너지 밀도</h2>
+  <p>전기장이 있는 공간 자체가 에너지를 가진다 — 단위 부피당:</p>
+  $$ u_E = \tfrac{1}{2}\varepsilon_0 E^2 \quad (\text{J/m}^3) $$
+  <p>14주 전자기파에서 다시 등장. 빛이 가지는 에너지의 출처.</p>
+
+  <h2>6. 캐패시터 충·방전 (RC 미리 보기)</h2>
+  <p>다음 주(12주) RC 회로의 출발점:</p>
+  <ul>
+    <li>전압 변화율 $dV/dt$가 클수록 캐패시터로 흐르는 전류가 큼: $I = C\,dV/dt$.</li>
+    <li>변하지 않는 전압(DC 정상상태) → $I = 0$ (전류가 안 흐름).</li>
+    <li>고주파 AC → 캐패시터가 거의 단락(impedance 작음).</li>
+  </ul>
+
+  <h2>강의실 예제</h2>
+  <div class="tip"><strong>예제 1.</strong> +5 μC에서 0.1 m 전위?<br>
+  $V = kQ/r \approx 4.5\times 10^5$ V.</div>
+  <div class="tip"><strong>예제 2.</strong> $A=0.01$ m², $d=1$ mm 평행판 $C$?<br>
+  $C = \varepsilon_0 A/d \approx 88.5$ pF.</div>
+  <div class="tip"><strong>예제 3.</strong> $C=100$ μF, $V=12$ V 저장 에너지?<br>
+  $U = \tfrac{1}{2}CV^2 = 7.2$ mJ.</div>
+  <div class="tip"><strong>예제 4 (전위차로 가속).</strong> 전자(0 → ?)를 1000 V 전위차로 가속. 도달 KE와 속도?<br>
+  $W = qV = 1.6\times 10^{-19}\cdot 1000 = 1.6\times 10^{-16}$ J. $v = \sqrt{2K/m} \approx 1.88\times 10^7$ m/s. (CRT의 원리.)</div>
+  <div class="tip"><strong>예제 5 (직렬·병렬).</strong> 6 μF, 3 μF (a) 병렬, (b) 직렬?<br>
+  (a) $9$ μF. (b) $1/(1/6 + 1/3) = 2$ μF.</div>
+  <div class="tip"><strong>예제 6 (유전체).</strong> $C_0 = 100$ pF에 $\kappa = 4$ 유전체. 새로운 $C$와 같은 전압의 저장 에너지 비?<br>
+  $C = 4 C_0 = 400$ pF. $U = \tfrac{1}{2}CV^2$ → 에너지도 4배.</div>
+  <div class="tip"><strong>예제 7 (충전 후 분리).</strong> 평행판을 12 V로 충전 후 배터리 끊고 거리 2배로. 새로운 전압?<br>
+  $Q$ 보존, $C$가 1/2배. $V = Q/C$ → 24 V로 증가.</div>
+
+  <h2>자기 점검 ✅</h2>
+  <div class="note">
+    <ol>
+      <li>등전위면을 따라 움직일 때 일이 0인 이유?</li>
+      <li>충전된 캐패시터에서 두 판 사이 거리를 늘리면 (배터리 연결 상태) $Q$는?</li>
+      <li>같은 전압에 같은 면적이지만 거리가 1/2 → $C$, $U$ 변화?</li>
+      <li>1 F 슈퍼캡과 1 μF 일반 캡의 저장 가능한 전하량 비? (같은 전압)</li>
+    </ol>
+    <strong>정답</strong>: (1) $\Delta V = 0$이므로 $W = q\Delta V = 0$. (2) $C$ 감소 → $V = Q/C$가 변하면 안 되므로 $Q$ 감소(전하가 배터리로 돌아감). (3) $C$ 2배, $U = \tfrac{1}{2}CV^2$도 2배. (4) $10^6$배.
+  </div>
+
+  <h2>응용·확장</h2>
+  <table>
+    <thead><tr><th>분야</th><th>어떻게 쓰나</th></tr></thead>
+    <tbody>
+      <tr><td>모든 전자기기</td><td>전원 평활용·필터·디커플링 캐패시터</td></tr>
+      <tr><td>플래시·전기 충격기</td><td>천천히 충전 → 한순간에 방전</td></tr>
+      <tr><td>전기차</td><td>슈퍼커패시터 + 배터리 하이브리드(회생제동)</td></tr>
+      <tr><td>터치스크린</td><td>손가락 접촉 시 정전용량 변화 감지</td></tr>
+      <tr><td>DRAM</td><td>비트당 1개의 작은 캐패시터(충전 = 1, 방전 = 0)</td></tr>
+      <tr><td>심장 제세동기</td><td>200 J 캐패시터의 순간 방전</td></tr>
+    </tbody>
+  </table>
+
+  <h2>과제 10</h2>
+  <ol>
+    <li>(개념) 220V가 9V보다 위험한 이유 + 정전기 1만 V는 왜 안 죽이나? 전압과 전류를 분리해 설명.</li>
+    <li>(계산) Halliday 24·25장 4문제.</li>
+    <li>(시뮬) PhET <em>Capacitor Lab</em>: 면적·거리·유전체에 따른 $C$, $V$, $U$ 표. A4 한 장.</li>
+  </ol>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 전하가 움직이기 시작하면 — <strong>회로</strong>. 옴, 키르히호프, RC 시정수. 멀티미터로 직접 측정.</div>
+
+  <h2>🎮 인터랙티브 데모 1 — 평행판 축전기 시뮬레이터</h2>
+  <p>슬라이더로 판 면적 $A$, 간격 $d$, 전압 $V$를 바꾸면 정전용량 $C = \varepsilon_0 A / d$, 전하 $Q = CV$, 저장 에너지 $U = \tfrac{1}{2}CV^2$가 어떻게 변하는지 실시간 확인. 두 판 사이의 균일한 전기장 $E = V/d$도 함께 시각화.</p>
+
+  <div class="demo">
+    <h4>평행판 축전기 — 면적·간격·전압이 바뀌면?</h4>
+    <p>$A$, $d$, $V$를 움직여 보세요. <strong>면적 $A$를 키우거나 간격 $d$를 줄이면 $C$가 커집니다.</strong> 전기장(빨간 화살표)은 +판에서 -판으로 향합니다.</p>
+    <canvas id="w11_capCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>면적 $A$ <span class="val" id="w11_capAv">1.00</span> ×10⁻² m²
+        <input type="range" id="w11_capA" min="0.1" max="5" step="0.1" value="1.0"></label>
+      <label>간격 $d$ <span class="val" id="w11_capDv">1.0</span> mm
+        <input type="range" id="w11_capD" min="0.2" max="5" step="0.1" value="1.0"></label>
+      <label>전압 $V$ <span class="val" id="w11_capVv">12</span> V
+        <input type="range" id="w11_capV" min="1" max="50" step="1" value="12"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$d$를 1/2로 줄이면 → $C$ 2배, $Q$ 2배, $U$ 2배 (같은 전압). 직접 확인.</li>
+        <li>$V$를 2배로 → $Q$ 2배, $U$ <strong>4배</strong>. 에너지가 $V^2$에 비례.</li>
+        <li>$A$를 5배로 → $C$, $Q$, $U$ 모두 5배.</li>
+        <li>$E = V/d$가 슬라이더 변화에 어떻게 따라오는지 보세요.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w11_capCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const eps0=8.854e-12;
+    function draw(){
+      const A=+document.getElementById('w11_capA').value*1e-2;
+      const d=+document.getElementById('w11_capD').value*1e-3;
+      const V=+document.getElementById('w11_capV').value;
+      document.getElementById('w11_capAv').textContent=(A*100).toFixed(2);
+      document.getElementById('w11_capDv').textContent=(d*1000).toFixed(1);
+      document.getElementById('w11_capVv').textContent=V;
+      const C=eps0*A/d, Q=C*V, U=0.5*C*V*V, E=V/d;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // plates: width proportional to sqrt(A), gap proportional to d
+      const pw=Math.min(420,80+Math.sqrt(A/1e-4)*50);
+      const gap=Math.max(20,Math.min(180,d*1e4*4));
+      const cx=W/2, cy=H/2;
+      // top plate (+)
+      ctx.fillStyle='#d62728';
+      ctx.fillRect(cx-pw/2, cy-gap/2-12, pw, 12);
+      // bottom plate (-)
+      ctx.fillStyle='#1f77b4';
+      ctx.fillRect(cx-pw/2, cy+gap/2, pw, 12);
+      // E-field arrows (red) from + to -
+      ctx.strokeStyle='#d62728';ctx.fillStyle='#d62728';ctx.lineWidth=2;
+      const nArr=Math.max(3,Math.min(10,Math.floor(pw/45)));
+      for(let i=0;i<nArr;i++){
+        const x=cx-pw/2+pw*(i+0.5)/nArr;
+        ctx.beginPath();ctx.moveTo(x,cy-gap/2);ctx.lineTo(x,cy+gap/2-4);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x,cy+gap/2-4);
+        ctx.lineTo(x-4,cy+gap/2-10);ctx.lineTo(x+4,cy+gap/2-10);ctx.closePath();ctx.fill();
+      }
+      // labels
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText('+Q',cx-pw/2-30,cy-gap/2-4);
+      ctx.fillText('−Q',cx-pw/2-30,cy+gap/2+10);
+      // info box
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(10,10,300,108);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(10,10,300,108);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('C = ε₀A/d = '+(C*1e12).toFixed(2)+' pF',20,32);
+      ctx.fillText('Q = CV = '+(Q*1e9).toFixed(2)+' nC',20,52);
+      ctx.fillText('U = ½CV² = '+(U*1e9).toFixed(2)+' nJ',20,72);
+      ctx.fillText('E = V/d = '+(E/1000).toFixed(2)+' kV/m',20,92);
+      ctx.fillText('u_E = ½ε₀E² = '+(0.5*eps0*E*E*1e6).toFixed(3)+' μJ/m³',20,112);
+    }
+    ['w11_capA','w11_capD','w11_capV'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>🎮 인터랙티브 데모 2 — 등전위선과 전기력선의 직교</h2>
+  <p>두 점전하의 부호를 바꿔가며 등전위선(파랑, 닫힌 곡선)이 어떻게 그려지는지, 전기력선(빨강 화살표)이 항상 등전위선과 <strong>수직</strong>으로 만나는지 직접 확인.</p>
+
+  <div class="demo">
+    <h4>두 점전하 주위의 등전위 vs 전기력선</h4>
+    <p>전하 부호와 거리(분리)를 조절해 보세요. <strong>같은 부호(쌍극자가 아닌 동극)</strong>일 때와 <strong>반대 부호(쌍극자)</strong>일 때 등전위면 모양이 어떻게 다른지 비교.</p>
+    <canvas id="w11_eqCanvas" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>전하 1 부호 $q_1$ <span class="val" id="w11_q1v">+1</span>
+        <input type="range" id="w11_q1" min="-2" max="2" step="1" value="1"></label>
+      <label>전하 2 부호 $q_2$ <span class="val" id="w11_q2v">−1</span>
+        <input type="range" id="w11_q2" min="-2" max="2" step="1" value="-1"></label>
+      <label>전하 분리 $s$ <span class="val" id="w11_sv">120</span> px
+        <input type="range" id="w11_s" min="40" max="240" step="10" value="120"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$q_1=+1, q_2=-1$ → 쌍극자. 등전위선이 두 전하를 둘러싸지 않고 한쪽으로 휨.</li>
+        <li>$q_1=q_2=+1$ → 두 +. 멀리서는 +2 점전하처럼 보이는 동심원.</li>
+        <li>전기력선은 +에서 시작 -로 끝남. 등전위선과 만나는 곳마다 90°.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w11_eqCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function V(x,y,x1,y1,q1,x2,y2,q2){
+      const r1=Math.hypot(x-x1,y-y1)+1e-6;
+      const r2=Math.hypot(x-x2,y-y2)+1e-6;
+      return q1/r1+q2/r2;
+    }
+    function draw(){
+      const q1=+document.getElementById('w11_q1').value;
+      const q2=+document.getElementById('w11_q2').value;
+      const s=+document.getElementById('w11_s').value;
+      document.getElementById('w11_q1v').textContent=(q1>0?'+':'')+q1;
+      document.getElementById('w11_q2v').textContent=(q2>0?'+':'')+q2;
+      document.getElementById('w11_sv').textContent=s;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2, cy=H/2;
+      const x1=cx-s/2,y1=cy,x2=cx+s/2,y2=cy;
+      // sample V on grid for contours
+      const NX=80,NY=45,gw=W/NX,gh=H/NY;
+      const grid=[];
+      for(let j=0;j<NY;j++){grid.push([]);for(let i=0;i<NX;i++){grid[j].push(V(i*gw,j*gh,x1,y1,q1,x2,y2,q2));}}
+      // contour levels (rough marching squares)
+      ctx.strokeStyle='#1f77b4';ctx.lineWidth=1;
+      const levels=[-0.08,-0.04,-0.02,-0.01,0.01,0.02,0.04,0.08];
+      for(const L of levels){
+        for(let j=0;j<NY-1;j++){
+          for(let i=0;i<NX-1;i++){
+            const a=grid[j][i],b=grid[j][i+1],cV=grid[j+1][i+1],dV=grid[j+1][i];
+            const seg=[];
+            function ip(va,vb,xa,ya,xb,yb){const t=(L-va)/(vb-va);return [xa+t*(xb-xa),ya+t*(yb-ya)];}
+            if((a-L)*(b-L)<0)seg.push(ip(a,b,i*gw,j*gh,(i+1)*gw,j*gh));
+            if((b-L)*(cV-L)<0)seg.push(ip(b,cV,(i+1)*gw,j*gh,(i+1)*gw,(j+1)*gh));
+            if((cV-L)*(dV-L)<0)seg.push(ip(cV,dV,(i+1)*gw,(j+1)*gh,i*gw,(j+1)*gh));
+            if((dV-L)*(a-L)<0)seg.push(ip(dV,a,i*gw,(j+1)*gh,i*gw,j*gh));
+            if(seg.length>=2){ctx.beginPath();ctx.moveTo(seg[0][0],seg[0][1]);ctx.lineTo(seg[1][0],seg[1][1]);ctx.stroke();}
+          }
+        }
+      }
+      // field lines starting around +charges
+      ctx.strokeStyle='#d62728';ctx.fillStyle='#d62728';ctx.lineWidth=1.5;
+      function drawFL(sx,sy,sign){
+        let x=sx,y=sy;
+        for(let st=0;st<400;st++){
+          const eps=0.5;
+          const v0=V(x,y,x1,y1,q1,x2,y2,q2);
+          const ex=-(V(x+eps,y,x1,y1,q1,x2,y2,q2)-V(x-eps,y,x1,y1,q1,x2,y2,q2))/(2*eps);
+          const ey=-(V(x,y+eps,x1,y1,q1,x2,y2,q2)-V(x,y-eps,x1,y1,q1,x2,y2,q2))/(2*eps);
+          const m=Math.hypot(ex,ey)+1e-9;
+          const dx=sign*ex/m*2.5, dy=sign*ey/m*2.5;
+          ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();
+          x+=dx;y+=dy;
+          if(x<0||x>W||y<0||y>H)break;
+          if(Math.hypot(x-x1,y-y1)<8||Math.hypot(x-x2,y-y2)<8)break;
+        }
+      }
+      const N=12;
+      if(q1!==0)for(let k=0;k<N;k++){const a=2*Math.PI*k/N;drawFL(x1+12*Math.cos(a),y1+12*Math.sin(a),Math.sign(q1));}
+      if(q2!==0)for(let k=0;k<N;k++){const a=2*Math.PI*k/N;drawFL(x2+12*Math.cos(a),y2+12*Math.sin(a),Math.sign(q2));}
+      // charges
+      function drawQ(x,y,q){
+        ctx.beginPath();ctx.arc(x,y,10,0,2*Math.PI);
+        ctx.fillStyle=q>0?'#d62728':(q<0?'#1f77b4':'#888');ctx.fill();
+        ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(q>0?'+':(q<0?'−':'0'),x,y);ctx.textAlign='start';ctx.textBaseline='alphabetic';
+      }
+      drawQ(x1,y1,q1);drawQ(x2,y2,q2);
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,260,46);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,260,46);
+      ctx.fillStyle='#1f77b4';ctx.font='13px sans-serif';ctx.fillText('━ 등전위선 (V = 일정)',16,28);
+      ctx.fillStyle='#d62728';ctx.fillText('→ 전기력선 (E = −∇V)',16,46);
+    }
+    ['w11_q1','w11_q2','w11_s'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>🎮 인터랙티브 데모 3 — 직렬 vs 병렬 축전기 합성</h2>
+  <p>두 축전기 $C_1$, $C_2$를 직렬·병렬로 연결할 때 합성 정전용량을 직접 비교. <strong>저항과 반대</strong>임을 손으로 느껴보자.</p>
+
+  <div class="demo">
+    <h4>직렬·병렬 합성 시뮬레이터</h4>
+    <p>$C_1$, $C_2$ 두 슬라이더를 움직여 직렬과 병렬 결과를 동시에 비교. 입력 전압 $V$도 함께 조절.</p>
+    <canvas id="w11_seriesCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>$C_1$ <span class="val" id="w11_C1v">10</span> μF
+        <input type="range" id="w11_C1" min="1" max="50" step="1" value="10"></label>
+      <label>$C_2$ <span class="val" id="w11_C2v">20</span> μF
+        <input type="range" id="w11_C2" min="1" max="50" step="1" value="20"></label>
+      <label>전압 $V$ <span class="val" id="w11_seVv">12</span> V
+        <input type="range" id="w11_seV" min="1" max="50" step="1" value="12"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li><strong>병렬</strong>: $C_\text{eq} = C_1 + C_2$. 단순 합. (저항의 직렬과 같은 모양.)</li>
+        <li><strong>직렬</strong>: $1/C_\text{eq} = 1/C_1 + 1/C_2$, 즉 $C_\text{eq} = C_1 C_2 / (C_1+C_2)$. <em>가장 작은 것보다 더 작아짐.</em></li>
+        <li>$C_1=C_2$일 때 직렬 = $C/2$, 병렬 = $2C$. 4배 차이.</li>
+        <li>직렬에선 두 축전기에 같은 전하 $Q$ 분배. 병렬에선 같은 전압 $V$ 분배.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w11_seriesCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const C1=+document.getElementById('w11_C1').value;
+      const C2=+document.getElementById('w11_C2').value;
+      const V=+document.getElementById('w11_seV').value;
+      document.getElementById('w11_C1v').textContent=C1;
+      document.getElementById('w11_C2v').textContent=C2;
+      document.getElementById('w11_seVv').textContent=V;
+      const Cpar=C1+C2;
+      const Cser=(C1*C2)/(C1+C2);
+      const Qpar=Cpar*V, Upar=0.5*Cpar*V*V;
+      const Qser=Cser*V, User=0.5*Cser*V*V;
+      const V1ser=Qser/C1, V2ser=Qser/C2; // series voltage split
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // left: parallel
+      ctx.fillStyle='#222';ctx.font='bold 14px sans-serif';
+      ctx.fillText('병렬 (Parallel)',40,24);
+      ctx.fillText('직렬 (Series)',360,24);
+      // parallel diagram
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(60,60);ctx.lineTo(60,180);ctx.moveTo(220,60);ctx.lineTo(220,180);
+      ctx.moveTo(60,90);ctx.lineTo(110,90);ctx.moveTo(170,90);ctx.lineTo(220,90);
+      ctx.moveTo(60,150);ctx.lineTo(110,150);ctx.moveTo(170,150);ctx.lineTo(220,150);
+      // capacitor symbols (||)
+      ctx.moveTo(110,80);ctx.lineTo(110,100);ctx.moveTo(120,80);ctx.lineTo(120,100);
+      ctx.moveTo(170,80);ctx.lineTo(170,100);
+      ctx.moveTo(110,140);ctx.lineTo(110,160);ctx.moveTo(120,140);ctx.lineTo(120,160);
+      ctx.moveTo(170,140);ctx.lineTo(170,160);
+      ctx.stroke();
+      // series diagram
+      ctx.beginPath();
+      ctx.moveTo(360,60);ctx.lineTo(360,180);ctx.moveTo(560,60);ctx.lineTo(560,180);
+      ctx.moveTo(360,120);ctx.lineTo(420,120);
+      ctx.moveTo(480,120);ctx.lineTo(520,120);
+      ctx.moveTo(420,110);ctx.lineTo(420,130);ctx.moveTo(430,110);ctx.lineTo(430,130);
+      ctx.moveTo(470,110);ctx.lineTo(470,130);ctx.moveTo(480,110);ctx.lineTo(480,130);
+      ctx.moveTo(520,110);ctx.lineTo(520,130);ctx.moveTo(530,110);ctx.lineTo(530,130);
+      // wait, fix series: two caps in series on one wire
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('C₁='+C1+'μF',125,86);
+      ctx.fillText('C₂='+C2+'μF',125,146);
+      ctx.fillText('C₁',438,108);ctx.fillText('C₂',498,108);
+      // results box
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(40,200,260,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(40,200,260,72);
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';
+      ctx.fillText('C_eq = '+Cpar.toFixed(2)+' μF',50,220);
+      ctx.fillText('Q_total = '+Qpar.toFixed(1)+' μC',50,240);
+      ctx.fillText('U = '+Upar.toFixed(1)+' μJ',50,260);
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(340,200,260,72);
+      ctx.strokeRect(340,200,260,72);
+      ctx.fillStyle='#d62728';
+      ctx.fillText('C_eq = '+Cser.toFixed(2)+' μF',350,220);
+      ctx.fillText('Q (each) = '+Qser.toFixed(2)+' μC',350,240);
+      ctx.fillText('U = '+User.toFixed(2)+' μJ  (V₁='+V1ser.toFixed(1)+', V₂='+V2ser.toFixed(1)+')',350,260);
+    }
+    ['w11_C1','w11_C2','w11_seV'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>🪜 단계별 사고 과정 — 축전기 직렬·병렬 합성 5단계</h2>
+  <p>회로도가 복잡해 보여도 <strong>5단계 절차</strong>면 어떤 축전기 네트워크도 푼다. 직렬·병렬 공식을 외우기 전에, 어떤 식이 어디 적용되는지 <em>판단하는 능력</em>이 더 중요하다.</p>
+
+  <ol>
+    <li><strong>Step 1 — 구분</strong>: 두 축전기가 <em>같은 두 점</em> 사이에 있나? → 병렬. <em>같은 전류만 통과</em>(끝이 한 점에서 다음 축전기로만)? → 직렬. 둘 다 아니면 △-Y 변환이 필요(이 강의 범위 밖).</li>
+    <li><strong>Step 2 — 가장 작은 묶음부터</strong>: 가장 안쪽(끝쪽) 직렬·병렬 쌍을 먼저 합쳐 단일 $C_\text{eq}$로 대체. 회로도를 다시 그린다.</li>
+    <li><strong>Step 3 — 반복</strong>: 단순 회로(축전기 1개 + 전압원)가 될 때까지 Step 1·2를 반복.</li>
+    <li><strong>Step 4 — 전체 $Q$, $U$ 계산</strong>: 최종 $C_\text{tot}$가 나오면 $Q_\text{tot} = C_\text{tot} V$, $U_\text{tot} = \tfrac{1}{2} C_\text{tot} V^2$.</li>
+    <li><strong>Step 5 — 거꾸로 분배</strong>: 각 축전기의 $Q$와 $V$를 알고 싶으면, 합쳤던 순서를 <em>거꾸로 풀면서</em> 직렬은 같은 $Q$, 병렬은 같은 $V$를 적용. 합산 결과(에너지·전하)가 Step 4 값과 일치하는지 검산.</li>
+  </ol>
+
+  <div class="tip"><strong>외우는 핵심 한 줄.</strong> 직렬에선 모든 축전기에 <em>같은 전하</em>가 흐르고, 병렬에선 모든 축전기에 <em>같은 전압</em>이 걸린다. 이것만 알면 식은 잊어도 유도할 수 있다.</div>
+
+  <h3>예시 — 5단계로 풀어 보기</h3>
+  <p>$C_1 = 6\,\mu\text{F}$, $C_2 = 3\,\mu\text{F}$가 직렬, 그 결과가 $C_3 = 4\,\mu\text{F}$와 병렬, 12 V 전압원에 연결.</p>
+  <ol>
+    <li>Step 1·2: $C_1$, $C_2$ 직렬 → $C_{12} = (6\cdot 3)/(6+3) = 2\,\mu\text{F}$.</li>
+    <li>Step 1·2: $C_{12}$와 $C_3$ 병렬 → $C_\text{tot} = 2 + 4 = 6\,\mu\text{F}$.</li>
+    <li>Step 4: $Q_\text{tot} = 6\,\mu\text{F}\cdot 12\,\text{V} = 72\,\mu\text{C}$. $U = \tfrac{1}{2}(6)(12)^2 = 432\,\mu\text{J}$.</li>
+    <li>Step 5: $C_3$에 12 V → $Q_3 = 48\,\mu\text{C}$. $C_{12}$ 묶음에도 12 V → $Q_{12} = 24\,\mu\text{C}$ (이게 직렬 두 축전기 모두에 흐름).</li>
+    <li>검산: $V_1 = Q_{12}/C_1 = 4$ V, $V_2 = Q_{12}/C_2 = 8$ V → 합 12 V. ✓</li>
+  </ol>
+
+  <h2>✏️ 연습문제 — 풀이 토글로 자기 학습</h2>
+  <p>다음 12문제를 종이에 풀어보고 <em>막힐 때만</em> 풀이를 펼치자. 7문제 이상 풀이 없이 풀면 W11 핵심 OK.</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 1.</strong> $+2\,\mu\text{C}$ 점전하에서 50 cm 거리의 전위?</summary>
+    <p style="margin-top:10px">$V = kQ/r = (8.99\times 10^9)(2\times 10^{-6})/0.5 \approx 3.6\times 10^4\,\text{V} = 36\,\text{kV}$.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 2.</strong> 평행판 축전기, $A = 2\times 10^{-3}\,\text{m}^2$, $d = 0.5\,\text{mm}$의 정전용량?</summary>
+    <p style="margin-top:10px">$C = \varepsilon_0 A/d = (8.854\times 10^{-12})(2\times 10^{-3})/(5\times 10^{-4}) \approx 35.4\,\text{pF}$.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 3.</strong> $C = 220\,\mu\text{F}$ 캐패시터를 $V = 9\,\text{V}$로 충전. 저장 에너지는?</summary>
+    <p style="margin-top:10px">$U = \tfrac{1}{2} C V^2 = 0.5(220\times 10^{-6})(81) \approx 8.91\,\text{mJ}$. (220 μF에 9 V 정도면 작은 LED 잠깐 점멸 가능.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 4.</strong> 같은 점에서 $+3\,\text{nC}$, $-1\,\text{nC}$가 각각 1 m 떨어져 있다. 두 점 사이 중간에서의 전위?</summary>
+    <p style="margin-top:10px">중간점에서 두 전하까지 거리 모두 0.5 m. $V = k(q_1/r_1 + q_2/r_2) = (8.99\times 10^9)(3\times 10^{-9}/0.5 + (-1\times 10^{-9})/0.5) = (8.99\times 10^9)(2\times 10^{-9}\cdot 2) = 36\,\text{V}$.<br>
+    (전위는 스칼라 합 — 부호 그대로 더한다. 전기장처럼 벡터 합이 아니다.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 5.</strong> $C_1 = 4\,\mu\text{F}$, $C_2 = 12\,\mu\text{F}$를 (a) 병렬, (b) 직렬 연결할 때 $C_\text{eq}$?</summary>
+    <p style="margin-top:10px">(a) 병렬: $C_\text{eq} = 4 + 12 = 16\,\mu\text{F}$.<br>
+    (b) 직렬: $C_\text{eq} = (4\cdot 12)/(4+12) = 48/16 = 3\,\mu\text{F}$. (가장 작은 것보다 작음 — 직렬의 특징.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 6 (전위차로 가속).</strong> 정지한 양성자를 500 V 전위차로 가속하면 도달 속력은? ($m_p = 1.673\times 10^{-27}\,\text{kg}$, $e = 1.6\times 10^{-19}\,\text{C}$.)</summary>
+    <p style="margin-top:10px">에너지 보존: $eV = \tfrac{1}{2}m v^2$ → $v = \sqrt{2eV/m} = \sqrt{2(1.6\times 10^{-19})(500)/(1.673\times 10^{-27})} \approx 3.1\times 10^5\,\text{m/s}$.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 7 (유전체 삽입).</strong> $C_0 = 50\,\text{pF}$ 공기 축전기에 $\kappa = 5$ 유전체를 가득 채움. 같은 전압 12 V를 유지할 때 추가로 흘러 들어간 전하?</summary>
+    <p style="margin-top:10px">$C = \kappa C_0 = 250\,\text{pF}$. $Q_0 = C_0 V = 600\,\text{pC}$, $Q = CV = 3000\,\text{pC}$. 추가 전하 $\Delta Q = 2400\,\text{pC} = 2.4\,\text{nC}$.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 8 (충전 후 분리해서 거리 변경).</strong> 평행판 축전기를 12 V로 충전 후 배터리를 끊고, 판 간격을 3배로 늘렸다. 새로운 전압과 저장 에너지 비?</summary>
+    <p style="margin-top:10px">배터리 끊김 → $Q$ 보존. $C \propto 1/d$ → $C$가 1/3배로 감소.<br>
+    $V = Q/C$ → 12 V × 3 = <strong>36 V</strong>로 증가.<br>
+    $U = Q^2/(2C)$ → $C$가 1/3 → $U$가 <strong>3배</strong>. 늘리느라 외부에서 일을 한 것이 에너지로 들어감.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 9 (배터리 연결 상태에서 거리 변경).</strong> 같은 축전기를 배터리 연결 <em>유지</em>하고 거리 3배. $V$, $Q$, $U$, 배터리가 한 일?</summary>
+    <p style="margin-top:10px">$V$ 일정(배터리). $C$ 1/3배 → $Q$ 1/3배(전하가 배터리로 돌아감). $U = \tfrac{1}{2}CV^2$도 1/3배(감소).<br>
+    감소한 에너지의 행방: $\Delta Q$만큼이 배터리로 흘러 들어가며 배터리를 충전. 외부에서 판을 끌어당기느라 한 일까지 합치면 에너지 균형 OK.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 10 (에너지 밀도).</strong> 1 cm 떨어진 두 평행판에 100 V 걸렸을 때 두 판 사이 공간의 에너지 밀도 $u_E$?</summary>
+    <p style="margin-top:10px">$E = V/d = 100/0.01 = 10^4\,\text{V/m}$.<br>
+    $u_E = \tfrac{1}{2}\varepsilon_0 E^2 = 0.5(8.854\times 10^{-12})(10^4)^2 \approx 4.43\times 10^{-4}\,\text{J/m}^3$.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 11.</strong> 병렬 회로에서 $C_1 = 5\,\mu\text{F}$에 $30\,\mu\text{C}$이 저장되어 있다. $C_2 = 10\,\mu\text{F}$에 저장된 전하?</summary>
+    <p style="margin-top:10px">병렬 → 같은 전압. $V = Q_1/C_1 = 30/5 = 6\,\text{V}$.<br>
+    $Q_2 = C_2 V = 10\cdot 6 = 60\,\mu\text{C}$.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 12 (혼합 회로).</strong> $C_1 = 2\,\mu\text{F}$, $C_2 = 4\,\mu\text{F}$가 직렬이고, 이 묶음이 $C_3 = 6\,\mu\text{F}$와 병렬, 24 V에 연결. 전체 에너지?</summary>
+    <p style="margin-top:10px">$C_{12}^\text{ser} = (2\cdot 4)/(2+4) = 4/3\,\mu\text{F}$.<br>
+    $C_\text{tot} = 4/3 + 6 = 22/3\,\mu\text{F} \approx 7.33\,\mu\text{F}$.<br>
+    $U = \tfrac{1}{2}(7.33\times 10^{-6})(24)^2 \approx 2.11\,\text{mJ}$.</p>
+  </details>
+
+  <h3>🔥 도전 문제 — 시간 여유 있을 때만</h3>
+
+  <details class="warn" style="margin:10px 0">
+    <summary><strong>도전 1.</strong> $\vec E = -\nabla V$를 1차원에서 직접 계산. $V(x) = 10 - 3x + x^2/2$ (V, m). $x = 2\,\text{m}$에서의 전기장은?</summary>
+    <p style="margin-top:10px">$E_x = -dV/dx = -(-3 + x) = 3 - x$. $x = 2$에서 $E_x = 3 - 2 = 1\,\text{V/m}$ (양의 $x$ 방향).</p>
+  </details>
+
+  <details class="warn" style="margin:10px 0">
+    <summary><strong>도전 2.</strong> 반지름 $R$의 도체구를 $V_0$로 충전. 표면에서 거리 $r$ ($r > R$)에서의 전위와 전기장을 구하라.</summary>
+    <p style="margin-top:10px">도체구 표면 전위 $V_0 = kQ/R$ → $Q = V_0 R/k$.<br>
+    외부 ($r > R$)에서는 모든 전하가 중심에 있는 점전하처럼 행동: $V(r) = kQ/r = V_0 R/r$.<br>
+    전기장: $E(r) = kQ/r^2 = V_0 R/r^2$ (방사 방향). 도체 내부($r < R$)에서는 $E = 0$, $V = V_0$ (균일).</p>
+  </details>
+
+  <details class="warn" style="margin:10px 0">
+    <summary><strong>도전 3 (반쪽 유전체).</strong> 평행판 축전기 ($A$, $d$) 의 절반을 $\kappa$ 유전체로 채웠다. 두 가지 경우 — (i) 좌·우로 채운 경우, (ii) 위·아래(판에 수평하게)로 채운 경우 — 각각의 $C$는?</summary>
+    <p style="margin-top:10px">(i) <strong>좌우 절반</strong>: 두 축전기가 <em>병렬</em>. 각각 면적 $A/2$.<br>
+    $C = \varepsilon_0 (A/2)/d + \kappa \varepsilon_0 (A/2)/d = \dfrac{\varepsilon_0 A}{2d}(1 + \kappa)$.<br>
+    (ii) <strong>위아래 절반</strong>: 두 축전기가 <em>직렬</em>. 각각 두께 $d/2$.<br>
+    $1/C = \dfrac{d/2}{\varepsilon_0 A} + \dfrac{d/2}{\kappa \varepsilon_0 A}$ → $C = \dfrac{2\kappa \varepsilon_0 A}{(1+\kappa)d}$.<br>
+    두 결과는 일반적으로 다르다. (배치에 따라 정전용량이 달라짐 — 산업 설계의 핵심.)</p>
+  </details>
+
+  <h2>❓ 학생 FAQ — 자주 묻는 15가지</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q1.</strong> 전위와 전기장은 무엇이 다른가요?</summary>
+    <p style="margin-top:10px">전위 $V$는 <strong>스칼라</strong>(크기만), 단위 V (= J/C). 전기장 $\vec E$는 <strong>벡터</strong>(방향 있음), 단위 V/m (= N/C). 둘 사이 관계: $\vec E = -\nabla V$ (전위가 가장 가파르게 떨어지는 방향이 전기장).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q2.</strong> 축전기에 "전기를 저장한다"는 게 정확히 뭘 저장한다는 뜻인가요?</summary>
+    <p style="margin-top:10px">두 가지를 동시에 저장합니다. (1) <strong>전하 $Q$</strong> — 한 판에 +Q, 반대 판에 -Q. (2) <strong>에너지 $U = \tfrac{1}{2}CV^2$</strong> — 두 판 사이 <em>전기장이 만든 공간</em>에 저장. 에너지 밀도 $u_E = \tfrac{1}{2}\varepsilon_0 E^2$가 이 사실의 정량적 표현.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q3.</strong> 1 F는 왜 그렇게 큰 단위인가요?</summary>
+    <p style="margin-top:10px">$1\,\text{F} = 1\,\text{C}/\text{V}$. 1 C는 어마어마한 전하(지구를 살짝 띄울 정도). 그래서 전자제품 캐패시터는 보통 μF, nF, pF 단위. 1 F짜리 슈퍼커패시터는 손바닥 크기쯤 됩니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q4.</strong> 전압이 0이라고 하면 전위가 0인 건가요?</summary>
+    <p style="margin-top:10px">전위는 <strong>기준점</strong>에 따라 달라집니다. 보통 무한대를 0으로 잡거나, 회로에서는 접지(GND)를 0으로 잡음. <strong>물리적으로 의미 있는 건 차이 $\Delta V$</strong>. 산의 절대 높이는 해수면 기준이지만, 산을 오르는 데 드는 일은 시작 높이와 끝 높이의 <em>차이</em>로 결정되는 것과 같음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q5.</strong> 등전위면을 따라 움직이면 왜 일이 0인가요?</summary>
+    <p style="margin-top:10px">$W = q\Delta V$. 등전위면 위 두 점은 $V$가 같음 → $\Delta V = 0$ → $W = 0$. 산의 등고선을 따라 옆으로 걸으면 위치에너지가 안 변하는 것과 정확히 같음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q6.</strong> $\vec E = -\nabla V$의 마이너스는 왜 붙나요?</summary>
+    <p style="margin-top:10px">전기장은 +전하가 받는 힘의 방향 = 전위가 <em>낮은</em> 쪽 방향. 그런데 $\nabla V$는 전위가 가장 빨리 <em>증가</em>하는 방향. 그래서 부호를 뒤집어야 일치. (중력에서 $\vec g = -\nabla \Phi$의 마이너스와 같은 이유.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q7.</strong> 평행판 축전기에서 거리 $d$를 0으로 만들면 $C$가 무한대?</summary>
+    <p style="margin-top:10px">이론적으론 그렇지만, 실제로는 두 가지 한계: (1) 유전체의 <strong>절연 파괴</strong>(공기는 $E \approx 3\times 10^6\,\text{V/m}$에서 스파크) — 너무 가까우면 $E$가 폭주. (2) 판이 닿으면 단락. 그래서 실용 캐패시터는 $d \sim$ 마이크로미터 수준이 한계.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q8.</strong> 유전체를 끼우면 $C$가 왜 커지나요?</summary>
+    <p style="margin-top:10px">유전체 안에서 분자가 약하게 분극(쌍극자가 정렬) → 판 표면에 유도된 반대 부호 표면 전하 → 두 판 사이 알짜 $E$가 약해짐 → 같은 $Q$에 대해 $V$가 줄어듦 → $C = Q/V$가 커짐. ($\kappa$배 정확히.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q9.</strong> 전위차가 같으면 어떤 전하든 같은 일을 받나요?</summary>
+    <p style="margin-top:10px">아니요. $W = q\Delta V$. <strong>전하의 부호와 크기에 따라</strong> 일이 다름. +1 C이 1 V 떨어지면 +1 J(자연스럽게 떨어짐), -1 C이면 -1 J(외부 일이 필요). 전위 자체가 1 C당 위치에너지일 뿐이고, 실제 일은 <em>전하를 곱해야</em> 나옴.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q10.</strong> 신경세포에도 축전기가 있다는데 정말인가요?</summary>
+    <p style="margin-top:10px">네. 세포막은 두께 $\sim$ 5 nm의 지질 이중층(절연체). 안팎으로 이온이 +/- 분포 → 쌍판 콘덴서. 막 정전용량 $\sim 1\,\mu\text{F/cm}^2$, 막 전압 $\sim$ 70 mV. 이 작은 콘덴서들의 빠른 충·방전이 신경 신호. (Hodgkin–Huxley 1952 노벨상.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q11.</strong> 직렬 축전기에선 왜 모든 축전기에 같은 전하가 흐르나요?</summary>
+    <p style="margin-top:10px">처음에 둘 사이 전선은 중성. 외부에서 +Q가 첫 판에 모이면, 정전기 유도로 두 번째 판에는 -Q, 그 두 번째 축전기의 첫 판에는 다시 +Q... 즉 같은 양의 전하가 <em>유도되어</em> 줄줄이 분리됨. 회로 어디서도 외부와 전하가 추가로 들어오지 않으므로 $|Q|$가 모두 같음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q12.</strong> 9V 건전지를 혀에 대면 따끔. 100 V 정전기는 더 큰데 왜 안 따끔?</summary>
+    <p style="margin-top:10px">전류 = 전하/시간. 정전기는 전하량이 매우 작아($\sim$ nC) 순간에 끝나면 전류는 작은 값×0(짧은 시간) = 거의 0의 에너지 전달. 9V 건전지는 지속적으로 전하 공급 → 혀 같은 저항이 낮은 곳에 mA의 전류가 꾸준히. 위험은 (전류) × (시간) × (경로 — 심장 통과 여부)에 달려 있음.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q13.</strong> 슈퍼커패시터는 배터리와 어떻게 다른가요?</summary>
+    <p style="margin-top:10px">배터리는 화학반응으로 에너지 저장(느린 충·방전, 고에너지 밀도). 슈퍼캡은 <em>전하 분리</em>로 저장(빠른 충·방전, 낮은 에너지 밀도지만 매우 높은 출력 밀도). KTX·전기버스의 회생제동에 슈퍼캡 + 배터리 조합. 슈퍼캡은 수만 번 충·방전 가능(배터리는 천 번 수준).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q14.</strong> 콘덴서·캐패시터·축전기 — 다 같은 말인가요?</summary>
+    <p style="margin-top:10px">네. <strong>축전기</strong>(한자식)와 <strong>캐패시터</strong>(영어 capacitor)는 동의어. <strong>콘덴서</strong>는 일본어식 표현이지만 한국 산업계에선 자주 쓰임. 모두 같은 부품. 본 강의에선 축전기/캐패시터를 사용.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q15.</strong> 시험 1주 전에 W11을 어떻게 복습할까요?</summary>
+    <p style="margin-top:10px">(1) 핵심 공식 5개 — $V = kQ/r$, $\Delta V = -\int \vec E\cdot d\vec l$, $C = Q/V$, $C_\text{평행판} = \varepsilon_0 A/d$, $U = \tfrac{1}{2}CV^2$. (2) 직렬·병렬 합성 1번씩만 손으로. (3) 데모 1·3 한 번씩 가지고 놀기. (4) 자주 틀리는 계산 실수 BEST 10 빠르게 훑기. (5) Halliday 24·25장 끝 문제 5개. — 1.5시간 충분.</p>
+  </details>
+
+  <h2>📝 자주 틀리는 계산 실수 BEST 10</h2>
+  <table>
+    <thead><tr><th>#</th><th>실수</th><th>맞는 풀이</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>직렬에서 $C_\text{eq} = C_1 + C_2$로 계산 (저항과 헷갈림)</td><td>직렬은 <strong>역수의 합</strong>: $1/C_\text{eq} = 1/C_1 + 1/C_2$. 결과는 가장 작은 $C$보다 더 작아야 함(검산).</td></tr>
+      <tr><td>2</td><td>병렬에서 $1/C_\text{eq} = 1/C_1 + 1/C_2$로 계산</td><td>병렬은 <strong>단순 합</strong>: $C_\text{eq} = C_1 + C_2$. 가장 큰 $C$보다 커야 함.</td></tr>
+      <tr><td>3</td><td>$U = \tfrac{1}{2}CV$ (제곱 빠뜨림)</td><td>$U = \tfrac{1}{2}CV^2 = \tfrac{1}{2}QV = Q^2/(2C)$. 셋 다 같은 식.</td></tr>
+      <tr><td>4</td><td>전위와 전위차를 혼동 — "5 V 점"의 의미</td><td>전위는 <em>기준점에 대한</em> 상대값. "5 V 점"은 보통 접지(0 V)에 대해 5 V 높음을 의미.</td></tr>
+      <tr><td>5</td><td>$V = kQ/r$에서 $Q$ 부호 무시</td><td>$Q < 0$이면 $V < 0$. 부호 그대로 대입.</td></tr>
+      <tr><td>6</td><td>여러 점전하 전위 계산을 벡터합처럼</td><td>전위는 <strong>스칼라</strong>. 부호 포함해 단순 산술합. 벡터합은 전기장에 한정.</td></tr>
+      <tr><td>7</td><td>$E = V/d$를 점전하에 적용</td><td>$E = V/d$는 <em>균일 전기장(평행판 내부)</em>에서만. 점전하 주변은 $E = kQ/r^2$, $V = kQ/r$.</td></tr>
+      <tr><td>8</td><td>유전체 삽입 시 $C$만 곱하고 $Q$는 그대로 본다</td><td>"같은 전압" 유지면 $Q = CV$도 $\kappa$배. "$Q$ 보존(배터리 끊김)"이면 $V$가 1/$\kappa$배. 어떤 조건인지 명시!</td></tr>
+      <tr><td>9</td><td>단위 환산 — μF·V·μC 사이</td><td>μF × V = μC. 항상 SI(F, V, C)로 일단 환산하면 안전. $1\,\mu = 10^{-6}$, $1\,\text{n} = 10^{-9}$, $1\,\text{p} = 10^{-12}$.</td></tr>
+      <tr><td>10</td><td>"전위차로 가속" 문제에서 부호 헷갈림</td><td>전자(-)는 <em>전위가 높은</em> 쪽으로 가속, 양성자(+)는 <em>전위가 낮은</em> 쪽으로. KE 증가량 = $|q\Delta V|$로 계산하면 안전.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🧪 5분 실험 — 직접 해보세요</h2>
+
+  <h3>실험 A — 라이덴 병(Leyden jar) 만들기</h3>
+  <p>가장 오래된 축전기. 1745년 라이덴대학에서 발견되어 정전기 폭풍을 가두는 데 쓰임.</p>
+  <ol>
+    <li><strong>준비물:</strong> 유리병(또는 플라스틱 병) 1개, 알루미늄 호일, 못, 풍선.</li>
+    <li>유리병 외부 절반을 알루미늄 호일로 감싼다(외부 전극).</li>
+    <li>병 안에도 호일을 채운다(내부 전극).</li>
+    <li>뚜껑에 못을 박아 내부 호일과 닿게 한다.</li>
+    <li>풍선을 머리에 비벼 정전기 → 못에 여러 번 갖다 대 충전.</li>
+    <li>외부 호일과 못을 동시에 만지면 — <strong>찌릿!</strong> (살짝, 무서워 마세요. 1~2 nF 정도라 위험하지 않음.)</li>
+  </ol>
+  <p>이 실험으로 평행판이 아닌 <em>실린더 형태</em>의 축전기도 같은 원리로 작동함을 확인.</p>
+
+  <h3>실험 B — 멀티미터로 콘덴서 충·방전 측정</h3>
+  <ol>
+    <li><strong>준비물:</strong> 1000 μF 전해 콘덴서, 9V 건전지, 멀티미터(전압 모드), 100 kΩ 저항(선택).</li>
+    <li>콘덴서 +단자에 건전지 +, −단자에 건전지 − — 약 5초 충전.</li>
+    <li>건전지 분리. 멀티미터로 콘덴서 양단 전압 측정 → 약 9 V 가까이 유지(서서히 자기방전).</li>
+    <li>100 kΩ 저항으로 양단 단락 → 시정수 $\tau = RC = (10^5)(10^{-3}) = 100\,\text{s}$. 전압이 약 100초 만에 1/e ≈ 37%로 감소.</li>
+    <li>$\tau$를 멀티미터로 직접 측정해 다음 주(W12) RC 회로 미리 체험.</li>
+  </ol>
+  <div class="warn"><strong>주의:</strong> 전해 콘덴서는 <strong>극성</strong> 있음. + 단자를 반대로 연결하면 폭발할 수 있음. 표시(긴 다리/+ 마크) 확인.</div>
+
+  <h2>🌍 실생활 데이터 — 다양한 축전기의 정전용량</h2>
+  <table>
+    <thead><tr><th>분류</th><th>예시</th><th>정전용량 $C$</th><th>전압</th><th>저장 에너지(대략)</th></tr></thead>
+    <tbody>
+      <tr><td>RF·고주파</td><td>휴대폰 안테나 매칭 콘덴서</td><td>0.1–10 pF</td><td>5 V</td><td>수 pJ</td></tr>
+      <tr><td>디지털 회로</td><td>마이크로컨트롤러 디커플링</td><td>100 nF (= 0.1 μF)</td><td>3.3 V</td><td>0.5 μJ</td></tr>
+      <tr><td>오디오 필터</td><td>스피커 크로스오버</td><td>1–10 μF</td><td>~30 V</td><td>0.5–5 mJ</td></tr>
+      <tr><td>전원 평활</td><td>핸드폰 충전기 내부</td><td>100–470 μF</td><td>16 V</td><td>13–60 mJ</td></tr>
+      <tr><td>카메라 플래시</td><td>일회용 카메라</td><td>80–300 μF</td><td>330 V</td><td>4–16 J</td></tr>
+      <tr><td>제세동기</td><td>병원·AED</td><td>30–100 μF</td><td>2 kV</td><td>60–200 J</td></tr>
+      <tr><td>슈퍼커패시터</td><td>전기버스 회생제동</td><td>100–3000 F</td><td>2.7 V</td><td>360 J–11 kJ</td></tr>
+      <tr><td>생체</td><td>신경세포 막</td><td>1 μF/cm² × $10^{-5}$ cm² ≈ 10 pF</td><td>70 mV</td><td>~25 fJ</td></tr>
+      <tr><td>지구 대기</td><td>지면 ↔ 이오노스피어</td><td>~ 1 F</td><td>~ 300 kV</td><td>~ 50 MJ (지구 전체 — 번개의 원천)</td></tr>
+    </tbody>
+  </table>
+  <div class="note">크기 비율을 보면 — 신경세포 콘덴서 한 개 ↔ 휴대폰 충전기 콘덴서: 약 $10^7$배. 지구 대기 콘덴서 ↔ 신경세포: $10^{11}$배. 같은 식 $C = Q/V$로 11자리 스케일을 통합해서 다룰 수 있다는 점이 물리의 힘.</div>
+
+  <h2>🏟️ 실생활 응용 5가지</h2>
+
+  <h3>1. 카메라 플래시 — "천천히 모았다 한 번에"</h3>
+  <p>일회용 카메라 또는 DSLR 플래시는 100–300 μF, 330 V 캐패시터. 1.5 V 건전지로 부스터 회로(승압)를 통해 약 10초간 충전 → 셔터와 동시에 0.001초에 모든 에너지(≈ 10 J)를 크세논 가스 전구에 방전. 순간 출력 $P \approx 10\,\text{kW}$. <strong>핵심: 평균 출력은 작아도 순간 출력은 거대.</strong> 같은 원리가 레이저 펄스, 전기 충격기, 입자가속기 1차단에도.</p>
+
+  <h3>2. 컴퓨터 메모리 (DRAM) — 비트당 1개의 콘덴서</h3>
+  <p>현대 컴퓨터 RAM의 주력인 DRAM은 비트당 트랜지스터 1개 + <strong>콘덴서 1개</strong>. 콘덴서가 충전되어 있으면 1, 비어 있으면 0. 콘덴서 크기 약 30 fF (10⁻¹⁵ F). 자기방전이 빠르므로 <em>밀리초마다</em> 다시 충전(refresh) 필요 — 그래서 "Dynamic RAM". 8 GB 메모리에 콘덴서가 약 640억 개. 본 강의 식 $C = \varepsilon_0 A/d$를 나노미터 스케일로 적용한 결과.</p>
+
+  <h3>3. 슈퍼커패시터 + 전기차 — 회생제동의 핵심</h3>
+  <p>전기버스·KTX의 브레이크는 모터를 발전기로 역전. 그러나 갑자기 큰 전류가 나오면 배터리가 못 받음(고출력 충전은 배터리 수명 단축). <strong>슈퍼캡이 첫 1~2초의 큰 전류를 흡수</strong>한 뒤 천천히 배터리로 전달. 30 ~ 50% 에너지 회수. 한국 광주 슈퍼캡 트램(2014~)이 대표 사례.</p>
+
+  <h3>4. 터치스크린 — 손가락이 만든 정전용량 변화</h3>
+  <p>스마트폰 터치스크린은 투명 전극 격자 사이의 미세 콘덴서들. 손가락이 가까워지면 <strong>유전체(인체)</strong>가 끼어든 효과 → 정전용량이 약 1 pF 변화. 칩이 그 변화를 감지해 위치 결정. 멀티터치(여러 손가락 동시)도 격자 분리로 가능. <em>장갑 끼면 안 되는 이유</em>: 장갑이 또 다른 유전체로 작용해 정전용량 변화가 줄어듦.</p>
+
+  <h3>5. 심장 제세동기 — 200 J 캐패시터</h3>
+  <p>병원·공항의 AED(자동제세동기)는 약 30–100 μF, 1500–2000 V 캐패시터. 부정맥(심실세동)에서 심장 전기 신호가 무질서해지면, 큰 전기 펄스로 모든 심근세포를 동시에 "리셋"한 뒤 정상 박동을 다시 시작. 200 J을 약 5 ms 동안 방출 → 순간 출력 40 kW. <strong>$U = \tfrac{1}{2}CV^2$의 문자 그대로 생명을 살리는 응용.</strong></p>
+
+  <div class="tip">5가지 모두 같은 원리: <strong>저전류로 천천히 모은 에너지를 한 번에 방출</strong>하거나(플래시·제세동기·슈퍼캡), <strong>매우 작은 정전용량 변화를 감지</strong>(터치스크린·DRAM 누설 모니터링)하는 두 패턴.</div>
+
+  <h2>📚 부록 — 대표 유전체의 유전상수 $\kappa$</h2>
+  <table>
+    <thead><tr><th>물질</th><th>$\kappa$ (상온)</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>진공</td><td>1.000 (정의)</td><td>$\varepsilon_0 = 8.854\times 10^{-12}\,\text{F/m}$</td></tr>
+      <tr><td>공기 (1 atm)</td><td>1.0006</td><td>실용적으론 진공과 동일</td></tr>
+      <tr><td>테플론(PTFE)</td><td>2.1</td><td>저손실 RF 케이블</td></tr>
+      <tr><td>종이</td><td>~ 3</td><td>구식 콘덴서</td></tr>
+      <tr><td>마이카(운모)</td><td>3–6</td><td>고온·고전압 안정</td></tr>
+      <tr><td>유리(파이렉스)</td><td>~ 5</td><td>라이덴 병</td></tr>
+      <tr><td>네오프렌(고무)</td><td>~ 6.7</td><td>유연 콘덴서</td></tr>
+      <tr><td>실리콘 산화물 ($\text{SiO}_2$)</td><td>3.9</td><td>반도체 게이트 절연</td></tr>
+      <tr><td>물(증류수)</td><td>~ 80</td><td>생체에서 큰 영향. 주파수 의존성.</td></tr>
+      <tr><td>티탄산바륨(BaTiO₃)</td><td>~ 1000</td><td>강유전체. 세라믹 콘덴서.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📐 SI 단위 정리</h2>
+  <table>
+    <thead><tr><th>양</th><th>기호</th><th>SI 단위</th><th>풀어쓰기</th></tr></thead>
+    <tbody>
+      <tr><td>전위·전압</td><td>$V$, $\Delta V$</td><td>볼트 V</td><td>1 V = 1 J/C</td></tr>
+      <tr><td>전기장</td><td>$\vec E$</td><td>V/m</td><td>1 V/m = 1 N/C</td></tr>
+      <tr><td>정전용량</td><td>$C$</td><td>패럿 F</td><td>1 F = 1 C/V = 1 C²/J</td></tr>
+      <tr><td>전하</td><td>$Q$</td><td>쿨롱 C</td><td>1 C = 1 A·s</td></tr>
+      <tr><td>에너지</td><td>$U$</td><td>줄 J</td><td>1 J = 1 V·C = 1 N·m</td></tr>
+      <tr><td>유전율</td><td>$\varepsilon = \kappa\varepsilon_0$</td><td>F/m</td><td>$\varepsilon_0 = 8.854\times 10^{-12}\,\text{F/m}$</td></tr>
+      <tr><td>에너지 밀도</td><td>$u_E$</td><td>J/m³</td><td>= F·V²/m³</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>단위 점검 트릭.</strong> 식이 의심스러우면 SI 단위로 풀어 좌우 일치 여부를 확인. 예: $U = \tfrac{1}{2}CV^2$ → [F][V²] = [C/V][V²] = [CV] = [J]. ✓</div>
+
+  <h2>🗺️ 개념 지도 — W11이 어디에 위치하나</h2>
+  <pre><code>            [W10. 전기장 E, 가우스 법칙]
+                       │  적분(선적분)으로 V 정의
+                       ▼
+            ┌─────────────────────────┐
+            │   W11. 전위 V, 축전기 C │  ← 지금 여기
+            │   E = -∇V, C = Q/V       │
+            │   U = ½CV², u_E = ½ε₀E²  │
+            └─────────────────────────┘
+                       │
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+ [W12. 회로/RC]  [W13. 자기장 B]  [W14. LC 진동·전자기파]
+  τ=RC, KCL/KVL   움직이는 전하    L↔C 에너지 교환
+                                  c² = 1/(ε₀μ₀)</code></pre>
+  <ul>
+    <li><strong>W10 → W11</strong>: 전기장의 선적분 = 전위차. $V$는 $E$의 적분, $E$는 $V$의 미분(부호 뒤집고).</li>
+    <li><strong>W11 → W12</strong>: 캐패시터 + 저항이 만나면 시정수 $\tau = RC$의 충·방전 곡선. $V_C(t) = V_0(1 - e^{-t/\tau})$.</li>
+    <li><strong>W11 → W14</strong>: 캐패시터(전기 에너지) ↔ 인덕터(자기 에너지)가 교대로 에너지 교환 → LC 진동. 전자기파의 출발점.</li>
+    <li><strong>W11 → 양자역학</strong>: 같은 1/r 위치에너지 형태가 수소 원자 슈뢰딩거 방정식의 출발(2학년 양자물리).</li>
+  </ul>
+
+  <h2>🎯 시험 직전 5분 노트</h2>
+  <div class="tip">
+    시험장 입장 5분 전에 이것만 머릿속에 다시 그려라:
+    <ol>
+      <li><strong>전위 $V$</strong> = 1 C당 위치에너지 (스칼라). 점전하 $V = kQ/r$, 평행판 안 $V = Ed$.</li>
+      <li><strong>전위차 $\Delta V = -\int \vec E\cdot d\vec l$</strong>. 등전위 $\Rightarrow$ $W=0$.</li>
+      <li><strong>$\vec E = -\nabla V$</strong>. 1D는 $E_x = -dV/dx$. 음의 부호 잊지 말 것.</li>
+      <li><strong>축전기 $C = Q/V$.</strong> 평행판 $C = \varepsilon_0 A/d$. 유전체 $C = \kappa C_0$.</li>
+      <li><strong>저장 에너지 $U = \tfrac{1}{2}CV^2 = Q^2/(2C) = \tfrac{1}{2}QV$.</strong> 셋 다 동치.</li>
+      <li><strong>병렬</strong>: $C_\text{eq} = \sum C_i$ (단순 합). <strong>직렬</strong>: $1/C_\text{eq} = \sum 1/C_i$ (역수 합). <em>저항과 반대!</em></li>
+      <li><strong>전위차로 가속</strong>: $|q|\Delta V = \tfrac{1}{2} m v^2$. 부호는 가속 방향만 결정.</li>
+      <li><strong>에너지 밀도 $u_E = \tfrac{1}{2}\varepsilon_0 E^2$.</strong> 빈 공간 $E$만으로 에너지 보유.</li>
+    </ol>
+    8가지 전부 한 줄 식으로 백지에 쓸 수 있으면 W11 문제는 다 풀린다.
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>🚦 진단 트리 — 시험에 어떤 식 쓸까?</strong>
+    <ul>
+      <li>"점전하의 전위" → $V = kQ/r$, 부호 그대로.</li>
+      <li>"전위차로 가속된 입자 속도" → $|q|\Delta V = \tfrac{1}{2} mv^2$.</li>
+      <li>"평행판 정전용량 또는 두 판 사이 전기장" → $C = \varepsilon_0 A/d$, $E = V/d$.</li>
+      <li>"축전기에 저장된 에너지" → $U = \tfrac{1}{2}CV^2$ (전압 알 때) 또는 $Q^2/(2C)$ (전하 알 때).</li>
+      <li>"여러 축전기 회로 → 합성 $C$" → 직렬·병렬 5단계 절차.</li>
+      <li>"유전체 삽입 후 $V$ 또는 $Q$" → 배터리 연결 여부 먼저 확인! 연결 = $V$ 일정, 분리 = $Q$ 일정.</li>
+    </ul>
+  </div>
+
+  <h2>🎓 1분 미니퀴즈 — 5문항</h2>
+  <p>아래 5문항을 1분 안에 머릿속으로 답하고 토글로 확인. 4개 이상 맞으면 W11 OK.</p>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 1.</strong> 1 V = ?</summary>
+    <p style="margin-top:8px">1 J/C. 1 쿨롱이 1 J의 위치에너지를 가질 때의 전위.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 2.</strong> 평행판 축전기 거리를 2배로 늘리면 정전용량은? (배터리 분리 조건)</summary>
+    <p style="margin-top:8px">$C = \varepsilon_0 A/d$ → 1/2배. $Q$는 보존되므로 $V$는 2배로 증가.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 3.</strong> 두 캐패시터 4 μF, 12 μF를 직렬 연결한 합성?</summary>
+    <p style="margin-top:8px">$(4\cdot 12)/(4+12) = 3\,\mu\text{F}$. 가장 작은 것보다 작아야 함을 확인.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 4.</strong> 등전위면과 전기장선의 각도?</summary>
+    <p style="margin-top:8px">항상 90° (수직). 그렇지 않으면 전기장에 수평 성분이 있어 등전위면 위에서도 일이 0이 아닌 모순 발생.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 5.</strong> $C = 100\,\mu\text{F}$를 100 V로 충전했을 때 저장 에너지?</summary>
+    <p style="margin-top:8px">$U = \tfrac{1}{2}(10^{-4})(10^4) = 0.5\,\text{J}$. 작은 LED 1초 켤 정도.</p>
+  </details>
+
+  <h2>📖 더 깊이 — 참고자료</h2>
+  <ul>
+    <li><strong>Halliday, Resnick, Walker</strong>, <em>Fundamentals of Physics</em> — 24장(전위), 25장(축전기). 한국어판 풍부한 예제, 각 장 끝 문제.</li>
+    <li><strong>Khan Academy 한국어 — 전기 위치에너지·축전기</strong> (무료): 단계별 영상 + 즉시 채점.</li>
+    <li><strong>Walter Lewin MIT 8.02 Lecture 4–7</strong>: 전위와 축전기의 가장 시각적인 강의(영어, 자막). Lewin이 손수 그리는 등전위면 시연.</li>
+    <li><strong>PhET <em>Capacitor Lab</em></strong> (<a href="https://phet.colorado.edu/sims/cheerpj/capacitor-lab/latest/capacitor-lab.html">phet.colorado.edu</a>): 면적·거리·유전체·배터리 연결을 직접 끌어 비교. 본 데모와 동일 원리.</li>
+    <li><strong>3Blue1Brown</strong>, <em>Divergence and Curl</em> 영상: $\nabla$ 연산자의 시각적 직관.</li>
+    <li><strong>EEVblog</strong> 슈퍼커패시터 분해 영상: 진짜 슈퍼캡이 어떻게 생겼는지.</li>
+    <li><strong>HyperPhysics</strong> Capacitor 트리(<a href="http://hyperphysics.phy-astr.gsu.edu/hbase/electric/capac.html">hyperphysics</a>): 모든 축전기 공식의 그래픽 요약.</li>
+  </ul>
+
+  <h2>📋 학습 체크리스트</h2>
+  <div class="tip">
+    이번 주 끝나기 전에 다음을 모두 ✅ 표시할 수 있는지 확인하세요:
+    <ul style="list-style:none;padding-left:0">
+      <li>☐ 전위 $V$의 정의(1 C당 위치에너지)를 산-높이 비유로 설명할 수 있다.</li>
+      <li>☐ $\vec E = -\nabla V$를 1D에서 $E_x = -dV/dx$로 적용할 수 있다.</li>
+      <li>☐ 등전위면이 전기장과 항상 수직임을 그림 + 한 줄 논증으로 보일 수 있다.</li>
+      <li>☐ $C = \varepsilon_0 A/d$를 외우지 않고 $C = Q/V$ + 균일장 $E = V/d$에서 유도할 수 있다.</li>
+      <li>☐ 직렬·병렬 합성 공식을 저항과 헷갈리지 않는다.</li>
+      <li>☐ 축전기 5단계 합성 절차로 혼합 회로를 풀 수 있다.</li>
+      <li>☐ "배터리 연결" vs "배터리 분리" 조건에서 $V$, $Q$, $U$가 어떻게 다르게 변하는지 한 표로 정리할 수 있다.</li>
+      <li>☐ 유전체 삽입이 $C$를 $\kappa$배로 만드는 분극 메커니즘을 한 문장으로 설명한다.</li>
+      <li>☐ 데모 1·2·3을 직접 가지고 놀아 봤다.</li>
+      <li>☐ 자주 틀리는 계산 실수 BEST 10을 한 번 읽어봤다.</li>
+      <li>☐ 연습문제 12개 중 7개 이상을 풀이 없이 풀 수 있다.</li>
+      <li>☐ 1분 미니퀴즈 5문제를 모두 맞췄다.</li>
+      <li>☐ 실생활 응용 5가지(플래시·DRAM·슈퍼캡·터치스크린·제세동기) 중 3개 이상의 작동 원리를 한 문단으로 쓸 수 있다.</li>
+    </ul>
+    하나라도 막히면 그 섹션으로 돌아가 다시 5분만 보세요.
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>학습 시간 가이드</strong> — 평균적인 학생이 본 페이지를 처음 끝까지 읽는 데 약 100분.
+    데모 3개와 연습문제 12개까지 모두 따라가면 약 3.5시간.
+    시험 1주 전에는 미니퀴즈 + 시험 직전 5분 노트 + 자주 틀리는 실수 BEST 10 위주로 1.5시간이면 복습 끝.
+  </div>
+
+  <h2>📚 추가 학습 가이드</h2>
+
+  <h3>🎓 단계별 복습 일정 — 일주일/하루/한 시간 전</h3>
+  <table>
+    <thead><tr><th>시점</th><th>해야 할 것</th><th>피해야 할 것</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1주 전</strong></td><td>강의안 통독 1회, 인터랙티브 데모 모두 직접 조작, 연습문제 풀이 시도</td><td>한 번에 다 외우려 하기</td></tr>
+      <tr><td><strong>3일 전</strong></td><td>FAQ + 자주 틀리는 실수 정독, 미니퀴즈로 자가 진단, 막힌 부분 강의안 다시</td><td>아예 새 자료 시작</td></tr>
+      <tr><td><strong>1일 전</strong></td><td>핵심 식 + 시험 직전 5분 노트만, 일찍 잠</td><td>밤샘 공부, 새 유형 풀이 시도</td></tr>
+      <tr><td><strong>1시간 전</strong></td><td>시험 직전 5분 노트만 차분히 읽기</td><td>시험장에서 새 문제 풀어보기, 친구 답 비교</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🧭 학습 우선순위 — 시간이 부족할 때</h3>
+  <p>모든 섹션을 다 보지 못할 때 다음 우선순위로:</p>
+  <ol>
+    <li><strong>핵심 식 + 자주 틀리는 실수</strong> (시험 점수에 직접 영향)</li>
+    <li><strong>인터랙티브 데모 1-2개 직접 조작</strong> (직관 형성)</li>
+    <li><strong>연습문제 5-7개 풀이</strong> (실전 감각)</li>
+    <li><strong>FAQ 정독</strong> (헷갈리는 개념 정리)</li>
+    <li>응용 / 실생활 데이터 (여유 있을 때)</li>
+  </ol>
+
+  <h3>📓 효율적인 노트 정리</h3>
+  <div class="tip">
+    <ul>
+      <li><strong>한 페이지 요약</strong>: 시험 직전 5분 노트의 핵심을 손으로 다시 적기. 손글씨가 기억에 강함.</li>
+      <li><strong>색깔 구분</strong>: 식 (파랑) / 단위 (초록) / 자주 틀림 표시 (빨강) — 시각적 인덱싱.</li>
+      <li><strong>오답 노트</strong>: 연습문제에서 틀린 문제 → 어디서 헷갈렸는지 한 줄 메모. 재시험 직전에만 다시 봄.</li>
+    </ul>
+  </div>
+
+  <h3>🔗 다음 강의 준비 — 자가점검 3문</h3>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>자가점검 1.</strong> 이번 주 가장 중요한 식 한 개를 외우지 않고 유도할 수 있나요?</summary>
+    <p style="margin-top:10px">"왜 그 식이 나오는가"를 설명할 수 있으면 OK. 못 한다면 단계별 사고 과정으로 돌아가 한 번 더 따라가 보세요.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>자가점검 2.</strong> 인터랙티브 데모를 모두 직접 조작해 보았나요?</summary>
+    <p style="margin-top:10px">슬라이더로 극단값(최소, 최대, 0)을 시험해 보세요. 식의 의미가 더 명확해집니다.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>자가점검 3.</strong> 자주 틀리는 계산 실수 BEST 10 중 본인이 평소 자주 하는 것 1-2개를 의식하고 있나요?</summary>
+    <p style="margin-top:10px">시험장에서 그 항목만 한 번 더 의심하면 점수가 한 학점 차이 납니다.</p>
+  </details>
+
+  <h3>🌐 더 많은 자료가 필요할 때</h3>
+  <ul>
+    <li><strong>YouTube</strong>: <em>Khan Academy Korean</em>(한국어 자막), <em>Walter Lewin MIT 8.01/8.02</em>(영어 + 자막), <em>3Blue1Brown</em>(미적분·선형대수 직관 영상)</li>
+    <li><strong>모의 시험</strong>: 한국물리올림피아드(KPhO) 기출, 대학수학능력시험 물리 II</li>
+    <li><strong>오픈코스</strong>: <a href="https://ocw.mit.edu/courses/8-01sc-classical-mechanics-fall-2016/">MIT OCW 8.01</a>, <a href="https://www.edwith.org/">edwith.org</a> 한국어 강의</li>
+  </ul>
+
+  <h3>💪 학습 동기 — 이 주차가 어디로 이어지는가</h3>
+  <div class="note">
+    이번 주 배운 것은 단순히 시험 끝나면 잊는 지식이 아닙니다.
+    <ul>
+      <li>학부 4학년 <strong>자율주행 / 로봇공학 / 모델예측제어(MPC)</strong> 강의에서 그대로 응용</li>
+      <li>대학원 <strong>제어공학 · 동역학 · 항공우주공학</strong> 연구의 출발점</li>
+      <li>실무에서 <strong>전자제품 설계 · 게임 물리 엔진 · 시뮬레이션</strong>에 직접 사용</li>
+    </ul>
+    <strong>지금의 한 시간 투자 = 4학년 한 학기 절약.</strong> 기초가 든든해야 위에 쌓을 게 있습니다.
+  </div>
+
+  <h3>🔋 추가 응용 — 축전기가 어디까지 가는가</h3>
+  <ul>
+    <li><strong>슈퍼커패시터(EDLC)</strong>: 배터리만큼 에너지 저장하면서 충전이 수십 배 빠름. 전기버스·트램에 사용.</li>
+    <li><strong>디커플링 캡</strong>: 모든 전자제품 PCB 위 칩 옆에 작은 세라믹 캡(0.1 μF)이 수십~수백 개. 전원 노이즈 차단.</li>
+    <li><strong>심장 제세동기(AED)</strong>: $200~360$ J을 큰 캡에 충전 후 1 ms에 방전 → 평균 출력 ≈ 200 kW. 멈춘 심장을 다시 박동시킴.</li>
+    <li><strong>플래시 메모리·DRAM</strong>: 트랜지스터 옆 미세 캡에 전하 = 1, 없으면 = 0. 핸드폰 메모리의 원리.</li>
+    <li><strong>터치스크린</strong>: 손가락이 가까이 가면 정전용량이 미세하게 변함 → 측정해 위치 추정. 정전식 터치의 원리.</li>
+  </ul>
+
+  <h3>🧭 다음 강의(W12 회로)와의 연결 — 한 줄 다리</h3>
+  <p>축전기에 저항을 직렬로 연결하면 충전·방전이 시간 상수 $\tau = RC$를 갖는 지수 함수가 된다. 다음 주에 그래프와 식을 깊이 다룬다.</p>
+
+  <h3>🧪 추가 도전 — 축전기 직병렬 실전</h3>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 1.</strong> 6 μF, 12 μF가 직렬 연결. 합성 정전용량은?</summary>
+    <p style="margin-top:10px">$1/C = 1/6 + 1/12 = 3/12$ → $C = 4 \mu F$. 직렬 합성은 전체보다 작아짐.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 2.</strong> 같은 두 축전기를 병렬 연결하면?</summary>
+    <p style="margin-top:10px">$C = 6 + 12 = 18 \mu F$. 병렬은 단순 합산. 직렬과 정확히 반대 동작.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 3.</strong> 위 직렬·병렬 조합에 12 V를 걸면 각 합성 축전기에 저장된 에너지는?</summary>
+    <p style="margin-top:10px">직렬: $U = \tfrac{1}{2}(4 \mu)(12)^2 = 288 \mu J$. 병렬: $U = \tfrac{1}{2}(18 \mu)(12)^2 = 1296 \mu J$. 같은 전압에서 병렬이 4.5배 에너지 저장.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 4.</strong> 평행판 축전기에 유전체를 끼우면 정전용량이 왜 커지나요?</summary>
+    <p style="margin-top:10px">유전체 분자가 분극되어 외부 전기장과 반대 방향으로 작은 전기장을 만듦 → 판 사이 순 전기장 감소 → 같은 $Q$에 더 작은 $V$ → $C = Q/V$ 증가. 유전상수 $\kappa$만큼 정전용량이 곱해짐.</p>
+  </details>
+
+  <h3>🔋 차세대 축전기 — 슈퍼커패시터 (EDLC)</h3>
+  <p>전통적 축전기는 μF 단위지만, 슈퍼커패시터는 F 단위 — 100만 배 큰 정전용량. 비결은 면적을 극대화한 활성 탄소 표면(g당 수천 m²).</p>
+  <ul>
+    <li><strong>충전 속도</strong>: 배터리의 1000배 — 수 초 내 완전 충전.</li>
+    <li><strong>수명</strong>: 100만 회 이상 충방전 (배터리는 1000회 정도).</li>
+    <li><strong>에너지 밀도</strong>: 배터리의 1/10 (덜 저장하지만 빠르게 입출).</li>
+    <li><strong>응용</strong>: 전기버스(중국 일부 노선), 회생 제동(전기차), 데이터센터 무정전 전원, 카메라 플래시 모듈.</li>
+  </ul>
+  <div class="tip">배터리 + 슈퍼캡 하이브리드가 미래 EV의 표준이 될 가능성. 배터리는 장거리 주행, 슈퍼캡은 순간 가속·회생.</div>
+
+  <h3>📌 핵심 한 줄 요약 — 축전기의 모든 것</h3>
+  <p>평행판 축전기 식 $C = \varepsilon_0 A/d$ 한 줄이 모든 것의 시작입니다.</p>
+  <ul>
+    <li><strong>면적 $A$ 크게</strong> → 정전용량 큼.
+        슈퍼커패시터(EDLC)는 활성 탄소 표면으로 면적을 극대화.</li>
+    <li><strong>간격 $d$ 작게</strong> → 정전용량 큼.
+        MEMS 마이크로 커패시터·DRAM의 원리.</li>
+    <li><strong>유전체 $\kappa$ 크게</strong> → 정전용량 큼.
+        세라믹·전해 커패시터의 차이.</li>
+    <li>이 세 변수의 최적 조합이 모든 축전기 설계의 본질입니다.</li>
+  </ul>
+  <p>다음 주(W12 회로)에서 이 축전기가 저항·전압원과 만나면 어떤 시간 함수가 나오는지 깊이 다룬다 — RC 회로, $\tau = RC$, 충전·방전 곡선.</p>
+  <p>그 다음 W14 전자기 유도에서는 인덕터 $L$과 함께 <strong>LC 진동 회로</strong>로 발전합니다 — 라디오·무선통신의 기본.</p>
+  <p><strong>14주 전체 흐름</strong>: W10 전기장 → <em>W11 축전기 (현재)</em> → W12 회로 → W13 자기장 → W14 유도/전자기파.</p>
+
+  <div class="prevnext">
+    <a href="10-efield-gauss.html"><small>← 이전</small>W10. 전기장과 가우스 법칙</a>
+    <a href="12-circuits.html" class="next"><small>다음 →</small>W12. 회로 (옴·키르히호프·RC)</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

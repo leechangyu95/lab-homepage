@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 세 가지 불연속 모양 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 세 가지 불연속 모양</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/01-functions-limits.html">Week 1. 함수·극한·연속</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 세 가지 불연속 모양</h4>
+    <p>버튼을 눌러 세 종류의 불연속을 비교해 보세요. 그래프 아래에 좌극한·우극한·함숫값이 표시됩니다 — 셋이 모두 같으면 연속, 하나라도 어긋나면 불연속이에요.</p>
+    <canvas id="dg" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="dgRem">① 제거가능</button>
+      <button id="dgJump">② 점프</button>
+      <button id="dgOsc">③ 진동</button>
+    </div>
+    <p id="dgInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dg'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:40};
+    let mode='rem';
+    document.getElementById('dgRem').onclick=()=>{mode='rem';};
+    document.getElementById('dgJump').onclick=()=>{mode='jump';};
+    document.getElementById('dgOsc').onclick=()=>{mode='osc';};
+    function setup(){
+      if(mode==='rem')return{a:1,xR:[-0.5,2.5],yR:[-0.5,3.5],
+        f:v=>{if(Math.abs(v-1)<1e-9)return null;return (v*v-1)/(v-1);},
+        defined:false,fa:null,
+        title:'f(x) = (x² − 1)/(x − 1),  x = 1 에서 정의 안 됨',
+        info:'좌극한 = 2, 우극한 = 2, f(1) = 정의 안 됨 → 제거가능 불연속'};
+      if(mode==='jump')return{a:0,xR:[-2,2],yR:[-1.8,1.8],
+        f:v=>v>0?1:(v<0?-1:0),
+        defined:true,fa:0,
+        title:'f(x) = sgn(x)',
+        info:'좌극한 = −1, 우극한 = +1 → 두 값이 다름 → 점프 불연속'};
+      return{a:0,xR:[-0.6,0.6],yR:[-1.4,1.4],
+        f:v=>{if(Math.abs(v)<1e-12)return null;return Math.sin(1/v);},
+        defined:false,fa:null,
+        title:'f(x) = sin(1/x)',
+        info:'좌극한·우극한 모두 존재하지 않음 (무한 진동) → 본질적 불연속'};
+    }
+    function loop(){
+      const S=setup();
+      const xR=S.xR,yR=S.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v+=Math.max(1,Math.round((xR[1]-xR[0])/8))){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.lineWidth=1.2;
+      x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // curve (sample with dense steps; break across the singular point)
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      const step=(xR[1]-xR[0])/(mode==='osc'?6000:1500);
+      let first=true,prevSign=null;
+      for(let v=xR[0];v<=xR[1];v+=step){
+        if(Math.abs(v-S.a)<step*0.6){first=true;continue;}
+        const y=S.f(v);
+        if(y===null||!isFinite(y)||y<yR[0]-2||y>yR[1]+2){first=true;continue;}
+        if(first){x.moveTo(px(v),py(y));first=false;}else x.lineTo(px(v),py(y));
+      }
+      x.stroke();
+      // mark x = a behavior
+      // left-limit and right-limit indicator (open circles)
+      function plot(v,filled,color){
+        x.beginPath();x.arc(px(v[0]),py(v[1]),5,0,Math.PI*2);
+        if(filled){x.fillStyle=color;x.fill();}else{x.lineWidth=2;x.strokeStyle=color;x.fillStyle='#fafbfc';x.fill();x.stroke();}
+      }
+      if(mode==='rem'){
+        plot([1,2],false,'#c62828');
+      }else if(mode==='jump'){
+        plot([0,-1],false,'#c62828');plot([0,1],false,'#c62828');plot([0,0],true,'#1b5e20');
+      }
+      // dashed line at x=a
+      x.strokeStyle='rgba(198,40,40,0.5)';x.setLineDash([4,4]);
+      x.beginPath();x.moveTo(px(S.a),py(yR[0]));x.lineTo(px(S.a),py(yR[1]));x.stroke();x.setLineDash([]);
+      // title
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText(S.title,M.l,M.t-4);
+      document.getElementById('dgInfo').textContent=S.info;
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

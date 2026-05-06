@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Plan &amp; Do 시간선 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Plan &amp; Do 시간선</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/01-intro.html">Week 1. MPC 입문</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Plan &amp; Do 시간선</h4>
+    <p>매 샘플마다 N=8 스텝을 계획하지만 <strong>첫 한 칸만 실제 적용</strong>합니다. 스텝을 진행하며 어떻게 호라이즌이 미끄러져 가는지 봐요. 빨강은 적용된 입력, 파랑은 계획만 된 미래.</p>
+    <canvas id="rhBar" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>현재 시점 t <span class="val" id="rhTV">3</span><input type="range" id="rhT" min="0" max="12" step="1" value="3"></label>
+      <label>호라이즌 N <span class="val" id="rhN2V">8</span><input type="range" id="rhN2" min="3" max="12" step="1" value="8"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rhBar');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const t=+document.getElementById('rhT').value;
+      const N=+document.getElementById('rhN2').value;
+      document.getElementById('rhTV').textContent=t;
+      document.getElementById('rhN2V').textContent=N;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const total=20;
+      const cell=(W-80)/total;
+      const numRows=4;
+      const rowH=50;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('샘플 시각:',10,30);
+      for(let i=0;i<total;i++){
+        ctx.fillStyle='#666';ctx.font='10px sans-serif';
+        ctx.fillText(i,40+i*cell+cell/2-5,45);
+      }
+      for(let r=0;r<numRows;r++){
+        const tR=t-numRows+1+r+2;
+        const y=60+r*rowH;
+        ctx.fillStyle='#666';ctx.font='12px sans-serif';
+        ctx.fillText('t='+tR,8,y+22);
+        for(let i=0;i<total;i++){
+          const x=40+i*cell;
+          let col='#eef0f4';let label='';
+          if(i<tR){col='#cfd8e3';}
+          else if(i===tR){col='#c62828';label='적용';}
+          else if(i<tR+N){col='#cce5ff';label='계획';}
+          ctx.fillStyle=col;ctx.fillRect(x+1,y,cell-2,30);
+          ctx.strokeStyle='#999';ctx.strokeRect(x+1,y,cell-2,30);
+          if(label){ctx.fillStyle=col==='#c62828'?'#fff':'#0b5fff';ctx.font='10px sans-serif';ctx.fillText(label,x+4,y+19);}
+        }
+      }
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('각 행 = 한 샘플의 MPC 풀이. 빨강(첫 칸)만 시스템에 적용 → 다음 행에서 한 칸 미끄러져 다시 계획.',12,H-20);
+    }
+    document.getElementById('rhT').addEventListener('input',draw);
+    document.getElementById('rhN2').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

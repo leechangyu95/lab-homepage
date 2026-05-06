@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 적분기 — 사각파를 삼각파로 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 적분기 — 사각파를 삼각파로</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/11-opamp.html">Week 11. 아날로그 기초·연산증폭기 — 두 줄 규칙으로 풀리는 마법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 적분기 — 사각파를 삼각파로</h4>
+    <p>반전 증폭기의 $R_2$ 자리에 커패시터 $C$를 두면 적분기. 사각파 입력에 적분기를 통과시키면 삼각파 출력이 나옵니다 — 출력 기울기는 $-v_S/(RC)$.</p>
+    <canvas id="intCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="iRV">10</span> kΩ<input type="range" id="iR" min="1" max="100" step="1" value="10"></label>
+      <label>C <span class="val" id="iCV">1.0</span> μF<input type="range" id="iC" min="0.01" max="10" step="0.01" value="1"></label>
+      <label>입력 진폭 <span class="val" id="iAV">1.0</span> V<input type="range" id="iA" min="0.1" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('intCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Vsat=13;
+    function draw(){
+      const R=+document.getElementById('iR').value*1000;
+      const Cv=+document.getElementById('iC').value*1e-6;
+      const A=+document.getElementById('iA').value;
+      document.getElementById('iRV').textContent=(R/1000).toFixed(0);
+      document.getElementById('iCV').textContent=(Cv*1e6).toFixed(2);
+      document.getElementById('iAV').textContent=A.toFixed(1);
+      const f=100;
+      const Tspan=2/f;
+      const N=400,dt=Tspan/N;
+      let vO=0;
+      const arr=[];
+      for(let k=0;k<N;k++){
+        const t=k*dt;
+        const vS=A*(Math.sin(2*Math.PI*f*t)>=0?1:-1);
+        // dvO/dt = -vS/(RC)
+        vO=vO-vS/(R*Cv)*dt;
+        vO=Math.max(-Vsat,Math.min(Vsat,vO));
+        arr.push({t,vS,vO});
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(t){return 60+t/Tspan*(W-90);}
+      function y(v){return H/2-v/(Vsat+1)*(H-60)/2;}
+      ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Tspan),y(0));ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      arr.forEach((p,i)=>{if(i===0)ctx.moveTo(x(p.t),y(p.vS));else ctx.lineTo(x(p.t),y(p.vS));});
+      ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.beginPath();
+      arr.forEach((p,i)=>{if(i===0)ctx.moveTo(x(p.t),y(p.vO));else ctx.lineTo(x(p.t),y(p.vO));});
+      ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';
+      ctx.fillText('입력 사각파 v_S(t)',60,30);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('출력 삼각파 v_O(t) = −(1/RC)∫v_S dt',300,30);
+      const tau=R*Cv;
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`τ = RC = ${(tau*1000).toFixed(2)} ms,  슬로프 = ±${(A/(R*Cv)).toFixed(0)} V/s`,40,H-15);
+    }
+    ['iR','iC','iA'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

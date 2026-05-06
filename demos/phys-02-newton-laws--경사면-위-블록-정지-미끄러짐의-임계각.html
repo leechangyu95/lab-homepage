@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🛷 경사면 위 블록 — 정지/미끄러짐의 임계각 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🛷 경사면 위 블록 — 정지/미끄러짐의 임계각</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/02-newton-laws.html">Week 2. 뉴턴 운동법칙</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🛷 경사면 위 블록 — 정지/미끄러짐의 임계각</h4>
+    <p>각도가 임계각 $\theta_c = \tan^{-1}\mu$를 넘는 순간 미끄러지기 시작합니다. 정지에서 미끄러짐으로 넘어가는 경계를 직접 찾아보세요.</p>
+    <canvas id="inclineDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>질량 $m$ <span class="val" id="inc_mV">5</span> kg
+        <input type="range" id="inc_m" min="1" max="20" step="1" value="5"></label>
+      <label>각도 $\theta$ <span class="val" id="inc_aV">25°</span>
+        <input type="range" id="inc_a" min="0" max="60" step="1" value="25"></label>
+      <label>마찰계수 $\mu$ <span class="val" id="inc_uV">0.30</span>
+        <input type="range" id="inc_u" min="0" max="1" step="0.02" value="0.3"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>가지고 놀 것</strong>
+      <ul>
+        <li>$\mu = 0.3$일 때 임계각은 $\tan^{-1}(0.3) \approx 16.7°$. 슬라이더로 확인.</li>
+        <li>각도를 0°로 → 가속도 0, 정지 (수평면).</li>
+        <li>$\mu = 0$ (마찰 없음) → 어떤 각도라도 미끄러짐, $a = g\sin\theta$.</li>
+        <li>각도를 늘려가며 정지→미끄러짐 전환 순간(빨강으로 바뀌는 지점) 확인.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('inclineDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const m=+document.getElementById('inc_m').value;
+      const ang=+document.getElementById('inc_a').value;
+      const mu=+document.getElementById('inc_u').value;
+      document.getElementById('inc_mV').textContent=m;
+      document.getElementById('inc_aV').textContent=ang+'°';
+      document.getElementById('inc_uV').textContent=mu.toFixed(2);
+      const g=9.8,rad=ang*Math.PI/180;
+      const N=m*g*Math.cos(rad),Fg=m*g*Math.sin(rad),fmax=mu*N;
+      let a,status,fric,col;
+      if(Fg<=fmax){a=0;status='정지 (정지마찰 충분)';fric=Fg;col='#2e7d32';}
+      else{a=g*(Math.sin(rad)-mu*Math.cos(rad));status='미끄러짐';fric=fmax;col='#c62828';}
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const baseY=H-40,baseX1=60,baseX2=W-30;
+      const len=baseX2-baseX1,topY=baseY-len*Math.tan(rad);
+      ctx.strokeStyle='#8d6e63';ctx.fillStyle='#d7ccc8';ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(baseX1,baseY);ctx.lineTo(baseX2,baseY);
+      ctx.lineTo(baseX2,topY);ctx.closePath();
+      ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(baseX2,baseY,40,Math.PI,Math.PI+rad,false);ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(ang+'°',baseX2-55,baseY-10);
+      const blkX=baseX1+len*0.35;
+      const blkY=baseY-len*0.35*Math.tan(rad);
+      const sz=36;
+      ctx.save();
+      ctx.translate(blkX,blkY);
+      ctx.rotate(-rad);
+      ctx.fillStyle='#0b5fff';ctx.fillRect(-sz/2,-sz,sz,sz);
+      ctx.strokeStyle='#0742b8';ctx.strokeRect(-sz/2,-sz,sz,sz);
+      ctx.fillStyle='#fff';ctx.font='12px sans-serif';
+      ctx.fillText(m+' kg',-14,-12);
+      ctx.restore();
+      const ix=15,iy=15,iw=240,ih=130;
+      ctx.fillStyle='rgba(255,255,255,0.96)';ctx.fillRect(ix,iy,iw,ih);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(ix,iy,iw,ih);
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      let y=iy+18;
+      ctx.fillText('수직항력 N = mg cosθ = '+N.toFixed(1)+' N',ix+10,y);y+=17;
+      ctx.fillText('중력 사면 성분 = mg sinθ = '+Fg.toFixed(1)+' N',ix+10,y);y+=17;
+      ctx.fillText('최대 정지마찰 μN = '+fmax.toFixed(1)+' N',ix+10,y);y+=17;
+      ctx.fillText('현재 마찰 = '+fric.toFixed(1)+' N',ix+10,y);y+=22;
+      ctx.fillStyle=col;ctx.font='bold 13px sans-serif';
+      ctx.fillText(status,ix+10,y);y+=18;
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText('가속도 a = '+a.toFixed(2)+' m/s²',ix+10,y);
+    }
+    ['inc_m','inc_a','inc_u'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

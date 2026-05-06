@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: DWA로 장애물 회피 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: DWA로 장애물 회피</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: DWA로 장애물 회피</h4>
+    <p>로봇이 매 프레임마다 ~150개 후보 궤적을 평가해 가장 좋은 것을 따라갑니다. 캔버스를 클릭해 목표를 옮겨 보세요. 파란 곡선들은 모두 후보 궤적, 빨강은 충돌, 주황 굵은 선이 선택된 명령.</p>
+    <canvas id="dwa" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>heading 가중치 α <span class="val" id="dwaAV">0.5</span><input type="range" id="dwaA" min="0" max="2" step="0.05" value="0.5"></label>
+      <label>clearance 가중치 β <span class="val" id="dwaBV">1</span><input type="range" id="dwaB" min="0" max="3" step="0.05" value="1"></label>
+      <label>velocity 가중치 γ <span class="val" id="dwaGV">0.3</span><input type="range" id="dwaG" min="0" max="2" step="0.05" value="0.3"></label>
+      <button id="dwaRst" class="alt">로봇 리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>실험</strong> — α를 키우면 목표로 직진하다 장애물에 잘 박힘. β를 키우면 장애물을 멀리 우회. γ를 키우면 빠르게 가지만 코너에서 위태로움.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dwa'),x=c.getContext('2d');
+    const obs=[{x:200,y:200,r:35},{x:380,y:120,r:30},{x:480,y:280,r:40},{x:300,y:300,r:25}];
+    let goal=[600,200];
+    let s={x:40,y:200,th:0,v:0,om:0};
+    function reset(){s={x:40,y:200,th:0,v:0,om:0};}
+    document.getElementById('dwaRst').onclick=reset;
+    c.onclick=e=>{const r=c.getBoundingClientRect();goal=[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height];};
+    const dt=0.1, T=1.6;
+    const vMax=45,omMax=2.2,vAcc=80,omAcc=4.5;
+    function collidePt(p){return obs.some(o=>(o.x-p[0])**2+(o.y-p[1])**2<(o.r+8)**2);}
+    function simTraj(v,om){
+      const pts=[];let xx=s.x,yy=s.y,th=s.th;
+      for(let t=0;t<=T;t+=dt){pts.push([xx,yy]);xx+=v*Math.cos(th)*dt;yy+=v*Math.sin(th)*dt;th+=om*dt;}
+      return pts;
+    }
+    function score(v,om,a,b,g){
+      const pts=simTraj(v,om);
+      for(const p of pts)if(collidePt(p))return {sc:-1e9,collide:true,pts};
+      const last=pts[pts.length-1];
+      const head=-Math.hypot(last[0]-goal[0],last[1]-goal[1])/100;
+      let clr=Infinity;
+      for(const p of pts)for(const o of obs)clr=Math.min(clr,Math.hypot(p[0]-o.x,p[1]-o.y)-o.r);
+      clr=Math.min(clr,40)/40;
+      const vv=v/vMax;
+      return {sc:a*head+b*clr+g*vv,collide:false,pts};
+    }
+    function loop(){
+      const a=+document.getElementById('dwaA').value, b=+document.getElementById('dwaB').value, g=+document.getElementById('dwaG').value;
+      ['dwaA','dwaB','dwaG'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const vMin=Math.max(0,s.v-vAcc*dt), vMaxW=Math.min(vMax,s.v+vAcc*dt);
+      const omMin=Math.max(-omMax,s.om-omAcc*dt), omMaxW=Math.min(omMax,s.om+omAcc*dt);
+      let bestV=0,bestOm=0,bestS=-Infinity,bestPts=null;
+      const all=[];
+      const Nv=8,Nom=15;
+      for(let i=0;i<=Nv;i++)for(let j=0;j<=Nom;j++){
+        const v=vMin+(vMaxW-vMin)*i/Nv, om=omMin+(omMaxW-omMin)*j/Nom;
+        const r=score(v,om,a,b,g);
+        all.push({v,om,...r});
+        if(r.sc>bestS){bestS=r.sc;bestV=v;bestOm=om;bestPts=r.pts;}
+      }
+      s.v=bestV;s.om=bestOm;
+      s.x+=s.v*Math.cos(s.th)*dt;s.y+=s.v*Math.sin(s.th)*dt;s.th+=s.om*dt;
+      if(s.x<10||s.x>c.width-10||s.y<10||s.y>c.height-10)reset();
+      if(Math.hypot(s.x-goal[0],s.y-goal[1])<15){reset();}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 후보 궤적
+      all.forEach(t=>{
+        if(t.collide){x.strokeStyle='rgba(198,40,40,0.18)';x.lineWidth=1;}
+        else{
+          const norm=Math.max(0,(t.sc-(bestS-2))/2);
+          x.strokeStyle='rgba(11,95,255,'+(0.08+0.25*norm)+')';x.lineWidth=1;
+        }
+        x.beginPath();t.pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      });
+      if(bestPts){
+        x.strokeStyle='#ff8c00';x.lineWidth=2.8;x.beginPath();
+        bestPts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      }
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(goal[0],goal[1],10,0,Math.PI*2);x.fill();
+      // 로봇 (삼각형)
+      x.save();x.translate(s.x,s.y);x.rotate(s.th);
+      x.fillStyle='#0b5fff';x.beginPath();x.moveTo(11,0);x.lineTo(-7,-6);x.lineTo(-7,6);x.closePath();x.fill();
+      x.restore();
+      x.fillStyle='#222';x.font='12px sans-serif';
+      x.fillText('v='+s.v.toFixed(1)+' px/s, ω='+s.om.toFixed(2)+' rad/s · 후보 '+all.length+'개 · best='+bestS.toFixed(2),12,20);
+      x.fillStyle='#666';x.fillText('캔버스를 클릭해 목표 이동',12,c.height-12);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

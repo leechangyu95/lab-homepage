@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 노드 해석 — 두 노드 회로 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 노드 해석 — 두 노드 회로</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/04-dc-analysis-1.html">Week 4. 직류회로 해석 1 — KCL · KVL · 중첩</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 노드 해석 — 두 노드 회로</h4>
+    <p>10V 전원 → $R_1$ → 노드 A → $R_3$ → 노드 B → $R_4$ → 접지, A에서 $R_2$로 접지. 노드 A, B 전압이 KCL 연립으로 어떻게 정해지는지 봅니다.</p>
+    <canvas id="kclCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R₁ <span class="val" id="kclR1V">2</span> Ω<input type="range" id="kclR1" min="1" max="10" step="0.5" value="2"></label>
+      <label>R₂ <span class="val" id="kclR2V">4</span> Ω<input type="range" id="kclR2" min="1" max="10" step="0.5" value="4"></label>
+      <label>R₃ <span class="val" id="kclR3V">4</span> Ω<input type="range" id="kclR3" min="1" max="10" step="0.5" value="4"></label>
+      <label>R₄ <span class="val" id="kclR4V">4</span> Ω<input type="range" id="kclR4" min="1" max="10" step="0.5" value="4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kclCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Vs=10;
+    function draw(){
+      const R1=+document.getElementById('kclR1').value;
+      const R2=+document.getElementById('kclR2').value;
+      const R3=+document.getElementById('kclR3').value;
+      const R4=+document.getElementById('kclR4').value;
+      document.getElementById('kclR1V').textContent=R1.toFixed(1);
+      document.getElementById('kclR2V').textContent=R2.toFixed(1);
+      document.getElementById('kclR3V').textContent=R3.toFixed(1);
+      document.getElementById('kclR4V').textContent=R4.toFixed(1);
+      // KCL: (Vs-Va)/R1 = Va/R2 + (Va-Vb)/R3
+      // (Va-Vb)/R3 = Vb/R4
+      // From eq2: Va = Vb*(1 + R3/R4)
+      const k=1+R3/R4;
+      // Eq1 multiplied by R1*R2*R3:
+      // R2*R3*(Vs-Va) = R1*R3*Va + R1*R2*(Va-Vb)
+      // R2*R3*Vs = (R2*R3 + R1*R3 + R1*R2)*Va - R1*R2*Vb
+      // Substitute Va = k*Vb
+      const A=R2*R3+R1*R3+R1*R2;
+      const B=R1*R2;
+      const Vb=R2*R3*Vs/(A*k - B);
+      const Va=k*Vb;
+      const I1=(Vs-Va)/R1, I2=Va/R2, I3=(Va-Vb)/R3, I4=Vb/R4;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(40,80);ctx.lineTo(40,200);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';ctx.fillText('10V',20,75);
+      ctx.beginPath();ctx.moveTo(40,80);ctx.lineTo(180,80);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(80,80);ctx.lineTo(140,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_1=${R1}Ω`,90,72);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(180,80);ctx.lineTo(180,200);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.fillText(`A: ${Va.toFixed(2)}V`,160,70);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(180,120);ctx.lineTo(180,160);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_2=${R2}Ω`,190,140);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(180,80);ctx.lineTo(380,80);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(240,80);ctx.lineTo(320,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_3=${R3}Ω`,250,72);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(380,80);ctx.lineTo(380,200);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.fillText(`B: ${Vb.toFixed(2)}V`,360,70);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(380,120);ctx.lineTo(380,160);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_4=${R4}Ω`,390,140);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(180,200);ctx.lineTo(380,200);ctx.lineTo(380,200);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(40,200);ctx.lineTo(180,200);ctx.stroke();
+      // GND symbol
+      ctx.beginPath();ctx.moveTo(170,210);ctx.lineTo(190,210);ctx.moveTo(173,215);ctx.lineTo(187,215);ctx.moveTo(177,220);ctx.lineTo(183,220);ctx.stroke();
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText(`I_1=${(I1*1000).toFixed(1)}mA, I_2=${(I2*1000).toFixed(1)}mA, I_3=${(I3*1000).toFixed(1)}mA, I_4=${(I4*1000).toFixed(1)}mA`,30,H-30);
+      ctx.fillText(`KCL 검산: I_1 - I_2 - I_3 = ${((I1-I2-I3)*1000).toFixed(2)} mA ≈ 0 ✓`,30,H-10);
+    }
+    ['kclR1','kclR2','kclR3','kclR4'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

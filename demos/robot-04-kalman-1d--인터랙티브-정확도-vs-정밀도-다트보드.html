@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 정확도 vs 정밀도 다트보드 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 정확도 vs 정밀도 다트보드</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/04-kalman-1d.html">Lecture 4. 칼만 필터 (1D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정확도 vs 정밀도 다트보드</h4>
+    <p>편향(bias)과 표준편차(σ)를 조절하면 다트 분포가 어떻게 변하는지 보세요. 칼만 필터가 최종적으로 추정하는 것은 "분포의 평균"이므로, 정밀도가 매우 중요합니다.</p>
+    <canvas id="dart" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>편향 (bias) <span class="val" id="biV">0</span><input type="range" id="bi" min="-2" max="2" step="0.1" value="0"></label>
+      <label>표준편차 σ <span class="val" id="dsV">0.5</span><input type="range" id="ds" min="0.1" max="2" step="0.1" value="0.5"></label>
+      <button id="dartRst">다시 던지기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dart'),x=c.getContext('2d');
+    let darts=[];
+    function gen(){
+      const bi=+document.getElementById('bi').value;
+      const sg=+document.getElementById('ds').value;
+      darts=[];
+      for(let i=0;i<30;i++){
+        const r=Math.sqrt(-2*Math.log(Math.random()));
+        const t=2*Math.PI*Math.random();
+        darts.push([bi+r*Math.cos(t)*sg,r*Math.sin(t)*sg]);
+      }
+    }
+    gen();
+    document.getElementById('dartRst').onclick=gen;
+    document.getElementById('bi').oninput=gen;
+    document.getElementById('ds').oninput=gen;
+    function loop(){
+      document.getElementById('biV').textContent=document.getElementById('bi').value;
+      document.getElementById('dsV').textContent=document.getElementById('ds').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320,cy=160,scale=50;
+      // dartboard rings
+      ['#c62828','#fff','#c62828','#fff','#2e7d32'].forEach((col,i)=>{
+        x.fillStyle=col;x.beginPath();x.arc(cx,cy,(5-i)*30,0,Math.PI*2);x.fill();
+        x.strokeStyle='#666';x.stroke();
+      });
+      x.fillStyle='#000';x.beginPath();x.arc(cx,cy,8,0,Math.PI*2);x.fill();
+      // darts
+      darts.forEach(d=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(cx+d[0]*scale,cy+d[1]*scale,4,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.stroke();});
+      // diagnosis
+      const meanX=darts.reduce((s,d)=>s+d[0],0)/darts.length;
+      const meanY=darts.reduce((s,d)=>s+d[1],0)/darts.length;
+      const distMean=Math.hypot(meanX,meanY);
+      const spread=Math.sqrt(darts.reduce((s,d)=>s+(d[0]-meanX)**2+(d[1]-meanY)**2,0)/darts.length);
+      x.fillStyle='#666';x.font='13px sans-serif';
+      x.fillText('정확도 (편향 거리): '+distMean.toFixed(2),20,30);
+      x.fillText('정밀도 (1σ 흩어짐): '+spread.toFixed(2),20,50);
+      const desc=distMean<0.5&&spread<0.6?'✓ 정확하고 정밀':distMean<0.5?'정확하지만 흩어짐':spread<0.6?'정밀하지만 편향':'정확도·정밀도 모두 부족';
+      x.fillStyle='#0742b8';x.font='bold 14px sans-serif';x.fillText(desc,20,75);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

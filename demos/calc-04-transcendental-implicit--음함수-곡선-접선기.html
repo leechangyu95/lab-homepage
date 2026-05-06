@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 음함수 곡선 접선기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 음함수 곡선 접선기</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/04-transcendental-implicit.html">Week 4. 초월함수 &amp; 음함수 미분</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 음함수 곡선 접선기</h4>
+    <p>곡선을 선택하고, 접점의 매개변수를 슬라이더로 움직여 보세요. 그 점에서의 접선이 자동으로 그어지고, $dy/dx$ 값이 표시됩니다.</p>
+    <canvas id="im" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>곡선
+        <select id="imC">
+          <option value="circle" selected>원: x² + y² = 4</option>
+          <option value="ellipse">타원: x²/4 + y² = 1</option>
+          <option value="heart">하트: (x²+y²−1)³ = x²y³</option>
+        </select>
+      </label>
+      <label>매개변수 t <span class="val" id="imTV">0.80</span><input type="range" id="imT" min="0" max="6.28" step="0.01" value="0.8"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('im'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    const xR=[-3,3],yR=[-2.2,2.2];
+    function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+    function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function curve(){return document.getElementById('imC').value;}
+    function point(t){
+      const m=curve();
+      if(m==='circle')return{x:2*Math.cos(t),y:2*Math.sin(t)};
+      if(m==='ellipse')return{x:2*Math.cos(t),y:Math.sin(t)};
+      // heart parametric (Boss formula)
+      return{x:16*Math.pow(Math.sin(t),3)/13,y:(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))/13};
+    }
+    function slope(p){
+      const m=curve();
+      // implicit diff:
+      // circle: 2x + 2y y' = 0 → y' = -x/y
+      if(m==='circle')return -p.x/p.y;
+      // ellipse: x/2 + 2y y' = 0 → y' = -x/(4y)
+      if(m==='ellipse')return -p.x/(4*p.y);
+      // heart: numerical derivative of parametric
+      const dt=0.001;
+      // refind t for current point
+      // we'll compute slope numerically using parametric form
+      // actually use parametric tangent: dy/dx = (dy/dt)/(dx/dt)
+      // requires t — use binary search? simpler: take dt around the t we used
+      return null;
+    }
+    function paraSlope(t){
+      const dt=0.001;const a=point(t-dt),b=point(t+dt);
+      return(b.y-a.y)/(b.x-a.x);
+    }
+    function plotCurve(){
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      const N=400;
+      for(let i=0;i<=N;i++){
+        const t=i*2*Math.PI/N;
+        const p=point(t);
+        if(i===0)x.moveTo(px(p.x),py(p.y));else x.lineTo(px(p.x),py(p.y));
+      }
+      x.stroke();
+    }
+    function loop(){
+      const t=+document.getElementById('imT').value;
+      document.getElementById('imTV').textContent=t.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      plotCurve();
+      const p=point(t);
+      const dy=paraSlope(t);
+      // tangent line through p with slope dy
+      x.strokeStyle='#f57c00';x.lineWidth=2;
+      x.beginPath();
+      const tx0=xR[0],ty0=p.y+dy*(tx0-p.x);
+      const tx1=xR[1],ty1=p.y+dy*(tx1-p.x);
+      x.moveTo(px(tx0),py(ty0));x.lineTo(px(tx1),py(ty1));x.stroke();
+      // point
+      x.fillStyle='#c62828';x.beginPath();x.arc(px(p.x),py(p.y),5,0,Math.PI*2);x.fill();
+      // info
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('점 (x, y) ≈ ('+p.x.toFixed(2)+', '+p.y.toFixed(2)+')',M.l+10,M.t+18);
+      x.fillStyle='#b35c00';
+      x.fillText('접선 기울기 dy/dx ≈ '+(isFinite(dy)?dy.toFixed(2):'∞ (수직)'),M.l+10,M.t+38);
+      requestAnimationFrame(()=>setTimeout(loop,40));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

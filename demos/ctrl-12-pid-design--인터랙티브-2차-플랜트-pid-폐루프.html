@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 2차 플랜트 + PID 폐루프 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 2차 플랜트 + PID 폐루프</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/12-pid-design.html">Week 12. PID 제어기 설계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2차 플랜트 + PID 폐루프</h4>
+    <p>플랜트 $G(s) = 1/(s^2 + 0.4s + 1)$ ($\omega_n = 1$, $\zeta = 0.2$).
+    Kp, Ki, Kd를 직접 만져 오버슈트와 정착시간을 줄여 보세요.
+    Ziegler-Nichols 추천값 버튼으로 출발점 확인.</p>
+    <canvas id="pid" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="pkpV">2.0</span><input type="range" id="pkp" min="0" max="10" step="0.1" value="2.0"></label>
+      <label>Ki <span class="val" id="pkiV">0.5</span><input type="range" id="pki" min="0" max="5" step="0.05" value="0.5"></label>
+      <label>Kd <span class="val" id="pkdV">0.5</span><input type="range" id="pkd" min="0" max="5" step="0.05" value="0.5"></label>
+      <button id="zn">Ziegler-Nichols 추천값</button>
+      <button id="pidRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pid'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('pkpV').textContent=(+$('pkp').value).toFixed(1);$('pkiV').textContent=(+$('pki').value).toFixed(2);$('pkdV').textContent=(+$('pkd').value).toFixed(2);};
+    ['pkp','pki','pkd'].forEach(id=>$(id).oninput=upd);
+    $('zn').onclick=()=>{$('pkp').value=4.5;$('pki').value=2.5;$('pkd').value=0.6;upd();};
+    $('pidRst').onclick=()=>{$('pkp').value=2;$('pki').value=0.5;$('pkd').value=0.5;upd();};
+    function loop(){
+      const Kp=+$('pkp').value, Ki=+$('pki').value, Kd=+$('pkd').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // simulate plant ÿ + 0.4ẏ + y = u with PID controller; setpoint = 1
+      const dt=0.02, N=600;
+      let y=0,yd=0,iE=0,prevE=0;
+      const hist=[];
+      for(let k=0;k<N;k++){
+        const r = 1.0;
+        const e = r - y;
+        iE += e*dt;
+        const dE = (e - prevE)/dt;
+        prevE = e;
+        let u = Kp*e + Ki*iE + Kd*dE;
+        u = Math.max(-3, Math.min(3, u));
+        const ydd = u - 0.4*yd - y;
+        yd += ydd*dt; y += yd*dt;
+        hist.push(y);
+      }
+      // plot
+      const ox=40, oy=270, w=560, h=220, T=N*dt;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(ox,oy-h*0.5);x.lineTo(ox+w,oy-h*0.5);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='11px sans-serif';x.fillText('1.0',ox-22,oy-h*0.5+4);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-Math.max(-0.5,Math.min(2,v))*h*0.5;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      // metrics
+      const Mp = (Math.max(...hist) - 1) * 100;
+      const final = hist[N-1];
+      let ts = T;
+      for(let k=N-1;k>=0;k--){if(Math.abs(hist[k]-1)>0.02){ts=k*dt;break;}}
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('오버슈트 Mp = '+Mp.toFixed(1)+'%   정착시간 ts ≈ '+ts.toFixed(2)+' s   최종값 = '+final.toFixed(3),ox,oy+18);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('Ziegler-Nichols 추천값: Kp=4.5, Ki=2.5, Kd=0.6 (오버슈트는 크지만 빠른 응답)',ox,15);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

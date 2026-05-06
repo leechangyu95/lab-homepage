@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 파이프라인 박스 클릭 — 무엇을 하는지 펼쳐보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 파이프라인 박스 클릭 — 무엇을 하는지 펼쳐보기</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/01-intro.html">Week 1. 강의 개요 &amp; 자율주행 개론</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 파이프라인 박스 클릭 — 무엇을 하는지 펼쳐보기</h4>
+    <p>각 박스를 클릭하면 그 모듈의 <strong>입력 / 핵심 작업 / 출력</strong>이 펼쳐집니다.
+    "이 출력이 다음 모듈의 입력이 된다"는 흐름이 한눈에 보일 거예요.</p>
+    <canvas id="pipe" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="bP">Perception</button>
+      <button id="bL">Planning</button>
+      <button id="bC">Control</button>
+      <button id="bA" class="alt">전체 보기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pipe'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const data={
+      P:{title:'Perception (인지)', col:'#1976d2', bg:'#e3f2fd',
+        i:'카메라 픽셀 / LiDAR 포인트 / Radar 스캔 / IMU·GPS',
+        w:'센서 융합 → 객체 검출 → Tracking → Localization',
+        o:'주변 차/보행자 위치·속도, 차선 경계, 자기 위치 (x,y,θ)'},
+      L:{title:'Planning (계획)', col:'#f57c00', bg:'#fff3e0',
+        i:'주변 객체 + 자기 위치 + HD Map + 목적지',
+        w:'Mission(전역 라우팅) → Behavior(차선·양보) → Motion(궤적)',
+        o:'시간에 따른 (x,y,v,ψ) 참조 궤적'},
+      C:{title:'Control (제어)', col:'#c62828', bg:'#fce4ec',
+        i:'참조 궤적 + 현재 차량 상태',
+        w:'횡: Pure Pursuit/Stanley/LQR/MPC, 종: PID/MPC',
+        o:'조향각 δ, 가속/제동 명령'}
+    };
+    let sel='all';
+    function draw(){
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      const boxes=[['P',20],['L',225],['C',430]];
+      boxes.forEach(([k,X])=>{
+        const d=data[k]; const hl=(sel===k);
+        x.fillStyle=hl?d.bg:'#fff'; x.strokeStyle=d.col; x.lineWidth=hl?3:1;
+        x.fillRect(X,20,190,60); x.strokeRect(X,20,190,60);
+        x.fillStyle=d.col; x.font='bold 15px sans-serif';
+        x.fillText(d.title, X+10, 50);
+      });
+      // arrows
+      x.strokeStyle='#666'; x.lineWidth=2; x.beginPath();
+      x.moveTo(210,50); x.lineTo(225,50); x.moveTo(415,50); x.lineTo(430,50); x.stroke();
+      // detail panel
+      if(sel==='all'){
+        x.fillStyle='#444'; x.font='13px sans-serif';
+        x.fillText('박스를 클릭하면 그 모듈의 입력·핵심작업·출력이 표시됩니다.', 20, 130);
+        x.fillText('흐름: Perception 출력 → Planning 입력 → Control 입력 → 차량 명령', 20, 152);
+        x.fillText('이 강의에서는 Perception 출력은 이미 주어졌다고 가정합니다.', 20, 174);
+      } else {
+        const d=data[sel];
+        x.fillStyle=d.bg; x.fillRect(20,110,600,190);
+        x.strokeStyle=d.col; x.lineWidth=2; x.strokeRect(20,110,600,190);
+        x.fillStyle=d.col; x.font='bold 16px sans-serif';
+        x.fillText(d.title, 35, 135);
+        x.fillStyle='#1a1a1a'; x.font='bold 13px sans-serif';
+        x.fillText('입력 (Input)', 35, 165);
+        x.font='13px sans-serif';
+        x.fillText(d.i, 130, 165);
+        x.font='bold 13px sans-serif';
+        x.fillText('핵심 작업', 35, 200);
+        x.font='13px sans-serif';
+        x.fillText(d.w, 130, 200);
+        x.font='bold 13px sans-serif';
+        x.fillText('출력 (Output)', 35, 235);
+        x.font='13px sans-serif';
+        x.fillText(d.o, 130, 235);
+        x.fillStyle='#666'; x.font='italic 12px sans-serif';
+        x.fillText('☞ 이 출력이 다음 모듈의 입력이 됩니다.', 35, 275);
+      }
+    }
+    $('bP').onclick=()=>{sel='P';draw();};
+    $('bL').onclick=()=>{sel='L';draw();};
+    $('bC').onclick=()=>{sel='C';draw();};
+    $('bA').onclick=()=>{sel='all';draw();};
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

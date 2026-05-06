@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 도립진자 자유 거동 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 도립진자 자유 거동</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/03-state-space.html">Lecture 3. 상태공간 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 도립진자 자유 거동</h4>
+    <p>막대가 자유 낙하하는 모습입니다. 입력 $u=0$이므로 막대가 떨어집니다. 다음 강의(L8 PID, L13 MPC)에서 이 막대를 똑바로 세우는 제어기를 학습합니다.</p>
+    <canvas id="ip" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>막대 길이 ℓ <span class="val" id="ipLV">1</span><input type="range" id="ipL" min="0.3" max="2" step="0.05" value="1"></label>
+      <label>막대 질량 m <span class="val" id="ipmV">0.3</span><input type="range" id="ipm" min="0.1" max="1" step="0.05" value="0.3"></label>
+      <button id="ipRst">다시 세우기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ip'),x=c.getContext('2d');
+    let s={x:0,xd:0,ph:0.05,phd:0};
+    document.getElementById('ipRst').onclick=()=>{s={x:0,xd:0,ph:0.05,phd:0};};
+    function loop(){
+      const M=1,m=+document.getElementById('ipm').value,L=+document.getElementById('ipL').value,g=9.81,dt=0.02;
+      ['ipL','ipm'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      // full nonlinear dynamics (cart + pendulum, no input)
+      const sP=Math.sin(s.ph),cP=Math.cos(s.ph);
+      const den=M+m*sP*sP;
+      const xdd=(m*sP*(L*s.phd*s.phd-g*cP))/den;
+      const phdd=((M+m)*g*sP-m*L*s.phd*s.phd*sP*cP)/(L*den);
+      s.xd+=xdd*dt;s.x+=s.xd*dt;
+      s.phd+=phdd*dt;s.ph+=s.phd*dt;
+      if(s.x<-3)s.x=-3;if(s.x>3)s.x=3;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#999';x.beginPath();x.moveTo(0,220);x.lineTo(c.width,220);x.stroke();
+      // cart
+      const cx=320+s.x*60;
+      x.fillStyle='#0b5fff';x.fillRect(cx-30,200,60,30);
+      x.fillStyle='#222';x.beginPath();x.arc(cx-20,235,5,0,Math.PI*2);x.fill();x.beginPath();x.arc(cx+20,235,5,0,Math.PI*2);x.fill();
+      // pendulum
+      const px=cx+L*100*Math.sin(s.ph),py=200-L*100*Math.cos(s.ph);
+      x.strokeStyle='#c62828';x.lineWidth=4;x.beginPath();x.moveTo(cx,200);x.lineTo(px,py);x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(px,py,8,0,Math.PI*2);x.fill();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('φ = '+(s.ph*180/Math.PI).toFixed(1)+'°',12,30);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

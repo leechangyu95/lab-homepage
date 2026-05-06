@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>⚖️ KCL/KVL 만족 게임 — 회로 풀기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">⚖️ KCL/KVL 만족 게임 — 회로 풀기</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/12-circuits.html">Week 12. 회로</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>⚖️ KCL/KVL 만족 게임 — 회로 풀기</h4>
+    <p>회로: 좌측 루프에 $\varepsilon_1 = 12$ V, $R_1 = 4$ Ω; 우측 루프에 $\varepsilon_2 = 6$ V, $R_2 = 2$ Ω; 가운데 가지에 $R_3 = 6$ Ω. 가지 전류 $I_1$(좌측, ↓), $I_2$(우측, ↓), $I_3 = I_1 + I_2$(가운데, ↓ KCL).</p>
+    <canvas id="w12_kvDemo" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$I_1$ <span class="val" id="w12_kvI1V">1.0</span> A
+        <input type="range" id="w12_kvI1" min="-3" max="3" step="0.05" value="1"></label>
+      <label>$I_2$ <span class="val" id="w12_kvI2V">0.0</span> A
+        <input type="range" id="w12_kvI2" min="-3" max="3" step="0.05" value="0"></label>
+      <button type="button" id="w12_kvSolve" style="margin-top:8px">정답으로 자동 맞추기</button>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>풀이</strong> — 좌측 KVL: $\varepsilon_1 - I_1 R_1 - (I_1+I_2)R_3 = 0$ → $12 - 4I_1 - 6(I_1+I_2) = 0$.<br>
+      우측 KVL: $\varepsilon_2 - I_2 R_2 - (I_1+I_2)R_3 = 0$ → $6 - 2I_2 - 6(I_1+I_2) = 0$.<br>
+      정리: $10 I_1 + 6 I_2 = 12$, $6 I_1 + 8 I_2 = 6$ → $I_1 \approx 1.105$ A, $I_2 \approx -0.0789$ A. 음수 = 가정 방향과 반대로 흐른다는 뜻.
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w12_kvDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const E1=12,E2=6,R1=4,R2=2,R3=6;
+    function draw(){
+      const I1=+document.getElementById('w12_kvI1').value;
+      const I2=+document.getElementById('w12_kvI2').value;
+      document.getElementById('w12_kvI1V').textContent=I1.toFixed(2);
+      document.getElementById('w12_kvI2V').textContent=I2.toFixed(2);
+      const I3=I1+I2;
+      const KVL1=E1 - I1*R1 - I3*R3;
+      const KVL2=E2 - I2*R2 - I3*R3;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // 회로 그림
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      // 좌측 루프
+      ctx.beginPath();
+      ctx.moveTo(80,80);ctx.lineTo(80,260);ctx.lineTo(320,260);ctx.lineTo(320,80);ctx.lineTo(80,80);
+      // 우측 루프
+      ctx.moveTo(320,80);ctx.lineTo(560,80);ctx.lineTo(560,260);ctx.lineTo(320,260);
+      ctx.stroke();
+      // 배터리 좌
+      ctx.fillStyle='#c62828';ctx.fillRect(70,170,20,4);ctx.fillRect(74,180,12,4);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('ε1='+E1+' V',30,178);
+      // 배터리 우
+      ctx.fillStyle='#c62828';ctx.fillRect(550,170,20,4);ctx.fillRect(554,180,12,4);
+      ctx.fillStyle='#222';
+      ctx.fillText('ε2='+E2+' V',570,178);
+      // R1 (위쪽 좌)
+      ctx.fillStyle='#fff';ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.fillRect(170,68,60,24);ctx.strokeRect(170,68,60,24);
+      ctx.fillStyle='#0b5fff';ctx.fillText('R1='+R1+'Ω',176,84);
+      // R2 (위쪽 우)
+      ctx.fillStyle='#fff';ctx.strokeRect(410,68,60,24);
+      ctx.fillStyle='#0b5fff';ctx.fillText('R2='+R2+'Ω',416,84);
+      // R3 (가운데)
+      ctx.fillStyle='#fff';ctx.strokeRect(295,150,50,40);
+      ctx.fillStyle='#0b5fff';ctx.fillText('R3='+R3+'Ω',300,174);
+      // 전류 화살표
+      ctx.font='12px sans-serif';
+      function arr(x,y,dx,dy,col,label){
+        ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();
+        const ang=Math.atan2(dy,dx),hl=8;
+        ctx.beginPath();ctx.moveTo(x+dx,y+dy);
+        ctx.lineTo(x+dx-hl*Math.cos(ang-0.4),y+dy-hl*Math.sin(ang-0.4));
+        ctx.lineTo(x+dx-hl*Math.cos(ang+0.4),y+dy-hl*Math.sin(ang+0.4));
+        ctx.closePath();ctx.fill();
+        ctx.fillText(label,x+dx+4,y+dy+4);
+      }
+      arr(120,120,0,30,'#c62828','I1='+I1.toFixed(2)+'A');
+      arr(540,120,0,30,'#2e7d32','I2='+I2.toFixed(2)+'A');
+      arr(360,200,0,30,'#7b1fa2','I3='+I3.toFixed(2)+'A');
+      // 결과창
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(40,275,560,55);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(40,275,560,55);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      const ok1=Math.abs(KVL1)<0.05, ok2=Math.abs(KVL2)<0.05;
+      ctx.fillStyle=ok1?'#2e7d32':'#c62828';
+      ctx.fillText((ok1?'✓':'✗')+' 좌측 KVL: ε1 - I1·R1 - I3·R3 = '+KVL1.toFixed(3)+' V',50,295);
+      ctx.fillStyle=ok2?'#2e7d32':'#c62828';
+      ctx.fillText((ok2?'✓':'✗')+' 우측 KVL: ε2 - I2·R2 - I3·R3 = '+KVL2.toFixed(3)+' V',50,315);
+    }
+    ['w12_kvI1','w12_kvI2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    document.getElementById('w12_kvSolve').addEventListener('click',()=>{
+      // 10I1+6I2=12, 6I1+8I2=6 → 행렬식
+      const det=10*8-6*6; const I1=(12*8-6*6)/det, I2=(10*6-6*12)/det;
+      document.getElementById('w12_kvI1').value=I1.toFixed(2);
+      document.getElementById('w12_kvI2').value=I2.toFixed(2);
+      draw();
+    });
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

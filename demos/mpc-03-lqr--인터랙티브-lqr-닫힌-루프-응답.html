@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: LQR 닫힌 루프 응답 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: LQR 닫힌 루프 응답</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/03-lqr.html">Week 3. LQR — 무제약 최적 제어</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: LQR 닫힌 루프 응답</h4>
+    <p>2차 시스템 $\ddot x = u$를 이산화해 LQR로 0으로 보냅니다. <strong>$Q/R$ 비율</strong>을 키우면 빠르게 수렴하지만 입력이 거칠어지고, 줄이면 부드럽지만 느립니다. <strong>초기 위치</strong>도 조절 가능.</p>
+    <canvas id="lqrDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$\log_{10}(Q/R)$ <span class="val" id="lqRV">1.0</span><input type="range" id="lqR" min="-2" max="3" step="0.1" value="1"></label>
+      <label>초기 위치 <span class="val" id="lqXV">3.0</span><input type="range" id="lqX" min="-5" max="5" step="0.2" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lqrDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function dlqr(qr){
+      // System: x_{k+1} = A x_k + B u_k, A=[[1,dt],[0,1]], B=[[0],[dt]], dt=0.1
+      const dt=0.1;const A=[[1,dt],[0,1]],B=[[0],[dt]];
+      const Q=[[qr,0],[0,qr*0.1]],R=[[1]];
+      // Iteratively solve DARE
+      let P=[[qr,0],[0,qr*0.1]];
+      for(let it=0;it<200;it++){
+        const PA=[[P[0][0]*A[0][0]+P[0][1]*A[1][0],P[0][0]*A[0][1]+P[0][1]*A[1][1]],
+                  [P[1][0]*A[0][0]+P[1][1]*A[1][0],P[1][0]*A[0][1]+P[1][1]*A[1][1]]];
+        const ATPA=[[A[0][0]*PA[0][0]+A[1][0]*PA[1][0],A[0][0]*PA[0][1]+A[1][0]*PA[1][1]],
+                    [A[0][1]*PA[0][0]+A[1][1]*PA[1][0],A[0][1]*PA[0][1]+A[1][1]*PA[1][1]]];
+        const PB=[[P[0][0]*B[0][0]+P[0][1]*B[1][0]],[P[1][0]*B[0][0]+P[1][1]*B[1][0]]];
+        const BTPB=B[0][0]*PB[0][0]+B[1][0]*PB[1][0];
+        const inv=1/(R[0][0]+BTPB);
+        const BTPA=[B[0][0]*PA[0][0]+B[1][0]*PA[1][0],B[0][0]*PA[0][1]+B[1][0]*PA[1][1]];
+        const K_new=[[BTPA[0]*inv,BTPA[1]*inv]];
+        const ATPB=[A[0][0]*PB[0][0]+A[1][0]*PB[1][0],A[0][1]*PB[0][0]+A[1][1]*PB[1][0]];
+        const correction=[[ATPB[0]*K_new[0][0],ATPB[0]*K_new[0][1]],
+                          [ATPB[1]*K_new[0][0],ATPB[1]*K_new[0][1]]];
+        const Pnew=[[Q[0][0]+ATPA[0][0]-correction[0][0],Q[0][1]+ATPA[0][1]-correction[0][1]],
+                    [Q[1][0]+ATPA[1][0]-correction[1][0],Q[1][1]+ATPA[1][1]-correction[1][1]]];
+        P=Pnew;
+      }
+      // Final K
+      const PA=[[P[0][0]*A[0][0]+P[0][1]*A[1][0],P[0][0]*A[0][1]+P[0][1]*A[1][1]],
+                [P[1][0]*A[0][0]+P[1][1]*A[1][0],P[1][0]*A[0][1]+P[1][1]*A[1][1]]];
+      const PB=[[P[0][0]*B[0][0]+P[0][1]*B[1][0]],[P[1][0]*B[0][0]+P[1][1]*B[1][0]]];
+      const BTPB=B[0][0]*PB[0][0]+B[1][0]*PB[1][0];
+      const inv=1/(R[0][0]+BTPB);
+      const BTPA=[B[0][0]*PA[0][0]+B[1][0]*PA[1][0],B[0][0]*PA[0][1]+B[1][0]*PA[1][1]];
+      return {K:[BTPA[0]*inv,BTPA[1]*inv],dt};
+    }
+    function draw(){
+      const lr=+document.getElementById('lqR').value;
+      const x0=+document.getElementById('lqX').value;
+      const QR=Math.pow(10,lr);
+      document.getElementById('lqRV').textContent=lr.toFixed(1);
+      document.getElementById('lqXV').textContent=x0.toFixed(1);
+      const {K,dt}=dlqr(QR);
+      let x=[x0,0];const xs=[],vs=[],us=[];const T=120;
+      for(let k=0;k<T;k++){
+        const u=-(K[0]*x[0]+K[1]*x[1]);
+        xs.push(x[0]);vs.push(x[1]);us.push(u);
+        x=[x[0]+dt*x[1],x[1]+dt*u];
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const tH=170;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      ctx.moveTo(40,30);ctx.lineTo(W-20,30);ctx.moveTo(40,tH);ctx.lineTo(W-20,tH);
+      ctx.moveTo(40,30);ctx.lineTo(40,tH);ctx.stroke();
+      const refY=(30+tH)/2;
+      ctx.strokeStyle='#999';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(40,refY);ctx.lineTo(W-20,refY);ctx.stroke();ctx.setLineDash([]);
+      const sc=(tH-30)/12;
+      function plot(arr,col){
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+        arr.forEach((v,i)=>{const x=40+(i/(T-1))*(W-60);const y=refY-v*sc;
+          if(!isFinite(y))return;
+          if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+      }
+      plot(xs,'#0b5fff');plot(vs,'#2e7d32');
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';ctx.fillText('상태',12,40);
+      ctx.fillStyle='#0b5fff';ctx.fillText('위치 x',W-180,40);
+      ctx.fillStyle='#2e7d32';ctx.fillText('속도ẋ',W-180,58);
+      // u
+      const uTop=190,uBot=H-30;
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      ctx.moveTo(40,uTop);ctx.lineTo(W-20,uTop);ctx.moveTo(40,uBot);ctx.lineTo(W-20,uBot);
+      ctx.moveTo(40,uTop);ctx.lineTo(40,uBot);ctx.stroke();
+      const mid=(uTop+uBot)/2;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,mid);ctx.lineTo(W-20,mid);ctx.stroke();
+      const uMax=Math.max(...us.map(Math.abs),0.1);
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;ctx.beginPath();
+      us.forEach((v,i)=>{const x=40+(i/(T-1))*(W-60);const y=mid-(v/uMax)*((uBot-uTop)/2-5);
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`u(t), 게인 K=[${K[0].toFixed(2)}, ${K[1].toFixed(2)}]`,12,200);
+    }
+    document.getElementById('lqR').addEventListener('input',draw);
+    document.getElementById('lqX').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

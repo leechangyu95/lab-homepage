@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 웨이포인트 → 매끈한 경로 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 웨이포인트 → 매끈한 경로</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 웨이포인트 → 매끈한 경로</h4>
+    <p>점을 드래그하면 곡선이 즉시 따라옵니다. 빈 공간을 클릭하면 새 점이 추가됩니다. 회색 점선은 직선 연결, 파란 곡선이 Catmull-Rom 스플라인입니다.</p>
+    <canvas id="spline" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>장력 τ <span class="val" id="splTV">0.5</span><input type="range" id="splT" min="0" max="1" step="0.05" value="0.5"></label>
+      <button id="splRst">기본 점 복원</button>
+      <button id="splClr" class="alt">모두 지우기</button>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>장력</strong>이 0이면 직선에 가깝게, 1이면 점에서 더 크게 휘어집니다. 표준 Catmull-Rom은 τ=0.5.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('spline'),x=c.getContext('2d');
+    let pts=[[60,200],[180,80],[300,260],[420,100],[540,220]];
+    let drag=-1;
+    c.onmousedown=e=>{
+      const r=c.getBoundingClientRect();const px=(e.clientX-r.left)*c.width/r.width;const py=(e.clientY-r.top)*c.height/r.height;
+      let bi=-1,bd=Infinity;
+      pts.forEach((p,i)=>{const d=Math.hypot(p[0]-px,p[1]-py);if(d<bd){bd=d;bi=i;}});
+      if(bd<15)drag=bi;else{pts.push([px,py]);drag=pts.length-1;}
+      draw();
+    };
+    c.onmousemove=e=>{
+      if(drag<0)return;
+      const r=c.getBoundingClientRect();
+      pts[drag]=[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height];
+      draw();
+    };
+    window.addEventListener('mouseup',()=>{drag=-1;});
+    document.getElementById('splRst').onclick=()=>{pts=[[60,200],[180,80],[300,260],[420,100],[540,220]];draw();};
+    document.getElementById('splClr').onclick=()=>{pts=[];draw();};
+    document.getElementById('splT').oninput=()=>{document.getElementById('splTV').textContent=document.getElementById('splT').value;draw();};
+    function catmull(p0,p1,p2,p3,t,tau){
+      const t2=t*t,t3=t2*t;
+      const f1=-tau*t+2*tau*t2-tau*t3;
+      const f2=1+(tau-3)*t2+(2-tau)*t3;
+      const f3=tau*t+(3-2*tau)*t2+(tau-2)*t3;
+      const f4=-tau*t2+tau*t3;
+      return [p0[0]*f1+p1[0]*f2+p2[0]*f3+p3[0]*f4, p0[1]*f1+p1[1]*f2+p2[1]*f3+p3[1]*f4];
+    }
+    function draw(){
+      const tau=+document.getElementById('splT').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 격자
+      x.strokeStyle='#eef0f3';
+      for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      if(pts.length<1){x.fillStyle='#666';x.font='14px sans-serif';x.fillText('빈 공간을 클릭해 점 추가',20,30);return;}
+      // 직선 경로
+      x.strokeStyle='#cfd8e3';x.lineWidth=1.5;x.setLineDash([4,4]);x.beginPath();
+      pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();x.setLineDash([]);
+      // 스플라인
+      if(pts.length>=2){
+        x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+        const ext=[pts[0],...pts,pts[pts.length-1]];
+        let totalLen=0,prev=null;
+        for(let i=0;i<pts.length-1;i++){
+          for(let t=0;t<=1.001;t+=0.04){
+            const q=catmull(ext[i],ext[i+1],ext[i+2],ext[i+3],t,tau);
+            if(i===0&&t===0){x.moveTo(q[0],q[1]);prev=q;}
+            else{x.lineTo(q[0],q[1]);if(prev)totalLen+=Math.hypot(q[0]-prev[0],q[1]-prev[1]);prev=q;}
+          }
+        }
+        x.stroke();
+        // 직선 길이
+        let linLen=0;
+        for(let i=1;i<pts.length;i++)linLen+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+        x.fillStyle='#666';x.font='12px sans-serif';
+        x.fillText('직선 합 '+linLen.toFixed(0)+' px → 스플라인 '+totalLen.toFixed(0)+' px',12,c.height-12);
+      }
+      // 점
+      pts.forEach((p,i)=>{
+        x.fillStyle=i===0?'#2e7d32':i===pts.length-1?'#c62828':'#0b5fff';
+        x.beginPath();x.arc(p[0],p[1],8,0,Math.PI*2);x.fill();
+        x.fillStyle='#fff';x.font='bold 11px sans-serif';x.textAlign='center';
+        x.fillText(i+1,p[0],p[1]+4);x.textAlign='start';
+      });
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('웨이포인트 '+pts.length+'개 (드래그/추가 가능)',12,22);
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

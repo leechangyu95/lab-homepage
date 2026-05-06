@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 멀티헤드 분할 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 멀티헤드 분할</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/13-transformer-llm.html">Week 13. Transformer와 LLM</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 멀티헤드 분할</h4>
+    <p>$d_{\text{model}}=64$ 차원이 8개 헤드로 나뉘면 헤드당 8차원입니다. 헤드 수를 바꾸며 분할 모습을 보세요.</p>
+    <canvas id="mhCanvas" width="640" height="220"></canvas>
+    <div class="controls">
+      <label>헤드 수 <span class="val" id="mhV">8</span><input type="range" id="mh" min="1" max="16" step="1" value="8"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mhCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLORS=['#0b5fff','#ff8c00','#2e7d32','#c62828','#6a1b9a','#00838f','#e91e63','#f9a825','#3f51b5','#009688','#795548','#9c27b0','#607d8b','#ffc107','#4caf50','#f44336'];
+    function draw(){
+      const h=+document.getElementById('mh').value;
+      document.getElementById('mhV').textContent=h;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const D=64,total=W-80,bw=total/D;
+      for(let k=0;k<D;k++){
+        const head=Math.floor(k/(D/h));
+        ctx.fillStyle=COLORS[head%16];
+        ctx.fillRect(40+k*bw,80,bw-1,60);
+      }
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`d_model=64, ${h}개 헤드, 헤드당 ${64/h}차원`,40,50);
+    }
+    document.getElementById('mh').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

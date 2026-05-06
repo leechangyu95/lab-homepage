@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: $1/[s(s+1)(s+5)]$의 근궤적 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: $1/[s(s+1)(s+5)]$의 근궤적</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/09-root-locus.html">Week 9. 근궤적 (Root Locus)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: $1/[s(s+1)(s+5)]$의 근궤적</h4>
+    <p>회색 곡선이 K가 0 → 60일 때 그리는 전체 궤적, 빨간 X가 현재 K에서의 폐루프 극점.
+    슬라이더로 K를 움직이면서 극점이 좌반평면 → 허수축 → 우반평면으로 옮겨가는 모습을 보세요.</p>
+    <canvas id="rl" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>게인 K <span class="val" id="rlKV">5</span><input type="range" id="rlK" min="0.1" max="60" step="0.1" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rl'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('rlKV').textContent=(+$('rlK').value).toFixed(1);};
+    $('rlK').oninput=upd;
+    function roots3(a,b,c,d){
+      const p2=b/a,p1=c/a,p0=d/a;
+      let r=[{re:1,im:1},{re:1,im:-1},{re:-1,im:0}];
+      for(let it=0;it<60;it++){
+        const nr=r.map((zi,i)=>{
+          const z2={re:zi.re*zi.re-zi.im*zi.im, im:2*zi.re*zi.im};
+          const z3={re:z2.re*zi.re-z2.im*zi.im, im:z2.re*zi.im+z2.im*zi.re};
+          const f={re:z3.re + p2*z2.re + p1*zi.re + p0, im:z3.im + p2*z2.im + p1*zi.im};
+          let dn={re:1,im:0};
+          r.forEach((zj,j)=>{if(i===j)return;
+            const dr=zi.re-zj.re, di=zi.im-zj.im;
+            dn={re:dn.re*dr-dn.im*di, im:dn.re*di+dn.im*dr};});
+          const denom=dn.re*dn.re+dn.im*dn.im;
+          const dz={re:(f.re*dn.re+f.im*dn.im)/denom, im:(f.im*dn.re-f.re*dn.im)/denom};
+          return {re:zi.re-dz.re, im:zi.im-dz.im};
+        });
+        r=nr;
+      }
+      return r;
+    }
+    function loop(){
+      const Kcur=+$('rlK').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320, cy=190, sc=45;
+      // grid
+      x.strokeStyle='#eee';for(let r=-7;r<=2;r++){const xx=cx+r*sc;x.beginPath();x.moveTo(xx,20);x.lineTo(xx,360);x.stroke();}
+      for(let i=-4;i<=4;i++){const yy=cy-i*sc;x.beginPath();x.moveTo(20,yy);x.lineTo(620,yy);x.stroke();}
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,cy);x.lineTo(620,cy);x.moveTo(cx,20);x.lineTo(cx,360);x.stroke();
+      // unstable shading
+      x.fillStyle='rgba(198,40,40,0.06)';x.fillRect(cx,20,300,340);
+      // open-loop poles (blue X)
+      [0,-1,-5].forEach(p=>{const px=cx+p*sc,py=cy;
+        x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+        x.moveTo(px-7,py-7);x.lineTo(px+7,py+7);x.moveTo(px-7,py+7);x.lineTo(px+7,py-7);x.stroke();});
+      // entire root locus: sweep K and plot all roots
+      x.fillStyle='rgba(150,150,150,0.5)';
+      for(let K=0.1;K<60;K+=0.3){
+        const r=roots3(1,6,5,K);
+        r.forEach(p=>{const px=cx+p.re*sc,py=cy-p.im*sc;
+          x.fillRect(px-1.2,py-1.2,2.4,2.4);});
+      }
+      // current K poles (red X)
+      const r=roots3(1,6,5,Kcur);
+      r.forEach(p=>{const px=cx+p.re*sc,py=cy-p.im*sc;
+        x.strokeStyle='#c62828';x.lineWidth=2.5;x.beginPath();
+        x.moveTo(px-9,py-9);x.lineTo(px+9,py+9);x.moveTo(px-9,py+9);x.lineTo(px+9,py-9);x.stroke();});
+      // labels
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('Re',610,cy-4);x.fillText('Im',cx+5,28);
+      [0,-1,-5].forEach(p=>{x.fillText(p.toString(),cx+p*sc-4,cy+14);});
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('파랑 X = 개루프 극점,  회색 점 = 전체 근궤적,  빨강 X = 현재 K의 폐루프 극점',20,375);
+      // verdict
+      const unstable=r.some(p=>p.re>0.001);
+      x.fillStyle=unstable?'#c62828':'#2e7d32';x.font='13px sans-serif';
+      x.fillText(unstable?'불안정':'안정',20,30);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

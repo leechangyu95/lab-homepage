@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🌀 중첩 원리 — 보강·소멸 간섭 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🌀 중첩 원리 — 보강·소멸 간섭</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/08-waves.html">Week 8. 파동과 소리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🌀 중첩 원리 — 보강·소멸 간섭</h4>
+    <p>위 두 파(파랑·주황)가 합쳐져 보라색 합성파가 됩니다. <strong>두 파 자체는 변하지 않고 변위만 더해집니다.</strong></p>
+    <canvas id="w8_superposeDemo" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>위상차 $\Delta\phi$ <span class="val" id="w8_phV">0°</span>
+        <input type="range" id="w8_ph" min="0" max="360" step="5" value="0"></label>
+      <label>파장 $\lambda$ <span class="val" id="w8_l2V">2.0</span> m
+        <input type="range" id="w8_l2" min="1.0" max="4.0" step="0.1" value="2.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰할 것</strong>
+      <ul>
+        <li>$\Delta\phi = 0°$ → 합성파 진폭이 2배 (완전 보강)</li>
+        <li>$\Delta\phi = 180°$ → 합성파 진폭 0 (완전 소멸 — 이게 노이즈 캔슬링의 원리)</li>
+        <li>$\Delta\phi = 90°$ → 진폭이 $\sqrt{2}$배가 되며 위상도 45° 이동</li>
+        <li>같은 위상차라도 $\lambda$가 바뀌면 합성파의 공간 주기도 바뀌지만 진폭은 그대로</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w8_superposeDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const ph=+document.getElementById('w8_ph').value*Math.PI/180;
+      const L=+document.getElementById('w8_l2').value;
+      document.getElementById('w8_phV').textContent=(ph*180/Math.PI).toFixed(0)+'°';
+      document.getElementById('w8_l2V').textContent=L.toFixed(1);
+      const k=2*Math.PI/L;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=40;const sx=(W-60)/8,sy=35;
+      function panel(py,label){
+        ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(ox,py);ctx.lineTo(W-20,py);ctx.stroke();
+        ctx.fillStyle='#444';ctx.font='bold 12px sans-serif';
+        ctx.fillText(label,ox+4,py-44);
+      }
+      panel(80,'파 1: y₁ = sin(kx)');
+      panel(180,'파 2: y₂ = sin(kx + Δφ)');
+      panel(290,'합성: y₁ + y₂');
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=400;i++){const x=8*i/400;const y=Math.sin(k*x);
+        const px=ox+x*sx,py=80-y*sy;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+      ctx.stroke();
+      ctx.strokeStyle='#ff8c00';ctx.beginPath();
+      for(let i=0;i<=400;i++){const x=8*i/400;const y=Math.sin(k*x+ph);
+        const px=ox+x*sx,py=180-y*sy;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+      ctx.stroke();
+      ctx.strokeStyle='#7b1fa2';ctx.lineWidth=2.5;ctx.beginPath();
+      let maxA=0;
+      for(let i=0;i<=400;i++){const x=8*i/400;const y=Math.sin(k*x)+Math.sin(k*x+ph);
+        if(Math.abs(y)>maxA)maxA=Math.abs(y);
+        const px=ox+x*sx,py=290-y*sy;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+      ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-180,300,160,40);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-180,300,160,40);
+      ctx.fillStyle='#7b1fa2';ctx.font='12px sans-serif';
+      ctx.fillText('합성 진폭 ≈ '+maxA.toFixed(2),W-172,318);
+      const kind=maxA>1.95?'완전 보강':maxA<0.05?'완전 소멸':maxA>1?'부분 보강':'부분 소멸';
+      ctx.fillStyle='#222';ctx.fillText(kind,W-172,334);
+    }
+    ['w8_ph','w8_l2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

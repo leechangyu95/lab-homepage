@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 포텐셜 필드 내비게이션 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 포텐셜 필드 내비게이션</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 포텐셜 필드 내비게이션</h4>
+    <p>마우스를 끌어 목표점(녹색)을 옮기면, 로봇(파랑)이 인력+척력 합력 방향으로 움직입니다. 장애물 주위의 등고선도 보입니다.</p>
+    <canvas id="pf" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>인력 ka <span class="val" id="kaV">1</span><input type="range" id="ka" min="0.1" max="3" step="0.1" value="1"></label>
+      <label>척력 kr <span class="val" id="krV">800</span><input type="range" id="kr" min="100" max="10000" step="50" value="800"></label>
+      <button id="pfRst">로봇 리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pf'),x=c.getContext('2d');
+    const obs=[{x:230,y:150,r:30},{x:380,y:230,r:35},{x:480,y:150,r:25},{x:320,y:90,r:20}];
+    let robot={x:60,y:300},goal={x:580,y:60};
+    c.onmousemove=e=>{const r=c.getBoundingClientRect();goal.x=(e.clientX-r.left)*c.width/r.width;goal.y=(e.clientY-r.top)*c.height/r.height;};
+    document.getElementById('pfRst').onclick=()=>{robot={x:60,y:300};};
+    function force(p){
+      const ka=+document.getElementById('ka').value,kr=+document.getElementById('kr').value;
+      // Attractive: F = -ka*(p - goal), scaled so magnitude ~1 at ~20 px away
+      let fx=-ka*(p.x-goal.x)*0.05,fy=-ka*(p.y-goal.y)*0.05;
+      obs.forEach(o=>{
+        const dx=p.x-o.x,dy=p.y-o.y;
+        const dc=Math.hypot(dx,dy);
+        if(dc<0.5)return;
+        const d=Math.max(dc-o.r,0.5); // distance to obstacle SURFACE
+        const r0=60;                   // influence radius from surface
+        if(d<r0){
+          // F_rep = kr*(1/d - 1/r0)/d^2 along the outward radial direction
+          const m=kr*(1/d-1/r0)/(d*d);
+          fx+=m*dx/dc;fy+=m*dy/dc;
+        }
+      });
+      return {fx,fy};
+    }
+    function loop(){
+      ['ka','kr'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const f=force(robot);
+      const mag=Math.hypot(f.fx,f.fy)||1;
+      // step size proportional to force magnitude but capped — this lets repulsion
+      // actually deflect the trajectory instead of being washed out by normalization
+      const step=Math.min(mag,2);
+      robot.x+=f.fx/mag*step;robot.y+=f.fy/mag*step;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // potential heat
+      const STEP=12;
+      for(let i=0;i<c.width;i+=STEP)for(let j=0;j<c.height;j+=STEP){
+        let U=0.001*((i-goal.x)**2+(j-goal.y)**2);
+        obs.forEach(o=>{const dc=Math.hypot(i-o.x,j-o.y);const d=Math.max(dc-o.r,0.5);if(d<60)U+=500*(1/d-1/60)**2;});
+        const v=Math.min(1,U/150);
+        x.fillStyle='rgba(255,140,0,'+v*0.4+')';x.fillRect(i,j,STEP,STEP);
+      }
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();x.arc(goal.x,goal.y,10,0,Math.PI*2);x.stroke();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(robot.x,robot.y,8,0,Math.PI*2);x.fill();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

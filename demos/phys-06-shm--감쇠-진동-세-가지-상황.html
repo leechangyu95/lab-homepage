@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>감쇠 진동 — 세 가지 상황 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">감쇠 진동 — 세 가지 상황</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/06-shm.html">Week 6. 단진동 (SHM)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>감쇠 진동 — 세 가지 상황</h4>
+    <p>운동방정식 $m\ddot x + b\dot x + kx = 0$의 수치해. 임계 감쇠계수 $b_c = 2\sqrt{mk}$ 기준으로 비율 $\zeta = b/b_c$ 표기.</p>
+    <canvas id="w6_damp_canvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>감쇠계수 $b$ <span class="val" id="w6_bV">1.0</span> kg/s
+        <input type="range" id="w6_b" min="0" max="20" step="0.1" value="1.0"></label>
+      <label>스프링 $k$ <span class="val" id="w6_dkV">25</span> N/m
+        <input type="range" id="w6_dk" min="5" max="100" step="1" value="25"></label>
+      <label>질량 $m$ <span class="val" id="w6_dmV">1.0</span> kg
+        <input type="range" id="w6_dm" min="0.2" max="3.0" step="0.1" value="1.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$\zeta < 1$ (저감쇠): 진폭이 지수 함수 모양으로 줄며 흔들림.</li>
+        <li>$\zeta = 1$ (임계감쇠): 진동 없이 가장 빨리 평형으로 — 자동차·로봇 댐퍼 목표.</li>
+        <li>$\zeta > 1$ (과감쇠): 진동은 없지만 천천히 평형으로. 실외기 진동대 등.</li>
+        <li>$b=0$ (무감쇠): 영원히 진동. 비현실적.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w6_damp_canvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const b=+document.getElementById('w6_b').value;
+      const k=+document.getElementById('w6_dk').value;
+      const m=+document.getElementById('w6_dm').value;
+      document.getElementById('w6_bV').textContent=b.toFixed(1);
+      document.getElementById('w6_dkV').textContent=k;
+      document.getElementById('w6_dmV').textContent=m.toFixed(1);
+      const bc=2*Math.sqrt(m*k);
+      const zeta=b/bc;
+      const w0=Math.sqrt(k/m);
+      const TMAX=Math.max(6,4*2*Math.PI/w0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=44;
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(margin,H/2);ctx.lineTo(W-15,H/2);
+      ctx.moveTo(margin,15);ctx.lineTo(margin,H-25);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('t (s)',W-25,H/2+14);
+      ctx.fillText('x',margin-18,20);
+      // Numerical RK4
+      let x=1,v=0,t=0;const dt=TMAX/600;
+      const xs=[];const ts=[];
+      for(let i=0;i<=600;i++){
+        xs.push(x);ts.push(t);
+        function deriv(xx,vv){return [-(b/m)*vv-(k/m)*xx];}
+        const k1v=-(b/m)*v-(k/m)*x;const k1x=v;
+        const k2v=-(b/m)*(v+k1v*dt/2)-(k/m)*(x+k1x*dt/2);const k2x=v+k1v*dt/2;
+        const k3v=-(b/m)*(v+k2v*dt/2)-(k/m)*(x+k2x*dt/2);const k3x=v+k2v*dt/2;
+        const k4v=-(b/m)*(v+k3v*dt)-(k/m)*(x+k3x*dt);const k4x=v+k3v*dt;
+        v+=(k1v+2*k2v+2*k3v+k4v)*dt/6;
+        x+=(k1x+2*k2x+2*k3x+k4x)*dt/6;
+        t+=dt;
+      }
+      const xmax=Math.max(...xs.map(Math.abs),1);
+      const sc=(H/2-25)/xmax;
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.2;ctx.beginPath();
+      for(let i=0;i<xs.length;i++){
+        const px=margin+(ts[i]/TMAX)*(W-margin-15);
+        const py=H/2-xs[i]*sc;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // Envelope (only for underdamped)
+      if(zeta<1){
+        const wd=w0*Math.sqrt(1-zeta*zeta);
+        const gamma=b/(2*m);
+        ctx.strokeStyle='#ff8c00';ctx.lineWidth=1.4;ctx.setLineDash([4,4]);
+        ctx.beginPath();
+        for(let i=0;i<=200;i++){
+          const tt=TMAX*i/200,env=Math.exp(-gamma*tt);
+          const px=margin+(tt/TMAX)*(W-margin-15);
+          const py=H/2-env*sc;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+        ctx.beginPath();
+        for(let i=0;i<=200;i++){
+          const tt=TMAX*i/200,env=-Math.exp(-gamma*tt);
+          const px=margin+(tt/TMAX)*(W-margin-15);
+          const py=H/2-env*sc;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();ctx.setLineDash([]);
+      }
+      // Info
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(W-220,15,205,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,15,205,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('ω₀ = '+w0.toFixed(2)+' rad/s',W-210,32);
+      ctx.fillText('b_c (임계) = '+bc.toFixed(2)+' kg/s',W-210,50);
+      let regime='';
+      if(zeta<0.001)regime='무감쇠';
+      else if(zeta<1)regime='저감쇠';
+      else if(Math.abs(zeta-1)<0.05)regime='임계감쇠';
+      else regime='과감쇠';
+      ctx.fillStyle=zeta<1?'#0b5fff':(Math.abs(zeta-1)<0.05?'#27ae60':'#c62828');
+      ctx.fillText('ζ = '+zeta.toFixed(3)+' ('+regime+')',W-210,68);
+    }
+    ['w6_b','w6_dk','w6_dm'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

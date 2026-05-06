@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 스프링-매스-댐퍼 실시간 시뮬레이션 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 스프링-매스-댐퍼 실시간 시뮬레이션</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/07-system-models.html">Week 7. 시스템 모델 — 미분방정식으로 동역학을 적기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 스프링-매스-댐퍼 실시간 시뮬레이션</h4>
+    <p>스텝 외력을 가했을 때 질량이 어떻게 흔들리며 평형으로 가는지 실시간으로 봅니다. <strong>스프링 $k$↑이면 빨라지고, 댐퍼 $b$↑이면 진동이 잦아듭니다</strong>. 위쪽은 질량 애니메이션, 아래쪽은 시간응답 곡선.</p>
+    <canvas id="smdDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>질량 m <span class="val" id="smdMV">1.0</span> kg<input type="range" id="smdM" min="0.2" max="5" step="0.1" value="1"></label>
+      <label>스프링 k <span class="val" id="smdKV">10</span> N/m<input type="range" id="smdK" min="1" max="80" step="1" value="10"></label>
+      <label>댐퍼 b <span class="val" id="smdBV">1.0</span> N·s/m<input type="range" id="smdB" min="0" max="20" step="0.1" value="1"></label>
+      <label>외력 f <span class="val" id="smdFV">5</span> N<input type="range" id="smdF" min="0" max="20" step="0.5" value="5"></label>
+      <button id="smdRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('smdDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let x=0,v=0,t=0,hist=[];
+    document.getElementById('smdRst').onclick=()=>{x=0;v=0;t=0;hist=[];};
+    function loop(){
+      const m=+document.getElementById('smdM').value;
+      const k=+document.getElementById('smdK').value;
+      const b=+document.getElementById('smdB').value;
+      const f=+document.getElementById('smdF').value;
+      ['smdM','smdK','smdB','smdF'].forEach(id=>document.getElementById(id+'V').textContent=document.getElementById(id).value);
+      const dt=0.016;
+      // a = (f - b*v - k*x)/m
+      const a=(f - b*v - k*x)/m;
+      v += a*dt; x += v*dt;
+      t += dt;
+      hist.push({t,x});
+      if(hist.length>500)hist.shift();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // top: animation
+      const ay=80,baseX=80,XScale=8;
+      ctx.strokeStyle='#333';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(baseX,40);ctx.lineTo(baseX,120);ctx.stroke();
+      // hatch wall
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      for(let yy=40;yy<120;yy+=8){ctx.beginPath();ctx.moveTo(baseX-8,yy);ctx.lineTo(baseX,yy+6);ctx.stroke();}
+      const massX=baseX+200+x*XScale;
+      // spring
+      ctx.strokeStyle='#0742b8';ctx.lineWidth=2;ctx.beginPath();
+      const turns=8, sStart=baseX, sEnd=massX-30;
+      ctx.moveTo(sStart,ay);
+      for(let i=0;i<=turns*4;i++){const fr=i/(turns*4);const xx=sStart+fr*(sEnd-sStart);
+        const yy=ay+(i%2===0?0:(Math.floor(i/2)%2===0?-12:12));ctx.lineTo(xx,yy);}
+      ctx.lineTo(sEnd,ay);ctx.stroke();
+      // damper
+      ctx.strokeStyle='#c1121f';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(sStart,ay+30);ctx.lineTo(sStart+60,ay+30);
+      ctx.rect(sStart+60,ay+18,40,24);
+      ctx.moveTo(sStart+90,ay+30);ctx.lineTo(massX-30,ay+30);ctx.stroke();
+      // mass
+      ctx.fillStyle='#1b5e20';ctx.fillRect(massX-30,ay-25,60,55);
+      ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.fillText('m',massX-7,ay+8);
+      // force arrow
+      if(f>0){ctx.strokeStyle='#666';ctx.lineWidth=2;ctx.beginPath();
+        ctx.moveTo(massX+30,ay);ctx.lineTo(massX+30+f*5,ay);
+        ctx.lineTo(massX+25+f*5,ay-5);ctx.moveTo(massX+30+f*5,ay);ctx.lineTo(massX+25+f*5,ay+5);ctx.stroke();
+        ctx.fillStyle='#666';ctx.font='12px sans-serif';ctx.fillText('f='+f,massX+35+f*5,ay+5);}
+      // x label
+      ctx.strokeStyle='#0742b8';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(baseX+200,ay+50);ctx.lineTo(massX,ay+50);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0742b8';ctx.fillText(`x = ${x.toFixed(3)} m`,baseX+205,ay+65);
+      // bottom: time response
+      const ox=40,oy=H-30,w=W-60,h=130;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,oy-h);ctx.lineTo(ox,oy);ctx.stroke();
+      const xss = k>0 ? f/k : 0;
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oy-xss/(Math.max(2,xss*1.8))*h);ctx.lineTo(ox+w,oy-xss/(Math.max(2,xss*1.8))*h);ctx.stroke();ctx.setLineDash([]);
+      const xRange=Math.max(2,xss*1.8);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h0,i)=>{const xx=ox+i/500*w,yy=oy-Math.max(0,h0.x)/xRange*h;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const wn=Math.sqrt(k/m), zeta=b/(2*Math.sqrt(k*m));
+      ctx.fillText(`ωₙ = ${wn.toFixed(2)} rad/s,  ζ = ${zeta.toFixed(3)}`,ox,oy-h-5);
+      const cls = zeta<0.001?'무감쇠':zeta<1?'저감쇠 (진동)':zeta<1.001?'임계감쇠':'과감쇠';
+      ctx.fillText(`정상상태 x∞ = f/k = ${xss.toFixed(3)} m  /  ${cls}`,ox+260,oy-h-5);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

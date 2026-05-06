@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: RC 필터 위상 응답 — 차단 주파수에서 ±45° — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: RC 필터 위상 응답 — 차단 주파수에서 ±45°</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/08-impedance.html">Week 8. 임피던스 — AC용 옴의 법칙</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: RC 필터 위상 응답 — 차단 주파수에서 ±45°</h4>
+    <p>같은 RC 필터의 <strong>위상</strong>을 봅니다. LPF는 차단 주파수에서 −45°를 통과해 −90°로 수렴, HPF는 +90°에서 시작해 차단 주파수에서 +45°를 거쳐 0°로 수렴. 빨간 점이 현재 차단 주파수 위치입니다.</p>
+    <canvas id="phaseCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>필터
+        <select id="phaseSel"><option value="lpf">LPF (저역통과)</option><option value="hpf">HPF (고역통과)</option></select>
+      </label>
+      <label>R <span class="val" id="phaseRV">1.0</span> kΩ<input type="range" id="phaseR" min="0.1" max="10" step="0.1" value="1"></label>
+      <label>C <span class="val" id="phaseCV">1.0</span> μF<input type="range" id="phaseC" min="0.01" max="10" step="0.01" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('phaseCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const sel=document.getElementById('phaseSel').value;
+      const R=+document.getElementById('phaseR').value*1000;
+      const Cv=+document.getElementById('phaseC').value*1e-6;
+      document.getElementById('phaseRV').textContent=(R/1000).toFixed(1);
+      document.getElementById('phaseCV').textContent=(Cv*1e6).toFixed(2);
+      const fc=1/(2*Math.PI*R*Cv);
+      const fmin=fc/100,fmax=fc*100;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(f){return 60+(Math.log10(f/fmin))/4*(W-90);}
+      // y range: -90 to +90 degrees
+      const phMin=-95,phMax=95;
+      function y(p){return H-50-(p-phMin)/(phMax-phMin)*(H-90);}
+      // Grid
+      ctx.strokeStyle='#ddd';
+      for(let p=-2;p<=2;p++){const f=fc*Math.pow(10,p);ctx.beginPath();ctx.moveTo(x(f),y(phMin));ctx.lineTo(x(f),y(phMax));ctx.stroke();}
+      for(let ph=-90;ph<=90;ph+=30){ctx.beginPath();ctx.moveTo(x(fmin),y(ph));ctx.lineTo(x(fmax),y(ph));ctx.stroke();}
+      // Axes
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x(fmin),y(0));ctx.lineTo(x(fmax),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(fmin),y(phMin));ctx.lineTo(x(fmin),y(phMax));ctx.stroke();
+      // Labels
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let ph=-90;ph<=90;ph+=30){ctx.fillText(ph+'°',25,y(ph)+4);}
+      // -45° / +45° reference
+      ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      const refPh=sel==='lpf'?-45:45;
+      ctx.beginPath();ctx.moveTo(x(fmin),y(refPh));ctx.lineTo(x(fc),y(refPh));ctx.lineTo(x(fc),y(phMin));ctx.stroke();
+      ctx.setLineDash([]);
+      // Curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const f=Math.pow(10,lf);const wRC=(2*Math.PI*f)*R*Cv;
+        const ph=sel==='lpf'?-Math.atan(wRC)*180/Math.PI:(90-Math.atan(wRC)*180/Math.PI);
+        if(lf===Math.log10(fmin))ctx.moveTo(x(f),y(ph));else ctx.lineTo(x(f),y(ph));
+      }
+      ctx.stroke();
+      // Mark fc point
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(x(fc),y(refPh),6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`f_c = ${fc<1000?fc.toFixed(1)+' Hz':(fc/1000).toFixed(2)+' kHz'} → 위상 ${refPh}°`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(sel==='lpf'?'LPF: 0° → −45°(f_c) → −90°':'HPF: +90° → +45°(f_c) → 0°',40,52);
+      ctx.fillText('주파수 f (log, f_c 기준 ±2decade)',W/2-100,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('∠H(jω) [°]',-30,0);ctx.restore();
+    }
+    ['phaseSel','phaseR','phaseC'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.addEventListener('input',draw);el.addEventListener('change',draw);
+    });
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

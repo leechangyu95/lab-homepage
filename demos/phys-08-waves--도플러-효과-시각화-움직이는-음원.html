@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🚓 도플러 효과 시각화 — 움직이는 음원 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🚓 도플러 효과 시각화 — 움직이는 음원</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/08-waves.html">Week 8. 파동과 소리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🚓 도플러 효과 시각화 — 움직이는 음원</h4>
+    <p>음원이 매 0.5초마다 동심원(파면)을 방출. 음원이 움직이면 파면들이 한쪽으로 쏠려 파장이 비대칭으로 변합니다. 빨간 점은 정지한 관측자.</p>
+    <canvas id="w8_dopplerDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>음원 속도 $v_s$ <span class="val" id="w8_vsV">0</span> m/s
+        <input type="range" id="w8_vs" min="-200" max="200" step="10" value="0"></label>
+      <label>음원 진동수 $f$ <span class="val" id="w8_fsV">500</span> Hz
+        <input type="range" id="w8_fs" min="200" max="1000" step="50" value="500"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰할 것</strong>
+      <ul>
+        <li>$v_s = 0$ → 동심원이 균일 → 관측자 진동수 = 음원 진동수</li>
+        <li>$v_s > 0$ (오른쪽 이동) → 오른쪽 관측자에게 $f' > f$, 왼쪽 관측자에게 $f' < f$</li>
+        <li>$v_s$가 음속(343 m/s)에 가까워지면 파면이 한 점에 모임 → 충격파(소닉붐)</li>
+        <li>$f' = f \cdot v/(v - v_s)$ — 박스에 실시간 표시</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w8_dopplerDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const vsound=343;
+    let t0=performance.now();
+    let pulses=[];let lastEmit=0;
+    function draw(){
+      const vs=+document.getElementById('w8_vs').value;
+      const fs=+document.getElementById('w8_fs').value;
+      document.getElementById('w8_vsV').textContent=vs;
+      document.getElementById('w8_fsV').textContent=fs;
+      const t=(performance.now()-t0)/1000;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cy=H/2,cx=W/2;
+      const sourceX=cx+vs*t*0.3;
+      const period=0.5;
+      while(lastEmit<t){
+        pulses.push({x:cx+vs*lastEmit*0.3,t:lastEmit});
+        lastEmit+=period;
+      }
+      pulses=pulses.filter(p=>(t-p.t)<3);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=1.5;
+      pulses.forEach(p=>{
+        const r=(t-p.t)*vsound*0.3;
+        if(r>0&&r<W){ctx.beginPath();ctx.arc(p.x,cy,r,0,Math.PI*2);ctx.stroke();}
+      });
+      ctx.fillStyle='#222';ctx.beginPath();ctx.arc(sourceX,cy,8,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('음원',sourceX-12,cy-14);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(W-60,cy,7,0,Math.PI*2);ctx.fill();
+      ctx.fillText('관측자(우)',W-95,cy-12);
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(60,cy,7,0,Math.PI*2);ctx.fill();
+      ctx.fillText('관측자(좌)',32,cy-12);
+      const fR=fs*vsound/Math.max(vsound-vs,1);
+      const fL=fs*vsound/(vsound+vs);
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(10,10,220,60);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(10,10,220,60);
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText('우측 관측자 f\' = '+fR.toFixed(0)+' Hz',18,30);
+      ctx.fillStyle='#2e7d32';
+      ctx.fillText('좌측 관측자 f\' = '+fL.toFixed(0)+' Hz',18,48);
+      ctx.fillStyle='#222';
+      ctx.fillText('Δf(우-좌) = '+(fR-fL).toFixed(0)+' Hz',18,64);
+      if(sourceX>W-30||sourceX<30){t0=performance.now();pulses=[];lastEmit=0;}
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 퍼셉트론 — 가중치·편향이 결정경계가 된다 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 퍼셉트론 — 가중치·편향이 결정경계가 된다</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/10-ann.html">Lecture 10. 인공 신경망 (ANN)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 퍼셉트론 — 가중치·편향이 결정경계가 된다</h4>
+    <p>2D 데이터(파랑 클래스 0, 빨강 클래스 1)를 한 개 뉴런이 분류합니다. 가중치 $w_1, w_2$와 편향 $b$를 움직이면 직선 $w_1 x_1 + w_2 x_2 + b = 0$이 회전·평행이동합니다. 배경 색은 sigmoid 출력이고, "학습 시작" 버튼은 한 스텝씩 가중치를 갱신해 자동 분류해 봅니다.</p>
+    <canvas id="pc" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>w₁ <span class="val" id="pcW1V">1.0</span><input type="range" id="pcW1" min="-3" max="3" step="0.05" value="1"></label>
+      <label>w₂ <span class="val" id="pcW2V">1.0</span><input type="range" id="pcW2" min="-3" max="3" step="0.05" value="1"></label>
+      <label>b <span class="val" id="pcBV">0.0</span><input type="range" id="pcB" min="-3" max="3" step="0.05" value="0"></label>
+      <button id="pcTrain">학습 시작</button>
+      <button id="pcReg" class="alt">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pc'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    let pts,training=false;
+    function regen(){
+      pts=[];
+      const a=Math.random()*Math.PI;
+      const dirX=Math.cos(a),dirY=Math.sin(a);
+      for(let i=0;i<30;i++){
+        const xi=(Math.random()-0.5)*4,yi=(Math.random()-0.5)*4;
+        const proj=xi*dirX+yi*dirY+(Math.random()-0.5)*0.6;
+        pts.push({x:xi,y:yi,t:proj>0?1:0});
+      }
+    }
+    regen();
+    document.getElementById('pcReg').onclick=()=>{regen();training=false;document.getElementById('pcTrain').textContent='학습 시작';};
+    document.getElementById('pcTrain').onclick=function(){
+      training=!training;this.textContent=training?'학습 중지':'학습 시작';
+    };
+    function px(p){return 30+(p.x+2.5)/5*(W-60);}
+    function py(p){return H-30-(p.y+2.5)/5*(H-60);}
+    function sig(z){return 1/(1+Math.exp(-z));}
+    function loop(){
+      const w1=+document.getElementById('pcW1').value;
+      const w2=+document.getElementById('pcW2').value;
+      const b=+document.getElementById('pcB').value;
+      document.getElementById('pcW1V').textContent=w1.toFixed(2);
+      document.getElementById('pcW2V').textContent=w2.toFixed(2);
+      document.getElementById('pcBV').textContent=b.toFixed(2);
+      // SGD step
+      if(training){
+        let nw1=w1,nw2=w2,nb=b;
+        const lr=0.05;
+        pts.forEach(p=>{
+          const z=nw1*p.x+nw2*p.y+nb;const a=sig(z);
+          const e=a-p.t;
+          nw1-=lr*e*p.x;nw2-=lr*e*p.y;nb-=lr*e;
+        });
+        document.getElementById('pcW1').value=nw1.toFixed(2);
+        document.getElementById('pcW2').value=nw2.toFixed(2);
+        document.getElementById('pcB').value=Math.max(-3,Math.min(3,nb)).toFixed(2);
+      }
+      // background
+      const cell=12;
+      for(let i=0;i<W;i+=cell){
+        for(let j=0;j<H;j+=cell){
+          const xi=(i-30)/(W-60)*5-2.5;
+          const yi=2.5-(j-30)/(H-60)*5;
+          const z=w1*xi+w2*yi+b;const a=sig(z);
+          const r=Math.floor(220*a+30*(1-a));
+          const g=Math.floor(60*a+90*(1-a));
+          const bl=Math.floor(60*a+220*(1-a));
+          x.fillStyle=`rgba(${r},${g},${bl},0.18)`;
+          x.fillRect(i,j,cell,cell);
+        }
+      }
+      // decision line w1*x + w2*y + b = 0  =>  y = -(w1 x + b)/w2
+      x.strokeStyle='#222';x.lineWidth=2.5;x.beginPath();
+      if(Math.abs(w2)>0.01){
+        const xa=-2.5,xb=2.5;
+        const ya=-(w1*xa+b)/w2,yb=-(w1*xb+b)/w2;
+        x.moveTo(px({x:xa}),py({y:ya}));x.lineTo(px({x:xb}),py({y:yb}));
+      }else{
+        const xv=-b/w1;
+        x.moveTo(px({x:xv}),py({y:-2.5}));x.lineTo(px({x:xv}),py({y:2.5}));
+      }
+      x.stroke();
+      // points
+      let correct=0;
+      pts.forEach(p=>{
+        const z=w1*p.x+w2*p.y+b;const pred=z>0?1:0;
+        if(pred===p.t)correct++;
+        x.fillStyle=p.t===1?'#c62828':'#0b5fff';
+        x.strokeStyle=pred===p.t?'#fff':'#ff0';x.lineWidth=2;
+        x.beginPath();x.arc(px(p),py(p),5,0,Math.PI*2);x.fill();x.stroke();
+      });
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('정확도 '+correct+'/'+pts.length+'   ·   z = w₁x₁ + w₂x₂ + b   (배경: σ(z))',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

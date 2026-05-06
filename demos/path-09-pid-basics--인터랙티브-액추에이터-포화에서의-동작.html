@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 액추에이터 포화에서의 동작 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 액추에이터 포화에서의 동작</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/09-pid-basics.html">Week 9. PID 제어 기초</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 액추에이터 포화에서의 동작</h4>
+    <p>큰 스텝 입력(0 → 2.0)을 줘서 액추에이터가 포화되는 상황입니다. <strong>Anti-windup ON/OFF</strong>를 토글해 차이를 보세요.</p>
+    <canvas id="awCv" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="kp2V">3.0</span><input type="range" id="kp2" min="0" max="10" step="0.1" value="3.0"></label>
+      <label>Ki <span class="val" id="ki2V">2.0</span><input type="range" id="ki2" min="0" max="5" step="0.05" value="2.0"></label>
+      <label>액추 한계 ±<span class="val" id="umV">1.5</span><input type="range" id="um" min="0.5" max="3" step="0.1" value="1.5"></label>
+      <label><input type="checkbox" id="aw" checked> Anti-windup</label>
+      <button id="rstAw" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('awCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('kp2V').textContent=(+$('kp2').value).toFixed(1);$('ki2V').textContent=(+$('ki2').value).toFixed(2);$('umV').textContent=(+$('um').value).toFixed(1);};
+    ['kp2','ki2','um'].forEach(id=>$(id).oninput=upd);
+    let y,I,t,hist;
+    function reset(){y=0;I=0;t=0;hist=[];}
+    reset();$('rstAw').onclick=reset;
+    function loop(){
+      const Kp=+$('kp2').value,Ki=+$('ki2').value,um=+$('um').value,awOn=$('aw').checked;
+      const r=t<1?0:2.0;const e=r-y;const dt=0.04;
+      I+=e*dt;
+      let u=Kp*e+Ki*I;const u_sat=Math.max(-um,Math.min(um,u));
+      if(awOn&&u!==u_sat)I-=e*dt;
+      y+=dt*((1.0*u_sat-y)/2.0);t+=dt;
+      hist.push({t,r,y,u,u_sat,I});if(hist.length>500)hist.shift();
+      if(t>15)reset();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h=c.height,pad=42;const xa=tt=>pad+tt/15*(w-2*pad);const ya=v=>h-pad-(v+0.5)/3.5*(h-2*pad);
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(pad,ya(0));x.lineTo(w-pad,ya(0));x.moveTo(pad,ya(2));x.lineTo(w-pad,ya(2));x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=ya(p.r);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();x.setLineDash([]);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=ya(p.y);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='#f57c00';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=ya(p.u_sat/2);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#222';x.font='12px sans-serif';x.fillText('Anti-windup: '+(awOn?'ON':'OFF')+'   적분 I = '+(hist.length?hist[hist.length-1].I.toFixed(2):'0'),12,18);
+      x.fillStyle='#0b5fff';x.fillText('파랑: y(t)',12,34);x.fillStyle='#f57c00';x.fillText('주황: 포화된 입력 u_sat',12,50);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

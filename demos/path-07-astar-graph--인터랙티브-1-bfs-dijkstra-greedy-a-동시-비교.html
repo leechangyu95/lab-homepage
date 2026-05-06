@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브 #1 — BFS / Dijkstra / Greedy / A* 동시 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브 #1 — BFS / Dijkstra / Greedy / A* 동시 비교</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/07-astar-graph.html">Week 7. A* 알고리즘 — &quot;나침반을 가진 탐색자&quot;</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브 #1 — BFS / Dijkstra / Greedy / A* 동시 비교</h4>
+    <p>같은 격자 위에서 네 알고리즘이 <strong>몇 개의 노드를 방문하는지</strong>를 직접 확인해 보세요.
+    빈칸을 클릭/드래그하면 장애물(■)이 됩니다. 시작(🟢)과 목표(🔴)는 더블클릭으로 옮길 수 있어요.
+    <strong>실행</strong>을 누르면 단계별 애니메이션과 함께 방문 노드(연파랑) · 최종 경로(파랑)가 표시됩니다.</p>
+    <canvas id="grid1" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>알고리즘
+        <select id="m1">
+          <option value="astar">A*</option>
+          <option value="dij">Dijkstra</option>
+          <option value="bfs">BFS</option>
+          <option value="greedy">Greedy</option>
+        </select>
+      </label>
+      <label>휴리스틱
+        <select id="h1">
+          <option value="euc">Euclidean</option>
+          <option value="man">Manhattan</option>
+          <option value="che">Chebyshev</option>
+        </select>
+      </label>
+      <label>속도 <span class="val" id="sp1V">10</span><input type="range" id="sp1" min="1" max="50" value="10"></label>
+      <button id="run1">실행</button>
+      <button id="clr1" class="alt">장애물 지우기</button>
+      <button id="pre1" class="alt">미로 프리셋</button>
+      <span id="stat1" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('grid1'),x=c.getContext('2d');
+    const W=32,H=20,SZ=20;
+    let grid=Array.from({length:H},()=>Array(W).fill(0));
+    let start=[2,10], goal=[29,10];
+    let visited=new Set(), path=[], frontier=new Set();
+    let timer=null, dblTarget=null;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        const k=i*W+j;
+        if(grid[i][j])x.fillStyle='#222';
+        else if(frontier.has(k))x.fillStyle='#ffe082';
+        else if(visited.has(k))x.fillStyle='#cfe0ff';
+        else x.fillStyle='#fff';
+        x.fillRect(j*SZ,i*SZ,SZ-1,SZ-1);
+      }
+      x.strokeStyle='#0b5fff';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{const xx=p[0]*SZ+SZ/2,yy=p[1]*SZ+SZ/2;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#2e7d32';x.fillRect(start[0]*SZ,start[1]*SZ,SZ-1,SZ-1);
+      x.fillStyle='#c62828';x.fillRect(goal[0]*SZ,goal[1]*SZ,SZ-1,SZ-1);
+    }
+    let drag=false,dragVal=1;
+    function cellOf(e){const r=c.getBoundingClientRect();return [Math.floor((e.clientX-r.left)*c.width/r.width/SZ),Math.floor((e.clientY-r.top)*c.height/r.height/SZ)];}
+    c.onmousedown=e=>{const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W)return;if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1])){dblTarget=(j==start[0]&&i==start[1])?'s':'g';return;}dragVal=1-grid[i][j];grid[i][j]=dragVal;drag=true;visited=new Set();path=[];frontier=new Set();draw();};
+    c.onmousemove=e=>{if(!drag)return;const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W)return;if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1]))return;grid[i][j]=dragVal;draw();};
+    window.addEventListener('mouseup',()=>{drag=false;});
+    c.ondblclick=e=>{const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W||grid[i][j])return;if(dblTarget==='s'||(j!=goal[0]||i!=goal[1])){if(dblTarget==='g')goal=[j,i];else start=[j,i];}dblTarget=null;visited=new Set();path=[];frontier=new Set();draw();};
+    function heuristic(a,b){
+      const dx=Math.abs(a[0]-b[0]),dy=Math.abs(a[1]-b[1]);
+      const t=document.getElementById('h1').value;
+      if(t==='man')return dx+dy;
+      if(t==='che')return Math.max(dx,dy);
+      return Math.hypot(dx,dy);
+    }
+    function startSearch(){
+      if(timer){clearInterval(timer);timer=null;}
+      visited=new Set();path=[];frontier=new Set();
+      const mode=document.getElementById('m1').value;
+      const open=[{p:start,g:0,f:0,parent:null}];
+      const gscore={};gscore[start[1]*W+start[0]]=0;
+      open[0].f=mode==='greedy'?heuristic(start,goal):mode==='bfs'?0:mode==='dij'?0:heuristic(start,goal);
+      const speed=Math.max(1,51-(+document.getElementById('sp1').value));
+      timer=setInterval(()=>{
+        for(let it=0;it<3;it++){
+          if(!open.length){clearInterval(timer);timer=null;
+            document.getElementById('stat1').textContent='경로 없음 — 방문 '+visited.size+'노드';
+            draw();return;}
+          open.sort((a,b)=>a.f-b.f);
+          const cur=open.shift();
+          const k=cur.p[1]*W+cur.p[0];
+          if(visited.has(k))continue;
+          visited.add(k);frontier.delete(k);
+          if(cur.p[0]==goal[0]&&cur.p[1]==goal[1]){
+            let n=cur;path=[];while(n){path.push(n.p);n=n.parent;}path.reverse();
+            clearInterval(timer);timer=null;
+            const len=path.reduce((s,p,i)=>i?s+Math.hypot(p[0]-path[i-1][0],p[1]-path[i-1][1]):0,0);
+            document.getElementById('stat1').textContent='방문 '+visited.size+'노드 · 경로 길이 '+len.toFixed(2);
+            draw();return;
+          }
+          for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+            const nx=cur.p[0]+dx,ny=cur.p[1]+dy;
+            if(nx<0||ny<0||nx>=W||ny>=H||grid[ny][nx])continue;
+            const stepC=mode==='bfs'?1:Math.hypot(dx,dy);
+            const ng=cur.g+stepC;
+            const kk=ny*W+nx;
+            if(gscore[kk]!==undefined&&ng>=gscore[kk])continue;
+            gscore[kk]=ng;
+            const hv=heuristic([nx,ny],goal);
+            const f=mode==='bfs'?ng:mode==='dij'?ng:mode==='greedy'?hv:ng+hv;
+            open.push({p:[nx,ny],g:ng,f,parent:cur});
+            frontier.add(kk);
+          }
+        }
+        draw();
+      },speed);
+    }
+    document.getElementById('run1').onclick=startSearch;
+    document.getElementById('clr1').onclick=()=>{if(timer){clearInterval(timer);timer=null;}grid=Array.from({length:H},()=>Array(W).fill(0));visited=new Set();path=[];frontier=new Set();draw();};
+    document.getElementById('pre1').onclick=()=>{if(timer){clearInterval(timer);timer=null;}grid=Array.from({length:H},()=>Array(W).fill(0));for(let i=4;i<16;i++){grid[i][12]=1;grid[i][20]=1;}for(let j=12;j<22;j++){grid[15][j]=1;}visited=new Set();path=[];frontier=new Set();draw();};
+    document.getElementById('sp1').oninput=()=>{document.getElementById('sp1V').textContent=document.getElementById('sp1').value;};
+    document.getElementById('pre1').onclick();
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브: 직진 후 회전 — $\Delta t$를 흔들어보세요 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브: 직진 후 회전 — $\Delta t$를 흔들어보세요</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/04-euler-simulation.html">Week 4. 오일러 방법 &amp; 시뮬레이션</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브: 직진 후 회전 — $\Delta t$를 흔들어보세요</h4>
+    <p>$v=5$ m/s, 3초까지 직진 후 조향 각 $\delta$로 회전. 같은 명령에 $\Delta t$만 바꿔
+    그려보면, 큰 $\Delta t$일수록 이론상 원호(빨간 점선)에서 벗어나는 게 보입니다.</p>
+    <canvas id="bike" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>$\Delta t$ <span class="val" id="bdtV">0.05</span><input type="range" id="bdt" min="0.005" max="0.5" step="0.005" value="0.05"></label>
+      <label>조향 $\delta$ (°) <span class="val" id="bdelV">15</span><input type="range" id="bdel" min="5" max="35" step="1" value="15"></label>
+      <label>속도 v (m/s) <span class="val" id="bvV">5</span><input type="range" id="bv" min="1" max="12" step="0.5" value="5"></label>
+      <button id="brun">시뮬 실행</button>
+      <button id="brst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bike'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    const upd=()=>{
+      $('bdtV').textContent=(+$('bdt').value).toFixed(3);
+      $('bdelV').textContent=(+$('bdel').value).toFixed(0);
+      $('bvV').textContent=(+$('bv').value).toFixed(1);
+    };
+    ['bdt','bdel','bv'].forEach(id=>$(id).oninput=upd);
+    let traj=[];
+    function run(){
+      const dt=+$('bdt').value, delDeg=+$('bdel').value, v=+$('bv').value;
+      const L=2.9, T=12.0;
+      let xx=0,yy=0,psi=0;
+      traj=[{x:xx,y:yy}];
+      for(let t=0;t<T;t+=dt){
+        const delta = (t<3)?0:delDeg*Math.PI/180;
+        const dx=v*Math.cos(psi), dy=v*Math.sin(psi), dpsi=v/L*Math.tan(delta);
+        xx+=dx*dt; yy+=dy*dt; psi+=dpsi*dt;
+        traj.push({x:xx,y:yy});
+      }
+      draw();
+    }
+    function reset(){traj=[];draw();}
+    $('brun').onclick=run; $('brst').onclick=reset;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,sc=6;
+      // grid
+      x.strokeStyle='#eee';
+      for(let i=-50;i<=50;i+=5){
+        x.beginPath();x.moveTo(cx+i*sc,0);x.lineTo(cx+i*sc,H);x.stroke();
+        x.beginPath();x.moveTo(0,cy+i*sc);x.lineTo(W,cy+i*sc);x.stroke();
+      }
+      x.strokeStyle='#999';
+      x.beginPath();x.moveTo(cx,0);x.lineTo(cx,H);x.stroke();
+      x.beginPath();x.moveTo(0,cy);x.lineTo(W,cy);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('5 m',cx+5*sc-8,cy+12);x.fillText('x [m]',W-40,cy-4);x.fillText('y [m]',cx+4,12);
+      // ideal arc (after 3s straight, then circular with R=L/tan(delta))
+      const v=+$('bv').value, delDeg=+$('bdel').value, L=2.9;
+      const R=L/Math.tan(delDeg*Math.PI/180);
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=1.5;x.beginPath();
+      // straight portion 0..15m
+      x.moveTo(cx,cy);
+      const xS=v*3, yS=0;
+      x.lineTo(cx+xS*sc, cy-yS*sc);
+      // arc center at (xS, R)
+      const cxa=xS, cya=R;
+      for(let th=0;th<2*Math.PI;th+=0.05){
+        const px=cxa+R*Math.sin(th), py=cya-R*Math.cos(th);
+        x.lineTo(cx+px*sc, cy-py*sc);
+      }
+      x.stroke();x.setLineDash([]);
+      // simulated traj
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      traj.forEach((p,i)=>{const px=cx+p.x*sc, py=cy-p.y*sc;
+        if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});
+      x.stroke();
+      x.fillStyle='#0b5fff';
+      traj.forEach((p,i)=>{if(i%30!=0)return;
+        const px=cx+p.x*sc, py=cy-p.y*sc;x.beginPath();x.arc(px,py,3,0,7);x.fill();});
+      // info
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('이론 회전반경 R = L/tan(δ) = '+R.toFixed(2)+' m', 10, 18);
+      x.fillText('스텝 수 = '+(traj.length-1)+',  $\\Delta t$ = '+$('bdt').value+' s', 10, 36);
+      x.fillStyle='#c62828';x.fillText('빨강 점선: 이론', W-130, 18);
+      x.fillStyle='#0b5fff';x.fillText('파랑: 오일러 시뮬', W-130, 34);
+    }
+    upd();draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

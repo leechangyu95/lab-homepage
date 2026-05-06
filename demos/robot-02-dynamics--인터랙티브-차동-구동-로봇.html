@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 차동 구동 로봇 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 차동 구동 로봇</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/02-dynamics.html">Lecture 2. 운동학과 동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 차동 구동 로봇</h4>
+    <p>좌·우 바퀴 속도를 따로 조절합니다. 두 속도가 같으면 직진, 다르면 회전. 한쪽이 음수면 제자리 회전이 가능합니다 (자동차는 못 함!).</p>
+    <canvas id="diff" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>왼쪽 v_L <span class="val" id="vlV">3</span><input type="range" id="vl" min="-5" max="5" step="0.1" value="3"></label>
+      <label>오른쪽 v_R <span class="val" id="vrV">3</span><input type="range" id="vr" min="-5" max="5" step="0.1" value="3"></label>
+      <label>축거 L <span class="val" id="dlV">0.5</span><input type="range" id="dl" min="0.2" max="1.5" step="0.05" value="0.5"></label>
+      <button id="dRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('diff'),x=c.getContext('2d');
+    let s={x:320,y:160,th:0},trail=[];
+    const sl=id=>document.getElementById(id);
+    const upd=()=>{['vl','vr','dl'].forEach(k=>sl(k+'V').textContent=sl(k).value);};
+    sl('dRst').onclick=()=>{s={x:320,y:160,th:0};trail=[];};
+    ['vl','vr','dl'].forEach(k=>sl(k).oninput=upd);
+    function loop(){
+      const vl=+sl('vl').value,vr=+sl('vr').value,L=+sl('dl').value,dt=0.05;
+      // 1 m = 60 px (보기 좋도록)
+      const SCALE=60;
+      const v=(vr+vl)/2,w=(vr-vl)/L;
+      s.x+=v*Math.cos(s.th)*dt*SCALE;
+      s.y+=v*Math.sin(s.th)*dt*SCALE;
+      s.th+=w*dt;
+      if(s.x<0||s.x>c.width||s.y<0||s.y>c.height){s.x=320;s.y=160;trail=[];}
+      trail.push([s.x,s.y]);if(trail.length>250)trail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      // 회전 반경 가이드: R = v/w (양 바퀴 속도가 다를 때)
+      if(Math.abs(w)>0.05&&Math.abs(v)>0.05){
+        const R=v/w*SCALE;
+        const cx=s.x-R*Math.sin(s.th),cy=s.y+R*Math.cos(s.th);
+        x.strokeStyle='rgba(255,140,0,0.4)';x.setLineDash([5,5]);x.lineWidth=1.5;
+        x.beginPath();x.arc(cx,cy,Math.abs(R),0,Math.PI*2);x.stroke();x.setLineDash([]);
+        x.fillStyle='#ff8c00';x.beginPath();x.arc(cx,cy,3,0,Math.PI*2);x.fill();
+        x.fillStyle='#666';x.font='12px sans-serif';
+        x.fillText('R = v/ω = ((v_R+v_L)/2) / ((v_R-v_L)/L) ≈ '+Math.abs(v/w).toFixed(2)+' m',12,30);
+      }else if(Math.abs(w)>0.05){
+        x.fillStyle='#666';x.font='12px sans-serif';x.fillText('제자리 회전 (v_R = -v_L)',12,30);
+      }else{
+        x.fillStyle='#666';x.font='12px sans-serif';x.fillText('직진',12,30);
+      }
+      // 자취
+      x.strokeStyle='#9eb9ff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.stroke();
+      // 로봇 (L에 비례한 트랙 폭)
+      x.save();x.translate(s.x,s.y);x.rotate(s.th);
+      const halfL=L*SCALE/2;            // 트랙 폭의 절반 (좌우 바퀴 사이)
+      const bodyLen=Math.max(20,L*SCALE*0.6);
+      x.fillStyle='#0b5fff';x.fillRect(-bodyLen/2,-halfL,bodyLen,halfL*2);
+      // 좌우 바퀴 (속도에 따라 색 다르게)
+      const wcol=v=>v>=0?'#222':'#c62828';
+      x.fillStyle=wcol(vl);x.fillRect(-bodyLen*0.3,-halfL-4,bodyLen*0.6,4);
+      x.fillStyle=wcol(vr);x.fillRect(-bodyLen*0.3,halfL,bodyLen*0.6,4);
+      x.fillStyle='#fff';x.beginPath();x.arc(bodyLen*0.35,0,3,0,Math.PI*2);x.fill();
+      x.restore();
+      upd();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

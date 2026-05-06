@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 개회로 vs 폐회로 — 외란과 모델 오차에 누가 강한가 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 개회로 vs 폐회로 — 외란과 모델 오차에 누가 강한가</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/01-intro.html">Week 1. 자동제어 개요</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 개회로 vs 폐회로 — 외란과 모델 오차에 누가 강한가</h4>
+    <p>같은 1차 시스템 두 대(예: 가열기로 방 데우기)에 같은 목표 온도 $r$을 주었습니다.
+    <span style="color:#f57c00;font-weight:600">개회로(주황)</span>은 공칭 모델만 보고 미리 계산한
+    입력 $u_{ff} = r/\hat{K}$을 그대로 보냅니다.
+    <span style="color:#0b5fff;font-weight:600">폐회로(파랑)</span>은 측정된 출력으로 $u = K_p(r-y)$를 매 순간 갱신합니다.
+    외란(창문 열림)과 모델 게인 오차(난방기 효율 변화)를 흔들어 보세요.</p>
+    <canvas id="ol_cl" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>외란 d <span class="val" id="dV">0</span><input type="range" id="d" min="-3" max="3" step="0.1" value="0"></label>
+      <label>모델 오차 ΔK <span class="val" id="kV">0</span><input type="range" id="k" min="-0.5" max="0.5" step="0.05" value="0"></label>
+      <label>폐회로 게인 Kp <span class="val" id="kpV">3</span><input type="range" id="kp" min="0.5" max="10" step="0.1" value="3"></label>
+      <button id="stepBtn">목표 변경</button>
+      <button id="rstBtn" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ol_cl'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{
+      $('dV').textContent=(+$('d').value).toFixed(1);
+      $('kV').textContent=(+$('k').value).toFixed(2);
+      $('kpV').textContent=(+$('kp').value).toFixed(1);
+    };
+    ['d','k','kp'].forEach(id=>$(id).oninput=upd);
+    const Knom=1.0, tau=2.0;          // nominal first-order plant: tau*y' + y = K*u + d
+    let yo=0, yc=0, ref=3, hist=[];
+    const reset=()=>{yo=0;yc=0;hist=[];};
+    $('rstBtn').onclick=reset;
+    $('stepBtn').onclick=()=>{ref=ref>0?-3:3;};
+    function loop(){
+      const d=+$('d').value, dk=+$('k').value, Kp=+$('kp').value;
+      const Kact=Knom+dk;             // actual plant gain
+      const dt=0.04;
+      // open-loop: feedforward u = r / Knom
+      const uo=ref/Knom;
+      yo += dt*((Kact*uo + d - yo)/tau);
+      // closed-loop P controller
+      const uc=Kp*(ref-yc);
+      yc += dt*((Kact*uc + d - yc)/tau);
+      hist.push({yo,yc,ref}); if(hist.length>320)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // top: bar visualization (room temperature)
+      const drawBar=(y,cy,color,label)=>{
+        x.fillStyle='#eee';x.fillRect(40,cy-14,560,28);
+        const w=Math.max(0,Math.min(560,(y+5)/10*560));
+        x.fillStyle=color;x.fillRect(40,cy-14,w,28);
+        const rx=40+(ref+5)/10*560;
+        x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+        x.moveTo(rx,cy-22);x.lineTo(rx,cy+22);x.stroke();x.setLineDash([]);
+        x.fillStyle='#444';x.font='12px sans-serif';x.fillText(label,12,cy-20);
+        x.fillText(y.toFixed(2),610,cy+4);
+      };
+      drawBar(yo,40,'#f57c00','개루프 (u = r/K̂)');
+      drawBar(yc,100,'#0b5fff','폐루프 (P 제어)');
+      // bottom: response curves
+      const y0=280;
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(0,y0);x.lineTo(c.width,y0);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=y0-h.ref*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();x.setLineDash([]);
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=y0-h.yo*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=y0-h.yc*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('응답 y(t) — 빨강: 목표, 주황: 개루프, 파랑: 폐루프',10,160);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('잔여 오차    개루프: '+(ref-yo).toFixed(2)+'    폐루프: '+(ref-yc).toFixed(2),10,365);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

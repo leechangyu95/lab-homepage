@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: α를 작게/크게 설정해 보세요 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: α를 작게/크게 설정해 보세요</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/12-cbf-avoidance.html">Week 12. CBF — 안전을 수학적으로 보장하기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: α를 작게/크게 설정해 보세요</h4>
+    <p>같은 환경에서 α만 다르게 — 작으면 멀리서부터 우회(보수적), 크면 장애물에 더 다가간 뒤 회피(공격적).</p>
+    <canvas id="aCmp" width="640" height="260"></canvas>
+    <div class="controls">
+      <button id="goA">3개 동시 실행</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('aCmp'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const W=22,H=8;const sc=Math.min(c.width/W,c.height/H);
+    const goal=[20,4],ob=[10,4,1.5];
+    const cfgs=[{al:0.5,col:'#0b5fff'},{al:1.5,col:'#2e7d32'},{al:5.0,col:'#c62828'}];
+    let runs;
+    function reset(){runs=cfgs.map(cf=>({al:cf.al,col:cf.col,p:[1,4],trail:[],done:false}));}
+    reset();
+    $('goA').onclick=()=>{reset();const id=setInterval(()=>{const dt=0.05;
+      runs.forEach(r=>{if(r.done)return;let vd=[goal[0]-r.p[0],goal[1]-r.p[1]];const dn=Math.hypot(vd[0],vd[1]);if(dn>1e-3){vd=[vd[0]/dn*2,vd[1]/dn*2];}
+        const d=[r.p[0]-ob[0],r.p[1]-ob[1]];const h=d[0]*d[0]+d[1]*d[1]-ob[2]*ob[2];const gh=[2*d[0],2*d[1]];
+        const lhs=gh[0]*vd[0]+gh[1]*vd[1]+r.al*h;let v=vd.slice();
+        if(lhs<0){const g2=gh[0]*gh[0]+gh[1]*gh[1];v=[vd[0]-(lhs/g2)*gh[0],vd[1]-(lhs/g2)*gh[1]];}
+        r.p=[r.p[0]+v[0]*dt,r.p[1]+v[1]*dt];r.trail.push(r.p.slice());if(Math.hypot(goal[0]-r.p[0],goal[1]-r.p[1])<0.5)r.done=true;});
+      draw();if(runs.every(r=>r.done))clearInterval(id);},40);};
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';x.beginPath();x.arc(ob[0]*sc,c.height-ob[1]*sc,ob[2]*sc,0,2*Math.PI);x.fill();x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,6,0,2*Math.PI);x.fill();
+      runs.forEach((r,i)=>{x.strokeStyle=r.col;x.lineWidth=2.2;x.beginPath();
+        r.trail.forEach((p,j)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(j==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+        x.fillStyle=r.col;x.font='13px sans-serif';x.fillText('α='+r.al,12,18+i*16);});
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

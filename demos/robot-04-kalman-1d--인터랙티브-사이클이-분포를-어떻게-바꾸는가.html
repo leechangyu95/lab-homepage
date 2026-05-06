@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 사이클이 분포를 어떻게 바꾸는가 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 사이클이 분포를 어떻게 바꾸는가</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/04-kalman-1d.html">Lecture 4. 칼만 필터 (1D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 사이클이 분포를 어떻게 바꾸는가</h4>
+    <p>한 스텝 = <strong>예측 → 측정 → 갱신</strong>. 회색 점선은 이전 사후, 주황은 예측 후 분포(분산이 $Q$만큼 커짐), 파랑은 측정과 합친 갱신 사후(좁아짐). 빨간 점은 측정값 $z$, 초록 점선은 참 위치 $x^*$입니다. 자동 모드로 두면 분포가 시간에 따라 어떻게 안정되는지 보입니다.</p>
+    <canvas id="puc" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>프로세스 잡음 Q <span class="val" id="pucQV">0.5</span><input type="range" id="pucQ" min="0" max="3" step="0.05" value="0.5"></label>
+      <label>측정 잡음 R <span class="val" id="pucRV">2</span><input type="range" id="pucR" min="0.1" max="10" step="0.1" value="2"></label>
+      <label>참 위치 x* <span class="val" id="pucTV">5</span><input type="range" id="pucT" min="-10" max="10" step="0.5" value="5"></label>
+      <button id="pucStep">▶ 한 스텝</button>
+      <button id="pucAuto">▶▶ 자동</button>
+      <button id="pucRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('puc'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    let mu,P,prevMu,prevP,predMu,predP,lastZ,t,history;
+    const home=()=>{mu=0;P=10;prevMu=null;prevP=null;predMu=null;predP=null;lastZ=null;t=0;history=[];};
+    home();
+    const upd=()=>['pucQ','pucR','pucT'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['pucQ','pucR','pucT'].forEach(k=>sl(k).oninput=upd);upd();
+    function step(){
+      const Q=+sl('pucQ').value, R=+sl('pucR').value, target=+sl('pucT').value;
+      prevMu=mu;prevP=P;
+      predMu=mu;predP=P+Q;
+      const u1=Math.random()||1e-9, u2=Math.random();
+      const noise=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2)*Math.sqrt(R);
+      lastZ=target+noise;
+      const K=predP/(predP+R);
+      mu=predMu+K*(lastZ-predMu);
+      P=(1-K)*predP;
+      t++;
+      history.push({t,mu,P,z:lastZ,target});
+      if(history.length>120)history.shift();
+    }
+    sl('pucStep').onclick=step;
+    sl('pucRst').onclick=home;
+    let autoTimer=null;
+    sl('pucAuto').onclick=()=>{
+      if(autoTimer){clearInterval(autoTimer);autoTimer=null;sl('pucAuto').textContent='▶▶ 자동';}
+      else{autoTimer=setInterval(step,500);sl('pucAuto').textContent='⏸ 정지';}
+    };
+    function gauss(m,v,xq){return Math.exp(-(xq-m)*(xq-m)/(2*v))/Math.sqrt(2*Math.PI*v);}
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const SPLIT=220;
+      const xMin=-15,xMax=15,gw=c.width-40,gh=SPLIT-50,gx0=20,gy0=30;
+      x.strokeStyle='#eee';
+      for(let xv=xMin;xv<=xMax;xv+=5){
+        const px=gx0+(xv-xMin)/(xMax-xMin)*gw;
+        x.beginPath();x.moveTo(px,gy0);x.lineTo(px,gy0+gh);x.stroke();
+        x.fillStyle='#aaa';x.font='10px sans-serif';x.textAlign='center';x.fillText(xv,px,gy0+gh+12);
+      }
+      let yMax=0.5;
+      if(prevP!==null) yMax=Math.max(yMax,gauss(prevMu,prevP,prevMu));
+      if(predP!==null) yMax=Math.max(yMax,gauss(predMu,predP,predMu));
+      yMax=Math.max(yMax,gauss(mu,P,mu));
+      function plotG(m,v,color,dash){
+        x.strokeStyle=color;x.lineWidth=2;if(dash)x.setLineDash(dash);else x.setLineDash([]);
+        x.beginPath();
+        for(let i=0;i<=240;i++){
+          const xv=xMin+(xMax-xMin)*i/240;
+          const yv=gauss(m,v,xv);
+          const px=gx0+(xv-xMin)/(xMax-xMin)*gw;
+          const py=gy0+gh-yv/yMax*gh*0.9;
+          if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+        }
+        x.stroke();x.setLineDash([]);
+      }
+      if(prevP!==null)plotG(prevMu,prevP,'#bbb',[3,3]);
+      if(predP!==null)plotG(predMu,predP,'#ff8c00',null);
+      plotG(mu,P,'#0b5fff',null);
+      if(lastZ!==null){
+        const px=gx0+(lastZ-xMin)/(xMax-xMin)*gw;
+        x.strokeStyle='#c62828';x.lineWidth=2;
+        x.beginPath();x.moveTo(px,gy0+gh-12);x.lineTo(px,gy0+gh);x.stroke();
+        x.fillStyle='#c62828';x.beginPath();x.arc(px,gy0+gh,5,0,Math.PI*2);x.fill();
+      }
+      const target=+sl('pucT').value;
+      const tpx=gx0+(target-xMin)/(xMax-xMin)*gw;
+      x.strokeStyle='#2e7d32';x.setLineDash([2,3]);x.lineWidth=1.5;
+      x.beginPath();x.moveTo(tpx,gy0);x.lineTo(tpx,gy0+gh);x.stroke();x.setLineDash([]);
+      x.font='11px sans-serif';x.textAlign='left';
+      x.fillStyle='#bbb';x.fillText('--- 이전 사후',gx0+8,gy0-10);
+      x.fillStyle='#ff8c00';x.fillText('— 예측 (P+Q)',gx0+108,gy0-10);
+      x.fillStyle='#0b5fff';x.fillText('— 갱신 사후',gx0+208,gy0-10);
+      x.fillStyle='#c62828';x.fillText('● 측정 z',gx0+296,gy0-10);
+      x.fillStyle='#2e7d32';x.fillText(': 참 x*',gx0+360,gy0-10);
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';
+      x.fillText('스텝 t='+t,gx0,SPLIT-8);
+      x.fillStyle='#0b5fff';x.fillText('μ='+mu.toFixed(2)+', σ²='+P.toFixed(3)+', σ='+Math.sqrt(P).toFixed(3),gx0+80,SPLIT-8);
+      if(predP!==null){const K=predP/(predP+ +sl('pucR').value);x.fillStyle='#ff8c00';x.fillText('K='+K.toFixed(3),gx0+360,SPLIT-8);}
+      x.strokeStyle='#e3e6ea';x.beginPath();x.moveTo(0,SPLIT);x.lineTo(c.width,SPLIT);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('시간에 따른 추정 (μ ± σ 띠, 빨간 점=측정)',gx0,SPLIT+18);
+      const tx0=gx0,ty0=SPLIT+28,tw=gw,th=c.height-SPLIT-48;
+      const tWin=60, tStart=Math.max(0,t-tWin);
+      const yMinT=-12, yMaxT=12;
+      const tx=tt=>tx0+(tt-tStart)/tWin*tw;
+      const ty=yv=>ty0+th-(yv-yMinT)/(yMaxT-yMinT)*th;
+      x.strokeStyle='#ccc';x.beginPath();x.moveTo(tx0,ty0);x.lineTo(tx0,ty0+th);x.stroke();
+      x.beginPath();x.moveTo(tx0,ty(0));x.lineTo(tx0+tw,ty(0));x.stroke();
+      x.strokeStyle='#2e7d32';x.setLineDash([3,3]);
+      x.beginPath();x.moveTo(tx0,ty(target));x.lineTo(tx0+tw,ty(target));x.stroke();x.setLineDash([]);
+      if(history.length>0){
+        x.fillStyle='rgba(11,95,255,0.15)';x.beginPath();let started=false;
+        history.forEach(e=>{if(e.t<tStart)return;const px=tx(e.t),py=ty(e.mu+Math.sqrt(e.P));if(!started){x.moveTo(px,py);started=true;}else x.lineTo(px,py);});
+        for(let i=history.length-1;i>=0;i--){const e=history[i];if(e.t<tStart)continue;const px=tx(e.t),py=ty(e.mu-Math.sqrt(e.P));x.lineTo(px,py);}
+        x.closePath();x.fill();
+        x.fillStyle='#c62828';
+        history.forEach(e=>{if(e.t<tStart)return;const px=tx(e.t),py=ty(e.z);x.beginPath();x.arc(px,py,2.5,0,Math.PI*2);x.fill();});
+        x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();started=false;
+        history.forEach(e=>{if(e.t<tStart)return;const px=tx(e.t),py=ty(e.mu);if(!started){x.moveTo(px,py);started=true;}else x.lineTo(px,py);});
+        x.stroke();
+      }
+      x.fillStyle='#aaa';x.font='10px sans-serif';
+      x.fillText(yMaxT,tx0-22,ty0+6);x.fillText(yMinT,tx0-22,ty0+th);x.fillText(0,tx0-10,ty(0)+4);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

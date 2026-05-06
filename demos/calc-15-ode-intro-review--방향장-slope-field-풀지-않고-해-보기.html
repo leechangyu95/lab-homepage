@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 방향장 (Slope Field) — 풀지 않고 해 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 방향장 (Slope Field) — 풀지 않고 해 보기</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/15-ode-intro-review.html">Week 15. 1차 ODE + 종합 정리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 방향장 (Slope Field) — 풀지 않고 해 보기</h4>
+    <p>화살표는 그 점에서 ODE 가 알려주는 기울기. 캔버스를 클릭하면 그 점에서 출발하는 해 곡선 (오일러 적분) 이 그려집니다. 평형점·안정성도 한눈에.</p>
+    <canvas id="sf" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>ODE
+        <select id="sfFn">
+          <option value="decay" selected>dy/dt = −y (지수 감소)</option>
+          <option value="growth">dy/dt = y (지수 증가)</option>
+          <option value="logistic">dy/dt = y(1 − y) (로지스틱)</option>
+          <option value="forced">dy/dt = −y + sin(t)</option>
+          <option value="ty">dy/dt = t − y</option>
+        </select>
+      </label>
+      <span style="font-size:12px;color:#666">캔버스 클릭 → 그 점에서의 해 곡선</span>
+      <button id="sfClr" class="alt">곡선 지우기</button>
+    </div>
+    <p id="sfInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sf'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:30,b:40};
+    function fn(t,y){
+      const m=document.getElementById('sfFn').value;
+      if(m==='decay')return -y;
+      if(m==='growth')return y;
+      if(m==='logistic')return y*(1-y);
+      if(m==='forced')return -y+Math.sin(t);
+      return t-y;
+    }
+    function fnRange(){
+      const m=document.getElementById('sfFn').value;
+      if(m==='logistic')return{tR:[0,8],yR:[-0.3,1.5],desc:'평형점 y=0(불안정), y=1(안정)'};
+      if(m==='growth')return{tR:[0,4],yR:[-3,3],desc:'평형점 y=0(불안정) — 모든 해 발산'};
+      if(m==='forced')return{tR:[0,12],yR:[-2,2],desc:'주기 입력 → 정상상태에서 사인파로 응답'};
+      if(m==='ty')return{tR:[0,5],yR:[-2,5],desc:'점근선 y = t−1 로 모든 해 수렴'};
+      return{tR:[0,5],yR:[-2,2],desc:'평형점 y=0(안정) — 모든 해 0으로 수렴'};
+    }
+    let trails=[];
+    document.getElementById('sfClr').onclick=()=>{trails=[];loop();};
+    document.getElementById('sfFn').onchange=()=>{trails=[];loop();};
+    function pxT(v,tR){return M.l+(v-tR[0])/(tR[1]-tR[0])*(W-M.l-M.r);}
+    function pyY(v,yR){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function invT(px0,tR){return tR[0]+(px0-M.l)/(W-M.l-M.r)*(tR[1]-tR[0]);}
+    function invY(py0,yR){return yR[0]+(H-M.b-py0)/(H-M.t-M.b)*(yR[1]-yR[0]);}
+    c.onclick=e=>{
+      const {tR,yR}=fnRange();
+      const r=c.getBoundingClientRect();
+      const cx=(e.clientX-r.left)*c.width/r.width;
+      const cy=(e.clientY-r.top)*c.height/r.height;
+      const t0=invT(cx,tR),y0=invY(cy,yR);
+      // forward and backward Euler
+      const path=[{t:t0,y:y0}];
+      let t=t0,y=y0;const h=(tR[1]-tR[0])/300;
+      while(t<tR[1]&&y>yR[0]-2&&y<yR[1]+2){
+        const k=fn(t,y);y+=h*k;t+=h;
+        path.push({t,y});
+      }
+      // backward
+      t=t0;y=y0;
+      while(t>tR[0]&&y>yR[0]-2&&y<yR[1]+2){
+        const k=fn(t,y);y-=h*k;t-=h;
+        path.unshift({t,y});
+      }
+      trails.push(path);
+      loop();
+    };
+    function loop(){
+      const{tR,yR,desc}=fnRange();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(tR[0]);v<=tR[1];v++){x.beginPath();x.moveTo(pxT(v,tR),pyY(yR[0],yR));x.lineTo(pxT(v,tR),pyY(yR[1],yR));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(pxT(tR[0],tR),pyY(v,yR));x.lineTo(pxT(tR[1],tR),pyY(v,yR));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(pxT(tR[0],tR),pyY(0,yR));x.lineTo(pxT(tR[1],tR),pyY(0,yR));x.stroke();
+      // slope field
+      const NX=20,NY=12;
+      x.strokeStyle='#0b5fff';x.lineWidth=1.2;
+      for(let i=0;i<NX;i++){
+        for(let j=0;j<NY;j++){
+          const t=tR[0]+(i+0.5)/NX*(tR[1]-tR[0]);
+          const y=yR[0]+(j+0.5)/NY*(yR[1]-yR[0]);
+          const k=fn(t,y);
+          // unit vector with slope k
+          const len=12;
+          const ang=Math.atan2(k*(H-M.t-M.b)/(yR[1]-yR[0]),(W-M.l-M.r)/(tR[1]-tR[0]));
+          const dx=Math.cos(ang)*len,dy=Math.sin(ang)*len;
+          const cx=pxT(t,tR),cy=pyY(y,yR);
+          x.beginPath();x.moveTo(cx-dx/2,cy-dy/2);x.lineTo(cx+dx/2,cy+dy/2);x.stroke();
+        }
+      }
+      // trails
+      trails.forEach(path=>{
+        x.strokeStyle='#c62828';x.lineWidth=2.2;x.beginPath();
+        path.forEach((p,i)=>{i?x.lineTo(pxT(p.t,tR),pyY(p.y,yR)):x.moveTo(pxT(p.t,tR),pyY(p.y,yR));});x.stroke();
+        x.fillStyle='#c62828';
+        const start=path.find(p=>p.t>=path[0].t)||path[0];
+        x.beginPath();x.arc(pxT(start.t,tR),pyY(start.y,yR),4,0,Math.PI*2);x.fill();
+      });
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('t',pxT(tR[1],tR)-10,pyY(0,yR)+15);
+      x.fillText('y',M.l-15,M.t+8);
+      x.fillStyle='#0742b8';x.fillText('파란 화살표: 방향장 (각 점의 기울기)',M.l+10,M.t-12);
+      x.fillStyle='#c62828';x.fillText('빨간 곡선: 클릭한 초기조건의 해',M.l+250,M.t-12);
+      document.getElementById('sfInfo').textContent=desc;
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

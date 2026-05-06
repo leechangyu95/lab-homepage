@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 변수 변환과 면적의 비례 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 변수 변환과 면적의 비례</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/09-antiderivative-techniques.html">Week 9. 부정적분·치환·부분적분</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 변수 변환과 면적의 비례</h4>
+    <p>변환 $u = g(x)$ 를 골라 보세요. 같은 폭의 작은 막대가 $x$-축에서 $u$-축으로 어떻게 늘이거나 줄어드는지가 보입니다. 이 늘림비율이 정확히 $g'(x)$.</p>
+    <canvas id="us" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>변환
+        <select id="usG">
+          <option value="sq" selected>u = x²</option>
+          <option value="cube">u = x³</option>
+          <option value="exp">u = eˣ</option>
+          <option value="log">u = ln x</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('us'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    function g(v){const m=document.getElementById('usG').value;if(m==='sq')return v*v;if(m==='cube')return v*v*v;if(m==='exp')return Math.exp(v);return Math.log(v);}
+    function gp(v){const m=document.getElementById('usG').value;if(m==='sq')return 2*v;if(m==='cube')return 3*v*v;if(m==='exp')return Math.exp(v);return 1/v;}
+    function loop(){
+      const m=document.getElementById('usG').value;
+      const xR=(m==='log')?[0.2,4]:(m==='exp'?[-2,2]:[0,3]);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // top axis: x
+      const Ax0=40,Ax1=W-40,Ay=80;
+      x.strokeStyle='#888';x.lineWidth=1.5;
+      x.beginPath();x.moveTo(Ax0,Ay);x.lineTo(Ax1,Ay);x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('x-축',Ax0-25,Ay+5);
+      // bottom axis: u
+      const Bx0=40,Bx1=W-40,By=240;
+      x.beginPath();x.moveTo(Bx0,By);x.lineTo(Bx1,By);x.stroke();
+      x.fillText('u-축',Bx0-25,By+5);
+      // x ticks and bars
+      const N=8;
+      const dx=(xR[1]-xR[0])/N;
+      // compute u range
+      const us=[];for(let i=0;i<=N;i++)us.push(g(xR[0]+i*dx));
+      const uMin=Math.min(...us),uMax=Math.max(...us);
+      function pxX(v){return Ax0+(v-xR[0])/(xR[1]-xR[0])*(Ax1-Ax0);}
+      function pxU(v){return Bx0+(v-uMin)/(uMax-uMin)*(Bx1-Bx0);}
+      for(let i=0;i<N;i++){
+        const x1=xR[0]+i*dx,x2=x1+dx;
+        const u1=g(x1),u2=g(x2);
+        const hue=(i*40)%360;
+        const col='hsl('+hue+',60%,55%)';
+        // x bar
+        x.fillStyle=col+'';
+        x.fillRect(pxX(x1),Ay-25,pxX(x2)-pxX(x1)-1,25);
+        x.fillStyle='#fff';x.font='10px sans-serif';
+        x.fillText(x1.toFixed(2),pxX(x1)+2,Ay-10);
+        // u bar
+        x.fillStyle=col;
+        const ux1=Math.min(pxU(u1),pxU(u2)),uw=Math.abs(pxU(u2)-pxU(u1));
+        x.fillRect(ux1,By-25,uw,25);
+        // connecting lines
+        x.strokeStyle=col;x.lineWidth=1;x.setLineDash([3,3]);
+        x.beginPath();x.moveTo(pxX(x1),Ay);x.lineTo(ux1,By-25);x.stroke();
+        x.beginPath();x.moveTo(pxX(x2),Ay);x.lineTo(ux1+uw,By-25);x.stroke();
+        x.setLineDash([]);
+      }
+      // hint text
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('같은 폭 dx 의 막대가 변환 후 g\'(x) 배만큼 늘어남.',Ax0,300);
+      x.fillStyle='#666';x.font='12px Consolas,monospace';
+      x.fillText('∫ f(g(x)) g\'(x) dx = ∫ f(u) du   ← 늘림 비율 g\' 가 적분에 자연히 등장',Ax0,318);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

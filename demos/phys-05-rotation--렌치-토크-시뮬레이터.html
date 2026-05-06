@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🔧 렌치 토크 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🔧 렌치 토크 시뮬레이터</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/05-rotation.html">Week 5. 회전과 각운동량</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🔧 렌치 토크 시뮬레이터</h4>
+    <p>$\phi=0$(스패너 방향과 같은 방향) → 토크 0. $\phi=90°$(수직) → 최대 토크. 같은 힘으로도 각도와 길이만으로 너트가 풀릴지 안 풀릴지가 결정됩니다.</p>
+    <canvas id="w5_torqueDemo" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>스패너 길이 $r$ <span class="val" id="w5_tqR_V">0.30</span> m
+        <input type="range" id="w5_tqR" min="0.05" max="0.6" step="0.01" value="0.30"></label>
+      <label>가하는 힘 $F$ <span class="val" id="w5_tqF_V">50</span> N
+        <input type="range" id="w5_tqF" min="5" max="200" step="5" value="50"></label>
+      <label>힘의 각도 $\phi$ <span class="val" id="w5_tqA_V">90°</span>
+        <input type="range" id="w5_tqA" min="0" max="180" step="5" value="90"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰</strong> — $\tau = rF\sin\phi$. 너트가 풀리는 임계 토크가 약 25 N·m라면, 짧은 스패너(10 cm)로는 250 N(체중에 가까움)이 필요하지만, 긴 스패너(50 cm)로는 50 N이면 충분.
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w5_torqueDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function arrow(x1,y1,x2,y2,col,lw){
+      ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw||2.5;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1),hl=10;
+      ctx.beginPath();ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+      ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fill();
+    }
+    function draw(){
+      const r=+document.getElementById('w5_tqR').value;
+      const F=+document.getElementById('w5_tqF').value;
+      const phi=+document.getElementById('w5_tqA').value;
+      document.getElementById('w5_tqR_V').textContent=r.toFixed(2);
+      document.getElementById('w5_tqF_V').textContent=F;
+      document.getElementById('w5_tqA_V').textContent=phi+'°';
+      const tau=r*F*Math.sin(phi*Math.PI/180);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=180,oy=H/2;
+      // nut (pivot)
+      ctx.fillStyle='#999';ctx.beginPath();
+      // hexagonal nut
+      for(let i=0;i<6;i++){
+        const a=i*Math.PI/3;
+        const px=ox+18*Math.cos(a), py=oy+18*Math.sin(a);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.closePath();ctx.fill();ctx.strokeStyle='#555';ctx.stroke();
+      // wrench: a rectangle along +x of length r
+      const sc=400; // m to px
+      const Lpx=r*sc;
+      ctx.fillStyle='#cfd8e3';
+      ctx.fillRect(ox+12, oy-9, Lpx-12, 18);
+      ctx.strokeStyle='#777';ctx.strokeRect(ox+12, oy-9, Lpx-12, 18);
+      // Hand position (end of wrench)
+      const hx=ox+Lpx, hy=oy;
+      // moment arm vector r (from pivot to hand)
+      arrow(ox,oy,hx,hy,'#0b5fff',2);
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';
+      ctx.fillText('r',ox+Lpx/2-8,oy-14);
+      // force vector F at the hand, angle phi w.r.t. r direction
+      const Fpx=Math.min(F*0.8,160);
+      const fx=hx+Fpx*Math.cos((phi)*Math.PI/180+Math.PI*0); // angle phi from r-direction (which is +x)
+      const fy=hy-Fpx*Math.sin(phi*Math.PI/180); // upward = -y
+      arrow(hx,hy,fx,fy,'#c62828',2.5);
+      ctx.fillStyle='#c62828';ctx.fillText('F',fx+6,fy);
+      // perpendicular component
+      const Fperp=F*Math.sin(phi*Math.PI/180);
+      const fxp=hx, fyp=hy-Math.abs(Fperp)*0.8*Math.sign(Math.sin(phi*Math.PI/180));
+      ctx.strokeStyle='#aaa';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(fxp,fyp);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#666';ctx.fillText('F sin φ',hx-46,fyp+4);
+      // info
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-220,12,200,98);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,12,200,98);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('τ = rF sin φ',W-210,32);
+      ctx.fillText('= '+r.toFixed(2)+' × '+F+' × '+Math.sin(phi*Math.PI/180).toFixed(2),W-210,52);
+      ctx.font='bold 14px sans-serif';
+      ctx.fillText('= '+tau.toFixed(2)+' N·m',W-210,76);
+      ctx.font='12px sans-serif';
+      ctx.fillStyle=tau>=25?'#2e7d32':'#c62828';
+      ctx.fillText(tau>=25?'✓ 너트가 풀림':'✗ 부족 (25 N·m 필요)',W-210,98);
+    }
+    ['w5_tqR','w5_tqF','w5_tqA'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

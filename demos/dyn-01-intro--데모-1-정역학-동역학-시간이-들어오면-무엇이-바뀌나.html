@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 정역학 → 동역학 — 시간이 들어오면 무엇이 바뀌나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 정역학 → 동역학 — 시간이 들어오면 무엇이 바뀌나</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/01-intro.html">Week 1. 강의 소개 (OT)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 정역학 → 동역학 — 시간이 들어오면 무엇이 바뀌나</h4>
+    <p>왼쪽은 정역학 — 블록이 정지해 있고, 슬라이더로 외력 $F$를 주면 마찰력이 같은 크기로 반대 방향으로 작용해 균형을 이룹니다($F \le \mu N$일 때만). 오른쪽은 동역학 — 같은 외력이지만 마찰을 이기면 가속합니다. <strong>$F$를 천천히 키워보세요.</strong> 어느 순간 정적 마찰 한계를 넘어서면 정역학의 답은 사라지고, 동역학에서는 가속이 시작됩니다.</p>
+    <canvas id="staticDynC" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>외력 F (N) <span class="val" id="sdFV">8</span><input type="range" id="sdF" min="0" max="40" step="0.5" value="8"></label>
+      <label>마찰계수 μ <span class="val" id="sdMV">0.3</span><input type="range" id="sdM" min="0" max="0.6" step="0.02" value="0.3"></label>
+      <button id="sdReset">동역학 재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('staticDynC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['sdF','sdM'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    let dyn={x:480,v:0};
+    sl('sdReset').onclick=()=>{dyn={x:480,v:0};};
+    ['sdF','sdM'].forEach(k=>sl(k).oninput=upd);upd();
+    const m=2,g=9.81;
+    function drawBlock(cx,cy,col,arrowF,arrowFr,label){
+      x.fillStyle='#e8e8e8';x.fillRect(40,cy+30,560,4);
+      x.fillStyle=col;x.fillRect(cx-30,cy-10,60,40);
+      x.strokeStyle='#333';x.strokeRect(cx-30,cy-10,60,40);
+      // F arrow (right)
+      if(arrowF>0.1){
+        x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();x.moveTo(cx+30,cy+10);x.lineTo(cx+30+arrowF,cy+10);
+        x.lineTo(cx+25+arrowF,cy+5);x.moveTo(cx+30+arrowF,cy+10);x.lineTo(cx+25+arrowF,cy+15);x.stroke();
+        x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('F',cx+30+arrowF/2-4,cy+4);
+      }
+      // friction arrow (left)
+      if(arrowFr>0.1){
+        x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();x.moveTo(cx-30,cy+22);x.lineTo(cx-30-arrowFr,cy+22);
+        x.lineTo(cx-25-arrowFr,cy+17);x.moveTo(cx-30-arrowFr,cy+22);x.lineTo(cx-25-arrowFr,cy+27);x.stroke();
+        x.fillStyle='#c62828';x.font='12px sans-serif';x.fillText('f',cx-30-arrowFr/2-2,cy+18);
+      }
+      x.fillStyle='#333';x.font='bold 13px sans-serif';x.textAlign='center';x.fillText(label,cx,cy-22);
+    }
+    function loop(){
+      const F=+sl('sdF').value, mu=+sl('sdM').value;
+      const fmax=mu*m*g;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // Static side (left)
+      x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='left';
+      x.fillText('정역학 (a=0 가정)',60,30);
+      const fStatic=Math.min(F,fmax);
+      const moving=F>fmax;
+      drawBlock(160,140,moving?'#fff5f5':'#cfe9ff',F*2,fStatic*2, moving?'한계 초과 — 균형 불가':'정적 균형');
+      x.fillStyle='#666';x.font='11px Consolas,monospace';x.textAlign='center';
+      x.fillText('f_max = μmg = '+fmax.toFixed(1)+' N',160,205);
+      x.fillText(moving?'F > f_max ⇒ 정지 안 됨':('F = '+F.toFixed(1)+', f = '+fStatic.toFixed(1)),160,220);
+      // Dynamic side (right)
+      x.fillStyle='#1a1a1a';x.font='bold 12px sans-serif';x.textAlign='left';
+      x.fillText('동역학 (a = (F − μmg)/m)',360,30);
+      const a=Math.max(0,(F-fmax)/m);
+      dyn.v+=a*0.03;dyn.v*=0.999;
+      dyn.x+=dyn.v;
+      if(dyn.x>590){dyn.x=590;dyn.v=0;}
+      drawBlock(dyn.x,140,'#ffd7d7',F*2,fmax*2,'가속 중');
+      x.fillStyle='#666';x.font='11px Consolas,monospace';x.textAlign='center';
+      x.fillText('a = '+a.toFixed(2)+' m/s²,  v = '+dyn.v.toFixed(2),480,205);
+      x.fillText('F='+F.toFixed(1)+'  −  μmg='+fmax.toFixed(1),480,220);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

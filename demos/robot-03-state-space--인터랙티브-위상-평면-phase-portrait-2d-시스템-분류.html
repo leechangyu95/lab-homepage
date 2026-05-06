@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 위상 평면 (Phase Portrait) — 2D 시스템 분류 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 위상 평면 (Phase Portrait) — 2D 시스템 분류</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/03-state-space.html">Lecture 3. 상태공간 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 위상 평면 (Phase Portrait) — 2D 시스템 분류</h4>
+    <p>2차원 시스템 $\dot{\mathbf x} = A\mathbf x$를 직접 구성해 보세요. 화살표는 흐름 방향, 곡선은 8개 초기 조건에서 출발한 궤적입니다. $A$의 4개 성분에 따라 노드·초점·안장점·중심으로 분류됩니다.</p>
+    <canvas id="phase" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>$A_{11}$ <span class="val" id="phAV">-0.5</span><input type="range" id="phA" min="-2" max="2" step="0.1" value="-0.5"></label>
+      <label>$A_{12}$ <span class="val" id="phBV">1</span><input type="range" id="phB" min="-2" max="2" step="0.1" value="1"></label>
+      <label>$A_{21}$ <span class="val" id="phCV">-1</span><input type="range" id="phC" min="-2" max="2" step="0.1" value="-1"></label>
+      <label>$A_{22}$ <span class="val" id="phDV">-0.5</span><input type="range" id="phD" min="-2" max="2" step="0.1" value="-0.5"></label>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>실험해 보기</strong> — $A=[[0,1],[-1,0]]$: 중심(원). $[[0,1],[1,0]]$: 안장점. $[[-0.5,1],[-1,-0.5]]$: 안정 초점. $[[0.5,1],[-1,0.5]]$: 불안정 초점. 분류는 사실 trace$(A)$와 det$(A)$만으로 결정됩니다 — Strogatz의 trace-determinant 평면 참고.</p>
+  </div>
+  <script>
+  (function(){
+    const cv=document.getElementById('phase'),x=cv.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    function eig(A){
+      const tr=A[0][0]+A[1][1], det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+      const disc=tr*tr-4*det;
+      if(disc>=0){const r=Math.sqrt(disc);return [{re:(tr+r)/2,im:0},{re:(tr-r)/2,im:0}];}
+      const r=Math.sqrt(-disc);return [{re:tr/2,im:r/2},{re:tr/2,im:-r/2}];
+    }
+    function classify(e){
+      const e1=e[0],e2=e[1];
+      if(Math.abs(e1.im)>1e-6){
+        if(Math.abs(e1.re)<5e-3)return ['중심 (center)','#0b5fff'];
+        return e1.re<0?['안정 초점 (stable focus)','#2e7d32']:['불안정 초점 (unstable focus)','#c62828'];
+      }
+      if(e1.re*e2.re<0)return ['안장점 (saddle) — 불안정','#c62828'];
+      if(e1.re<0&&e2.re<0)return ['안정 노드 (stable node)','#2e7d32'];
+      if(e1.re>0&&e2.re>0)return ['불안정 노드 (unstable node)','#c62828'];
+      return ['축퇴 (degenerate)','#666'];
+    }
+    function loop(){
+      const a=+sl('phA').value,b=+sl('phB').value,c=+sl('phC').value,d=+sl('phD').value;
+      ['phA','phB','phC','phD'].forEach(k=>sl(k+'V').textContent=(+sl(k).value).toFixed(2));
+      const A=[[a,b],[c,d]];
+      const e=eig(A), cls=classify(e);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,cv.width,cv.height);
+      const cx=200,cy=180,R=140;
+      // 격자
+      x.strokeStyle='#e3e6ea';x.lineWidth=1;
+      for(let i=-2;i<=2;i++){
+        x.beginPath();x.moveTo(cx-R,cy-i*R/2);x.lineTo(cx+R,cy-i*R/2);x.stroke();
+        x.beginPath();x.moveTo(cx+i*R/2,cy-R);x.lineTo(cx+i*R/2,cy+R);x.stroke();
+      }
+      x.strokeStyle='#999';x.lineWidth=1.5;
+      x.beginPath();x.moveTo(cx-R,cy);x.lineTo(cx+R,cy);x.stroke();
+      x.beginPath();x.moveTo(cx,cy-R);x.lineTo(cx,cy+R);x.stroke();
+      // 벡터장
+      x.strokeStyle='rgba(11,95,255,0.45)';x.fillStyle='rgba(11,95,255,0.45)';x.lineWidth=1;
+      for(let i=-2;i<=2;i+=0.4){
+        for(let j=-2;j<=2;j+=0.4){
+          if(Math.abs(i)<0.05&&Math.abs(j)<0.05)continue;
+          const dx=a*i+b*j,dy=c*i+d*j;
+          const nrm=Math.sqrt(dx*dx+dy*dy)||1;
+          const sc=0.18;
+          const px=cx+i*R/2, py=cy-j*R/2;
+          const ex=px+dx/nrm*sc*R/2, ey=py-dy/nrm*sc*R/2;
+          x.beginPath();x.moveTo(px,py);x.lineTo(ex,ey);x.stroke();
+          const ang=Math.atan2(ey-py,ex-px);
+          x.beginPath();x.moveTo(ex,ey);
+          x.lineTo(ex-4*Math.cos(ang-0.4),ey-4*Math.sin(ang-0.4));
+          x.lineTo(ex-4*Math.cos(ang+0.4),ey-4*Math.sin(ang+0.4));
+          x.closePath();x.fill();
+        }
+      }
+      // 샘플 궤적
+      const inits=[[1.6,0.4],[-1.6,-0.4],[0.4,1.6],[-0.4,-1.6],[1.4,1.4],[-1.4,1.4],[1.4,-1.4],[-1.4,-1.4]];
+      inits.forEach(init=>{
+        let s=[...init];
+        x.strokeStyle=cls[1];x.lineWidth=1.6;x.beginPath();
+        x.moveTo(cx+s[0]*R/2,cy-s[1]*R/2);
+        const dt=0.02;
+        for(let t=0;t<300;t++){
+          const k1x=a*s[0]+b*s[1],k1y=c*s[0]+d*s[1];
+          const k2x=a*(s[0]+k1x*dt/2)+b*(s[1]+k1y*dt/2);
+          const k2y=c*(s[0]+k1x*dt/2)+d*(s[1]+k1y*dt/2);
+          s=[s[0]+k2x*dt,s[1]+k2y*dt];
+          if(Math.abs(s[0])>2.5||Math.abs(s[1])>2.5)break;
+          x.lineTo(cx+s[0]*R/2,cy-s[1]*R/2);
+        }
+        x.stroke();
+        x.fillStyle=cls[1];x.beginPath();x.arc(cx+init[0]*R/2,cy-init[1]*R/2,3,0,Math.PI*2);x.fill();
+      });
+      // 평형점
+      x.fillStyle='#222';x.beginPath();x.arc(cx,cy,4,0,Math.PI*2);x.fill();
+      x.strokeStyle='#999';x.strokeRect(cx-R,cy-R,2*R,2*R);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('x₁',cx+R+5,cy+4);x.fillText('x₂',cx-4,cy-R-5);
+      // 우측 정보
+      const px0=380;
+      x.fillStyle=cls[1];x.font='bold 15px sans-serif';
+      x.fillText(cls[0],px0,50);
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('A = [['+a.toFixed(2)+', '+b.toFixed(2)+'],',px0,90);
+      x.fillText('     ['+c.toFixed(2)+', '+d.toFixed(2)+']]',px0,108);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('tr(A) = '+(a+d).toFixed(2),px0,140);
+      x.fillText('det(A) = '+((a*d)-(b*c)).toFixed(2),px0,158);
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('고유값:',px0,190);
+      if(Math.abs(e[0].im)<1e-6){
+        x.fillText('λ₁ = '+e[0].re.toFixed(3),px0,210);
+        x.fillText('λ₂ = '+e[1].re.toFixed(3),px0,230);
+      }else{
+        x.fillText('λ = '+e[0].re.toFixed(3)+' ± '+Math.abs(e[0].im).toFixed(3)+'j',px0,210);
+      }
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('• det>0, tr<0 → 안정',px0,260);
+      x.fillText('• det<0 → 안장 (불안정)',px0,276);
+      x.fillText('• tr²<4det → 진동 (초점/중심)',px0,292);
+      x.fillText('• tr²>4det → 비진동 (노드)',px0,308);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

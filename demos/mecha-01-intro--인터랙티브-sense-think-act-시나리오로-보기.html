@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Sense → Think → Act, 시나리오로 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Sense → Think → Act, 시나리오로 보기</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/01-intro.html">Week 1. 메카트로닉스 개요</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Sense → Think → Act, 시나리오로 보기</h4>
+    <p>예시 시나리오를 골라보세요. 시나리오마다 어떤 센서가 보고, 어떤 알고리즘이 생각하고, 어떤 액추에이터가 움직이는지 한눈에 비교됩니다.</p>
+    <canvas id="staDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>시나리오
+        <select id="staSel">
+          <option value="dslr">DSLR 자동초점</option>
+          <option value="cruise">자동차 크루즈컨트롤</option>
+          <option value="drone">드론 호버링</option>
+          <option value="vacuum">로봇 청소기</option>
+          <option value="thermo">에어컨 온도조절</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('staDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data={
+      dslr:{sense:'거리 센서 (PD AF)',think:'목표 거리 − 현재 거리 → 모터 명령',act:'렌즈 모터 (보이스코일)',plant:'촬영 렌즈군',cycle:'1 사이클 ≈ 30 ms'},
+      cruise:{sense:'휠 엔코더 (속도)',think:'PID: 목표속도 − 측정속도',act:'스로틀·브레이크 액추에이터',plant:'차량 종방향 동역학',cycle:'1 사이클 ≈ 10 ms'},
+      drone:{sense:'IMU + 기압계 + 광류',think:'자세·고도 칼만 + PID',act:'4개 BLDC 모터 PWM',plant:'쿼드로터 6-DOF',cycle:'1 사이클 ≈ 2 ms'},
+      vacuum:{sense:'범퍼·LiDAR·낭떠러지 IR',think:'SLAM + 경로계획 (A*)',act:'좌·우 바퀴 모터, 흡입팬',plant:'차동 구동 로봇',cycle:'1 사이클 ≈ 100 ms'},
+      thermo:{sense:'서미스터 (온도)',think:'On/Off 또는 PI 제어',act:'압축기 인버터',plant:'실내 공기 + 열용량',cycle:'1 사이클 ≈ 1 s'}
+    };
+    function draw(){
+      const k=document.getElementById('staSel').value, d=data[k];
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cols=[
+        {x:30,t:'SENSE',sub:d.sense,fill:'#eef3ff',stroke:'#0742b8',label:'#0742b8'},
+        {x:230,t:'THINK',sub:d.think,fill:'#fff3e0',stroke:'#f57c00',label:'#e65100'},
+        {x:430,t:'ACT',sub:d.act,fill:'#e8f5e9',stroke:'#2e7d32',label:'#1b5e20'}
+      ];
+      cols.forEach(c0=>{
+        ctx.fillStyle=c0.fill;ctx.strokeStyle=c0.stroke;ctx.lineWidth=2;
+        ctx.beginPath();ctx.roundRect(c0.x,60,170,140,12);ctx.fill();ctx.stroke();
+        ctx.fillStyle=c0.label;ctx.font='bold 16px sans-serif';
+        ctx.fillText(c0.t,c0.x+12,90);
+        ctx.fillStyle='#333';ctx.font='12px sans-serif';
+        wrap(ctx,c0.sub,c0.x+12,115,150,16);
+      });
+      // arrows
+      ctx.strokeStyle='#666';ctx.lineWidth=2;
+      [[200,130,230],[400,130,430]].forEach(([x1,y1,x2])=>{
+        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y1);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x2-6,y1-4);ctx.lineTo(x2,y1);ctx.lineTo(x2-6,y1+4);ctx.fill();
+      });
+      // feedback loop
+      ctx.strokeStyle='#c62828';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+      ctx.beginPath();ctx.moveTo(515,200);ctx.lineTo(515,235);ctx.lineTo(115,235);ctx.lineTo(115,200);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.moveTo(115-4,200-6);ctx.lineTo(115,200);ctx.lineTo(115+4,200-6);ctx.fill();
+      ctx.font='11px sans-serif';ctx.fillText('피드백 (다음 사이클에 반영)',225,250);
+      // header
+      ctx.fillStyle='#222';ctx.font='bold 14px sans-serif';
+      ctx.fillText('대상(plant): '+d.plant,30,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(d.cycle,30,48);
+    }
+    function wrap(ctx,text,x,y,maxW,lh){
+      const words=text.split(' ');let line='',yy=y;
+      words.forEach((w,i)=>{
+        const test=line+w+' ';
+        if(ctx.measureText(test).width>maxW&&i>0){ctx.fillText(line,x,yy);line=w+' ';yy+=lh;}
+        else line=test;
+      });
+      ctx.fillText(line,x,yy);
+    }
+    if(!ctx.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){this.beginPath();this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this;};}
+    document.getElementById('staSel').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

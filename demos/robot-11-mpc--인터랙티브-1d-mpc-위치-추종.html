@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 1D MPC 위치 추종 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 1D MPC 위치 추종</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/11-mpc.html">Lecture 11. 모델 예측 제어 (MPC)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D MPC 위치 추종</h4>
+    <p>마우스로 목표 위치(빨강 점선)를 끌고 다녀보세요. MPC가 가속도 한계 안에서 최적으로 따라갑니다.</p>
+    <canvas id="mpc" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>예측 호라이즌 N <span class="val" id="nV">15</span><input type="range" id="n" min="3" max="40" value="15"></label>
+      <label>입력 가중치 R <span class="val" id="rV">0.3</span><input type="range" id="r" min="0.01" max="3" step="0.01" value="0.3"></label>
+      <label>가속도 한계 <span class="val" id="uV">3</span><input type="range" id="u" min="0.5" max="10" step="0.1" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mpc'),x=c.getContext('2d');
+    let pos=0,vel=0,target=200,hist=[],horiz=[];
+    c.onmousemove=e=>{const r=c.getBoundingClientRect();target=(e.clientX-r.left)*c.width/r.width-50;};
+    function loop(){
+      const N=+document.getElementById('n').value;
+      const R=+document.getElementById('r').value;
+      const umax=+document.getElementById('u').value;
+      ['n','r','u'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      // very simple gradient descent on N-step open-loop accelerations
+      let u=new Array(N).fill(0);
+      const dt=0.1;
+      for(let it=0;it<40;it++){
+        // simulate
+        let p=pos,v=vel;const ps=[p];
+        for(let i=0;i<N;i++){v+=u[i]*dt;p+=v*dt;ps.push(p);}
+        // gradient: for each u_i, ∂J/∂u_i ≈ 2*(p_N-target)*dt*(N-i)*dt + 2*R*u_i
+        for(let i=0;i<N;i++){
+          let g=2*R*u[i];
+          for(let k=i+1;k<=N;k++){g+=2*(ps[k]-target)*dt*(k-i)*dt*0.3;}
+          u[i]-=0.05*g;
+          if(u[i]>umax)u[i]=umax;if(u[i]<-umax)u[i]=-umax;
+        }
+      }
+      // apply first
+      vel+=u[0]*dt; pos+=vel*dt;
+      // build horizon ghost
+      let p=pos,v=vel;horiz=[p];
+      for(let i=0;i<N;i++){v+=u[i]*dt;p+=v*dt;horiz.push(p);}
+      hist.push(pos);if(hist.length>300)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // road
+      x.fillStyle='#eee';x.fillRect(40,120,560,30);
+      // target
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(target+50,80);x.lineTo(target+50,170);x.stroke();x.setLineDash([]);
+      // horizon
+      x.fillStyle='rgba(11,95,255,0.25)';
+      horiz.forEach((p,i)=>{x.beginPath();x.arc(p+50,135,5-i*0.1,0,Math.PI*2);x.fill();});
+      // car
+      x.fillStyle='#0b5fff';x.fillRect(pos+35,120,30,30);
+      // history plot
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=240-(h+50)*0.2;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

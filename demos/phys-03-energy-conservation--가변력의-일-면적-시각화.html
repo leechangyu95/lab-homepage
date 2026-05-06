@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📊 가변력의 일 = 면적 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">📊 가변력의 일 = 면적 시각화</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/03-energy-conservation.html">Week 3. 일·에너지 보존</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>📊 가변력의 일 = 면적 시각화</h4>
+    <p>$F(x) = F_0 - kx$ 형태(스프링형 가변력). 색칠된 영역의 면적이 한 일이며, 같은 값이 정지 상태에서 출발한 1 kg 물체의 $K = \tfrac{1}{2}v^2$ 가 됩니다.</p>
+    <canvas id="w3_workCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>초기 힘 $F_0$ <span class="val" id="w3_F0V">10</span> N
+        <input type="range" id="w3_F0" min="2" max="30" step="1" value="10"></label>
+      <label>감소율 $k$ <span class="val" id="w3_kV">1.0</span> N/m
+        <input type="range" id="w3_k" min="0" max="3" step="0.1" value="1"></label>
+      <label>이동 거리 $d$ <span class="val" id="w3_dV">5.0</span> m
+        <input type="range" id="w3_d" min="0.5" max="10" step="0.1" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$k=0$ → 면적 = $F_0 \cdot d$ (사각형, 일정한 힘의 일)</li>
+        <li>$k>0$, 거리 길게 → 사다리꼴 면적, 힘이 0 이하로 떨어지면 음의 일도 생김</li>
+        <li>음의 일 영역(빨간색)은 운동에너지를 빼앗는 영역</li>
+        <li>총 일 = 양 - 음. 1 kg 가정 시 $v = \sqrt{2W}$ 자동 표시</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w3_workCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const F0=+document.getElementById('w3_F0').value;
+      const k=+document.getElementById('w3_k').value;
+      const d=+document.getElementById('w3_d').value;
+      document.getElementById('w3_F0V').textContent=F0;
+      document.getElementById('w3_kV').textContent=k.toFixed(1);
+      document.getElementById('w3_dV').textContent=d.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=44,xmax=10;
+      const sx=(W-2*margin)/xmax;
+      const Fmax=Math.max(F0+1,5),Fmin=Math.min(0,F0-k*xmax-1);
+      const sy=(H-2*margin)/(Fmax-Fmin);
+      const xz=(0-Fmin)*sy;
+      const ox=margin,oy=H-margin-xz;
+      // axes
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(margin,oy);ctx.lineTo(W-margin,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(margin,margin);ctx.lineTo(margin,H-margin);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('x (m)',W-margin-30,oy+15);
+      ctx.fillText('F (N)',margin+4,margin+14);
+      for(let xx=0;xx<=xmax;xx++){
+        const px=margin+xx*sx;
+        ctx.strokeStyle='#eef0f4';ctx.beginPath();ctx.moveTo(px,margin);ctx.lineTo(px,H-margin);ctx.stroke();
+        ctx.fillStyle='#999';ctx.fillText(xx,px-3,oy+13);
+      }
+      // shaded area for [0,d]
+      // positive part green, negative part red
+      ctx.beginPath();ctx.moveTo(margin,oy);
+      let workPos=0,workNeg=0;
+      const N=200;
+      for(let i=0;i<=N;i++){
+        const xx=(d*i)/N;
+        const F=F0-k*xx;
+        const px=margin+xx*sx,py=oy-F*sy;
+        if(i===0)ctx.moveTo(px,oy);
+        ctx.lineTo(px,py);
+      }
+      ctx.lineTo(margin+d*sx,oy);
+      ctx.closePath();
+      ctx.fillStyle='rgba(76,175,80,0.18)';ctx.fill();
+      // rough work integral
+      let W_=0;
+      for(let i=0;i<N;i++){
+        const x1=(d*i)/N,x2=(d*(i+1))/N;
+        const F1=F0-k*x1,F2=F0-k*x2;
+        const dW=0.5*(F1+F2)*(x2-x1);
+        W_+=dW;
+        if(dW>0)workPos+=dW;else workNeg+=dW;
+      }
+      // F(x) curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const xx=(xmax*i)/200;
+        const F=F0-k*xx;
+        const px=margin+xx*sx,py=oy-F*sy;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // distance marker
+      ctx.strokeStyle='#c62828';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(margin+d*sx,margin);ctx.lineTo(margin+d*sx,H-margin);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.fillText('x = d',margin+d*sx-12,margin+12);
+      // info box
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-220,12,200,80);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,12,200,80);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('총 일 W = '+W_.toFixed(2)+' J',W-212,32);
+      ctx.fillText('양의 일 ≈ '+workPos.toFixed(2)+' J',W-212,50);
+      ctx.fillText('음의 일 ≈ '+workNeg.toFixed(2)+' J',W-212,68);
+      const v=W_>0?Math.sqrt(2*W_):0;
+      ctx.fillText('1 kg 정지 출발 → v = '+v.toFixed(2)+' m/s',W-212,86);
+    }
+    ['w3_F0','w3_k','w3_d'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

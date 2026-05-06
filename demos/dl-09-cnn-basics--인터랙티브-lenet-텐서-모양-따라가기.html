@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: LeNet 텐서 모양 따라가기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: LeNet 텐서 모양 따라가기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/09-cnn-basics.html">Week 9. CNN 기초 — 합성곱 신경망</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: LeNet 텐서 모양 따라가기</h4>
+    <p>입력 이미지가 LeNet의 8개 층을 통과하면서 모양이 어떻게 변하는지 봅니다. <strong>입력 크기</strong>를 바꾸면 모든 후속 모양이 자동으로 다시 계산됩니다 — "왜 32×32 입력은 안 되고 28×28만 되나?" 같은 질문도 직접 확인 가능.</p>
+    <canvas id="lenet" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>입력 크기 <span class="val" id="lnIV">28</span><input type="range" id="lnI" min="20" max="40" step="1" value="28"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lenet');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const I=+document.getElementById('lnI').value;
+      document.getElementById('lnIV').textContent=I;
+      const layers=[];
+      let s=I,ch=1;layers.push({n:'Input',s,ch,p:0});
+      let s1=s-5+1;layers.push({n:'Conv1 5×5',s:s1,ch:6,p:6*5*5+6});
+      s=Math.floor(s1/2);layers.push({n:'Pool1 2×2',s,ch:6,p:0});
+      s1=s-5+1;layers.push({n:'Conv2 5×5',s:s1,ch:16,p:16*6*5*5+16});
+      s=Math.floor(s1/2);layers.push({n:'Pool2 2×2',s,ch:16,p:0});
+      const flat=16*s*s;
+      layers.push({n:'Flatten',s:1,ch:flat,p:0});
+      layers.push({n:'FC1',s:1,ch:120,p:flat*120+120});
+      layers.push({n:'FC2',s:1,ch:84,p:120*84+84});
+      layers.push({n:'Out',s:1,ch:10,p:84*10+10});
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const colW=W/layers.length;
+      let totalP=0;
+      layers.forEach((L,i)=>{
+        totalP+=L.p;
+        const cx=i*colW+colW/2;
+        const sz=Math.max(8,Math.min(60,L.s*1.5));
+        const stack=Math.min(L.ch,8);
+        for(let k=0;k<stack;k++){
+          const x=cx-sz/2-k*2,y=120-sz/2-k*2;
+          ctx.fillStyle=L.s>1?'#cce5ff':'#ffe1c2';
+          ctx.fillRect(x,y,sz,sz);
+          ctx.strokeStyle='#666';ctx.strokeRect(x,y,sz,sz);
+        }
+        ctx.fillStyle=L.s===0||L.s<0?'#c62828':'#333';
+        ctx.font='11px sans-serif';
+        ctx.fillText(L.n,cx-colW/2+4,200);
+        ctx.fillText(L.s>1?`${L.ch}×${L.s}×${L.s}`:`${L.ch}`,cx-colW/2+4,215);
+        if(L.p>0){ctx.fillStyle='#888';ctx.fillText(`p=${L.p.toLocaleString()}`,cx-colW/2+4,230);}
+        if(i<layers.length-1){ctx.strokeStyle='#0b5fff';ctx.beginPath();ctx.moveTo(cx+sz/2+5,120);ctx.lineTo((i+1)*colW+colW/2-30,120);ctx.stroke();}
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`총 파라미터 약 ${totalP.toLocaleString()}개 · 입력 ${I}×${I}`,12,260);
+      const last=layers[layers.length-1].s;
+      if(last<1){ctx.fillStyle='#c62828';ctx.fillText('⚠ 입력 크기가 너무 작아 음수 차원이 나옵니다',12,280);}
+    }
+    document.getElementById('lnI').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

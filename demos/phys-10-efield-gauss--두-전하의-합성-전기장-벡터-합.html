@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 두 전하의 합성 전기장 (벡터 합) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 두 전하의 합성 전기장 (벡터 합)</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/10-efield-gauss.html">Week 10. 전기장과 가우스 법칙</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 두 전하의 합성 전기장 (벡터 합)</h4>
+    <p>왼쪽 전하 $q_1$, 오른쪽 전하 $q_2$. 각 점에서 두 전하가 만드는 $\vec E$를 벡터 합한 결과의 방향만 화살표로 그렸습니다 (길이는 시각화 한계로 정규화). 부호가 같으면 사이 공간이 비고, 다르면 한쪽에서 다른 쪽으로 흐르는 전기장선이 만들어집니다.</p>
+    <canvas id="w10_dipole" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>$q_1$ (왼쪽) <span class="val" id="w10_q1V">+5</span> nC
+        <input type="range" id="w10_q1" min="-10" max="10" step="0.5" value="5"></label>
+      <label>$q_2$ (오른쪽) <span class="val" id="w10_q2V">-5</span> nC
+        <input type="range" id="w10_q2" min="-10" max="10" step="0.5" value="-5"></label>
+      <label>두 전하 거리 $d$ <span class="val" id="w10_dV">3.0</span>
+        <input type="range" id="w10_d" min="1" max="6" step="0.5" value="3"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$q_1=+5, q_2=-5$ (쌍극자) → 양에서 음으로 곡선처럼 휘는 전기장선이 보입니다.</li>
+        <li>$q_1=+5, q_2=+5$ (같은 부호) → 두 전하 사이 중점에 $\vec E = 0$인 점이 생깁니다.</li>
+        <li>$q_1=+10, q_2=-2$ → 작은 전하의 약 $5\times 1.5\approx 1.86$배 거리 떨어진 곳에 영점.</li>
+        <li>거리 $d$를 늘리면 두 전하의 영향이 분리되고, 줄이면 점점 점전하 1개처럼.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w10_dipole');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function arrow(x1,y1,x2,y2,col,lw){
+      ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw||1.5;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1),hl=6;
+      ctx.beginPath();ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+      ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fill();
+    }
+    function draw(){
+      const q1=+document.getElementById('w10_q1').value;
+      const q2=+document.getElementById('w10_q2').value;
+      const d=+document.getElementById('w10_d').value;
+      document.getElementById('w10_q1V').textContent=(q1>=0?'+':'')+q1.toFixed(1);
+      document.getElementById('w10_q2V').textContent=(q2>=0?'+':'')+q2.toFixed(1);
+      document.getElementById('w10_dV').textContent=d.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const sc=44, ox=W/2, oy=H/2;
+      ctx.strokeStyle='#eef0f4';ctx.lineWidth=1;
+      for(let g=-7;g<=7;g++){
+        ctx.beginPath();ctx.moveTo(ox+g*sc,0);ctx.lineTo(ox+g*sc,H);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,oy+g*sc);ctx.lineTo(W,oy+g*sc);ctx.stroke();
+      }
+      const x1=-d/2, x2=d/2;
+      // arrow grid
+      const arrows=[];let maxE=0;
+      for(let gx=-7;gx<=7;gx+=0.7){
+        for(let gy=-4;gy<=4;gy+=0.7){
+          // E from each charge (in arbitrary units)
+          let Ex=0, Ey=0;
+          [[q1,x1],[q2,x2]].forEach(qq=>{
+            const dx=gx-qq[1], dy=gy;
+            const r2=dx*dx+dy*dy;
+            if(r2<0.05) return;
+            const r=Math.sqrt(r2);
+            const E=qq[0]/r2; // signed
+            Ex += E*dx/r; Ey += E*dy/r;
+          });
+          const Em=Math.hypot(Ex,Ey);
+          if(Em>maxE) maxE=Em;
+          arrows.push({gx,gy,Ex,Ey,Em});
+        }
+      }
+      arrows.forEach(a=>{
+        if(a.Em<0.001) return;
+        const px=ox+a.gx*sc, py=oy-a.gy*sc;
+        const norm=Math.hypot(a.Ex,a.Ey);
+        const ux=a.Ex/norm, uy=a.Ey/norm;
+        const ln=12;
+        const intensity=Math.min(1, Math.log10(1+9*a.Em/maxE));
+        const r=Math.round(11+200*intensity), gC=Math.round(95-60*intensity), b=Math.round(255-200*intensity);
+        arrow(px,py,px+ux*ln,py-uy*ln,`rgb(${r},${gC},${b})`,1+intensity);
+      });
+      // charges
+      [[q1,x1],[q2,x2]].forEach(qq=>{
+        const cpx=ox+qq[1]*sc, cpy=oy;
+        ctx.fillStyle=qq[0]>=0?'#c62828':'#1565c0';
+        ctx.beginPath();ctx.arc(cpx,cpy,9+Math.min(7,Math.abs(qq[0])/2),0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+        ctx.fillText(qq[0]>=0?'+':'−',cpx,cpy+5);
+        ctx.textAlign='left';
+      });
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,260,40);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,260,40);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('q1='+(q1>=0?'+':'')+q1+' nC,  q2='+(q2>=0?'+':'')+q2+' nC, d='+d+' m',16,30);
+    }
+    ['w10_q1','w10_q2','w10_d'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

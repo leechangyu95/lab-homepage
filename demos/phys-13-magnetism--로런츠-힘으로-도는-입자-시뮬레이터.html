@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로런츠 힘으로 도는 입자 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">로런츠 힘으로 도는 입자 시뮬레이터</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/13-magnetism.html">Week 13. 자기장과 자기력</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>로런츠 힘으로 도는 입자 시뮬레이터</h4>
+    <p>자기장은 화면 안쪽(⊗) 또는 바깥쪽(⊙). 양전하($q&gt;0$) 기준 오른손 법칙으로 회전 방향을 직접 예측해 보고, 시뮬레이터로 확인하세요.</p>
+    <canvas id="w13_lorentz" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>전하 $q$ <span class="val" id="w13_qV">+1</span> e
+        <input type="range" id="w13_q" min="-2" max="2" step="1" value="1"></label>
+      <label>속력 $v$ <span class="val" id="w13_vV">3.0</span>
+        <input type="range" id="w13_v" min="0.5" max="6" step="0.1" value="3.0"></label>
+      <label>자기장 $B$ <span class="val" id="w13_BV">1.0</span>
+        <input type="range" id="w13_B" min="0.2" max="3" step="0.1" value="1.0"></label>
+      <label>$B$ 방향 <span class="val" id="w13_dirV">⊗ (안쪽)</span>
+        <input type="range" id="w13_dir" min="-1" max="1" step="2" value="1"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$B$ 두 배 → 반경 1/2. <em>$r = mv/(qB)$의 정직한 결과.</em></li>
+        <li>$v$ 두 배 → 반경 두 배지만 주기 $T = 2\pi m/(qB)$는 일정.</li>
+        <li>$q$를 양 → 음으로 → 회전 방향 반전(시계 ↔ 반시계).</li>
+        <li>$B$ 방향 반전 → 회전 방향 반전.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w13_lorentz');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const q=+document.getElementById('w13_q').value;
+      const v=+document.getElementById('w13_v').value;
+      const B=+document.getElementById('w13_B').value;
+      const dir=+document.getElementById('w13_dir').value;
+      document.getElementById('w13_qV').textContent=(q>=0?'+':'')+q;
+      document.getElementById('w13_vV').textContent=v.toFixed(1);
+      document.getElementById('w13_BV').textContent=B.toFixed(1);
+      document.getElementById('w13_dirV').textContent=dir>0?'⊗ (안쪽)':'⊙ (바깥쪽)';
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // dot grid showing B field direction
+      ctx.fillStyle='#cfd8e3';
+      for(let xi=20;xi<W;xi+=40){
+        for(let yi=20;yi<H;yi+=40){
+          if(dir>0){ctx.beginPath();ctx.arc(xi,yi,5,0,Math.PI*2);ctx.stroke();
+            ctx.beginPath();ctx.moveTo(xi-3.5,yi-3.5);ctx.lineTo(xi+3.5,yi+3.5);
+            ctx.moveTo(xi+3.5,yi-3.5);ctx.lineTo(xi-3.5,yi+3.5);ctx.stroke();}
+          else{ctx.beginPath();ctx.arc(xi,yi,5,0,Math.PI*2);ctx.stroke();
+            ctx.beginPath();ctx.arc(xi,yi,1.5,0,Math.PI*2);ctx.fill();}
+        }
+      }
+      // particle radius scaled
+      const m=1.0;
+      let r=80;
+      if(q!==0 && B>0)r=Math.min(150, m*v/(Math.abs(q)*B)*30);
+      const cx=W/2,cy=H/2;
+      // sense of rotation: F = qv x B; if B into page (+), v right (+x), then F = q(+x x -z) = q(+y) -> if q>0, force up, circle goes up
+      const sense=(q*dir>0)?-1:1;
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+      // particle position animated
+      const t=Date.now()/600;
+      const ang=sense*t;
+      const px=cx+r*Math.cos(ang),py=cy+r*Math.sin(ang);
+      ctx.fillStyle=q>=0?'#c62828':'#1565c0';
+      ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(q>=0?'+':'-',px,py);
+      ctx.textAlign='start';ctx.textBaseline='alphabetic';
+      // velocity arrow
+      const vx=-r*sense*Math.sin(ang),vy=r*sense*Math.cos(ang);
+      const vn=Math.hypot(vx,vy)||1;
+      const ux=vx/vn,uy=vy/vn;
+      ctx.strokeStyle='#2e7d32';ctx.fillStyle='#2e7d32';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+ux*30,py+uy*30);ctx.stroke();
+      const an=Math.atan2(uy,ux);
+      ctx.beginPath();ctx.moveTo(px+ux*30,py+uy*30);
+      ctx.lineTo(px+ux*30-8*Math.cos(an-0.4),py+uy*30-8*Math.sin(an-0.4));
+      ctx.lineTo(px+ux*30-8*Math.cos(an+0.4),py+uy*30-8*Math.sin(an+0.4));
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,210,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,210,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('반경 r ≈ '+(r/30).toFixed(2)+' (임의단위)',16,28);
+      ctx.fillText('주기 T ∝ m/(|q|B) = '+(1/(Math.abs(q||1)*B)).toFixed(2),16,46);
+      ctx.fillText('회전 '+(sense>0?'시계방향':'반시계방향'),16,64);
+      requestAnimationFrame(draw);
+    }
+    ['w13_q','w13_v','w13_B','w13_dir'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{}));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 운동학 vs 동역학 — 같은 진자, 두 시각 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 운동학 vs 동역학 — 같은 진자, 두 시각</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/02-dynamics.html">Lecture 2. 운동학과 동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 운동학 vs 동역학 — 같은 진자, 두 시각</h4>
+    <p>왼쪽 진자는 <strong>운동학</strong>: 슬라이더로 각도를 직접 지정합니다 — 힘은 등장하지 않고 "어디 있는가"만 묘사합니다.
+    오른쪽은 <strong>동역학</strong>: 중력과 감쇠가 만드는 미분방정식 $\ddot\theta = -(g/L)\sin\theta - b\dot\theta$의 자연스러운 흔들림입니다.</p>
+    <canvas id="penC" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>운동학 각도 θ (°) <span class="val" id="penThV">30</span><input type="range" id="penTh" min="-80" max="80" value="30"></label>
+      <label>중력 g <span class="val" id="penGV">9.81</span><input type="range" id="penG" min="0" max="20" step="0.1" value="9.81"></label>
+      <label>감쇠 b <span class="val" id="penBV">0.3</span><input type="range" id="penB" min="0" max="2" step="0.05" value="0.3"></label>
+      <button id="penReset">동역학 재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('penC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    let dyn={th:Math.PI/3,w:0};
+    const upd=()=>['penTh','penG','penB'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    sl('penReset').onclick=()=>{dyn={th:Math.PI/3,w:0};};
+    ['penTh','penG','penB'].forEach(k=>sl(k).oninput=upd);upd();
+    function drawPen(cx,cy,th,color,label,subLabel){
+      const Lpx=110;
+      const ex=cx+Lpx*Math.sin(th),ey=cy+Lpx*Math.cos(th);
+      x.strokeStyle='#d0d4d9';x.setLineDash([4,4]);x.beginPath();x.moveTo(cx,cy);x.lineTo(cx,cy+Lpx);x.stroke();x.setLineDash([]);
+      x.strokeStyle='#999';x.lineWidth=2;x.beginPath();x.arc(cx,cy,4,0,Math.PI*2);x.stroke();
+      x.strokeStyle=color;x.lineWidth=3;x.beginPath();x.moveTo(cx,cy);x.lineTo(ex,ey);x.stroke();
+      x.fillStyle=color;x.beginPath();x.arc(ex,ey,13,0,Math.PI*2);x.fill();
+      x.fillStyle='#1a1a1a';x.font='bold 14px sans-serif';x.textAlign='center';x.fillText(label,cx,28);
+      x.fillStyle=color;x.font='12px Consolas,monospace';x.fillText('θ = '+(th*180/Math.PI).toFixed(0)+'°',cx,c.height-32);
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText(subLabel,cx,c.height-14);
+    }
+    function loop(){
+      const dt=0.03,g=+sl('penG').value,b=+sl('penB').value,L=1.5;
+      dyn.w+=(-(g/L)*Math.sin(dyn.th)-b*dyn.w)*dt;
+      dyn.th+=dyn.w*dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const thKin=+sl('penTh').value*Math.PI/180;
+      drawPen(160,60,thKin,'#0b5fff','운동학 (Kinematics)','각도 직접 지정 — 힘 없음');
+      drawPen(480,60,dyn.th,'#c62828','동역학 (Dynamics)','중력+감쇠로 자연스러운 진동');
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

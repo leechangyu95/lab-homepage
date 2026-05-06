@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 7. 행렬 (3) — 역행렬·행렬식 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html" class="active">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../linear-algebra.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 7. 행렬 (3) — 역행렬·행렬식</h1>
+  <p class="lead">"변환 되돌리기" = 역행렬, "가역 가능 한 줄 신호" = 행렬식. 두 도구로 $A\mathbf{x}=\mathbf{b}$ 의 해 분석을 완성한다.</p>
+
+  <h2>🔁 복습</h2>
+
+  <h3>우리가 가진 것</h3>
+  <ul>
+    <li>행렬과 연산 (5강) / 가우스 소거법 (6강).</li>
+    <li>$A\mathbf{x} = \mathbf{b}$ 를 가우스 소거법으로 풀 수 있음.</li>
+  </ul>
+
+  <h3>오늘의 두 도구</h3>
+  <ul>
+    <li><strong>역행렬</strong> $A^{-1}$ : "$A$ 로 곱한 것을 되돌리는" 행렬.</li>
+    <li><strong>행렬식</strong> $\det A$ : "$A$ 가 가역인가?" 를 알려주는 한 숫자.</li>
+  </ul>
+
+  <h3>왜 중요한가</h3>
+  <ul>
+    <li>$A\mathbf{x} = \mathbf{b}$ 의 해가 한 개인지·없는지·무한인지 → <strong>행렬식 한 번</strong>으로 알 수 있다.</li>
+    <li>회전·확대 같은 변환을 <strong>되돌리는</strong> 도구 = 역행렬.</li>
+  </ul>
+
+
+  <h2>🎯 오늘의 학습 목표</h2>
+
+  <h3>🔹 역행렬의 정의를 이해하고 $2\times 2$ 공식을 외운다</h3>
+
+  <h3>🔸 가우스–조르당으로 일반 $n\times n$ 역행렬을 구할 수 있다</h3>
+
+  <h3>🔸 행렬식을 $2\times 2$, $3\times 3$ 모두 손으로 계산할 수 있다</h3>
+
+  <h3>🔸 행렬식의 <strong>기하적 의미</strong>(부호 있는 면적·부피)를 설명할 수 있다</h3>
+
+  <h3>🔸 "$\det A \neq 0$ ↔ $A$ 가역" 의 동치 관계를 안다</h3>
+
+
+  <h2>↩️ 역행렬 — 정의</h2>
+
+  <h3>정의</h3>
+  <p>$n \times n$ 정사각행렬 $A$ 에 대해 다음을 만족하는 행렬 $B$ 가 있으면 $A$ 는 <strong>가역(invertible)</strong>.</p>
+
+  <p>$$AB = BA = I_n$$</p>
+
+  <p>이때 $B = A^{-1}$.</p>
+
+  <h3>직관 — "되돌리기"</h3>
+  <ul>
+    <li>$\mathbf{x} \xrightarrow{A} A\mathbf{x} \xrightarrow{A^{-1}} \mathbf{x}$</li>
+    <li>어떤 변환을 가했다가 그 효과를 정확히 무효화.</li>
+  </ul>
+
+  <h3>모든 행렬이 역행렬을 가지지는 않는다</h3>
+  <ul>
+    <li>가역인 행렬: <strong>정사각</strong>, 그리고 $\det A \neq 0$ (뒤에서).</li>
+    <li>그렇지 않으면 <strong>특이(singular) 행렬</strong>.</li>
+  </ul>
+
+<div class="warn">$2\times 3$ 같은 직사각 행렬은 <b>역행렬 자체가 정의되지 않습니다</b>. 정사각만 가능.</div>
+
+
+  <h2>↩️ $2\times 2$ 역행렬 — 공식 외우자</h2>
+
+  <h3>공식</h3>
+  <p>$$
+A = \begin{pmatrix} a & b \\ c & d \end{pmatrix}, \qquad \det A = ad - bc \neq 0
+$$</p>
+  <p>$$
+\boxed{\,A^{-1} = \frac{1}{ad - bc}\begin{pmatrix} d & -b \\ -c & a \end{pmatrix}\,}
+$$</p>
+
+  <h3>외우는 요령</h3>
+  <ol>
+    <li>대각선 두 원소($a, d$) 자리 바꾸기</li>
+    <li>비대각선 두 원소($b, c$) 부호 반대로</li>
+    <li>전체에 $\dfrac{1}{ad - bc}$ 곱하기</li>
+  </ol>
+
+  <h3>🌱 왜 이 공식이 맞나? — 직접 곱해서 확인</h3>
+  <p>외운 공식이 진짜로 $AA^{-1}=I$ 를 만들어내는지 한 번 손으로 곱해 봅시다.</p>
+  <p>$$
+  A \cdot \frac{1}{ad-bc}\begin{pmatrix} d & -b \\ -c & a \end{pmatrix}
+  = \frac{1}{ad-bc}\begin{pmatrix} a & b \\ c & d \end{pmatrix}\begin{pmatrix} d & -b \\ -c & a \end{pmatrix}
+  $$</p>
+  <p>각 칸을 행 × 열 내적으로 계산하면:</p>
+  <p>$$
+  = \frac{1}{ad-bc}\begin{pmatrix} ad-bc & -ab+ba \\ cd-dc & -cb+da \end{pmatrix}
+  = \frac{1}{ad-bc}\begin{pmatrix} ad-bc & 0 \\ 0 & ad-bc \end{pmatrix}
+  = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix} = I
+  $$</p>
+  <p>$\dfrac{1}{ad-bc}$ 가 필요한 이유가 보입니다 — 대각선 칸이 정확히 $ad-bc$ 가 되어 그 값으로 나눠야 1이 됩니다.
+     또 $ad-bc=0$ 이면 나눌 수 없으므로 <strong>역행렬이 없음 (특이행렬)</strong> 이라는 사실도 동시에 증명됩니다.</p>
+
+  <h3>예</h3>
+  <p>$$A = \begin{pmatrix} 2 & 1 \\ 5 & 3 \end{pmatrix},\ \det A = 6 - 5 = 1$$</p>
+  <p>$$A^{-1} = \frac{1}{1}\begin{pmatrix} 3 & -1 \\ -5 & 2 \end{pmatrix} = \begin{pmatrix} 3 & -1 \\ -5 & 2 \end{pmatrix}$$</p>
+
+  <p>검산: $A A^{-1} = \begin{pmatrix} 6-5 & -2+2 \\ 15-15 & -5+6 \end{pmatrix} = I$ ✓</p>
+
+
+  <h2>🛠️ 일반 $n\times n$ 역행렬 — 가우스–조르당</h2>
+
+  <h3>절차</h3>
+  <ol>
+    <li>$[A \mid I]$ 형태의 첨가행렬을 만든다.</li>
+    <li>행 연산으로 왼쪽을 $I$ 로 만든다.</li>
+    <li>그러면 오른쪽이 자동으로 $A^{-1}$ 이 된다.</li>
+  </ol>
+
+  <p>$$[\,A\,|\,I\,] \xrightarrow{\text{행 연산}} [\,I\,|\,A^{-1}\,]$$</p>
+
+  <h3>왜 이게 동작하나?</h3>
+  <ul>
+    <li>같은 행 연산은 어떤 행렬을 곱하는 것과 동치.</li>
+    <li>왼쪽이 $I$ 가 되도록 곱한 행렬이 곧 $A^{-1}$.</li>
+    <li>그 행렬이 오른쪽 $I$ 에 곱해지면서 그대로 나타남.</li>
+  </ul>
+
+  <h3>작업 도중 0행이 나오면?</h3>
+  <ul>
+    <li>왼쪽을 $I$ 로 만들 수 없음 → $A$ 는 <strong>특이(역행렬 없음)</strong>.</li>
+  </ul>
+
+
+  <h2>🛠️ 일반 역행렬 — 예제</h2>
+
+  <h3>예</h3>
+  <p>$A = \begin{pmatrix} 1 & 2 & 1 \\ 2 & 3 & 2 \\ 1 & 1 & 2 \end{pmatrix}$</p>
+
+  <p>$$
+[\,A\,|\,I\,]
+=
+\left[\begin{array}{ccc|ccc}
+1 & 2 & 1 & 1 & 0 & 0 \\
+2 & 3 & 2 & 0 & 1 & 0 \\
+1 & 1 & 2 & 0 & 0 & 1
+\end{array}\right]
+$$</p>
+
+  <p>$R_2 \to R_2 - 2R_1$, $R_3 \to R_3 - R_1$:</p>
+  <p>$$
+\left[\begin{array}{ccc|ccc}
+1 & 2 & 1 & 1 & 0 & 0 \\
+0 & -1 & 0 & -2 & 1 & 0 \\
+0 & -1 & 1 & -1 & 0 & 1
+\end{array}\right]
+$$</p>
+
+  <p>$R_2 \to -R_2$, $R_3 \to R_3 - R_2$:</p>
+  <p>$$
+\left[\begin{array}{ccc|ccc}
+1 & 2 & 1 & 1 & 0 & 0 \\
+0 & 1 & 0 & 2 & -1 & 0 \\
+0 & 0 & 1 & 1 & -1 & 1
+\end{array}\right]
+$$</p>
+
+  <p>$R_1 \to R_1 - 2R_2 - R_3$:</p>
+  <p>$$
+\left[\begin{array}{ccc|ccc}
+1 & 0 & 0 & -4 & 3 & -1 \\
+0 & 1 & 0 & 2 & -1 & 0 \\
+0 & 0 & 1 & 1 & -1 & 1
+\end{array}\right]
+$$</p>
+
+  <p>$$\therefore A^{-1} = \begin{pmatrix} -4 & 3 & -1 \\ 2 & -1 & 0 \\ 1 & -1 & 1 \end{pmatrix}$$</p>
+
+
+  <h2>⚙️ 역행렬의 성질</h2>
+
+  <h3>성질</h3>
+  <ol>
+    <li>$(A^{-1})^{-1} = A$</li>
+    <li>$(AB)^{-1} = B^{-1} A^{-1}$ ← <strong>순서 바뀜!</strong></li>
+    <li>$(A^T)^{-1} = (A^{-1})^T$</li>
+    <li>$(cA)^{-1} = \dfrac{1}{c} A^{-1}$</li>
+    <li><strong>유일성</strong>: 역행렬은 존재하면 단 하나.</li>
+  </ol>
+
+  <h3>$A\mathbf{x} = \mathbf{b}$ 의 해 (역행렬 존재 시)</h3>
+  <p>$$A\mathbf{x} = \mathbf{b} \;\Longrightarrow\; \mathbf{x} = A^{-1}\mathbf{b}$$</p>
+
+<div class="warn">$(AB)^{-1} = A^{-1}B^{-1}$ 이 아닙니다! 순서를 <b>거꾸로 바꿔야</b> 합니다 (전치와 같은 패턴).</div>
+
+
+  <h2>🔢 행렬식 — $2\times 2$</h2>
+
+  <h3>정의</h3>
+  <p>$$
+A = \begin{pmatrix} a & b \\ c & d \end{pmatrix},\quad
+\det A = |A| = ad - bc
+$$</p>
+
+  <h3>예</h3>
+  <ul>
+    <li>$\det\begin{pmatrix} 2 & 3 \\ 1 & 4 \end{pmatrix} = 8 - 3 = 5$</li>
+    <li>$\det\begin{pmatrix} 1 & 2 \\ 2 & 4 \end{pmatrix} = 4 - 4 = 0$ → 특이</li>
+  </ul>
+
+<div class="tip">$\det A = 0$ 이라는 한 줄 신호가 "역행렬 없음 / 가우스 소거에서 자유변수 발생 / 두 직선 평행" 을 동시에 의미합니다.</div>
+
+
+  <h2>🔢 행렬식 — $3\times 3$ (사루스 법칙)</h2>
+
+  <h3>사루스(Sarrus) 법칙</h3>
+  <p>$3\times 3$ 행렬의 행렬식은 다음 6개 항의 합·차.</p>
+
+  <p>$$
+A = \begin{pmatrix} a_1 & a_2 & a_3 \\ b_1 & b_2 & b_3 \\ c_1 & c_2 & c_3 \end{pmatrix}
+$$</p>
+
+  <p>$$
+\det A = a_1 b_2 c_3 + a_2 b_3 c_1 + a_3 b_1 c_2 - a_3 b_2 c_1 - a_2 b_1 c_3 - a_1 b_3 c_2
+$$</p>
+
+  <h3>외우는 요령 — "↘ 더하고 ↙ 빼기"</h3>
+  <ul>
+    <li>행렬을 그리고 첫 두 열을 오른쪽에 한 번 더 적기.</li>
+    <li>↘ 방향 대각선 3개 합 − ↙ 방향 대각선 3개 합.</li>
+  </ul>
+
+<div class="note">사루스 법칙은 <b>$3\times 3$ 한정</b>입니다. $4\times 4$ 부터는 다음 슬라이드의 여인수 전개 사용.</div>
+
+
+  <h2>🔢 행렬식 — 여인수 전개 (일반 $n\times n$)</h2>
+
+  <h3>여인수 전개 (Cofactor expansion)</h3>
+  <p>첫 번째 행 기준으로:</p>
+  <p>$$\det A = \sum_{j=1}^n (-1)^{1+j}\,a_{1j}\,M_{1j}$$</p>
+
+  <ul>
+    <li>$M_{1j}$ = $a_{1j}$ 의 <strong>소행렬식</strong> ($1$ 행과 $j$ 열을 지운 $(n-1)\times(n-1)$ 행렬의 행렬식).</li>
+    <li>$(-1)^{1+j}$ = 부호 (+ − + − ...)</li>
+  </ul>
+
+  <h3>예 — $3\times 3$</h3>
+  <p>$$
+\det\begin{pmatrix} 1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 0 \end{pmatrix}
+= 1\cdot\det\begin{pmatrix} 5 & 6 \\ 8 & 0 \end{pmatrix}
+- 2\cdot\det\begin{pmatrix} 4 & 6 \\ 7 & 0 \end{pmatrix}
++ 3\cdot\det\begin{pmatrix} 4 & 5 \\ 7 & 8 \end{pmatrix}
+$$</p>
+  <p>$$= 1\cdot(0 - 48) - 2\cdot(0 - 42) + 3\cdot(32 - 35) = -48 + 84 - 9 = 27$$</p>
+
+<div class="tip">
+
+🌱 <b>팁</b>: 0 이 많은 행/열을 골라 전개하면 계산량이 크게 줄어듭니다.
+
+</div>
+
+
+  <h2>📐 행렬식의 기하적 의미 (1) — 면적</h2>
+
+  <h3>$2\times 2$ 행렬</h3>
+  <p>열벡터 두 개가 만드는 <strong>평행사변형의 (부호 있는) 면적</strong> = $|\det A|$.</p>
+
+<svg width="900" height="240" viewBox="0 0 900 240" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <line x1="60" y1="200" x2="500" y2="200" stroke="#bbb" stroke-width="1"/>
+  <line x1="100" y1="20" x2="100" y2="220" stroke="#bbb" stroke-width="1"/>
+  <line x1="100" y1="200" x2="280" y2="200" stroke="#1677ff" stroke-width="3"/>
+  <polygon points="280,200 268,196 268,204" fill="#1677ff"/>
+  <text x="180" y="220" font-size="14" font-weight="bold" fill="#1677ff">a₁ = (3, 0)</text>
+  <line x1="100" y1="200" x2="160" y2="80" stroke="#fa8c16" stroke-width="3"/>
+  <polygon points="160,80 149,84 153,93" fill="#fa8c16"/>
+  <text x="40" y="135" font-size="14" font-weight="bold" fill="#fa8c16">a₂ = (1, 2)</text>
+  <polygon points="100,200 280,200 340,80 160,80" fill="#1677ff" fill-opacity="0.15" stroke="#1677ff" stroke-width="1"/>
+  <text x="220" y="150" font-size="16" font-weight="bold" fill="#cf1322">면적 = |det A| = 6</text>
+  <line x1="280" y1="200" x2="340" y2="80" stroke="#fa8c16" stroke-width="2" stroke-dasharray="4 3"/>
+  <line x1="160" y1="80" x2="340" y2="80" stroke="#1677ff" stroke-width="2" stroke-dasharray="4 3"/>
+  <!-- right text -->
+  <text x="540" y="60" font-size="15" fill="#333" font-weight="bold">계산 확인</text>
+  <text x="540" y="100" font-size="14">A = (3 1 / 0 2)</text>
+  <text x="540" y="125" font-size="14">det A = 3·2 − 1·0 = 6</text>
+  <text x="540" y="160" font-size="14" fill="#666">평행사변형 면적 = 6</text>
+  <text x="540" y="190" font-size="13" fill="#999">(부호: 두 벡터의 회전 방향)</text>
+</svg>
+
+  <h3>$3\times 3$</h3>
+  <p>열벡터 세 개가 만드는 <strong>평행육면체의 (부호 있는) 부피</strong> = $|\det A|$.</p>
+
+<div class="tip">"$\det A = 0$" → 면적/부피가 0 → 두 벡터가 평행, 또는 세 벡터가 한 평면에 → <b>차원이 줄어든다</b>는 의미.</div>
+
+  <h3>🌱 왜 $\det A = 0$ 이면 역행렬이 없을까? — 직관</h3>
+  <p>행렬 $A$ 가 평면(2D 입력 공간)을 어떻게 변환하는지 생각해 봅시다.
+     $A$ 의 두 열벡터가 만드는 평행사변형의 면적이 $|\det A|$ 입니다.</p>
+  <ul>
+    <li>$\det A \neq 0$ : 평면 → 평면 (면적이 보존되거나 배율로 변함). 모든 점이 <strong>구별</strong>되어 도착하므로,
+        도착점에서 출발점으로 되돌리는 함수($A^{-1}$)가 존재.</li>
+    <li>$\det A = 0$ : 평면 → 직선/점 으로 <strong>찌그러짐</strong>. 여러 출발점이 같은 도착점이 되어
+        <em>되돌리려 해도 어느 출발점이 진짜인지 알 수 없음</em> → 역행렬 정의 불가능.</li>
+  </ul>
+
+<svg width="700" height="220" viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <!-- left: full rank -->
+  <text x="100" y="30" font-size="13" font-weight="bold" fill="#2e7d32" text-anchor="middle">det ≠ 0  (가역)</text>
+  <polygon points="40,170 130,170 170,80 80,80" fill="#2e7d32" fill-opacity="0.18" stroke="#2e7d32" stroke-width="1.5"/>
+  <text x="100" y="135" font-size="12" fill="#2e7d32" text-anchor="middle">면적 &gt; 0</text>
+  <text x="100" y="200" font-size="11" fill="#666" text-anchor="middle">평면 → 평면</text>
+
+  <!-- middle arrow -->
+  <text x="260" y="115" font-size="22" fill="#666">vs</text>
+
+  <!-- right: singular (vectors parallel) -->
+  <text x="430" y="30" font-size="13" font-weight="bold" fill="#cf1322" text-anchor="middle">det = 0  (특이)</text>
+  <line x1="350" y1="170" x2="510" y2="80" stroke="#cf1322" stroke-width="3"/>
+  <text x="430" y="135" font-size="12" fill="#cf1322" text-anchor="middle">면적 = 0 (직선)</text>
+  <text x="430" y="200" font-size="11" fill="#666" text-anchor="middle">평면 → 직선 (정보 손실)</text>
+
+  <!-- right text -->
+  <text x="560" y="80" font-size="13" fill="#333" font-weight="bold">왜 역행렬 없을까?</text>
+  <text x="560" y="105" font-size="12" fill="#666">평면의 모든 점이</text>
+  <text x="560" y="122" font-size="12" fill="#666">한 직선에 몰리니까,</text>
+  <text x="560" y="145" font-size="12" fill="#666">"이 직선 위 점이</text>
+  <text x="560" y="162" font-size="12" fill="#666">평면의 어디서 왔지?"</text>
+  <text x="560" y="183" font-size="12" fill="#cf1322" font-weight="bold">→ 답이 무한 개</text>
+</svg>
+
+  <p>정리: <strong>$\det A = 0 \iff A$ 가 차원을 줄임 $\iff$ 정보 손실 $\iff$ 역행렬 없음</strong>. 이 동치 사슬은
+     7주차 끝의 6가지 동치 관계의 핵심이고, 12주차 <em>핵·치역·계수</em>에서 다시 만납니다.</p>
+
+
+  <h2>📐 행렬식의 기하적 의미 (2) — 부호의 의미</h2>
+
+  <h3>양수 vs 음수</h3>
+  <ul>
+    <li>$\det A > 0$ : 변환 전후의 <strong>방향이 보존</strong>됨 (오른손 → 오른손).</li>
+    <li>$\det A < 0$ : 변환이 <strong>거울 반사</strong>를 포함 (오른손 → 왼손).</li>
+  </ul>
+
+  <h3>예</h3>
+  <ul>
+    <li>회전: $\det = +1$ → 같은 방향.</li>
+    <li>반사 (좌우 뒤집기): $\det = -1$ → 거울상.</li>
+    <li>스케일링 ($\times 2$): $\det = 4$ → 면적 4배 (2D).</li>
+  </ul>
+
+<div class="note">$|\det A|$ 는 변환이 면적/부피를 <b>몇 배 늘이는지</b>의 비율. 부호는 방향이 뒤집혔는지의 신호.</div>
+
+
+  <h2>🧮 행렬식의 성질</h2>
+
+  <h3>성질</h3>
+  <ol>
+    <li>$\det(A^T) = \det A$</li>
+    <li>$\det(AB) = \det A \cdot \det B$  ← <strong>곱은 분배</strong></li>
+    <li>$\det(cA) = c^n \det A$ ($n \times n$ 일 때)</li>
+    <li>$\det(A^{-1}) = \dfrac{1}{\det A}$ (가역일 때)</li>
+    <li>단위행렬: $\det I = 1$</li>
+    <li>영행렬: $\det O = 0$</li>
+  </ol>
+
+  <h3>행 연산이 행렬식에 미치는 영향</h3>
+  <table>
+    <thead><tr><th>행 연산</th><th>행렬식 변화</th></tr></thead>
+    <tbody>
+      <tr><td>두 행 교환</td><td>부호 반전 (×−1)</td></tr>
+      <tr><td>한 행에 $c$ 곱</td><td>$\times c$</td></tr>
+      <tr><td>한 행에 다른 행 배수 더함</td><td><strong>변화 없음</strong></td></tr>
+    </tbody>
+  </table>
+
+<div class="tip">
+
+🌱 <b>실전 팁</b>: 가우스 소거를 행렬식 계산용으로 활용 가능 — 상삼각으로 만들면 대각 원소의 곱이 (부호 정정 후) 행렬식.
+
+</div>
+
+  <h2>🧮 행렬식 — 큰 행렬을 가우스 소거로 빠르게</h2>
+
+  <h3>$4\times 4$ 예제</h3>
+  <p>$A = \begin{pmatrix} 1 & 2 & 0 & 1 \\ 0 & 1 & 1 & 2 \\ 2 & 4 & 1 & 3 \\ 0 & 0 & 1 & 1 \end{pmatrix}$.</p>
+
+  <h3>여인수 전개 vs 가우스 소거 비교</h3>
+  <ul>
+    <li><strong>여인수 전개</strong>: $4 \times 6 = 24$ 항의 곱셈, 각 항 검산 어려움.</li>
+    <li><strong>가우스 소거 후 대각 곱</strong>: 6번의 행 연산으로 상삼각 만든 후 대각 원소의 곱 → 훨씬 빠름.</li>
+  </ul>
+
+  <h3>풀이 — 가우스 소거</h3>
+  <p>$R_3 \to R_3 - 2R_1$ (한 행에 다른 행 배수 더함 → 행렬식 변화 없음):</p>
+  <p>$$\begin{pmatrix} 1 & 2 & 0 & 1 \\ 0 & 1 & 1 & 2 \\ 0 & 0 & 1 & 1 \\ 0 & 0 & 1 & 1 \end{pmatrix}$$</p>
+  <p>$R_4 \to R_4 - R_3$:</p>
+  <p>$$\begin{pmatrix} 1 & 2 & 0 & 1 \\ 0 & 1 & 1 & 2 \\ 0 & 0 & 1 & 1 \\ 0 & 0 & 0 & 0 \end{pmatrix}$$</p>
+  <p>마지막 행이 모두 0 → $\det A = 0$ (특이행렬).</p>
+
+  <h3>일반 절차</h3>
+  <ol>
+    <li>가우스 소거(행 교환 시 부호 추적)로 상삼각 만들기.</li>
+    <li>대각 원소들의 곱 = 행렬식 (×$(-1)^{\text{교환 횟수}}$).</li>
+    <li>대각에 0이 있으면 행렬식 = 0.</li>
+  </ol>
+
+<div class="note">큰 행렬은 거의 항상 이 방법이 빠릅니다. 시험에서 $3\times 3$ 까지는 사루스가 빠를 수 있지만, $4\times 4$ 부터는 소거가 답.</div>
+
+
+  <h2>🔢 크라메르 공식 (Cramer's Rule)</h2>
+
+  <h3>식</h3>
+  <p>$A\mathbf{x} = \mathbf{b}$ ($A$ 가역) 의 해를 행렬식으로 직접 표현:</p>
+  <p>$$x_i = \frac{\det A_i}{\det A}$$</p>
+  <p>여기서 $A_i$ 는 $A$ 의 $i$ 번째 열을 $\mathbf{b}$ 로 바꾼 행렬.</p>
+
+  <h3>예 — $2\times 2$</h3>
+  <p>$\begin{cases} 2x + y = 5 \\ x + 3y = 8 \end{cases}$, $A = \begin{pmatrix}2 & 1 \\ 1 & 3\end{pmatrix}$, $\det A = 5$.</p>
+  <ul>
+    <li>$A_1 = \begin{pmatrix}5 & 1 \\ 8 & 3\end{pmatrix}$, $\det A_1 = 7$. $x = 7/5$.</li>
+    <li>$A_2 = \begin{pmatrix}2 & 5 \\ 1 & 8\end{pmatrix}$, $\det A_2 = 11$. $y = 11/5$.</li>
+  </ul>
+
+  <h3>장단점</h3>
+  <ul>
+    <li><strong>장점</strong>: 한 변수만 필요할 때 다른 변수 계산 안 해도 됨. 식이 깔끔.</li>
+    <li><strong>단점</strong>: $n$ 차원이면 행렬식 $n+1$ 개 계산 → 큰 시스템에는 매우 느림. 가우스 소거가 거의 항상 더 빠름.</li>
+  </ul>
+
+<div class="tip">크라메르 공식은 "이론적 도구"로 가치 있음. 손으로 푸는 시험에서는 작은 시스템이거나 한 변수만 필요할 때 유용.</div>
+
+
+  <h2>🌟 핵심 동치 관계</h2>
+
+  <h3>정리 (Invertibility)</h3>
+  <p>$n \times n$ 행렬 $A$ 에 대해 다음은 모두 동치:</p>
+
+  <ol>
+    <li>$A$ 는 <strong>가역</strong> ($A^{-1}$ 존재).</li>
+    <li>$\det A \neq 0$.</li>
+    <li>$A\mathbf{x} = \mathbf{b}$ 가 <strong>모든</strong> $\mathbf{b}$ 에 대해 유일해를 가짐.</li>
+    <li>$A\mathbf{x} = \mathbf{0}$ 의 해가 <strong>$\mathbf{x} = \mathbf{0}$ 뿐</strong>.</li>
+    <li>$A$ 의 RREF = $I_n$.</li>
+    <li>$A$ 의 열들이 <strong>일차독립</strong> (10주차 개념).</li>
+  </ol>
+
+<div class="tip">이 6가지는 "<b>같은 사실의 6가지 옷차림</b>". 시험과 응용 어디서나 자유롭게 오갈 수 있어야 합니다.</div>
+
+
+  <h2>🌍 응용 (1) — $A\mathbf{x} = \mathbf{b}$ 즉시 해결</h2>
+
+  <h3>예</h3>
+  <p>$$\begin{cases} 2x + y = 5 \\ 5x + 3y = 13 \end{cases} \;\Longleftrightarrow\; A\mathbf{x} = \mathbf{b},\; A = \begin{pmatrix} 2 & 1 \\ 5 & 3 \end{pmatrix},\ \mathbf{b} = \begin{pmatrix} 5 \\ 13 \end{pmatrix}$$</p>
+
+  <h3>풀이 (역행렬)</h3>
+  <p>$\det A = 6 - 5 = 1 \neq 0$ → 가역.</p>
+  <p>$$A^{-1} = \begin{pmatrix} 3 & -1 \\ -5 & 2 \end{pmatrix}$$</p>
+  <p>$$\mathbf{x} = A^{-1}\mathbf{b} = \begin{pmatrix} 3\cdot 5 - 1\cdot 13 \\ -5\cdot 5 + 2\cdot 13 \end{pmatrix} = \begin{pmatrix} 2 \\ 1 \end{pmatrix}$$</p>
+
+  <p>→ $x = 2,\ y = 1$.</p>
+
+<div class="note">변수가 많을 때는 역행렬을 직접 구하기보다 가우스 소거가 보통 더 빠릅니다. 역행렬은 "<b>여러 다른 $\mathbf{b}$ 에 대해 반복</b>해서 풀 때" 유용.</div>
+
+
+  <h2>🌍 응용 (2) — 그래픽스의 변환 되돌리기</h2>
+
+  <h3>시나리오</h3>
+  <ul>
+    <li>캐릭터를 $T = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}$ (회전) 으로 변환했다.</li>
+    <li>마우스 클릭 위치(화면 좌표)를 캐릭터 좌표계로 다시 변환하려면?</li>
+    <li>→ $T^{-1}$ 곱하기.</li>
+  </ul>
+
+  <h3>회전 행렬의 역행렬</h3>
+  <p>회전 행렬은 항상 $\det = 1$ 이고 $T^{-1} = T^T$ ← <strong>직교행렬</strong>의 성질.</p>
+
+<div class="tip">"역행렬 = 변환 되돌리기" 라는 직관이 게임·VR/AR·로봇팔 좌표 변환에서 매일 사용됩니다.</div>
+
+
+  <h2>🌍 응용 (3) — 면적·부피 빠른 계산</h2>
+
+  <h3>시나리오</h3>
+  <p>세 점 $A=(1,0),\ B=(4,2),\ C=(2,5)$ 가 만드는 <strong>삼각형 면적</strong>.</p>
+
+  <h3>풀이</h3>
+  <p>두 변 $\overrightarrow{AB} = (3,2),\ \overrightarrow{AC} = (1,5)$.</p>
+  <p>$$S_\triangle = \tfrac{1}{2}\,\bigl|\det\begin{pmatrix} 3 & 1 \\ 2 & 5 \end{pmatrix}\bigr| = \tfrac{1}{2}|15 - 2| = \tfrac{13}{2}$$</p>
+
+  <h3>활용</h3>
+  <ul>
+    <li>GIS / 지도 위 다각형 면적 계산.</li>
+    <li>메시(mesh) 처리 시 삼각형 면적 한꺼번에.</li>
+  </ul>
+
+
+  <h2>📝 정리 — 오늘의 핵심</h2>
+
+  <h3>1️⃣ 역행렬</h3>
+  <ul>
+    <li>$AB = BA = I$ → $B = A^{-1}$.</li>
+    <li>$2\times 2$: $\dfrac{1}{ad - bc}\begin{pmatrix} d & -b \\ -c & a \end{pmatrix}$.</li>
+    <li>일반: 가우스–조르당으로 $[A | I] \to [I | A^{-1}]$.</li>
+    <li>$(AB)^{-1} = B^{-1}A^{-1}$ — <strong>순서 반대</strong>.</li>
+  </ul>
+
+  <h3>2️⃣ 행렬식</h3>
+  <ul>
+    <li>$2\times 2$: $ad - bc$. $3\times 3$: 사루스. 일반: 여인수 전개.</li>
+    <li>기하: 면적·부피의 부호 있는 값.</li>
+  </ul>
+
+  <h3>3️⃣ 핵심 동치</h3>
+  <p>$A$ 가역 ↔ $\det A \neq 0$ ↔ $A\mathbf{x}=\mathbf{b}$ 유일해 ↔ 열 일차독립.</p>
+
+<div class="tip">중간고사까지 한 단계 남음. 다음 강의는 중간고사이며 9강에서는 풀이와 함께 <b>"부분공간"</b>으로 넘어갑니다.</div>
+
+
+  <h2>📚 연습문제</h2>
+
+  <h3>문제 1 ($2\times 2$ 역행렬)</h3>
+  <p>다음 행렬의 역행렬을 구하시오 (없으면 "특이").</p>
+  <ol>
+    <li>$\begin{pmatrix} 4 & 7 \\ 2 & 6 \end{pmatrix}$</li>
+    <li>$\begin{pmatrix} 3 & 6 \\ 1 & 2 \end{pmatrix}$</li>
+  </ol>
+
+  <h3>문제 2 (가우스–조르당)</h3>
+  <p>$A = \begin{pmatrix} 1 & 0 & 2 \\ 2 & 1 & 3 \\ 1 & 1 & 2 \end{pmatrix}$ 의 역행렬을 구하시오.</p>
+
+  <h3>문제 3 (행렬식 — 사루스)</h3>
+  <p>$\det\begin{pmatrix} 1 & 2 & 0 \\ 3 & -1 & 1 \\ 2 & 0 & 4 \end{pmatrix}$ 를 구하시오.</p>
+
+  <h3>문제 4 (역행렬로 풀기)</h3>
+  <p>$\begin{cases} 2x + y = 7 \\ x + 3y = 11 \end{cases}$ 을 역행렬을 사용해 푸시오.</p>
+
+  <h3>문제 5 (면적)</h3>
+  <p>세 점 $A=(0,0),\ B=(3,1),\ C=(2,4)$ 이 만드는 삼각형 면적을 행렬식으로 구하시오.</p>
+
+  <h3>문제 6 (개념)</h3>
+  <p>$A,\,B$ 가 모두 $3\times 3$ 가역행렬이고 $\det A = 2,\ \det B = -3$ 일 때 $\det(A^{-1} B^T)$ 를 구하시오.</p>
+
+  <h3>문제 7 (가우스 소거로 행렬식)</h3>
+  <p>$\det\begin{pmatrix} 1 & 2 & 3 \\ 0 & 1 & 4 \\ 5 & 6 & 0 \end{pmatrix}$ 를 가우스 소거(상삼각 만들기)로 계산하시오.</p>
+
+  <h3>문제 8 (크라메르)</h3>
+  <p>$\begin{cases} x + 2y - z = 1 \\ 2x - y + z = 3 \\ x + y + z = 4 \end{cases}$ 의 $z$ 만 크라메르 공식으로 구하시오.</p>
+
+  <h3>문제 9 (응용 — 회전 역변환)</h3>
+  <p>$T = R_{60°}$ (60° 반시계 회전) 의 역행렬을 두 가지 방법(공식 + 직교행렬 성질) 으로 구하고 결과가 같은지 확인하시오.</p>
+
+  <h3>문제 10 (개념)</h3>
+  <p>$\det A = 0$ 인 행렬 $A$ 가 주어졌을 때, $A\mathbf{x} = \mathbf{0}$ 의 해 공간의 차원이 양수임을 설명하시오.</p>
+
+  <h3>문제 11 (응용 — 그래픽스)</h3>
+  <p>2D 변환 행렬 $T = \begin{pmatrix} 2 & 0 \\ 0 & 0.5 \end{pmatrix}$ 가 단위정사각형(꼭짓점 $(0,0), (1,0), (1,1), (0,1)$)을 어떤 모양으로
+     보내는지 면적과 방향(부호)을 모두 답하시오.</p>
+
+
+
+
+  <h3>오늘 배운 내용에 대해 궁금한 점이 있으면 언제든지 질문해 주세요.</h3>
+
+  <ul>
+    <li>이메일 : <strong>leeck@kongju.ac.kr</strong></li>
+    <li>사무실 : 1공학관 609호</li>
+  </ul>
+
+  <p><br></p>
+
+<div class="tip" style="text-align:center; font-size:1.1em;">
+다음 강의: 중간고사 (8주) → 풀이 / 부분공간·일차독립 (9주)
+</div>
+
+
+  <div class="prevnext">
+    <a href="06-gauss-elimination.html"><small>← 이전</small>Week 6. 행렬 (2) — 가우스 소거법</a>
+    <a class="next" href="08-midterm-review.html"><small>다음 →</small>Week 8. 중간고사 정리</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

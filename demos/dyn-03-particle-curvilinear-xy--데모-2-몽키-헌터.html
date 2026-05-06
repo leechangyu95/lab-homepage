@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 몽키 헌터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 몽키 헌터</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/03-particle-curvilinear-xy.html">Week 3. 곡선 운동학 (직각좌표)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 몽키 헌터</h4>
+    <p>화살은 원숭이가 가만히 있다고 가정하고 직선으로 겨냥합니다. <strong>발사 버튼을 누르는 순간 원숭이가 가지를 놓습니다</strong>. 중력이 0이면 화살은 원숭이가 있던 자리에 도달하고, 중력이 있으면 둘 다 똑같이 떨어져 결국 만납니다. 화살의 초속을 바꿔도 결과는 변하지 않습니다(화살이 더 느리면 만나는 위치가 더 낮을 뿐).</p>
+    <canvas id="monkC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>화살 초속 v₀ (m/s) <span class="val" id="mhVV">18</span><input type="range" id="mhV" min="6" max="35" step="0.5" value="18"></label>
+      <label>중력 g (m/s²) <span class="val" id="mhGV">9.81</span><input type="range" id="mhG" min="0" max="20" step="0.1" value="9.81"></label>
+      <button id="mhFire">발사</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('monkC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['mhV','mhG'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['mhV','mhG'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0,firing=false;
+    const hunter={x:60,y:280},monkey0={x:540,y:80};
+    sl('mhFire').onclick=()=>{t=0;firing=true;};
+    function loop(){
+      const v0=+sl('mhV').value,g=+sl('mhG').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // ground
+      x.fillStyle='#bcd6a8';x.fillRect(0,300,c.width,20);
+      // tree trunk
+      x.fillStyle='#8b6f47';x.fillRect(monkey0.x-5,monkey0.y,10,200);
+      // hunter
+      x.fillStyle='#444';x.fillRect(hunter.x-8,hunter.y-20,16,20);
+      x.beginPath();x.arc(hunter.x,hunter.y-30,8,0,Math.PI*2);x.fill();
+      // aim line (from hunter to monkey original)
+      const dx=monkey0.x-hunter.x,dy=monkey0.y-hunter.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const angle=Math.atan2(-dy,dx);
+      x.strokeStyle='#ddd';x.setLineDash([3,3]);x.beginPath();x.moveTo(hunter.x,hunter.y-25);x.lineTo(monkey0.x,monkey0.y);x.stroke();x.setLineDash([]);
+      let mx=monkey0.x,my=monkey0.y;
+      let ax=hunter.x,ay=hunter.y-25;
+      if(firing){
+        t+=0.02;
+        // arrow position (constant velocity along aim direction + gravity)
+        const tt=t;
+        ax=hunter.x+v0*Math.cos(angle)*tt*8;
+        ay=hunter.y-25-v0*Math.sin(angle)*tt*8+0.5*g*tt*tt*8;
+        // monkey free-falls
+        my=monkey0.y+0.5*g*tt*tt*8;
+        if(my>290||ax>c.width||tt>4){firing=false;t=0;}
+      }
+      // arrow
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      const al=14;
+      const ahx=ax-Math.cos(angle)*al,ahy=ay+Math.sin(angle)*al;
+      x.beginPath();x.moveTo(ahx,ahy);x.lineTo(ax,ay);x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(ax,ay,3,0,Math.PI*2);x.fill();
+      // monkey
+      x.fillStyle='#a0623c';x.beginPath();x.arc(mx,my,12,0,Math.PI*2);x.fill();
+      x.fillStyle='#fff';x.beginPath();x.arc(mx-4,my-3,2,0,Math.PI*2);x.arc(mx+4,my-3,2,0,Math.PI*2);x.fill();
+      // collision check
+      const d=Math.sqrt((ax-mx)**2+(ay-my)**2);
+      if(firing&&d<14){
+        x.fillStyle='#ffcb05';x.beginPath();x.arc(mx,my,28,0,Math.PI*2);x.fill();
+        x.fillStyle='#c62828';x.font='bold 14px sans-serif';x.textAlign='center';x.fillText('명중!',mx,my+5);
+      }
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('조준각 θ = '+(angle*180/Math.PI).toFixed(1)+'° (정확히 원숭이를 겨냥)',20,30);
+      x.fillText('두 물체 모두 ½gt²만큼 떨어짐 — y 방향 운동이 같음',20,48);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

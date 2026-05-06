@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 세 손실 함수와 그래디언트 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 세 손실 함수와 그래디언트 비교</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/03-regression-1.html">Week 3. 회귀 1: 선형회귀와 경사하강법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 세 손실 함수와 그래디언트 비교</h4>
+    <p>$\delta$를 움직여 Huber가 어떻게 L2(작을 때)와 L1(클 때) 사이를 부드럽게 잇는지 보세요. 위 그래프는 손실값, 아래는 그래디언트입니다.</p>
+    <canvas id="lossCmp" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>Huber δ <span class="val" id="hdV">1.00</span><input type="range" id="hd" min="0.2" max="3.0" step="0.05" value="1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lossCmp');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const xmin=-4,xmax=4,lossYmax=6,gradYmax=3;
+    const padL=50,padR=20,topY=20,topH=140,gapY=30,botH=140;
+    const botY=topY+topH+gapY;
+    const plotW=W-padL-padR;
+    const xToPx=r=>padL+(r-xmin)/(xmax-xmin)*plotW;
+    const lossYToPy=v=>topY+topH-v/lossYmax*topH;
+    const gradYToPy=v=>botY+botH/2-v/gradYmax*(botH/2);
+    const huber=(r,d)=>Math.abs(r)<=d?0.5*r*r:d*(Math.abs(r)-d/2);
+    const huberG=(r,d)=>Math.abs(r)<=d?r:d*Math.sign(r);
+    const colors={L2:'#c62828',L1:'#0b5fff',Huber:'#2e7d32'};
+    const dEl=document.getElementById('hd'),dVal=document.getElementById('hdV');
+    function plot(fn,color,yMap,clampY){
+      ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=240;i++){
+        const r=xmin+(xmax-xmin)*i/240;
+        let v=fn(r);
+        if(clampY)v=Math.max(-clampY,Math.min(clampY,v));
+        else v=Math.min(v,lossYmax);
+        const px=xToPx(r),py=yMap(v);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    }
+    function draw(){
+      const d=+dEl.value;dVal.textContent=d.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // axes for top panel (loss)
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(padL,topY);ctx.lineTo(padL,topY+topH);ctx.lineTo(padL+plotW,topY+topH);ctx.stroke();
+      // axes for bottom panel (gradient): zero line in middle
+      ctx.beginPath();ctx.moveTo(padL,botY);ctx.lineTo(padL,botY+botH);ctx.stroke();
+      ctx.strokeStyle='#bbb';
+      ctx.beginPath();ctx.moveTo(padL,botY+botH/2);ctx.lineTo(padL+plotW,botY+botH/2);ctx.stroke();
+      // r=0 vertical
+      ctx.strokeStyle='#e5e7eb';
+      ctx.beginPath();ctx.moveTo(xToPx(0),topY);ctx.lineTo(xToPx(0),topY+topH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(xToPx(0),botY);ctx.lineTo(xToPx(0),botY+botH);ctx.stroke();
+      // delta dashed lines
+      ctx.strokeStyle='#9aa0a6';ctx.setLineDash([4,4]);
+      [-d,d].forEach(rd=>{
+        ctx.beginPath();ctx.moveTo(xToPx(rd),topY);ctx.lineTo(xToPx(rd),topY+topH);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(xToPx(rd),botY);ctx.lineTo(xToPx(rd),botY+botH);ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      // tick labels — x axis (residual)
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let r=-4;r<=4;r++){
+        ctx.fillText(r.toString(),xToPx(r)-4,topY+topH+14);
+        ctx.fillText(r.toString(),xToPx(r)-4,botY+botH+14);
+      }
+      // delta tick
+      ctx.fillStyle='#555';ctx.fillText('+δ',xToPx(d)-7,topY-4);
+      ctx.fillText('−δ',xToPx(-d)-9,topY-4);
+      // y labels
+      ctx.fillStyle='#666';
+      [0,2,4,6].forEach(v=>{ctx.fillText(v.toFixed(0),padL-22,lossYToPy(v)+4);});
+      [-3,0,3].forEach(v=>{ctx.fillText(v.toFixed(0),padL-22,gradYToPy(v)+4);});
+      // panel titles
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('손실  L(r)',padL+4,topY-6);
+      ctx.fillText('그래디언트  ∂L/∂r',padL+4,botY-6);
+      ctx.fillText('잔차 r',padL+plotW-40,topY+topH+26);
+      ctx.fillText('잔차 r',padL+plotW-40,botY+botH+26);
+      // curves: loss
+      plot(r=>0.5*r*r,colors.L2,lossYToPy,null);
+      plot(r=>Math.abs(r),colors.L1,lossYToPy,null);
+      plot(r=>huber(r,d),colors.Huber,lossYToPy,null);
+      // curves: gradient
+      plot(r=>r,colors.L2,gradYToPy,gradYmax);
+      plot(r=>Math.sign(r),colors.L1,gradYToPy,gradYmax);
+      plot(r=>huberG(r,d),colors.Huber,gradYToPy,gradYmax);
+      // legend (top-right)
+      const lx=padL+plotW-150,ly=topY+10;
+      [['L2 = ½r²',colors.L2],['L1 = |r|',colors.L1],['Huber(δ)',colors.Huber]].forEach((it,i)=>{
+        ctx.strokeStyle=it[1];ctx.lineWidth=3;
+        ctx.beginPath();ctx.moveTo(lx,ly+i*16);ctx.lineTo(lx+22,ly+i*16);ctx.stroke();
+        ctx.fillStyle='#333';ctx.font='12px sans-serif';
+        ctx.fillText(it[0],lx+28,ly+i*16+4);
+      });
+    }
+    dEl.addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

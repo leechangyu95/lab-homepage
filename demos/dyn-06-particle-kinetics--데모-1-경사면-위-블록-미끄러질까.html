@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 경사면 위 블록 — 미끄러질까? — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 경사면 위 블록 — 미끄러질까?</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/06-particle-kinetics.html">Week 6. 입자의 운동역학 — F = ma</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 경사면 위 블록 — 미끄러질까?</h4>
+    <p>경사각 $\theta$를 키워가면서 어느 각도에서 블록이 미끄러지기 시작하는지 보세요. <strong>임계각</strong>은 $\tan\theta = \mu_s$. 그 위로 올라가면 미끄러지기 시작하고, 운동 중에는 $\mu_k$가 적용됩니다. 자유물체도(중력·수직항력·마찰)가 함께 표시됩니다.</p>
+    <canvas id="slopeC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>경사각 θ (°) <span class="val" id="slAV">15</span><input type="range" id="slA" min="0" max="60" step="1" value="15"></label>
+      <label>정적 μ_s <span class="val" id="slMsV">0.4</span><input type="range" id="slMs" min="0" max="1" step="0.02" value="0.4"></label>
+      <label>운동 μ_k <span class="val" id="slMkV">0.25</span><input type="range" id="slMk" min="0" max="1" step="0.02" value="0.25"></label>
+      <button id="slReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('slopeC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['slA','slMs','slMk'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let s=0,v=0;  // distance along slope, velocity
+    sl('slReset').onclick=()=>{s=0;v=0;};
+    sl('slA').addEventListener('input',()=>{s=0;v=0;});
+    function loop(){
+      const th=+sl('slA').value*Math.PI/180,mus=+sl('slMs').value,muk=+sl('slMk').value;
+      const g=9.81,m=1;
+      // gravity components
+      const Fpar=m*g*Math.sin(th); // along slope (down)
+      const N=m*g*Math.cos(th);
+      const fmax=mus*N;
+      let a=0,fric=0,moving=Math.abs(v)>1e-3;
+      if(!moving){
+        if(Fpar<=fmax){a=0;fric=Fpar;}
+        else {a=(Fpar-muk*N)/m;fric=muk*N;}
+      } else {
+        const dir=v>0?1:-1;
+        fric=muk*N*dir;
+        a=(Fpar-fric)/m;
+      }
+      const dt=0.025;
+      v+=a*dt;
+      s+=v*dt*40;
+      if(s>200){s=200;v=0;}
+      if(s<0){s=0;v=Math.max(0,v);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // slope geometry: incline starts at (80, 320) with angle th, length ~400
+      const x0=80,y0=320,L=420;
+      const ex=Math.cos(th),ey=-Math.sin(th);
+      const tipx=x0+ex*L,tipy=y0+ey*L;
+      x.fillStyle='#d8c8a8';x.beginPath();x.moveTo(x0,y0);x.lineTo(tipx,tipy);x.lineTo(tipx,y0);x.closePath();x.fill();
+      x.strokeStyle='#333';x.lineWidth=1.5;x.stroke();
+      // angle arc
+      x.strokeStyle='#666';x.beginPath();x.arc(x0,y0,40,0,-th,true);x.stroke();
+      x.fillStyle='#333';x.font='12px sans-serif';x.fillText('θ='+(+sl('slA').value)+'°',x0+44,y0-6);
+      // block position along slope
+      const bx=x0+ex*(80+s),by=y0+ey*(80+s);
+      // FBD vectors
+      const sz=24;
+      // perpendicular outward to slope (up-left)
+      const nx=-ey,ny=-ex; // up from slope
+      // block (rotated rectangle)
+      x.save();
+      x.translate(bx,by);
+      x.rotate(-th);
+      x.fillStyle='#0b5fff';x.fillRect(-sz/2,-sz,sz,sz);
+      x.strokeStyle='#333';x.strokeRect(-sz/2,-sz,sz,sz);
+      x.restore();
+      // gravity (down)
+      const cx=bx,cy=by-12;
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      x.beginPath();x.moveTo(cx,cy);x.lineTo(cx,cy+50);x.lineTo(cx-4,cy+45);x.moveTo(cx,cy+50);x.lineTo(cx+4,cy+45);x.stroke();
+      x.fillStyle='#c62828';x.font='11px sans-serif';x.fillText('mg',cx+5,cy+45);
+      // normal (perpendicular outward)
+      const Nlen=N*4;
+      x.strokeStyle='#2e7d32';
+      x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+nx*Nlen,cy+ny*Nlen);
+      x.lineTo(cx+nx*Nlen-Math.cos(Math.atan2(ny,nx))*8-Math.sin(Math.atan2(ny,nx))*4,
+               cy+ny*Nlen-Math.sin(Math.atan2(ny,nx))*8+Math.cos(Math.atan2(ny,nx))*4);
+      x.moveTo(cx+nx*Nlen,cy+ny*Nlen);
+      x.lineTo(cx+nx*Nlen-Math.cos(Math.atan2(ny,nx))*8+Math.sin(Math.atan2(ny,nx))*4,
+               cy+ny*Nlen-Math.sin(Math.atan2(ny,nx))*8-Math.cos(Math.atan2(ny,nx))*4);
+      x.stroke();
+      x.fillStyle='#2e7d32';x.font='11px sans-serif';x.fillText('N',cx+nx*Nlen-2,cy+ny*Nlen-4);
+      // friction (along slope, against motion direction or opposing applied)
+      const fricLen=Math.abs(fric)*4;
+      const fdir=(v>0||(!moving&&Fpar>0))?-1:1; // friction opposes motion / tendency
+      x.strokeStyle='#e7a33a';
+      x.beginPath();x.moveTo(cx,cy);
+      const fex=fdir*ex,fey=fdir*ey;
+      x.lineTo(cx+fex*fricLen,cy+fey*fricLen);
+      x.stroke();
+      x.fillStyle='#e7a33a';x.fillText('f',cx+fex*fricLen+4,cy+fey*fricLen);
+      // info panel
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,80);
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      const tanCrit=Math.atan(mus)*180/Math.PI;
+      x.fillText('임계각 (μ_s = tanθ): '+tanCrit.toFixed(1)+'°',20,25);
+      x.fillText('현재 θ = '+(+sl('slA').value)+'°  →  '+(th*180/Math.PI>tanCrit?'미끄러짐':'정지 (정적 마찰이 잡고 있음)'),20,43);
+      x.fillText('mg sinθ = '+Fpar.toFixed(2)+',  μ_s N = '+fmax.toFixed(2)+',  a = '+a.toFixed(2)+' m/s²',20,61);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

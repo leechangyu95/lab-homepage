@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 진자의 비선형 vs 선형 근사 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 진자의 비선형 vs 선형 근사</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/07-system-models.html">Week 7. 시스템 모델 — 미분방정식으로 동역학을 적기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 진자의 비선형 vs 선형 근사</h4>
+    <p>작은 초기각에서는 두 곡선이 거의 겹쳐요. 그런데 초기각을 60° 이상으로 키우면, <strong>선형 근사가 진동 주기를 짧게 잘못 예측</strong>합니다. 큰 각에서는 비선형 효과로 진자가 더 느리게 흔들립니다.</p>
+    <canvas id="penDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>초기각 θ₀ <span class="val" id="penAV">20</span> °<input type="range" id="penA" min="5" max="170" step="1" value="20"></label>
+      <label>줄 길이 ℓ <span class="val" id="penLV">1.0</span> m<input type="range" id="penL" min="0.2" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('penDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const a0=+document.getElementById('penA').value*Math.PI/180;
+      const L=+document.getElementById('penL').value;
+      document.getElementById('penAV').textContent=(a0*180/Math.PI).toFixed(0);
+      document.getElementById('penLV').textContent=L.toFixed(1);
+      const g=9.81, wn=Math.sqrt(g/L);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H/2,w=W-70,h=H-80,T=4*2*Math.PI/wn;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      // simulate full nonlinear with RK4
+      const N=600,dt=T/N;
+      let th=a0,om=0;
+      const nl=[];
+      for(let i=0;i<=N;i++){nl.push(th);
+        const k1a=om, k1b=-g/L*Math.sin(th);
+        const k2a=om+k1b*dt/2, k2b=-g/L*Math.sin(th+k1a*dt/2);
+        const k3a=om+k2b*dt/2, k3b=-g/L*Math.sin(th+k2a*dt/2);
+        const k4a=om+k3b*dt, k4b=-g/L*Math.sin(th+k3a*dt);
+        th += dt/6*(k1a+2*k2a+2*k3a+k4a);
+        om += dt/6*(k1b+2*k2b+2*k3b+k4b);}
+      // linearized: th(t) = a0*cos(wn*t)
+      const yMax=Math.max(Math.abs(a0),0.3);
+      function yp(v){return oy-v/yMax*h*0.4;}
+      // linear (gray)
+      ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.beginPath();
+      for(let i=0;i<=N;i++){const t=i*dt;const v=a0*Math.cos(wn*t);
+        const xx=ox+i/N*w,yy=yp(v);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();ctx.setLineDash([]);
+      // nonlinear (blue)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      nl.forEach((v,i)=>{const xx=ox+i/N*w,yy=yp(v);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`선형 주기 T_lin = ${(2*Math.PI/wn).toFixed(2)} s`,ox,25);
+      // estimate nonlinear period
+      let Tnl=0;for(let i=1;i<N;i++)if(nl[i-1]>0&&nl[i]<=0&&nl[i-1]>0.01){Tnl=(i*dt)*2;break;}
+      ctx.fillText(`비선형 주기 ≈ ${Tnl.toFixed(2)} s  (편차 ${((Tnl-2*Math.PI/wn)/(2*Math.PI/wn)*100).toFixed(1)}%)`,ox+220,25);
+      ctx.fillStyle='#888';ctx.fillText('-- 선형 근사 (sinθ ≈ θ)',ox+10,H-15);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 비선형 (실제)',ox+200,H-15);
+    }
+    document.getElementById('penA').addEventListener('input',draw);
+    document.getElementById('penL').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

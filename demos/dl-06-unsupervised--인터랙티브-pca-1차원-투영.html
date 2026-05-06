@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: PCA 1차원 투영 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: PCA 1차원 투영</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/06-unsupervised.html">Week 6. 비지도학습 — 군집화와 차원 축소</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: PCA 1차원 투영</h4>
+    <p>2D 타원 데이터를 PCA의 첫 번째 주성분 방향으로 투영합니다. 회전된 빨간 직선이 첫 번째 주성분 축, 그 위 점들이 투영 결과입니다.</p>
+    <canvas id="pcaCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>회전각 <span class="val" id="agV">30</span><input type="range" id="ag" min="0" max="180" step="1" value="30"></label>
+      <label>장축 <span class="val" id="elV">2.5</span><input type="range" id="el" min="1" max="4" step="0.1" value="2.5"></label>
+      <button id="pcaRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pcaCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let raw=[];
+    function gen(){
+      raw=[];
+      for(let i=0;i<80;i++){
+        const u=Math.random(),v=Math.random();
+        const z0=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+        const z1=Math.sqrt(-2*Math.log(u))*Math.sin(2*Math.PI*v);
+        raw.push({a:z0,b:z1});
+      }
+      draw();
+    }
+    function draw(){
+      const ang=+document.getElementById('ag').value*Math.PI/180;
+      const el=+document.getElementById('el').value;
+      document.getElementById('agV').textContent=document.getElementById('ag').value;
+      document.getElementById('elV').textContent=el.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,sc=50;
+      const cosA=Math.cos(ang),sinA=Math.sin(ang);
+      const data=raw.map(p=>{const x=p.a*el,y=p.b;return {x:x*cosA-y*sinA,y:x*sinA+y*cosA};});
+      // PCA via covariance
+      const mx=data.reduce((a,b)=>a+b.x,0)/data.length,my=data.reduce((a,b)=>a+b.y,0)/data.length;
+      let sxx=0,sxy=0,syy=0;
+      data.forEach(p=>{sxx+=(p.x-mx)*(p.x-mx);sxy+=(p.x-mx)*(p.y-my);syy+=(p.y-my)*(p.y-my);});
+      sxx/=data.length;sxy/=data.length;syy/=data.length;
+      // dominant eigenvector of [[sxx,sxy],[sxy,syy]]
+      const tr=sxx+syy,det=sxx*syy-sxy*sxy;
+      const lam1=tr/2+Math.sqrt(tr*tr/4-det);
+      const lam2=tr/2-Math.sqrt(tr*tr/4-det);
+      const vx=sxy,vy=lam1-sxx;const nv=Math.hypot(vx,vy)||1;const ux=vx/nv,uy=vy/nv;
+      // axis line
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(cx-ux*200,cy-uy*200);ctx.lineTo(cx+ux*200,cy+uy*200);ctx.stroke();
+      // data
+      ctx.fillStyle='#0b5fff';
+      data.forEach(p=>{ctx.beginPath();ctx.arc(cx+(p.x-mx)*sc,cy+(p.y-my)*sc,3,0,Math.PI*2);ctx.fill();});
+      // projections
+      ctx.fillStyle='#ff8c00';
+      data.forEach(p=>{
+        const dx=(p.x-mx),dy=(p.y-my);const proj=dx*ux+dy*uy;
+        const px=cx+ux*proj*sc,py=cy+uy*proj*sc;
+        ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
+      });
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      const var1=lam1/(lam1+lam2);
+      ctx.fillText(`PC1 설명 분산: ${(var1*100).toFixed(1)}%`,10,20);
+    }
+    ['ag','el'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    document.getElementById('pcaRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

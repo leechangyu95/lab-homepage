@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: PID vs MPC — 입력 한계가 있을 때 누가 이길까? — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: PID vs MPC — 입력 한계가 있을 때 누가 이길까?</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/11-mpc.html">Lecture 11. 모델 예측 제어 (MPC)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: PID vs MPC — 입력 한계가 있을 때 누가 이길까?</h4>
+    <p>1차원 위치 시스템에 <em>같은 가속도 한계</em>($|u|\le u_\text{max}$)를 걸고, PID(빨강)와 MPC(파랑)에게 동일한 계단 명령을 주었을 때의 응답을 나란히 보여줍니다. 한계를 줄여보세요. PID는 한계를 모르고 큰 명령을 내리다 포화에 걸려 <strong>오버슛</strong>·<strong>적분 와인드업</strong>이 생기지만, MPC는 한계 안에서 미리 감속을 계획해 부드럽게 도착합니다. 하단 그래프는 실제로 인가된 가속도를 보여주는데, PID 쪽이 한계에서 평평하게 잘려나가는(saturation) 모습이 보입니다.</p>
+    <canvas id="pidmpc" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>가속도 한계 u<sub>max</sub> <span class="val" id="pmUV">1.5</span><input type="range" id="pmU" min="0.3" max="5" step="0.1" value="1.5"></label>
+      <label>목표 위치 변화량 <span class="val" id="pmRV">3.0</span><input type="range" id="pmR" min="1" max="6" step="0.5" value="3"></label>
+      <label>PID Kp <span class="val" id="pmKpV">2.5</span><input type="range" id="pmKp" min="0.5" max="6" step="0.1" value="2.5"></label>
+      <label>PID Ki <span class="val" id="pmKiV">0.8</span><input type="range" id="pmKi" min="0" max="3" step="0.1" value="0.8"></label>
+      <label><input type="checkbox" id="pmAW" checked> PID 와인드업 방지</label>
+      <button id="pmRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pidmpc'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const dt=0.1;
+    let t,pidS,mpcS,pidH,mpcH,pidU,mpcU,refH;
+    function init(){t=0;pidS={p:0,v:0,ei:0};mpcS={p:0,v:0};pidH=[];mpcH=[];pidU=[];mpcU=[];refH=[];}
+    init();
+    document.getElementById('pmRst').onclick=init;
+    function clip(u,umax){return Math.max(-umax,Math.min(umax,u));}
+    function refAt(tt){const R=+document.getElementById('pmR').value;return tt<2?0:R;}
+    // tiny MPC: gradient descent on N-step open-loop accelerations
+    function mpcStep(state,umax,N){
+      const Q=10,R=0.4;
+      let u=new Array(N).fill(0);
+      for(let it=0;it<25;it++){
+        let p=state.p,v=state.v;const ps=[p],vs=[v];
+        for(let i=0;i<N;i++){v+=u[i]*dt;p+=v*dt;ps.push(p);vs.push(v);}
+        for(let i=0;i<N;i++){
+          const r=refAt(t+(i+1)*dt);
+          let g=2*R*u[i];
+          for(let k=i+1;k<=N;k++){const rk=refAt(t+k*dt);g+=2*Q*(ps[k]-rk)*dt*(k-i)*dt;}
+          u[i]-=0.04*g;
+          if(u[i]>umax)u[i]=umax;if(u[i]<-umax)u[i]=-umax;
+        }
+      }
+      return u[0];
+    }
+    function loop(){
+      const umax=+document.getElementById('pmU').value;
+      const Kp=+document.getElementById('pmKp').value;
+      const Ki=+document.getElementById('pmKi').value;
+      const aw=document.getElementById('pmAW').checked;
+      ['pmU','pmR','pmKp','pmKi'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const r=refAt(t);
+      // PID with optional anti-windup (clamp integrator if saturated)
+      const ePid=r-pidS.p;
+      const Kd=1.5;
+      let uPidRaw=Kp*ePid+Ki*pidS.ei-Kd*pidS.v;
+      let uPid=clip(uPidRaw,umax);
+      if(!aw||(uPid===uPidRaw)) pidS.ei+=ePid*dt; // freeze integrator on saturation if AW on
+      pidS.v+=uPid*dt;pidS.p+=pidS.v*dt;
+      // MPC
+      const uMpc=clip(mpcStep(mpcS,umax,15),umax);
+      mpcS.v+=uMpc*dt;mpcS.p+=mpcS.v*dt;
+      pidH.push(pidS.p);mpcH.push(mpcS.p);pidU.push(uPid);mpcU.push(uMpc);refH.push(r);
+      const Tmax=120;
+      if(pidH.length>Tmax){pidH.shift();mpcH.shift();pidU.shift();mpcU.shift();refH.shift();}
+      t+=dt;
+      // render
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // top: position trace
+      const Tx0=40,Tx1=W-20,Ty0=20,Ty1=210;
+      const Bx0=40,Bx1=W-20,By0=240,By1=H-20;
+      x.strokeStyle='#ddd';x.strokeRect(Tx0,Ty0,Tx1-Tx0,Ty1-Ty0);
+      x.strokeStyle='#ddd';x.strokeRect(Bx0,By0,Bx1-Bx0,By1-By0);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('위치 응답',Tx0+6,Ty0+14);
+      x.fillText('가속도(입력) — 한계: ±'+umax.toFixed(1),Bx0+6,By0+14);
+      // axes
+      const pxT=(i)=>Tx0+i/Tmax*(Tx1-Tx0);
+      const Rmax=+document.getElementById('pmR').value;
+      const pyT=(p)=>Ty1-((p+0.5)/(Rmax+1))*(Ty1-Ty0-20)-10;
+      const pxB=pxT;
+      const pyB=(u)=>{const m=Math.max(umax*1.1,0.5);return (By0+By1)/2 - u/m*((By1-By0)/2-10);};
+      // ref
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=2;x.beginPath();
+      refH.forEach((rr,i)=>{i?x.lineTo(pxT(i),pyT(rr)):x.moveTo(pxT(i),pyT(rr));});x.stroke();x.setLineDash([]);
+      // PID position
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      pidH.forEach((p,i)=>{i?x.lineTo(pxT(i),pyT(p)):x.moveTo(pxT(i),pyT(p));});x.stroke();
+      // MPC position
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      mpcH.forEach((p,i)=>{i?x.lineTo(pxT(i),pyT(p)):x.moveTo(pxT(i),pyT(p));});x.stroke();
+      // saturation lines on bottom
+      x.strokeStyle='#aaa';x.setLineDash([3,3]);
+      x.beginPath();x.moveTo(Bx0,pyB(umax));x.lineTo(Bx1,pyB(umax));x.stroke();
+      x.beginPath();x.moveTo(Bx0,pyB(-umax));x.lineTo(Bx1,pyB(-umax));x.stroke();
+      x.setLineDash([]);
+      x.strokeStyle='#666';x.beginPath();x.moveTo(Bx0,(By0+By1)/2);x.lineTo(Bx1,(By0+By1)/2);x.stroke();
+      // PID input
+      x.strokeStyle='#c62828';x.lineWidth=1.8;x.beginPath();
+      pidU.forEach((u,i)=>{i?x.lineTo(pxB(i),pyB(u)):x.moveTo(pxB(i),pyB(u));});x.stroke();
+      // MPC input
+      x.strokeStyle='#0b5fff';x.lineWidth=1.8;x.beginPath();
+      mpcU.forEach((u,i)=>{i?x.lineTo(pxB(i),pyB(u)):x.moveTo(pxB(i),pyB(u));});x.stroke();
+      // legend
+      x.fillStyle='#c62828';x.fillRect(Tx1-150,Ty0+22,12,3);x.fillStyle='#444';x.fillText('PID',Tx1-130,Ty0+26);
+      x.fillStyle='#0b5fff';x.fillRect(Tx1-90,Ty0+22,12,3);x.fillStyle='#444';x.fillText('MPC',Tx1-70,Ty0+26);
+      x.fillStyle='#c62828';x.fillText('--- 목표',Tx1-150,Ty0+42);
+      requestAnimationFrame(()=>setTimeout(loop,40));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

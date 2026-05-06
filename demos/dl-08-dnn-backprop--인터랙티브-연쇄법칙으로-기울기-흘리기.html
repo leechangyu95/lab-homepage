@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 연쇄법칙으로 기울기 흘리기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 연쇄법칙으로 기울기 흘리기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/08-dnn-backprop.html">Week 8. 심층신경망과 역전파</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 연쇄법칙으로 기울기 흘리기</h4>
+    <p>2층 망의 forward와 backward를 단계별로 따라갑니다. 각 노드를 클릭하면 그 노드까지 도달한 기울기 값이 강조됩니다. <strong>backward 진행</strong> 슬라이더를 움직이면 출력층부터 차례로 기울기가 흘러내려요.</p>
+    <canvas id="bp2" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>입력 x <span class="val" id="bpXV">1.0</span><input type="range" id="bpX" min="-2" max="2" step="0.1" value="1"></label>
+      <label>정답 y <span class="val" id="bpYV">1.0</span><input type="range" id="bpY" min="-2" max="2" step="0.1" value="1"></label>
+      <label>backward 진행 <span class="val" id="bpSV">5</span>/5<input type="range" id="bpS" min="0" max="5" step="1" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bp2');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const w1=0.7,b1=0.1,w2=0.5,b2=0.0;
+    function draw(){
+      const x=+document.getElementById('bpX').value;
+      const y=+document.getElementById('bpY').value;
+      const s=+document.getElementById('bpS').value;
+      document.getElementById('bpXV').textContent=x.toFixed(1);
+      document.getElementById('bpYV').textContent=y.toFixed(1);
+      document.getElementById('bpSV').textContent=s;
+      const z1=w1*x+b1,a1=Math.tanh(z1);
+      const z2=w2*a1+b2,yhat=Math.tanh(z2);
+      const L=0.5*(yhat-y)*(yhat-y);
+      const dyhat=(yhat-y);
+      const dz2=dyhat*(1-yhat*yhat);
+      const dw2=dz2*a1,db2=dz2;
+      const da1=dz2*w2,dz1=da1*(1-a1*a1);
+      const dw1=dz1*x,db1=dz1;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const nodes=[
+        {x:60,y:160,label:'x',val:x.toFixed(2),grad:'-',active:false},
+        {x:170,y:120,label:'z₁=w₁x+b₁',val:z1.toFixed(2),grad:dz1.toFixed(3),active:s>=4},
+        {x:170,y:200,label:'(w₁,b₁)',val:`${w1},${b1}`,grad:`${dw1.toFixed(3)},${db1.toFixed(3)}`,active:s>=5},
+        {x:300,y:120,label:'a₁=tanh(z₁)',val:a1.toFixed(2),grad:da1.toFixed(3),active:s>=3},
+        {x:430,y:120,label:'z₂=w₂a₁+b₂',val:z2.toFixed(2),grad:dz2.toFixed(3),active:s>=2},
+        {x:430,y:200,label:'(w₂,b₂)',val:`${w2},${b2}`,grad:`${dw2.toFixed(3)},${db2.toFixed(3)}`,active:s>=2},
+        {x:560,y:120,label:'ŷ=tanh(z₂)',val:yhat.toFixed(2),grad:dyhat.toFixed(3),active:s>=1},
+        {x:560,y:60,label:'L',val:L.toFixed(3),grad:'1',active:s>=1}
+      ];
+      // edges
+      const edges=[[0,1],[2,1],[1,3],[3,4],[5,4],[4,6],[6,7]];
+      edges.forEach(([a,b])=>{
+        ctx.strokeStyle=nodes[b].active?'#c62828':'#cfd8e3';
+        ctx.lineWidth=nodes[b].active?2:1;
+        ctx.beginPath();ctx.moveTo(nodes[a].x+30,nodes[a].y);ctx.lineTo(nodes[b].x-30,nodes[b].y);ctx.stroke();
+      });
+      nodes.forEach(n=>{
+        ctx.fillStyle=n.active?'#fff3e0':'#fff';
+        ctx.strokeStyle=n.active?'#c62828':'#999';
+        ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(n.x,n.y,28,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle='#222';ctx.font='11px sans-serif';
+        ctx.fillText(n.label,n.x-25,n.y-3);
+        ctx.fillStyle='#0b5fff';ctx.fillText('v='+n.val,n.x-25,n.y+10);
+        if(n.active){ctx.fillStyle='#c62828';ctx.fillText('∂L='+n.grad,n.x-25,n.y+40);}
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('→ Forward (파랑) ← Backward (빨강, '+s+'단계 진행)',12,22);
+      ctx.fillText(`손실 L = ${L.toFixed(4)}`,12,290);
+    }
+    document.getElementById('bpX').addEventListener('input',draw);
+    document.getElementById('bpY').addEventListener('input',draw);
+    document.getElementById('bpS').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

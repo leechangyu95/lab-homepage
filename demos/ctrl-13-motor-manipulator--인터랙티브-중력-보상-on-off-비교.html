@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 중력 보상 ON/OFF 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 중력 보상 ON/OFF 비교</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/13-motor-manipulator.html">Week 13. PID 응용 ① — DC 모터 &amp; 로봇 팔</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 중력 보상 ON/OFF 비교</h4>
+    <p>1자유도 회전 팔의 각도 제어. PID는 동일, 중력 보상만 켜고 끄세요.
+    중력 OFF에서는 PID가 중력을 이기느라 위치 오차가 잔류하거나 큰 적분 와인드업이 일어납니다.</p>
+    <canvas id="arm" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="aKpV">8</span><input type="range" id="aKp" min="1" max="30" step="0.5" value="8"></label>
+      <label>Kd <span class="val" id="aKdV">2</span><input type="range" id="aKd" min="0" max="10" step="0.2" value="2"></label>
+      <label>페이로드 m [kg] <span class="val" id="amV">1.0</span><input type="range" id="am" min="0" max="3" step="0.1" value="1.0"></label>
+      <label><input type="checkbox" id="aGc" checked> 중력 보상 ON</label>
+      <button id="aStep">목표각 변경</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('arm'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('aKpV').textContent=(+$('aKp').value).toFixed(1);$('aKdV').textContent=(+$('aKd').value).toFixed(1);$('amV').textContent=(+$('am').value).toFixed(1);};
+    ['aKp','aKd','am'].forEach(id=>$(id).oninput=upd);
+    let ref=Math.PI/3; $('aStep').onclick=()=>{ref = ref>0 ? -Math.PI/4 : Math.PI/3;};
+    let th=0, thd=0;
+    function loop(){
+      const Kp=+$('aKp').value, Kd=+$('aKd').value, m=+$('am').value;
+      const gc=$('aGc').checked;
+      const J=0.5, b=0.3, g=9.81, L=0.5;
+      const e=ref-th, de=-thd;
+      const ff = gc ? m*g*L*Math.sin(th) : 0;
+      let tau = Kp*e + Kd*de + ff;
+      tau = Math.max(-30,Math.min(30,tau));
+      const thdd = (tau - b*thd - m*g*L*Math.sin(th))/J;
+      thd += thdd*0.02; th += thd*0.02;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // arm visualization
+      const cx=200, cy=170;
+      x.strokeStyle='#888';x.beginPath();x.moveTo(20,cy);x.lineTo(380,cy);x.stroke();
+      // target
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      x.moveTo(cx,cy);x.lineTo(cx+150*Math.cos(ref-Math.PI/2),cy+150*Math.sin(ref-Math.PI/2));x.stroke();x.setLineDash([]);
+      // arm
+      x.strokeStyle='#0b5fff';x.lineWidth=6;x.beginPath();
+      x.moveTo(cx,cy);
+      const ex=cx+150*Math.cos(th-Math.PI/2), ey=cy+150*Math.sin(th-Math.PI/2);
+      x.lineTo(ex,ey);x.stroke();
+      x.fillStyle='#444';x.beginPath();x.arc(cx,cy,8,0,Math.PI*2);x.fill();
+      x.fillStyle='#f57c00';x.beginPath();x.arc(ex,ey,10+m*4,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('θ_ref = '+(ref*180/Math.PI).toFixed(0)+'°',420,30);
+      x.fillText('θ     = '+(th*180/Math.PI).toFixed(1)+'°',420,50);
+      x.fillText('오차 = '+((ref-th)*180/Math.PI).toFixed(1)+'°',420,70);
+      x.fillText('토크 τ = '+tau.toFixed(2)+' Nm',420,90);
+      x.fillStyle=gc?'#2e7d32':'#c62828';
+      x.fillText(gc?'중력 보상 ON':'중력 보상 OFF',420,115);
+      // angle history
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('빨강 점선 = 목표,  파랑 = 현재 자세,  주황 원 = 페이로드 (크기=무게)',20,310);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

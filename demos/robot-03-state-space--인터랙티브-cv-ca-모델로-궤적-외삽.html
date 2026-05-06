@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: CV/CA 모델로 궤적 외삽 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: CV/CA 모델로 궤적 외삽</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/03-state-space.html">Lecture 3. 상태공간 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: CV/CA 모델로 궤적 외삽</h4>
+    <p>실제 물체(검은 점)는 사인파처럼 움직입니다. 등속도(CV) 또는 등가속도(CA) 모델로 마지막 측정에서 미래를 외삽한 결과를 비교해 보세요. 직선 구간에서는 둘 다 좋지만, 가속이 변하는 구간에서는 CA가, 그리고 가속까지 변하는 구간에서는 둘 다 결국 어긋납니다.</p>
+    <canvas id="cvca" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>예측 지평 H (초) <span class="val" id="hzV">1</span><input type="range" id="hz" min="0.2" max="3" step="0.1" value="1"></label>
+      <label>실제 가속 a (m/s²) <span class="val" id="accV">2</span><input type="range" id="acc" min="0" max="6" step="0.1" value="2"></label>
+      <label>가속 변동 j (m/s³) <span class="val" id="jrkV">0</span><input type="range" id="jrk" min="0" max="3" step="0.1" value="0"></label>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>관찰</strong> — j=0이면 진짜 등가속도이므로 CA가 완벽. j&gt;0이면 CA도 어긋나기 시작 — 더 고차 모델이 필요하거나 프로세스 노이즈를 키워야 합니다.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cvca'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    let t=0;
+    function loop(){
+      const H=+sl('hz').value, acc=+sl('acc').value, jrk=+sl('jrk').value;
+      ['hz','acc','jrk'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+      // 실제 운동: p(τ) = ∫∫ (a + j·τ) dτ²  + 초기조건. 단순화해 분석적으로 풀자.
+      // 0~t 구간만 시뮬레이션. 적분: v(τ) = v0 + a·τ + j·τ²/2, p(τ) = p0 + v0·τ + a·τ²/2 + j·τ³/6
+      // 매 시뮬 타임 t에 대해 그래프를 그림
+      t+=0.02; if(t>6)t=0;
+      function trueP(τ){return 0 + 0*τ + acc*τ*τ/2 + jrk*τ*τ*τ/6;}
+      function trueV(τ){return 0 + acc*τ + jrk*τ*τ/2;}
+      function trueA(τ){return acc + jrk*τ;}
+      // 현재 측정값 (t에서)
+      const p0=trueP(t), v0=trueV(t), a0=trueA(t);
+      // CV 외삽: p̂(t+h) = p0 + v0·h
+      // CA 외삽: p̂(t+h) = p0 + v0·h + a0·h²/2
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 좌표
+      const xLeft=20,xRight=620,yBot=240,yTop=20;
+      const tMax=6, pMax=Math.max(40, trueP(tMax)+10);
+      const sxT=τ=>xLeft+τ/tMax*(xRight-xLeft);
+      const syP=p=>yBot-p/pMax*(yBot-yTop);
+      // 격자
+      x.strokeStyle='#e3e6ea';
+      for(let i=0;i<=tMax;i++){x.beginPath();x.moveTo(sxT(i),yTop);x.lineTo(sxT(i),yBot);x.stroke();}
+      x.strokeStyle='#999';x.beginPath();x.moveTo(xLeft,yBot);x.lineTo(xRight,yBot);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('시간 t (s) →',xRight-70,yBot+15);x.fillText('위치 p',xLeft+5,yTop+10);
+      // 실제 궤적 (전체 0~tMax)
+      x.strokeStyle='#222';x.lineWidth=2;x.beginPath();
+      for(let τ=0;τ<=tMax;τ+=0.05){
+        const xx=sxT(τ),yy=syP(trueP(τ));
+        if(τ===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      // 현재 측정 위치
+      x.fillStyle='#222';x.beginPath();x.arc(sxT(t),syP(p0),5,0,Math.PI*2);x.fill();
+      // CV 외삽 (t..t+H)
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.setLineDash([6,4]);x.beginPath();
+      for(let h=0;h<=H;h+=0.05){
+        const xx=sxT(t+h),yy=syP(p0+v0*h);
+        if(h===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      // CA 외삽
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();
+      for(let h=0;h<=H;h+=0.05){
+        const xx=sxT(t+h),yy=syP(p0+v0*h+a0*h*h/2);
+        if(h===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      x.setLineDash([]);
+      // 종점 마커
+      const cvEnd=p0+v0*H, caEnd=p0+v0*H+a0*H*H/2, trueEnd=trueP(t+H);
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(sxT(t+H),syP(cvEnd),4,0,Math.PI*2);x.fill();
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(sxT(t+H),syP(caEnd),4,0,Math.PI*2);x.fill();
+      x.fillStyle='#222';x.beginPath();x.arc(sxT(t+H),syP(trueEnd),5,0,Math.PI*2);x.stroke();
+      // 라벨
+      x.fillStyle='#222';x.font='12px sans-serif';x.fillText('━ 실제 (검은 곡선)',xLeft,265);
+      x.fillStyle='#0b5fff';x.fillText('— — CV 외삽',xLeft+150,265);
+      x.fillStyle='#2e7d32';x.fillText('━ CA 외삽',xLeft+260,265);
+      x.fillStyle='#666';
+      const errCV=Math.abs(cvEnd-trueEnd), errCA=Math.abs(caEnd-trueEnd);
+      x.fillText('H='+H.toFixed(1)+'s 후 오차:  CV='+errCV.toFixed(2)+',  CA='+errCA.toFixed(2),xLeft+360,265);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

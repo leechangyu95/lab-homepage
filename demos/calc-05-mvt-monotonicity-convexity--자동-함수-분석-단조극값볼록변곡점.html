@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 자동 함수 분석 — 단조·극값·볼록·변곡점 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 자동 함수 분석 — 단조·극값·볼록·변곡점</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/05-mvt-monotonicity-convexity.html">Week 5. 평균값 정리·단조성·볼록성</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 자동 함수 분석 — 단조·극값·볼록·변곡점</h4>
+    <p>함수를 골라 보세요. $f$ 그래프 위에 단조 구간(빨강/파랑)과 볼록·오목 구간(연한 색칠), 극값과 변곡점이 자동으로 표시됩니다.</p>
+    <canvas id="anly" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="anlyFn">
+          <option value="cubic" selected>x³ − 3x</option>
+          <option value="quartic">x⁴ − 4x²</option>
+          <option value="bell">e^(-x²/2)</option>
+          <option value="rational">x/(1+x²)</option>
+        </select>
+      </label>
+    </div>
+    <p id="anlyInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('anly'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function fn(v){
+      const m=document.getElementById('anlyFn').value;
+      if(m==='cubic')return{f:v**3-3*v,d:3*v*v-3,d2:6*v,xR:[-3,3],yR:[-4,4]};
+      if(m==='quartic')return{f:v**4-4*v*v,d:4*v**3-8*v,d2:12*v*v-8,xR:[-3,3],yR:[-5,9]};
+      if(m==='bell'){const e=Math.exp(-v*v/2);return{f:e,d:-v*e,d2:(v*v-1)*e,xR:[-3,3],yR:[-0.2,1.2]};}
+      const D=1+v*v;return{f:v/D,d:(1-v*v)/(D*D),d2:2*v*(v*v-3)/(D*D*D),xR:[-4,4],yR:[-0.7,0.7]};
+    }
+    function loop(){
+      const ref=fn(0.01);
+      const xR=ref.xR,yR=ref.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // sample
+      const N=600;
+      const samples=[];
+      for(let i=0;i<=N;i++){
+        const v=xR[0]+i*(xR[1]-xR[0])/N;
+        samples.push({v,...fn(v)});
+      }
+      // background shade based on f''
+      for(let i=0;i<N;i++){
+        const a=samples[i],b=samples[i+1];
+        const sgn=a.d2>=0?1:-1;
+        x.fillStyle=sgn>0?'rgba(11,95,255,0.06)':'rgba(245,124,0,0.06)';
+        x.fillRect(px(a.v),py(yR[1]),px(b.v)-px(a.v),py(yR[0])-py(yR[1]));
+      }
+      // curve segmented by f' sign
+      for(let i=0;i<N;i++){
+        const a=samples[i],b=samples[i+1];
+        const sgn=a.d>=0?'#1b5e20':'#c62828';
+        x.strokeStyle=sgn;x.lineWidth=2.5;x.beginPath();
+        x.moveTo(px(a.v),py(a.f));x.lineTo(px(b.v),py(b.f));x.stroke();
+      }
+      // mark critical and inflection points
+      const ext=[],infl=[];
+      for(let i=1;i<N;i++){
+        if(samples[i-1].d*samples[i+1].d<0)ext.push(samples[i]);
+        if(samples[i-1].d2*samples[i+1].d2<0)infl.push(samples[i]);
+      }
+      ext.forEach(p=>{x.fillStyle='#c62828';x.beginPath();x.arc(px(p.v),py(p.f),5,0,Math.PI*2);x.fill();});
+      infl.forEach(p=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(px(p.v),py(p.f),5,0,Math.PI*2);x.fill();});
+      // legend
+      x.fillStyle='#1b5e20';x.fillRect(M.l+10,M.t+10,16,3);x.fillStyle='#222';x.font='12px sans-serif';x.fillText("f'>0 증가",M.l+30,M.t+15);
+      x.fillStyle='#c62828';x.fillRect(M.l+110,M.t+10,16,3);x.fillStyle='#222';x.fillText("f'<0 감소",M.l+130,M.t+15);
+      x.fillStyle='#c62828';x.beginPath();x.arc(M.l+220,M.t+13,4,0,Math.PI*2);x.fill();x.fillStyle='#222';x.fillText('극값',M.l+228,M.t+17);
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(M.l+260,M.t+13,4,0,Math.PI*2);x.fill();x.fillStyle='#222';x.fillText('변곡',M.l+268,M.t+17);
+      // info
+      const exStr=ext.map(p=>'('+p.v.toFixed(2)+', '+p.f.toFixed(2)+')').join('  ');
+      const inStr=infl.map(p=>'('+p.v.toFixed(2)+', '+p.f.toFixed(2)+')').join('  ');
+      document.getElementById('anlyInfo').textContent='극값: '+(exStr||'없음')+'    ·    변곡점: '+(inStr||'없음');
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

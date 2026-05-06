@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W2. 좌표계 &amp; 차량 기구학 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html" class="active">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 2. 좌표계 &amp; 차량 기구학 모델</h1>
+  <p class="lead">자율주행의 모든 수식은 "어떤 좌표계에서 쓴 것인가?"가 먼저 정해져야 합니다.
+  오늘은 World/Body/Sensor/Frenet 네 개 좌표계를 구분하고, 그 사이를 자유롭게 오가는 <strong>회전·동차 변환</strong>을
+  손에 익힌 뒤, 본 강의의 일꾼이 될 <strong>Kinematic Bicycle Model</strong>을 직접 시뮬레이터로 굴려봅니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 좌표계가 먼저인가?</li>
+    <li>4가지 주요 좌표계</li>
+    <li>2D 회전행렬 복습</li>
+    <li>동차 변환행렬 (Homogeneous Transform)</li>
+    <li>인터랙티브: World ↔ Body 변환</li>
+    <li>Kinematic Bicycle Model — 가정 &amp; 유도</li>
+    <li>회전반경 R = L/tan(δ)</li>
+    <li>인터랙티브: Bicycle 시뮬 &amp; 8자 궤적</li>
+    <li>Ackermann 조향 · 좌표 기준점</li>
+    <li>수치 안정성 팁 (각도 wrap·RK4)</li>
+    <li>핵심 정리 &amp; 실습</li>
+  </ol></div>
+
+  <h2>1. 왜 좌표계가 먼저인가?</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>친구에게 길을 알려준다고 해봅시다. "오른쪽으로 가"는 누구의 오른쪽일까요? <em>나의</em> 오른쪽? <em>친구의</em> 오른쪽?
+  지도상의 동쪽? — 똑같은 점도 누구의 시점에서 말하느냐에 따라 숫자가 달라집니다.</p>
+  <p>자율주행에서 같은 일이 매 순간 일어납니다. <strong>센서가 본 좌표</strong>, <strong>차체에서 본 좌표</strong>,
+  <strong>지도에서의 절대 좌표</strong> — 이 셋이 다 다른 숫자입니다. 잘못 환산하면 알고리즘은 엉뚱한 곳에 차를 보냅니다.</p>
+
+  <div class="warn">
+    <strong>실무 격언</strong> — "어떤 좌표계에서 이야기하는 거야?"가 자율주행 디버깅의 첫 질문입니다.
+    버그의 절반 이상은 좌표계 오해에서 옵니다.
+  </div>
+
+  <h2>2. 자율주행의 4가지 주요 좌표계</h2>
+
+  <table>
+    <thead><tr><th>좌표계</th><th>기호</th><th>원점 / 축</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td>세계 (Global)</td><td>$\{W\}$</td><td>지도 상 고정점, $x$ 동, $y$ 북</td><td>전역 경로, HD Map</td></tr>
+      <tr><td>차체 (Body)</td><td>$\{B\}$</td><td>차 후륜축 중앙, $x$ 전방</td><td>추종제어 수식 작성</td></tr>
+      <tr><td>센서 (Sensor)</td><td>$\{S\}$</td><td>센서 장착 지점</td><td>인식 출력</td></tr>
+      <tr><td>도로 (Frenet)</td><td>$\{F\}$</td><td>도로 중심선 기준 $(s, d)$</td><td>지역 경로계획 (4주차)</td></tr>
+    </tbody>
+  </table>
+
+  <p>이번 주는 $\{W\}, \{B\}, \{S\}$에 집중합니다. $\{F\}$는 4주차에서 본격 등장합니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+      <!-- World axes -->
+      <line x1="40" y1="200" x2="180" y2="200" stroke="#0b5fff" stroke-width="2"/>
+      <line x1="40" y1="200" x2="40"  y2="60"  stroke="#0b5fff" stroke-width="2"/>
+      <text x="185" y="205" fill="#0b5fff" font-size="13">$x_W$ (East)</text>
+      <text x="20"  y="55" fill="#0b5fff" font-size="13">$y_W$ (North)</text>
+      <text x="42"  y="220" fill="#0b5fff" font-size="13">{W}</text>
+
+      <!-- Body frame: car at (300,140) rotated 30deg -->
+      <g transform="translate(300,140) rotate(-30)">
+        <rect x="-30" y="-15" width="60" height="30" fill="#fff" stroke="#c62828" stroke-width="2"/>
+        <line x1="0" y1="0" x2="60" y2="0" stroke="#c62828" stroke-width="2"/>
+        <line x1="0" y1="0" x2="0" y2="-50" stroke="#c62828" stroke-width="2"/>
+        <text x="65" y="5" fill="#c62828" font-size="13">$x_B$</text>
+        <text x="-5" y="-55" fill="#c62828" font-size="13">$y_B$</text>
+        <text x="-50" y="20" fill="#c62828" font-size="12">{B}</text>
+      </g>
+      <!-- Sensor on body -->
+      <g transform="translate(300,140) rotate(-30) translate(40,0)">
+        <circle r="4" fill="#9c27b0"/>
+        <line x1="0" y1="0" x2="30" y2="0" stroke="#9c27b0" stroke-width="1.5"/>
+        <line x1="0" y1="0" x2="0" y2="-25" stroke="#9c27b0" stroke-width="1.5"/>
+        <text x="35" y="4" fill="#9c27b0" font-size="12">$x_S$</text>
+        <text x="-5" y="-30" fill="#9c27b0" font-size="12">$y_S$</text>
+        <text x="-30" y="15" fill="#9c27b0" font-size="11">{S}</text>
+      </g>
+      <!-- t vector -->
+      <line x1="40" y1="200" x2="300" y2="140" stroke="#666" stroke-dasharray="4,3"/>
+      <text x="160" y="180" fill="#666" font-size="12">$\mathbf{t}$ (차체 원점의 월드 좌표)</text>
+    </svg>
+    <figcaption>그림 1. 같은 점 하나도 World({W}), Body({B}), Sensor({S})에서 좌표값이 모두 다릅니다.</figcaption>
+  </figure>
+
+  <h2>3. 2D 회전행렬 복습</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>회전행렬은 종이 위 점을 원점 둘레로 핀처럼 돌리는 도구입니다. <em>각도</em>만 정해주면, 어느 방향으로 얼마나 돌릴지 결정됩니다.</p>
+
+  <p>점을 $\theta$ 만큼 <strong>반시계</strong>로 회전시키는 행렬:</p>
+  $$
+  R(\theta) = \begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}
+  $$
+
+  <p>꼭 외워야 할 성질 4개:</p>
+  <ul>
+    <li><strong>직교행렬</strong>: $R^\top R = I$</li>
+    <li><strong>역회전 = 전치</strong>: $R^{-1} = R^\top$ (덕분에 역행렬 계산이 공짜)</li>
+    <li>$\det R = 1$ (길이·각 보존)</li>
+    <li>합성: $R(\alpha) R(\beta) = R(\alpha + \beta)$</li>
+  </ul>
+
+<pre><code class="language-python">import numpy as np
+
+def R(theta):
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array([[c, -s],
+                     [s,  c]])</code></pre>
+
+  <div class="note">
+    <strong>Active vs Passive</strong> — 같은 행렬이 두 가지 의미로 쓰입니다.
+    <strong>Active</strong>: "점 자체를 회전" ($\mathbf{p}' = R\mathbf{p}$).
+    <strong>Passive</strong>: "좌표축을 회전" ($\mathbf{p}^B = R(-\theta)\mathbf{p}^W$).
+    자율주행에서 "World 좌표를 차체 좌표로" 변환할 땐 <strong>Passive 관점</strong>입니다 — 점은 안 움직이고 우리가 보는 축만 돌아가니까요.
+  </div>
+
+  <h2>4. 동차 변환행렬 (Homogeneous Transform)</h2>
+
+  <h3>왜 필요?</h3>
+  <p>실제 차는 회전만 하지 않고 <em>위치도 움직</em>입니다. 회전과 평행이동을 <strong>한 번의 행렬 곱</strong>으로 처리하기 위한
+  꼼수가 동차 좌표(homogeneous coordinates)입니다. 점에 1을 하나 더 붙여 3차원 벡터로 만들면, 변환이 모두 행렬 곱이 됩니다.</p>
+
+  $$
+  T^W_B = \begin{bmatrix} R(\theta) & \mathbf{t} \\ \mathbf{0}^\top & 1 \end{bmatrix}
+  = \begin{bmatrix} \cos\theta & -\sin\theta & t_x \\ \sin\theta & \cos\theta & t_y \\ 0 & 0 & 1 \end{bmatrix}
+  $$
+
+  <p>점 변환 (동차 좌표):</p>
+  $$ \tilde{\mathbf{p}}^W = T^W_B \, \tilde{\mathbf{p}}^B, \quad \tilde{\mathbf{p}} = [x, y, 1]^\top $$
+
+  <p>역변환은 다음과 같이 깔끔하게 떨어집니다:</p>
+  $$
+  T^B_W = (T^W_B)^{-1} = \begin{bmatrix} R^\top & -R^\top \mathbf{t} \\ \mathbf{0}^\top & 1 \end{bmatrix}
+  $$
+
+<pre><code class="language-python">def T_wb(x, y, theta):
+    """Body -> World 동차 변환 행렬"""
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array([[c, -s, x],
+                     [s,  c, y],
+                     [0,  0, 1]])
+
+def transform(T, p):
+    """2D 점 p=[x,y]를 T로 변환"""
+    ph = np.array([p[0], p[1], 1.0])
+    return (T @ ph)[:2]
+
+# 차량 (10,5), 헤딩 30°. 차체 기준 전방 2m 점은?
+T   = T_wb(10.0, 5.0, np.deg2rad(30))
+p_w = transform(T, np.array([2.0, 0.0]))
+print(p_w)   # [11.732  6.   ]</code></pre>
+
+  <h3>체인 법칙 — 좌표계를 줄줄이 잇기</h3>
+  <p>센서 점을 곧장 월드로 옮길 때 자주 등장하는 패턴입니다.</p>
+  $$ T^W_S = T^W_B \, T^B_S $$
+  <ul>
+    <li>$T^B_S$ — 센서 장착 캘리브레이션 (한 번 측정, <strong>정적</strong>)</li>
+    <li>$T^W_B$ — 시시각각 차량 자세 (Localization 출력, <strong>동적</strong>)</li>
+  </ul>
+  <p>ROS의 <code>tf2</code> 라이브러리가 이런 트리를 자동으로 관리해 줍니다. 원리는 똑같아요.</p>
+
+  <h2>5. 인터랙티브: World ↔ Body 변환</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 차를 끌어보세요 — 월드의 빨간 점이 차체에서 어떻게 보이나?</h4>
+    <p>회색 격자가 월드 프레임, 파란 차량의 자체 축이 차체 프레임입니다. 차량 위치 $(x,y)$와 헤딩 $\psi$를 슬라이더로 바꾸면
+    오른쪽 패널의 <strong>차체 좌표값</strong>이 실시간으로 갱신됩니다. 빨간 점 자체는 가만히 있어요 — 우리가 보는 축이 돌고 옮겨지는 것이죠.</p>
+    <canvas id="frame" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>차량 x <span class="val" id="cxV">2</span><input type="range" id="cx" min="-5" max="10" step="0.5" value="2"></label>
+      <label>차량 y <span class="val" id="cyV">1</span><input type="range" id="cy" min="-5" max="5" step="0.5" value="1"></label>
+      <label>헤딩 ψ° <span class="val" id="psV">30</span><input type="range" id="ps" min="-180" max="180" step="5" value="30"></label>
+      <label>점 px <span class="val" id="pxV">6</span><input type="range" id="px" min="-5" max="10" step="0.5" value="6"></label>
+      <label>점 py <span class="val" id="pyV">3</span><input type="range" id="py" min="-5" max="5" step="0.5" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('frame'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const ids=['cx','cy','ps','px','py'];
+    function w2s(p){return {x:c.width/2+p[0]*30, y:c.height/2-p[1]*30};}
+    function draw(){
+      ids.forEach(id=>$(id+'V').textContent=$(id).value);
+      const cx=+$('cx').value, cy=+$('cy').value, psi=+$('ps').value*Math.PI/180;
+      const px=+$('px').value, py=+$('py').value;
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      // grid
+      x.strokeStyle='#e3e6ea'; x.lineWidth=1;
+      for(let i=-10;i<=10;i++){
+        const s1=w2s([i,-10]), s2=w2s([i,10]);
+        x.beginPath(); x.moveTo(s1.x,s1.y); x.lineTo(s2.x,s2.y); x.stroke();
+        const s3=w2s([-10,i]), s4=w2s([10,i]);
+        x.beginPath(); x.moveTo(s3.x,s3.y); x.lineTo(s4.x,s4.y); x.stroke();
+      }
+      // world axes
+      const o=w2s([0,0]);
+      x.strokeStyle='#0b5fff'; x.lineWidth=2;
+      x.beginPath(); x.moveTo(o.x,o.y); x.lineTo(o.x+90,o.y); x.stroke();
+      x.beginPath(); x.moveTo(o.x,o.y); x.lineTo(o.x,o.y-90); x.stroke();
+      x.fillStyle='#0b5fff'; x.font='13px sans-serif';
+      x.fillText('x_W', o.x+95, o.y+5); x.fillText('y_W', o.x-15, o.y-95);
+      x.fillText('{W}', o.x+5, o.y+18);
+      // car body
+      const sc=w2s([cx,cy]);
+      x.save(); x.translate(sc.x,sc.y); x.rotate(-psi);
+      x.fillStyle='#fff'; x.strokeStyle='#c62828'; x.lineWidth=2;
+      x.fillRect(-25,-12,50,24); x.strokeRect(-25,-12,50,24);
+      // body axes
+      x.strokeStyle='#c62828'; x.lineWidth=2;
+      x.beginPath(); x.moveTo(0,0); x.lineTo(60,0); x.stroke();
+      x.beginPath(); x.moveTo(0,0); x.lineTo(0,-60); x.stroke();
+      x.fillStyle='#c62828'; x.font='12px sans-serif';
+      x.fillText('x_B', 65, 5); x.fillText('y_B', -8, -65);
+      x.restore();
+      // point
+      const sp=w2s([px,py]);
+      x.fillStyle='#e91e63'; x.beginPath(); x.arc(sp.x,sp.y,7,0,Math.PI*2); x.fill();
+      x.fillStyle='#444'; x.font='12px sans-serif';
+      x.fillText('p^W=('+px.toFixed(1)+', '+py.toFixed(1)+')', sp.x+10, sp.y-8);
+      // dashed link from car origin to point
+      x.strokeStyle='#999'; x.setLineDash([3,3]); x.beginPath();
+      x.moveTo(sc.x,sc.y); x.lineTo(sp.x,sp.y); x.stroke(); x.setLineDash([]);
+      // compute body coord
+      const dx=px-cx, dy=py-cy;
+      const cs=Math.cos(-psi), sn=Math.sin(-psi);
+      const bx=cs*dx - sn*dy, by=sn*dx + cs*dy;
+      // info panel
+      x.fillStyle='#fff'; x.fillRect(c.width-220,12,210,90);
+      x.strokeStyle='#0b5fff'; x.lineWidth=1; x.strokeRect(c.width-220,12,210,90);
+      x.fillStyle='#0b5fff'; x.font='bold 13px sans-serif';
+      x.fillText('차체 좌표 p^B', c.width-210,32);
+      x.fillStyle='#1a1a1a'; x.font='13px Consolas,monospace';
+      x.fillText('x_B = '+bx.toFixed(2)+' m', c.width-210, 55);
+      x.fillText('y_B = '+by.toFixed(2)+' m', c.width-210, 75);
+      x.fillStyle='#666'; x.font='11px sans-serif';
+      x.fillText('p^B = R(-ψ)(p^W − t)', c.width-210, 95);
+    }
+    ids.forEach(id=>$(id).oninput=draw); draw();
+  })();
+  </script>
+
+  <h2>6. Kinematic Bicycle Model — 가정 &amp; 유도</h2>
+
+  <h3>왜 "자전거"라 부르나?</h3>
+  <p>실제 차는 4륜이지만 좌우 한 쌍을 한 점으로 합치면 자전거처럼 단순한 모델이 됩니다.
+  <strong>앞바퀴 하나, 뒷바퀴 하나, 휠베이스 L</strong>. 이 단순화가 Planning·저속 Control에서 충분히 정확합니다.</p>
+
+  <h3>가정</h3>
+  <ol>
+    <li>좌우 바퀴를 하나로 합친 자전거</li>
+    <li><strong>타이어 슬립 없음</strong> — 바퀴는 바라보는 방향으로만 굴러감</li>
+    <li>조향은 앞바퀴만 (Ackermann 근사)</li>
+    <li>평지 2D, Pitch·Roll 무시</li>
+  </ol>
+
+  <h3>기호</h3>
+  <ul>
+    <li>$(x, y, \psi)$ — 후륜축 중앙 위치 + 차량 헤딩</li>
+    <li>$v$ — 후륜축 속도 ($\approx$ 차량 속도)</li>
+    <li>$\delta$ — 전륜 조향각</li>
+    <li>$L$ — 휠베이스 (앞뒤 차축 거리)</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg">
+      <!-- chassis line from rear to front wheel -->
+      <line x1="120" y1="150" x2="380" y2="150" stroke="#444" stroke-width="3"/>
+      <!-- rear wheel -->
+      <rect x="100" y="138" width="40" height="24" fill="#222"/>
+      <text x="120" y="180" text-anchor="middle" font-size="13">후륜</text>
+      <text x="120" y="195" text-anchor="middle" font-size="11" fill="#666">(x,y,ψ)</text>
+      <!-- front wheel rotated by delta -->
+      <g transform="translate(380,150) rotate(-25)">
+        <rect x="-20" y="-12" width="40" height="24" fill="#222"/>
+        <line x1="20" y1="0" x2="60" y2="0" stroke="#c62828" stroke-width="2" stroke-dasharray="3,3"/>
+        <text x="64" y="4" fill="#c62828" font-size="12">$v_f$</text>
+      </g>
+      <text x="380" y="180" text-anchor="middle" font-size="13">전륜</text>
+      <!-- L bracket -->
+      <line x1="120" y1="115" x2="380" y2="115" stroke="#0b5fff" stroke-width="1"/>
+      <line x1="120" y1="110" x2="120" y2="125" stroke="#0b5fff"/>
+      <line x1="380" y1="110" x2="380" y2="125" stroke="#0b5fff"/>
+      <text x="250" y="108" text-anchor="middle" fill="#0b5fff" font-size="13">L (휠베이스)</text>
+      <!-- heading arrow -->
+      <line x1="140" y1="150" x2="180" y2="150" stroke="#2e7d32" stroke-width="2"/>
+      <polygon points="180,150 175,146 175,154" fill="#2e7d32"/>
+      <text x="155" y="143" fill="#2e7d32" font-size="12">$v$</text>
+      <!-- delta angle arc -->
+      <path d="M 400 150 A 20 20 0 0 0 398 132" stroke="#c62828" fill="none" stroke-width="1.5"/>
+      <text x="412" y="142" fill="#c62828" font-size="13">δ</text>
+      <text x="60" y="40" fill="#1a1a1a" font-size="14" font-weight="bold">Kinematic Bicycle</text>
+      <text x="60" y="60" fill="#666" font-size="12">후륜축 중앙을 기준점으로</text>
+      <text x="60" y="78" fill="#666" font-size="12">상태 (x,y,ψ), 입력 (v,δ)</text>
+    </svg>
+    <figcaption>그림 2. Kinematic Bicycle Model. 후륜축 중앙이 기준점, 앞바퀴가 δ만큼 꺾인 자전거.</figcaption>
+  </figure>
+
+  <h3>상태방정식 유도</h3>
+  <p>후륜은 헤딩 방향으로, 전륜은 헤딩+조향 방향으로 굴러갑니다. 후륜축 중앙을 기준으로 잡으면:</p>
+  $$
+  \dot x = v\cos\psi, \quad \dot y = v\sin\psi, \quad \dot\psi = \frac{v}{L}\tan\delta
+  $$
+
+  <div class="tip">
+    <strong>한 줄 암기</strong> — "조향각의 탄젠트 ÷ 휠베이스 × 속도 = 요레이트"<br>
+    $\dot\psi = (v/L)\tan\delta$. 이 한 줄이 본 강의 끝까지 천 번 등장합니다.
+  </div>
+
+  <h2>7. 회전반경 R = L/tan(δ)</h2>
+
+  <p>$\dot\psi = v/R$라는 원운동 관계와 위 식을 결합하면 곧바로:</p>
+  $$ \tan\delta = \frac{L}{R} \;\Longrightarrow\; R = \frac{L}{\tan\delta} $$
+
+  <table>
+    <thead><tr><th>예시</th><th>L</th><th>δ</th><th>R</th></tr></thead>
+    <tbody>
+      <tr><td>완만 선회</td><td>2.7 m</td><td>5°</td><td>≈ 30.9 m</td></tr>
+      <tr><td>일반 선회</td><td>2.7 m</td><td>15°</td><td>≈ 10.1 m</td></tr>
+      <tr><td>급선회</td><td>2.7 m</td><td>30°</td><td>≈ 4.7 m</td></tr>
+    </tbody>
+  </table>
+  <p>도심 U턴 최소 반경(약 5 m)이 조향각 30° 근처라는 사실, 직관과 잘 맞죠?</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 조향각 → 회전반경 곡선</h4>
+    <p>슬라이더로 조향각 $\delta$를 움직이면 (a) 차가 그리는 원호와 회전중심, (b) $R$ vs $\delta$ 곡선 위의 현재 위치가
+    동시에 갱신됩니다. δ가 0에 가까워질수록 R이 폭발적으로 커지는(=거의 직진하는) 모습을 눈으로 확인하세요.</p>
+    <canvas id="rdelta" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>조향각 δ° <span class="val" id="dV">15</span><input type="range" id="d" min="1" max="40" step="0.5" value="15"></label>
+      <label>휠베이스 L <span class="val" id="LV">2.7</span><input type="range" id="L" min="1.5" max="4" step="0.1" value="2.7"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rdelta'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    function draw(){
+      const d=+$('d').value, L=+$('L').value;
+      $('dV').textContent=d.toFixed(1); $('LV').textContent=L.toFixed(1);
+      const drad=d*Math.PI/180;
+      const R=L/Math.tan(drad);
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      // left: arc visualization
+      x.fillStyle='#1a1a1a'; x.font='bold 14px sans-serif';
+      x.fillText('회전 반경 (스케일 가변)', 20, 22);
+      // car at (320, 280) heading right; turning center above
+      const cx=160, cy=280, scale=Math.min(220/(R+0.01), 80);
+      // turning center at distance R perpendicular to heading
+      const Rp=R*scale;
+      const ox=cx, oy=cy-Rp;
+      // arc
+      x.strokeStyle='#0b5fff'; x.lineWidth=2;
+      x.beginPath();
+      const a0=Math.PI/2, a1=Math.PI/2-1.2;
+      x.arc(ox,oy,Rp,a0,a1,true); x.stroke();
+      // radius line
+      x.strokeStyle='#999'; x.setLineDash([3,3]);
+      x.beginPath(); x.moveTo(ox,oy); x.lineTo(cx,cy); x.stroke(); x.setLineDash([]);
+      x.fillStyle='#666'; x.font='12px sans-serif';
+      x.fillText('R='+R.toFixed(2)+' m', (ox+cx)/2+5,(oy+cy)/2);
+      // turning center
+      x.fillStyle='#c62828'; x.beginPath(); x.arc(ox,oy,5,0,Math.PI*2); x.fill();
+      x.fillText('회전중심', ox+8, oy+4);
+      // car
+      x.save(); x.translate(cx,cy); x.rotate(0);
+      x.fillStyle='#fff'; x.strokeStyle='#0b5fff'; x.lineWidth=2;
+      x.fillRect(-18,-9,36,18); x.strokeRect(-18,-9,36,18);
+      x.save(); x.translate(14,0); x.rotate(-drad);
+      x.fillStyle='#222'; x.fillRect(-5,-3,10,6); x.restore();
+      x.restore();
+      // right: R vs delta curve
+      const px0=320, py0=60, pw=300, ph=280;
+      x.strokeStyle='#ddd'; x.strokeRect(px0,py0,pw,ph);
+      x.fillStyle='#1a1a1a'; x.font='bold 14px sans-serif';
+      x.fillText('R vs δ (L='+L.toFixed(1)+'m)', px0+10, py0+18);
+      // axes
+      x.strokeStyle='#666'; x.lineWidth=1;
+      x.beginPath(); x.moveTo(px0+30,py0+ph-30); x.lineTo(px0+pw-10,py0+ph-30); x.stroke();
+      x.beginPath(); x.moveTo(px0+30,py0+ph-30); x.lineTo(px0+30,py0+30); x.stroke();
+      x.fillStyle='#666'; x.font='11px sans-serif';
+      x.fillText('δ°', px0+pw-15, py0+ph-15);
+      x.fillText('R [m]', px0+5, py0+30);
+      // ticks
+      [10,20,30,40].forEach(t=>{
+        const xx=px0+30+t/40*(pw-40);
+        x.beginPath(); x.moveTo(xx,py0+ph-30); x.lineTo(xx,py0+ph-26); x.stroke();
+        x.fillText(t, xx-5, py0+ph-15);
+      });
+      [10,20,30,40].forEach(t=>{
+        const yy=py0+ph-30-(t/40)*(ph-60);
+        x.beginPath(); x.moveTo(px0+25,yy); x.lineTo(px0+30,yy); x.stroke();
+        x.fillText(t, px0+5, yy+3);
+      });
+      // curve
+      x.strokeStyle='#0b5fff'; x.lineWidth=2; x.beginPath();
+      let first=true;
+      for(let dd=1; dd<=40; dd+=0.3){
+        const Rv=L/Math.tan(dd*Math.PI/180);
+        if(Rv>40) continue;
+        const xx=px0+30+dd/40*(pw-40);
+        const yy=py0+ph-30-Rv/40*(ph-60);
+        if(first){x.moveTo(xx,yy);first=false;} else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      // marker
+      const xm=px0+30+d/40*(pw-40);
+      const ym=py0+ph-30-Math.min(R,40)/40*(ph-60);
+      x.fillStyle='#c62828'; x.beginPath(); x.arc(xm,ym,6,0,Math.PI*2); x.fill();
+      x.font='12px sans-serif'; x.fillStyle='#c62828';
+      x.fillText('현재 (δ='+d.toFixed(1)+'°, R='+R.toFixed(2)+')', xm+8, ym-6);
+    }
+    ['d','L'].forEach(id=>$(id).oninput=draw); draw();
+  })();
+  </script>
+
+  <h2>8. 인터랙티브: Bicycle 시뮬 &amp; 8자 궤적</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Kinematic Bicycle 시뮬레이터</h4>
+    <p>속도 $v$와 조향 $\delta$를 슬라이더로 직접 잡아 차를 운전해 보세요. 회색 곡선이 차가 지나간 자취,
+    파란 점선이 이론 회전반경 $R = L/\tan\delta$입니다. δ를 일정하게 두면 차가 정확히 그 원 위로 굴러가는 걸 보게 됩니다.</p>
+    <canvas id="bsim" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>속도 v <span class="val" id="vV">5</span><input type="range" id="v" min="1" max="15" step="0.5" value="5"></label>
+      <label>조향 δ° <span class="val" id="ddV">10</span><input type="range" id="dd" min="-30" max="30" step="0.5" value="10"></label>
+      <label>휠베이스 L <span class="val" id="LV2">2.5</span><input type="range" id="L2" min="1.5" max="4" step="0.1" value="2.5"></label>
+      <button id="rstB" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bsim'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    let st={x:0,y:0,psi:0}, hist=[];
+    function reset(){st={x:0,y:0,psi:0}; hist=[];}
+    $('rstB').onclick=reset;
+    function w2s(p){return {x:c.width/2+p[0]*8, y:c.height/2-p[1]*8};}
+    function loop(){
+      const v=+$('v').value, dd=+$('dd').value, L=+$('L2').value;
+      $('vV').textContent=v.toFixed(1); $('ddV').textContent=dd.toFixed(1); $('LV2').textContent=L.toFixed(1);
+      const drad=dd*Math.PI/180;
+      const dt=0.05;
+      st.x+=v*Math.cos(st.psi)*dt;
+      st.y+=v*Math.sin(st.psi)*dt;
+      st.psi+=v/L*Math.tan(drad)*dt;
+      hist.push({x:st.x,y:st.y});
+      if(hist.length>2000) hist.shift();
+      // wrap if too far
+      if(Math.abs(st.x)>50||Math.abs(st.y)>30){st.x*=0;st.y*=0;hist=[];}
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      // grid
+      x.strokeStyle='#eee';
+      for(let i=-50;i<=50;i+=5){
+        const s1=w2s([i,-30]), s2=w2s([i,30]);
+        x.beginPath(); x.moveTo(s1.x,s1.y); x.lineTo(s2.x,s2.y); x.stroke();
+        const s3=w2s([-50,i]), s4=w2s([50,i]);
+        x.beginPath(); x.moveTo(s3.x,s3.y); x.lineTo(s4.x,s4.y); x.stroke();
+      }
+      // theoretical circle
+      if(Math.abs(drad)>0.005){
+        const R=L/Math.tan(drad);
+        // turning center perpendicular to heading at start (0,0,0): center at (0, R)
+        const cc=w2s([0, R]);
+        x.strokeStyle='#0b5fff'; x.setLineDash([4,4]); x.lineWidth=1;
+        x.beginPath(); x.arc(cc.x,cc.y,Math.abs(R)*8,0,Math.PI*2); x.stroke();
+        x.setLineDash([]);
+      }
+      // history
+      x.strokeStyle='#999'; x.lineWidth=2; x.beginPath();
+      hist.forEach((p,i)=>{const s=w2s([p.x,p.y]); if(i===0)x.moveTo(s.x,s.y); else x.lineTo(s.x,s.y);});
+      x.stroke();
+      // car
+      const sc=w2s([st.x,st.y]);
+      x.save(); x.translate(sc.x,sc.y); x.rotate(-st.psi);
+      x.fillStyle='#fff'; x.strokeStyle='#c62828'; x.lineWidth=2;
+      x.fillRect(-15,-7,30,14); x.strokeRect(-15,-7,30,14);
+      x.fillStyle='#c62828'; x.fillRect(10,-5,4,10);
+      x.restore();
+      // info
+      x.fillStyle='#444'; x.font='12px sans-serif';
+      x.fillText('상태: x='+st.x.toFixed(1)+'  y='+st.y.toFixed(1)+'  ψ='+(st.psi*180/Math.PI).toFixed(1)+'°', 12, 20);
+      if(Math.abs(drad)>0.005){
+        const R=L/Math.tan(drad);
+        x.fillText('이론 R = L/tan(δ) = '+R.toFixed(2)+' m', 12, 40);
+      } else {
+        x.fillText('δ ≈ 0 → 직진', 12, 40);
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정현파 조향 → 8자 궤적</h4>
+    <p>조향을 시간에 따라 $\delta(t) = \delta_{\max}\sin(\omega t)$로 흔들면 차는 <strong>8자</strong>를 그립니다.
+    $\delta_{\max}$가 폭, $\omega$가 빠르기를 결정합니다. 자율주행 대회 시험 주행의 단골 패턴이에요.</p>
+    <canvas id="fig8" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>δ_max° <span class="val" id="dmV">20</span><input type="range" id="dm" min="5" max="35" step="1" value="20"></label>
+      <label>ω rad/s <span class="val" id="omV">0.4</span><input type="range" id="om" min="0.1" max="1.2" step="0.05" value="0.4"></label>
+      <label>속도 v <span class="val" id="v8V">5</span><input type="range" id="v8" min="2" max="12" step="0.5" value="5"></label>
+      <button id="rst8" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fig8'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const L=2.5;
+    let st={x:0,y:0,psi:0,t:0}, hist=[];
+    function reset(){st={x:0,y:0,psi:0,t:0}; hist=[];}
+    $('rst8').onclick=reset;
+    function w2s(p){return {x:c.width/2+p[0]*9, y:c.height/2-p[1]*9};}
+    function loop(){
+      const dm=+$('dm').value, om=+$('om').value, v=+$('v8').value;
+      $('dmV').textContent=dm; $('omV').textContent=om.toFixed(2); $('v8V').textContent=v.toFixed(1);
+      const dt=0.05;
+      const drad=dm*Math.PI/180*Math.sin(om*st.t);
+      st.x+=v*Math.cos(st.psi)*dt;
+      st.y+=v*Math.sin(st.psi)*dt;
+      st.psi+=v/L*Math.tan(drad)*dt;
+      st.t+=dt;
+      hist.push({x:st.x,y:st.y});
+      if(hist.length>1500) hist.shift();
+      if(Math.abs(st.x)>40||Math.abs(st.y)>25) reset();
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      // grid
+      x.strokeStyle='#eee';
+      for(let i=-40;i<=40;i+=5){
+        const s1=w2s([i,-25]), s2=w2s([i,25]);
+        x.beginPath(); x.moveTo(s1.x,s1.y); x.lineTo(s2.x,s2.y); x.stroke();
+      }
+      // path
+      x.strokeStyle='#0b5fff'; x.lineWidth=2; x.beginPath();
+      hist.forEach((p,i)=>{const s=w2s([p.x,p.y]); if(i===0)x.moveTo(s.x,s.y); else x.lineTo(s.x,s.y);});
+      x.stroke();
+      // car
+      const sc=w2s([st.x,st.y]);
+      x.save(); x.translate(sc.x,sc.y); x.rotate(-st.psi);
+      x.fillStyle='#fff'; x.strokeStyle='#c62828'; x.lineWidth=2;
+      x.fillRect(-12,-6,24,12); x.strokeRect(-12,-6,24,12);
+      x.restore();
+      // info: delta(t) sparkline
+      const sx=380, sy=20, sw=240, sh=60;
+      x.fillStyle='#fff'; x.fillRect(sx,sy,sw,sh);
+      x.strokeStyle='#ddd'; x.strokeRect(sx,sy,sw,sh);
+      x.fillStyle='#444'; x.font='11px sans-serif';
+      x.fillText('δ(t) = '+(drad*180/Math.PI).toFixed(1)+'°', sx+5, sy+15);
+      x.strokeStyle='#666'; x.beginPath(); x.moveTo(sx,sy+sh/2); x.lineTo(sx+sw,sy+sh/2); x.stroke();
+      x.strokeStyle='#c62828'; x.beginPath();
+      const N=60;
+      for(let i=0;i<N;i++){
+        const tt=st.t-((N-1-i)/N)*(2*Math.PI/om);
+        const dv=Math.sin(om*tt)*dm*Math.PI/180;
+        const xx=sx+i/N*sw, yy=sy+sh/2 - dv/(35*Math.PI/180)*sh*0.45;
+        if(i===0) x.moveTo(xx,yy); else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>9. Ackermann 조향 · 좌표 기준점</h2>
+
+  <h3>실제 4륜은 좌·우 조향각이 다르다</h3>
+  <p>회전 중심이 후륜축 연장선 위 한 점 $O$를 공유해야 한다는 기하 조건에서 자연스럽게 따라옵니다.
+  내측 바퀴가 더 많이 꺾여야 하죠. 이를 <strong>Ackermann Geometry</strong>라고 합니다.</p>
+  $$ \cot\delta_o - \cot\delta_i = \frac{W}{L} $$
+  <p>여기서 $W$는 트레드(좌우 바퀴 간격), $L$은 휠베이스. Bicycle 모델의 $\delta$는 실무적으로 내·외 조향의 평균이라고 보면 됩니다.</p>
+
+  <h3>기준점을 어디로 잡느냐 — 후륜 vs 중심 vs 전륜</h3>
+  <table>
+    <thead><tr><th>기준점</th><th>$\dot x$</th><th>$\dot y$</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>후륜축 중앙</td><td>$v\cos\psi$</td><td>$v\sin\psi$</td><td>수식 단순. <strong>Planning에서 표준</strong></td></tr>
+      <tr><td>차체 중심 G</td><td>$v\cos(\psi+\beta)$</td><td>$v\sin(\psi+\beta)$</td><td>실측 IMU 위치에 가깝다</td></tr>
+      <tr><td>전륜축 중앙</td><td>$v_f\cos(\psi+\delta)$</td><td>$v_f\sin(\psi+\delta)$</td><td><strong>Stanley 제어(W11)</strong>의 기준</td></tr>
+    </tbody>
+  </table>
+  <p>차체 슬립각 $\beta$ (속도 방향과 차체 방향의 차)는 Kinematic에서 $\tan\beta = (l_r \tan\delta)/L$.
+  Stanley가 "전륜 기준"으로 설계되는 이유 — 11주차에서 다시 등장합니다.</p>
+
+  <h2>10. PythonRobotics 기반 — 한 스텝 시뮬레이터</h2>
+
+<pre><code class="language-python"># 참고: PythonRobotics/PathTracking/pure_pursuit 의 상태 갱신 로직을
+# 교육용으로 단순화 (MIT License, A. Sakai).
+import numpy as np
+
+L = 2.9  # 휠베이스 [m]
+
+def update(state, v, delta, dt=0.1):
+    x, y, psi = state
+    x   += v * np.cos(psi) * dt
+    y   += v * np.sin(psi) * dt
+    psi += v / L * np.tan(delta) * dt
+    return np.array([x, y, psi])
+
+# 예: 5초간 직진 → 오른쪽 조향
+state = np.array([0.0, 0.0, 0.0])
+traj  = [state.copy()]
+for t in np.arange(0, 5, 0.1):
+    delta = np.deg2rad(10) if t > 2 else 0.0
+    state = update(state, v=5.0, delta=delta)
+    traj.append(state.copy())
+
+traj = np.array(traj)
+# matplotlib.pyplot.plot(traj[:,0], traj[:,1])  # 호(arc) 모양</code></pre>
+
+  <h2>11. 수치 안정성 팁</h2>
+
+  <h3>적분 — Euler vs Runge-Kutta 4</h3>
+  <p>강의에서는 Euler 적분($\Delta t = 0.01\sim0.1$)을 사용합니다. 고정밀이 필요하면 RK4:</p>
+<pre><code class="language-python">def rk4(f, s, u, dt):
+    k1 = f(s, u)
+    k2 = f(s + dt/2*k1, u)
+    k3 = f(s + dt/2*k2, u)
+    k4 = f(s + dt*k3,   u)
+    return s + dt/6*(k1 + 2*k2 + 2*k3 + k4)</code></pre>
+
+  <h3>각도 정규화 — wrap to [-π, π]</h3>
+  <p>버그 1위 원인: $\psi$가 +180°/-180° 경계에서 불연속하게 튀어 비교가 깨집니다.</p>
+<pre><code class="language-python">def wrap(a):
+    return (a + np.pi) % (2*np.pi) - np.pi</code></pre>
+
+  <div class="warn">
+    <strong>흔한 함정 5</strong> — (1) rad↔deg 혼용, (2) 각도 wrap 누락, (3) World↔Body 부호 오류,
+    (4) 휠베이스 단위(미터로 통일!), (5) 후륜 vs 중심 기준 혼동. 이 다섯 개만 조심하면 시뮬 디버깅이 90% 줄어듭니다.
+  </div>
+
+  <h2>12. Pose vs Twist — 용어 정리</h2>
+  <table>
+    <thead><tr><th>용어</th><th>구성</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Pose</strong></td><td>$(x, y, \psi)$ 2D / $(x,y,z,\phi,\theta,\psi)$ 3D</td><td>위치 + 자세</td></tr>
+      <tr><td><strong>Twist</strong></td><td>$(v_x, v_y, \omega_z)$</td><td>선속도 + 각속도</td></tr>
+      <tr><td><strong>State</strong></td><td>Pose + Twist + 기타</td><td>시스템 현재 조건</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li>2주차(오늘) Bicycle State — $(x, y, \psi)$ + 입력 $(v, \delta)$</li>
+    <li>3주차 Dynamic State — $(x, y, \psi, v_y, \dot\psi)$로 확장</li>
+    <li>13주차 MPC — State에 추종 오차 $(e_y, e_\psi)$ 추가</li>
+  </ul>
+
+  <h2>13. Kinematic Model의 한계</h2>
+  <table>
+    <thead><tr><th>상황</th><th>왜 문제가 되나</th></tr></thead>
+    <tbody>
+      <tr><td>고속 (≥ 60 km/h)</td><td>타이어 슬립 발생 → 모델 편차</td></tr>
+      <tr><td>급조향 · 급가감속</td><td>슬립각 증가, 위치 오차 누적</td></tr>
+      <tr><td>노면 마찰 변화 (비/눈)</td><td>예측 궤적과 실제 어긋남</td></tr>
+      <tr><td>트럭 · 트레일러</td><td>다관절 모델 필요</td></tr>
+    </tbody>
+  </table>
+  <p>그럼에도 왜 쓰나? <strong>간단</strong>하고 <strong>선형화 쉽고</strong>, Planning 용도에는 충분하기 때문입니다.
+  추종제어가 어차피 보정해 주니까요. 다음 주(W3)에서 이 한계를 부수고 Dynamic Model로 확장합니다.</p>
+
+  <h2>14. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>좌표계 4종: World, Body, Sensor, Frenet. <strong>모든 수식은 어느 프레임에서 쓴 것인지 먼저 명시</strong>.</li>
+      <li>동차 변환행렬 $T = \begin{bmatrix}R & t \\ 0 & 1\end{bmatrix}$ 하나로 회전·평행이동을 한 번에 처리.</li>
+      <li>체인 법칙: $T^W_S = T^W_B \, T^B_S$. 캘리브레이션(정적) × 차량 자세(동적).</li>
+      <li>Kinematic Bicycle: $\dot x = v\cos\psi,\; \dot y = v\sin\psi,\; \dot\psi = (v/L)\tan\delta$.</li>
+      <li>회전반경 $R = L/\tan\delta$. <strong>이 한 줄</strong>이 후속 알고리즘 곳곳에서 다시 등장.</li>
+      <li>한계: 고속·급조향·미끄러움. 그래서 다음 주는 Dynamic Bicycle.</li>
+    </ul>
+  </div>
+
+  <h2>15. 손풀이 연습</h2>
+  <div class="note">
+    <strong>Q1.</strong> $L = 2.8$ m, $\delta = 10°$, $v = 5$ m/s. 회전반경과 요레이트는?<br>
+    → $R = 2.8/\tan 10° \approx 15.88$ m, $\dot\psi = (5/2.8)\tan 10° \approx 0.315$ rad/s ($\approx 18°$/s).<br><br>
+    <strong>Q2.</strong> 월드 점 $(3, 4)$를 차량 위치 $(1, 1)$, 헤딩 $90°$ 기준으로 차체 좌표는?<br>
+    → 평행이동 $(2, 3)$ → $R(-90°)$ 곱 → <strong>$(3, -2)$</strong>. 차량 앞 3 m, 오른쪽 2 m.<br><br>
+    <strong>Q3.</strong> Bicycle 식만으로 차가 옆으로 평행이동할 수 있나?<br>
+    → 불가능. $\dot x, \dot y$가 항상 헤딩 방향으로만 갖는 비홀로노믹(non-holonomic) 시스템.
+  </div>
+
+  <h2>16. 이번 주 실습</h2>
+  <ul>
+    <li><strong>실습 1</strong> — <code>world_to_body(p, ego)</code>, <code>body_to_world(p, ego)</code> 구현 및 5개 테스트 케이스 통과</li>
+    <li><strong>실습 2</strong> — <code>step(state, v, delta, dt)</code> 구현, $\delta$ 스텝 입력에 대한 궤적 반경 검증</li>
+    <li><strong>실습 3 (Hard)</strong> — $\delta(t) = \delta_{\max}\sin(\omega t)$ 정현파 조향으로 8자 궤적 재현</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="01-intro.html"><small>← 이전</small>W1. 강의 개요 &amp; 자율주행 개론</a>
+    <a href="03-vehicle-dynamics.html" class="next"><small>다음 →</small>W3. 차량 동역학 기초</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

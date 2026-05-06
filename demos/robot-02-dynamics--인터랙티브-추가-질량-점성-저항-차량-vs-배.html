@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 추가 질량 &amp; 점성 저항 — 차량 vs 배 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 추가 질량 &amp; 점성 저항 — 차량 vs 배</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/02-dynamics.html">Lecture 2. 운동학과 동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 추가 질량 & 점성 저항 — 차량 vs 배</h4>
+    <p>"추진" 버튼을 누르면 1초간 같은 추력이 자동차와 배에 가해집니다. 자동차는 마찰로 빠르게 멈추지만, 배는 추가 질량으로 가속이 굼뜨고 $|v|v$ 점성 저항으로 천천히 사라집니다. 슬라이더로 배의 특성을 바꿔보고 속도-시간 그래프를 비교하세요.</p>
+    <canvas id="marC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>추가 질량비 m_a/m <span class="val" id="marMaV">1.0</span><input type="range" id="marMa" min="0" max="2.5" step="0.1" value="1.0"></label>
+      <label>선형 감쇠 D₁ <span class="val" id="marD1V">0.4</span><input type="range" id="marD1" min="0" max="2" step="0.05" value="0.4"></label>
+      <label>비선형 감쇠 D₂ <span class="val" id="marD2V">0.3</span><input type="range" id="marD2" min="0" max="2" step="0.05" value="0.3"></label>
+      <button id="marP">▶ 추진 (1s)</button>
+      <button id="marR" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('marC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    let car,boat,t,pulseEnd,log;
+    const home=()=>{car={x:30,v:0};boat={x:30,v:0};t=0;pulseEnd=-1;log=[];};home();
+    const upd=()=>['marMa','marD1','marD2'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    sl('marP').onclick=()=>{pulseEnd=t+1.0;};
+    sl('marR').onclick=home;
+    ['marMa','marD1','marD2'].forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const ma=+sl('marMa').value,d1=+sl('marD1').value,d2=+sl('marD2').value;
+      const dt=0.04,F=(t<pulseEnd)?5:0;
+      car.v+=(F-1.2*car.v)*dt;car.x+=car.v*dt*30;
+      const m=1+ma;
+      boat.v+=((F-d1*boat.v-d2*Math.abs(boat.v)*boat.v)/m)*dt;boat.x+=boat.v*dt*30;
+      if(car.x>c.width-20)car.x=30;
+      if(boat.x>c.width-20)boat.x=30;
+      t+=dt;
+      log.push([t,car.v,boat.v]);if(log.length>800)log.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const SPLIT=140;
+      x.strokeStyle='#e3e6ea';x.beginPath();x.moveTo(0,SPLIT);x.lineTo(c.width,SPLIT);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.textAlign='left';
+      x.fillText('🚗 자동차 (큰 마찰, 추가 질량 무시)',12,20);
+      x.fillText('🚢 배 (m_eff = m + m_a, |v|v 저항)',12,80);
+      x.fillStyle='#0b5fff';x.fillRect(car.x-12,38,24,14);
+      x.fillStyle='#0a8a3e';x.fillRect(boat.x-16,98,32,18);
+      if(t<pulseEnd){x.fillStyle='#ff8c00';x.font='bold 12px sans-serif';x.fillText('▶ 추진중',c.width-80,20);}
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('속도 v(t)',12,SPLIT+18);
+      const gx0=12,gy0=SPLIT+30,gw=c.width-24,gh=c.height-SPLIT-50;
+      x.strokeStyle='#ccc';x.beginPath();x.moveTo(gx0,gy0+gh);x.lineTo(gx0+gw,gy0+gh);x.stroke();
+      x.beginPath();x.moveTo(gx0,gy0);x.lineTo(gx0,gy0+gh);x.stroke();
+      const tWin=20,vMax=5;
+      const tStart=Math.max(0,t-tWin);
+      const gx=tt=>gx0+(tt-tStart)/tWin*gw;
+      const gy=vv=>gy0+gh-Math.min(gh,Math.max(0,vv/vMax*gh));
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();let started=false;
+      for(const e of log){if(e[0]<tStart)continue;const px=gx(e[0]),py=gy(e[1]);if(!started){x.moveTo(px,py);started=true;}else x.lineTo(px,py);}
+      x.stroke();
+      x.strokeStyle='#0a8a3e';x.beginPath();started=false;
+      for(const e of log){if(e[0]<tStart)continue;const px=gx(e[0]),py=gy(e[2]);if(!started){x.moveTo(px,py);started=true;}else x.lineTo(px,py);}
+      x.stroke();
+      x.fillStyle='#666';x.font='10px sans-serif';
+      x.fillText('t = '+t.toFixed(1)+'s',gx0+gw-50,gy0+gh+14);
+      x.fillText(' 0',gx0-10,gy0+gh+4);x.fillText(vMax+' m/s',gx0-30,gy0+8);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

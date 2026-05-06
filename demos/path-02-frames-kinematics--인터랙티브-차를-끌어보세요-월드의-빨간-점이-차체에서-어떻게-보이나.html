@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 차를 끌어보세요 — 월드의 빨간 점이 차체에서 어떻게 보이나? — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 차를 끌어보세요 — 월드의 빨간 점이 차체에서 어떻게 보이나?</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/02-frames-kinematics.html">Week 2. 좌표계 &amp; 차량 기구학 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 차를 끌어보세요 — 월드의 빨간 점이 차체에서 어떻게 보이나?</h4>
+    <p>회색 격자가 월드 프레임, 파란 차량의 자체 축이 차체 프레임입니다. 차량 위치 $(x,y)$와 헤딩 $\psi$를 슬라이더로 바꾸면
+    오른쪽 패널의 <strong>차체 좌표값</strong>이 실시간으로 갱신됩니다. 빨간 점 자체는 가만히 있어요 — 우리가 보는 축이 돌고 옮겨지는 것이죠.</p>
+    <canvas id="frame" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>차량 x <span class="val" id="cxV">2</span><input type="range" id="cx" min="-5" max="10" step="0.5" value="2"></label>
+      <label>차량 y <span class="val" id="cyV">1</span><input type="range" id="cy" min="-5" max="5" step="0.5" value="1"></label>
+      <label>헤딩 ψ° <span class="val" id="psV">30</span><input type="range" id="ps" min="-180" max="180" step="5" value="30"></label>
+      <label>점 px <span class="val" id="pxV">6</span><input type="range" id="px" min="-5" max="10" step="0.5" value="6"></label>
+      <label>점 py <span class="val" id="pyV">3</span><input type="range" id="py" min="-5" max="5" step="0.5" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('frame'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const ids=['cx','cy','ps','px','py'];
+    function w2s(p){return {x:c.width/2+p[0]*30, y:c.height/2-p[1]*30};}
+    function draw(){
+      ids.forEach(id=>$(id+'V').textContent=$(id).value);
+      const cx=+$('cx').value, cy=+$('cy').value, psi=+$('ps').value*Math.PI/180;
+      const px=+$('px').value, py=+$('py').value;
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      // grid
+      x.strokeStyle='#e3e6ea'; x.lineWidth=1;
+      for(let i=-10;i<=10;i++){
+        const s1=w2s([i,-10]), s2=w2s([i,10]);
+        x.beginPath(); x.moveTo(s1.x,s1.y); x.lineTo(s2.x,s2.y); x.stroke();
+        const s3=w2s([-10,i]), s4=w2s([10,i]);
+        x.beginPath(); x.moveTo(s3.x,s3.y); x.lineTo(s4.x,s4.y); x.stroke();
+      }
+      // world axes
+      const o=w2s([0,0]);
+      x.strokeStyle='#0b5fff'; x.lineWidth=2;
+      x.beginPath(); x.moveTo(o.x,o.y); x.lineTo(o.x+90,o.y); x.stroke();
+      x.beginPath(); x.moveTo(o.x,o.y); x.lineTo(o.x,o.y-90); x.stroke();
+      x.fillStyle='#0b5fff'; x.font='13px sans-serif';
+      x.fillText('x_W', o.x+95, o.y+5); x.fillText('y_W', o.x-15, o.y-95);
+      x.fillText('{W}', o.x+5, o.y+18);
+      // car body
+      const sc=w2s([cx,cy]);
+      x.save(); x.translate(sc.x,sc.y); x.rotate(-psi);
+      x.fillStyle='#fff'; x.strokeStyle='#c62828'; x.lineWidth=2;
+      x.fillRect(-25,-12,50,24); x.strokeRect(-25,-12,50,24);
+      // body axes
+      x.strokeStyle='#c62828'; x.lineWidth=2;
+      x.beginPath(); x.moveTo(0,0); x.lineTo(60,0); x.stroke();
+      x.beginPath(); x.moveTo(0,0); x.lineTo(0,-60); x.stroke();
+      x.fillStyle='#c62828'; x.font='12px sans-serif';
+      x.fillText('x_B', 65, 5); x.fillText('y_B', -8, -65);
+      x.restore();
+      // point
+      const sp=w2s([px,py]);
+      x.fillStyle='#e91e63'; x.beginPath(); x.arc(sp.x,sp.y,7,0,Math.PI*2); x.fill();
+      x.fillStyle='#444'; x.font='12px sans-serif';
+      x.fillText('p^W=('+px.toFixed(1)+', '+py.toFixed(1)+')', sp.x+10, sp.y-8);
+      // dashed link from car origin to point
+      x.strokeStyle='#999'; x.setLineDash([3,3]); x.beginPath();
+      x.moveTo(sc.x,sc.y); x.lineTo(sp.x,sp.y); x.stroke(); x.setLineDash([]);
+      // compute body coord
+      const dx=px-cx, dy=py-cy;
+      const cs=Math.cos(-psi), sn=Math.sin(-psi);
+      const bx=cs*dx - sn*dy, by=sn*dx + cs*dy;
+      // info panel
+      x.fillStyle='#fff'; x.fillRect(c.width-220,12,210,90);
+      x.strokeStyle='#0b5fff'; x.lineWidth=1; x.strokeRect(c.width-220,12,210,90);
+      x.fillStyle='#0b5fff'; x.font='bold 13px sans-serif';
+      x.fillText('차체 좌표 p^B', c.width-210,32);
+      x.fillStyle='#1a1a1a'; x.font='13px Consolas,monospace';
+      x.fillText('x_B = '+bx.toFixed(2)+' m', c.width-210, 55);
+      x.fillText('y_B = '+by.toFixed(2)+' m', c.width-210, 75);
+      x.fillStyle='#666'; x.font='11px sans-serif';
+      x.fillText('p^B = R(-ψ)(p^W − t)', c.width-210, 95);
+    }
+    ids.forEach(id=>$(id).oninput=draw); draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

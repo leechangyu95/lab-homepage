@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 전압 분배기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 전압 분배기</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/03-dc-circuit.html">Week 3. 직류회로 — 직렬·병렬·직병렬</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 전압 분배기</h4>
+    <p>$R_1$, $R_2$ 직렬에서 각 저항에 걸리는 전압이 저항비대로 어떻게 나뉘는지 봅니다. 같은 전류가 흐르므로 큰 저항에 큰 전압이 걸립니다 — $V_k = V_T \cdot R_k/R_T$.</p>
+    <canvas id="vdivCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>전체 전압 V_T <span class="val" id="vdivVTV">12</span> V<input type="range" id="vdivVT" min="1" max="20" step="0.5" value="12"></label>
+      <label>R₁ <span class="val" id="vdivR1V">100</span> Ω<input type="range" id="vdivR1" min="10" max="500" step="10" value="100"></label>
+      <label>R₂ <span class="val" id="vdivR2V">200</span> Ω<input type="range" id="vdivR2" min="10" max="500" step="10" value="200"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vdivCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const VT=+document.getElementById('vdivVT').value;
+      const R1=+document.getElementById('vdivR1').value;
+      const R2=+document.getElementById('vdivR2').value;
+      document.getElementById('vdivVTV').textContent=VT.toFixed(1);
+      document.getElementById('vdivR1V').textContent=R1;
+      document.getElementById('vdivR2V').textContent=R2;
+      const RT=R1+R2,I=VT/RT;
+      const V1=VT*R1/RT,V2=VT*R2/RT;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`R_T = R_1 + R_2 = ${RT} Ω,  I = V_T/R_T = ${(I*1000).toFixed(2)} mA`,30,30);
+      const xL=80,xR=W-80,yT=80,yB=H-60;
+      const total=xR-xL;
+      const w1=total*R1/RT;
+      ctx.fillStyle='#0b5fff';ctx.fillRect(xL,yT,w1,yB-yT);
+      ctx.fillStyle='#c62828';ctx.fillRect(xL+w1,yT,total-w1,yB-yT);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.strokeRect(xL,yT,total,yB-yT);
+      ctx.beginPath();ctx.moveTo(xL+w1,yT);ctx.lineTo(xL+w1,yB);ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='14px sans-serif';
+      ctx.fillText(`R_1=${R1}Ω`,xL+w1/2-32,yT+30);
+      ctx.fillText(`V_1=${V1.toFixed(2)}V`,xL+w1/2-32,yT+50);
+      ctx.fillText(`R_2=${R2}Ω`,xL+w1+(total-w1)/2-32,yT+30);
+      ctx.fillText(`V_2=${V2.toFixed(2)}V`,xL+w1+(total-w1)/2-32,yT+50);
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('막대 길이 = 저항 비, 전압 비도 같음',xL,yB+30);
+      ctx.fillText(`검산: V_1 + V_2 = ${(V1+V2).toFixed(2)} V = V_T ✓`,xL,yB+50);
+    }
+    ['vdivVT','vdivR1','vdivR2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

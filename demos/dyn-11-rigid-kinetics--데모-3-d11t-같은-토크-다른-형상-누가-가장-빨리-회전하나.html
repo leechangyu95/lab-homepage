@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 3 (d11t): 같은 토크 다른 형상 — 누가 가장 빨리 회전하나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 3 (d11t): 같은 토크 다른 형상 — 누가 가장 빨리 회전하나</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/11-rigid-kinetics.html">Week 11. 강체의 평면 운동역학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 3 (d11t): 같은 토크 다른 형상 — 누가 가장 빨리 회전하나</h4>
+    <p>같은 토크를 받는 세 가지 형상(반경·질량 동일)의 회전 가속을 비교. <strong>관성모멘트가 작은 게 더 빨리 가속</strong>. 동일한 모터로 어느 휠을 돌리는 게 효율적인지 직관 확인.</p>
+    <canvas id="d11tC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>토크 M (N·m) <span class="val" id="d11tMV">5</span><input type="range" id="d11tM" min="1" max="20" step="0.5" value="5"></label>
+      <label>반경 R (m) <span class="val" id="d11tRV">0.3</span><input type="range" id="d11tR" min="0.1" max="0.6" step="0.05" value="0.3"></label>
+      <label>질량 m (kg) <span class="val" id="d11tmV">2</span><input type="range" id="d11tm" min="0.5" max="10" step="0.5" value="2"></label>
+      <button id="d11tReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d11tC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['d11tM','d11tR','d11tm'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let phi=[0,0,0];
+    sl('d11tReset').onclick=()=>{phi=[0,0,0];};
+    function loop(){
+      const M=+sl('d11tM').value,R=+sl('d11tR').value,m=+sl('d11tm').value;
+      const I_disk=0.5*m*R*R,I_ring=m*R*R,I_sphere=0.4*m*R*R;
+      const Is=[I_sphere,I_disk,I_ring];
+      const cols=['#0b5fff','#2e7d32','#c62828'];
+      const labels=['속찬 구 (²⁄₅mR²)','속찬 원판 (½mR²)','링 (mR²)'];
+      const dt=0.025;
+      Is.forEach((I,i)=>{phi[i]+=M/I*dt*0.1;});
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // three rotating wheels
+      Is.forEach((I,i)=>{
+        const cx=130+i*180,cy=140;
+        x.fillStyle=cols[i];x.globalAlpha=0.15;x.beginPath();x.arc(cx,cy,60,0,Math.PI*2);x.fill();x.globalAlpha=1;
+        x.strokeStyle=cols[i];x.lineWidth=2;x.beginPath();x.arc(cx,cy,60,0,Math.PI*2);x.stroke();
+        // spokes for visualization
+        for(let s=0;s<6;s++){
+          const a=phi[i]+s*Math.PI/3;
+          x.strokeStyle=cols[i];x.lineWidth=2;
+          x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+60*Math.cos(a),cy+60*Math.sin(a));x.stroke();
+        }
+        x.fillStyle='#444';x.font='12px sans-serif';x.textAlign='center';
+        x.fillText(labels[i],cx,235);
+        x.fillText('I = '+I.toFixed(3)+' kg·m²',cx,253);
+        x.fillText('α = '+(M/I).toFixed(2)+' rad/s²',cx,271);
+        x.fillText('ω(t) = '+(M/I*phi[i]/(M/Is[0]*phi[0])*phi[i]/0.025/40).toFixed(2)+' rad/s',cx,289);
+      });
+      x.fillStyle='#666';x.font='11px sans-serif';x.textAlign='left';
+      x.fillText('같은 토크 M = '+M.toFixed(1)+' N·m가 모두에 작용',20,30);
+      x.fillText('각가속도 α = M/I — 관성모멘트가 작은 것이 가장 빨리 가속',20,48);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

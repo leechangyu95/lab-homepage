@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🌡️ 박스 안의 분자 — 온도와 속력 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🌡️ 박스 안의 분자 — 온도와 속력</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/09-thermodynamics.html">Week 9. 열역학 핵심</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🌡️ 박스 안의 분자 — 온도와 속력</h4>
+    <p>40개의 점은 이상기체 분자를 단순화한 것. 이 박스는 단열 벽이고, 충돌은 모두 탄성. 실제 기체와 달리 2D이고 양자 효과 무시.</p>
+    <canvas id="w9_molDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>온도 $T$ <span class="val" id="w9_molTV">300</span> K
+        <input type="range" id="w9_molT" min="50" max="1200" step="10" value="300"></label>
+      <label>입자 수 <span class="val" id="w9_molNV">40</span>
+        <input type="range" id="w9_molN" min="10" max="80" step="2" value="40"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰</strong>
+      <ul>
+        <li>$T$를 50 K(액체질소 근처)로 → 거의 멈춤. 절대영도(0 K)에서는 정지.</li>
+        <li>$T$를 1200 K로 → 분자들이 잔상이 보일 만큼 빠름. 실제 속력 비례 $v \propto \sqrt{T}$.</li>
+        <li>입자 수를 늘리면 충돌 빈도 ↑ → 압력 ↑ ($P = nRT/V$).</li>
+        <li>특정 입자가 다른 입자보다 훨씬 빠른 순간이 종종 보임 → 맥스웰-볼츠만 분포.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w9_molDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let particles=[];
+    function resetParticles(N,T){
+      particles=[];
+      const sigma=Math.sqrt(T)/10; // arbitrary visual scale
+      for(let i=0;i<N;i++){
+        // box-muller for gaussian
+        const u1=Math.random(),u2=Math.random();
+        const r=Math.sqrt(-2*Math.log(u1));
+        const vx=r*Math.cos(2*Math.PI*u2)*sigma;
+        const vy=r*Math.sin(2*Math.PI*u2)*sigma;
+        particles.push({x:Math.random()*(W-20)+10,y:Math.random()*(H-20)+10,vx:vx,vy:vy});
+      }
+    }
+    function step(T){
+      const targetSigma=Math.sqrt(T)/10;
+      // gentle thermalize: rescale velocities slowly toward target rms
+      let s=0;particles.forEach(p=>{s+=p.vx*p.vx+p.vy*p.vy;});
+      const rms=Math.sqrt(s/particles.length);
+      const want=targetSigma*Math.sqrt(2);
+      const k=Math.pow(want/(rms+1e-6),0.05);
+      particles.forEach(p=>{
+        p.vx*=k;p.vy*=k;
+        p.x+=p.vx;p.y+=p.vy;
+        if(p.x<6){p.x=6;p.vx=-p.vx;}
+        if(p.x>W-6){p.x=W-6;p.vx=-p.vx;}
+        if(p.y<6){p.y=6;p.vy=-p.vy;}
+        if(p.y>H-6){p.y=H-6;p.vy=-p.vy;}
+      });
+    }
+    function draw(T){
+      ctx.fillStyle='#0a0d1a';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#3a4566';ctx.lineWidth=2;ctx.strokeRect(2,2,W-4,H-4);
+      let total=0;
+      particles.forEach(p=>{
+        const sp=Math.hypot(p.vx,p.vy);total+=sp;
+        const hue=Math.min(280-Math.min(sp*30,260),280);
+        ctx.fillStyle='hsl('+hue+',80%,65%)';
+        ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();
+      });
+      const avgSp=total/particles.length;
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(10,10,200,52);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('T = '+T+' K',18,28);
+      ctx.fillText('평균 속력(상대) ≈ '+avgSp.toFixed(2),18,46);
+      ctx.fillText('입자 수 = '+particles.length,18,60);
+    }
+    let lastN=0;
+    function tick(){
+      const T=+document.getElementById('w9_molT').value;
+      const N=+document.getElementById('w9_molN').value;
+      document.getElementById('w9_molTV').textContent=T;
+      document.getElementById('w9_molNV').textContent=N;
+      if(N!==lastN){resetParticles(N,T);lastN=N;}
+      step(T);draw(T);
+      requestAnimationFrame(tick);
+    }
+    resetParticles(40,300);tick();
+  })();
+  </script>
+</main>
+</body>
+</html>

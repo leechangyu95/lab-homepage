@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 같은 플랜트, 세 가지 제어기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 같은 플랜트, 세 가지 제어기</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/09-pid-basics.html">Week 9. PID 제어 기초</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 같은 플랜트, 세 가지 제어기</h4>
+    <p><span style="color:#c62828">빨강 P</span>, <span style="color:#f57c00">주황 PI</span>, <span style="color:#0b5fff">파랑 PID</span>를 동시에 돌려 차이를 봅니다. 외란을 켜면 차이가 더 명확해져요.</p>
+    <canvas id="threePid" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>외란 펄스 (3~6s) <span class="val" id="dpV">0.5</span><input type="range" id="dp" min="0" max="2" step="0.1" value="0.5"></label>
+      <button id="rst3" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('threePid'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('dpV').textContent=(+$('dp').value).toFixed(1);};$('dp').oninput=upd;
+    const tau=2.0,K=1.0;
+    const cfgs=[{name:'P',col:'#c62828',Kp:2,Ki:0,Kd:0},{name:'PI',col:'#f57c00',Kp:2,Ki:0.6,Kd:0},{name:'PID',col:'#0b5fff',Kp:2,Ki:0.6,Kd:0.2}];
+    let runs,t;
+    function reset(){runs=cfgs.map(cf=>({...cf,y:0,I:0,e_p:null,hist:[]}));t=0;}
+    reset();$('rst3').onclick=reset;
+    function loop(){
+      const dp=+$('dp').value;const dist=t>3&&t<6?dp:0;
+      const r=t<1?0:1.0;const dt=0.04;
+      runs.forEach(rn=>{const e=r-rn.y;rn.I+=e*dt;const dedt=rn.e_p===null?0:(e-rn.e_p)/dt;rn.e_p=e;
+        let u=rn.Kp*e+rn.Ki*rn.I+rn.Kd*dedt;u=Math.max(-3,Math.min(3,u));
+        rn.y+=dt*((K*u+dist-rn.y)/tau);rn.hist.push({t,y:rn.y});if(rn.hist.length>500)rn.hist.shift();});
+      t+=dt;if(t>20){reset();}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h=c.height,pad=42;const xa=tt=>pad+tt/20*(w-2*pad);const ya=v=>h-pad-(v+0.5)/2.0*(h-2*pad);
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(pad,ya(0));x.lineTo(w-pad,ya(0));x.moveTo(pad,ya(1));x.lineTo(w-pad,ya(1));x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('t',w-pad-12,h-pad+18);x.fillText('1.0',pad-30,ya(1)+4);
+      // disturbance band
+      x.fillStyle='rgba(245,180,0,0.1)';x.fillRect(xa(3),pad,xa(6)-xa(3),h-2*pad);
+      x.fillStyle='#f5b400';x.fillText('외란',xa(4.2),pad+12);
+      runs.forEach((rn,i)=>{x.strokeStyle=rn.col;x.lineWidth=2;x.beginPath();
+        rn.hist.forEach((p,j)=>{const xx=xa(p.t),yy=ya(p.y);if(j==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+        x.fillStyle=rn.col;x.fillText(rn.name+'  Kp='+rn.Kp+' Ki='+rn.Ki+' Kd='+rn.Kd,12,18+i*16);});
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

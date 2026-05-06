@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 시그모이드와 그 미분 동시 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 시그모이드와 그 미분 동시 보기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/04-regression-2.html">Week 4. 회귀 2: 다중회귀, 로지스틱, 소프트맥스</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 시그모이드와 그 미분 동시 보기</h4>
+    <p>시그모이드 자체(파랑)와 그 미분(주황)을 같은 화면에 그립니다. 미분이 z=0에서 최대(0.25), 양쪽 끝으로 가면서 0에 수렴함을 볼 수 있습니다.</p>
+    <canvas id="sigDeriv" width="640" height="280"></canvas>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sigDeriv');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const PL=40,PR=20,PT=20,PB=30;
+    const plotW=W-PL-PR,plotH=H-PT-PB;
+    function px(x){return PL+(x+8)/16*plotW;}
+    function py(y){return PT+plotH*(1-y);}
+    ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(PL,PT+plotH);ctx.lineTo(PL+plotW,PT+plotH);ctx.moveTo(px(0),PT);ctx.lineTo(px(0),PT+plotH);ctx.stroke();
+    ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+    for(let i=0;i<=400;i++){const z=-8+16*i/400;const s=1/(1+Math.exp(-z));if(i===0)ctx.moveTo(px(z),py(s));else ctx.lineTo(px(z),py(s));}
+    ctx.stroke();
+    ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;ctx.beginPath();
+    for(let i=0;i<=400;i++){const z=-8+16*i/400;const s=1/(1+Math.exp(-z));const d=s*(1-s)*4;if(i===0)ctx.moveTo(px(z),py(d));else ctx.lineTo(px(z),py(d));}
+    ctx.stroke();
+    ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';ctx.fillText('σ(z)',px(3),py(0.95));
+    ctx.fillStyle='#ff8c00';ctx.fillText("σ'(z) (×4 표시)",px(2),py(0.85));
+    ctx.fillStyle='#666';ctx.font='12px sans-serif';
+    ctx.fillText('|z|>4 영역에서 미분이 거의 0 → 기울기 소실',PL,H-10);
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 단독 센서는 왜 부족한가? — GPS vs IMU vs 융합 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 단독 센서는 왜 부족한가? — GPS vs IMU vs 융합</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/04-kalman-1d.html">Lecture 4. 칼만 필터 (1D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 단독 센서는 왜 부족한가? — GPS vs IMU vs 융합</h4>
+    <p>1차원 위치를 추적하는 상황입니다. <strong>GPS</strong>는 잡음이 크지만 평균적으로 진실 주변에 머물고, <strong>IMU</strong>(가속도 적분)는 매끄럽지만 작은 속도 편향이 시간이 지날수록 누적되어 진실에서 멀어집니다. 두 센서를 똑똑하게 섞은 <strong>융합 추정</strong>은 어느 쪽 단독보다 진실에 가깝게 따라갑니다. 슬라이더를 움직여 잡음·드리프트를 키워보고, 좌상단의 RMS 오차가 어떻게 변하는지 보세요.</p>
+    <canvas id="motiv" width="680" height="320"></canvas>
+    <div class="controls">
+      <label>GPS 잡음 σ (m) <span class="val" id="mGpsV">1.5</span><input type="range" id="mGps" min="0.2" max="4" step="0.1" value="1.5"></label>
+      <label>IMU 드리프트 (m/s) <span class="val" id="mDriftV">0.20</span><input type="range" id="mDrift" min="0" max="0.5" step="0.01" value="0.20"></label>
+      <button id="mRst">노이즈 다시 뽑기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('motiv');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const ml=52,mr=16,mt=28,mb=34;
+    const pw=W-ml-mr,ph=H-mt-mb;
+    const T=25,dt=0.1,N=Math.floor(T/dt)+1;
+    const yMin=-2,yMax=36;
+    function truth(t){return 0.8*t+3*Math.sin(0.5*t);}
+    function truthV(t){return 0.8+1.5*Math.cos(0.5*t);}
+    function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    const X=t=>ml+(t/T)*pw, Y=y=>mt+ph-((y-yMin)/(yMax-yMin))*ph;
+    let truePts=[],gps=[],imu=[],fused=[],noise=[];
+    function reroll(){noise=[];for(let i=0;i<N;i++)noise.push(gauss());}
+    function regen(){
+      const sgGps=+document.getElementById('mGps').value;
+      const drift=+document.getElementById('mDrift').value;
+      const alpha=0.92;
+      truePts=[];gps=[];imu=[];fused=[];
+      let imuPos=truth(0),fusePos=truth(0);
+      for(let i=0;i<N;i++){
+        const t=i*dt,xt=truth(t);
+        truePts.push({t,y:xt});
+        const z=xt+sgGps*noise[i];
+        gps.push({t,y:z});
+        const v=truthV(t)+drift;
+        imuPos+=v*dt;
+        imu.push({t,y:imuPos});
+        fusePos=alpha*(fusePos+v*dt)+(1-alpha)*z;
+        fused.push({t,y:fusePos});
+      }
+    }
+    function draw(){
+      document.getElementById('mGpsV').textContent=(+document.getElementById('mGps').value).toFixed(1);
+      document.getElementById('mDriftV').textContent=(+document.getElementById('mDrift').value).toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+      for(let y=0;y<=35;y+=5){ctx.beginPath();ctx.moveTo(ml,Y(y));ctx.lineTo(W-mr,Y(y));ctx.stroke();}
+      for(let t=0;t<=T;t+=5){ctx.beginPath();ctx.moveTo(X(t),mt);ctx.lineTo(X(t),mt+ph);ctx.stroke();}
+      ctx.strokeStyle='#999';
+      ctx.beginPath();ctx.moveTo(ml,mt+ph);ctx.lineTo(W-mr,mt+ph);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.stroke();
+      ctx.fillStyle='#555';ctx.font='11px sans-serif';
+      for(let t=0;t<=T;t+=5){ctx.fillText(t+'s',X(t)-7,mt+ph+16);}
+      for(let y=0;y<=35;y+=5){ctx.fillText(y+' m',ml-34,Y(y)+4);}
+      ctx.fillStyle='#c62828';
+      gps.forEach(p=>{ctx.beginPath();ctx.arc(X(p.t),Y(p.y),2,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.beginPath();truePts.forEach((p,i)=>{const px=X(p.t),py=Y(p.y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle='#f59e0b';ctx.lineWidth=2;
+      ctx.beginPath();imu.forEach((p,i)=>{const px=X(p.t),py=Y(p.y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();fused.forEach((p,i)=>{const px=X(p.t),py=Y(p.y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});ctx.stroke();
+      const lx=W-mr-152,ly=mt+6;
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(lx-8,ly-4,152,86);
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.strokeRect(lx-8,ly-4,152,86);
+      ctx.font='12px sans-serif';
+      function row(yy,col,dash,txt,dot){
+        ctx.strokeStyle=col;ctx.lineWidth=2.5;
+        if(dash)ctx.setLineDash(dash);
+        ctx.beginPath();ctx.moveTo(lx,yy);ctx.lineTo(lx+22,yy);ctx.stroke();
+        ctx.setLineDash([]);
+        if(dot){ctx.fillStyle=col;ctx.beginPath();ctx.arc(lx+11,yy,2,0,Math.PI*2);ctx.fill();}
+        ctx.fillStyle='#333';ctx.fillText(txt,lx+28,yy+4);
+      }
+      row(ly+10,'#888',[6,4],'진짜 위치',false);
+      row(ly+30,'#c62828',null,'GPS 측정',true);
+      row(ly+50,'#f59e0b',null,'IMU 적분',false);
+      row(ly+70,'#0b5fff',null,'융합 추정',false);
+      let eG=0,eI=0,eF=0;
+      for(let i=0;i<N;i++){eG+=(gps[i].y-truePts[i].y)**2;eI+=(imu[i].y-truePts[i].y)**2;eF+=(fused[i].y-truePts[i].y)**2;}
+      eG=Math.sqrt(eG/N);eI=Math.sqrt(eI/N);eF=Math.sqrt(eF/N);
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('RMS 오차 — GPS: '+eG.toFixed(2)+' m,  IMU: '+eI.toFixed(2)+' m,  융합: '+eF.toFixed(2)+' m',ml,mt-10);
+    }
+    function update(){regen();draw();}
+    document.getElementById('mGps').addEventListener('input',update);
+    document.getElementById('mDrift').addEventListener('input',update);
+    document.getElementById('mRst').addEventListener('click',()=>{reroll();update();});
+    reroll();update();
+  })();
+  </script>
+</main>
+</body>
+</html>

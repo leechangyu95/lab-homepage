@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Pure Pursuit으로 곡선 경로 추종 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Pure Pursuit으로 곡선 경로 추종</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/07-feedback-control.html">Lecture 7. 피드백 제어 (PID)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Pure Pursuit으로 곡선 경로 추종</h4>
+    <p>전방 주시 거리 $L_d$를 바꿔보세요. 너무 짧으면 진동, 너무 길면 코너 컷팅이 일어납니다.</p>
+    <canvas id="pp" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>전방 주시 L_d <span class="val" id="ldV">40</span><input type="range" id="ld" min="10" max="120" value="40"></label>
+      <label>속도 v <span class="val" id="ppvV">2</span><input type="range" id="ppv" min="0.5" max="5" step="0.1" value="2"></label>
+      <button id="ppRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pp'),x=c.getContext('2d');
+    const path=[];for(let t=0;t<=Math.PI*2;t+=0.05){path.push([320+180*Math.cos(t),190+90*Math.sin(t*2)]);}
+    let car;
+    function init(){car={x:path[0][0],y:path[0][1]+30,th:0};}
+    init();document.getElementById('ppRst').onclick=init;
+    function loop(){
+      const Ld=+document.getElementById('ld').value;
+      const v=+document.getElementById('ppv').value;
+      ['ld','ppv'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      // find lookahead point: closest path index then walk forward by Ld
+      let bi=0,bd=Infinity;
+      path.forEach((p,i)=>{const d=(p[0]-car.x)**2+(p[1]-car.y)**2;if(d<bd){bd=d;bi=i;}});
+      let acc=0,li=bi;
+      while(acc<Ld){const ni=(li+1)%path.length;acc+=Math.hypot(path[ni][0]-path[li][0],path[ni][1]-path[li][1]);li=ni;}
+      const target=path[li];
+      const alpha=Math.atan2(target[1]-car.y,target[0]-car.x)-car.th;
+      const L=20;
+      const delta=Math.atan2(2*L*Math.sin(alpha),Ld);
+      car.x+=v*Math.cos(car.th);
+      car.y+=v*Math.sin(car.th);
+      car.th+=v/L*Math.tan(delta);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.beginPath();
+      path.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.closePath();x.stroke();
+      // lookahead point
+      x.fillStyle='#ff8c00';x.beginPath();x.arc(target[0],target[1],6,0,Math.PI*2);x.fill();
+      x.strokeStyle='#ff8c00';x.setLineDash([3,3]);x.beginPath();x.moveTo(car.x,car.y);x.lineTo(target[0],target[1]);x.stroke();x.setLineDash([]);
+      // car
+      x.save();x.translate(car.x,car.y);x.rotate(car.th);
+      x.fillStyle='#0b5fff';x.fillRect(-14,-7,28,14);
+      x.fillStyle='#fff';x.fillRect(8,-5,4,10);
+      x.restore();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

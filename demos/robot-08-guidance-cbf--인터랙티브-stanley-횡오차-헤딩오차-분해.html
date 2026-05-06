@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Stanley — 횡오차 + 헤딩오차 분해 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Stanley — 횡오차 + 헤딩오차 분해</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/08-guidance-cbf.html">Lecture 8. 유도 &amp; 제어 장벽 함수 (CBF)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Stanley — 횡오차 + 헤딩오차 분해</h4>
+    <p>같은 곡선 경로를 Stanley 방법으로 추종합니다. 빨강 점선이 <strong>앞바퀴 횡오차</strong> $e_\text{fa}$, 작은 회색 호가 <strong>헤딩오차</strong> $\theta_e$입니다. 게인 $k$를 키우면 경로 복귀가 빨라지지만 진동이, $v$를 늘리면 분모가 커져 자동으로 부드러워집니다.</p>
+    <canvas id="sl" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>게인 k <span class="val" id="slKV">2.0</span><input type="range" id="slK" min="0.2" max="6" step="0.1" value="2"></label>
+      <label>속도 v <span class="val" id="slVV">2.0</span><input type="range" id="slV" min="0.5" max="4" step="0.1" value="2"></label>
+      <button id="slRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sl'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const path=[];
+    for(let s=0;s<W+50;s+=2){
+      const px=s,py=H/2+55*Math.sin(s*0.012);
+      const dyx=55*0.012*Math.cos(s*0.012);
+      path.push({x:px,y:py,th:Math.atan2(dyx,1)});
+    }
+    const L=24;
+    let car;
+    function init(){car={x:30,y:H/2-50,th:0.25,trail:[]};}
+    init();
+    document.getElementById('slRst').onclick=init;
+    function nearestIdx(px,py){
+      let best=0,bd=1e9;
+      for(let i=0;i<path.length;i++){
+        const d=(path[i].x-px)**2+(path[i].y-py)**2;
+        if(d<bd){bd=d;best=i;}
+      }
+      return best;
+    }
+    function loop(){
+      const k=+document.getElementById('slK').value;
+      const v=+document.getElementById('slV').value;
+      document.getElementById('slKV').textContent=k.toFixed(1);
+      document.getElementById('slVV').textContent=v.toFixed(1);
+      const fx=car.x+L*Math.cos(car.th),fy=car.y+L*Math.sin(car.th);
+      const ni=nearestIdx(fx,fy);
+      const ref=path[ni];
+      const tx=Math.cos(ref.th),ty=Math.sin(ref.th);
+      const dx=fx-ref.x,dy=fy-ref.y;
+      const efa=tx*dy-ty*dx;
+      const thE=((ref.th-car.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+      const atanT=Math.atan2(k*efa,Math.max(v,0.5));
+      let delta=thE-atanT;
+      delta=Math.max(-0.7,Math.min(0.7,delta));
+      const dt=0.05;
+      car.x+=v*Math.cos(car.th)*dt*15;
+      car.y+=v*Math.sin(car.th)*dt*15;
+      car.th+=v/L*Math.tan(delta)*dt*15;
+      car.trail.push({x:car.x,y:car.y});
+      if(car.trail.length>600) car.trail.shift();
+      if(car.x>W-20) init();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#2e7d32';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(11,95,255,0.4)';x.lineWidth=2;x.beginPath();
+      car.trail.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.lineWidth=2;
+      x.beginPath();x.moveTo(fx,fy);x.lineTo(ref.x,ref.y);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.beginPath();x.arc(ref.x,ref.y,4,0,Math.PI*2);x.fill();
+      x.strokeStyle='#888';x.lineWidth=1;
+      x.beginPath();x.moveTo(fx,fy);x.lineTo(fx+25*Math.cos(ref.th),fy+25*Math.sin(ref.th));x.stroke();
+      x.beginPath();x.arc(fx,fy,16,Math.min(car.th,ref.th),Math.max(car.th,ref.th));x.stroke();
+      x.save();x.translate(car.x,car.y);x.rotate(car.th);
+      x.fillStyle='#0b5fff';x.fillRect(-2,-7,L+2,14);
+      x.fillStyle='#222';x.fillRect(-3,-7,3,14);
+      x.translate(L,0);x.rotate(delta);
+      x.fillStyle='#c62828';x.fillRect(-3,-6,6,12);
+      x.restore();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('θ_e = '+(thE*180/Math.PI).toFixed(1)+'°   ·   atan(k·e_fa/v) = '+(atanT*180/Math.PI).toFixed(1)+'°   ·   δ = '+(delta*180/Math.PI).toFixed(1)+'°   ·   e_fa = '+efa.toFixed(1)+' px',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

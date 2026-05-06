@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 비선형 진자 NMPC — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 비선형 진자 NMPC</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/08-nmpc.html">Week 8. 비선형 MPC (NMPC)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비선형 진자 NMPC</h4>
+    <p>비선형 진자 $\ddot\theta = -\sin\theta + u$를 $\theta = 0$ (위쪽)으로 swing-up하는 NMPC. <strong>호라이즌 N</strong>을 키우면 swing-up 동작이 부드러워지고, <strong>$u_{\max}$</strong>을 줄이면 여러 번 흔들어 올려야 합니다.</p>
+    <canvas id="pendDemo" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>호라이즌 N <span class="val" id="pNV">25</span><input type="range" id="pN" min="10" max="50" step="1" value="25"></label>
+      <label>$u_{\max}$ <span class="val" id="pUV">2.0</span><input type="range" id="pU" min="0.5" max="5" step="0.1" value="2"></label>
+      <button id="pRun">시작/정지</button>
+      <button id="pRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pendDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let theta=Math.PI,omega=0,running=false,raf=null,trace=[];
+    function dynamics(th,om,u,dt){return [th+dt*om,om+dt*(-Math.sin(th)+u-0.1*om)];}
+    function solveNMPC(th0,om0){
+      const N=+document.getElementById('pN').value;
+      const uMax=+document.getElementById('pU').value;
+      const dt=0.05;
+      // Simple shooting: random search refined (toy NMPC)
+      let bestU=0,bestC=Infinity;
+      for(let trial=0;trial<60;trial++){
+        const u0=(Math.random()*2-1)*uMax;
+        let th=th0,om=om0,cost=0;
+        for(let k=0;k<N;k++){
+          // Use u0 for first step, then "shrinking" toward equilibrium-stabilizing PD
+          let u;
+          if(k===0)u=u0;
+          else{u=Math.max(-uMax,Math.min(uMax,-3*Math.sin(th)-1*om));}
+          const nx=dynamics(th,om,u,dt);
+          th=nx[0];om=nx[1];
+          // Cost: deviation from 0 (mod 2pi) and energy
+          const thErr=Math.atan2(Math.sin(th),Math.cos(th));
+          cost+=10*thErr*thErr+0.5*om*om+0.1*u*u;
+        }
+        if(cost<bestC){bestC=cost;bestU=u0;}
+      }
+      return bestU;
+    }
+    function step(){
+      const u=solveNMPC(theta,omega);
+      const dt=0.05;
+      const nx=dynamics(theta,omega,u,dt);
+      theta=nx[0];omega=nx[1];
+      trace.push(Math.atan2(Math.sin(theta),Math.cos(theta)));
+      if(trace.length>200)trace.shift();
+      draw(u);
+    }
+    function draw(u){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // pendulum
+      const cx=W/4,cy=H/2,L=100;
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(cx-100,cy);ctx.lineTo(cx+100,cy);ctx.moveTo(cx,cy-100);ctx.lineTo(cx,cy+100);ctx.stroke();
+      // upright dashed (target)
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy-L);ctx.stroke();ctx.setLineDash([]);
+      // pendulum (pivot at bottom, theta=0 is up)
+      const px=cx+L*Math.sin(theta),py=cy-L*Math.cos(theta);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(px,py,12,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();
+      // theta history
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();
+      ctx.moveTo(W/2+10,H/2);ctx.lineTo(W-20,H/2);
+      ctx.moveTo(W/2+10,30);ctx.lineTo(W/2+10,H-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('θ(t) (목표: 0, 윗쪽)',W/2+10,22);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      trace.forEach((v,i)=>{const x=W/2+10+i*((W-20-W/2-10)/200);const y=H/2-v/Math.PI*((H-60)/2);
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('θ='+theta.toFixed(2)+'  ω='+omega.toFixed(2)+'  u='+(u||0).toFixed(2),12,30);
+    }
+    function tick(){if(running){step();raf=requestAnimationFrame(tick);}}
+    document.getElementById('pN').addEventListener('input',()=>{document.getElementById('pNV').textContent=document.getElementById('pN').value;});
+    document.getElementById('pU').addEventListener('input',()=>{document.getElementById('pUV').textContent=(+document.getElementById('pU').value).toFixed(1);});
+    document.getElementById('pRun').onclick=()=>{running=!running;if(running)tick();};
+    document.getElementById('pRst').onclick=()=>{running=false;cancelAnimationFrame(raf);theta=Math.PI;omega=0;trace=[];draw(0);};
+    draw(0);
+  })();
+  </script>
+</main>
+</body>
+</html>

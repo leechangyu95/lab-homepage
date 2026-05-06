@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 바이어스와 산포 직접 만지기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 바이어스와 산포 직접 만지기</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/02-sensor.html">Week 2. 센서와 트랜스듀서</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 바이어스와 산포 직접 만지기</h4>
+    <p>슬라이더로 <strong>바이어스(평균이 참값에서 얼마나 벗어났는지)</strong>와 <strong>산포(측정 표준편차)</strong>를 바꿔보세요. 산포가 작으면 정밀도↑, 바이어스가 작으면 정확도↑. 두 축이 독립적이라는 점을 직접 확인하세요.</p>
+    <canvas id="apDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>바이어스 (정확도 ↔) <span class="val" id="apBV">0.0</span><input type="range" id="apB" min="-2" max="2" step="0.1" value="0.5"></label>
+      <label>산포 σ (정밀도 ↔) <span class="val" id="apSV">0.5</span><input type="range" id="apS" min="0.05" max="2" step="0.05" value="0.5"></label>
+      <button id="apNew">새 측정</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('apDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function regen(){
+      const b=+document.getElementById('apB').value;
+      const s=+document.getElementById('apS').value;
+      pts=[];for(let i=0;i<20;i++)pts.push([b+gauss()*s, gauss()*s*0.6]);
+    }
+    function draw(){
+      const b=+document.getElementById('apB').value;
+      const s=+document.getElementById('apS').value;
+      document.getElementById('apBV').textContent=b.toFixed(1);
+      document.getElementById('apSV').textContent=s.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=200,cy=160,SC=50;
+      // target rings
+      [3,2,1].forEach(r=>{ctx.fillStyle=r===1?'#fff3e0':'#fff';ctx.strokeStyle='#999';
+        ctx.beginPath();ctx.arc(cx,cy,r*SC,0,Math.PI*2);ctx.fill();ctx.stroke();});
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fill();
+      // crosshair
+      ctx.strokeStyle='#bbb';ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(cx-3*SC,cy);ctx.lineTo(cx+3*SC,cy);ctx.moveTo(cx,cy-3*SC);ctx.lineTo(cx,cy+3*SC);ctx.stroke();
+      ctx.setLineDash([]);
+      // points
+      ctx.fillStyle='#0b5fff';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(cx+p[0]*SC,cy+p[1]*SC,3.5,0,Math.PI*2);ctx.fill();});
+      // mean point
+      const mx=pts.reduce((a,p)=>a+p[0],0)/pts.length, my=pts.reduce((a,p)=>a+p[1],0)/pts.length;
+      ctx.fillStyle='#7b1fa2';ctx.strokeStyle='#fff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx+mx*SC,cy+my*SC,7,0,Math.PI*2);ctx.fill();ctx.stroke();
+      // scale & labels
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('🔴 참값 (과녁 중심)',400,40);
+      ctx.fillStyle='#0b5fff';ctx.fillText('🔵 개별 측정값 (20개)',400,62);
+      ctx.fillStyle='#7b1fa2';ctx.fillText('🟣 측정 평균',400,84);
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('정확도 = 평균이 참값에서 얼마나 떨어졌나',400,120);
+      const acc=Math.hypot(mx,my);
+      ctx.fillText(`  → ‖평균 − 참값‖ = ${acc.toFixed(2)}`,400,138);
+      ctx.fillText('정밀도 = 점들이 얼마나 모여 있나',400,170);
+      const spread=Math.sqrt(pts.reduce((a,p)=>a+(p[0]-mx)**2+(p[1]-my)**2,0)/pts.length);
+      ctx.fillText(`  → 표본 σ = ${spread.toFixed(2)}`,400,188);
+      const verdict = (acc<0.4?'정확↑':'정확↓')+'  '+(spread<0.4?'정밀↑':'정밀↓');
+      ctx.fillStyle='#c62828';ctx.font='bold 14px sans-serif';
+      ctx.fillText(verdict,400,230);
+    }
+    document.getElementById('apB').addEventListener('input',()=>{regen();draw();});
+    document.getElementById('apS').addEventListener('input',()=>{regen();draw();});
+    document.getElementById('apNew').addEventListener('click',()=>{regen();draw();});
+    regen();draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

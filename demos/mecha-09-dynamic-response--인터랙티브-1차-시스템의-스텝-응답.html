@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 1차 시스템의 스텝 응답 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 1차 시스템의 스텝 응답</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/09-dynamic-response.html">Week 9. 동적 응답 — 1차·2차 시스템의 시간 응답</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 시스템의 스텝 응답</h4>
+    <p>$\tau$를 0.2 → 2초로 옮겨보세요. 표시된 빨간 점이 정확히 ($\tau$, 63.2%), ($2\tau$, 86.5%), ($3\tau$, 95%), ($5\tau$, 99.3%)에 위치합니다. <strong>$\tau$가 작은 시스템 = 빠른 시스템</strong>. DC 이득 $K$는 정상상태 출력값을 결정해요(입력의 몇 배인지).</p>
+    <canvas id="firstOrderDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>시정수 τ <span class="val" id="foTV">0.5</span> s<input type="range" id="foT" min="0.1" max="2" step="0.05" value="0.5"></label>
+      <label>DC 이득 K <span class="val" id="foKV">1.0</span><input type="range" id="foK" min="0.5" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('firstOrderDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const tau=+document.getElementById('foT').value;
+      const K=+document.getElementById('foK').value;
+      document.getElementById('foTV').textContent=tau.toFixed(2);
+      document.getElementById('foKV').textContent=K.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=55,oy=H-35,w=W-80,h=H-70,T=Math.max(5*tau,3);
+      const ymax=Math.max(K*1.2,1.2);
+      ctx.strokeStyle='#eee';
+      for(let g=0;g<=4;g++){const yy=oy-g/4*h;ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      // K reference (final value)
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      ctx.moveTo(ox,oy-K/ymax*h);ctx.lineTo(ox+w,oy-K/ymax*h);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='11px sans-serif';
+      ctx.fillText('K = '+K.toFixed(1)+' (정상상태)',ox+w-130,oy-K/ymax*h-4);
+      // step input (faded)
+      ctx.strokeStyle='#aaa';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oy);ctx.lineTo(ox+w*0.05,oy);ctx.lineTo(ox+w*0.05,oy-1/ymax*h);ctx.lineTo(ox+w,oy-1/ymax*h);ctx.stroke();ctx.setLineDash([]);
+      // sensor curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.8;ctx.beginPath();
+      const t0=T*0.05;
+      for(let i=0;i<=500;i++){
+        const t=i/500*T;
+        const y = t<t0 ? 0 : K*(1-Math.exp(-(t-t0)/tau));
+        const xx=ox+(t/T)*w, yy=oy-y/ymax*h;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      // mark τ, 2τ, 3τ, 5τ
+      [[1,'τ',0.632],[2,'2τ',0.865],[3,'3τ',0.950],[5,'5τ',0.993]].forEach(([n,lbl,frac])=>{
+        const t=t0+n*tau;if(t>T)return;
+        const xx=ox+(t/T)*w, yy=oy-K*frac/ymax*h;
+        ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(xx,yy,4,0,Math.PI*2);ctx.fill();
+        ctx.font='11px sans-serif';
+        ctx.fillStyle='#c62828';ctx.fillText(`${lbl} → ${(frac*100).toFixed(1)}%`,xx+5,yy-4);
+        ctx.strokeStyle='rgba(198,40,40,0.4)';ctx.setLineDash([2,2]);
+        ctx.beginPath();ctx.moveTo(xx,oy);ctx.lineTo(xx,yy);ctx.stroke();ctx.setLineDash([]);
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`y(t) = K(1 − e^(−t/τ)) = ${K.toFixed(1)}(1 − e^(−t/${tau.toFixed(2)}))`,ox,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 t (s)',W-90,oy+22);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 출력 y(t)',ox+10,oy+22);
+      ctx.fillStyle='#aaa';ctx.fillText('-- 스텝 입력',ox+110,oy+22);
+    }
+    document.getElementById('foT').addEventListener('input',draw);
+    document.getElementById('foK').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

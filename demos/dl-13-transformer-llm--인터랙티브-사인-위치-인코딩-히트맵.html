@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 사인 위치 인코딩 히트맵 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 사인 위치 인코딩 히트맵</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/13-transformer-llm.html">Week 13. Transformer와 LLM</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 사인 위치 인코딩 히트맵</h4>
+    <p>각 위치(행)와 각 차원(열)에서 사인/코사인 위치 인코딩 값을 시각화합니다. 낮은 차원은 빠르게 진동하고 높은 차원은 천천히 진동해, 모든 위치에 고유한 "지문"이 만들어져요.</p>
+    <canvas id="posenc" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>최대 위치 <span class="val" id="peLV">32</span><input type="range" id="peL" min="8" max="64" step="2" value="32"></label>
+      <label>차원 d <span class="val" id="peDV">32</span><input type="range" id="peD" min="8" max="64" step="2" value="32"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('posenc');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const L=+document.getElementById('peL').value;
+      const d=+document.getElementById('peD').value;
+      document.getElementById('peLV').textContent=L;
+      document.getElementById('peDV').textContent=d;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cellW=(W-100)/d,cellH=(H-60)/L;
+      for(let pos=0;pos<L;pos++)for(let i=0;i<d;i++){
+        const ii=Math.floor(i/2);
+        const angle=pos/Math.pow(10000,2*ii/d);
+        const v=i%2===0?Math.sin(angle):Math.cos(angle);
+        const t=Math.floor(127+v*127);
+        ctx.fillStyle=v>0?`rgb(${255-t},${255-t},255)`:`rgb(255,${255+t-127},${255+t-127})`;
+        ctx.fillRect(60+i*cellW,30+pos*cellH,cellW,cellH);
+      }
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('차원 →',60,20);
+      ctx.fillText('위',12,40);ctx.fillText('치',12,55);ctx.fillText('↓',12,70);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('파랑 = 양수 (sin/cos), 빨강 = 음수',60,H-15);
+      ctx.fillText('낮은 차원(왼쪽)은 빠른 주기, 높은 차원(오른쪽)은 느린 주기',60,H-2);
+    }
+    document.getElementById('peL').addEventListener('input',draw);
+    document.getElementById('peD').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

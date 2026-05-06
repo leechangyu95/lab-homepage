@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W14. 강화학습(RL) 기초 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html" class="active">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 14. 강화학습(RL) 기초 — 경험으로 배우는 제어</h1>
+  <p class="lead">PID·MPC·CBF가 모두 모델을 손에 쥐고 설계하는 도구라면, 강화학습은 정반대 — <strong>모델 없이 시행착오로 정책을 학습</strong>합니다.
+  오늘은 강아지 훈련 비유로 큰 그림을 잡고, 그리드월드에서 Q-Learning이 어떻게 최적 경로를 스스로 찾아가는지를 직접 돌려봅니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>RL이란? — 강아지 훈련 비유</li>
+    <li>4가지 구성 요소 (S, A, R, π)</li>
+    <li>탐험(Exploration) vs 활용(Exploitation)</li>
+    <li>Q-Learning 업데이트 규칙 (Bellman)</li>
+    <li>인터랙티브: ε-greedy 탐험 시각화</li>
+    <li>인터랙티브: 그리드월드에서 Q-Learning이 학습되는 모습</li>
+    <li>인터랙티브: 보상 설계의 함정</li>
+    <li>Deep RL과 자율주행</li>
+    <li>RL vs 고전 제어, 핵심 정리</li>
+  </ol></div>
+
+  <h2>1. RL이란? — 강아지 훈련 비유</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>강아지에게 "앉아!"를 가르치는 장면을 떠올려 보세요. 처음엔 강아지가 엉뚱한 행동을 합니다.
+  앉으면 간식을 주고, 안 앉으면 안 줍니다. 시간이 지나면 강아지는 <em>"앉으면 간식이 나오는구나"</em>를 시행착오로 배웁니다.
+  강아지에게 어떤 근육을 어떻게 움직이라고 가르치지 않았는데도요.</p>
+  <p>이게 강화학습(Reinforcement Learning)입니다. <strong>"잘하면 보상, 못하면 보상 없음/벌점"</strong>이라는 신호 하나로 정책을 학습합니다.</p>
+
+  <h2>2. 4가지 구성 요소</h2>
+
+  <table>
+    <thead><tr><th>요소</th><th>기호</th><th>강아지 예시</th><th>자율주행 예시</th></tr></thead>
+    <tbody>
+      <tr><td>State (상태)</td><td>$s$</td><td>강아지의 자세·상황</td><td>차량 위치·속도·차선</td></tr>
+      <tr><td>Action (행동)</td><td>$a$</td><td>앉다 / 일어서다 / 짖다</td><td>조향각 / 가속 / 제동</td></tr>
+      <tr><td>Reward (보상)</td><td>$r$</td><td>간식 +1 / 무반응 0</td><td>경로 추종 +1, 충돌 -100</td></tr>
+      <tr><td>Policy (정책)</td><td>$\pi(s)$</td><td>상황별 행동 규칙</td><td>상태→조향/속도 함수</td></tr>
+    </tbody>
+  </table>
+
+  <p>목표는 단 하나: <strong>누적 할인 보상 $\sum_t \gamma^t r_t$를 최대화하는 정책 $\pi$를 찾기</strong>.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arr3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#555"/></marker></defs>
+      <rect x="40" y="55" width="160" height="50" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="120" y="78" text-anchor="middle">에이전트 (정책 π)</text>
+      <text x="120" y="94" text-anchor="middle" font-size="11" fill="#666">상태→행동</text>
+      <rect x="380" y="55" width="160" height="50" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="460" y="78" text-anchor="middle">환경 (Plant)</text>
+      <text x="460" y="94" text-anchor="middle" font-size="11" fill="#666">물리·시뮬레이터</text>
+      <path d="M200,75 L378,75" stroke="#555" marker-end="url(#arr3)"/>
+      <text x="290" y="68" text-anchor="middle" font-size="12">행동 a</text>
+      <path d="M380,90 L200,90" stroke="#555" marker-end="url(#arr3)"/>
+      <text x="290" y="108" text-anchor="middle" font-size="12">상태 s', 보상 r</text>
+    </svg>
+    <figcaption>그림 1. 매 스텝: 에이전트는 행동을 보내고, 환경은 다음 상태와 보상을 돌려준다.</figcaption>
+  </figure>
+
+  <h2>3. 탐험(Exploration) vs 활용(Exploitation)</h2>
+
+  <p>RL의 가장 유명한 딜레마입니다. <strong>지금 알고 있는 최선을 계속 쓸까(활용)? 아니면 새 행동을 시도해 더 좋은 길을 찾아볼까(탐험)?</strong></p>
+  <ul>
+    <li>탐험만 하면 → 보상이 낮은 길도 무작정 시도, 학습이 느림.</li>
+    <li>활용만 하면 → 처음 발견한 그저 그런 길만 반복, 더 좋은 길을 못 찾음.</li>
+  </ul>
+  <p>가장 단순한 절충안이 <strong>ε-greedy</strong>입니다. 확률 $\varepsilon$로 랜덤 행동, $1-\varepsilon$로 현재 최선의 행동.
+  학습 초반에 ε이 크고, 시간이 지날수록 줄여 갑니다.</p>
+
+  <h2>4. Q-Learning 업데이트 규칙</h2>
+
+  <p>Q-Learning은 <strong>"상태 $s$에서 행동 $a$를 했을 때 앞으로 받을 총 보상의 추정값"</strong> $Q(s, a)$을 학습합니다.</p>
+  $$ Q(s, a) \leftarrow Q(s, a) + \alpha\Big[\,r + \gamma\,\max_{a'} Q(s', a') - Q(s, a)\,\Big] $$
+  <p>$\alpha$: 학습률 (0.01–0.3), $\gamma$: 할인율 (0.9–0.99). 정책은 $\pi(s) = \arg\max_a Q(s, a)$.</p>
+
+  <h2>5. 인터랙티브: ε-greedy 탐험 시각화</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: ε에 따른 행동 분포</h4>
+    <p>두 슬롯머신 A, B 중에 진짜 보상은 B가 더 큽니다. ε 값에 따라 에이전트의 행동 분포와 누적 보상이 어떻게 바뀌는지 보세요.</p>
+    <canvas id="banditCv" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>ε <span class="val" id="eV">0.20</span><input type="range" id="e" min="0" max="1" step="0.02" value="0.2"></label>
+      <button id="rstE" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('banditCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('eV').textContent=(+$('e').value).toFixed(2);};$('e').oninput=upd;
+    const trueQ={A:0.4,B:0.7};
+    let estQ,nA,nB,total,history;
+    function reset(){estQ={A:0,B:0};nA=0;nB=0;total=0;history=[];}
+    reset();$('rstE').onclick=reset;
+    function step(){
+      const eps=+$('e').value;
+      const action=Math.random()<eps?(Math.random()<0.5?'A':'B'):(estQ.A>=estQ.B?'A':'B');
+      const reward=Math.random()<trueQ[action]?1:0;
+      if(action==='A'){nA++;estQ.A+=(reward-estQ.A)/nA;}else{nB++;estQ.B+=(reward-estQ.B)/nB;}
+      total+=reward;history.push({a:action,r:reward,total});if(history.length>200)history.shift();
+    }
+    function loop(){
+      for(let k=0;k<2;k++)step();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h=c.height;
+      // bars
+      const drawBar=(label,val,mx,col,y0,truth)=>{
+        x.fillStyle='#eee';x.fillRect(60,y0-12,400,20);
+        x.fillStyle=col;x.fillRect(60,y0-12,Math.max(0,Math.min(400,val/mx*400)),20);
+        x.fillStyle='#444';x.font='12px sans-serif';x.fillText(label,12,y0+4);
+        x.fillText('Q='+val.toFixed(3),470,y0+4);
+        x.strokeStyle='#c62828';x.beginPath();x.moveTo(60+truth/mx*400,y0-16);x.lineTo(60+truth/mx*400,y0+12);x.stroke();
+      };
+      drawBar('슬롯 A',estQ.A,1,'#0b5fff',38,trueQ.A);
+      drawBar('슬롯 B',estQ.B,1,'#2e7d32',74,trueQ.B);
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('빨간 선 = 진짜 Q*. 막대 = 추정 Q.',12,98);
+      // pulls
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('당김 횟수  A: '+nA+'    B: '+nB+'    누적 보상: '+total,12,124);
+      // history bar (action color)
+      x.fillStyle='#444';x.fillText('최근 행동 (좌→우, 파랑=A, 초록=B):',12,150);
+      history.slice(-180).forEach((h_,i)=>{x.fillStyle=h_.a==='A'?'#0b5fff':'#2e7d32';x.fillRect(12+i*3,158,2,18);});
+      // total reward curve
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      history.forEach((h_,i)=>{const xx=12+i*3,yy=h-20-h_.total/200*100;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#f57c00';x.fillText('주황 = 누적 보상',12,h-12);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <p>ε이 0이면 처음 운 좋은 슬롯에 갇혀 진짜 좋은 슬롯을 못 찾고, 1이면 늘 무작위라 학습 의미가 없어요. 0.05–0.2 정도가 표준 출발점.</p>
+
+  <h2>6. 인터랙티브: 그리드월드 Q-Learning</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 5×5 그리드월드 학습</h4>
+    <p>좌측 하단(녹색)에서 우측 상단(빨강)으로 가야 합니다. 가운데 회색은 함정(보상 -5).
+    매 스텝 -0.1, 도달 +10. <strong>학습 시작</strong>을 누르면 Q-table이 갱신되고, 셀 화살표가 점차 최적 경로 쪽으로 정렬됩니다.</p>
+    <canvas id="gw" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>α <span class="val" id="alV">0.2</span><input type="range" id="al" min="0.05" max="0.5" step="0.05" value="0.2"></label>
+      <label>γ <span class="val" id="gmV">0.95</span><input type="range" id="gm" min="0.5" max="0.99" step="0.01" value="0.95"></label>
+      <label>ε <span class="val" id="ep2V">0.30</span><input type="range" id="ep2" min="0" max="1" step="0.02" value="0.3"></label>
+      <button id="trainBtn">학습 시작/중지</button>
+      <button id="rstGw" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gw'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('alV').textContent=(+$('al').value).toFixed(2);$('gmV').textContent=(+$('gm').value).toFixed(2);$('ep2V').textContent=(+$('ep2').value).toFixed(2);};
+    ['al','gm','ep2'].forEach(id=>$(id).oninput=upd);
+    const N=5;const sc=Math.min(c.width-220,c.height)/N;
+    const trap=[2,2],goal=[4,4],startC=[0,0];
+    let Q,training=false,episodes,steps,total;
+    function reset(){Q=Array.from({length:N},()=>Array.from({length:N},()=>[0,0,0,0]));episodes=0;steps=0;total=0;draw();}
+    reset();$('rstGw').onclick=reset;
+    const acts=[[1,0],[-1,0],[0,1],[0,-1]];
+    function step(s){
+      const eps=+$('ep2').value,al=+$('al').value,gm=+$('gm').value;
+      const ai=Math.random()<eps?Math.floor(Math.random()*4):argmax(Q[s[0]][s[1]]);
+      const ns=[Math.max(0,Math.min(N-1,s[0]+acts[ai][0])),Math.max(0,Math.min(N-1,s[1]+acts[ai][1]))];
+      const r=ns[0]===goal[0]&&ns[1]===goal[1]?10:(ns[0]===trap[0]&&ns[1]===trap[1]?-5:-0.1);
+      const done=(r===10||r===-5);
+      const tgt=r+(done?0:gm*Math.max(...Q[ns[0]][ns[1]]));
+      Q[s[0]][s[1]][ai]+=al*(tgt-Q[s[0]][s[1]][ai]);
+      total+=r;steps++;
+      return done?null:ns;
+    }
+    function argmax(arr){let bi=0;for(let i=1;i<arr.length;i++)if(arr[i]>arr[bi])bi=i;return bi;}
+    function trainEp(){let s=startC.slice();let it=0;while(s&&it<200){s=step(s);it++;}episodes++;}
+    $('trainBtn').onclick=()=>{training=!training;if(training)tick();};
+    function tick(){if(!training)return;for(let k=0;k<5;k++)trainEp();draw();requestAnimationFrame(tick);}
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+        let fill='#fff';if(i===trap[0]&&j===trap[1])fill='#999';if(i===goal[0]&&j===goal[1])fill='#fce4ec';
+        x.fillStyle=fill;x.fillRect(i*sc,(N-1-j)*sc,sc-2,sc-2);x.strokeStyle='#bbb';x.strokeRect(i*sc,(N-1-j)*sc,sc-2,sc-2);
+        const q=Q[i][j];const mx=Math.max(...q);const mn=Math.min(...q);
+        if(mx>mn+0.01){const ai=argmax(q);const da=acts[ai];const cx=i*sc+sc/2,cy=(N-1-j)*sc+sc/2;
+          x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+          x.moveTo(cx-da[0]*sc*0.25,cy+da[1]*sc*0.25);x.lineTo(cx+da[0]*sc*0.25,cy-da[1]*sc*0.25);x.stroke();
+          x.beginPath();x.arc(cx+da[0]*sc*0.25,cy-da[1]*sc*0.25,3,0,2*Math.PI);x.fillStyle='#0b5fff';x.fill();}
+        x.fillStyle='#666';x.font='9px sans-serif';x.fillText(mx.toFixed(1),i*sc+4,(N-1-j)*sc+10);
+      }
+      const tx=N*sc+12;
+      x.fillStyle='#2e7d32';x.fillRect(startC[0]*sc+sc/2-6,(N-1-startC[1])*sc+sc/2-6,12,12);
+      x.fillStyle='#c62828';x.fillRect(goal[0]*sc+sc/2-6,(N-1-goal[1])*sc+sc/2-6,12,12);
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('에피소드 '+episodes,tx,18);x.fillText('총 스텝 '+steps,tx,36);
+      x.fillText('누적 보상 '+total.toFixed(1),tx,54);
+      x.fillText('학습: '+(training?'진행':'중지'),tx,72);
+    }
+    upd();
+  })();
+  </script>
+
+  <p>처음에는 화살표가 무작위 방향이지만, 수십~수백 에피소드 후에 함정을 피해 목표로 향하는 일관된 패턴이 만들어집니다.
+  γ를 너무 낮추면 멀리 있는 +10 보상이 감지되지 않아 학습이 더뎌요.</p>
+
+  <h2>7. 인터랙티브: 보상 설계의 함정</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 잘못 설계된 보상은 이상한 행동을 학습한다</h4>
+    <p>같은 그리드월드에 보상 설계만 다르게 줍니다. 어느 보상 설계가 "원하는 행동"을 만들어내는지 비교해 보세요.</p>
+    <canvas id="rewCv" width="640" height="220"></canvas>
+    <div class="controls">
+      <label>설계
+        <select id="rewSel">
+          <option value="standard">표준: 도달 +10, 함정 -5, 매스텝 -0.1</option>
+          <option value="speed">속도만 +: 매스텝 +0.1, 도달 +10 (함정 패널티 없음)</option>
+          <option value="sparse">희박: 도달 +10, 그 외 0</option>
+        </select>
+      </label>
+      <button id="goRew">10000 에피소드 학습</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rewCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const N=5;const acts=[[1,0],[-1,0],[0,1],[0,-1]];
+    const trap=[2,2],goal=[4,4],startC=[0,0];
+    function argmax(arr){let bi=0;for(let i=1;i<arr.length;i++)if(arr[i]>arr[bi])bi=i;return bi;}
+    function rew(ns,sel){
+      const onGoal=ns[0]===goal[0]&&ns[1]===goal[1],onTrap=ns[0]===trap[0]&&ns[1]===trap[1];
+      if(sel==='standard')return onGoal?10:onTrap?-5:-0.1;
+      if(sel==='speed')return onGoal?10:0.1;
+      return onGoal?10:0;
+    }
+    function train(sel){
+      const Q=Array.from({length:N},()=>Array.from({length:N},()=>[0,0,0,0]));
+      const al=0.2,gm=0.95;let eps=0.4;
+      for(let ep=0;ep<10000;ep++){let s=startC.slice();let it=0;
+        while(it<300){const ai=Math.random()<eps?Math.floor(Math.random()*4):argmax(Q[s[0]][s[1]]);
+          const ns=[Math.max(0,Math.min(N-1,s[0]+acts[ai][0])),Math.max(0,Math.min(N-1,s[1]+acts[ai][1]))];
+          const r=rew(ns,sel);const done=(r===10);
+          Q[s[0]][s[1]][ai]+=al*(r+(done?0:gm*Math.max(...Q[ns[0]][ns[1]]))-Q[s[0]][s[1]][ai]);
+          s=ns;if(done)break;it++;}
+        eps=Math.max(0.05,eps*0.9995);}
+      return Q;
+    }
+    let Qstd,Qspd,Qsps,sel='standard';
+    function draw(Q,ox,label){
+      const sc=180/N;
+      x.strokeStyle='#bbb';
+      for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+        let fill='#fff';if(i===trap[0]&&j===trap[1])fill='#999';if(i===goal[0]&&j===goal[1])fill='#fce4ec';
+        x.fillStyle=fill;x.fillRect(ox+i*sc,(N-1-j)*sc,sc-1,sc-1);x.strokeRect(ox+i*sc,(N-1-j)*sc,sc-1,sc-1);
+        const q=Q[i][j];const ai=argmax(q);const da=acts[ai];const cx=ox+i*sc+sc/2,cy=(N-1-j)*sc+sc/2;
+        x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+        x.moveTo(cx-da[0]*sc*0.3,cy+da[1]*sc*0.3);x.lineTo(cx+da[0]*sc*0.3,cy-da[1]*sc*0.3);x.stroke();
+        x.beginPath();x.arc(cx+da[0]*sc*0.3,cy-da[1]*sc*0.3,3,0,2*Math.PI);x.fillStyle='#0b5fff';x.fill();
+        x.strokeStyle='#bbb';
+      }
+      x.fillStyle='#222';x.font='12px sans-serif';x.fillText(label,ox+8,N*sc+16);
+    }
+    function render(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      if(Qstd)draw(Qstd,10,'표준');if(Qspd)draw(Qspd,210,'속도만 +');if(Qsps)draw(Qsps,410,'희박');
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('파랑 화살표: 학습된 정책 π(s) = argmax Q(s,a)',10,c.height-6);
+    }
+    $('goRew').onclick=()=>{Qstd=train('standard');Qspd=train('speed');Qsps=train('sparse');render();};
+    render();
+  })();
+  </script>
+
+  <p>"속도만 +"는 도달 보상을 추구하긴 하지만 함정 패널티가 없어 종종 함정 옆을 무심히 지나갑니다.
+  "희박" 보상은 신호가 너무 적어 정책이 잘 안 잡히고, 도착까지 무작위에 가까운 행동이 남기 쉽습니다. <strong>보상 설계는 RL 성패의 절반</strong>이에요.</p>
+
+  <h2>8. Deep RL과 자율주행</h2>
+
+  <p>Q-table은 상태가 적은 그리드에서만 동작합니다. 자율주행처럼 상태가 $(x, y, \psi, v, \ldots)$ 연속이고 행동도 연속이면 신경망으로 $Q(s,a)$ 또는 $\pi(s)$를 근사하는 <strong>Deep RL</strong>을 씁니다.</p>
+
+  <table>
+    <thead><tr><th>알고리즘</th><th>특징</th><th>자율주행 적합도</th></tr></thead>
+    <tbody>
+      <tr><td>Q-Learning</td><td>테이블, 이산 행동</td><td>저차원 그리드만</td></tr>
+      <tr><td>DQN</td><td>CNN으로 Q, 이산 행동</td><td>비디오 게임에 강함</td></tr>
+      <tr><td>DDPG / TD3</td><td>연속 행동, off-policy</td><td>★ 자율주행 연구</td></tr>
+      <tr><td>PPO</td><td>안정적 학습, 산업 표준</td><td>★★ 자율주행/로봇</td></tr>
+      <tr><td>SAC</td><td>샘플 효율 높음</td><td>★★ 시뮬→실차 전이</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>실차에 그대로 못 쓰는 이유</strong> — Deep RL은 보통 수백만 에피소드의 시뮬이 필요하고, 안전이 보장되지 않습니다.
+    실무에서는 <strong>Sim-to-Real 전이 + 안전 필터(W12 CBF) + 사람 감독</strong>의 조합이 표준이고, RL은 행동 선택(Behavior layer)이나 보조 정책에 주로 쓰입니다.
+  </div>
+
+  <h2>9. RL vs 고전 제어</h2>
+
+  <table>
+    <thead><tr><th>관점</th><th>PID/MPC</th><th>RL</th></tr></thead>
+    <tbody>
+      <tr><td>모델 필요</td><td>필요</td><td>불필요(시뮬레이터로 대체)</td></tr>
+      <tr><td>안전 보장</td><td>가능 (CBF·MPC)</td><td>일반적으로 어려움</td></tr>
+      <tr><td>설계 시간</td><td>오래 (모델·튜닝)</td><td>학습은 오래, 설계는 짧음</td></tr>
+      <tr><td>일반화</td><td>모델 범위 안</td><td>학습 분포 안</td></tr>
+      <tr><td>강점</td><td>해석 가능, 검증 가능</td><td>비선형·고차원·복잡 환경</td></tr>
+    </tbody>
+  </table>
+
+  <p>둘은 경쟁이 아니라 <strong>역할 분담</strong>입니다. 안쪽 추종 루프는 PID·MPC가, 차선 변경/양보 같은 의사결정은 RL이, 안전 보장은 CBF가 — 이게 2026년 현대 자율주행의 표준 구조입니다.</p>
+
+  <h2>9b. 자율주행 RL 의 진짜 장벽</h2>
+
+  <h3>1. 시뮬→실차 갭 (Sim-to-Real Gap)</h3>
+  <p>시뮬에서 완벽한 정책이 실차에서 무력해지는 이유:</p>
+  <ul>
+    <li>시뮬의 타이어·공기저항 모델 단순 → 실차는 비선형 강함</li>
+    <li>센서 노이즈, 지연(latency), 통신 지터 → 시뮬에선 부재</li>
+    <li>도로 마찰, 풍향, 비/눈 → 도메인 시프트</li>
+  </ul>
+  <p>대응: <strong>Domain Randomization</strong>. 시뮬 학습 시 파라미터를 무작위로 흔들어 정책이 다양한 환경에 robust하게.</p>
+
+  <h3>2. 보상 해킹 (Reward Hacking)</h3>
+  <p>RL 에이전트는 "<em>보상을 최대화</em>"만 합니다. "<em>안전하게 잘 운전</em>"이 아닙니다. 예시:</p>
+  <ul>
+    <li>"빨리 도착하면 +" → 신호 무시, 과속 학습</li>
+    <li>"차선 유지하면 +" → 출발 자체를 안 함 (안전한 정지)</li>
+    <li>"가속도 작게 -" → 후진하며 천천히 도착</li>
+  </ul>
+  <p>대응: 다중 목표 보상 설계 + 인간 피드백 (RLHF).</p>
+
+  <h3>3. 검증 불가능성</h3>
+  <p>"이 정책이 어떤 상황에서도 안전한가?" 를 수학적으로 증명할 수 없음. 100만 km 시뮬해도 "그 다음 1 km" 가 안전하다는 보장 X.</p>
+  <p>대응: <strong>Shielded RL</strong> — 학습된 정책 출력에 CBF 같은 안전 필터를 강제로 통과시킴.</p>
+
+  <h2>9c. Imitation Learning — 전문가를 모방하라</h2>
+
+  <p>순수 RL의 학습 시간(수백만 에피소드)을 단축하는 방법: <strong>전문가 행동을 직접 학습</strong>.</p>
+
+  <h3>Behavioral Cloning (BC)</h3>
+  <p>전문가 (사람 운전자) 의 (state, action) 쌍을 모아 지도학습:</p>
+  $$ \min_\theta \sum_i \|\pi_\theta(s_i) - a_i^\text{expert}\|^2 $$
+  <ul>
+    <li>장점: 빠른 학습, 안전 (전문가 데이터)</li>
+    <li>단점: <strong>분포 시프트</strong> — 전문가가 가본 적 없는 상태에서 무력 (compounding error)</li>
+  </ul>
+
+  <h3>DAgger (Dataset Aggregation)</h3>
+  <p>BC로 학습 → 시뮬 돌림 → 학습 정책이 실수한 곳에서 전문가 데이터 추가 수집 → 재학습. 분포 시프트 점진 해결.</p>
+
+  <h3>RL + IL 조합</h3>
+  <p>현실적 패턴: <strong>IL로 초기 정책 학습 + RL로 미세조정</strong>. Wayve, Waymo 모두 이 형태로 자율주행 정책을 학습.</p>
+
+  <h2>9d. 안전 RL — 최신 동향</h2>
+
+  <table>
+    <thead><tr><th>접근</th><th>아이디어</th><th>강점</th></tr></thead>
+    <tbody>
+      <tr><td>Shielded RL</td><td>RL 출력 → CBF 필터 → 차량</td><td>증명 가능한 안전</td></tr>
+      <tr><td>Constrained RL</td><td>제약 만족 학습 (CMDP)</td><td>안전을 직접 최적화</td></tr>
+      <tr><td>Curriculum Learning</td><td>쉬운 환경 → 점차 어려운</td><td>안정적 학습</td></tr>
+      <tr><td>Risk-aware RL</td><td>분산·VaR 등 위험 측정</td><td>최악의 경우 고려</td></tr>
+      <tr><td>Model-based RL</td><td>세계 모델 학습 후 시뮬</td><td>샘플 효율 ↑</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9e. 손풀이 — RL 개념 점검</h2>
+
+  <h3>Q1. 보상 설계</h3>
+  <p>"교차로에서 왼쪽 회전" 행동을 학습시키려 한다. 다음 중 가장 좋은 보상은?</p>
+  <ol type="a">
+    <li>왼쪽으로 갔으면 +1, 그 외 0</li>
+    <li>매 스텝 -0.1, 회전 완료 시 +10, 사고 시 -100</li>
+    <li>회전 중 부드럽게 가면 +1</li>
+    <li>모든 행동 +0.01</li>
+  </ol>
+  <details>
+    <summary>풀이</summary>
+    <p>(b). (a)는 너무 sparse, (c)는 모호, (d)는 신호 부족.<br>
+    (b)는 ① 빠르게 (매스텝 페널티) ② 목표 (도달 보너스) ③ 안전 (사고 페널티) 모두 포함 → 균형 잡힌 설계.</p>
+  </details>
+
+  <h3>Q2. 탐험 vs 활용</h3>
+  <p>$\varepsilon$-greedy에서 $\varepsilon$=0.05로 너무 작게 시작하면?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>탐험 부족 → 처음 발견한 평범한 정책에 갇힘 (지역 최적). 더 좋은 경로가 있어도 못 찾음.<br>
+    권장: $\varepsilon$=0.3~0.5에서 시작 → 점차 0.01까지 감소 (annealing).</p>
+  </details>
+
+  <h3>Q3. Q-Learning 한 스텝</h3>
+  <p>$Q(s,a) = 5$, 실제 받은 $r=2$, 다음 상태 최대 Q $= 4$, $\alpha=0.1$, $\gamma=0.9$. 업데이트 후 $Q(s,a)$는?</p>
+  <details>
+    <summary>풀이</summary>
+    <p>$Q \leftarrow 5 + 0.1 \times (2 + 0.9 \times 4 - 5) = 5 + 0.1 \times 0.6 = 5.06$.</p>
+  </details>
+
+  <h2>10. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li>RL = <strong>경험으로 정책을 학습</strong>. 모델 없이도 잘 작동하는 강력한 도구.</li>
+      <li>4가지 요소 (S, A, R, π)와 ε-greedy 탐험은 RL 책의 1장에 모두 들어 있음.</li>
+      <li>Q-Learning의 한 줄: $Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma\max_{a'}Q(s',a') - Q(s,a)]$.</li>
+      <li>보상 설계가 절반 — 잘못 짜면 엉뚱한 행동을 학습한다.</li>
+      <li>자율주행에서는 Deep RL을 단독으로 쓰기보다 <strong>고전 제어 + 안전 필터 + RL 의사결정</strong> 형태로 결합.</li>
+    </ul>
+  </div>
+
+  <h2>10b. 흔한 실수 5가지</h2>
+
+  <table>
+    <thead><tr><th>#</th><th>실수</th><th>증상</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>$\gamma = 1.0$</td><td>발산 (무한 누적 보상)</td><td>0.9 ~ 0.99 권장</td></tr>
+      <tr><td>2</td><td>$\varepsilon$ 너무 작게 시작</td><td>지역 최적 갇힘</td><td>초기 0.3~0.5, 점차 감소</td></tr>
+      <tr><td>3</td><td>실차에서 직접 학습</td><td>사고 위험</td><td>시뮬 → Sim-to-Real</td></tr>
+      <tr><td>4</td><td>보상 해킹 미인지</td><td>이상한 행동 학습</td><td>다중 목표 + 인간 피드백</td></tr>
+      <tr><td>5</td><td>일반화 테스트 X</td><td>새 환경에서 무력</td><td>다양한 시나리오로 평가</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10c. 실무 자율주행 RL 사례</h2>
+
+  <h3>Wayve (영국)</h3>
+  <p>"<em>End-to-End Learning</em>" — 카메라 → 조향·속도 직접 예측. RL + IL 조합. 런던 도심 시범 운행 중.</p>
+
+  <h3>Waymo</h3>
+  <p>주로 모방 학습 (전문가 운전자 데이터) 기반. RL은 합류·차선변경 같은 의사결정 보조에 사용.</p>
+
+  <h3>Tesla FSD</h3>
+  <p>대량 데이터 기반 신경망 + 일부 RL. 안전 검증은 전통 방식 유지.</p>
+
+  <h3>국내 (포티투닷, 42dot)</h3>
+  <p>RL 기반 행동 결정 + MPC 추종. 양자 결합으로 안전성 확보.</p>
+
+  <h2>10d. 학습 모니터링 — 무엇을 봐야 하나</h2>
+
+  <table>
+    <thead><tr><th>지표</th><th>의미</th><th>이상 신호</th></tr></thead>
+    <tbody>
+      <tr><td>Episode Reward (이동평균)</td><td>학습 진척</td><td>오래 정체 또는 급락</td></tr>
+      <tr><td>Episode Length</td><td>에피소드 시간</td><td>너무 짧음 = 빨리 실패</td></tr>
+      <tr><td>Success Rate</td><td>목표 도달 비율</td><td>학습 종료 기준</td></tr>
+      <tr><td>Exploration Rate ($\varepsilon$)</td><td>탐험 비율</td><td>너무 빨리 0 되면 X</td></tr>
+      <tr><td>Loss (Q-network)</td><td>학습 안정성</td><td>발산 또는 진동</td></tr>
+      <tr><td>Q-value 평균</td><td>가치 함수 적정성</td><td>비현실적으로 큼/작음</td></tr>
+    </tbody>
+  </table>
+
+  <p>도구: TensorBoard (PyTorch), Weights &amp; Biases (외부 SaaS). 학생 프로젝트 수준에선 matplotlib로도 충분.</p>
+
+  <h2>10e. RL 의 미래 — 2025+ 트렌드</h2>
+
+  <ul>
+    <li><strong>Foundation Model + RL</strong>: GPT 같은 대형 모델이 상황 이해, RL이 행동 결정</li>
+    <li><strong>World Model</strong>: 환경 모델을 학습 후 내부 시뮬로 빠른 학습 (Dreamer 시리즈)</li>
+    <li><strong>Multi-agent RL</strong>: 여러 차량이 협력 — 합류·교차로 협상</li>
+    <li><strong>Diffusion Policy</strong>: 확산 모델 기반 정책 (행동 생성)</li>
+    <li><strong>Offline RL</strong>: 실차 로그 만 가지고 학습 (시뮬 불필요)</li>
+  </ul>
+
+  <p>이 모든 것이 "<em>안전 제약 (CBF) + 강건성 + 인간 피드백</em>" 위에서 발전 중. 2030년쯤엔 자율주행 표준 스택이 될 가능성.</p>
+
+  <h2>11. 더 깊이 공부하기</h2>
+  <ul>
+    <li>R. S. Sutton &amp; A. G. Barto, <em>Reinforcement Learning: An Introduction</em> — RL의 정석. 무료 PDF.</li>
+    <li>OpenAI Spinning Up — <a href="https://spinningup.openai.com" target="_blank">spinningup.openai.com</a>. PPO/SAC 구현 노트.</li>
+    <li>Wayve, Waymo의 자율주행 RL 논문 — "End-to-End Driving" 키워드로 검색.</li>
+    <li>관련 강의: <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>의 신경망·역전파 내용이 Deep RL의 전제입니다.</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="13-mpc-basics.html"><small>← 이전</small>W13. MPC 기초</a>
+    <a href="15-final-review.html" class="next"><small>다음 →</small>W15. 기말 전체 정리</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

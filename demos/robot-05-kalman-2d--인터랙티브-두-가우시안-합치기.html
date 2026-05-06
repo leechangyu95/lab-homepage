@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 두 가우시안 합치기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 두 가우시안 합치기</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/05-kalman-2d.html">Lecture 5. 칼만 필터 (2D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 가우시안 합치기</h4>
+    <p>두 가우시안의 평균을 마우스로 드래그하고, 슬라이더로 각각의 공분산 모양을 바꿔보세요.
+    <span style="color:#c62828">빨강</span>·<span style="color:#0b5fff">파랑</span> 타원이 입력이고,
+    <span style="color:#7b1fa2">보라</span> 타원이 합쳐진 결과입니다.
+    <strong>보라가 항상 두 입력 안쪽에 들어가고 (불확실성 감소), 더 좁은 쪽 평균에 더 가까워지는 것</strong>을 확인하세요.</p>
+    <canvas id="merge" width="640" height="380"></canvas>
+    <div class="controls" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px">
+      <label style="color:#c62828">G1: σ²ₓ <span class="val" id="m1sxV">3</span><input type="range" id="m1sx" min="0.5" max="8" step="0.1" value="3"></label>
+      <label style="color:#0b5fff">G2: σ²ₓ <span class="val" id="m2sxV">1.5</span><input type="range" id="m2sx" min="0.5" max="8" step="0.1" value="1.5"></label>
+      <label style="color:#c62828">G1: σ²ᵧ <span class="val" id="m1syV">1</span><input type="range" id="m1sy" min="0.5" max="8" step="0.1" value="1"></label>
+      <label style="color:#0b5fff">G2: σ²ᵧ <span class="val" id="m2syV">4</span><input type="range" id="m2sy" min="0.5" max="8" step="0.1" value="4"></label>
+      <label style="color:#c62828">G1: σₓᵧ <span class="val" id="m1sxyV">0.8</span><input type="range" id="m1sxy" min="-3" max="3" step="0.1" value="0.8"></label>
+      <label style="color:#0b5fff">G2: σₓᵧ <span class="val" id="m2sxyV">-1.2</span><input type="range" id="m2sxy" min="-3" max="3" step="0.1" value="-1.2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('merge'),x=c.getContext('2d');
+    const SC=30, cx=320, cy=190;
+    // 화면 좌표 ↔ 데이터 좌표
+    const toScr=(p)=>({x:cx+p[0]*SC, y:cy-p[1]*SC});
+    const toData=(sx,sy)=>[(sx-cx)/SC,(cy-sy)/SC];
+    // 두 평균 (데이터 좌표)
+    let mu1=[-3,-1], mu2=[3,1.5];
+    let drag=null;
+    c.onmousedown=e=>{
+      const r=c.getBoundingClientRect();
+      const px=(e.clientX-r.left)*c.width/r.width, py=(e.clientY-r.top)*c.height/r.height;
+      const p1=toScr(mu1), p2=toScr(mu2);
+      const d1=Math.hypot(px-p1.x,py-p1.y), d2=Math.hypot(px-p2.x,py-p2.y);
+      if(d1<14&&d1<d2)drag=1; else if(d2<14)drag=2;
+    };
+    c.onmousemove=e=>{
+      if(!drag)return;
+      const r=c.getBoundingClientRect();
+      const px=(e.clientX-r.left)*c.width/r.width, py=(e.clientY-r.top)*c.height/r.height;
+      const d=toData(px,py);
+      if(drag===1)mu1=d; else mu2=d;
+    };
+    c.onmouseup=()=>drag=null; c.onmouseleave=()=>drag=null;
+    // 2x2 역행렬, 합, 곱
+    const inv=(M)=>{const d=M[0][0]*M[1][1]-M[0][1]*M[1][0];return [[M[1][1]/d,-M[0][1]/d],[-M[1][0]/d,M[0][0]/d]];};
+    const add=(A,B)=>[[A[0][0]+B[0][0],A[0][1]+B[0][1]],[A[1][0]+B[1][0],A[1][1]+B[1][1]]];
+    const mv=(M,v)=>[M[0][0]*v[0]+M[0][1]*v[1], M[1][0]*v[0]+M[1][1]*v[1]];
+    function ellipse(S, color, fillAlpha, levels){
+      const tr=S[0][0]+S[1][1], disc=Math.sqrt(Math.max(0,(S[0][0]-S[1][1])**2+4*S[0][1]*S[1][0]));
+      const l1=(tr+disc)/2, l2=(tr-disc)/2;
+      const ang=0.5*Math.atan2(2*S[0][1], S[0][0]-S[1][1]);
+      return {l1,l2,ang};
+    }
+    function drawEll(mu, S, color, lw){
+      const tr=S[0][0]+S[1][1], disc=Math.sqrt(Math.max(0,(S[0][0]-S[1][1])**2+4*S[0][1]*S[1][0]));
+      const l1=(tr+disc)/2, l2=(tr-disc)/2;
+      const ang=0.5*Math.atan2(2*S[0][1], S[0][0]-S[1][1]);
+      const p=toScr(mu);
+      // y축이 뒤집혀 있으므로 회전각도 부호 반전
+      [3,2,1].forEach(k=>{
+        x.strokeStyle=color; x.lineWidth=lw;
+        x.fillStyle=color.replace('rgb','rgba').replace(')',','+(0.06*(4-k))+')');
+        x.beginPath();
+        x.ellipse(p.x, p.y, Math.sqrt(Math.max(l1,0.01))*k*SC, Math.sqrt(Math.max(l2,0.01))*k*SC, -ang, 0, Math.PI*2);
+        x.fill(); x.stroke();
+      });
+    }
+    function loop(){
+      const ids=['m1sx','m1sy','m1sxy','m2sx','m2sy','m2sxy'];
+      const v={};
+      ids.forEach(k=>{v[k]=+document.getElementById(k).value;document.getElementById(k+'V').textContent=document.getElementById(k).value;});
+      const S1=[[v.m1sx,v.m1sxy],[v.m1sxy,v.m1sy]];
+      const S2=[[v.m2sx,v.m2sxy],[v.m2sxy,v.m2sy]];
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 격자 + 축
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=SC){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=SC){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(20,cy);x.lineTo(620,cy);x.moveTo(cx,30);x.lineTo(cx,350);x.stroke();
+      // 양정부호 검사
+      const det1=S1[0][0]*S1[1][1]-S1[0][1]**2, det2=S2[0][0]*S2[1][1]-S2[0][1]**2;
+      if(det1<=0||det2<=0){
+        x.fillStyle='#c62828';x.font='14px sans-serif';
+        x.fillText('⚠ 비양정부호 공분산. σₓᵧ를 줄이세요.',20,30);
+        requestAnimationFrame(loop);return;
+      }
+      // 합치기
+      const P1=inv(S1), P2=inv(S2);
+      const Pn=add(P1,P2);
+      const Sn=inv(Pn);
+      const muN=mv(Sn, [P1[0][0]*mu1[0]+P1[0][1]*mu1[1]+P2[0][0]*mu2[0]+P2[0][1]*mu2[1],
+                        P1[1][0]*mu1[0]+P1[1][1]*mu1[1]+P2[1][0]*mu2[0]+P2[1][1]*mu2[1]]);
+      // 그리기 — 입력 두 개, 합쳐진 결과
+      drawEll(mu1, S1, 'rgb(198,40,40)', 1.5);
+      drawEll(mu2, S2, 'rgb(11,95,255)', 1.5);
+      drawEll(muN, Sn, 'rgb(123,31,162)', 2.5);
+      // 평균 점들
+      const p1=toScr(mu1), p2=toScr(mu2), pN=toScr(muN);
+      x.fillStyle='#c62828';x.beginPath();x.arc(p1.x,p1.y,7,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.lineWidth=2;x.stroke();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(p2.x,p2.y,7,0,Math.PI*2);x.fill();x.stroke();
+      x.fillStyle='#7b1fa2';x.beginPath();x.arc(pN.x,pN.y,6,0,Math.PI*2);x.fill();x.stroke();
+      // 정보 패널
+      const tr1=S1[0][0]+S1[1][1], tr2=S2[0][0]+S2[1][1], trN=Sn[0][0]+Sn[1][1];
+      x.fillStyle='#222';x.font='12px sans-serif';
+      x.fillText('μ₁ = ('+mu1[0].toFixed(2)+', '+mu1[1].toFixed(2)+')   tr(Σ₁) = '+tr1.toFixed(2),12,22);
+      x.fillText('μ₂ = ('+mu2[0].toFixed(2)+', '+mu2[1].toFixed(2)+')   tr(Σ₂) = '+tr2.toFixed(2),12,40);
+      x.fillStyle='#7b1fa2';x.font='bold 12px sans-serif';
+      x.fillText('μ_new = ('+muN[0].toFixed(2)+', '+muN[1].toFixed(2)+')   tr(Σ_new) = '+trN.toFixed(2)+'   (← 항상 더 작음)',12,58);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('🔴 G1   🔵 G2   🟣 합쳐진 분포 — 빨강·파랑 점을 드래그해 평균을 옮겨보세요',12,365);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

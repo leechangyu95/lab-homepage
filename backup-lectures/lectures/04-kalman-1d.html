@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L4. 칼만 필터 (1D) — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html" class="active">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 4. 칼만 필터 (1D)</h1>
+  <p class="lead">잡음 속에서 진실을 찾는 가장 우아한 알고리즘.</p>
+
+  <div class="note">
+    <strong>📋 한눈에</strong> — 이 강의가 끝나면 다음을 할 수 있어야 합니다.
+    <ul style="margin:6px 0 0 0">
+      <li>"두 정규분포를 합치면 더 좁은 정규분포가 된다"는 직관 설명</li>
+      <li>예측·갱신 두 단계를 구분해 적기</li>
+      <li>칼만 이득 $K$가 0에 가깝거나 1에 가까울 때 무엇을 의미하는지 해석</li>
+    </ul>
+    <strong>선수지식</strong> — 평균·분산·표준편차(고1 통계). 정규분포 모양만 알아도 충분. <a href="03-state-space.html">L3</a>의 이산 모델 $x_{k+1}=A_d x_k$가 "예측" 단계로 그대로 쓰입니다.<br>
+    <strong>이전 강의 복습</strong> — L3까지는 "$\mathbf x$를 정확히 안다"고 가정했지만, 실제 센서는 잡음투성이입니다. 그 잡음을 어떻게 다루는지가 오늘 주제.
+  </div>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 필터가 필요한가?</li>
+    <li>은닉 상태와 측정의 개념</li>
+    <li>분산 · 표준편차 · 정규 분포</li>
+    <li>정확도(Accuracy) vs 정밀도(Precision)</li>
+    <li>두 가우시안 합치기</li>
+    <li>예측 - 갱신 사이클</li>
+    <li>예제 1: 정지된 거리 추정</li>
+    <li>예제 2: 등속도 추적</li>
+    <li>칼만 이득의 의미</li>
+    <li>베이즈 정리로 다시 보기</li>
+    <li>$Q$, $R$은 어디서 오는가</li>
+    <li>중간 예제 — 등가속도 추정</li>
+    <li>발산하는 흔한 원인 5가지</li>
+    <li>실제로 쓰이는 곳 — 갤러리</li>
+    <li>코드 예제 · 다음 강의</li>
+  </ol></div>
+
+  <h2>1. 왜 필터가 필요한가?</h2>
+  <p>실제 센서는 항상 잡음을 포함합니다.</p>
+  <ul>
+    <li>GPS는 ±5 m 정도의 위치 오차</li>
+    <li>IMU는 정확하지만 시간이 지나면 드리프트(누적 오차)</li>
+    <li>LiDAR도 환경에 따라 오차가 다름</li>
+  </ul>
+  <p>각 센서는 단독으로는 완벽하지 않지만, <strong>여러 센서를 똑똑하게 합치면</strong> 단독보다 더 정확한 추정을 얻을 수 있습니다. 그게 칼만 필터의 본질입니다.</p>
+
+  <p>1960년 R. E. Kalman이 제안했고, 곧 NASA의 Apollo 우주선 항법 컴퓨터에 탑재되어 인류를 달에 보냈습니다. 오늘날 거의 모든 자율 시스템(드론, 자동차, 선박, 스마트폰 GPS) 안에 칼만 필터가 돌고 있습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 단독 센서는 왜 부족한가? — GPS vs IMU vs 융합</h4>
+    <p>1차원 위치를 추적하는 상황입니다. <strong>GPS</strong>는 잡음이 크지만 평균적으로 진실 주변에 머물고, <strong>IMU</strong>(가속도 적분)는 매끄럽지만 작은 속도 편향이 시간이 지날수록 누적되어 진실에서 멀어집니다. 두 센서를 똑똑하게 섞은 <strong>융합 추정</strong>은 어느 쪽 단독보다 진실에 가깝게 따라갑니다. 슬라이더를 움직여 잡음·드리프트를 키워보고, 좌상단의 RMS 오차가 어떻게 변하는지 보세요.</p>
+    <canvas id="motiv" width="680" height="320"></canvas>
+    <div class="controls">
+      <label>GPS 잡음 σ (m) <span class="val" id="mGpsV">1.5</span><input type="range" id="mGps" min="0.2" max="4" step="0.1" value="1.5"></label>
+      <label>IMU 드리프트 (m/s) <span class="val" id="mDriftV">0.20</span><input type="range" id="mDrift" min="0" max="0.5" step="0.01" value="0.20"></label>
+      <button id="mRst">노이즈 다시 뽑기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('motiv');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const ml=52,mr=16,mt=28,mb=34;
+    const pw=W-ml-mr,ph=H-mt-mb;
+    const T=25,dt=0.1,N=Math.floor(T/dt)+1;
+    const yMin=-2,yMax=36;
+    function truth(t){return 0.8*t+3*Math.sin(0.5*t);}
+    function truthV(t){return 0.8+1.5*Math.cos(0.5*t);}
+    function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    const X=t=>ml+(t/T)*pw, Y=y=>mt+ph-((y-yMin)/(yMax-yMin))*ph;
+    let truePts=[],gps=[],imu=[],fused=[],noise=[];
+    function reroll(){noise=[];for(let i=0;i<N;i++)noise.push(gauss());}
+    function regen(){
+      const sgGps=+document.getElementById('mGps').value;
+      const drift=+document.getElementById('mDrift').value;
+      const alpha=0.92;
+      truePts=[];gps=[];imu=[];fused=[];
+      let imuPos=truth(0),fusePos=truth(0);
+      for(let i=0;i<N;i++){
+        const t=i*dt,xt=truth(t);
+        truePts.push({t,y:xt});
+        const z=xt+sgGps*noise[i];
+        gps.push({t,y:z});
+        const v=truthV(t)+drift;
+        imuPos+=v*dt;
+        imu.push({t,y:imuPos});
+        fusePos=alpha*(fusePos+v*dt)+(1-alpha)*z;
+        fused.push({t,y:fusePos});
+      }
+    }
+    function draw(){
+      document.getElementById('mGpsV').textContent=(+document.getElementById('mGps').value).toFixed(1);
+      document.getElementById('mDriftV').textContent=(+document.getElementById('mDrift').value).toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+      for(let y=0;y<=35;y+=5){ctx.beginPath();ctx.moveTo(ml,Y(y));ctx.lineTo(W-mr,Y(y));ctx.stroke();}
+      for(let t=0;t<=T;t+=5){ctx.beginPath();ctx.moveTo(X(t),mt);ctx.lineTo(X(t),mt+ph);ctx.stroke();}
+      ctx.strokeStyle='#999';
+      ctx.beginPath();ctx.moveTo(ml,mt+ph);ctx.lineTo(W-mr,mt+ph);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.stroke();
+      ctx.fillStyle='#555';ctx.font='11px sans-serif';
+      for(let t=0;t<=T;t+=5){ctx.fillText(t+'s',X(t)-7,mt+ph+16);}
+      for(let y=0;y<=35;y+=5){ctx.fillText(y+' m',ml-34,Y(y)+4);}
+      ctx.fillStyle='#c62828';
+      gps.forEach(p=>{ctx.beginPath();ctx.arc(X(p.t),Y(p.y),2,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.beginPath();truePts.forEach((p,i)=>{const px=X(p.t),py=Y(p.y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle='#f59e0b';ctx.lineWidth=2;
+      ctx.beginPath();imu.forEach((p,i)=>{const px=X(p.t),py=Y(p.y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();fused.forEach((p,i)=>{const px=X(p.t),py=Y(p.y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});ctx.stroke();
+      const lx=W-mr-152,ly=mt+6;
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(lx-8,ly-4,152,86);
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.strokeRect(lx-8,ly-4,152,86);
+      ctx.font='12px sans-serif';
+      function row(yy,col,dash,txt,dot){
+        ctx.strokeStyle=col;ctx.lineWidth=2.5;
+        if(dash)ctx.setLineDash(dash);
+        ctx.beginPath();ctx.moveTo(lx,yy);ctx.lineTo(lx+22,yy);ctx.stroke();
+        ctx.setLineDash([]);
+        if(dot){ctx.fillStyle=col;ctx.beginPath();ctx.arc(lx+11,yy,2,0,Math.PI*2);ctx.fill();}
+        ctx.fillStyle='#333';ctx.fillText(txt,lx+28,yy+4);
+      }
+      row(ly+10,'#888',[6,4],'진짜 위치',false);
+      row(ly+30,'#c62828',null,'GPS 측정',true);
+      row(ly+50,'#f59e0b',null,'IMU 적분',false);
+      row(ly+70,'#0b5fff',null,'융합 추정',false);
+      let eG=0,eI=0,eF=0;
+      for(let i=0;i<N;i++){eG+=(gps[i].y-truePts[i].y)**2;eI+=(imu[i].y-truePts[i].y)**2;eF+=(fused[i].y-truePts[i].y)**2;}
+      eG=Math.sqrt(eG/N);eI=Math.sqrt(eI/N);eF=Math.sqrt(eF/N);
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('RMS 오차 — GPS: '+eG.toFixed(2)+' m,  IMU: '+eI.toFixed(2)+' m,  융합: '+eF.toFixed(2)+' m',ml,mt-10);
+    }
+    function update(){regen();draw();}
+    document.getElementById('mGps').addEventListener('input',update);
+    document.getElementById('mDrift').addEventListener('input',update);
+    document.getElementById('mRst').addEventListener('click',()=>{reroll();update();});
+    reroll();update();
+  })();
+  </script>
+
+  <h2>2. 은닉 상태와 측정</h2>
+
+  <h3>왜 "은닉"이라 부르나?</h3>
+  <p>"진짜 위치"는 우주 어딘가에 있긴 하지만 <strong>우리는 직접 볼 수 없어요</strong>. 우리에게 보이는 건 GPS·IMU·카메라가 알려주는 잡음 섞인 숫자뿐이죠. 그래서 진짜 상태를 "<em>커튼 뒤에 숨어 있다</em>"는 의미로 <strong>은닉(hidden) 상태</strong>라 부릅니다.</p>
+
+  <p>일상 비유: 친구가 옆방에서 책을 읽고 있다고 합시다. 친구가 어디에 있는지(상태)는 직접 안 보여요. 들리는 건 책 넘기는 소리, 의자 삐걱이는 소리(측정값) 정도. 이 소리들로부터 친구의 위치를 추정하는 게 칼만 필터가 하는 일과 똑같습니다.</p>
+
+  <p>"진짜 상태(true state)"는 우리가 직접 볼 수 없습니다. 보이는 건 잡음이 섞인 측정값(measurement)뿐. 진짜 상태를 <strong>은닉 상태(hidden state)</strong>라 부릅니다.</p>
+
+  <table>
+    <thead><tr><th>기호</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>$x$</td><td>진짜 (은닉) 상태 — 우리가 알고 싶은 값</td></tr>
+      <tr><td>$\hat x$</td><td>추정값 (estimate) — 필터가 만든 답</td></tr>
+      <tr><td>$z$</td><td>측정값 (measurement) — 잡음이 섞임</td></tr>
+      <tr><td>$P$</td><td>추정 분산 — "내가 얼마나 확신하는가"</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. 분산 · 표준편차 · 정규 분포</h2>
+
+  <h3>왜 하필 가우시안인가?</h3>
+  <p>"실제 센서 오차가 진짜로 종 모양일까?" — 학부생들이 가장 먼저 갖는 의심입니다. 답은 "<strong>아주 정확하지는 않지만, 충분히 그렇다</strong>"입니다. 이유는 <strong>중심극한정리(Central Limit Theorem)</strong>입니다. 한 줄로 말하면 "<em>독립적인 작은 잡음 여러 개를 더하면 그 합은 모양에 상관없이 가우시안에 가까워진다</em>." GPS 오차는 위성 시계 흔들림, 대기 굴절, 다중 경로 반사, 수신기 회로 잡음 등 수많은 작은 요인의 합이라 자연스럽게 가우시안 비슷해집니다. 그래서 "잘 모르겠으면 일단 가우시안"이 공학자의 디폴트가 됐어요.</p>
+
+  <p>또 하나 결정적인 이유 — 가우시안은 <strong>두 개를 곱하거나 더해도 여전히 가우시안</strong>입니다(§5에서 활용). 이런 닫혀 있는(closed) 성질 덕분에 칼만 필터의 모든 식이 평균과 분산 두 숫자만으로 깔끔하게 떨어집니다.</p>
+
+  <h3>$\sigma^2$가 몸으로 와닿게 — 활쏘기 비유</h3>
+  <p>양궁 선수가 같은 자세로 화살 100발을 쏘았다고 합시다. 화살이 과녁에 박힌 자국을 보면 평균적으로 정중앙 근처지만 모두가 한 점에 모이지는 않죠. 이 "<strong>흩어진 정도</strong>"가 바로 분산 $\sigma^2$이고, 그 제곱근 $\sigma$가 표준편차입니다. <strong>$\sigma$는 "한 발이 평균에서 보통 얼마나 빗나가는가"의 단위</strong>라고 외우면 편해요. 화살 자국이 한 점에 모일수록 $\sigma$는 작고, 사방에 흩어질수록 큽니다.</p>
+
+  <h3>1σ / 2σ / 3σ 규칙 — 숫자로 직접 풀어보기</h3>
+  <div class="tip">
+    GPS 잡음 표준편차가 $\sigma = 3$ m라고 합시다. 가우시안의 황금 규칙:
+    <ul>
+      <li><strong>±1σ (±3 m)</strong> 안에 측정값이 들어올 확률 ≈ <strong>68%</strong></li>
+      <li><strong>±2σ (±6 m)</strong> 안 ≈ <strong>95%</strong></li>
+      <li><strong>±3σ (±9 m)</strong> 안 ≈ <strong>99.7%</strong></li>
+    </ul>
+    뒤집어 말하면: GPS 한 측정이 진짜 위치에서 9 m 이상 벗어날 확률은 0.3%밖에 안 됩니다. 그래서 자율주행 안전 기준은 보통 "$3\sigma$ 안에 들어와야 한다"고 명시합니다 — "거의 항상"의 공학적 정의가 99.7%인 거예요.
+  </div>
+
+  <p>측정 오차는 보통 평균 0의 정규 분포(가우시안)로 모델링합니다.</p>
+  $$ p(z) = \frac{1}{\sigma\sqrt{2\pi}} \exp\!\left(-\frac{(z-\mu)^2}{2\sigma^2}\right) $$
+  <ul>
+    <li>$\mu$ — 평균. 정확하면 진짜 값과 일치.</li>
+    <li>$\sigma^2$ — 분산. 클수록 측정이 흩어진다.</li>
+    <li>$\sigma$ — 표준편차. 직관적으로 "평균 오차"의 크기.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정규 분포 모양 바꿔보기</h4>
+    <p>평균과 표준편차를 바꿔보며 가우시안의 모양을 익혀보세요. 1σ 안에 약 68%, 2σ 안에 95%, 3σ 안에 99.7%의 확률이 들어 있습니다.</p>
+    <canvas id="gauss" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>평균 μ <span class="val" id="muV">0</span><input type="range" id="mu" min="-3" max="3" step="0.1" value="0"></label>
+      <label>표준편차 σ <span class="val" id="sgV">1</span><input type="range" id="sg" min="0.3" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gauss');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const x0=W/2,y0=H-40,sx=60,peakH=170;
+    function pdf(xx,mu,sg){return Math.exp(-(xx-mu)*(xx-mu)/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));}
+    function draw(){
+      const muEl=document.getElementById('mu'),sgEl=document.getElementById('sg');
+      const mu=parseFloat(muEl.value),sg=parseFloat(sgEl.value);
+      document.getElementById('muV').textContent=mu.toFixed(1);
+      document.getElementById('sgV').textContent=sg.toFixed(1);
+      const peak=pdf(mu,mu,sg);
+      const yScale=peakH/peak;
+      // clear
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // axes
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(20,y0);ctx.lineTo(W-20,y0);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x0,40);ctx.lineTo(x0,y0+10);ctx.stroke();
+      // 2σ shading
+      function shade(k,fill){
+        ctx.fillStyle=fill;
+        ctx.beginPath();
+        const a=mu-k*sg,b=mu+k*sg,N=80;
+        ctx.moveTo(x0+a*sx,y0);
+        for(let i=0;i<=N;i++){
+          const xx=a+(b-a)*i/N;
+          ctx.lineTo(x0+xx*sx,y0-pdf(xx,mu,sg)*yScale);
+        }
+        ctx.lineTo(x0+b*sx,y0);
+        ctx.closePath();ctx.fill();
+      }
+      shade(2,'rgba(11,95,255,0.08)');
+      shade(1,'rgba(11,95,255,0.18)');
+      // main curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      const N=300;
+      for(let i=0;i<=N;i++){
+        const xx=-5+10*i/N;
+        const px=x0+xx*sx,py=y0-pdf(xx,mu,sg)*yScale;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // mean line
+      ctx.strokeStyle='#c62828';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(x0+mu*sx,40);ctx.lineTo(x0+mu*sx,y0);ctx.stroke();
+      ctx.setLineDash([]);
+      // labels
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText('μ = '+mu.toFixed(1),x0+mu*sx+4,55);
+      ctx.fillStyle='#555';
+      ctx.fillText('1σ ≈ 68%',x0+0.5*sg*sx,y0-peakH*0.35);
+      ctx.fillText('2σ ≈ 95%',x0+1.5*sg*sx,y0-peakH*0.1);
+      ctx.fillText('피크 높이 정규화 (실제 높이 = '+peak.toFixed(3)+')',20,25);
+    }
+    document.getElementById('mu').addEventListener('input',draw);
+    document.getElementById('sg').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>4. 정확도 vs 정밀도</h2>
+
+  <h3>한 줄 비유부터 — 다트보드 네 가지 패턴</h3>
+  <p>다트 30발을 던졌다고 상상해 봅시다. 결과는 네 가지 중 하나일 거예요.</p>
+  <ul>
+    <li><strong>중앙 근처에 한 점으로 뭉쳐 있다</strong> → 정확하고 정밀 (이상적)</li>
+    <li><strong>중앙에서 떨어진 곳에 뭉쳐 있다</strong> → 정밀하지만 부정확 (편향이 큼 — 조준 자체가 틀림)</li>
+    <li><strong>중앙 근처에 평균은 있는데 사방으로 흩어져 있다</strong> → 정확하지만 부정밀 (운에 맡긴 셈)</li>
+    <li><strong>저 멀리 흩어져 있다</strong> → 부정확하고 부정밀 (말 그대로 못 쓰겠음)</li>
+  </ul>
+
+  <p>핵심 비유:</p>
+  <ul>
+    <li><strong>정확도(accuracy) = "조준이 맞나?"</strong> — 평균 위치가 정중앙(진짜 값)에 얼마나 가까운가. 멀리 떨어져 있으면 <em>편향(bias)</em>이 있다고 합니다.</li>
+    <li><strong>정밀도(precision) = "손이 떨리나?"</strong> — 한 발 한 발이 서로 얼마나 모여 있는가. 흩어짐이 작으면 분산 $\sigma^2$가 작은 것.</li>
+  </ul>
+
+  <h3>왜 칼만 필터에서 이걸 구분해야 하나?</h3>
+  <p>칼만 필터의 두 파라미터 $Q$와 $R$이 사실상 이 두 개념을 그대로 반영합니다. 센서가 <strong>편향이 있으면 칼만 필터가 못 잡습니다</strong> — 평균 0의 가우시안 잡음만 가정하기 때문이에요. 그래서 실무에서는 항상 "센서를 캘리브레이션해서 편향 0으로 만든 뒤" 칼만 필터를 돌립니다. 반면 정밀도(분산)는 $R$로 직접 다룰 수 있어요. 따라서 학부 실험실에서 "왜 추정이 이상하게 한쪽으로 쏠리지?" 싶으면 99% 센서 편향 캘리브레이션을 잊은 겁니다.</p>
+
+  <p>두 단어는 일상에서 비슷하게 쓰지만 추정 이론에서는 분명히 구분합니다. 다트 보드 비유가 제일 직관적입니다.</p>
+
+  <ul>
+    <li><strong>정확(Accurate)</strong> — 평균이 진짜 값(가운데)에 가깝다 (편향이 작다)</li>
+    <li><strong>정밀(Precise)</strong> — 흩어짐이 작다 (분산이 작다)</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정확도 vs 정밀도 다트보드</h4>
+    <p>편향(bias)과 표준편차(σ)를 조절하면 다트 분포가 어떻게 변하는지 보세요. 칼만 필터가 최종적으로 추정하는 것은 "분포의 평균"이므로, 정밀도가 매우 중요합니다.</p>
+    <canvas id="dart" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>편향 (bias) <span class="val" id="biV">0</span><input type="range" id="bi" min="-2" max="2" step="0.1" value="0"></label>
+      <label>표준편차 σ <span class="val" id="dsV">0.5</span><input type="range" id="ds" min="0.1" max="2" step="0.1" value="0.5"></label>
+      <button id="dartRst">다시 던지기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dart'),x=c.getContext('2d');
+    let darts=[];
+    function gen(){
+      const bi=+document.getElementById('bi').value;
+      const sg=+document.getElementById('ds').value;
+      darts=[];
+      for(let i=0;i<30;i++){
+        const r=Math.sqrt(-2*Math.log(Math.random()));
+        const t=2*Math.PI*Math.random();
+        darts.push([bi+r*Math.cos(t)*sg,r*Math.sin(t)*sg]);
+      }
+    }
+    gen();
+    document.getElementById('dartRst').onclick=gen;
+    document.getElementById('bi').oninput=gen;
+    document.getElementById('ds').oninput=gen;
+    function loop(){
+      document.getElementById('biV').textContent=document.getElementById('bi').value;
+      document.getElementById('dsV').textContent=document.getElementById('ds').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320,cy=160,scale=50;
+      // dartboard rings
+      ['#c62828','#fff','#c62828','#fff','#2e7d32'].forEach((col,i)=>{
+        x.fillStyle=col;x.beginPath();x.arc(cx,cy,(5-i)*30,0,Math.PI*2);x.fill();
+        x.strokeStyle='#666';x.stroke();
+      });
+      x.fillStyle='#000';x.beginPath();x.arc(cx,cy,8,0,Math.PI*2);x.fill();
+      // darts
+      darts.forEach(d=>{x.fillStyle='#0b5fff';x.beginPath();x.arc(cx+d[0]*scale,cy+d[1]*scale,4,0,Math.PI*2);x.fill();x.strokeStyle='#fff';x.stroke();});
+      // diagnosis
+      const meanX=darts.reduce((s,d)=>s+d[0],0)/darts.length;
+      const meanY=darts.reduce((s,d)=>s+d[1],0)/darts.length;
+      const distMean=Math.hypot(meanX,meanY);
+      const spread=Math.sqrt(darts.reduce((s,d)=>s+(d[0]-meanX)**2+(d[1]-meanY)**2,0)/darts.length);
+      x.fillStyle='#666';x.font='13px sans-serif';
+      x.fillText('정확도 (편향 거리): '+distMean.toFixed(2),20,30);
+      x.fillText('정밀도 (1σ 흩어짐): '+spread.toFixed(2),20,50);
+      const desc=distMean<0.5&&spread<0.6?'✓ 정확하고 정밀':distMean<0.5?'정확하지만 흩어짐':spread<0.6?'정밀하지만 편향':'정확도·정밀도 모두 부족';
+      x.fillStyle='#0742b8';x.font='bold 14px sans-serif';x.fillText(desc,20,75);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>좋은 필터의 목표: 가능한 한 <strong>편향이 작고 분산도 작은</strong> 추정을 만드는 것.</p>
+
+  <h2>5. 두 가우시안 합치기 — 칼만의 핵심</h2>
+
+  <h3>한 줄 비유부터 — "두 친구의 증언"</h3>
+  <p>친구 A와 B가 같은 사건을 봤다고 합시다. A는 "범인 키가 175 cm 같았어" 라고 말하고(자신감 보통), B는 "172 cm였어"라고 말합니다(자신감 매우 높음). 여러분이라면 답을 어떻게 합칠까요? 그냥 평균 173.5 cm로 갈까요? 아니죠 — <strong>B 쪽 의견에 더 큰 무게</strong>를 주고, B가 정말 자신 있어 보이면 답을 172에 가깝게 끌고 갈 겁니다.</p>
+
+  <p>이게 가우시안 합치기의 본질입니다. <strong>분산이 작은(=확실한) 정보에 더 큰 가중치</strong>를 주는 가중평균. 그리고 결정적으로, <strong>두 사람의 증언을 합친 답은 어느 한 사람의 답보다도 더 확실합니다</strong>. 정보가 두 개니까 한 개일 때보다 좋아지는 게 당연하죠.</p>
+
+  <h3>왜 합친 분산이 더 작아지나? — 정밀도(precision)의 덧셈</h3>
+  <p>식 $\frac{1}{\hat\sigma^2} = \frac{1}{\sigma_1^2} + \frac{1}{\sigma_2^2}$를 보세요. $1/\sigma^2$를 <strong>정밀도(precision)</strong>라 부르고 "확신의 양"이라 생각하면 됩니다. 분산이 클수록(흐릿할수록) 정밀도가 작아요. 핵심 직감은:</p>
+  <ul>
+    <li><strong>정보를 합친다 = 확신을 더한다</strong></li>
+    <li>두 정밀도를 그냥 더하니, 합쳐진 정밀도는 항상 둘 중 어느 것보다도 큽니다.</li>
+    <li>정밀도가 커진다 = 분산이 작아진다 = 더 좁은 종 모양 → 더 확실한 추정.</li>
+  </ul>
+  <p>이게 칼만 필터가 "마법처럼" 보이는 이유의 본질입니다. <strong>정보 두 조각은 한 조각보다 항상 좋다</strong> — 두 조각이 서로 어긋나더라도요.</p>
+
+  <h3>숫자로 직접 풀어보기 — $\mu_1=10, \sigma_1=2,\ \mu_2=12, \sigma_2=3$</h3>
+  <div class="tip">
+    측정 1은 "값이 10이고 표준편차 2", 측정 2는 "값이 12이고 표준편차 3"이라 합시다. 둘을 합치면?
+    <ul>
+      <li>합쳐진 평균:
+        $\hat\mu = \dfrac{\sigma_2^2\,\mu_1 + \sigma_1^2\,\mu_2}{\sigma_1^2 + \sigma_2^2}
+                 = \dfrac{9\cdot 10 + 4\cdot 12}{4 + 9}
+                 = \dfrac{90 + 48}{13}
+                 = \dfrac{138}{13} \approx 10.62$</li>
+      <li>합쳐진 분산:
+        $\dfrac{1}{\hat\sigma^2} = \dfrac{1}{4} + \dfrac{1}{9} = \dfrac{9+4}{36} = \dfrac{13}{36}$
+        → $\hat\sigma^2 = \dfrac{36}{13} \approx 2.77$ → $\hat\sigma \approx 1.66$</li>
+    </ul>
+    관찰 포인트:
+    <ul>
+      <li>합쳐진 평균 10.62는 단순평균 11보다 <strong>측정 1(더 정확한 쪽)에 더 가까움</strong> — 확신이 큰 쪽으로 끌려간다.</li>
+      <li>합쳐진 표준편차 1.66은 둘 중 작은 쪽인 $\sigma_1=2$보다도 <strong>더 작다</strong> — 정보가 두 개라서 더 확신할 수 있다.</li>
+    </ul>
+  </div>
+
+  <p>두 측정 $z_1, z_2$가 있고 각각 분산이 $\sigma_1^2, \sigma_2^2$이라면, 둘을 합쳐 만든 새 추정의 평균과 분산은:</p>
+  $$ \hat\mu = \frac{\sigma_2^2 \mu_1 + \sigma_1^2 \mu_2}{\sigma_1^2 + \sigma_2^2}, \qquad \frac{1}{\hat\sigma^2} = \frac{1}{\sigma_1^2} + \frac{1}{\sigma_2^2} $$
+
+  <p>핵심 사실: <strong>합쳐진 분산은 두 입력 분산보다 모두 작습니다</strong>. 즉 두 정보를 똑똑하게 합치면 둘 중 어느 것보다도 더 확실한 답이 나옵니다. 마법의 정체가 이것입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 가우시안 합치기</h4>
+    <p>두 측정의 평균과 분산을 조절하세요. 합쳐진 결과(녹색)가 어떻게 더 좁고 정확해지는지 보세요.</p>
+    <canvas id="merge" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>μ₁ <span class="val" id="m1V">-1</span><input type="range" id="m1" min="-3" max="3" step="0.1" value="-1"></label>
+      <label>σ₁ <span class="val" id="s1V">1</span><input type="range" id="s1" min="0.2" max="2.5" step="0.1" value="1"></label>
+      <label>μ₂ <span class="val" id="m2V">1.5</span><input type="range" id="m2" min="-3" max="3" step="0.1" value="1.5"></label>
+      <label>σ₂ <span class="val" id="s2V">0.7</span><input type="range" id="s2" min="0.2" max="2.5" step="0.1" value="0.7"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('merge');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const x0=W/2,y0=H-30,sx=70,peakH=170;
+    function gpdf(xx,mu,sg){return Math.exp(-(xx-mu)*(xx-mu)/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));}
+    function render(){
+      const m1=parseFloat(document.getElementById('m1').value);
+      const s1=parseFloat(document.getElementById('s1').value);
+      const m2=parseFloat(document.getElementById('m2').value);
+      const s2=parseFloat(document.getElementById('s2').value);
+      ['m1','s1','m2','s2'].forEach(k=>{document.getElementById(k+'V').textContent=document.getElementById(k).value;});
+      const sgF=Math.sqrt(1/(1/(s1*s1)+1/(s2*s2)));
+      const muF=(s2*s2*m1+s1*s1*m2)/(s1*s1+s2*s2);
+      const peakMax=Math.max(gpdf(m1,m1,s1),gpdf(m2,m2,s2),gpdf(muF,muF,sgF));
+      const yScale=peakH/peakMax;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(20,y0);ctx.lineTo(W-20,y0);ctx.stroke();
+      function drawDist(mu,sg,stroke,fill){
+        ctx.fillStyle=fill;
+        ctx.beginPath();
+        const N=200;
+        ctx.moveTo(x0-5*sx,y0);
+        for(let i=0;i<=N;i++){
+          const xx=-5+10*i/N;
+          const px=x0+xx*sx,py=y0-gpdf(xx,mu,sg)*yScale;
+          ctx.lineTo(px,py);
+        }
+        ctx.lineTo(x0+5*sx,y0);
+        ctx.closePath();ctx.fill();
+        ctx.strokeStyle=stroke;ctx.lineWidth=2.5;
+        ctx.beginPath();
+        for(let i=0;i<=N;i++){
+          const xx=-5+10*i/N;
+          const px=x0+xx*sx,py=y0-gpdf(xx,mu,sg)*yScale;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+      drawDist(m1,s1,'#0b5fff','rgba(11,95,255,0.15)');
+      drawDist(m2,s2,'#ff8c00','rgba(255,140,0,0.15)');
+      drawDist(muF,sgF,'#2e7d32','rgba(46,125,50,0.30)');
+      ctx.font='12px sans-serif';
+      ctx.fillStyle='#0b5fff';ctx.fillText('측정 1 (μ='+m1.toFixed(1)+', σ='+s1.toFixed(1)+')',20,25);
+      ctx.fillStyle='#ff8c00';ctx.fillText('측정 2 (μ='+m2.toFixed(1)+', σ='+s2.toFixed(1)+')',20,42);
+      ctx.fillStyle='#2e7d32';ctx.fillText('합쳐진 결과 (μ='+muF.toFixed(2)+', σ='+sgF.toFixed(2)+')',20,59);
+    }
+    ['m1','s1','m2','s2'].forEach(k=>document.getElementById(k).addEventListener('input',render));
+    render();
+  })();
+  </script>
+
+  <h2>6. 예측-갱신 사이클</h2>
+
+  <h3>한 줄 비유부터 — "예측 후 측정으로 보정"의 무한 반복</h3>
+  <p>운전 중에 조수석 친구에게 "지금 어디쯤 왔어?"라고 묻는 상황을 떠올려 보세요. 친구는 두 가지 정보를 씁니다 — (1) 1분 전 위치 + 우리가 약 60 km/h로 1분 달렸으니 <em>대략 1 km 더 갔을 거야</em>(예측), (2) 마침 옆에 보이는 표지판이 "안성 IC 0.5 km"라네(측정). 이 둘을 합쳐 "안성 IC 0.5 km 직전쯤"이라 답하죠. 다음 1분 뒤에 또 같은 절차를 반복합니다. <strong>예측 → 측정 → 합치기(=갱신) → 다시 예측 →</strong> 이 사이클이 칼만 필터의 전부입니다.</p>
+
+  <p>수학적으로 말하면 <strong>예측-갱신 사이클은 베이즈 정리(Bayes' rule)의 반복 적용</strong>입니다. 매 스텝마다 "사전 확률(예측) × 우도(측정) ∝ 사후 확률(갱신)"을 계산하는데, 가우시안 가정 덕분에 이 곱이 §5의 깔끔한 공식으로 떨어지는 거예요.</p>
+
+  <h3>$Q$와 $R$의 평범한 의미</h3>
+  <ul>
+    <li><strong>$Q$ (프로세스 잡음)</strong> = "<em>내 모델을 얼마나 못 믿나</em>" — 내가 가정한 모델이 실제와 얼마나 어긋나 있는가. 차가 진짜로 등속도면 $Q$는 0이지만, 사실 가속/제동/바람 등으로 모델이 어긋나니 그 어긋남을 잡음으로 표현. <strong>$Q$가 크다 = 모델 의심 = 측정에 더 의존</strong>.</li>
+    <li><strong>$R$ (측정 잡음)</strong> = "<em>내 센서를 얼마나 못 믿나</em>" — GPS 노이즈 σ가 5 m이면 $R = 25$. 이 값은 보통 센서 데이터시트나 정지 상태 측정의 분산으로 정합니다. <strong>$R$이 크다 = 센서 의심 = 모델 예측에 더 의존</strong>.</li>
+  </ul>
+
+  <h3>왜 예측에서 $P$가 커지고 갱신에서 작아지나?</h3>
+  <p>이게 칼만 필터의 가장 직관적인 그림입니다.</p>
+  <ul>
+    <li><strong>예측 단계 ($P \to P+Q$)</strong> — "한 발자국 앞으로 갔는데 모델이 100% 정확하지는 않으니, 내 확신이 조금 흐릿해졌다." 시간이 지나기만 해도 불확실성은 자연히 늘어납니다(친구가 옆방에서 가만히 있다가 "1분 후 어디 있을까?" 물으면 점점 모르는 거 떠올려보세요).</li>
+    <li><strong>갱신 단계 ($P \to (1-K)P$)</strong> — "측정이 들어왔으니 정보가 하나 추가됐고, 두 정보 합치기로 분산은 항상 줄어든다(§5 그대로)." 새 측정 = 흐릿했던 시야가 다시 또렷해지는 순간.</li>
+  </ul>
+  <p>그래서 칼만 필터의 분산 $P$는 마치 호흡처럼 <strong>예측에서 부풀고 갱신에서 수축하는 패턴</strong>을 반복합니다. 측정이 자주 들어오는 시스템은 $P$가 작게 유지되고, 측정이 뜸하면 $P$가 점점 커집니다.</p>
+
+  <p>칼만 필터는 매 시각 두 단계를 반복합니다.</p>
+
+  <h3>① 예측 (Predict)</h3>
+  <p>모델로 한 스텝 앞으로 진행. 불확실성은 <em>증가</em>합니다.</p>
+  $$ \hat{x}_{k|k-1} = A \hat{x}_{k-1} + B u_k $$
+  $$ P_{k|k-1} = A P_{k-1} A^\top + Q $$
+
+  <h3>② 갱신 (Update)</h3>
+  <p>측정 $z_k$가 들어오면 두 가우시안(예측 + 측정)을 합칩니다. 불확실성은 <em>감소</em>합니다.</p>
+  $$ K_k = P_{k|k-1} H^\top (H P_{k|k-1} H^\top + R)^{-1} $$
+  $$ \hat{x}_k = \hat{x}_{k|k-1} + K_k (z_k - H \hat{x}_{k|k-1}) $$
+  $$ P_k = (I - K_k H) P_{k|k-1} $$
+
+  <ul>
+    <li>$Q$ — <strong>프로세스 잡음</strong>. 모델을 얼마나 못 믿느냐.</li>
+    <li>$R$ — <strong>측정 잡음</strong>. 센서를 얼마나 못 믿느냐.</li>
+    <li>$K$ — <strong>칼만 이득</strong>. 측정에 얼마나 가중치를 줄지의 비율.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 사이클이 분포를 어떻게 바꾸는가</h4>
+    <p>한 스텝 = <strong>예측 → 측정 → 갱신</strong>. 회색 점선은 이전 사후, 주황은 예측 후 분포(분산이 $Q$만큼 커짐), 파랑은 측정과 합친 갱신 사후(좁아짐). 빨간 점은 측정값 $z$, 초록 점선은 참 위치 $x^*$입니다. 자동 모드로 두면 분포가 시간에 따라 어떻게 안정되는지 보입니다.</p>
+    <canvas id="puc" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>프로세스 잡음 Q <span class="val" id="pucQV">0.5</span><input type="range" id="pucQ" min="0" max="3" step="0.05" value="0.5"></label>
+      <label>측정 잡음 R <span class="val" id="pucRV">2</span><input type="range" id="pucR" min="0.1" max="10" step="0.1" value="2"></label>
+      <label>참 위치 x* <span class="val" id="pucTV">5</span><input type="range" id="pucT" min="-10" max="10" step="0.5" value="5"></label>
+      <button id="pucStep">▶ 한 스텝</button>
+      <button id="pucAuto">▶▶ 자동</button>
+      <button id="pucRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('puc'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    let mu,P,prevMu,prevP,predMu,predP,lastZ,t,history;
+    const home=()=>{mu=0;P=10;prevMu=null;prevP=null;predMu=null;predP=null;lastZ=null;t=0;history=[];};
+    home();
+    const upd=()=>['pucQ','pucR','pucT'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['pucQ','pucR','pucT'].forEach(k=>sl(k).oninput=upd);upd();
+    function step(){
+      const Q=+sl('pucQ').value, R=+sl('pucR').value, target=+sl('pucT').value;
+      prevMu=mu;prevP=P;
+      predMu=mu;predP=P+Q;
+      const u1=Math.random()||1e-9, u2=Math.random();
+      const noise=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2)*Math.sqrt(R);
+      lastZ=target+noise;
+      const K=predP/(predP+R);
+      mu=predMu+K*(lastZ-predMu);
+      P=(1-K)*predP;
+      t++;
+      history.push({t,mu,P,z:lastZ,target});
+      if(history.length>120)history.shift();
+    }
+    sl('pucStep').onclick=step;
+    sl('pucRst').onclick=home;
+    let autoTimer=null;
+    sl('pucAuto').onclick=()=>{
+      if(autoTimer){clearInterval(autoTimer);autoTimer=null;sl('pucAuto').textContent='▶▶ 자동';}
+      else{autoTimer=setInterval(step,500);sl('pucAuto').textContent='⏸ 정지';}
+    };
+    function gauss(m,v,xq){return Math.exp(-(xq-m)*(xq-m)/(2*v))/Math.sqrt(2*Math.PI*v);}
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const SPLIT=220;
+      const xMin=-15,xMax=15,gw=c.width-40,gh=SPLIT-50,gx0=20,gy0=30;
+      x.strokeStyle='#eee';
+      for(let xv=xMin;xv<=xMax;xv+=5){
+        const px=gx0+(xv-xMin)/(xMax-xMin)*gw;
+        x.beginPath();x.moveTo(px,gy0);x.lineTo(px,gy0+gh);x.stroke();
+        x.fillStyle='#aaa';x.font='10px sans-serif';x.textAlign='center';x.fillText(xv,px,gy0+gh+12);
+      }
+      let yMax=0.5;
+      if(prevP!==null) yMax=Math.max(yMax,gauss(prevMu,prevP,prevMu));
+      if(predP!==null) yMax=Math.max(yMax,gauss(predMu,predP,predMu));
+      yMax=Math.max(yMax,gauss(mu,P,mu));
+      function plotG(m,v,color,dash){
+        x.strokeStyle=color;x.lineWidth=2;if(dash)x.setLineDash(dash);else x.setLineDash([]);
+        x.beginPath();
+        for(let i=0;i<=240;i++){
+          const xv=xMin+(xMax-xMin)*i/240;
+          const yv=gauss(m,v,xv);
+          const px=gx0+(xv-xMin)/(xMax-xMin)*gw;
+          const py=gy0+gh-yv/yMax*gh*0.9;
+          if(i===0)x.moveTo(px,py);else x.lineTo(px,py);
+        }
+        x.stroke();x.setLineDash([]);
+      }
+      if(prevP!==null)plotG(prevMu,prevP,'#bbb',[3,3]);
+      if(predP!==null)plotG(predMu,predP,'#ff8c00',null);
+      plotG(mu,P,'#0b5fff',null);
+      if(lastZ!==null){
+        const px=gx0+(lastZ-xMin)/(xMax-xMin)*gw;
+        x.strokeStyle='#c62828';x.lineWidth=2;
+        x.beginPath();x.moveTo(px,gy0+gh-12);x.lineTo(px,gy0+gh);x.stroke();
+        x.fillStyle='#c62828';x.beginPath();x.arc(px,gy0+gh,5,0,Math.PI*2);x.fill();
+      }
+      const target=+sl('pucT').value;
+      const tpx=gx0+(target-xMin)/(xMax-xMin)*gw;
+      x.strokeStyle='#2e7d32';x.setLineDash([2,3]);x.lineWidth=1.5;
+      x.beginPath();x.moveTo(tpx,gy0);x.lineTo(tpx,gy0+gh);x.stroke();x.setLineDash([]);
+      x.font='11px sans-serif';x.textAlign='left';
+      x.fillStyle='#bbb';x.fillText('--- 이전 사후',gx0+8,gy0-10);
+      x.fillStyle='#ff8c00';x.fillText('— 예측 (P+Q)',gx0+108,gy0-10);
+      x.fillStyle='#0b5fff';x.fillText('— 갱신 사후',gx0+208,gy0-10);
+      x.fillStyle='#c62828';x.fillText('● 측정 z',gx0+296,gy0-10);
+      x.fillStyle='#2e7d32';x.fillText(': 참 x*',gx0+360,gy0-10);
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';
+      x.fillText('스텝 t='+t,gx0,SPLIT-8);
+      x.fillStyle='#0b5fff';x.fillText('μ='+mu.toFixed(2)+', σ²='+P.toFixed(3)+', σ='+Math.sqrt(P).toFixed(3),gx0+80,SPLIT-8);
+      if(predP!==null){const K=predP/(predP+ +sl('pucR').value);x.fillStyle='#ff8c00';x.fillText('K='+K.toFixed(3),gx0+360,SPLIT-8);}
+      x.strokeStyle='#e3e6ea';x.beginPath();x.moveTo(0,SPLIT);x.lineTo(c.width,SPLIT);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('시간에 따른 추정 (μ ± σ 띠, 빨간 점=측정)',gx0,SPLIT+18);
+      const tx0=gx0,ty0=SPLIT+28,tw=gw,th=c.height-SPLIT-48;
+      const tWin=60, tStart=Math.max(0,t-tWin);
+      const yMinT=-12, yMaxT=12;
+      const tx=tt=>tx0+(tt-tStart)/tWin*tw;
+      const ty=yv=>ty0+th-(yv-yMinT)/(yMaxT-yMinT)*th;
+      x.strokeStyle='#ccc';x.beginPath();x.moveTo(tx0,ty0);x.lineTo(tx0,ty0+th);x.stroke();
+      x.beginPath();x.moveTo(tx0,ty(0));x.lineTo(tx0+tw,ty(0));x.stroke();
+      x.strokeStyle='#2e7d32';x.setLineDash([3,3]);
+      x.beginPath();x.moveTo(tx0,ty(target));x.lineTo(tx0+tw,ty(target));x.stroke();x.setLineDash([]);
+      if(history.length>0){
+        x.fillStyle='rgba(11,95,255,0.15)';x.beginPath();let started=false;
+        history.forEach(e=>{if(e.t<tStart)return;const px=tx(e.t),py=ty(e.mu+Math.sqrt(e.P));if(!started){x.moveTo(px,py);started=true;}else x.lineTo(px,py);});
+        for(let i=history.length-1;i>=0;i--){const e=history[i];if(e.t<tStart)continue;const px=tx(e.t),py=ty(e.mu-Math.sqrt(e.P));x.lineTo(px,py);}
+        x.closePath();x.fill();
+        x.fillStyle='#c62828';
+        history.forEach(e=>{if(e.t<tStart)return;const px=tx(e.t),py=ty(e.z);x.beginPath();x.arc(px,py,2.5,0,Math.PI*2);x.fill();});
+        x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();started=false;
+        history.forEach(e=>{if(e.t<tStart)return;const px=tx(e.t),py=ty(e.mu);if(!started){x.moveTo(px,py);started=true;}else x.lineTo(px,py);});
+        x.stroke();
+      }
+      x.fillStyle='#aaa';x.font='10px sans-serif';
+      x.fillText(yMaxT,tx0-22,ty0+6);x.fillText(yMinT,tx0-22,ty0+th);x.fillText(0,tx0-10,ty(0)+4);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>7. 예제 1: 정지된 거리 추정</h2>
+
+  <h3>왜 단순 평균이 아닌가? — 칼만이 진짜로 빛나는 곳</h3>
+  <p>"정지된 물체의 거리를 여러 번 재서 평균 내면 끝 아닌가?" 학부생들이 가장 자주 던지는 질문입니다. 이 예제 한 가지에 한해서는 맞습니다 — 진짜 거리가 변하지 않고(static), 모든 측정의 신뢰도가 같으면(IID), 단순 평균이 칼만 필터와 똑같은 답을 내요. 그럼 왜 굳이 칼만을 쓰나?</p>
+  <ul>
+    <li><strong>온라인(online) 처리</strong> — 단순 평균은 모든 데이터를 한꺼번에 모아야 합니다. 칼만은 측정 하나가 들어올 때마다 즉시 추정을 업데이트해요. 자율주행 차에서 "100개 측정이 다 모일 때까지 기다리세요"는 죽음입니다.</li>
+    <li><strong>비정상(non-stationary) 상황</strong> — 진짜 위치가 시간에 따라 변하면 단순 평균은 망가집니다. 1초 전 측정과 지금 측정을 동등하게 평균 내면 과거에 끌려가 버려요. 칼만은 모델로 "물체가 1초 동안 이만큼 움직였을 거야"를 자동 보정합니다.</li>
+    <li><strong>가중평균이 자동</strong> — 측정마다 신뢰도($R$)가 다르면(맑은 날 GPS와 흐린 날 GPS), 칼만이 자동으로 정밀도 가중치를 줘요. 단순 평균은 일률적으로 처리하므로 정보 낭비.</li>
+    <li><strong>불확실성도 같이 출력</strong> — 칼만은 추정값 $\hat x$뿐 아니라 분산 $P$도 알려줍니다. "지금 답은 50.2 m, 표준편차 0.4 m"라는 식으로요. 단순 평균은 점 추정만 줍니다.</li>
+  </ul>
+  <p>이 예제는 "<strong>가장 단순한 정지 상황에서도 칼만이 평균과 똑같은 결과를 줘요</strong>"를 보여주는 검증용 예제로 보면 됩니다 — 다음 §8에서 비정상 상황(움직이는 목표)으로 가면 단순 평균은 못 따라옵니다.</p>
+
+  <p>강의 노트의 예제: 진짜 거리는 50 m, 측정 오차 $\sigma = 5$ m. 10번 측정한 값:</p>
+  <p style="font-family:monospace;font-size:13px;background:#f5f5f5;padding:8px;border-radius:4px">
+  49.03, 48.44, 55.21, 49.98, 50.6, 52.61, 45.87, 42.64, 48.26, 55.84
+  </p>
+  <p>10개를 그냥 평균 내면 49.85 m로 정답에 가깝습니다. 칼만 필터는 측정이 들어올 때마다 추정치를 한 번씩 업데이트하면서 같은 결과로 수렴합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정지된 1D 위치 추정 — 측정이 쌓일수록 수렴</h4>
+    <p>진짜 거리는 50 m로 고정. 칼만 필터가 측정 한 개씩 받으며 추정값 $\hat x$와 불확실성 $P$를 어떻게 줄여나가는지 시간축으로 펼쳐서 봅니다. 일부러 <strong>틀린 초기 추정</strong>($\hat x_0=20$)에서 시작해도, 측정이 쌓이면 빠르게 50으로 수렴하고 <strong>±2σ 신뢰 구간(연한 파란 띠)</strong>이 좁아지는 게 보입니다. 같은 데이터를 단순 평균낸 값과도 비교됩니다.</p>
+    <canvas id="static" width="720" height="340"></canvas>
+    <div class="controls">
+      <label>측정 잡음 R <span class="val" id="srV">25</span><input type="range" id="sr" min="1" max="100" step="1" value="25"></label>
+      <label>초기 추정 x̂₀ <span class="val" id="sx0V">20</span><input type="range" id="sx0" min="10" max="90" step="1" value="20"></label>
+      <label>초기 분산 P₀ <span class="val" id="sp0V">400</span><input type="range" id="sp0" min="10" max="1000" step="10" value="400"></label>
+      <button id="sPlay">▶ 재생</button>
+      <button id="sStep" class="alt">한 스텝</button>
+      <button id="sNew" class="alt">새 시퀀스</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('static');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const ml=46,mr=196,mt=24,mb=34;
+    const pw=W-ml-mr,ph=H-mt-mb;
+    const truth=50,Nmax=20;
+    const yMin=10,yMax=90;
+    let xh0=20,P0=400,R=25;
+    let xh=xh0,P=P0;
+    let meas=[],hist=[];
+    let playing=false,lastTick=0;
+    const SPEED=380;
+    function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    const X=k=>ml+(k/Nmax)*pw;
+    const Y=y=>mt+ph-((y-yMin)/(yMax-yMin))*ph;
+    const clip=y=>Math.max(yMin,Math.min(yMax,y));
+    function newSeq(){
+      R=+document.getElementById('sr').value;
+      meas=[];
+      const sg=Math.sqrt(R);
+      for(let i=0;i<Nmax;i++)meas.push(truth+sg*gauss());
+      reset();
+    }
+    function reset(){
+      xh0=+document.getElementById('sx0').value;
+      P0=+document.getElementById('sp0').value;
+      xh=xh0;P=P0;hist=[];
+    }
+    function step(){
+      if(hist.length>=Nmax)return;
+      const k=hist.length;
+      const z=meas[k];
+      const K=P/(P+R);
+      xh=xh+K*(z-xh);
+      P=(1-K)*P;
+      hist.push({k,z,xh,P,K});
+    }
+    function draw(){
+      document.getElementById('srV').textContent=R.toFixed(0);
+      document.getElementById('sx0V').textContent=xh0.toFixed(0);
+      document.getElementById('sp0V').textContent=P0.toFixed(0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+      for(let y=yMin;y<=yMax;y+=10){ctx.beginPath();ctx.moveTo(ml,Y(y));ctx.lineTo(ml+pw,Y(y));ctx.stroke();}
+      for(let k=0;k<=Nmax;k+=5){ctx.beginPath();ctx.moveTo(X(k),mt);ctx.lineTo(X(k),mt+ph);ctx.stroke();}
+      ctx.strokeStyle='#999';
+      ctx.beginPath();ctx.moveTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.stroke();
+      ctx.fillStyle='#555';ctx.font='11px sans-serif';
+      for(let k=0;k<=Nmax;k+=5){ctx.fillText(k,X(k)-4,mt+ph+15);}
+      for(let y=yMin;y<=yMax;y+=10){ctx.fillText(y,ml-22,Y(y)+4);}
+      ctx.fillText('스텝 k',ml+pw/2-15,mt+ph+28);
+      ctx.save();ctx.translate(12,mt+ph/2+22);ctx.rotate(-Math.PI/2);ctx.fillText('거리 (m)',0,0);ctx.restore();
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.moveTo(ml,Y(truth));ctx.lineTo(ml+pw,Y(truth));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';
+      ctx.fillText('진짜 거리 = '+truth,ml+pw-92,Y(truth)-6);
+      const pts=[{k:0,xh:xh0,P:P0},...hist.map(h=>({k:h.k+1,xh:h.xh,P:h.P}))];
+      ctx.fillStyle='rgba(11,95,255,0.13)';
+      ctx.beginPath();
+      pts.forEach((p,i)=>{const sg=Math.sqrt(p.P);const py=Y(clip(p.xh+2*sg));if(i===0)ctx.moveTo(X(p.k),py);else ctx.lineTo(X(p.k),py);});
+      for(let i=pts.length-1;i>=0;i--){const sg=Math.sqrt(pts[i].P);ctx.lineTo(X(pts[i].k),Y(clip(pts[i].xh-2*sg)));}
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle='#c62828';
+      hist.forEach(h=>{ctx.beginPath();ctx.arc(X(h.k+1),Y(clip(h.z)),2.8,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      pts.forEach((p,i)=>{if(i===0)ctx.moveTo(X(p.k),Y(p.xh));else ctx.lineTo(X(p.k),Y(p.xh));});
+      ctx.stroke();
+      const cur=pts[pts.length-1];
+      ctx.fillStyle='#0b5fff';
+      ctx.beginPath();ctx.arc(X(cur.k),Y(cur.xh),4.5,0,Math.PI*2);ctx.fill();
+      const px=ml+pw+14,py=mt+4;
+      ctx.fillStyle='#fff';ctx.fillRect(px-6,py-2,180,ph+8);
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.strokeRect(px-6,py-2,180,ph+8);
+      ctx.fillStyle='#333';ctx.font='bold 13px sans-serif';
+      ctx.fillText('현재 상태',px,py+14);
+      ctx.font='12px Consolas,monospace';
+      let yy=py+34;
+      const last=hist.length>0?hist[hist.length-1]:null;
+      ctx.fillStyle='#555';
+      ctx.fillText('k = '+(last?last.k+1:0)+' / '+Nmax,px,yy);yy+=22;
+      if(last){
+        ctx.fillStyle='#c62828';ctx.fillText('z_k  = '+last.z.toFixed(2),px,yy);yy+=20;
+        ctx.fillStyle='#0b5fff';ctx.fillText('x̂_k  = '+last.xh.toFixed(2),px,yy);yy+=18;
+        ctx.fillText('P_k  = '+last.P.toFixed(2),px,yy);yy+=18;
+        ctx.fillText('σ_k  = '+Math.sqrt(last.P).toFixed(2),px,yy);yy+=18;
+        ctx.fillStyle='#7c3aed';ctx.fillText('K_k  = '+last.K.toFixed(3),px,yy);yy+=24;
+        let s=0;hist.forEach(h=>s+=h.z);const naive=s/hist.length;
+        ctx.fillStyle='#666';ctx.font='11px Consolas,monospace';
+        ctx.fillText('단순평균 = '+naive.toFixed(2),px,yy);yy+=16;
+        ctx.fillText('KF오차   = '+(last.xh-truth>=0?'+':'')+(last.xh-truth).toFixed(2),px,yy);
+      }else{
+        ctx.fillStyle='#0b5fff';ctx.fillText('x̂_0 = '+xh0.toFixed(0),px,yy);yy+=18;
+        ctx.fillText('P_0 = '+P0.toFixed(0),px,yy);yy+=18;
+        ctx.fillText('σ_0 = '+Math.sqrt(P0).toFixed(2),px,yy);yy+=22;
+        ctx.fillStyle='#999';ctx.font='11px sans-serif';
+        ctx.fillText('▶ 재생을 눌러 측정',px,yy);yy+=14;
+        ctx.fillText('   하나씩 받아보세요',px,yy);
+      }
+    }
+    function tick(now){
+      if(playing&&now-lastTick>=SPEED){
+        step();lastTick=now;
+        if(hist.length>=Nmax){playing=false;document.getElementById('sPlay').textContent='▶ 재생';}
+      }
+      draw();
+      requestAnimationFrame(tick);
+    }
+    document.getElementById('sr').addEventListener('input',()=>{playing=false;document.getElementById('sPlay').textContent='▶ 재생';newSeq();});
+    document.getElementById('sx0').addEventListener('input',reset);
+    document.getElementById('sp0').addEventListener('input',reset);
+    document.getElementById('sStep').addEventListener('click',()=>{playing=false;document.getElementById('sPlay').textContent='▶ 재생';if(hist.length>=Nmax)reset();step();});
+    document.getElementById('sPlay').addEventListener('click',()=>{
+      if(hist.length>=Nmax)reset();
+      playing=!playing;
+      document.getElementById('sPlay').textContent=playing?'⏸ 일시정지':'▶ 재생';
+      lastTick=performance.now();
+    });
+    document.getElementById('sNew').addEventListener('click',()=>{playing=false;document.getElementById('sPlay').textContent='▶ 재생';newSeq();});
+    newSeq();
+    requestAnimationFrame(tick);
+  })();
+  </script>
+
+  <h2>8. 예제 2: 등속도 추적</h2>
+
+  <h3>L3 §11과 연결 — "이게 그 등속도 모델의 1D 응용"</h3>
+  <p>L3 §11에서 봤던 <strong>등속도(CV) 모델</strong>이 기억나나요? "물체가 거의 일정한 속도로 움직이고, 작은 가속 변화는 프로세스 잡음 $\mathbf w$로 흡수한다"는 그 모델입니다. 이번 예제가 바로 그 CV 모델을 1D로 가장 단순하게 풀어낸 형태예요.</p>
+  <ul>
+    <li>L3 식: $\mathbf x = [p, v]^\top$, $\dot{\mathbf x} = \begin{bmatrix}0 & 1\\ 0 & 0\end{bmatrix}\mathbf x + \mathbf w$</li>
+    <li>여기 식: 위치 하나만 상태로 두고, 속도 $v$를 입력 $u$로 외부 주입 → $A = 1, Bu = v\Delta t$</li>
+  </ul>
+  <p>본질적으로 같은 가정입니다 — "속도는 거의 일정한데 모델이 못 잡는 부분(가속, 외란)은 $Q$로 흡수." L3에서 다룬 <strong>"모델이 못 잡는 항은 잡음으로"</strong>의 직감을 이 예제에서 직접 확인할 수 있습니다.</p>
+
+  <h3>$Q$와 $R$ 튜닝 — 학부생이 가장 헷갈리는 부분</h3>
+  <p>이 예제에서 가장 중요한 실습은 $Q, R$ 슬라이더를 움직여 보는 거예요. 다음 직감을 손으로 익히면 평생 갑니다.</p>
+  <ul>
+    <li><strong>$R$을 키우면</strong>(센서를 의심) → 추정 곡선이 매끄러워지지만 진짜 움직임을 늦게 따라감(지연).</li>
+    <li><strong>$R$을 줄이면</strong>(센서를 신뢰) → 추정이 측정의 노이즈를 그대로 흡수해 떨림.</li>
+    <li><strong>$Q$를 키우면</strong>(모델을 의심) → 모델 예측을 덜 믿어 측정에 빠르게 반응.</li>
+    <li><strong>$Q$를 줄이면</strong>(모델을 신뢰) → 매끄럽지만 모델 가정이 깨질 때(곡선 구간) 추정이 진실에서 벗어남.</li>
+  </ul>
+  <p>좋은 튜닝은 "지연 vs 떨림"의 절충이고, 이게 칼만 필터 엔지니어의 평생 직업입니다.</p>
+
+  <p>이번에는 물체가 속도 1 m/s로 직선 운동합니다. 상태는 위치 하나뿐이지만 모델에서 속도를 가정합니다.</p>
+  <ul>
+    <li>$A = 1$ (속도 1 m/s × $\Delta t$ = 1 m가 매 스텝 더해진다는 것은 입력으로)</li>
+    <li>$B u = v\Delta t$, $u = v$</li>
+    <li>$Q = 2$ (모델 잡음)</li>
+    <li>$R = 4$ (측정 잡음)</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D 칼만 필터 (이동하는 목표)</h4>
+    <p>목표가 사인파처럼 움직입니다. 측정 잡음 $R$과 모델 잡음 $Q$를 조절하며 추정이 어떻게 변하는지 관찰하세요.</p>
+    <canvas id="kf" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>측정 잡음 R <span class="val" id="rV">3</span><input type="range" id="r" min="0.1" max="10" step="0.1" value="3"></label>
+      <label>모델 잡음 Q <span class="val" id="qV">0.1</span><input type="range" id="q" min="0.01" max="2" step="0.01" value="0.1"></label>
+      <button id="rst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 진짜 &nbsp; 🔴 측정 &nbsp; 🔵 KF 추정</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kf'),x=c.getContext('2d');
+    let t=0, hist=[];
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{sl('rV').textContent=sl('r').value;sl('qV').textContent=sl('q').value;};
+    sl('rst').onclick=()=>{t=0;hist=[];xh=0;P=1;};
+    ['r','q'].forEach(k=>sl(k).oninput=upd);
+    let xh=0,P=1;
+    function loop(){
+      const R=+sl('r').value,Q=+sl('q').value,dt=0.05,A=1,H=1;
+      const truth=20+15*Math.sin(t*0.5);
+      const meas=truth+(Math.random()*2-1)*Math.sqrt(R)*1.5;
+      const xp=A*xh, Pp=A*P*A+Q;
+      const K=Pp*H/(H*Pp*H+R);
+      xh=xp+K*(meas-H*xp);
+      P=(1-K*H)*Pp;
+      hist.push({t,truth,meas,est:xh});
+      if(hist.length>300)hist.shift();
+      t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.height;i+=40){x.beginPath();x.moveTo(0,i);x.lineTo(c.width,i);x.stroke();}
+      const sx=v=>v*2, sy=v=>140-(v-20)*5;
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.truth);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#c62828';
+      hist.forEach((h,i)=>{x.beginPath();x.arc(sx(i),sy(h.meas),1.5,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.est);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('K (현재 칼만 이득) = '+K.toFixed(3),12,260);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+
+  <h2>9. 칼만 이득 $K$의 직감</h2>
+
+  <h3>한 줄로 읽기 — $K$는 "측정에 줄 가중치"</h3>
+  <p>식 $K = \dfrac{P}{P + R}$를 그대로 한국어로 읽으면 이렇습니다 — "<strong>나의 불확실성($P$) ÷ (나의 불확실성 + 센서의 불확실성)</strong>." 분자와 분모를 비교만 하면 되니, 두 불확실성 중 어느 쪽이 더 큰가에 따라 $K$가 결정됩니다.</p>
+
+  <p>또 갱신 식 $\hat x \leftarrow \hat x + K(z - \hat x)$를 보면 $K$는 "측정이 가져온 새로운 정보($z - \hat x$)를 얼마나 받아들일지"의 비율이에요. 학부생들이 자주 헷갈리는 포인트:</p>
+  <div class="note">
+    <strong>흔한 오해</strong> — "$K$가 크면 추정이 더 정확해진다"라고 외우면 안 됩니다. $K$는 정확도의 척도가 아니라 <strong>"측정과 모델 중 측정에 얼마나 비중을 둘지"</strong>의 비율입니다. $K=1$이면 추정 = 측정(모델 무시), $K=0$이면 추정 = 모델 예측(측정 무시). 어느 쪽도 그 자체로 좋거나 나쁘지 않고, 상황에 맞는 비율이 정답이에요.
+  </div>
+
+  <h3>경계 사례로 손에 익히기</h3>
+  <table>
+    <thead><tr><th>상황</th><th>$K$ 값</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>$R \to 0$ (센서가 완벽)</td><td>$K \to 1$</td><td>측정을 100% 받아들임 — 모델은 의미 없음</td></tr>
+      <tr><td>$R \to \infty$ (센서가 쓰레기)</td><td>$K \to 0$</td><td>측정을 완전히 무시 — 모델 예측만 신뢰</td></tr>
+      <tr><td>$P \to \infty$ (내가 아무것도 모름)</td><td>$K \to 1$</td><td>"어차피 모르겠으니 일단 측정 받자" — 부팅 직후 자주 발생</td></tr>
+      <tr><td>$P \to 0$ (내가 완벽히 안다)</td><td>$K \to 0$</td><td>"이미 답을 아는데 측정 따위" — 측정은 추정을 거의 못 바꿈</td></tr>
+      <tr><td>$P = R$ (둘이 똑같이 의심스러움)</td><td>$K = 0.5$</td><td>모델·측정에 똑같은 가중치 → 단순 평균</td></tr>
+    </tbody>
+  </table>
+
+  <p>현실에서는 보통 $P$가 시간에 따라 줄어들면서 $K$도 같이 작아져 어떤 정상 상태(steady state)에 수렴합니다. 그 수렴값이 바로 그 시스템의 "<em>모델과 센서 중 누가 더 믿을 만한가</em>"를 숫자 하나로 요약한 것이에요.</p>
+
+  <p>$K$는 0과 1 사이의 값으로, "측정을 얼마나 신뢰할지"를 결정합니다.</p>
+  $$ K = \frac{P_\text{predict}}{P_\text{predict} + R} $$
+  <ul>
+    <li>$R$이 작다 → 측정이 정확 → $K \approx 1$ → 측정을 거의 그대로 받아들임</li>
+    <li>$R$이 크다 → 측정이 잡음투성이 → $K \approx 0$ → 모델 예측만 신뢰</li>
+    <li>$P$가 크다 → 추정이 불확실 → $K \uparrow$ → 측정으로 빠르게 보정</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: $K$의 시간 변화</h4>
+    <p>초기에 분산 $P$가 크므로 $K$가 거의 1입니다(측정을 그대로 받음). 시간이 지나며 $P$가 줄고 $K$도 작아져 안정됩니다.</p>
+    <canvas id="kgain" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="kgRV">5</span><input type="range" id="kgR" min="0.5" max="20" step="0.5" value="5"></label>
+      <label>Q <span class="val" id="kgQV">0.1</span><input type="range" id="kgQ" min="0" max="2" step="0.05" value="0.1"></label>
+      <button id="kgRst">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kgain'),x=c.getContext('2d');
+    let P,Khist,Phist,frame=0;
+    function init(){P=100;Khist=[];Phist=[];frame=0;}
+    init();document.getElementById('kgRst').onclick=init;
+    function loop(){
+      if(frame++%5===0){
+        const R=+document.getElementById('kgR').value;
+        const Q=+document.getElementById('kgQ').value;
+        // predict
+        P=P+Q;
+        // K
+        const K=P/(P+R);
+        Khist.push(K);Phist.push(P);
+        if(Khist.length>120){Khist.shift();Phist.shift();}
+        // update
+        P=(1-K)*P;
+      }
+      ['kgR','kgQ'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#999';x.beginPath();x.moveTo(40,240);x.lineTo(620,240);x.moveTo(40,30);x.lineTo(40,240);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('스텝 →',560,255);x.fillText('K, P',12,40);
+      // K (0~1) 곡선
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      Khist.forEach((v,i)=>{const xx=40+i*4.8,yy=240-v*180;if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      // P (정규화) 곡선
+      const Pmax=Math.max(...Phist,1);
+      x.strokeStyle='#ff8c00';x.beginPath();
+      Phist.forEach((v,i)=>{const xx=40+i*4.8,yy=240-v/Pmax*180;if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#0b5fff';x.fillText('🔵 K (칼만 이득)',40,30);
+      x.fillStyle='#ff8c00';x.fillText('🟠 P (정규화 분산)',180,30);
+      x.fillStyle='#666';x.fillText('수렴 K ≈ '+(Khist[Khist.length-1]||0).toFixed(3),330,30);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p>관찰 포인트: $Q=0$이면 $P$가 점점 줄어 $K\to 0$이 됩니다(측정을 무시하기 시작). $Q$가 크면 모델을 의심해 $K$가 0에 도달하지 못하고 측정에 계속 의존합니다.</p>
+
+  <h2>10. 베이즈 정리로 다시 보기 — 칼만 필터의 "왜 그게 답인가"</h2>
+  <p>지금까지의 식은 "두 가우시안 합치기"라는 기하학적 직감으로 유도했어요. 사실 그 모든 단계는 <strong>베이즈 정리</strong>를 가우시안 분포에 적용한 결과입니다. 이 시각이 칼만 필터를 EKF·UKF·파티클 필터·SLAM 같은 모든 친척 알고리즘과 같은 가족으로 묶어 줍니다.</p>
+  <p>베이즈 정리:</p>
+  $$ p(x_k | z_{1:k}) \;\propto\; \underbrace{p(z_k | x_k)}_{\text{우도(likelihood)}}\;\cdot\;\underbrace{p(x_k | z_{1:k-1})}_{\text{사전(prior)}} $$
+  <ul>
+    <li><strong>사전</strong> = "측정 받기 직전, 내가 생각한 상태 분포" → 칼만 필터의 <em>예측</em> 단계 결과 $\mathcal N(x_k^-, P_k^-)$.</li>
+    <li><strong>우도</strong> = "이 측정값이 들어왔을 때, 진짜 상태가 그것일 확률" → 측정 모델 $\mathcal N(z; Hx, R)$.</li>
+    <li><strong>사후(posterior)</strong> = 둘의 곱 → 칼만 필터의 <em>갱신</em> 단계 결과 $\mathcal N(x_k^+, P_k^+)$.</li>
+  </ul>
+  <p>가우시안 두 개의 곱이 다시 가우시안이라는 깔끔한 성질 덕에, 분포 전체를 평균과 분산 두 숫자로 따라다닐 수 있습니다 — 이게 칼만 필터가 그토록 효율적인 이유예요.</p>
+  <div class="tip">
+    <strong>한 줄 정리</strong> — 칼만 필터 = "가우시안 가정 아래의 베이즈 필터." 분포가 가우시안이 아니거나 동역학이 비선형이면, 같은 베이즈 틀에서 EKF(L5)·UKF(L5)·파티클 필터(L5)가 자연히 따라옵니다.
+  </div>
+
+  <h2>11. 잡음 분산 $Q$, $R$은 어디서 오는가</h2>
+  <p>학부생이 칼만 필터를 처음 짤 때 가장 막히는 부분은 "$Q, R$ 값을 도대체 어떻게 정하지?"입니다. 답은 한 줄이 아니라 세 줄이에요.</p>
+  <h3>11.1 측정 잡음 $R$ — 보통은 데이터시트에서</h3>
+  <p>센서마다 제조사가 표준편차 또는 RMS 오차를 명시합니다.</p>
+  <ul>
+    <li>GPS — 수평 ±2~5 m → $\sigma \approx 3$ m → $R = \sigma^2 \approx 9$ m².</li>
+    <li>IMU 가속도계 — $\sigma \approx 0.05$ m/s² → $R \approx 2.5\!\times\!10^{-3}$.</li>
+    <li>휠 인코더 — 한 틱당 거리 분해능 그대로 사용.</li>
+  </ul>
+  <p>데이터시트가 없으면 정지 상태에서 센서를 100~1000번 측정해 표본 분산을 구하면 됩니다.</p>
+
+  <h3>11.2 프로세스 잡음 $Q$ — 모델 가정의 결함</h3>
+  <p>$Q$는 "모델이 못 잡는 것"의 크기를 나타냅니다.</p>
+  <ul>
+    <li>등속도(CV) 모델인데 실제로는 가속이 있을 때 → $Q \approx (\sigma_a \Delta t)^2$, 여기서 $\sigma_a$는 예상 가속도 표준편차.</li>
+    <li>시스템 파라미터가 ±10% 모호할 때 → 모델이 만드는 1 스텝 변화량의 ±10%를 $\sigma$로 잡음.</li>
+  </ul>
+  <p>즉 $Q$는 "모델 가정의 신뢰도"를 정량화한 값이에요. 학부생이 처음에는 $Q$를 0.01부터 시작해 응답을 보며 10배씩 키워 보는 것을 권장합니다.</p>
+
+  <h3>11.3 자동 튜닝 — NIS·NEES 검정</h3>
+  <p>실제 시스템에서는 데이터로 $Q, R$을 검증할 수 있어요. <strong>NIS(Normalized Innovation Squared)</strong> $\nu_k^\top S_k^{-1} \nu_k$가 카이제곱 분포를 따라야 하는데, 너무 크면 $Q$나 $R$ 둘 다 작게 잡은 것이고, 너무 작으면 둘 다 크게 잡은 것입니다. 대학원에서 본격적으로 다루지만 학부 단계에서는 "이런 도구가 있다"만 알아두세요.</p>
+
+  <h2>12. 중간 예제 — 등가속도 운동 추정</h2>
+  <p>예제 1(정지)과 예제 2(등속) 사이의 난이도를 채우기 위해 등가속도 추정을 손으로 따라가 봅시다. 자유낙하나 일정 가속 차량 같은 상황입니다.</p>
+  <ul>
+    <li><strong>모델</strong>: 위치 $p_{k+1} = p_k + v_k \Delta t + \tfrac12 a \Delta t^2$. 여기서 $a$는 알려진 일정 가속도(중력처럼).</li>
+    <li><strong>입력 항</strong>: $u = a$, $B = \tfrac12 \Delta t^2$. $A = 1$, $v_k$를 잠시 알려진 값으로 두기.</li>
+    <li>$\Delta t = 0.1$ s, $a = -9.8$ m/s² (자유낙하), $Q = 0.05$, $R = 1.0$.</li>
+  </ul>
+  <p><strong>한 사이클(스텝 1).</strong></p>
+  <ol>
+    <li><em>예측</em>: $\hat p^- = 0 + 0 \cdot 0.1 + 0.5 \cdot (-9.8) \cdot 0.01 = -0.049$ m. $P^- = 1 \cdot 1 \cdot 1 + 0.05 = 1.05$.</li>
+    <li><em>측정</em>: 진짜는 $-0.049$ m이지만 잡음 0.3 m가 붙어 $z = 0.251$ m라고 합시다.</li>
+    <li><em>갱신</em>: $K = 1.05 / (1.05 + 1.0) = 0.512$. $\hat p = -0.049 + 0.512 \cdot (0.251 - (-0.049)) = -0.049 + 0.512 \cdot 0.300 = 0.105$ m. $P = (1 - 0.512) \cdot 1.05 = 0.512$.</li>
+  </ol>
+  <p>한 스텝 만에 $P$가 1.0(초기) → 0.512로 절반 가까이 줄었어요. 측정이 들어올수록 분산은 계속 줄고, $K$도 점점 작아져 결국 안정 상태에 듭니다. 이게 정지 예제와 등속 예제 사이의 자연스러운 다리입니다.</p>
+
+  <h2>13. 칼만 필터가 "발산"하는 흔한 원인</h2>
+  <p>실험실에서 칼만 필터를 만들면 한 번쯤 추정이 진짜 상태에서 점점 멀어지는 일을 겪습니다. 발산(divergence)의 흔한 원인 다섯 가지를 정리합니다.</p>
+  <ol>
+    <li><strong>$P$가 너무 작아짐 (filter overconfidence)</strong> — 측정을 너무 신뢰해 $P \to 0$이 되면 $K \to 0$이 되어 새 측정을 무시함. 해결: $Q$ 키우기 또는 $P$의 하한 강제.</li>
+    <li><strong>모델 불일치</strong> — 등속 모델인데 실제는 가속하는 경우. 해결: $Q$ 키우거나 모델을 등가속도(CA)로 바꾸기.</li>
+    <li><strong>측정 잡음의 비-가우시안성</strong> — GPS의 멀티패스로 가끔 큰 편향이 들어오면 평균이 흔들림. 해결: 이상치 거부(NIS 검정), Huber 칼만 필터.</li>
+    <li><strong>수치 오차</strong> — 부동소수점에서 $P$가 비대칭이 되거나 음정의가 깨짐. 해결: Joseph form 사용, $P = (P + P^\top)/2$ 강제.</li>
+    <li><strong>관측 가능성 부족</strong> — 일부 상태가 측정에 영향을 못 주면 그 상태의 추정 오차가 무한히 자람. L3의 가관측성 행렬로 사전 진단.</li>
+  </ol>
+
+  <h2>14. 칼만 필터가 쓰이는 곳 — 한 페이지 갤러리</h2>
+  <ul>
+    <li><strong>Apollo 우주선 (1960년대)</strong> — 칼만 필터의 첫 큰 무대. 별 추적기와 IMU를 융합해 달까지의 항법.</li>
+    <li><strong>스마트폰 GPS</strong> — GPS + 가속도 + 자이로 + 보행 모델을 융합해 GPS 사각지대에서도 위치 추정 유지.</li>
+    <li><strong>자율주행 EKF/UKF</strong> — 휠 오도메트리 + IMU + GPS + LiDAR 매칭을 한꺼번에 융합. L5에서 다룸.</li>
+    <li><strong>금융 시계열 추정</strong> — 시장 가격에 숨은 "진짜 추세"를 추출(Kalman은 신호처리 출신이지만 금융에서도 표준).</li>
+    <li><strong>Bitcoin·암호화폐 가격 예측</strong> — 짧은 시간 스케일에서 noise에 대비하는 단순 KF.</li>
+    <li><strong>의료 영상 — 심장 박동 추적</strong>, <strong>전기차 배터리 SOC 추정</strong>, <strong>날씨 데이터 어시밀레이션</strong> 등.</li>
+  </ul>
+  <p>"진짜 상태가 잡음으로 가려져 있고, 그걸 모델 + 측정으로 추정"하는 모든 곳에 칼만 필터(혹은 그 변형)가 살아 있습니다.</p>
+
+  <h2>15. 코드 예제 (Python)</h2>
+  <pre><code>import numpy as np
+
+# 시스템 파라미터
+A, H = 1.0, 1.0
+Q, R = 0.1, 4.0          # process / measurement noise
+x_hat, P = 0.0, 1.0      # initial estimate
+
+# 진짜 값 + 잡음 측정
+truth = 50.0
+measurements = truth + np.random.randn(50)*np.sqrt(R)
+
+estimates = []
+for z in measurements:
+    # 1) 예측
+    x_hat = A * x_hat
+    P     = A * P * A + Q
+    # 2) 갱신
+    K = P * H / (H * P * H + R)
+    x_hat = x_hat + K * (z - H * x_hat)
+    P = (1 - K * H) * P
+    estimates.append(x_hat)
+
+print("최종 추정:", estimates[-1])    # ≈ 50</code></pre>
+
+  <h2>16. 다음 강의 미리보기</h2>
+  <p>이 강의의 모든 식은 스칼라(숫자 한 개)였습니다. 하지만 실제 로봇은 위치·속도·각도 같은 <strong>여러 상태</strong>를 동시에 추정해야 합니다.
+  스칼라를 행렬로 바꾸기만 하면 같은 알고리즘이 그대로 돌아간다는 게 칼만 필터의 매력입니다.</p>
+  <p><strong><a href="05-kalman-2d.html">L5. 칼만 필터 (2D·비선형)</a></strong>에서는
+  ① 상태가 여러 개일 때의 행렬 형태, ② 공분산 행렬 $P$를 "타원"으로 시각화하는 법,
+  ③ 비선형 동역학(자전거 모델 같은 것)을 다루는 EKF·UKF·파티클 필터를 배웁니다.
+  이 도구가 있으면 L2의 자전거 모델 + L3의 상태공간 + 잡음 섞인 GPS 측정으로 차의 위치를 정확히 추정할 수 있어요.</p>
+
+  <h2>📖 더 깊이 공부하기</h2>
+  <ul>
+    <li><strong><a href="https://www.kalmanfilter.net/default.aspx">Kalman Filter from the Ground Up</a></strong> (Alex Becker) — 강의 노트가 참조하는 무료 온라인 교과서. 단계별 직관 설명이 일품입니다.</li>
+    <li><strong>Probabilistic Robotics</strong> (Thrun, Burgard, Fox) — 로봇 측위·SLAM의 표준 교과서, 2장이 필터의 기초.</li>
+    <li><strong><a href="https://underactuated.mit.edu/state_estimation.html">Underactuated Robotics 12장 — State Estimation</a></strong></li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="03-state-space.html"><small>← 이전</small>L3. 상태공간</a>
+    <a href="05-kalman-2d.html" class="next"><small>다음 →</small>L5. 칼만 필터 2D</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

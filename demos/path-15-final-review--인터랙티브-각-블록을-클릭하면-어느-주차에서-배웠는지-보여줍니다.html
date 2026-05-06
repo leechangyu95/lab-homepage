@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 각 블록을 클릭하면 어느 주차에서 배웠는지 보여줍니다 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 각 블록을 클릭하면 어느 주차에서 배웠는지 보여줍니다</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/15-final-review.html">Week 15. 기말 전체 정리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 각 블록을 클릭하면 어느 주차에서 배웠는지 보여줍니다</h4>
+    <canvas id="pipe" width="640" height="220"></canvas>
+    <p id="pipeMsg" style="margin-top:8px;color:var(--muted);font-size:13px">블록을 클릭하면 설명이 여기에 나옵니다.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pipe'),x=c.getContext('2d'),msg=document.getElementById('pipeMsg');
+    const blocks=[
+      {label:'Perception',sub:'(입력 가정)',col:'#f3e5f5',bd:'#9c27b0',w:120,info:'본 강의 범위 외. 카메라·LiDAR·Radar로 세상을 인식.'},
+      {label:'Planning',sub:'W5–W7',col:'#eef3ff',bd:'#0b5fff',w:120,info:'W5 지도 표현 → W6 RRT / W7 A*. "어디로 갈까"의 답.'},
+      {label:'Tracking',sub:'W9–W11',col:'#e8f5e9',bd:'#2e7d32',w:120,info:'W9 PID + W10 Pure Pursuit/Stanley + W11 통합 시뮬레이션.'},
+      {label:'Safety',sub:'W12 CBF',col:'#fce4ec',bd:'#c62828',w:100,info:'W12 Control Barrier Function. 모든 명령에 안전 제약을 부여.'},
+      {label:'Advanced',sub:'W13–W14',col:'#fff3e0',bd:'#f57c00',w:120,info:'W13 MPC: 미래 예측 + 최적화. W14 RL: 경험 기반 학습.'}
+    ];
+    const y0=70,h=70;let xs=20;blocks.forEach(b=>{b.x=xs;b.y=y0;b.h=h;xs+=b.w+12;});
+    function draw(highlight){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      blocks.forEach(b=>{
+        x.fillStyle=b.col;x.strokeStyle=b.bd;x.lineWidth=highlight===b?3:1.2;
+        x.fillRect(b.x,b.y,b.w,b.h);x.strokeRect(b.x,b.y,b.w,b.h);
+        x.fillStyle='#222';x.font='14px sans-serif';x.fillText(b.label,b.x+10,b.y+28);
+        x.fillStyle='#666';x.font='12px sans-serif';x.fillText(b.sub,b.x+10,b.y+48);
+      });
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('자율주행 파이프라인 (좌→우)',12,24);
+    }
+    draw();
+    c.addEventListener('click',e=>{const r=c.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;
+      const hit=blocks.find(b=>px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h);
+      if(hit){draw(hit);msg.textContent=hit.label+' — '+hit.info;}});
+  })();
+  </script>
+</main>
+</body>
+</html>

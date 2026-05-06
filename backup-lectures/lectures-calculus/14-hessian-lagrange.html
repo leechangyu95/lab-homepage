@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W14. 헤시안 &amp; 라그랑주 승수법 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html" class="active">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../calculus.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 14. 헤시안 &amp; 라그랑주 승수법</h1>
+  <p class="lead">다변수 2차 도함수로 임계점이 그릇인지 안장인지 분류하고, "조건이 붙은 최적화" 문제를 우아하게 푸는 라그랑주의 승수법을 배웁니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>다변수 1·2차 테일러</li>
+    <li>헤시안 행렬</li>
+    <li>임계점 분류 — 2계 판정</li>
+    <li>고윳값 직관 — 그릇·역그릇·안장의 모양</li>
+    <li>라그랑주 승수법 — 등식 제약</li>
+    <li>고전 응용 — 둘레·부피·면적</li>
+    <li>두 개 이상의 제약</li>
+    <li>경계 검사 — 닫힌 영역의 최대·최소</li>
+    <li>인터랙티브: 헤시안과 임계점</li>
+    <li>인터랙티브: 라그랑주 — 그라디언트 평행 시각화</li>
+    <li>흔한 오해와 핵심 정리</li>
+    <li>더 깊이 공부하기</li>
+  </ol></div>
+
+  <h2>1. 다변수 1·2차 테일러</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>단변수 1차 테일러가 직선 근사였다면, 다변수 1차 테일러는 <strong>접평면 근사</strong>. 2차로 가면 그릇·안장 같은 2차 곡면 근사.</p>
+
+  <h3>1차 테일러 (접평면)</h3>
+  $$ f(x, y) \approx f(a, b) + f_x(a, b)(x-a) + f_y(a, b)(y-b) $$
+  <p>한 점 근처에서 가장 잘 맞는 평면. 그라디언트가 그 평면의 기울기 정보 전체를 갖고 있어요.</p>
+
+  <h3>2차 테일러 (접 2차곡면)</h3>
+  $$ f(x, y) \approx f(a, b) + \nabla f(a,b) \cdot \begin{bmatrix} x-a \\ y-b \end{bmatrix} + \tfrac{1}{2} \begin{bmatrix} x-a \\ y-b \end{bmatrix}^\top H(a, b) \begin{bmatrix} x-a \\ y-b \end{bmatrix} $$
+  <p>여기서 $H$ 가 헤시안 행렬. 2차 도함수 정보를 모아 둔 자리.</p>
+
+  <h2>2. 헤시안 행렬</h2>
+
+  <h3>정의</h3>
+  $$ H_f(x, y) = \begin{bmatrix} f_{xx} & f_{xy} \\ f_{yx} & f_{yy} \end{bmatrix} $$
+  <p>혼합 편미분 $f_{xy}$ 와 $f_{yx}$ 는 (충분히 매끄러우면) 같습니다 (Clairaut 정리). 즉 헤시안은 <strong>대칭 행렬</strong>.</p>
+
+  <h3>예제 2.1</h3>
+  <p>$f(x, y) = x^3 + 3xy^2 - 6y$.</p>
+  <p>$f_x = 3x^2 + 3y^2$, $f_y = 6xy - 6$. 2계: $f_{xx} = 6x$, $f_{yy} = 6x$, $f_{xy} = 6y$.</p>
+  $$ H = \begin{bmatrix} 6x & 6y \\ 6y & 6x \end{bmatrix} $$
+
+  <h2>3. 임계점 분류 — 2계 판정</h2>
+
+  <h3>임계점</h3>
+  <p>$\nabla f = \mathbf{0}$ 인 점 $(a, b)$. 단변수의 $f' = 0$ 의 다변수 일반화.</p>
+
+  <h3>2계 판정 (Second Derivative Test)</h3>
+  <p>판별식 $D = \det H = f_{xx} f_{yy} - f_{xy}^2$ 를 계산.</p>
+  <ul>
+    <li>$D > 0$ 이고 $f_{xx} > 0$ → <strong>극소</strong> (그릇 모양).</li>
+    <li>$D > 0$ 이고 $f_{xx} < 0$ → <strong>극대</strong> (역그릇).</li>
+    <li>$D < 0$ → <strong>안장점</strong> (한 방향 위, 한 방향 아래).</li>
+    <li>$D = 0$ → 판정 불가, 더 높은 차수의 정보 필요.</li>
+  </ul>
+
+  <h3>왜 행렬식인가? — 직관</h3>
+  <p>헤시안의 고윳값이 모두 양수면 그릇, 모두 음수면 역그릇, 부호가 섞이면 안장. 행렬식 $D$ 가 두 고윳값의 곱이라 부호가 정보로 충분.
+  $D > 0$ 은 두 고윳값이 같은 부호 (그릇 또는 역그릇), $D < 0$ 은 서로 다른 부호 (안장). $f_{xx}$ 가 그 중 어느 부호인지를 결정해 줍니다.</p>
+
+  <h3>예제 3.1 — $f(x, y) = x^2 - y^2$</h3>
+  <p>$\nabla f = (2x, -2y)$. 임계점 $(0, 0)$.</p>
+  <p>$f_{xx} = 2, f_{yy} = -2, f_{xy} = 0$. $D = 2 \cdot (-2) - 0 = -4 < 0$ → <strong>안장점</strong>.</p>
+  <p>실제로 $x$ 방향으로 가면 위로, $y$ 방향으로 가면 아래로 휘는 모양 — 안장 모양 그대로.</p>
+
+  <h3>예제 3.2 — $f(x, y) = x^2 + y^2 + 2x - 4y + 5$</h3>
+  <p>$\nabla f = (2x + 2, 2y - 4)$. 임계점 $(-1, 2)$.</p>
+  <p>$f_{xx} = 2, f_{yy} = 2, f_{xy} = 0$. $D = 4 > 0$, $f_{xx} > 0$ → <strong>극소</strong>. $f(-1, 2) = 1 - 4 + (-2) - 8 + 5 = -8 + 4 \cdot 0 = 0$.</p>
+
+  <h2>4. 고윳값 직관 — 그릇·역그릇·안장의 모양</h2>
+
+  <h3>대각화로 보는 헤시안</h3>
+  <p>임계점 근처에서 함수는 $f \approx f_0 + \tfrac{1}{2}\Delta\vec p^\top H \Delta\vec p$ 모양. 좌표를 헤시안의 고유벡터 방향으로 회전하면 다음 모양이 됩니다.</p>
+  $$ f \approx f_0 + \tfrac{1}{2}(\lambda_1 u^2 + \lambda_2 v^2) $$
+  <p>여기서 $\lambda_1, \lambda_2$ 는 헤시안의 고윳값.</p>
+  <ul>
+    <li>$\lambda_1, \lambda_2 > 0$ → 그릇 (둘 다 위로) → <strong>극소</strong>.</li>
+    <li>$\lambda_1, \lambda_2 < 0$ → 역그릇 (둘 다 아래로) → <strong>극대</strong>.</li>
+    <li>부호 다름 → 한 방향 위, 한 방향 아래 → <strong>안장</strong>.</li>
+  </ul>
+
+  <h3>판별식 $D$ 와 고윳값의 관계</h3>
+  <p>2×2 행렬에서 행렬식 = 고윳값의 곱: $D = \lambda_1 \lambda_2$. 부호:</p>
+  <ul>
+    <li>$D > 0$: 두 고윳값 동부호 (둘 다 + 또는 −).</li>
+    <li>$D < 0$: 부호 다름 (안장).</li>
+    <li>$f_{xx}$ = 대각선 항. $D > 0$ 일 때 $f_{xx}$ 의 부호로 그릇/역그릇 가르기.</li>
+  </ul>
+
+  <h3>비등방성 (anisotropy)</h3>
+  <p>$\lambda_1, \lambda_2$ 가 같은 부호여도 크기가 매우 다르면 <strong>좁은 골짜기 모양</strong>이에요. 예를 들어 $\lambda_1 = 1, \lambda_2 = 100$ 이면 한 방향은 가파르고 한 방향은 완만 — 머신러닝에서 "조건수가 큰 헤시안"이라 부르며, 경사하강법이 지그재그로 천천히 수렴하는 원인.</p>
+
+  <h2>5. 라그랑주 승수법 — 등식 제약</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>"펜스 100 m 짜리로 만들 수 있는 가장 큰 직사각형 마당의 면적은?" — 단순 최적화가 아니에요. <em>"펜스 길이 = 100 m"</em> 라는 <strong>제약</strong>이 붙어 있습니다.
+  라그랑주의 발상: 제약 곡선 위에서 목적 함수가 극값일 때, 그라디언트끼리 평행하다.</p>
+
+  <h3>식 — 두 줄로 끝</h3>
+  <p>$f(x, y)$ 를 제약 $g(x, y) = c$ 위에서 최적화하려면 다음 시스템을 풉니다.</p>
+  $$ \nabla f = \lambda \nabla g, \qquad g(x, y) = c $$
+  <p>$\lambda$ 는 라그랑주 승수 — 미정 상수. 변수 3개($x, y, \lambda$), 식 3개라 풀립니다.</p>
+
+  <h3>왜 평행한가? — 직관</h3>
+  <p>제약 곡선 $g = c$ 위를 따라가면 $g$ 값이 안 변해요. 즉 그 방향의 $\nabla g$ 성분이 0. 같은 방향에서 $f$ 가 극값이라면 $\nabla f$ 의 그 방향 성분도 0.
+  결국 $\nabla f$ 와 $\nabla g$ 가 모두 같은 방향(제약 곡선과 직교)이라야 한다는 결론.</p>
+
+  <h2>6. 고전 응용</h2>
+
+  <h3>예제 5.1 — 단위원 위에서 $x + y$ 최대</h3>
+  <p>$f(x, y) = x + y$, $g(x, y) = x^2 + y^2 = 1$.</p>
+  <p>$\nabla f = (1, 1), \nabla g = (2x, 2y)$. 평행 조건: $(1, 1) = \lambda(2x, 2y)$ → $x = y = 1/(2\lambda)$.</p>
+  <p>제약 $x^2 + y^2 = 1$ → $2/(4\lambda^2) = 1$ → $\lambda = \pm 1/\sqrt{2}$.</p>
+  <p>최대: $x = y = 1/\sqrt{2}$, $f = \sqrt{2}$. 최소: $x = y = -1/\sqrt{2}$, $f = -\sqrt{2}$.</p>
+
+  <h3>예제 5.2 — 둘레 $P$ 직사각형의 최대 면적 (다변수 풀이)</h3>
+  <p>$f = xy$ 최대화, $g = 2x + 2y = P$.</p>
+  <p>$\nabla f = (y, x), \nabla g = (2, 2)$. 평행: $y = 2\lambda, x = 2\lambda$ → $x = y$.</p>
+  <p>제약 $2x + 2y = P, x = y$ → $x = y = P/4$. 답은 정사각형. W6의 단변수 풀이와 일치하지만 라그랑주가 더 우아합니다.</p>
+
+  <h3>예제 6.3 — 부피·표면적 trade-off (통조림 캔)</h3>
+  <p>부피 $V$ 일정한 원기둥의 표면적 최소화. $r$ (반지름), $h$ (높이).</p>
+  <p>$f(r, h) = 2\pi r^2 + 2\pi r h$ (위·아래 + 옆), $g = \pi r^2 h = V$.</p>
+  <p>풀면 $h = 2r$ — <strong>높이가 지름과 같을 때 표면적 최소</strong>. 음료수 캔 디자인의 진실.</p>
+
+  <h2>7. 두 개 이상의 제약</h2>
+
+  <p>제약이 여러 개면 라그랑주 승수도 여러 개. 제약 $g_1 = c_1, g_2 = c_2, \dots$ 가 주어지면:</p>
+  $$ \nabla f = \lambda_1 \nabla g_1 + \lambda_2 \nabla g_2 + \cdots, \qquad g_i = c_i \;\forall i $$
+
+  <h3>예제 7.1 — 단위구 위의 평면 위 점에서 $f = z$ 최대</h3>
+  <p>$f(x, y, z) = z$, 제약 $g_1 = x^2 + y^2 + z^2 = 1$ (구면), $g_2 = x + y + z = 1$ (평면).</p>
+  <p>$\nabla f = (0, 0, 1), \nabla g_1 = (2x, 2y, 2z), \nabla g_2 = (1, 1, 1)$.</p>
+  <p>$0 = 2\lambda_1 x + \lambda_2$, $0 = 2\lambda_1 y + \lambda_2$, $1 = 2\lambda_1 z + \lambda_2$ ⇒ $x = y$.</p>
+  <p>제약 $2x^2 + z^2 = 1, 2x + z = 1$ ⇒ $z = 1 - 2x$ 대입 → $6x^2 - 4x = 0$ ⇒ $x = 0$ or $2/3$.</p>
+  <ul>
+    <li>$x = y = 0, z = 1$ → $f = 1$ (최대)</li>
+    <li>$x = y = 2/3, z = -1/3$ → $f = -1/3$ (최소)</li>
+  </ul>
+
+  <h2>8. 경계 검사 — 닫힌 영역의 최대·최소</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>닫힌 영역에서 함수의 최대·최소는 (1) 영역 <em>내부</em>의 임계점 + (2) <em>경계</em> 위의 라그랑주 임계점 + (3) 경계의 모서리 점, 모두를 비교해야 합니다. 한 곳만 봐서는 안 됨.</p>
+
+  <h3>예제 8.1</h3>
+  <p>$f(x, y) = x^2 - 2x + y^2$ 의 영역 $x^2 + y^2 \le 4$ (반지름 2 원판) 안에서 최대·최소.</p>
+  <ol>
+    <li>내부 임계점: $\nabla f = (2x - 2, 2y) = 0$ ⇒ $(1, 0)$. $f(1, 0) = -1$.</li>
+    <li>경계 ($x^2 + y^2 = 4$): 라그랑주.
+      $\nabla f = \lambda \nabla g$ → $(2x - 2, 2y) = \lambda(2x, 2y)$.
+      $y \ne 0$ 이면 $\lambda = 1$ ⇒ $-2 = 0$ (불가능). 따라서 $y = 0$, $x = \pm 2$.
+      $f(2, 0) = 0, f(-2, 0) = 8$.
+    </li>
+    <li>비교: $-1 < 0 < 8$ ⇒ 최소 $-1$ (at $(1,0)$), 최대 $8$ (at $(-2, 0)$).</li>
+  </ol>
+
+  <h2>9. 인터랙티브: 헤시안과 임계점</h2>
+
+  <div class="demo">
+    <h4>🎮 임계점 분류 — 그릇·역그릇·안장</h4>
+    <p>함수를 골라 보세요. 등고선 위에 임계점이 표시되고, 그 주변의 헤시안 분류(극소·극대·안장)가 자동으로 색칠됩니다. 흰색 타원은 그 점에서의 2차 테일러 근사 — 그릇·안장 모양이 한눈에 보입니다.</p>
+    <canvas id="hs" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="hsFn">
+          <option value="bowl" selected>x² + y² (극소)</option>
+          <option value="domeg">−(x² + y²) (극대)</option>
+          <option value="saddle">x² − y² (안장)</option>
+          <option value="mixed">x³ + y³ − 3xy (혼합)</option>
+        </select>
+      </label>
+    </div>
+    <p id="hsInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('hs'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:30,r:20,t:20,b:20};
+    function setup(){
+      const m=document.getElementById('hsFn').value;
+      if(m==='bowl')return{f:p=>p[0]*p[0]+p[1]*p[1],grad:p=>[2*p[0],2*p[1]],hess:p=>[[2,0],[0,2]],crit:[[0,0]],xR:[-3,3],yR:[-3,3]};
+      if(m==='domeg')return{f:p=>-(p[0]*p[0]+p[1]*p[1]),grad:p=>[-2*p[0],-2*p[1]],hess:p=>[[-2,0],[0,-2]],crit:[[0,0]],xR:[-3,3],yR:[-3,3]};
+      if(m==='saddle')return{f:p=>p[0]*p[0]-p[1]*p[1],grad:p=>[2*p[0],-2*p[1]],hess:p=>[[2,0],[0,-2]],crit:[[0,0]],xR:[-3,3],yR:[-3,3]};
+      // x^3 + y^3 - 3xy
+      return{
+        f:p=>p[0]**3+p[1]**3-3*p[0]*p[1],
+        grad:p=>[3*p[0]*p[0]-3*p[1],3*p[1]*p[1]-3*p[0]],
+        hess:p=>[[6*p[0],-3],[-3,6*p[1]]],
+        crit:[[0,0],[1,1]],xR:[-2.5,3],yR:[-2.5,3]
+      };
+    }
+    function classify(H){
+      const D=H[0][0]*H[1][1]-H[0][1]*H[1][0];
+      if(D>0&&H[0][0]>0)return{type:'극소',color:'#0b5fff'};
+      if(D>0&&H[0][0]<0)return{type:'극대',color:'#c62828'};
+      if(D<0)return{type:'안장',color:'#f57c00'};
+      return{type:'미정',color:'#666'};
+    }
+    function loop(){
+      const S=setup();
+      const xR=S.xR,yR=S.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // contour fill (with smart color range)
+      let vmin=Infinity,vmax=-Infinity;
+      const Ns=12;
+      for(let i=0;i<Ns;i++){for(let j=0;j<Ns;j++){
+        const xv=xR[0]+(i+0.5)/Ns*(xR[1]-xR[0]);
+        const yv=yR[0]+(j+0.5)/Ns*(yR[1]-yR[0]);
+        const v=S.f([xv,yv]);if(v<vmin)vmin=v;if(v>vmax)vmax=v;
+      }}
+      const cell=8;
+      for(let i=M.l;i<W-M.r;i+=cell){
+        for(let j=M.t;j<H-M.b;j+=cell){
+          const xv=xR[0]+(i-M.l)/(W-M.l-M.r)*(xR[1]-xR[0]);
+          const yv=yR[0]+(H-M.b-j)/(H-M.t-M.b)*(yR[1]-yR[0]);
+          const v=S.f([xv,yv]);
+          const t=Math.min(1,Math.max(0,(v-vmin)/(vmax-vmin+1e-9)));
+          const r=Math.floor(40+t*200),g=Math.floor(140-t*100),b=Math.floor(255-t*200);
+          x.fillStyle=`rgb(${r},${g},${b})`;
+          x.fillRect(i,j,cell,cell);
+        }
+      }
+      // critical points + ellipses
+      const info=[];
+      S.crit.forEach(p=>{
+        const cls=classify(S.hess(p));
+        info.push('('+p[0]+', '+p[1]+'): '+cls.type);
+        // 2nd-order Taylor ellipse: 0.5 (Δp)^T H (Δp) = level
+        const HM=S.hess(p);
+        const a=HM[0][0],b=HM[0][1],d=HM[1][1];
+        if(Math.abs(a*d-b*b)>1e-6){
+          x.strokeStyle='rgba(255,255,255,0.95)';x.lineWidth=1.5;
+          x.beginPath();
+          for(let th=0;th<=Math.PI*2+0.05;th+=0.05){
+            const ct=Math.cos(th),st=Math.sin(th);
+            const denom=Math.abs(0.5*(a*ct*ct+2*b*ct*st+d*st*st));
+            const r=Math.sqrt(1.5/Math.max(denom,1e-6));
+            const xv=p[0]+r*ct,yv=p[1]+r*st;
+            if(th===0)x.moveTo(px(xv),py(yv));else x.lineTo(px(xv),py(yv));
+          }
+          x.stroke();
+        }
+        x.fillStyle=cls.color;x.beginPath();x.arc(px(p[0]),py(p[1]),7,0,Math.PI*2);x.fill();
+        x.fillStyle='#fff';x.font='12px sans-serif';
+        x.fillText(cls.type,px(p[0])+10,py(p[1])-8);
+      });
+      document.getElementById('hsInfo').textContent='임계점 분류: '+info.join('   ·   ');
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>10. 인터랙티브: 라그랑주 — 그라디언트 평행 시각화</h2>
+
+  <p>제약 곡선을 따라 한 점이 움직이며, 그 점에서 $\nabla f$ (빨강)와 $\nabla g$ (파랑)을 화살표로 표시합니다. 두 화살표가 정확히 평행해지는 곳이 라그랑주 답이에요. 슬라이더로 점을 움직여 그 순간을 직접 만져 보세요.</p>
+
+  <div class="demo">
+    <h4>🎮 라그랑주 — ∇f ∥ ∇g 의 시각화</h4>
+    <p>제약 $g(x,y) = c$ 위를 따라 점이 이동. 그라디언트 두 벡터가 평행할 때 = 라그랑주 임계점. 두 벡터의 방향각이 일치(또는 180° 반대)인 순간을 찾으세요.</p>
+    <canvas id="lg" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>최적화 문제
+        <select id="lgP">
+          <option value="circle" selected>단위원 위 x+y 최대</option>
+          <option value="ellipse">x²+4y²=4 위 xy 최대</option>
+          <option value="line">x+y=4 위 x²+y² 최소</option>
+        </select>
+      </label>
+      <label>매개변수 t <span class="val" id="lgTV">0.50</span><input type="range" id="lgT" min="0" max="6.28" step="0.02" value="0.5"></label>
+    </div>
+    <p id="lgInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:13px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lg'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:60,r:20,t:30,b:30};
+    function setup(){
+      const m=document.getElementById('lgP').value;
+      if(m==='circle'){
+        return{
+          point:t=>({x:Math.cos(t),y:Math.sin(t)}),
+          gradF:p=>[1,1],
+          gradG:p=>[2*p.x,2*p.y],
+          fEval:p=>p.x+p.y,
+          xR:[-2,2],yR:[-2,2],
+          cdraw:t=>{return{x:Math.cos(t),y:Math.sin(t)};},
+          tRange:[0,2*Math.PI],
+          desc:'f = x+y, 제약: x²+y²=1. 답: x=y=1/√2'
+        };
+      }
+      if(m==='ellipse'){
+        return{
+          point:t=>({x:2*Math.cos(t),y:Math.sin(t)}),
+          gradF:p=>[p.y,p.x],
+          gradG:p=>[2*p.x,8*p.y],
+          fEval:p=>p.x*p.y,
+          xR:[-3,3],yR:[-2,2],
+          tRange:[0,2*Math.PI],
+          desc:'f = xy, 제약: x²+4y²=4. 답: x=√2, y=1/√2 등'
+        };
+      }
+      return{
+        point:t=>({x:t,y:4-t}),
+        gradF:p=>[2*p.x,2*p.y],
+        gradG:p=>[1,1],
+        fEval:p=>p.x*p.x+p.y*p.y,
+        xR:[-1,5],yR:[-1,5],
+        tRange:[0,4],
+        desc:'f = x²+y², 제약: x+y=4. 답: x=y=2'
+      };
+    }
+    function loop(){
+      const t=+document.getElementById('lgT').value;
+      document.getElementById('lgTV').textContent=t.toFixed(2);
+      const S=setup();
+      const xR=S.xR,yR=S.yR;
+      function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+      function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // f level curves (gray contours)
+      const fCur=S.fEval(S.point((t-S.tRange[0])%(S.tRange[1]-S.tRange[0])+S.tRange[0]));
+      // sample contour levels
+      const cell=12;
+      for(let i=M.l;i<W-M.r;i+=cell){
+        for(let j=M.t;j<H-M.b;j+=cell){
+          const xv=xR[0]+(i-M.l)/(W-M.l-M.r)*(xR[1]-xR[0]);
+          const yv=yR[0]+(H-M.b-j)/(H-M.t-M.b)*(yR[1]-yR[0]);
+          const fv=S.fEval({x:xv,y:yv});
+          // map to color
+          const hue=Math.atan2(yv,xv);
+          const t01=(fv-(-5))/15;
+          const r=Math.floor(40+t01*200),g=Math.floor(140-t01*100),b=Math.floor(255-t01*200);
+          x.fillStyle=`rgba(${r},${g},${b},0.5)`;
+          x.fillRect(i,j,cell,cell);
+        }
+      }
+      // constraint curve
+      x.strokeStyle='#fff';x.lineWidth=2.5;x.beginPath();
+      const N=200;
+      for(let i=0;i<=N;i++){
+        const tt=S.tRange[0]+i/N*(S.tRange[1]-S.tRange[0]);
+        const p=S.point(tt);
+        if(i===0)x.moveTo(px(p.x),py(p.y));else x.lineTo(px(p.x),py(p.y));
+      }
+      x.stroke();
+      // current point
+      const p=S.point(t);
+      const gF=S.gradF(p),gG=S.gradG(p);
+      // normalize for display
+      const sF=0.6/Math.hypot(gF[0],gF[1])*0.5,sG=0.6/Math.hypot(gG[0],gG[1])*0.5;
+      // arrow drawing
+      function arrow(x0,y0,vx,vy,col){
+        const X1=x0+vx,Y1=y0+vy;
+        x.strokeStyle=col;x.fillStyle=col;x.lineWidth=2.5;
+        x.beginPath();x.moveTo(px(x0),py(y0));x.lineTo(px(X1),py(Y1));x.stroke();
+        const ang=Math.atan2(py(Y1)-py(y0),px(X1)-px(x0));
+        x.beginPath();
+        x.moveTo(px(X1),py(Y1));
+        x.lineTo(px(X1)-9*Math.cos(ang-0.4),py(Y1)-9*Math.sin(ang-0.4));
+        x.lineTo(px(X1)-9*Math.cos(ang+0.4),py(Y1)-9*Math.sin(ang+0.4));
+        x.closePath();x.fill();
+      }
+      arrow(p.x,p.y,gF[0]*sF,gF[1]*sF,'#c62828');
+      arrow(p.x,p.y,gG[0]*sG,gG[1]*sG,'#0b5fff');
+      x.fillStyle='#222';x.beginPath();x.arc(px(p.x),py(p.y),5,0,Math.PI*2);x.fill();
+      // angle between
+      const dot=(gF[0]*gG[0]+gF[1]*gG[1])/(Math.hypot(gF[0],gF[1])*Math.hypot(gG[0],gG[1]));
+      const ang=Math.acos(Math.max(-1,Math.min(1,dot)))*180/Math.PI;
+      const aligned=(Math.abs(ang)<5||Math.abs(ang-180)<5);
+      // legend
+      x.fillStyle='#c62828';x.fillRect(M.l+10,M.t-22,16,3);x.fillStyle='#222';x.font='12px sans-serif';x.fillText('∇f (목적함수 그라디언트)',M.l+30,M.t-18);
+      x.fillStyle='#0b5fff';x.fillRect(M.l+200,M.t-22,16,3);x.fillStyle='#222';x.fillText('∇g (제약 그라디언트)',M.l+220,M.t-18);
+      x.fillStyle='#fff';x.fillText('흰선: 제약 곡선',M.l+10,M.t+15);
+      // info
+      document.getElementById('lgInfo').textContent=S.desc+'   ·   현재 점: ('+p.x.toFixed(2)+', '+p.y.toFixed(2)+')   f='+S.fEval(p).toFixed(3)+'   ·   ∇f∠∇g 각도: '+ang.toFixed(1)+'° '+(aligned?'★ 평행 (라그랑주 점 근처!)':'');
+    }
+    loop();
+    document.getElementById('lgP').onchange=loop;
+    document.getElementById('lgT').oninput=loop;
+  })();
+  </script>
+
+  <div class="tip"><strong>조작 팁</strong> —
+  ① 슬라이더를 천천히 움직이며 두 화살표가 평행(같은 방향 또는 180° 반대)이 되는 순간을 찾으세요.
+  ② 단위원 + $f = x+y$ 문제는 $t = \pi/4$ (점 $(1/\sqrt 2, 1/\sqrt 2)$) 에서 평행 — 정답.
+  ③ 평행이 아닌 곳에서는 $\nabla f$ 가 제약 곡선의 접선 방향 성분을 가져 그쪽으로 이동하면 $f$ 가 더 좋아짐.</div>
+
+  <h2>11. 흔한 오해와 핵심 정리</h2>
+
+  <div class="note"><strong>흔한 오해 ① — "그라디언트가 0이면 극값"</strong> —
+  안장점도 $\nabla f = 0$. 헤시안 판정으로 안장과 극값을 구분해야 합니다.</div>
+
+  <div class="note"><strong>흔한 오해 ② — "$D = 0$ 이면 임계점이 아니다"</strong> —
+  거짓. $D = 0$ 은 단지 2계 판정이 정보를 안 준다는 뜻. 더 깊이 봐야 합니다 (3·4계 도함수 또는 직접 그래프 분석).</div>
+
+  <div class="note"><strong>흔한 오해 ③ — "라그랑주 승수 $\lambda$ 는 답에 안 쓰인다"</strong> —
+  $\lambda$ 자체에 의미가 있어요 — 제약 상수가 1 단위 변할 때 목적 함수의 최적값이 얼마나 변하는지(민감도). 경제학·공학에서 "그림자 가격"이라 부릅니다.</div>
+
+  <h3>이번 주의 핵심 한 문장</h3>
+  <div class="tip"><strong>"헤시안 판별식으로 임계점이 그릇인지 안장인지 분류하고, 제약이 있는 최적화는 라그랑주 승수법으로 그라디언트가 평행한 점을 찾는다."</strong></div>
+
+  <h2>12. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Stewart, Ch.14.7~14.8.</li>
+    <li>Thomas, Ch.13.7~13.9.</li>
+    <li>다음 주 예고: 단변수 미적분의 자연스러운 종착지 — <strong>1차 미분방정식</strong>. 지수 응답·RC 회로·뉴턴 냉각 법칙.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="13-multivariable-gradient.html"><small>← 이전</small>W13. 다변수·그라디언트</a>
+    <a href="15-ode-intro-review.html" class="next"><small>다음 →</small>W15. 1차 ODE + 종합</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

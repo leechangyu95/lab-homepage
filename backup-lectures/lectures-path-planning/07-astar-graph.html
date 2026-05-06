@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W7. A* 알고리즘과 그래프 탐색 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html" class="active">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 7. A* 알고리즘 — "나침반을 가진 탐색자"</h1>
+  <p class="lead">5주차에서 만든 Occupancy Grid 위에서, 시작 칸과 목표 칸을 잇는 <em>가장 짧은</em> 경로를 어떻게
+  체계적으로 찾아낼 수 있을까요? BFS → Dijkstra → Greedy → A*로 이어지는 그래프 탐색의 진화를 따라가며,
+  자율주행에서 가장 자주 쓰이는 결정론적 경로 탐색 알고리즘 A*의 뿌리부터 손에 잡히게 익혀봅니다.
+  오늘의 한 줄 — <strong>"Dijkstra + 나침반 = A*"</strong>.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>지도 위의 길찾기 — 지하철 노선 비유</li>
+    <li>BFS · Dijkstra · Greedy · A* — 4단계 진화</li>
+    <li>A* 핵심 식 $f = g + h$ 와 휴리스틱 조건</li>
+    <li>인터랙티브: 같은 미로, 네 알고리즘 비교</li>
+    <li>인터랙티브: 휴리스틱 종류별 탐색 영역 차이</li>
+    <li>인터랙티브: 비용장(cost field) 시각화</li>
+    <li>Costmap·Weighted A*·후처리</li>
+    <li>코드 — Python A* 풀 구현</li>
+    <li>흔한 실수 TOP 5 와 자율주행 파이프라인 위치</li>
+  </ol></div>
+
+  <h2>1. 지도 위의 길찾기 — 지하철 노선 비유</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>처음 가는 동네에서 약속 장소까지 지하철로 가야 한다고 합시다. 가장 무식한 방법은 출발역에서 한 정거장씩
+  사방으로 다녀 보는 것이지요. 운이 나쁘면 반대편 끝까지 갔다 와야 합니다. 좀 더 똑똑한 사람은
+  "지금까지 걸어온 거리가 가장 짧은 역"을 우선 골라 다음 칸을 펼쳐 봅니다 — 이게 <strong>Dijkstra</strong>예요.
+  그래도 여전히 약속 장소가 동쪽인데 서쪽 노선까지 다 뒤지는 헛수고가 남습니다.</p>
+
+  <p>가장 영리한 사람은 핸드폰 GPS를 흘끗 보고 "약속 장소 방향이 동쪽이네"를 알게 됩니다. 그러면 같은 시간에
+  서쪽보다 동쪽 역들을 먼저 살펴보겠지요. 이렇게 <em>지금까지 걸어온 거리</em> + <em>목표까지 남은 거리의 추측</em>을
+  더해 우선순위를 매기는 사람이 바로 <strong>A*</strong>입니다. GPS가 정확할 필요는 없고, "남은 거리를
+  부풀려 말하지만 않으면" 항상 최단 경로에 도달합니다.</p>
+
+  <div class="note">
+    <strong>왜 굳이 그래프?</strong> — 자율주행 차의 지도는 대개 픽셀처럼 잘게 자른 격자(Occupancy Grid)예요.
+    각 칸을 <em>노드(node)</em>로, 인접 칸 사이를 <em>엣지(edge)</em>로 보면, "장애물 없이 가장 짧은 칸 시퀀스"를
+    찾는 일은 그래프 위의 최단 경로 문제가 됩니다. 그래프 탐색 알고리즘은 그래서 자율주행 경로계획의
+    출발점이 됩니다.
+  </div>
+
+  <h2>2. BFS · Dijkstra · Greedy · A* — 4단계 진화</h2>
+
+  <p>모두 같은 골격을 공유합니다 — <em>"어떤 노드를 먼저 펼칠지" 우선순위만 다른</em> 형제들이지요.</p>
+
+  <table>
+    <thead><tr><th>알고리즘</th><th>우선순위 기준</th><th>최적 보장?</th><th>퍼지는 모양</th><th>한 줄 비유</th></tr></thead>
+    <tbody>
+      <tr><td>BFS</td><td>step 수</td><td>가중치=1일 때만</td><td>균일한 동심원</td><td>지도 없는 사람이 한 칸씩 사방 탐색</td></tr>
+      <tr><td>Dijkstra</td><td>$g(n)$ — 실제 누적 비용</td><td>○ (가중치 ≥ 0)</td><td>비용 기반 동심원</td><td>안개 속에서 가까운 곳부터 한 발씩</td></tr>
+      <tr><td>Greedy Best-First</td><td>$h(n)$ — 목표까지 추정</td><td>×</td><td>목표 방향으로 빠르게</td><td>GPS만 보고 직진하다 막히면 헤맴</td></tr>
+      <tr><td><strong>A*</strong></td><td>$f(n) = g(n) + h(n)$</td><td>○ (admissible $h$)</td><td>좁은 타원형</td><td>"걸어온 거리 + 남은 거리 추정"</td></tr>
+    </tbody>
+  </table>
+
+  <p>BFS는 "엣지 비용 = 1"이라는 가정이 있어서 자율주행처럼 대각 이동 비용이 $\sqrt 2$인 환경에선 비최적입니다.
+  Dijkstra는 비용을 정확히 다루지만 목표 방향을 모르는 길치, Greedy는 목표 방향만 보고 달리는 성급한 사람,
+  그 둘의 장점을 더한 <strong>균형감각의 알고리즘이 A*</strong>예요.</p>
+
+  <h2>3. A* 핵심 식 — $f(n) = g(n) + h(n)$</h2>
+
+  <p>A*가 어렵게 느껴지는 가장 큰 이유는 두 비용이 헷갈리기 때문이에요. 한 번에 정리해 둡시다.</p>
+
+  <ul>
+    <li><strong>$g(n)$</strong> — 시작 노드에서 현재 노드 $n$까지 <em>실제로 걸어온</em> 비용. 측정값이라
+    정확합니다.</li>
+    <li><strong>$h(n)$</strong> — 노드 $n$에서 목표까지 <em>아마 이 정도일 거다</em>라는 추정 비용 (휴리스틱).
+    실제 길은 모르고, GPS 직선거리 같은 빠른 추정만 씁니다.</li>
+    <li><strong>$f(n) = g(n) + h(n)$</strong> — "이 노드를 거쳐갔을 때 전체 여정의 총 길이 추정값". A*는
+    이 $f$가 가장 작은 노드부터 우선 펼쳐 봅니다.</li>
+  </ul>
+
+  <h3>휴리스틱이 admissible해야 한다는 말</h3>
+  <p>$h(n)$이 실제 남은 거리보다 <em>크면</em>, A*는 좋은 길을 "이미 너무 멀어 보이네"라며 일찍 버려 버려서
+  최적 경로를 놓칠 수 있습니다. 반대로 $h$가 실제보다 <em>작거나 같으면</em>(이걸 <strong>admissible 휴리스틱</strong>이라
+  합니다) 절대로 좋은 길을 잘못 버리지 않아 최적 경로를 보장합니다.</p>
+
+  <div class="tip">
+    <strong>비유로 한 번 더</strong> — GPS가 "저기까지 직선거리 5 km"라고 말하면 OK (실제 길은 7 km여도).
+    하지만 "저기까지 10 km"라고 부풀리면 안 됩니다. 부풀린 GPS를 믿는 A*는 진짜 빠른 길을 그냥 지나쳐버려요.
+  </div>
+
+  <h3>자주 쓰는 휴리스틱 3가지</h3>
+  <table>
+    <thead><tr><th>이름</th><th>수식</th><th>언제 쓰는가</th><th>admissible?</th></tr></thead>
+    <tbody>
+      <tr><td>Manhattan</td><td>$|\Delta x| + |\Delta y|$</td><td>4-방향 이동</td><td>○ (4방향)</td></tr>
+      <tr><td>Euclidean</td><td>$\sqrt{\Delta x^2 + \Delta y^2}$</td><td>8-방향 이동, 자율주행 격자</td><td>○ (모든 격자)</td></tr>
+      <tr><td>Chebyshev</td><td>$\max(|\Delta x|, |\Delta y|)$</td><td>대각 비용 = 수평 비용</td><td>대각 1일 때만</td></tr>
+    </tbody>
+  </table>
+
+  <p>실전 자율주행 격자(8-방향)에서는 거의 항상 <strong>Euclidean</strong>을 씁니다. Manhattan은 4-방향에서만
+  admissible — 8-방향에선 대각 이동을 과대평가해 비최적 위험이 있어요.</p>
+
+  <h2>4. 인터랙티브: 같은 미로, 네 알고리즘 비교</h2>
+
+  <div class="demo">
+    <h4>인터랙티브 #1 — BFS / Dijkstra / Greedy / A* 동시 비교</h4>
+    <p>같은 격자 위에서 네 알고리즘이 <strong>몇 개의 노드를 방문하는지</strong>를 직접 확인해 보세요.
+    빈칸을 클릭/드래그하면 장애물(■)이 됩니다. 시작(🟢)과 목표(🔴)는 더블클릭으로 옮길 수 있어요.
+    <strong>실행</strong>을 누르면 단계별 애니메이션과 함께 방문 노드(연파랑) · 최종 경로(파랑)가 표시됩니다.</p>
+    <canvas id="grid1" width="640" height="400"></canvas>
+    <div class="controls">
+      <label>알고리즘
+        <select id="m1">
+          <option value="astar">A*</option>
+          <option value="dij">Dijkstra</option>
+          <option value="bfs">BFS</option>
+          <option value="greedy">Greedy</option>
+        </select>
+      </label>
+      <label>휴리스틱
+        <select id="h1">
+          <option value="euc">Euclidean</option>
+          <option value="man">Manhattan</option>
+          <option value="che">Chebyshev</option>
+        </select>
+      </label>
+      <label>속도 <span class="val" id="sp1V">10</span><input type="range" id="sp1" min="1" max="50" value="10"></label>
+      <button id="run1">실행</button>
+      <button id="clr1" class="alt">장애물 지우기</button>
+      <button id="pre1" class="alt">미로 프리셋</button>
+      <span id="stat1" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('grid1'),x=c.getContext('2d');
+    const W=32,H=20,SZ=20;
+    let grid=Array.from({length:H},()=>Array(W).fill(0));
+    let start=[2,10], goal=[29,10];
+    let visited=new Set(), path=[], frontier=new Set();
+    let timer=null, dblTarget=null;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        const k=i*W+j;
+        if(grid[i][j])x.fillStyle='#222';
+        else if(frontier.has(k))x.fillStyle='#ffe082';
+        else if(visited.has(k))x.fillStyle='#cfe0ff';
+        else x.fillStyle='#fff';
+        x.fillRect(j*SZ,i*SZ,SZ-1,SZ-1);
+      }
+      x.strokeStyle='#0b5fff';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{const xx=p[0]*SZ+SZ/2,yy=p[1]*SZ+SZ/2;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#2e7d32';x.fillRect(start[0]*SZ,start[1]*SZ,SZ-1,SZ-1);
+      x.fillStyle='#c62828';x.fillRect(goal[0]*SZ,goal[1]*SZ,SZ-1,SZ-1);
+    }
+    let drag=false,dragVal=1;
+    function cellOf(e){const r=c.getBoundingClientRect();return [Math.floor((e.clientX-r.left)*c.width/r.width/SZ),Math.floor((e.clientY-r.top)*c.height/r.height/SZ)];}
+    c.onmousedown=e=>{const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W)return;if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1])){dblTarget=(j==start[0]&&i==start[1])?'s':'g';return;}dragVal=1-grid[i][j];grid[i][j]=dragVal;drag=true;visited=new Set();path=[];frontier=new Set();draw();};
+    c.onmousemove=e=>{if(!drag)return;const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W)return;if((j==start[0]&&i==start[1])||(j==goal[0]&&i==goal[1]))return;grid[i][j]=dragVal;draw();};
+    window.addEventListener('mouseup',()=>{drag=false;});
+    c.ondblclick=e=>{const[j,i]=cellOf(e);if(i<0||i>=H||j<0||j>=W||grid[i][j])return;if(dblTarget==='s'||(j!=goal[0]||i!=goal[1])){if(dblTarget==='g')goal=[j,i];else start=[j,i];}dblTarget=null;visited=new Set();path=[];frontier=new Set();draw();};
+    function heuristic(a,b){
+      const dx=Math.abs(a[0]-b[0]),dy=Math.abs(a[1]-b[1]);
+      const t=document.getElementById('h1').value;
+      if(t==='man')return dx+dy;
+      if(t==='che')return Math.max(dx,dy);
+      return Math.hypot(dx,dy);
+    }
+    function startSearch(){
+      if(timer){clearInterval(timer);timer=null;}
+      visited=new Set();path=[];frontier=new Set();
+      const mode=document.getElementById('m1').value;
+      const open=[{p:start,g:0,f:0,parent:null}];
+      const gscore={};gscore[start[1]*W+start[0]]=0;
+      open[0].f=mode==='greedy'?heuristic(start,goal):mode==='bfs'?0:mode==='dij'?0:heuristic(start,goal);
+      const speed=Math.max(1,51-(+document.getElementById('sp1').value));
+      timer=setInterval(()=>{
+        for(let it=0;it<3;it++){
+          if(!open.length){clearInterval(timer);timer=null;
+            document.getElementById('stat1').textContent='경로 없음 — 방문 '+visited.size+'노드';
+            draw();return;}
+          open.sort((a,b)=>a.f-b.f);
+          const cur=open.shift();
+          const k=cur.p[1]*W+cur.p[0];
+          if(visited.has(k))continue;
+          visited.add(k);frontier.delete(k);
+          if(cur.p[0]==goal[0]&&cur.p[1]==goal[1]){
+            let n=cur;path=[];while(n){path.push(n.p);n=n.parent;}path.reverse();
+            clearInterval(timer);timer=null;
+            const len=path.reduce((s,p,i)=>i?s+Math.hypot(p[0]-path[i-1][0],p[1]-path[i-1][1]):0,0);
+            document.getElementById('stat1').textContent='방문 '+visited.size+'노드 · 경로 길이 '+len.toFixed(2);
+            draw();return;
+          }
+          for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+            const nx=cur.p[0]+dx,ny=cur.p[1]+dy;
+            if(nx<0||ny<0||nx>=W||ny>=H||grid[ny][nx])continue;
+            const stepC=mode==='bfs'?1:Math.hypot(dx,dy);
+            const ng=cur.g+stepC;
+            const kk=ny*W+nx;
+            if(gscore[kk]!==undefined&&ng>=gscore[kk])continue;
+            gscore[kk]=ng;
+            const hv=heuristic([nx,ny],goal);
+            const f=mode==='bfs'?ng:mode==='dij'?ng:mode==='greedy'?hv:ng+hv;
+            open.push({p:[nx,ny],g:ng,f,parent:cur});
+            frontier.add(kk);
+          }
+        }
+        draw();
+      },speed);
+    }
+    document.getElementById('run1').onclick=startSearch;
+    document.getElementById('clr1').onclick=()=>{if(timer){clearInterval(timer);timer=null;}grid=Array.from({length:H},()=>Array(W).fill(0));visited=new Set();path=[];frontier=new Set();draw();};
+    document.getElementById('pre1').onclick=()=>{if(timer){clearInterval(timer);timer=null;}grid=Array.from({length:H},()=>Array(W).fill(0));for(let i=4;i<16;i++){grid[i][12]=1;grid[i][20]=1;}for(let j=12;j<22;j++){grid[15][j]=1;}visited=new Set();path=[];frontier=new Set();draw();};
+    document.getElementById('sp1').oninput=()=>{document.getElementById('sp1V').textContent=document.getElementById('sp1').value;};
+    document.getElementById('pre1').onclick();
+    draw();
+  })();
+  </script>
+
+  <p><strong>꼭 비교해 볼 시나리오</strong>:</p>
+  <ul>
+    <li><strong>BFS vs Dijkstra</strong>: 미로 프리셋에서 둘 다 비슷한 영역을 방문하지만, BFS는 대각 비용을
+    1로 잘못 보고 결과가 길어집니다.</li>
+    <li><strong>Greedy</strong>: 방문 노드 수가 가장 적지만 좁은 통로 앞에서 막히면 우회로가 비최적이 됩니다.</li>
+    <li><strong>A*</strong>: 방문 영역은 Dijkstra의 1/3~1/10 수준이면서 최적 경로를 보장합니다.</li>
+    <li><strong>휴리스틱 변경</strong>: 같은 A*라도 Manhattan(8방향에서 비최적 위험) vs Euclidean을
+    비교해 보세요.</li>
+  </ul>
+
+  <h2>5. 인터랙티브: 휴리스틱 종류별 탐색 영역 차이</h2>
+
+  <div class="demo">
+    <h4>인터랙티브 #2 — 같은 맵, 휴리스틱만 바꾸기</h4>
+    <p>휴리스틱이 강할수록 (= 실제값에 가까울수록) 탐색 영역이 좁아집니다. 같은 시작/목표/장애물 환경에서
+    Zero(=Dijkstra), Manhattan, Euclidean, Chebyshev 네 가지를 동시에 실행해 <strong>방문 노드 수</strong>를
+    한눈에 비교하세요.</p>
+    <canvas id="grid2" width="640" height="400"></canvas>
+    <div class="controls">
+      <button id="run2">4가지 동시 실행</button>
+      <button id="seed2" class="alt">장애물 무작위 재생성</button>
+      <span id="stat2" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('grid2'),x=c.getContext('2d');
+    const W=32,H=20,SZ=20;
+    let grid=Array.from({length:H},()=>Array(W).fill(0));
+    const start=[2,10], goal=[29,10];
+    function gen(){
+      grid=Array.from({length:H},()=>Array(W).fill(0));
+      for(let i=0;i<35;i++){
+        const cx=2+Math.floor(Math.random()*(W-4));
+        const cy=2+Math.floor(Math.random()*(H-4));
+        const r=1+Math.floor(Math.random()*2);
+        for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+          const nx=cx+dx,ny=cy+dy;
+          if(nx<=0||nx>=W-1||ny<=0||ny>=H-1)continue;
+          if(Math.abs(nx-start[0])+Math.abs(ny-start[1])<3)continue;
+          if(Math.abs(nx-goal[0])+Math.abs(ny-goal[1])<3)continue;
+          grid[ny][nx]=1;
+        }
+      }
+      draw([]);
+    }
+    function search(htype){
+      const heur=([a,b],[c2,d])=>{
+        const dx=Math.abs(a-c2),dy=Math.abs(b-d);
+        if(htype==='zero')return 0;
+        if(htype==='man')return dx+dy;
+        if(htype==='che')return Math.max(dx,dy);
+        return Math.hypot(dx,dy);
+      };
+      const open=[{p:start,g:0,f:heur(start,goal),parent:null}];
+      const gs={};gs[start[1]*W+start[0]]=0;
+      const visited=new Set();
+      let pathOut=[];
+      while(open.length){
+        open.sort((a,b)=>a.f-b.f);
+        const cur=open.shift();
+        const k=cur.p[1]*W+cur.p[0];
+        if(visited.has(k))continue;
+        visited.add(k);
+        if(cur.p[0]==goal[0]&&cur.p[1]==goal[1]){
+          let n=cur;while(n){pathOut.push(n.p);n=n.parent;}pathOut.reverse();break;
+        }
+        for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+          const nx=cur.p[0]+dx,ny=cur.p[1]+dy;
+          if(nx<0||ny<0||nx>=W||ny>=H||grid[ny][nx])continue;
+          const ng=cur.g+Math.hypot(dx,dy);
+          const kk=ny*W+nx;
+          if(gs[kk]!==undefined&&ng>=gs[kk])continue;
+          gs[kk]=ng;
+          open.push({p:[nx,ny],g:ng,f:ng+heur([nx,ny],goal),parent:cur});
+        }
+      }
+      return {visited,path:pathOut};
+    }
+    function drawPanel(px,py,title,result,color){
+      x.strokeStyle='#ccc';x.strokeRect(px,py,310,190);
+      x.fillStyle='#fafbfc';x.fillRect(px+1,py+1,308,188);
+      const sz=9;
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        const k=i*W+j;
+        if(grid[i][j])x.fillStyle='#444';
+        else if(result.visited.has(k))x.fillStyle=color;
+        else x.fillStyle='#fff';
+        x.fillRect(px+5+j*sz,py+15+i*sz,sz-0.5,sz-0.5);
+      }
+      x.strokeStyle='#0b5fff';x.lineWidth=1.8;x.beginPath();
+      result.path.forEach((p,i)=>{const xx=px+5+p[0]*sz+sz/2,yy=py+15+p[1]*sz+sz/2;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#2e7d32';x.fillRect(px+5+start[0]*sz,py+15+start[1]*sz,sz,sz);
+      x.fillStyle='#c62828';x.fillRect(px+5+goal[0]*sz,py+15+goal[1]*sz,sz,sz);
+      x.fillStyle='#222';x.font='bold 12px sans-serif';
+      x.fillText(title+' — 방문 '+result.visited.size,px+5,py+12);
+    }
+    function draw(results){
+      x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+      if(!results||!results.length){
+        x.fillStyle='#888';x.font='13px sans-serif';
+        x.fillText('"4가지 동시 실행" 버튼을 누르세요',180,200);
+        return;
+      }
+      drawPanel(5,5,'Zero (=Dijkstra)',results[0],'#ffd180');
+      drawPanel(325,5,'Manhattan',results[1],'#a5d6a7');
+      drawPanel(5,205,'Euclidean',results[2],'#90caf9');
+      drawPanel(325,205,'Chebyshev',results[3],'#ce93d8');
+    }
+    document.getElementById('run2').onclick=()=>{
+      const r=[search('zero'),search('man'),search('euc'),search('che')];
+      draw(r);
+      document.getElementById('stat2').textContent='방문 노드: Zero '+r[0].visited.size+' · Man '+r[1].visited.size+' · Euc '+r[2].visited.size+' · Che '+r[3].visited.size;
+    };
+    document.getElementById('seed2').onclick=gen;
+    gen();
+  })();
+  </script>
+
+  <p>관찰 포인트:</p>
+  <ul>
+    <li><strong>Zero (=Dijkstra)</strong>: 모든 방향으로 균일하게 퍼져 방문 노드가 최대.</li>
+    <li><strong>Manhattan</strong>: 8방향 환경에서 대각 비용을 과대평가 — 비최적 경로가 나올 수 있음.</li>
+    <li><strong>Euclidean</strong>: admissible & 가장 균형 있음. 자율주행 표준 추천.</li>
+    <li><strong>Chebyshev</strong>: 대각 = 1로 가정하므로 8방향에선 좁지만 대각 비용을 무시.</li>
+  </ul>
+
+  <h2>6. 인터랙티브: 비용장(cost field) 시각화</h2>
+
+  <div class="demo">
+    <h4>인터랙티브 #3 — $g$, $h$, $f$ 히트맵</h4>
+    <p>A*가 우선순위를 매기는 기준 $f = g + h$가 격자 위에 어떻게 분포하는지 한눈에 보세요.
+    <strong>표시</strong>를 바꿔 가며 $g$(시작에서의 거리), $h$(목표까지 거리 추정), $f$(둘의 합)이
+    어떻게 다른지 직접 비교할 수 있습니다.</p>
+    <canvas id="grid3" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>표시
+        <select id="m3">
+          <option value="g">g(n) — 시작에서의 거리</option>
+          <option value="h">h(n) — 목표까지 추정</option>
+          <option value="f" selected>f(n) = g + h</option>
+        </select>
+      </label>
+      <label>가중치 w <span class="val" id="wV">1.0</span><input type="range" id="w3" min="1.0" max="3.0" step="0.1" value="1.0"></label>
+      <button id="redraw3">다시 그리기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('grid3'),x=c.getContext('2d');
+    const W=40,H=24,SZ=16;
+    const start=[3,12],goal=[36,12];
+    const obs=[];
+    for(let i=4;i<20;i++){obs.push([15,i]);obs.push([25,H-1-i]);}
+    function inObs(j,i){return obs.some(p=>p[0]===j&&p[1]===i);}
+    function bfsDist(src){
+      const dist=Array.from({length:H},()=>Array(W).fill(Infinity));
+      dist[src[1]][src[0]]=0;
+      const q=[src];
+      while(q.length){
+        const[j,i]=q.shift();
+        for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+          const nx=j+dx,ny=i+dy;
+          if(nx<0||ny<0||nx>=W||ny>=H||inObs(nx,ny))continue;
+          const nd=dist[i][j]+Math.hypot(dx,dy);
+          if(nd<dist[ny][nx]){dist[ny][nx]=nd;q.push([nx,ny]);}
+        }
+      }
+      return dist;
+    }
+    const gMap=bfsDist(start);
+    function eucl(j,i){return Math.hypot(j-goal[0],i-goal[1]);}
+    function draw(){
+      const mode=document.getElementById('m3').value;
+      const w=+document.getElementById('w3').value;
+      document.getElementById('wV').textContent=w.toFixed(1);
+      let mx=0;
+      const vals=Array.from({length:H},()=>Array(W).fill(0));
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        if(inObs(j,i)){vals[i][j]=-1;continue;}
+        const g=gMap[i][j],h=eucl(j,i)*w;
+        const v=mode==='g'?g:mode==='h'?h:g+h;
+        vals[i][j]=v;
+        if(isFinite(v)&&v>mx)mx=v;
+      }
+      x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+      for(let i=0;i<H;i++)for(let j=0;j<W;j++){
+        const v=vals[i][j];
+        if(v<0){x.fillStyle='#222';}
+        else if(!isFinite(v)){x.fillStyle='#eee';}
+        else{
+          const t=v/Math.max(1,mx);
+          const r=Math.floor(40+215*t),g=Math.floor(80+(1-t)*120),b=Math.floor(255*(1-t));
+          x.fillStyle=`rgb(${r},${g},${b})`;
+        }
+        x.fillRect(j*SZ,i*SZ,SZ,SZ);
+      }
+      x.fillStyle='#2e7d32';x.fillRect(start[0]*SZ,start[1]*SZ,SZ,SZ);
+      x.fillStyle='#c62828';x.fillRect(goal[0]*SZ,goal[1]*SZ,SZ,SZ);
+      x.fillStyle='#fff';x.font='bold 12px sans-serif';
+      const t=mode==='g'?'g(n)':mode==='h'?'w·h(n)':'f(n) = g + w·h';
+      x.fillText(t+'  (파랑=낮음 · 빨강=높음)',12,16);
+      x.fillText('🟢 시작 · 🔴 목표 · ⬛ 장애물',12,c.height-12);
+    }
+    document.getElementById('m3').onchange=draw;
+    document.getElementById('w3').oninput=draw;
+    document.getElementById('redraw3').onclick=draw;
+    draw();
+  })();
+  </script>
+
+  <p>한눈에 보이는 점 — A*가 우선순위로 쓰는 $f$의 등고선은 시작과 목표를 잇는 좁은 띠 모양입니다.
+  그 띠 안의 노드들이 다른 영역보다 먼저 펼쳐지므로, A*는 "직선 통로 근처만 살펴보고도" 최적 경로를 찾아냅니다.
+  $w$를 키우면 띠가 더 좁아지지요 — 다음 절의 Weighted A*가 바로 이 효과입니다.</p>
+
+  <h2>7. Costmap·Weighted A*·후처리</h2>
+
+  <h3>Costmap 반영 — "장애물에서 멀리"</h3>
+  <p>5주차 Costmap에서는 장애물 근처가 뜨겁고 멀수록 차가웠지요. A*에 한 줄만 추가하면 차가 안전하게
+  가장자리에서 떨어진 경로를 골라줍니다.</p>
+
+<pre><code class="language-python">step = np.hypot(di, dj) * (1.0 + alpha * cost[v])</code></pre>
+
+  <p><code>cost[v]</code> 가 0(안전)에서 1(충돌)까지 정규화돼 있을 때, $\alpha$가 클수록 장애물에서 멀어지는
+  경향이 강해집니다. 자율주행 대회 첫 세팅으로 $\alpha = 3$ 정도가 무난합니다.</p>
+
+  <h3>Weighted A* — 속도와 최적성의 트레이드오프</h3>
+  <p>가중치 $w \ge 1$을 휴리스틱에 곱해 봅시다.</p>
+  $$f(n) = g(n) + w \cdot h(n),\quad w \geq 1$$
+
+  <table>
+    <thead><tr><th>$w$</th><th>행동</th><th>결과</th></tr></thead>
+    <tbody>
+      <tr><td>1.0</td><td>표준 A*</td><td>최적</td></tr>
+      <tr><td>1.5</td><td>약간 공격적</td><td>조금 길지만 빠름</td></tr>
+      <tr><td>3.0</td><td>매우 공격적</td><td>더 길지만 훨씬 빠름</td></tr>
+      <tr><td>$\infty$</td><td>Greedy</td><td>최적성 포기</td></tr>
+    </tbody>
+  </table>
+
+  <p>실시간 제약이 빠듯할 때(고속도로 replanning, 큰 지도) <strong>$w = 1.2 \sim 1.5$</strong>로 가속하고,
+  나중 단계의 Spline smoothing이 작은 비최적성을 보정해 줍니다.</p>
+
+  <h3>경로 후처리 — 지그재그를 곡선으로</h3>
+  <p>A* 원본 경로는 격자 칸 시퀀스라 지그재그입니다. 차량은 이 경로를 그대로 못 따라가요. 보통 두 단계로 다듬습니다.</p>
+  <ol>
+    <li><strong>Shortcut</strong> — 두 점 사이가 직선으로 장애물이 없으면 사이 칸을 지움.</li>
+    <li><strong>Cubic Spline</strong> — 5주차에서 본 부드러운 곡선으로 보간.</li>
+  </ol>
+
+  <h2>8. 코드 — Python A* 풀 구현</h2>
+
+  <p>위 인터랙티브 데모와 동일한 알고리즘을 Python으로. <code>heapq</code>로 최소 힙을 구현하고,
+  <em>중복 노드 무시</em>(<code>gu &gt; g[u]</code> 체크)로 효율을 챙겼습니다.</p>
+
+<pre><code class="language-python">import heapq, numpy as np
+
+MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1),
+         (-1,-1), (-1, 1), (1,-1), (1, 1)]   # 8-방향
+
+def astar(grid, start, goal, w=1.0):
+    """grid: 2D numpy array (0 free, 1 obstacle).
+       start, goal: (row, col) 튜플. w: weighted A*."""
+    H, W = grid.shape
+
+    def h(n):                                 # Euclidean — admissible
+        return np.hypot(goal[0] - n[0], goal[1] - n[1])
+
+    open_set = [(h(start), 0.0, start)]       # (f, g, node)
+    came = {start: None}
+    g    = {start: 0.0}
+
+    while open_set:
+        _, gu, u = heapq.heappop(open_set)
+        if u == goal:
+            break
+        if gu > g[u]:                         # heap 중복 — 이미 더 좋은 길 있음
+            continue
+
+        for di, dj in MOVES:
+            v = (u[0] + di, u[1] + dj)
+            if not (0 &lt;= v[0] &lt; H and 0 &lt;= v[1] &lt; W):
+                continue
+            if grid[v] == 1:
+                continue
+            step = np.hypot(di, dj)           # 수평/수직 1, 대각 √2
+            tentative = gu + step
+            if tentative &lt; g.get(v, 1e18):
+                g[v] = tentative
+                came[v] = u
+                heapq.heappush(open_set, (tentative + w * h(v), tentative, v))
+
+    # 경로 복원
+    if goal not in came:
+        return None
+    path, cur = [], goal
+    while cur is not None:
+        path.append(cur)
+        cur = came[cur]
+    return path[::-1]
+
+
+# 사용 예
+grid = np.zeros((20, 32), dtype=int)
+grid[4:16, 12] = 1
+grid[4:16, 20] = 1
+path = astar(grid, (10, 2), (10, 29))
+print(f"경로 길이 {len(path)} 칸")</code></pre>
+
+  <div class="note">
+    <strong>핵심 디테일 — heap 중복 처리.</strong> 같은 노드가 다른 부모를 거쳐 더 큰 $g$로 다시 push되는 일이
+    잦습니다. <code>gu &gt; g[u]: continue</code>로 거르지 않으면 시간이 수십 배 느려져요. 작아 보이지만
+    실무 A*의 성능을 좌우하는 한 줄입니다.
+  </div>
+
+  <h2>9. 흔한 실수 TOP 5</h2>
+
+  <table>
+    <thead><tr><th>#</th><th>증상</th><th>원인</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>경로가 장애물을 통과</td><td>collision check 빠짐</td><td><code>if grid[v]==1: continue</code></td></tr>
+      <tr><td>2</td><td>속도 매우 느림</td><td>heap 중복 노드</td><td><code>gu &gt; g[u]: continue</code></td></tr>
+      <tr><td>3</td><td>경로가 거꾸로</td><td>came 복원 방향 혼동</td><td>마지막 <code>path[::-1]</code></td></tr>
+      <tr><td>4</td><td>대각 이동 누락</td><td>MOVES에 8방향 없음</td><td>리스트 확인</td></tr>
+      <tr><td>5</td><td>경로가 비최적</td><td>8방향에서 Manhattan h</td><td>Euclidean으로 교체</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>(row, col) ↔ (x, y) 혼동.</strong> NumPy <code>grid[i, j]</code>의 <code>i</code>는 행(=y), <code>j</code>는 열(=x).
+    matplotlib <code>plt.plot(xs, ys)</code>는 그 반대 순서를 받습니다. 함수 시그니처에 주석을 꼭 달고,
+    <em>빈 지도에서 직선 경로</em>가 나오는 단위 테스트로 한번 확인하세요.
+  </div>
+
+  <h2>10. 자율주행 파이프라인 위에서 A*의 위치</h2>
+
+  <figure>
+    <svg viewBox="0 0 720 130" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arP" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#888"/></marker></defs>
+      <rect x="10"  y="40" width="100" height="50" fill="#eef3ff" stroke="#0b5fff"/>
+      <text x="60" y="60" text-anchor="middle" font-size="12">Perception</text>
+      <text x="60" y="78" text-anchor="middle" font-size="11" fill="#666">Occupancy Grid</text>
+      <rect x="130" y="40" width="100" height="50" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="180" y="60" text-anchor="middle" font-size="12">Costmap</text>
+      <text x="180" y="78" text-anchor="middle" font-size="11" fill="#666">5주차</text>
+      <rect x="250" y="40" width="100" height="50" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="300" y="60" text-anchor="middle" font-size="13" font-weight="bold">A*</text>
+      <text x="300" y="78" text-anchor="middle" font-size="11" fill="#666">오늘</text>
+      <rect x="370" y="40" width="120" height="50" fill="#f3e5f5" stroke="#9c27b0"/>
+      <text x="430" y="60" text-anchor="middle" font-size="12">Shortcut+Spline</text>
+      <text x="430" y="78" text-anchor="middle" font-size="11" fill="#666">5주차</text>
+      <rect x="510" y="40" width="100" height="50" fill="#fce4ec" stroke="#c62828"/>
+      <text x="560" y="60" text-anchor="middle" font-size="12">Speed Profile</text>
+      <text x="560" y="78" text-anchor="middle" font-size="11" fill="#666">10주차+</text>
+      <rect x="630" y="40" width="80" height="50" fill="#fffde7" stroke="#fbc02d"/>
+      <text x="670" y="60" text-anchor="middle" font-size="12">Controller</text>
+      <text x="670" y="78" text-anchor="middle" font-size="11" fill="#666">9~14주차</text>
+      <path d="M110,65 L130,65" stroke="#888" marker-end="url(#arP)"/>
+      <path d="M230,65 L250,65" stroke="#888" marker-end="url(#arP)"/>
+      <path d="M350,65 L370,65" stroke="#888" marker-end="url(#arP)"/>
+      <path d="M490,65 L510,65" stroke="#888" marker-end="url(#arP)"/>
+      <path d="M610,65 L630,65" stroke="#888" marker-end="url(#arP)"/>
+    </svg>
+    <figcaption>그림. 오늘 배운 A*는 자율주행 스택의 정중앙. 위로는 지도/Costmap을 받고, 아래로는 추종제어로
+    참조경로를 넘깁니다.</figcaption>
+  </figure>
+
+  <h3>심화 한 장 — Hybrid A*</h3>
+  <p>일반 A*의 노드는 (row, col)뿐이라 경로 중간에 차가 갑자기 90도 꺾일 수 있어요. <strong>Hybrid A*</strong>는
+  노드에 방향 $\theta$를 추가하고, 이웃 확장을 <em>Bicycle 모델로 조향각별 시뮬</em>해서 차량이 실제로 탈 수
+  있는 경로만 만듭니다. 좁은 주차에서 특히 강력합니다. 구현은 PythonRobotics 데모를 참고하세요.</p>
+
+  <h2>11. 핵심 정리</h2>
+
+  <div class="tip">
+    <ul>
+      <li><strong>$f(n) = g(n) + h(n)$</strong> — A*의 핵심 한 식. 모든 변형은 여기서 나옵니다.</li>
+      <li><strong>admissible 휴리스틱</strong>($h \le h^*$)이면 A*는 최적 경로를 보장.</li>
+      <li>자율주행 8방향 격자에서는 <strong>Euclidean</strong> 추천.</li>
+      <li>큰 지도·실시간 제약 → Weighted A* ($w = 1.2 \sim 1.5$) + smoothing.</li>
+      <li>Costmap을 step cost에 곱하면 "더 안전한" 경로가 자연스럽게 선택됩니다.</li>
+    </ul>
+  </div>
+
+  <h2>12. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Hart, Nilsson, Raphael, <em>"A Formal Basis for the Heuristic Determination of Minimum Cost Paths"</em> (1968) — A* 원논문.</li>
+    <li>LaValle, <em>Planning Algorithms</em>, Ch.2, 5 — 그래프 탐색 이론의 표준 교재.</li>
+    <li><strong>PythonRobotics</strong> (MIT, A. Sakai) — <code>PathPlanning/AStar/a_star.py</code>,
+    <code>PathPlanning/Dijkstra/dijkstra.py</code>, Hybrid A* 데모.
+    <a href="https://github.com/AtsushiSakai/PythonRobotics">github.com/AtsushiSakai/PythonRobotics</a></li>
+    <li>JPS (Jump Point Search), Theta* (any-angle) — 격자 A*의 가속·일반화 변형.</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="06-rrt-sampling.html"><small>← 이전</small>W6. RRT 샘플링 경로계획</a>
+    <a href="08-midterm-review.html" class="next"><small>다음 →</small>W8. 중간고사 범위 정리</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

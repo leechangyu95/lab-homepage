@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 시간을 거슬러 사라지는 기울기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 시간을 거슬러 사라지는 기울기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/11-rnn-lstm.html">Week 11. RNN과 LSTM</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 시간을 거슬러 사라지는 기울기</h4>
+    <p>가중치 $W_h$의 절대값을 바꾸며 BPTT 기울기 $|W_h|^t$가 시간이 거슬러 올라갈 때 어떻게 변하는지 봅니다. 1보다 약간만 작아도 20스텝 후엔 기울기가 거의 0, 1보다 살짝만 커도 폭발해요.</p>
+    <canvas id="vbptt" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>$|W_h|$ <span class="val" id="vbWV">0.9</span><input type="range" id="vbW" min="0.4" max="1.6" step="0.05" value="0.9"></label>
+      <label>시퀀스 길이 T <span class="val" id="vbTV">30</span><input type="range" id="vbT" min="5" max="50" step="1" value="30"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vbptt');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const w=+document.getElementById('vbW').value;
+      const T=+document.getElementById('vbT').value;
+      document.getElementById('vbWV').textContent=w.toFixed(2);
+      document.getElementById('vbTV').textContent=T;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';
+      for(let i=0;i<=4;i++){const y=20+i*(H-50)/4;ctx.beginPath();ctx.moveTo(50,y);ctx.lineTo(W-20,y);ctx.stroke();}
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      const labels=['10⁰','10⁻²','10⁻⁴','10⁻⁶','10⁻⁸+'];
+      for(let i=0;i<=4;i++){ctx.fillText(labels[i],10,25+i*(H-50)/4);}
+      const xs=W-90;
+      const norm=v=>Math.max(0,Math.min(1,(Math.log10(Math.max(1e-10,v))+8)/8));
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=3;ctx.beginPath();
+      for(let t=0;t<=T;t++){
+        const g=Math.pow(w,t);
+        const x=50+t/T*xs;
+        const y=20+(1-norm(g))*(H-50);
+        if(t===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      const finalG=Math.pow(w,T);
+      ctx.fillStyle=finalG<1e-3?'#c62828':finalG>10?'#c62828':'#2e7d32';
+      ctx.font='bold 14px sans-serif';
+      ctx.fillText(`T=${T}: |기울기 곱|≈${finalG.toExponential(2)}`,60,H-10);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const verdict=finalG<1e-3?'⚠ 기울기 소실 — 옛 정보 학습 불가':finalG>10?'⚠ 기울기 폭발 — NaN 위험':'✓ 안정적인 기울기 흐름';
+      ctx.fillStyle=finalG<1e-3||finalG>10?'#c62828':'#2e7d32';
+      ctx.fillText(verdict,W-280,30);
+      ctx.fillStyle='#666';ctx.fillText('과거 ←       시간 t       → 현재',60,H-30);
+    }
+    document.getElementById('vbW').addEventListener('input',draw);
+    document.getElementById('vbT').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

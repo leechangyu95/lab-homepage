@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Tube MPC — 명목 + 외란 영역 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Tube MPC — 명목 + 외란 영역</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/07-robust.html">Week 7. 강건 MPC</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Tube MPC — 명목 + 외란 영역</h4>
+    <p>외란이 있을 때 실제 궤적이 명목 궤적 주변의 튜브 안에 머무는 모습을 봅니다. <strong>외란 크기</strong>를 키우면 튜브 단면이 커지고, 제약 영역(빨간 박스)을 침범하지 않으려면 명목 궤적이 더 안쪽으로 가야 해요.</p>
+    <canvas id="tube" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>외란 크기 $\bar w$ <span class="val" id="twWV">0.5</span><input type="range" id="twW" min="0" max="2" step="0.05" value="0.5"></label>
+      <button id="tubeRun">새 외란 표본</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tube');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let seed=12345;
+    function rng(){seed=(seed*1103515245+12345)&0x7fffffff;return (seed/0x7fffffff)*2-1;}
+    function reseed(){seed=Math.floor(Math.random()*1e6);}
+    function draw(){
+      const wbar=+document.getElementById('twW').value;
+      document.getElementById('twWV').textContent=wbar.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const T=60,K=0.7,a=0.85,b=0.15,r=8;
+      // Constraint box for x in [-2, 12], y will represent state
+      const xMin=-2,xMax=12;
+      const px=v=>40+(v-xMin)/(xMax-xMin)*(W-60);
+      const py=t=>30+(t/T)*(H-60);
+      // Constraint top/bot
+      const xCMax=10;
+      ctx.fillStyle='rgba(198,40,40,0.06)';
+      ctx.fillRect(px(xCMax),30,W-20-px(xCMax),H-60);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(px(xCMax),30);ctx.lineTo(px(xCMax),H-30);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText('상태 제약: x ≤ 10',px(xCMax)+8,45);
+      // Nominal trajectory: bring nominal to set point but stay inside tightened bound
+      // tightened bound: xCMax - epsilon where epsilon = wbar/(1-a) for tube width
+      const epsTube=wbar/(1-a*K);
+      const setPt=Math.min(xCMax-epsTube*1.0,xCMax-0.5);
+      let xn=0;const nom=[xn];
+      for(let k=1;k<=T;k++){xn+=b*((setPt-xn));nom.push(xn);}
+      // Tube: nominal +- epsilon
+      ctx.fillStyle='rgba(11,95,255,0.10)';
+      ctx.beginPath();
+      nom.forEach((v,k)=>{const x=px(v+epsTube),y=py(k);if(k===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      for(let k=T;k>=0;k--){const x=px(nom[k]-epsTube),y=py(k);ctx.lineTo(x,y);}
+      ctx.closePath();ctx.fill();
+      // Several actual trajectories
+      seed=12345;
+      for(let trial=0;trial<6;trial++){
+        let x=0;const traj=[x];
+        for(let k=1;k<=T;k++){
+          const w=rng()*wbar;
+          // u = ubar + K(x - xbar): ubar = b * (setPt - xbar_{k-1}) (proportional)
+          const ubar=b*(setPt-nom[k-1]);
+          const u=ubar+K*(nom[k-1]-x);
+          x=a*x+u+w;
+          traj.push(x);
+        }
+        ctx.strokeStyle='rgba(11,95,255,0.6)';ctx.lineWidth=1;
+        ctx.beginPath();
+        traj.forEach((v,k)=>{const xx=px(v),yy=py(k);if(k===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+        ctx.stroke();
+      }
+      // Nominal line on top
+      ctx.strokeStyle='#0742b8';ctx.lineWidth=3;
+      ctx.beginPath();
+      nom.forEach((v,k)=>{const x=px(v),y=py(k);if(k===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+      ctx.stroke();
+      // axis
+      ctx.strokeStyle='#999';ctx.beginPath();
+      ctx.moveTo(40,30);ctx.lineTo(40,H-30);ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('상태 x →',W-100,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('시간 t',0,0);ctx.restore();
+      ctx.fillStyle='#0742b8';ctx.fillText('━ 명목 궤적',W-200,30);
+      ctx.fillStyle='#0b5fff';ctx.fillText('━ 실제 (외란 표본)',W-200,48);
+      ctx.fillStyle='#0b5fff';ctx.globalAlpha=0.5;ctx.fillRect(W-220,55,12,8);ctx.globalAlpha=1;
+      ctx.fillStyle='#0b5fff';ctx.fillText('튜브 ε=±'+epsTube.toFixed(2),W-200,72);
+    }
+    document.getElementById('twW').addEventListener('input',draw);
+    document.getElementById('tubeRun').addEventListener('click',()=>{reseed();draw();});
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

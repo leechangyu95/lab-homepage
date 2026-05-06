@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 온도가 출력 분포에 미치는 영향 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 온도가 출력 분포에 미치는 영향</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/13-transformer-llm.html">Week 13. Transformer와 LLM</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 온도가 출력 분포에 미치는 영향</h4>
+    <p>5개 후보 단어의 점수를 받아 온도에 따라 확률 분포가 어떻게 변하는지 봅니다. 온도가 0에 가까우면 한 단어만 살아남고, 크면 모두 비슷해집니다.</p>
+    <canvas id="tmpCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>온도 T <span class="val" id="tmV">1</span><input type="range" id="tm" min="0.1" max="3" step="0.05" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tmpCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const words=['cat','dog','tree','sky','run'];
+    const scores=[3.0,2.5,1.0,0.5,2.0];
+    function draw(){
+      const T=+document.getElementById('tm').value;
+      document.getElementById('tmV').textContent=T.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ex=scores.map(s=>Math.exp(s/T));
+      const sm=ex.reduce((a,b)=>a+b);const p=ex.map(v=>v/sm);
+      const bw=80,gap=30,total=5*(bw+gap)-gap,x0=(W-total)/2;
+      p.forEach((v,i)=>{
+        const x=x0+i*(bw+gap),h=v*(H-80);
+        ctx.fillStyle='#0b5fff';ctx.fillRect(x,H-40-h,bw,h);
+        ctx.fillStyle='#333';ctx.font='13px sans-serif';
+        ctx.fillText(words[i],x+20,H-20);
+        ctx.fillText(v.toFixed(3),x+15,H-50-h);
+      });
+    }
+    document.getElementById('tm').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

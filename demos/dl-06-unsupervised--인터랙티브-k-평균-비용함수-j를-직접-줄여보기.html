@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: K-평균 비용함수 J를 직접 줄여보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: K-평균 비용함수 J를 직접 줄여보기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/06-unsupervised.html">Week 6. 비지도학습 — 군집화와 차원 축소</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: K-평균 비용함수 J를 직접 줄여보기</h4>
+    <p>3개의 중심(별표)을 <strong>드래그</strong>해 옮길 수 있습니다. 각 점에서 가장 가까운 중심까지 빨간 선분이 그어지고, 길이의 제곱합이 $J$입니다. <strong>"평균으로 점프"</strong> 버튼은 K-평균의 갱신 단계 — 각 중심을 자기 클러스터 평균으로 이동시킵니다. 직접 옮긴 결과보다 항상 $J$가 작거나 같다는 사실을 확인하세요.</p>
+    <canvas id="jcost" width="640" height="380" style="cursor:grab"></canvas>
+    <div class="controls">
+      <button id="jcReset">새 데이터</button>
+      <button id="jcMean">평균으로 점프</button>
+      <span style="font-size:12px;color:#666">중심을 마우스로 드래그하세요</span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('jcost');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const COLS=['#0b5fff','#ff8c00','#2e7d32'];
+    let pts=[],cents=[],dragging=-1;
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(){
+      pts=[];cents=[];
+      const C=[[160,120],[470,140],[320,290]];
+      C.forEach(c=>{for(let i=0;i<28;i++)pts.push({x:c[0]+gauss()*30,y:c[1]+gauss()*30,c:0});});
+      // initial centers: deliberately bad
+      cents=[{x:100,y:300},{x:560,y:80},{x:380,y:200}];
+      assign();
+    }
+    function assign(){
+      pts.forEach(p=>{
+        let bd=Infinity,bi=0;
+        cents.forEach((cc,i)=>{const d=(p.x-cc.x)**2+(p.y-cc.y)**2;if(d<bd){bd=d;bi=i;}});
+        p.c=bi;
+      });
+    }
+    function J(){
+      let s=0;
+      pts.forEach(p=>{const cc=cents[p.c];s+=(p.x-cc.x)**2+(p.y-cc.y)**2;});
+      return s;
+    }
+    function jumpToMean(){
+      cents.forEach((cc,i)=>{
+        const grp=pts.filter(p=>p.c===i);
+        if(grp.length){cc.x=grp.reduce((a,b)=>a+b.x,0)/grp.length;cc.y=grp.reduce((a,b)=>a+b.y,0)/grp.length;}
+      });
+      assign();draw();
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // segments
+      ctx.strokeStyle='rgba(220,40,40,0.4)';ctx.lineWidth=1;
+      pts.forEach(p=>{const cc=cents[p.c];ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(cc.x,cc.y);ctx.stroke();});
+      // points
+      pts.forEach(p=>{ctx.fillStyle=COLS[p.c];ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();});
+      // centers
+      cents.forEach((cc,i)=>{
+        ctx.fillStyle=COLS[i];ctx.strokeStyle='#000';ctx.lineWidth=2;
+        ctx.beginPath();
+        for(let k=0;k<10;k++){const a=Math.PI*2*k/10-Math.PI/2,r=k%2===0?14:6;
+          const x=cc.x+Math.cos(a)*r,y=cc.y+Math.sin(a)*r;if(k===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+        ctx.closePath();ctx.fill();ctx.stroke();
+      });
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText(`J = ${(J()/1000).toFixed(1)} × 10³  (작을수록 좋은 군집화)`,12,24);
+    }
+    c.addEventListener('mousedown',e=>{
+      const r=c.getBoundingClientRect();const mx=(e.clientX-r.left)*c.width/r.width,my=(e.clientY-r.top)*c.height/r.height;
+      cents.forEach((cc,i)=>{if(Math.hypot(mx-cc.x,my-cc.y)<18)dragging=i;});
+    });
+    c.addEventListener('mousemove',e=>{
+      if(dragging<0)return;
+      const r=c.getBoundingClientRect();const mx=(e.clientX-r.left)*c.width/r.width,my=(e.clientY-r.top)*c.height/r.height;
+      cents[dragging].x=mx;cents[dragging].y=my;assign();draw();
+    });
+    c.addEventListener('mouseup',()=>{dragging=-1;});
+    c.addEventListener('mouseleave',()=>{dragging=-1;});
+    document.getElementById('jcReset').onclick=()=>{gen();draw();};
+    document.getElementById('jcMean').onclick=jumpToMean;
+    gen();draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

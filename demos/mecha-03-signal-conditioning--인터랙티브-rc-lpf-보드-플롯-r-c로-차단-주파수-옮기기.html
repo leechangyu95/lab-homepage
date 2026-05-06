@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: RC LPF 보드 플롯 — R, C로 차단 주파수 옮기기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: RC LPF 보드 플롯 — R, C로 차단 주파수 옮기기</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/03-signal-conditioning.html">Week 3. 신호 조절(Signal Conditioning)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: RC LPF 보드 플롯 — R, C로 차단 주파수 옮기기</h4>
+    <p>$f_c = 1/(2\pi RC)$. $R$이나 $C$를 키우면 차단 주파수가 낮아집니다. 점선 표시 점 ($-3\,\text{dB}$, 약 $0.707$배)이 정확히 $f_c$에 위치하는지 확인하세요.</p>
+    <canvas id="bodeMc" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="bRV">1.0</span> kΩ<input type="range" id="bR" min="0.1" max="10" step="0.1" value="1"></label>
+      <label>C <span class="val" id="bCV">1.0</span> μF<input type="range" id="bC" min="0.01" max="10" step="0.01" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bodeMc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const R=+document.getElementById('bR').value*1000;
+      const Cv=+document.getElementById('bC').value*1e-6;
+      document.getElementById('bRV').textContent=(R/1000).toFixed(1);
+      document.getElementById('bCV').textContent=(Cv*1e6).toFixed(2);
+      const fc=1/(2*Math.PI*R*Cv);
+      const fmin=fc/100,fmax=fc*100;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(f){return 60+(Math.log10(f/fmin))/4*(W-90);}
+      function y(g){return H-50-Math.max(0,1+g)*(H-90)/1.1;}
+      ctx.strokeStyle='#eee';
+      for(let p=-2;p<=2;p++){const f=fc*Math.pow(10,p);ctx.beginPath();ctx.moveTo(x(f),y(0));ctx.lineTo(x(f),y(-1));ctx.stroke();}
+      for(let g=0;g>=-1;g-=0.2){ctx.beginPath();ctx.moveTo(x(fmin),y(g));ctx.lineTo(x(fmax),y(g));ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(x(fmin),y(-1));ctx.lineTo(x(fmax),y(-1));ctx.moveTo(x(fmin),y(0));ctx.lineTo(x(fmin),y(-1));ctx.stroke();
+      ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      const g707=Math.log10(0.7071);
+      ctx.beginPath();ctx.moveTo(x(fmin),y(g707));ctx.lineTo(x(fc),y(g707));ctx.lineTo(x(fc),y(-1));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const f=Math.pow(10,lf);const wRC=(2*Math.PI*f)*R*Cv;
+        const mag=1/Math.sqrt(1+wRC*wRC);
+        const lg=Math.log10(Math.max(1e-3,mag));
+        if(lf===Math.log10(fmin))ctx.moveTo(x(f),y(lg));else ctx.lineTo(x(f),y(lg));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`f_c = 1/(2πRC) = ${fc<1000?fc.toFixed(1)+' Hz':(fc/1000).toFixed(2)+' kHz'}`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('점선: −3dB(=0.707) 점이 차단 주파수',40,50);
+      ctx.fillText('주파수 (log)',W-100,H-15);
+    }
+    document.getElementById('bR').addEventListener('input',draw);
+    document.getElementById('bC').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

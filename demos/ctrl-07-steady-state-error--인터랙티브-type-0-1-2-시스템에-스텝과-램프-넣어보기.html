@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Type 0/1/2 시스템에 스텝과 램프 넣어보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Type 0/1/2 시스템에 스텝과 램프 넣어보기</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/07-steady-state-error.html">Week 7. 정상상태 오차</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Type 0/1/2 시스템에 스텝과 램프 넣어보기</h4>
+    <p>같은 게인 $K$로 세 시스템 ($\dfrac{K}{s+1}$, $\dfrac{K}{s(s+1)}$, $\dfrac{K}{s^2(s+1)}$)에
+    스텝/램프 입력을 가했을 때 어느 쪽이 따라가는지 보세요.</p>
+    <canvas id="ssec" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>입력 종류
+        <select id="inkind"><option value="step">단위 스텝</option><option value="ramp">램프</option></select>
+      </label>
+      <label>게인 K <span class="val" id="ssK">2.0</span><input type="range" id="ssk" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ssec'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('ssK').textContent=(+$('ssk').value).toFixed(1);};
+    $('ssk').oninput=upd;
+    function loop(){
+      const K=+$('ssk').value, kind=$('inkind').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const dt=0.04, N=400;
+      // 단위 피드백, P 제어(이득 K 한 변수에 흡수). 세 가지 폐루프:
+      //   Type 0:  G = K/(s+1)       →  closed:  ẏ + (1+K)y = K r
+      //   Type 1:  G = K/[s(s+1)]    →  closed:  ÿ + ẏ + K y = K r
+      //   Type 2:  G = K/[s²(s+1)]   →  closed:  y''' + y'' + K y = K r
+      let s0=0;                    // Type 0:  y
+      let s1a=0, s1b=0;            // Type 1:  y, ẏ
+      let s2a=0, s2b=0, s2c=0;     // Type 2:  y, ẏ, ÿ
+      const out0=[], out1=[], out2=[], rs=[];
+      for(let k=0;k<N;k++){
+        const t=k*dt;
+        const r = kind==='step' ? 1.0 : 0.5*t;
+        s0 += dt * (-(1+K)*s0 + K*r);
+        const dd1 = K*r - s1b - K*s1a;
+        s1b += dt*dd1; s1a += dt*s1b;
+        const ddd2 = K*r - s2c - K*s2a;
+        s2c += dt*ddd2; s2b += dt*s2c; s2a += dt*s2b;
+        out0.push(s0); out1.push(s1a); out2.push(s2a); rs.push(r);
+      }
+      const data={out0, out1, out2, rs};
+      const ox=40, oy=270, w=560, h=220, T=N*dt;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      const yMax = Math.max(2, Math.max(...data.rs)*1.2);
+      const Y=v=>oy - Math.max(-1,Math.min(yMax,v))/yMax * h;
+      // ref
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      data.rs.forEach((v,i)=>{const xx=ox+i*w/N, yy=Y(v); if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();x.setLineDash([]);
+      const drawC=(arr,col)=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+        arr.forEach((v,i)=>{const xx=ox+i*w/N, yy=Y(v); if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();};
+      drawC(data.out0,'#f57c00');
+      drawC(data.out1,'#0b5fff');
+      drawC(data.out2,'#2e7d32');
+      // labels
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('빨강(점선): 입력 r(t)',ox,oy+20);
+      x.fillStyle='#f57c00';x.fillText('Type 0',ox+170,oy+20);
+      x.fillStyle='#0b5fff';x.fillText('Type 1',ox+250,oy+20);
+      x.fillStyle='#2e7d32';x.fillText('Type 2',ox+330,oy+20);
+      // ess readout
+      const ess0 = data.rs[N-1] - data.out0[N-1];
+      const ess1 = data.rs[N-1] - data.out1[N-1];
+      const ess2 = data.rs[N-1] - data.out2[N-1];
+      x.fillStyle='#444';x.fillText('정상오차 ess  Type0='+ess0.toFixed(2)+'  Type1='+ess1.toFixed(2)+'  Type2='+ess2.toFixed(2),ox,oy+38);
+      requestAnimationFrame(loop);
+    }
+    upd();$('inkind').onchange=upd;loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

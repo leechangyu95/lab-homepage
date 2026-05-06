@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 고유벡터 직접 찾아보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 고유벡터 직접 찾아보기</h1>
+  <p class="demo-meta">
+    선형대수학 · <a href="../backup-lectures/lectures-linear-algebra/13-eigenvalue-eigenvector.html">Week 13. 고윳값·고유벡터</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 고유벡터 직접 찾아보기</h4>
+    <p>회전+스케일 행렬 $A$ 가 단위원 위 모든 점을 어디로 보내는지 보여줍니다.
+       파란 입력 화살표를 마우스로 끌어 보세요. 입력과 출력이 <strong>같은 직선 위에 있을 때</strong>
+       (즉, $A\mathbf{v}$ 가 $\mathbf{v}$ 와 평행) 그 방향이 바로 <strong>고유벡터</strong>입니다.
+       녹색 점선은 진짜 고유벡터의 방향. 슬라이더로 $A$ 의 원소를 바꿔도 보세요.</p>
+    <canvas id="eigDemo" width="780" height="380"></canvas>
+    <div class="controls">
+      <label>a₁₁ <span class="val" id="ea11V">2</span><input type="range" id="ea11" min="-3" max="3" step="0.1" value="2"></label>
+      <label>a₁₂ <span class="val" id="ea12V">1</span><input type="range" id="ea12" min="-3" max="3" step="0.1" value="1"></label>
+      <label>a₂₁ <span class="val" id="ea21V">0</span><input type="range" id="ea21" min="-3" max="3" step="0.1" value="0"></label>
+      <label>a₂₂ <span class="val" id="ea22V">3</span><input type="range" id="ea22" min="-3" max="3" step="0.1" value="3"></label>
+    </div>
+    <p id="eigInfo" style="margin-top:8px;font-size:13px;font-family:Consolas,monospace"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('eigDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=200,oy=190,scale=55;
+    let v={x:1,y:0.5};
+    let dragging=false;
+    function getMouse(e){const r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)};}
+    function px(p){return [ox+p.x*scale,oy-p.y*scale];}
+    function getA(){return [[+document.getElementById('ea11').value,+document.getElementById('ea12').value],
+                            [+document.getElementById('ea21').value,+document.getElementById('ea22').value]];}
+    function arrow(p,col,lw=3){const [x,y]=px(p);
+      ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x,y);ctx.stroke();
+      const ang=Math.atan2(y-oy,x-ox);
+      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y);
+      ctx.lineTo(x-12*Math.cos(ang-0.4),y-12*Math.sin(ang-0.4));
+      ctx.lineTo(x-12*Math.cos(ang+0.4),y-12*Math.sin(ang+0.4));ctx.closePath();ctx.fill();}
+    function eigenvalues(A){
+      const a=A[0][0],b=A[0][1],c2=A[1][0],d=A[1][1];
+      const tr=a+d,det=a*d-b*c2;
+      const disc=tr*tr-4*det;
+      if(disc<0) return null;
+      const s=Math.sqrt(disc);return [(tr+s)/2,(tr-s)/2];
+    }
+    function eigenvectors(A,evs){
+      // for each eigenvalue, solve (A - lambda I) v = 0
+      return evs.map(lam=>{
+        const a=A[0][0]-lam,b=A[0][1],c2=A[1][0],d=A[1][1]-lam;
+        // null space: pick v from one row
+        let v;
+        if(Math.abs(b)>1e-9||Math.abs(a)>1e-9) v={x:b,y:-a};
+        else v={x:d,y:-c2};
+        const n=Math.hypot(v.x,v.y);
+        return n>1e-9?{x:v.x/n,y:v.y/n}:null;
+      });
+    }
+    function draw(){
+      ['ea11','ea12','ea21','ea22'].forEach(k=>document.getElementById(k+'V').textContent=(+document.getElementById(k).value).toFixed(1));
+      const A=getA();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let i=-4;i<=4;i++){if(ox+i*scale>5&&ox+i*scale<400){ctx.beginPath();ctx.moveTo(ox+i*scale,10);ctx.lineTo(ox+i*scale,H-10);ctx.stroke();}}
+      for(let i=-4;i<=4;i++){if(oy+i*scale>10&&oy+i*scale<H-10){ctx.beginPath();ctx.moveTo(20,oy+i*scale);ctx.lineTo(380,oy+i*scale);ctx.stroke();}}
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(380,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,10);ctx.lineTo(ox,H-10);ctx.stroke();
+      // eigenvector lines (faint dashed green)
+      const evs=eigenvalues(A);
+      if(evs){
+        const eigvecs=eigenvectors(A,evs);
+        ctx.strokeStyle='#2e7d32';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+        eigvecs.forEach(ev=>{if(!ev)return;
+          ctx.beginPath();ctx.moveTo(ox-ev.x*200,oy+ev.y*200);ctx.lineTo(ox+ev.x*200,oy-ev.y*200);ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      }
+      // input v (blue) and Av (orange)
+      const Av={x:A[0][0]*v.x+A[0][1]*v.y,y:A[1][0]*v.x+A[1][1]*v.y};
+      arrow(Av,'#fa8c16',3.5);
+      arrow(v,'#1677ff',3);
+      // labels
+      const [vx,vy]=px(v),[avx,avy]=px(Av);
+      ctx.fillStyle='#1677ff';ctx.font='bold 14px sans-serif';ctx.fillText('v (입력)',vx+8,vy-5);
+      ctx.fillStyle='#fa8c16';ctx.fillText('Av',avx+8,avy-5);
+      // angle between v and Av
+      const cosAng=(v.x*Av.x+v.y*Av.y)/(Math.hypot(v.x,v.y)*Math.hypot(Av.x,Av.y));
+      const isAligned=Math.abs(Math.abs(cosAng)-1)<0.02;
+      // info panel
+      ctx.fillStyle='#0b5fff';ctx.font='bold 15px sans-serif';
+      ctx.fillText('현재 입력 v 와 출력 Av',420,40);
+      ctx.fillStyle='#222';ctx.font='13px Consolas,monospace';
+      ctx.fillText(`v  = (${v.x.toFixed(2)}, ${v.y.toFixed(2)})`,420,65);
+      ctx.fillText(`Av = (${Av.x.toFixed(2)}, ${Av.y.toFixed(2)})`,420,85);
+      ctx.fillText(`방향 일치 정도 (|cos|): ${Math.abs(cosAng).toFixed(3)}`,420,108);
+      ctx.fillStyle=isAligned?'#2e7d32':'#cf1322';ctx.font='bold 13px sans-serif';
+      ctx.fillText(isAligned?'✓ v 가 고유벡터에 거의 정렬됨':'✗ 아직 고유벡터 아님 — 입력 화살표를 끌어 평행하게 만들어 보세요',420,130);
+      // eigenvalues panel
+      ctx.fillStyle='#0b5fff';ctx.font='bold 15px sans-serif';
+      ctx.fillText('이 행렬 A 의 고윳값',420,170);
+      ctx.fillStyle='#222';ctx.font='13px Consolas,monospace';
+      ctx.fillText(`A = [${A[0][0].toFixed(1)}, ${A[0][1].toFixed(1)}]`,420,195);
+      ctx.fillText(`    [${A[1][0].toFixed(1)}, ${A[1][1].toFixed(1)}]`,420,213);
+      const tr=A[0][0]+A[1][1],det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+      ctx.fillText(`tr A = ${tr.toFixed(2)},  det A = ${det.toFixed(2)}`,420,235);
+      ctx.fillText(`특성식: λ² − ${tr.toFixed(2)}λ + ${det.toFixed(2)} = 0`,420,255);
+      if(evs){
+        ctx.fillStyle='#2e7d32';ctx.fillText(`λ₁ = ${evs[0].toFixed(3)},  λ₂ = ${evs[1].toFixed(3)}`,420,278);
+        ctx.fillStyle='#666';ctx.fillText('녹색 점선 = 고유벡터의 방향',420,300);
+        ctx.fillStyle='#666';ctx.fillText('확인: tr = λ₁+λ₂, det = λ₁·λ₂',420,320);
+      } else {
+        ctx.fillStyle='#cf1322';ctx.fillText('실수 고윳값 없음 (회전 효과)',420,278);
+      }
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('● 파란 화살표 끝점을 마우스로 끌어 v 를 바꿔 보세요',30,H-10);
+    }
+    c.addEventListener('mousedown',e=>{
+      const m=getMouse(e);const [vx,vy]=px(v);
+      if((m.x-vx)**2+(m.y-vy)**2<400) dragging=true;
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!dragging) return;
+      const m=getMouse(e);v={x:(m.x-ox)/scale,y:(oy-m.y)/scale};draw();
+    });
+    window.addEventListener('mouseup',()=>dragging=false);
+    ['ea11','ea12','ea21','ea22'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

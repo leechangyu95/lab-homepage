@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 개루프 vs 폐루프 — 언덕에서의 차이 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 개루프 vs 폐루프 — 언덕에서의 차이</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/01-intro.html">Week 1. 메카트로닉스 개요</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 개루프 vs 폐루프 — 언덕에서의 차이</h4>
+    <p>크루즈 컨트롤이 평지에서 100km/h로 달리다가 <em>언덕(외란)</em>을 만났을 때 두 방식의 반응을 비교합니다. 개루프는 "정해진 스로틀량"만 보내고 결과를 안 봐서 속도가 떨어지지만, 폐루프는 측정으로 오차를 잡아 보정합니다.</p>
+    <canvas id="loopDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>외란 (언덕 경사) <span class="val" id="dV">3</span>°<input type="range" id="d" min="0" max="8" step="0.5" value="3"></label>
+      <label>피드백 게인 K <span class="val" id="kV">0.6</span><input type="range" id="k" min="0" max="2" step="0.05" value="0.6"></label>
+      <button id="rstLoop">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 목표 100 km/h &nbsp; 🔴 개루프 &nbsp; 🔵 폐루프</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('loopDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t=0,vO=100,vC=100,hist=[],raf=null;
+    function reset(){t=0;vO=100;vC=100;hist=[];}
+    document.getElementById('rstLoop').onclick=reset;
+    ['d','k'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{document.getElementById(id+'V').textContent=document.getElementById(id).value;}));
+    function step(){
+      const d=+document.getElementById('d').value;
+      const k=+document.getElementById('k').value;
+      const dt=0.1, ref=100;
+      // disturbance starts at t=4
+      const slope = t>4 ? d : 0;
+      const dragO = 0.05*vO + 0.7*slope;       // hill slows the car
+      const throttleO = 5;                      // fixed open-loop throttle
+      vO += dt*(throttleO - dragO);
+      const dragC = 0.05*vC + 0.7*slope;
+      const throttleC = 5 + k*(ref - vC);       // closed-loop P controller
+      vC += dt*(throttleC - dragC);
+      hist.push({t,vO,vC,slope});
+      if(hist.length>300)hist.shift();
+      t+=dt;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#eee';for(let i=40;i<H-30;i+=30){ctx.beginPath();ctx.moveTo(40,i);ctx.lineTo(W-10,i);ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-10,H-30);ctx.moveTo(40,30);ctx.lineTo(40,H-30);ctx.stroke();
+      const sx=i=>40+i*2, sy=v=>H-30-(v-60)*4;
+      // hill region shading — index where t crossed 4s
+      let hillIdx = -1;
+      for(let i=0;i<hist.length;i++){if(hist[i].t>=4){hillIdx=i;break;}}
+      if(hillIdx>=0){
+        const hillStart = sx(hillIdx);
+        ctx.fillStyle='rgba(255,140,0,0.08)';
+        ctx.fillRect(hillStart,30,Math.max(0,W-10-hillStart),H-60);
+        ctx.fillStyle='#e65100';ctx.font='12px sans-serif';
+        ctx.fillText('← 언덕 진입(외란 시작)',hillStart+6,H-40);
+      }
+      // ref line
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(40,sy(100));ctx.lineTo(W-10,sy(100));ctx.stroke();ctx.setLineDash([]);
+      // open
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.vO);if(i==0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      // closed
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.vC);if(i==0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('속도 (km/h)',8,40);ctx.fillText('시간 →',W-60,H-10);
+      ctx.fillStyle='#c62828';ctx.fillText('개루프 = '+vO.toFixed(1),W-220,50);
+      ctx.fillStyle='#0b5fff';ctx.fillText('폐루프 = '+vC.toFixed(1),W-100,50);
+      raf=requestAnimationFrame(step);
+    }
+    step();
+  })();
+  </script>
+</main>
+</body>
+</html>

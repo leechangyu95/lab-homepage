@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: a → v → s, 세 그래프가 어떻게 연결되나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: a → v → s, 세 그래프가 어떻게 연결되나</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/02-particle-rectilinear.html">Week 2. 입자의 직선 운동학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: a → v → s, 세 그래프가 어떻게 연결되나</h4>
+    <p>가속도 $a(t)$를 펄스로 줄 수 있습니다. <strong>'펄스 추가' 버튼을 눌러보세요.</strong> $a$의 면적이 $v$의 변화로, $v$의 면적이 $s$의 변화로 그대로 옮겨가는 것을 직접 확인할 수 있습니다.</p>
+    <canvas id="avsC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>펄스 가속도 (m/s²) <span class="val" id="avsAV">2</span><input type="range" id="avsA" min="-5" max="5" step="0.5" value="2"></label>
+      <label>펄스 시간 (s) <span class="val" id="avsTV">1</span><input type="range" id="avsT" min="0.2" max="3" step="0.1" value="1"></label>
+      <button id="avsAdd">펄스 추가</button>
+      <button id="avsReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('avsC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['avsA','avsT'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['avsA','avsT'].forEach(k=>sl(k).oninput=upd);upd();
+    const T=10,N=600,dt=T/N;
+    let aArr=new Array(N).fill(0),vArr=new Array(N).fill(0),sArr=new Array(N).fill(0);
+    let cursor=0;
+    function recompute(){
+      vArr[0]=0;sArr[0]=0;
+      for(let i=1;i<N;i++){vArr[i]=vArr[i-1]+aArr[i-1]*dt;sArr[i]=sArr[i-1]+vArr[i-1]*dt;}
+    }
+    sl('avsAdd').onclick=()=>{
+      const aVal=+sl('avsA').value,tDur=+sl('avsT').value;
+      const start=cursor,end=Math.min(N,cursor+Math.round(tDur/dt));
+      for(let i=start;i<end;i++)aArr[i]+=aVal;
+      cursor=end;
+      recompute();
+    };
+    sl('avsReset').onclick=()=>{aArr.fill(0);vArr.fill(0);sArr.fill(0);cursor=0;};
+    function panel(yTop,yH,arr,label,col,unit){
+      const minV=Math.min(0,...arr),maxV=Math.max(0,...arr,0.1);
+      const range=maxV-minV||1;
+      x.fillStyle='#fff';x.fillRect(40,yTop,580,yH);
+      x.strokeStyle='#d0d4d9';x.strokeRect(40,yTop,580,yH);
+      // zero line
+      const zy=yTop+yH-((0-minV)/range)*yH;
+      x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.moveTo(40,zy);x.lineTo(620,zy);x.stroke();x.setLineDash([]);
+      // fill area
+      x.fillStyle=col+'30';x.beginPath();x.moveTo(40,zy);
+      for(let i=0;i<N;i++){const px=40+i/(N-1)*580;const py=yTop+yH-((arr[i]-minV)/range)*yH;x.lineTo(px,py);}
+      x.lineTo(620,zy);x.closePath();x.fill();
+      // line
+      x.strokeStyle=col;x.lineWidth=1.6;x.beginPath();
+      for(let i=0;i<N;i++){const px=40+i/(N-1)*580;const py=yTop+yH-((arr[i]-minV)/range)*yH;if(i===0)x.moveTo(px,py);else x.lineTo(px,py);}
+      x.stroke();
+      // cursor
+      const cx=40+cursor/(N-1)*580;
+      x.strokeStyle='#999';x.setLineDash([2,2]);x.beginPath();x.moveTo(cx,yTop);x.lineTo(cx,yTop+yH);x.stroke();x.setLineDash([]);
+      x.fillStyle='#333';x.font='bold 11px sans-serif';x.textAlign='left';
+      x.fillText(label+'  ['+unit+']',46,yTop+12);
+    }
+    function loop(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      panel(10,95,aArr,'a (가속도)','#c62828','m/s²');
+      panel(115,95,vArr,'v (속도)','#0b5fff','m/s');
+      panel(220,95,sArr,'s (위치)','#2e7d32','m');
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

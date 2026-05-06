@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 설계 명세 → s-평면 허용 영역 → 시간응답 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 설계 명세 → s-평면 허용 영역 → 시간응답</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/06-second-order.html">Week 6. 2차 시스템 시간응답</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 설계 명세 → s-평면 허용 영역 → 시간응답</h4>
+    <p>왼쪽 슬라이더로 시간영역 명세 (오버슈트 한계, 정착시간 한계)를 정하면, s-평면 위에 <span style="color:#2e7d32;font-weight:600">초록 영역</span>이 자동으로 그려집니다.
+    오른쪽에서 빨간 점(극점)을 마우스로 옮겨 영역 안/밖에서 응답이 어떻게 다른지 확인하세요.</p>
+    <canvas id="dspec" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>오버슈트 한계 Mp* [%] <span class="val" id="mpsV">10</span><input type="range" id="mps" min="1" max="50" step="1" value="10"></label>
+      <label>정착시간 한계 ts* [s] <span class="val" id="tssV">2.0</span><input type="range" id="tss" min="0.5" max="5" step="0.1" value="2.0"></label>
+      <label>극점 실수부 σ <span class="val" id="dpSig">-2.0</span><input type="range" id="dsig" min="-6" max="0.5" step="0.05" value="-2.0"></label>
+      <label>극점 허수부 ω <span class="val" id="dpOm">2.0</span><input type="range" id="dom" min="0" max="6" step="0.05" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dspec'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('mpsV').textContent=$('mps').value;$('tssV').textContent=(+$('tss').value).toFixed(1);
+      $('dpSig').textContent=(+$('dsig').value).toFixed(2);$('dpOm').textContent=(+$('dom').value).toFixed(2);};
+    ['mps','tss','dsig','dom'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const Mp=+$('mps').value/100, ts=+$('tss').value;
+      const sig=+$('dsig').value, om=+$('dom').value;
+      // derive zeta_min from Mp:  Mp = exp(-pi*z/sqrt(1-z^2))
+      const lnMp = Math.log(Mp);
+      const zMin = Math.sqrt(lnMp*lnMp/(Math.PI*Math.PI + lnMp*lnMp));
+      const sigMax = -4/ts;  // settling 2% rule
+      // current pole properties
+      const wn = Math.sqrt(sig*sig + om*om);
+      const zCur = wn>1e-3 ? -sig/wn : 1;
+      const Mp_cur = (zCur<1 && zCur>0) ? Math.exp(-Math.PI*zCur/Math.sqrt(1-zCur*zCur))*100 : (zCur>=1?0:NaN);
+      const ts_cur = zCur>1e-3 ? 4/(zCur*wn) : Infinity;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // s-plane
+      const cx=170, cy=190, sc=40;
+      // unstable shading
+      x.fillStyle='rgba(198,40,40,0.05)';x.fillRect(cx,20,180,340);
+      // allowed region (green): Re <= sigMax  AND  angle from neg real <= acos(zMin)
+      x.fillStyle='rgba(46,125,50,0.18)';
+      const angMax = Math.acos(zMin); // angle from negative real axis
+      // shade
+      for(let px=20;px<cx;px+=2){
+        for(let py=20;py<360;py+=2){
+          const sx=(px-cx)/sc, sy=(cy-py)/sc;
+          if(sx>sigMax/sc*sc) continue;  // simple
+          if(sx>sigMax) continue;
+          // angle from negative real axis
+          const ang = Math.atan2(Math.abs(sy), -sx);
+          if(ang<=angMax) x.fillRect(px,py,2,2);
+        }
+      }
+      // axes
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,cy);x.lineTo(340,cy);x.moveTo(cx,20);x.lineTo(cx,360);x.stroke();
+      // sigma boundary line
+      x.strokeStyle='#2e7d32';x.setLineDash([4,3]);x.beginPath();
+      x.moveTo(cx+sigMax*sc,20);x.lineTo(cx+sigMax*sc,360);x.stroke();x.setLineDash([]);
+      x.fillStyle='#2e7d32';x.font='10px sans-serif';x.fillText('Re='+sigMax.toFixed(2),cx+sigMax*sc-30,18);
+      // angle lines (zeta boundary)
+      x.strokeStyle='#2e7d32';x.lineWidth=1.5;
+      x.beginPath();x.moveTo(cx,cy);x.lineTo(cx-300*Math.cos(angMax),cy-300*Math.sin(angMax));x.stroke();
+      x.beginPath();x.moveTo(cx,cy);x.lineTo(cx-300*Math.cos(angMax),cy+300*Math.sin(angMax));x.stroke();
+      x.fillText('ζ≥'+zMin.toFixed(2),cx-100,cy-50);
+      // pole and conjugate
+      const px=cx+sig*sc, py=cy-om*sc, py2=cy+om*sc;
+      const inAllowed = (sig<=sigMax) && (Math.atan2(om,-sig)<=angMax) && sig<0;
+      x.fillStyle=inAllowed?'#2e7d32':'#c62828';
+      x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+      if(om>0.05){x.beginPath();x.arc(px,py2,7,0,Math.PI*2);x.fill();}
+      x.fillStyle='#666';x.font='10px sans-serif';x.fillText('Re',335,cy-4);x.fillText('Im',cx+5,28);
+      // info
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('현재 극점: ζ='+zCur.toFixed(2)+', ωn='+wn.toFixed(2),20,30);
+      x.fillText('Mp='+(isNaN(Mp_cur)?'발산':Mp_cur.toFixed(1)+'%')+'  ts='+(isFinite(ts_cur)?ts_cur.toFixed(2)+'s':'∞'),20,375);
+      x.fillStyle=inAllowed?'#2e7d32':'#c62828';
+      x.fillText(inAllowed?'✓ 명세 만족':'✗ 명세 위반',270,375);
+      // step response right
+      const ox=380, oy=290, w=240, h=200;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      // ts band
+      x.fillStyle='rgba(46,125,50,0.08)';x.fillRect(ox,oy-h*0.51,(ts/ts*w)*0+ts/8*w,h*0.04);
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,oy-h*0.5);x.lineTo(ox+w,oy-h*0.5);x.stroke();
+      x.beginPath();x.moveTo(ox,oy-h*0.5*(1+Mp));x.lineTo(ox+w,oy-h*0.5*(1+Mp));x.stroke();
+      x.beginPath();x.moveTo(ox+ts/8*w,oy);x.lineTo(ox+ts/8*w,oy-h);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='10px sans-serif';
+      x.fillText('1+Mp*',ox+w-40,oy-h*0.5*(1+Mp)-2);
+      x.fillText('ts*',ox+ts/8*w-10,oy-h-2);
+      // simulate response
+      x.strokeStyle=inAllowed?'#2e7d32':'#c62828';x.lineWidth=2;x.beginPath();
+      const T=8, dt=T/240;
+      let yp=0,vp=0;
+      const wn2=wn*wn, twoz=2*zCur*wn;
+      for(let i=0;i<240;i++){
+        const t=i*dt;
+        const a = -twoz*vp - wn2*yp + wn2;  // step input
+        vp += a*dt; yp += vp*dt;
+        const xx=ox+i*w/240, yy=oy-Math.max(-1,Math.min(2.5,yp))*h*0.5;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';x.fillText('계단응답',ox,oy-h-10);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

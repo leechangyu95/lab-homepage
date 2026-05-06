@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Kinematic Bicycle 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Kinematic Bicycle 시뮬레이터</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/02-frames-kinematics.html">Week 2. 좌표계 &amp; 차량 기구학 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Kinematic Bicycle 시뮬레이터</h4>
+    <p>속도 $v$와 조향 $\delta$를 슬라이더로 직접 잡아 차를 운전해 보세요. 회색 곡선이 차가 지나간 자취,
+    파란 점선이 이론 회전반경 $R = L/\tan\delta$입니다. δ를 일정하게 두면 차가 정확히 그 원 위로 굴러가는 걸 보게 됩니다.</p>
+    <canvas id="bsim" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>속도 v <span class="val" id="vV">5</span><input type="range" id="v" min="1" max="15" step="0.5" value="5"></label>
+      <label>조향 δ° <span class="val" id="ddV">10</span><input type="range" id="dd" min="-30" max="30" step="0.5" value="10"></label>
+      <label>휠베이스 L <span class="val" id="LV2">2.5</span><input type="range" id="L2" min="1.5" max="4" step="0.1" value="2.5"></label>
+      <button id="rstB" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bsim'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    let st={x:0,y:0,psi:0}, hist=[];
+    function reset(){st={x:0,y:0,psi:0}; hist=[];}
+    $('rstB').onclick=reset;
+    function w2s(p){return {x:c.width/2+p[0]*8, y:c.height/2-p[1]*8};}
+    function loop(){
+      const v=+$('v').value, dd=+$('dd').value, L=+$('L2').value;
+      $('vV').textContent=v.toFixed(1); $('ddV').textContent=dd.toFixed(1); $('LV2').textContent=L.toFixed(1);
+      const drad=dd*Math.PI/180;
+      const dt=0.05;
+      st.x+=v*Math.cos(st.psi)*dt;
+      st.y+=v*Math.sin(st.psi)*dt;
+      st.psi+=v/L*Math.tan(drad)*dt;
+      hist.push({x:st.x,y:st.y});
+      if(hist.length>2000) hist.shift();
+      // wrap if too far
+      if(Math.abs(st.x)>50||Math.abs(st.y)>30){st.x*=0;st.y*=0;hist=[];}
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      // grid
+      x.strokeStyle='#eee';
+      for(let i=-50;i<=50;i+=5){
+        const s1=w2s([i,-30]), s2=w2s([i,30]);
+        x.beginPath(); x.moveTo(s1.x,s1.y); x.lineTo(s2.x,s2.y); x.stroke();
+        const s3=w2s([-50,i]), s4=w2s([50,i]);
+        x.beginPath(); x.moveTo(s3.x,s3.y); x.lineTo(s4.x,s4.y); x.stroke();
+      }
+      // theoretical circle
+      if(Math.abs(drad)>0.005){
+        const R=L/Math.tan(drad);
+        // turning center perpendicular to heading at start (0,0,0): center at (0, R)
+        const cc=w2s([0, R]);
+        x.strokeStyle='#0b5fff'; x.setLineDash([4,4]); x.lineWidth=1;
+        x.beginPath(); x.arc(cc.x,cc.y,Math.abs(R)*8,0,Math.PI*2); x.stroke();
+        x.setLineDash([]);
+      }
+      // history
+      x.strokeStyle='#999'; x.lineWidth=2; x.beginPath();
+      hist.forEach((p,i)=>{const s=w2s([p.x,p.y]); if(i===0)x.moveTo(s.x,s.y); else x.lineTo(s.x,s.y);});
+      x.stroke();
+      // car
+      const sc=w2s([st.x,st.y]);
+      x.save(); x.translate(sc.x,sc.y); x.rotate(-st.psi);
+      x.fillStyle='#fff'; x.strokeStyle='#c62828'; x.lineWidth=2;
+      x.fillRect(-15,-7,30,14); x.strokeRect(-15,-7,30,14);
+      x.fillStyle='#c62828'; x.fillRect(10,-5,4,10);
+      x.restore();
+      // info
+      x.fillStyle='#444'; x.font='12px sans-serif';
+      x.fillText('상태: x='+st.x.toFixed(1)+'  y='+st.y.toFixed(1)+'  ψ='+(st.psi*180/Math.PI).toFixed(1)+'°', 12, 20);
+      if(Math.abs(drad)>0.005){
+        const R=L/Math.tan(drad);
+        x.fillText('이론 R = L/tan(δ) = '+R.toFixed(2)+' m', 12, 40);
+      } else {
+        x.fillText('δ ≈ 0 → 직진', 12, 40);
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

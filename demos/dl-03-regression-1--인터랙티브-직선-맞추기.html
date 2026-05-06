@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 직선 맞추기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 직선 맞추기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/03-regression-1.html">Week 3. 회귀 1: 선형회귀와 경사하강법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 직선 맞추기</h4>
+    <p>슬라이더로 직접 $w$와 $b$를 움직여 데이터에 직선을 맞춰보세요. 비용 $J$가 실시간으로 표시됩니다.</p>
+    <canvas id="fitCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>w (기울기) <span class="val" id="wfV">1</span><input type="range" id="wf" min="-2" max="4" step="0.05" value="1"></label>
+      <label>b (절편) <span class="val" id="bfV">0</span><input type="range" id="bf" min="-3" max="3" step="0.05" value="0"></label>
+      <span id="costOut" style="font-weight:bold;color:#0b5fff"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('fitCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[];
+    for(let i=0;i<25;i++){const x=Math.random()*8;data.push({x,y:1.8*x+0.5+(Math.random()-0.5)*2.5});}
+    const xmin=-1,xmax=9,ymin=-3,ymax=18;
+    const toPx=x=>40+(x-xmin)/(xmax-xmin)*(W-60);
+    const toPy=y=>H-30-(y-ymin)/(ymax-ymin)*(H-60);
+    function draw(){
+      const w=+document.getElementById('wf').value,b=+document.getElementById('bf').value;
+      document.getElementById('wfV').textContent=w.toFixed(2);
+      document.getElementById('bfV').textContent=b.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,10);ctx.lineTo(40,H-30);ctx.stroke();
+      // line
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(w*xmin+b));ctx.lineTo(toPx(xmax),toPy(w*xmax+b));ctx.stroke();
+      // residuals
+      let cost=0;
+      data.forEach(d=>{
+        const yh=w*d.x+b;cost+=(yh-d.y)*(yh-d.y);
+        ctx.strokeStyle='rgba(150,150,150,0.6)';
+        ctx.beginPath();ctx.moveTo(toPx(d.x),toPy(d.y));ctx.lineTo(toPx(d.x),toPy(yh));ctx.stroke();
+      });
+      cost/=data.length;
+      data.forEach(d=>{ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(toPx(d.x),toPy(d.y),4,0,Math.PI*2);ctx.fill();});
+      document.getElementById('costOut').textContent='J = '+cost.toFixed(3);
+    }
+    ['wf','bf'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

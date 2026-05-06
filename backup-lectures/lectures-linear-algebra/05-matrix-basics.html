@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 5. 행렬 (1) — 정의·연산 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html" class="active">선형대수학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../linear-algebra.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 5. 행렬 (1) — 정의·연산</h1>
+  <p class="lead">여러 벡터를 한꺼번에 다루는 도구 = 행렬. 정의·특수행렬·덧셈·스칼라곱·곱셈("행 × 열")·전치까지 한 학기 행렬 계산의 토대.</p>
+
+  <h2>🔁 복습 — 벡터 4주</h2>
+
+  <h3>우리가 가진 도구</h3>
+  <ul>
+    <li><strong>벡터</strong> = 화살표 = 숫자 묶음</li>
+    <li><strong>연산</strong>: 덧셈, 스칼라곱 / <strong>내적</strong>(스칼라) / <strong>외적</strong>(벡터, 3D)</li>
+    <li><strong>응용</strong>: 직선·평면 방정식, 힘·일·토크, 면적</li>
+  </ul>
+
+  <h3>다음 단계 — 한 번에 여러 벡터를 다루자</h3>
+  <ul>
+    <li>벡터 한 개로는 점 한 개만 다룰 수 있음.</li>
+    <li>점 100개, 또는 사진 한 장(픽셀 수천 개)을 다루려면?</li>
+    <li>→ <strong>행렬(matrix)</strong> = 벡터들을 가로/세로로 묶은 것.</li>
+  </ul>
+
+<div class="tip">행렬은 단순히 "숫자 사각형"이 아니라 <b>벡터를 묶은 것</b>이자 <b>변환의 약속</b>입니다 (자세히는 11주차).</div>
+
+
+
+  <h2>🎯 오늘의 학습 목표</h2>
+
+  <h3>🔹 행렬을 정의하고, 차원·표기를 정확히 쓸 수 있다</h3>
+
+  <h3>🔸 특수 행렬(영행렬, 단위행렬, 대각행렬, 대칭행렬)을 식별할 수 있다</h3>
+
+  <h3>🔸 행렬의 <strong>덧셈</strong>과 <strong>스칼라곱</strong>을 계산할 수 있다</h3>
+
+  <h3>🔸 행렬 <strong>곱셈</strong>의 정의와 직관을 설명할 수 있다 (왜 그렇게 정의되는가?)</h3>
+
+  <h3>🔸 <strong>전치(transpose)</strong> 의 의미와 성질을 안다</h3>
+
+
+
+  <h2>🧱 행렬의 정의</h2>
+
+  <h3>정의</h3>
+  <p><strong>행렬(matrix)</strong> = 숫자를 직사각형 모양으로 배열한 것.</p>
+
+  <p>$$
+A = \begin{pmatrix}
+a_{11} & a_{12} & a_{13} \\
+a_{21} & a_{22} & a_{23}
+\end{pmatrix}
+$$</p>
+
+  <ul>
+    <li><strong>행(row)</strong> : 가로줄. 위 행렬은 행이 2개.</li>
+    <li><strong>열(column)</strong> : 세로줄. 위 행렬은 열이 3개.</li>
+    <li><strong>차원</strong> : "(행 수) × (열 수)" → $2 \times 3$ 행렬.</li>
+    <li>각 원소는 $a_{ij}$ — $i$ 는 행, $j$ 는 열 번호.</li>
+  </ul>
+
+  <h3>예</h3>
+  <p>$$A = \begin{pmatrix} 1 & 4 & 7 \\ 2 & 5 & 8 \end{pmatrix}, \quad a_{12} = 4,\ a_{23} = 8$$</p>
+
+<div class="warn">$a_{ij}$ 의 첫 번째 첨자는 항상 <b>행 번호</b>! (영어 row의 r → 위, column의 c → 아래로 외워도 됨)</div>
+
+
+
+  <h2>🧱 벡터는 사실 행렬의 특수 경우</h2>
+
+  <h3>열벡터 = $n \times 1$ 행렬</h3>
+  <p>$$\begin{pmatrix} 1 \\ 2 \\ 3 \end{pmatrix} \;\;\to\;\; 3 \times 1 \text{ 행렬}$$</p>
+
+  <h3>행벡터 = $1 \times n$ 행렬</h3>
+  <p>$$\begin{pmatrix} 1 & 2 & 3 \end{pmatrix} \;\;\to\;\; 1 \times 3 \text{ 행렬}$$</p>
+
+  <h3>스칼라 = $1 \times 1$ 행렬</h3>
+  <p>$$\begin{pmatrix} 7 \end{pmatrix} \;\;\to\;\; 1 \times 1 \text{ 행렬}$$</p>
+
+<div class="tip">
+
+🌱 <b>한 줄 요약</b>: 스칼라 < 벡터 < 행렬 — 모두 같은 가족. 행렬은 "여러 벡터를 묶은 것" 이라고 봐도 됩니다.
+
+</div>
+
+
+
+  <h2>🔍 특수 행렬 (1) — 정사각·영·단위행렬</h2>
+
+  <h3>정사각행렬 (square matrix)</h3>
+  <ul>
+    <li>행과 열의 수가 같은 행렬 ($n \times n$).</li>
+    <li>역행렬·고윳값 등 중요한 개념들이 정사각행렬에 한정됨.</li>
+  </ul>
+
+  <h3>영행렬 $O$</h3>
+  <ul>
+    <li>모든 원소가 0.</li>
+  </ul>
+  <p>$$O_{2\times 3} = \begin{pmatrix} 0 & 0 & 0 \\ 0 & 0 & 0 \end{pmatrix}$$</p>
+
+  <h3>단위행렬 $I_n$ (identity matrix)</h3>
+  <ul>
+    <li>대각선만 1, 나머지는 0인 정사각행렬.</li>
+  </ul>
+  <p>$$I_3 = \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{pmatrix}$$</p>
+
+  <ul>
+    <li>"곱해도 안 변함" — 수의 1과 같은 역할 ($AI = IA = A$).</li>
+  </ul>
+
+
+
+  <h2>🔍 특수 행렬 (2) — 대각·대칭행렬</h2>
+
+  <h3>대각행렬 (diagonal matrix)</h3>
+  <ul>
+    <li>대각선 외의 모든 원소가 0인 정사각행렬.</li>
+  </ul>
+  <p>$$D = \begin{pmatrix} 3 & 0 & 0 \\ 0 & -1 & 0 \\ 0 & 0 & 5 \end{pmatrix}$$</p>
+
+  <ul>
+    <li>곱·거듭제곱이 매우 간단.</li>
+  </ul>
+
+  <h3>대칭행렬 (symmetric matrix)</h3>
+  <ul>
+    <li>$a_{ij} = a_{ji}$ — 대각선을 기준으로 좌우대칭.</li>
+  </ul>
+  <p>$$S = \begin{pmatrix} 1 & 2 & 3 \\ 2 & 4 & 5 \\ 3 & 5 & 6 \end{pmatrix}$$</p>
+
+  <ul>
+    <li>$A = A^T$ 인 행렬.</li>
+  </ul>
+
+<div class="note">대각·대칭행렬은 13주차 <b>고윳값/대각화</b>에서 매우 중요한 역할을 합니다. 이름을 미리 익혀두세요.</div>
+
+
+
+  <h2>➕ 행렬의 덧셈과 스칼라곱</h2>
+
+  <h3>덧셈 (같은 차원만 가능)</h3>
+  <p>같은 위치 원소끼리 더한다.</p>
+
+  <p>$$
+\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix} + \begin{pmatrix} 5 & 6 \\ 7 & 8 \end{pmatrix}
+= \begin{pmatrix} 6 & 8 \\ 10 & 12 \end{pmatrix}
+$$</p>
+
+  <h3>스칼라곱</h3>
+  <p>모든 원소에 $c$ 를 곱한다.</p>
+
+  <p>$$
+3 \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}
+= \begin{pmatrix} 3 & 6 \\ 9 & 12 \end{pmatrix}
+$$</p>
+
+  <h3>성질 (벡터와 동일)</h3>
+  <ul>
+    <li>교환법칙: $A + B = B + A$</li>
+    <li>결합법칙: $(A + B) + C = A + (B + C)$</li>
+    <li>항등원: $A + O = A$</li>
+    <li>분배법칙: $c(A + B) = cA + cB$</li>
+  </ul>
+
+<div class="warn">차원이 <b>다른</b> 행렬끼리는 더할 수 없음. $2\times 3$ + $3\times 2$ = 정의 안 됨.</div>
+
+
+
+  <h2>✖️ 행렬 곱셈 — 정의</h2>
+
+  <h3>차원 조건 (매우 중요!)</h3>
+  <p>$A$ 가 $m \times n$, $B$ 가 $n \times p$ 이면 → $AB$ 는 $m \times p$.</p>
+
+  <p>$$\underbrace{A}_{m\times n} \cdot \underbrace{B}_{n\times p} = \underbrace{C}_{m\times p}$$</p>
+
+  <p><strong>가운데 차원이 같아야</strong> 곱할 수 있다 (앞 행렬의 열 수 = 뒤 행렬의 행 수).</p>
+
+  <h3>곱의 원소</h3>
+  <p>$$c_{ij} = \sum_{k=1}^{n} a_{ik}\,b_{kj}$$</p>
+
+  <p>= "$A$ 의 $i$ 번째 <strong>행</strong> 과 $B$ 의 $j$ 번째 <strong>열</strong> 의 <strong>내적</strong>"</p>
+
+<div class="tip">
+
+🌱 <b>핵심 그림</b>: $C$ 의 한 칸을 채우려면 → $A$ 에서 가로줄(행) 하나 + $B$ 에서 세로줄(열) 하나를 골라 내적. <b>"행 × 열"</b> 패턴.
+
+</div>
+
+
+
+  <h2>✖️ 행렬 곱셈 — 그림으로</h2>
+
+<svg width="900" height="280" viewBox="0 0 900 280" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 4px auto;">
+  <!-- A (2x3) -->
+  <rect x="60" y="60" width="180" height="120" fill="none" stroke="#333" stroke-width="1.5"/>
+  <line x1="120" y1="60" x2="120" y2="180" stroke="#ddd"/>
+  <line x1="180" y1="60" x2="180" y2="180" stroke="#ddd"/>
+  <line x1="60" y1="120" x2="240" y2="120" stroke="#ddd"/>
+  <text x="80" y="105" font-size="14">a₁₁</text>
+  <text x="140" y="105" font-size="14">a₁₂</text>
+  <text x="200" y="105" font-size="14">a₁₃</text>
+  <text x="80" y="160" font-size="14">a₂₁</text>
+  <text x="140" y="160" font-size="14">a₂₂</text>
+  <text x="200" y="160" font-size="14">a₂₃</text>
+  <rect x="60" y="60" width="180" height="60" fill="#1677ff" fill-opacity="0.18"/>
+  <text x="150" y="50" font-size="14" fill="#1677ff" text-anchor="middle">i행 (행 1)</text>
+  <text x="150" y="200" font-size="13" fill="#666" text-anchor="middle">A: 2 × 3</text>
+  <!-- × -->
+  <text x="270" y="125" font-size="28" fill="#333">×</text>
+  <!-- B (3x2) -->
+  <rect x="310" y="40" width="120" height="180" fill="none" stroke="#333" stroke-width="1.5"/>
+  <line x1="370" y1="40" x2="370" y2="220" stroke="#ddd"/>
+  <line x1="310" y1="100" x2="430" y2="100" stroke="#ddd"/>
+  <line x1="310" y1="160" x2="430" y2="160" stroke="#ddd"/>
+  <text x="330" y="80" font-size="14">b₁₁</text>
+  <text x="390" y="80" font-size="14">b₁₂</text>
+  <text x="330" y="140" font-size="14">b₂₁</text>
+  <text x="390" y="140" font-size="14">b₂₂</text>
+  <text x="330" y="200" font-size="14">b₃₁</text>
+  <text x="390" y="200" font-size="14">b₃₂</text>
+  <rect x="370" y="40" width="60" height="180" fill="#fa8c16" fill-opacity="0.18"/>
+  <text x="370" y="30" font-size="14" fill="#fa8c16" text-anchor="middle">j열 (열 2)</text>
+  <text x="370" y="240" font-size="13" fill="#666" text-anchor="middle">B: 3 × 2</text>
+  <!-- = -->
+  <text x="460" y="125" font-size="28" fill="#333">=</text>
+  <!-- C (2x2) -->
+  <rect x="500" y="60" width="120" height="120" fill="none" stroke="#333" stroke-width="1.5"/>
+  <line x1="560" y1="60" x2="560" y2="180" stroke="#ddd"/>
+  <line x1="500" y1="120" x2="620" y2="120" stroke="#ddd"/>
+  <text x="520" y="105" font-size="14">c₁₁</text>
+  <rect x="560" y="60" width="60" height="60" fill="#cf1322" fill-opacity="0.25"/>
+  <text x="580" y="105" font-size="14" fill="#cf1322" font-weight="bold">c₁₂</text>
+  <text x="520" y="160" font-size="14">c₂₁</text>
+  <text x="580" y="160" font-size="14">c₂₂</text>
+  <text x="560" y="200" font-size="13" fill="#666" text-anchor="middle">C: 2 × 2</text>
+  <!-- formula -->
+  <text x="660" y="115" font-size="14" fill="#cf1322" font-weight="bold">c₁₂ = (i행) · (j열)</text>
+  <text x="660" y="138" font-size="13" fill="#666">= a₁₁b₁₂ + a₁₂b₂₂ + a₁₃b₃₂</text>
+</svg>
+
+<div class="note">"<b>1행 × 2열 → 1행 2열 위치</b>" 처럼, 출발 위치(행·열)가 곧 결과 위치임. 패턴만 잡으면 차원이 커져도 똑같이 적용됩니다.</div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 행렬 곱셈을 한 칸씩 채워보기</h4>
+    <p>아래 결과 행렬 $C$ 의 빨간 칸을 클릭하세요. 그 칸을 채우는 데 쓰는
+       $A$ 의 <strong>행</strong>과 $B$ 의 <strong>열</strong>이 색칠되고,
+       <strong>"행 · 열" = 내적</strong> 계산이 단계별로 보입니다.
+       숫자도 슬라이더로 바꿔보세요 — 손계산이 어떻게 나오는지가 실시간으로 보입니다.</p>
+    <canvas id="mmDemo" width="780" height="320"></canvas>
+    <div class="controls">
+      <label>a₁₁ <span class="val" id="a11V">1</span><input type="range" id="a11" min="-5" max="5" step="1" value="1"></label>
+      <label>a₁₂ <span class="val" id="a12V">2</span><input type="range" id="a12" min="-5" max="5" step="1" value="2"></label>
+      <label>a₂₁ <span class="val" id="a21V">3</span><input type="range" id="a21" min="-5" max="5" step="1" value="3"></label>
+      <label>a₂₂ <span class="val" id="a22V">4</span><input type="range" id="a22" min="-5" max="5" step="1" value="4"></label>
+      <label>b₁₁ <span class="val" id="b11V">5</span><input type="range" id="b11" min="-5" max="5" step="1" value="5"></label>
+      <label>b₁₂ <span class="val" id="b12V">6</span><input type="range" id="b12" min="-5" max="5" step="1" value="6"></label>
+      <label>b₂₁ <span class="val" id="b21V">7</span><input type="range" id="b21" min="-5" max="5" step="1" value="7"></label>
+      <label>b₂₂ <span class="val" id="b22V">8</span><input type="range" id="b22" min="-5" max="5" step="1" value="8"></label>
+    </div>
+    <p id="mmExplain" style="margin-top:10px;font-family:Consolas,monospace;font-size:14px;color:#0b5fff"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mmDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pick={i:0,j:0};
+    const ids=['a11','a12','a21','a22','b11','b12','b21','b22'];
+    function getA(){return [[+document.getElementById('a11').value,+document.getElementById('a12').value],
+                           [+document.getElementById('a21').value,+document.getElementById('a22').value]];}
+    function getB(){return [[+document.getElementById('b11').value,+document.getElementById('b12').value],
+                           [+document.getElementById('b21').value,+document.getElementById('b22').value]];}
+    function mul(A,B){const C=[[0,0],[0,0]];for(let i=0;i<2;i++)for(let j=0;j<2;j++)C[i][j]=A[i][0]*B[0][j]+A[i][1]*B[1][j];return C;}
+    const cellW=70,cellH=70,gap=80;
+    const Ax=40,Bx=Ax+2*cellW+gap,Cx=Bx+2*cellW+gap,Ty=80;
+    function drawMat(x,y,M,name,hiRow,hiCol,clickRows,clickCols){
+      ctx.strokeStyle='#333';ctx.lineWidth=2;
+      ctx.strokeRect(x,y,2*cellW,2*cellH);
+      ctx.font='13px sans-serif';ctx.fillStyle='#666';ctx.fillText(name,x,y-8);
+      for(let i=0;i<2;i++)for(let j=0;j<2;j++){
+        const cx=x+j*cellW,cy=y+i*cellH;
+        let fill='#fff';
+        if(hiRow!==undefined&&i===hiRow)fill='rgba(22,119,255,0.18)';
+        if(hiCol!==undefined&&j===hiCol)fill='rgba(250,140,22,0.18)';
+        if(hiRow!==undefined&&i===hiRow&&hiCol!==undefined&&j===hiCol)fill='rgba(207,19,34,0.30)';
+        ctx.fillStyle=fill;ctx.fillRect(cx,cy,cellW,cellH);
+        ctx.strokeStyle='#ccc';ctx.strokeRect(cx,cy,cellW,cellH);
+        ctx.fillStyle='#222';ctx.font='18px sans-serif';ctx.textAlign='center';
+        ctx.fillText(M[i][j],cx+cellW/2,cy+cellH/2+6);
+      }
+      ctx.textAlign='left';
+    }
+    function draw(){
+      ids.forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const A=getA(),B=getB(),C=mul(A,B);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      drawMat(Ax,Ty,A,'A (2×2)',pick.i,undefined);
+      drawMat(Bx,Ty,B,'B (2×2)',undefined,pick.j);
+      drawMat(Cx,Ty,C,'C = AB',pick.i,pick.j);
+      ctx.fillStyle='#333';ctx.font='28px sans-serif';
+      ctx.fillText('×',Ax+2*cellW+25,Ty+cellH+8);
+      ctx.fillText('=',Bx+2*cellW+25,Ty+cellH+8);
+      ctx.font='13px sans-serif';ctx.fillStyle='#0b5fff';
+      ctx.fillText('파란색: A의 i행',Ax,Ty+2*cellH+30);
+      ctx.fillStyle='#fa8c16';ctx.fillText('주황: B의 j열',Bx,Ty+2*cellH+30);
+      ctx.fillStyle='#cf1322';ctx.fillText('빨강: 결과 위치 c_ij (클릭)',Cx,Ty+2*cellH+30);
+      const i=pick.i,j=pick.j;
+      const expl=document.getElementById('mmExplain');
+      expl.innerHTML=`c<sub>${i+1}${j+1}</sub> = (A의 ${i+1}행) · (B의 ${j+1}열)
+        = ${A[i][0]}·${B[0][j]} + ${A[i][1]}·${B[1][j]}
+        = ${A[i][0]*B[0][j]} + ${A[i][1]*B[1][j]}
+        = <b>${C[i][j]}</b>`;
+    }
+    c.addEventListener('click',e=>{
+      const r=c.getBoundingClientRect();
+      const x=(e.clientX-r.left)*(c.width/r.width);
+      const y=(e.clientY-r.top)*(c.height/r.height);
+      if(x>=Cx&&x<Cx+2*cellW&&y>=Ty&&y<Ty+2*cellH){
+        pick={i:Math.floor((y-Ty)/cellH),j:Math.floor((x-Cx)/cellW)};draw();
+      }
+    });
+    ids.forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h3>🌱 왜 "행 × 열" 인가? — 한 줄 직관</h3>
+  <p>행렬 곱셈을 처음 보면 "왜 같은 자리끼리 곱하지 않고 굳이 행과 열을 내적하지?" 하는 의문이 듭니다.
+     이유는 11주차 <strong>선형변환</strong>에서 분명해지지만, 지금 단계에서 잡아둘 직관은 이렇습니다 —
+     $A$ 의 한 행 $(a_{i1}, a_{i2}, \ldots)$ 은 "출력의 $i$ 번째 성분을 만드는 레시피",
+     $B$ 의 한 열 $(b_{1j}, b_{2j}, \ldots)$ 은 "입력의 $j$ 번째 묶음" 입니다.
+     이 둘을 내적하면 = "그 레시피로 그 입력을 처리한 결과 한 칸"이 나옵니다.</p>
+
+  <h2>✖️ 행렬 곱셈 — 작은 예제</h2>
+
+  <h3>예 1 ($2\times 2$ × $2\times 2$)</h3>
+  <p>$$
+A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad B = \begin{pmatrix} 5 & 6 \\ 7 & 8 \end{pmatrix}
+$$</p>
+
+  <p>$$
+AB = \begin{pmatrix}
+1\cdot 5 + 2\cdot 7 & 1\cdot 6 + 2\cdot 8 \\
+3\cdot 5 + 4\cdot 7 & 3\cdot 6 + 4\cdot 8
+\end{pmatrix}
+= \begin{pmatrix} 19 & 22 \\ 43 & 50 \end{pmatrix}
+$$</p>
+
+  <h3>예 2 ($2\times 3$ × $3\times 1$ = 행렬 × 벡터)</h3>
+  <p>$$
+\begin{pmatrix} 1 & 2 & 3 \\ 4 & 5 & 6 \end{pmatrix}
+\begin{pmatrix} 1 \\ 0 \\ -1 \end{pmatrix}
+= \begin{pmatrix} 1 - 3 \\ 4 - 6 \end{pmatrix}
+= \begin{pmatrix} -2 \\ -2 \end{pmatrix}
+$$</p>
+
+<div class="tip">행렬 × 벡터 = 벡터. 이 연산이 11주차의 <b>"선형변환"</b>의 시작점.</div>
+
+
+
+  <h2>⚠️ 행렬 곱셈의 주의사항</h2>
+
+  <h3>1️⃣ 교환법칙 ✗</h3>
+  <p>일반적으로 $AB \neq BA$.</p>
+
+  <p>예시:</p>
+  <p>$$
+\begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}\begin{pmatrix} 1 & 0 \\ 1 & 1 \end{pmatrix}
+= \begin{pmatrix} 2 & 1 \\ 1 & 1 \end{pmatrix}
+$$</p>
+  <p>$$
+\begin{pmatrix} 1 & 0 \\ 1 & 1 \end{pmatrix}\begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}
+= \begin{pmatrix} 1 & 1 \\ 1 & 2 \end{pmatrix}
+$$</p>
+
+  <h3>2️⃣ $AB = O$ 이라고 $A = O$ 또는 $B = O$ 가 아닐 수 있다</h3>
+  <p>$$\begin{pmatrix} 1 & 0 \\ 0 & 0 \end{pmatrix}\begin{pmatrix} 0 & 0 \\ 0 & 1 \end{pmatrix} = \begin{pmatrix} 0 & 0 \\ 0 & 0 \end{pmatrix}$$</p>
+
+  <h3>3️⃣ "약분" 안 됨</h3>
+  <p>$AB = AC$ 라고 해서 $B = C$ 가 보장되지 않음.</p>
+
+<div class="warn">행렬은 보통 수와 비슷하지만 <b>위 세 가지 점은 절대 다름</b>. 시험에서 자주 함정으로 등장합니다.</div>
+
+
+
+  <h2>✅ 행렬 곱셈에서 성립하는 성질</h2>
+
+  <h3>성립하는 것</h3>
+  <ol>
+    <li><strong>결합법칙</strong> : $(AB)C = A(BC)$</li>
+    <li><strong>분배법칙</strong> : $A(B + C) = AB + AC$, $(A + B)C = AC + BC$</li>
+    <li><strong>스칼라 결합</strong> : $c(AB) = (cA)B = A(cB)$</li>
+    <li><strong>단위행렬</strong> : $AI = IA = A$</li>
+  </ol>
+
+  <h3>성립하지 않는 것 (방금 본 것)</h3>
+  <ul>
+    <li>교환법칙 ($AB \neq BA$)</li>
+    <li>영인자 없음 ($AB = O$ 이라고 $A,B$ 중 0이 있는 게 아님)</li>
+    <li>약분 (${AB = AC} \not\Rightarrow {B = C}$)</li>
+  </ul>
+
+<div class="tip">
+
+🌱 <b>요약</b>: <b>"순서 바꾸기 빼면"</b> 보통 수의 곱셈과 비슷합니다. 단, "순서 바꾸기"는 정말로 다르므로 항상 의식.
+
+</div>
+
+
+
+  <h2>💡 행렬 곱은 왜 그렇게 정의되는가?</h2>
+
+  <h3>직관 1 — 변환의 합성</h3>
+  <ul>
+    <li>벡터에 행렬 $B$ 를 곱하면 어떤 변환(예: 회전)이 일어남.</li>
+    <li>이어서 $A$ 를 곱하면 또 다른 변환.</li>
+    <li>두 변환을 한 번에 표현한 행렬이 바로 $AB$.</li>
+  </ul>
+
+  <p>$$\mathbf{x} \xrightarrow{B} B\mathbf{x} \xrightarrow{A} A(B\mathbf{x}) = (AB)\mathbf{x}$$</p>
+
+  <h3>직관 2 — 연립방정식 정리</h3>
+  <p>$$
+\begin{cases} 2x + 3y = 5 \\ x - y = 1 \end{cases}
+\;\;\Longleftrightarrow\;\;
+\begin{pmatrix} 2 & 3 \\ 1 & -1 \end{pmatrix}\begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} 5 \\ 1 \end{pmatrix}
+$$</p>
+
+  <p>= "$A\mathbf{x} = \mathbf{b}$" 라는 한 줄로 표현.</p>
+
+<div class="tip">행렬 곱의 정의는 임의로 만든 게 아니라, <b>변환 합성</b>과 <b>연립방정식</b>이 자연스럽게 동작하도록 설계된 것입니다.</div>
+
+
+
+  <h2>🔄 전치 (Transpose)</h2>
+
+  <h3>정의</h3>
+  <p>$A$ 의 <strong>전치</strong> $A^T$ = 행과 열을 뒤바꾼 행렬.</p>
+
+  <p>$$
+A = \begin{pmatrix} 1 & 2 & 3 \\ 4 & 5 & 6 \end{pmatrix}_{2\times 3}
+\;\;\Longrightarrow\;\;
+A^T = \begin{pmatrix} 1 & 4 \\ 2 & 5 \\ 3 & 6 \end{pmatrix}_{3\times 2}
+$$</p>
+
+  <h3>성질</h3>
+  <ol>
+    <li>$(A^T)^T = A$</li>
+    <li>$(A + B)^T = A^T + B^T$</li>
+    <li>$(cA)^T = c\,A^T$</li>
+    <li>$(AB)^T = B^T A^T$ ← <strong>순서 바뀜! 자주 함정</strong></li>
+  </ol>
+
+  <h3>대칭행렬</h3>
+  <p>$A = A^T$ 이면 <strong>대칭행렬</strong>.</p>
+
+<div class="warn">$(AB)^T \neq A^T B^T$. 반드시 <b>순서가 바뀜</b>: $(AB)^T = B^T A^T$.</div>
+
+
+
+  <h2>🌍 응용 — 행렬은 "데이터의 표"</h2>
+
+  <h3>학생 점수표 (4명 × 3과목)</h3>
+  <p>$$
+P = \begin{pmatrix}
+85 & 92 & 78 \\
+70 & 88 & 95 \\
+90 & 75 & 82 \\
+65 & 80 & 90
+\end{pmatrix}
+$$</p>
+
+  <h3>가중치 벡터 (각 과목 비중)</h3>
+  <p>$$\mathbf{w} = \begin{pmatrix} 0.4 \\ 0.3 \\ 0.3 \end{pmatrix}$$</p>
+
+  <h3>가중평균 = $P\mathbf{w}$ — 한 번에 4명 점수 계산</h3>
+  <p>$$P\mathbf{w} = \begin{pmatrix} 85\cdot 0.4 + 92\cdot 0.3 + 78\cdot 0.3 \\ \vdots \end{pmatrix} = \begin{pmatrix} 85.0 \\ 82.5 \\ 84.6 \\ 77.0 \end{pmatrix}$$</p>
+
+<div class="tip">엑셀의 "여러 행에 같은 가중치 적용" = 행렬 × 벡터 한 줄. 데이터·통계의 모든 계산이 이 패턴으로 일반화됩니다.</div>
+
+
+
+  <h2>🌍 응용 — 행렬 = 이미지</h2>
+
+  <h3>흑백 사진 한 장</h3>
+  <ul>
+    <li>가로 $w$, 세로 $h$ 픽셀의 사진 = $h \times w$ 행렬.</li>
+    <li>각 원소 = 0(검정) ~ 255(흰색) 사이 밝기.</li>
+  </ul>
+
+  <h3>사진 연산이 곧 행렬 연산</h3>
+  <table>
+    <thead><tr><th>동작</th><th>행렬 연산</th></tr></thead>
+    <tbody>
+      <tr><td>사진 두 장 합성</td><td>행렬 덧셈</td></tr>
+      <tr><td>밝기 조절</td><td>스칼라곱</td></tr>
+      <tr><td>회전·확대</td><td>행렬 곱 (11주차)</td></tr>
+      <tr><td>흐림 처리</td><td>행렬 곱 (필터)</td></tr>
+    </tbody>
+  </table>
+
+<div class="note">포토샵·인스타그램 필터의 모든 연산은 결국 <b>행렬 곱셈</b>을 빠르게 하는 일입니다.</div>
+
+
+  <h2>🌍 응용 — 그래프와 인접 행렬</h2>
+
+  <h3>인접 행렬 (Adjacency Matrix)</h3>
+  <p>$n$ 개 노드의 그래프에서 $A_{ij} = 1$ (노드 $i$ 에서 $j$ 로 가는 엣지가 있음) / $0$ (없음).</p>
+
+  <h3>제곱하면 — "두 단계로 갈 수 있는 경로의 수"</h3>
+  <p>$A^2$ 의 $(i, j)$ 원소 = $i$ 에서 $j$ 로 가는 길이 2 경로의 수.</p>
+  <ul>
+    <li>$(A^2)_{ij} = \sum_k a_{ik} a_{kj}$ — "$i \to k \to j$ 경로" 가 가능한 $k$ 의 개수.</li>
+    <li>$A^k$ 는 길이 $k$ 경로의 수.</li>
+  </ul>
+
+  <h3>예 — 4 노드 그래프</h3>
+  <p>$A = \begin{pmatrix} 0 & 1 & 0 & 1 \\ 1 & 0 & 1 & 0 \\ 0 & 1 & 0 & 1 \\ 1 & 0 & 1 & 0 \end{pmatrix}$ (사각형 모양 그래프)</p>
+  <p>$A^2$ 를 계산하면 대각이 2 (자기로 돌아오는 길이 2 경로가 2개), 비대각이 0 또는 2.</p>
+
+<div class="tip">SNS 친구 추천("당신과 친구의 친구"), 검색 엔진의 페이지 연결, 길찾기 등 그래프 응용은 모두 행렬 곱셈으로 분석됩니다.</div>
+
+
+  <h2>🌍 응용 — 마르코프 체인 (확률 행렬)</h2>
+
+  <h3>날씨 모델</h3>
+  <p>오늘이 맑음(S)이면 내일 맑을 확률 0.8, 흐릴 확률 0.2.
+     오늘 흐림(C)이면 내일 맑을 확률 0.4, 흐릴 확률 0.6.</p>
+  <p>전이 행렬: $P = \begin{pmatrix} 0.8 & 0.4 \\ 0.2 & 0.6 \end{pmatrix}$ (열 = 오늘, 행 = 내일).</p>
+
+  <h3>2일 후 확률</h3>
+  <p>오늘 맑음으로 시작 → $\mathbf{x}_0 = \binom{1}{0}$. 내일: $\mathbf{x}_1 = P\mathbf{x}_0$. 모레: $\mathbf{x}_2 = P\mathbf{x}_1 = P^2\mathbf{x}_0$.</p>
+  <p>$$P^2 = \begin{pmatrix} 0.72 & 0.56 \\ 0.28 & 0.44 \end{pmatrix}$$</p>
+  <p>$\mathbf{x}_2 = (0.72, 0.28)^T$. → 모레 맑을 확률 72%.</p>
+
+<div class="note">날씨 예보, 게임 AI, 음성 인식 모두 마르코프 체인 형태의 행렬 곱으로 모델링됩니다.</div>
+
+
+  <h2>🧮 종합 예제 — 행렬의 모든 연산</h2>
+
+  <h3>문제</h3>
+  <p>$A = \begin{pmatrix} 1 & 2 \\ 0 & -1 \\ 3 & 1 \end{pmatrix}$, $B = \begin{pmatrix} 2 & 0 & 1 \\ -1 & 3 & 0 \end{pmatrix}$ 에 대해</p>
+  <ol>
+    <li>$AB$, $BA$ 의 차원과 값을 구하시오.</li>
+    <li>$A^T$, $A^TA$ 를 구하시오.</li>
+    <li>$A^TA$ 가 대칭행렬임을 확인하시오.</li>
+  </ol>
+
+  <h3>풀이</h3>
+  <p><strong>1) $AB$</strong>: $(3\times 2)(2\times 3) = 3\times 3$. 가능.</p>
+  <p>$$AB = \begin{pmatrix} 1\cdot 2 + 2\cdot(-1) & 1\cdot 0 + 2\cdot 3 & 1\cdot 1 + 2\cdot 0 \\ 0\cdot 2 + (-1)(-1) & 0 + (-1)(3) & 0 + 0 \\ 3\cdot 2 + 1\cdot(-1) & 3\cdot 0 + 1\cdot 3 & 3\cdot 1 + 1\cdot 0 \end{pmatrix} = \begin{pmatrix} 0 & 6 & 1 \\ 1 & -3 & 0 \\ 5 & 3 & 3 \end{pmatrix}$$</p>
+
+  <p><strong>$BA$</strong>: $(2\times 3)(3\times 2) = 2\times 2$. 다른 차원 → $AB \neq BA$ (차원도 다르고).</p>
+  <p>$$BA = \begin{pmatrix} 2\cdot 1 + 0\cdot 0 + 1\cdot 3 & 2\cdot 2 + 0\cdot(-1) + 1\cdot 1 \\ -1\cdot 1 + 3\cdot 0 + 0\cdot 3 & -1\cdot 2 + 3\cdot(-1) + 0\cdot 1 \end{pmatrix} = \begin{pmatrix} 5 & 5 \\ -1 & -5 \end{pmatrix}$$</p>
+
+  <p><strong>2) $A^T = \begin{pmatrix} 1 & 0 & 3 \\ 2 & -1 & 1 \end{pmatrix}$</strong>.</p>
+  <p>$A^TA = \begin{pmatrix} 1 + 0 + 9 & 2 + 0 + 3 \\ 2 + 0 + 3 & 4 + 1 + 1 \end{pmatrix} = \begin{pmatrix} 10 & 5 \\ 5 & 6 \end{pmatrix}$</p>
+
+  <p><strong>3) 대칭 확인</strong>: $(A^TA)_{12} = 5 = (A^TA)_{21}$ ✓.
+     일반적으로 $(A^TA)^T = A^T(A^T)^T = A^TA$ — 항상 대칭. 14주차 대각화에서 자주 등장.</p>
+
+
+  <h2>📝 정리 — 오늘의 핵심</h2>
+
+  <h3>1️⃣ 행렬</h3>
+  <ul>
+    <li>$m \times n$ 형태의 숫자 배열.</li>
+    <li>벡터·스칼라는 행렬의 특수 경우.</li>
+  </ul>
+
+  <h3>2️⃣ 특수 행렬</h3>
+  <ul>
+    <li>정사각·영·단위·대각·대칭행렬.</li>
+  </ul>
+
+  <h3>3️⃣ 연산</h3>
+  <ul>
+    <li><strong>덧셈, 스칼라곱</strong>: 같은 자리끼리 (벡터와 동일).</li>
+    <li><strong>곱셈</strong>: 행 × 열 = 내적. 차원이 맞아야 가능.</li>
+    <li><strong>교환법칙 ✗</strong>, <strong>결합법칙 ✓</strong>, <strong>분배법칙 ✓</strong>.</li>
+  </ul>
+
+  <h3>4️⃣ 전치</h3>
+  <ul>
+    <li>행 ↔ 열 뒤집기. $(AB)^T = B^T A^T$.</li>
+  </ul>
+
+<div class="tip">다음 강의에서 행렬을 사용해 <b>연립방정식을 한 번에 푸는 방법</b>(가우스 소거법)을 배웁니다.</div>
+
+
+
+  <h2>📚 연습문제</h2>
+
+  <h3>문제 1 (덧셈·스칼라곱)</h3>
+  <p>$$A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix},\ B = \begin{pmatrix} 0 & -1 \\ 2 & 1 \end{pmatrix}$$</p>
+  <p>$2A - 3B$ 를 구하시오.</p>
+
+  <h3>문제 2 (곱셈 — 차원 확인)</h3>
+  <p>$A$ 가 $3\times 4$, $B$ 가 $4\times 2$ 일 때 $AB$, $BA$ 의 차원은? (둘 다 가능한가?)</p>
+
+  <h3>문제 3 (곱셈 계산)</h3>
+  <p>$$\begin{pmatrix} 1 & 2 & 0 \\ 0 & 1 & 3 \end{pmatrix}\begin{pmatrix} 2 & 1 \\ -1 & 0 \\ 1 & 2 \end{pmatrix}$$ 를 계산하시오.
+
+### 문제 4 (교환법칙 반례)
+$A = \begin{pmatrix} 0 & 1 \\ 0 & 0 \end{pmatrix},\ B = \begin{pmatrix} 0 & 0 \\ 1 & 0 \end{pmatrix}$ 에 대해 $AB$ 와 $BA$ 를 각각 구하고 다름을 확인하시오.
+
+### 문제 5 (전치)
+$A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \\ 5 & 6 \end{pmatrix}$ 의 $A^T$ 를 쓰고 $A A^T$ 를 계산하시오.
+
+### 문제 6 (응용)
+세 학생의 (수학, 영어) 점수가 $\begin{pmatrix} 80 & 90 \\ 70 & 85 \\ 95 & 60 \end{pmatrix}$, 가중치가 $\mathbf{w} = (0.6, 0.4)^T$ 일 때 가중평균 점수를 구하시오.
+
+### 문제 7 ($A^TA$)
+$A = \begin{pmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{pmatrix}$ 에 대해 $A^TA$ 를 계산하고 대칭임을 확인하시오.
+
+### 문제 8 (응용 — 그래프)
+3 노드 그래프의 인접행렬 $A = \begin{pmatrix} 0 & 1 & 1 \\ 1 & 0 & 1 \\ 1 & 1 & 0 \end{pmatrix}$ 에 대해 $A^2$ 를 계산하고
+"$1$ 번 노드에서 $1$ 번 노드로 돌아오는 길이 2 경로의 수" 가 무엇인지 답하시오.
+
+### 문제 9 (응용 — 마르코프)
+전이 행렬 $P = \begin{pmatrix} 0.7 & 0.5 \\ 0.3 & 0.5 \end{pmatrix}$ 에 대해, 오늘 상태 1로 시작했을 때 3일 후의 상태 분포 $P^3 \binom{1}{0}$ 을 구하시오.
+
+### 문제 10 (대칭행렬)
+$A$ 가 대칭, $B$ 가 대칭일 때 $AB$ 가 항상 대칭인지 답하고, 반례 또는 증명을 제시하시오.
+
+### 문제 11 (개념)
+$A$ 가 $4 \times 3$ 일 때 $A^TA$ 와 $AA^T$ 의 차원을 답하고 차이점을 설명하시오.
+
+
+---
+
+# 🙋 질문?
+
+### 오늘 배운 내용에 대해 궁금한 점이 있으면 언제든지 질문해 주세요.
+
+- 이메일 : **leeck@kongju.ac.kr**
+- 사무실 : 1공학관 609호
+
+<br>
+
+<div class="tip" style="text-align:center; font-size:1.1em;">
+다음 강의: 행렬 (2) — 연립방정식과 가우스 소거법 🔧
+</div>
+</p>
+
+  <div class="prevnext">
+    <a href="04-vector-cross-line-plane.html"><small>← 이전</small>Week 4. 벡터 (3) — 외적·직선·평면</a>
+    <a class="next" href="06-gauss-elimination.html"><small>다음 →</small>Week 6. 행렬 (2) — 가우스 소거법</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

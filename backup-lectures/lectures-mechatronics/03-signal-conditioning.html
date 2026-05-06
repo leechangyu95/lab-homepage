@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W3. 신호 조절 — 메카트로닉스</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 3. 신호 조절(Signal Conditioning)</h1>
+  <p class="lead">센서가 내놓은 거친 신호를 쓸 만한 형태로 다듬기 — 증폭·필터·ADC.</p>
+
+  <div class="note">
+    <strong>📖 이번 주 부담을 줄이는 가이드</strong> — 이번 주는 회로 부품과 수식이 많이 등장하지만, <strong>각 도구가 무엇을 해결하는지</strong>만 잡으면 OK.
+    <ul style="margin:8px 0 0 20px">
+      <li><strong>op-amp(연산증폭기)</strong>: 작은 신호를 키우는 표준 부품. "검은 IC 칩"으로 생각하세요. 자세한 회로는 기전공학기초 W11에서.</li>
+      <li><strong>$j$나 $j\omega$</strong>: 정현파(흔들림)를 깔끔하게 다루기 위한 수학 도구(허수 단위). 처음엔 "그냥 진동하는 신호 전용 표기"로 받아들이세요.</li>
+      <li><strong>dB(데시벨)</strong>: 배수를 로그 스케일로 표현. <em>−3 dB ≈ 0.71배(약 70%)</em>, <em>−20 dB = 0.1배</em>, <em>−40 dB = 0.01배</em>. 이 세 숫자만 기억하면 그래프 읽기 충분.</li>
+      <li>ADC, 표본화, 에일리어싱은 디지털 측정의 핵심이라 시간을 더 들여도 좋습니다.</li>
+    </ul>
+  </div>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 신호 조절이 필요한가</li>
+    <li>증폭(Amplification)</li>
+    <li>필터(Filter) — 노이즈 제거의 핵심</li>
+    <li>ADC — 아날로그를 디지털로</li>
+    <li>표본화 정리와 에일리어싱</li>
+    <li>이동 평균 필터(Moving Average)</li>
+  </ol></div>
+
+  <h2>1. 왜 신호 조절인가</h2>
+  <p>센서 출력은 그대로 MCU의 ADC에 넣을 수 있는 깨끗한 신호가 거의 없습니다. 보통 다음 문제 중 하나 이상을 가집니다.</p>
+  <ul>
+    <li><strong>크기가 너무 작음</strong> — 스트레인 게이지 출력은 mV 단위, ADC 입력은 0~5V. 1000배 증폭 필요.</li>
+    <li><strong>잡음이 섞임</strong> — 50/60Hz 전원 잡음, 고주파 EMI, 기계 진동에 의한 흔들림.</li>
+    <li><strong>전압 범위가 안 맞음</strong> — 음수 출력을 양수로, 또는 0~10V를 0~5V로 스케일링.</li>
+    <li><strong>임피던스가 안 맞음</strong> — 신호원 출력저항이 너무 커서 ADC가 신호를 빨아먹어버림.</li>
+  </ul>
+
+  <p>이 모든 문제를 해결하는 단계가 <strong>신호 조절</strong>이고, 보통 다음 순서로 구성됩니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 90" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="80" height="50" rx="6" fill="#eef3ff" stroke="#0742b8"/>
+      <text x="50" y="50" text-anchor="middle" font-size="11" fill="#0742b8">센서</text>
+      <path d="M90,45 L120,45" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="120" y="20" width="90" height="50" rx="6" fill="#fff3e0" stroke="#f57c00"/>
+      <text x="165" y="48" text-anchor="middle" font-size="11" fill="#e65100">증폭기</text>
+      <path d="M210,45 L240,45" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="240" y="20" width="90" height="50" rx="6" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="285" y="48" text-anchor="middle" font-size="11" fill="#1b5e20">필터(LPF)</text>
+      <path d="M330,45 L360,45" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="360" y="20" width="80" height="50" rx="6" fill="#f3e5f5" stroke="#6a1b9a"/>
+      <text x="400" y="48" text-anchor="middle" font-size="11" fill="#4a148c">ADC</text>
+      <path d="M440,45 L470,45" stroke="#666" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="470" y="20" width="100" height="50" rx="6" fill="#fce4ec" stroke="#c2185b"/>
+      <text x="520" y="48" text-anchor="middle" font-size="11" fill="#880e4f">MCU·SW</text>
+      <defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#666"/></marker></defs>
+    </svg>
+    <figcaption>그림 1. 센서 → 증폭 → 필터 → ADC → MCU의 신호 처리 파이프라인.</figcaption>
+  </figure>
+
+  <h2>2. 증폭(Amplification)</h2>
+  <p>작은 신호를 키우는 단계. 핵심 부품은 <strong>op-amp(연산증폭기)</strong> — 두 입력 핀의 전압 차이를 매우 크게 키우는 작은 IC 칩입니다. 옆에 붙이는 저항 두 개($R_1$, $R_2$)의 비율로 <em>이득(=증폭 배수)</em>을 자유롭게 설계할 수 있어요. 자세한 동작 원리는 <a href="../../lectures-mech/11-opamp.html">기전공학기초 W11</a>에서. 메카트로닉스에서 자주 쓰는 두 형태만 보고 갑시다.</p>
+
+  <h3>2.1 비반전 증폭기 (Non-inverting)</h3>
+  $$ v_O = \left(1 + \frac{R_2}{R_1}\right) v_S $$
+  <p>예: $R_1 = 10\,\text{k}\Omega$, $R_2 = 90\,\text{k}\Omega$이면 이득은 $1 + 9 = 10$배 → 입력이 0.1V면 출력이 1V. 입력 임피던스가 매우 커서 약한 신호원에 부담을 안 줍니다. 일반적인 센서 신호 증폭에 1순위.</p>
+
+  <h3>2.2 계측 증폭기 (Instrumentation Amp)</h3>
+  <p>3-op-amp 구조로 차분 신호만 증폭하고 동상 잡음을 제거합니다 (CMRR이 매우 높음). <strong>스트레인 게이지·서모커플·심전도 등 미약한 차분 신호 측정의 표준</strong>.</p>
+  $$ v_O = \frac{R_f}{R_1}(v_2 - v_1) \times \text{(추가 이득)} $$
+  <p>휘트스톤 브릿지(<a href="../../lectures-mech/05-dc-analysis-2.html">기전공학기초 W5</a>)의 출력을 받아 ADC로 보내는 자리에 거의 항상 들어갑니다. INA125·INA126 같은 IC가 표준 부품.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 비반전 증폭기 — 작은 센서 신호 키우기</h4>
+    <p>$R_1, R_2$로 이득 $1+R_2/R_1$을 정합니다. <strong>전원전압(±$V_{cc}$)</strong>을 넘으면 출력이 잘려 <em>포화(clipping)</em>합니다 — 이득을 무한정 키울 수 없는 이유. 입력 진폭을 살짝 키워보고, 이득과 함께 어떻게 잘리는지 관찰하세요.</p>
+    <canvas id="ampDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>R₁ <span class="val" id="ampR1V">10</span> kΩ<input type="range" id="ampR1" min="1" max="100" step="1" value="10"></label>
+      <label>R₂ <span class="val" id="ampR2V">90</span> kΩ<input type="range" id="ampR2" min="0" max="500" step="5" value="90"></label>
+      <label>입력 진폭 <span class="val" id="ampAV">0.5</span> V<input type="range" id="ampA" min="0.05" max="3" step="0.05" value="0.5"></label>
+      <label>전원 ±Vcc <span class="val" id="ampVV">12</span> V<input type="range" id="ampV" min="3" max="15" step="0.5" value="12"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ampDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const R1=+document.getElementById('ampR1').value;
+      const R2=+document.getElementById('ampR2').value;
+      const A=+document.getElementById('ampA').value;
+      const Vs=+document.getElementById('ampV').value;
+      document.getElementById('ampR1V').textContent=R1;
+      document.getElementById('ampR2V').textContent=R2;
+      document.getElementById('ampAV').textContent=A.toFixed(2);
+      document.getElementById('ampVV').textContent=Vs.toFixed(1);
+      const gain=1+R2/R1, Vsat=Vs-1.5;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=60,oy=H/2,w=W-90,h=H-60,T=4*Math.PI;
+      function px(t){return ox+t/T*w;}
+      function py(v){return oy-v/(Vs+0.5)*h/2;}
+      // saturation lines
+      ctx.strokeStyle='#aaa';ctx.setLineDash([5,3]);
+      ctx.beginPath();ctx.moveTo(ox,py(Vsat));ctx.lineTo(ox+w,py(Vsat));ctx.moveTo(ox,py(-Vsat));ctx.lineTo(ox+w,py(-Vsat));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#aaa';ctx.font='11px sans-serif';
+      ctx.fillText(`+Vsat = ${Vsat.toFixed(1)} V`,ox+w-90,py(Vsat)-3);
+      ctx.fillText(`−Vsat = ${(-Vsat).toFixed(1)} V`,ox+w-90,py(-Vsat)+12);
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      // input
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let t=0;t<=T;t+=0.02){const v=A*Math.sin(t);if(t===0)ctx.moveTo(px(t),py(v));else ctx.lineTo(px(t),py(v));}
+      ctx.stroke();
+      // output
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let t=0;t<=T;t+=0.02){let v=gain*A*Math.sin(t);v=Math.max(-Vsat,Math.min(Vsat,v));if(t===0)ctx.moveTo(px(t),py(v));else ctx.lineTo(px(t),py(v));}
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`이득 = 1 + R₂/R₁ = ${gain.toFixed(2)}×`,ox,25);
+      const peak=Math.abs(gain*A);
+      ctx.fillStyle=peak>Vsat?'#c62828':'#2e7d32';
+      ctx.fillText(`출력 피크 = ${peak.toFixed(2)} V ${peak>Vsat?'⚠ 포화!':'✓ 선형 영역'}`,ox+220,25);
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';ctx.fillText('🔵 입력 v_S',ox+10,H-15);
+      ctx.fillStyle='#c62828';ctx.fillText('🔴 출력 v_O',ox+120,H-15);
+    }
+    ['ampR1','ampR2','ampA','ampV'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>3. 필터(Filter)</h2>
+  <p>특정 주파수 대역만 통과시키고 나머지를 걸러내는 회로. 종류는 4가지:</p>
+
+  <table>
+    <thead><tr><th>이름</th><th>약자</th><th>통과 대역</th><th>대표 응용</th></tr></thead>
+    <tbody>
+      <tr><td>저역통과</td><td>LPF</td><td>$f &lt; f_c$</td><td>고주파 잡음 제거 (가장 흔함)</td></tr>
+      <tr><td>고역통과</td><td>HPF</td><td>$f &gt; f_c$</td><td>DC 오프셋 제거, AC 결합</td></tr>
+      <tr><td>대역통과</td><td>BPF</td><td>$f_1 &lt; f &lt; f_2$</td><td>특정 주파수만 (라디오 튜너)</td></tr>
+      <tr><td>대역저지</td><td>BSF/Notch</td><td>특정 주파수만 막음</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.1 RC 저역통과 필터(LPF)</h3>
+  <p>저항 + 커패시터 조합. 가장 단순하고 가장 자주 쓰는 잡음 제거기.</p>
+  $$ \frac{V_{\text{out}}}{V_{\text{in}}} = \frac{1}{1 + j\omega RC}, \qquad f_c = \frac{1}{2\pi RC} $$
+  <p>식이 어렵게 보여도 <strong>실용적으로는 $f_c$ 한 숫자만 기억</strong>하면 됩니다 — <em>차단 주파수 $f_c$보다 빠른 신호는 거의 막히고, 느린 신호는 거의 그대로 통과</em>. 마이크 앞에 손바닥을 가까이 대면 고음이 죽는 것과 비슷.</p>
+  <p>예: $R = 1\,\text{k}\Omega$, $C = 1\,\mu\text{F}$이면 $f_c = 1/(2\pi \cdot 10^3 \cdot 10^{-6}) \approx 159\,\text{Hz}$. 이 값보다 높은 진동(예: 1kHz EMI 잡음)은 1/10 이하로 줄어듭니다.</p>
+  <p><a href="../../lectures-mech/08-impedance.html">기전공학기초 W8 임피던스</a>에서 보드 플롯과 함께 더 자세히 다룹니다. ($j$는 허수 단위인데, 정현파 신호의 진폭과 위상을 한 식으로 묶어 다루기 위한 표기 — W10 라플라스에서 본격 등장.)</p>
+
+  <h3>3.2 적용 예 — IMU 가속도 센서</h3>
+  <p>차량의 IMU 가속도 신호에는 엔진 진동(수백 Hz)이 큰 잡음으로 섞여 들어옵니다. 차량 자세 제어에 필요한 주파수는 보통 ~10Hz 이하이므로 $f_c \approx 20\,\text{Hz}$인 LPF를 통과시키면 깨끗한 신호가 됩니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: RC LPF 보드 플롯 — R, C로 차단 주파수 옮기기</h4>
+    <p>$f_c = 1/(2\pi RC)$. $R$이나 $C$를 키우면 차단 주파수가 낮아집니다. 점선 표시 점 ($-3\,\text{dB}$, 약 $0.707$배)이 정확히 $f_c$에 위치하는지 확인하세요.</p>
+    <canvas id="bodeMc" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>R <span class="val" id="bRV">1.0</span> kΩ<input type="range" id="bR" min="0.1" max="10" step="0.1" value="1"></label>
+      <label>C <span class="val" id="bCV">1.0</span> μF<input type="range" id="bC" min="0.01" max="10" step="0.01" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bodeMc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const R=+document.getElementById('bR').value*1000;
+      const Cv=+document.getElementById('bC').value*1e-6;
+      document.getElementById('bRV').textContent=(R/1000).toFixed(1);
+      document.getElementById('bCV').textContent=(Cv*1e6).toFixed(2);
+      const fc=1/(2*Math.PI*R*Cv);
+      const fmin=fc/100,fmax=fc*100;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(f){return 60+(Math.log10(f/fmin))/4*(W-90);}
+      function y(g){return H-50-Math.max(0,1+g)*(H-90)/1.1;}
+      ctx.strokeStyle='#eee';
+      for(let p=-2;p<=2;p++){const f=fc*Math.pow(10,p);ctx.beginPath();ctx.moveTo(x(f),y(0));ctx.lineTo(x(f),y(-1));ctx.stroke();}
+      for(let g=0;g>=-1;g-=0.2){ctx.beginPath();ctx.moveTo(x(fmin),y(g));ctx.lineTo(x(fmax),y(g));ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(x(fmin),y(-1));ctx.lineTo(x(fmax),y(-1));ctx.moveTo(x(fmin),y(0));ctx.lineTo(x(fmin),y(-1));ctx.stroke();
+      ctx.strokeStyle='#aaa';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      const g707=Math.log10(0.7071);
+      ctx.beginPath();ctx.moveTo(x(fmin),y(g707));ctx.lineTo(x(fc),y(g707));ctx.lineTo(x(fc),y(-1));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const f=Math.pow(10,lf);const wRC=(2*Math.PI*f)*R*Cv;
+        const mag=1/Math.sqrt(1+wRC*wRC);
+        const lg=Math.log10(Math.max(1e-3,mag));
+        if(lf===Math.log10(fmin))ctx.moveTo(x(f),y(lg));else ctx.lineTo(x(f),y(lg));
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`f_c = 1/(2πRC) = ${fc<1000?fc.toFixed(1)+' Hz':(fc/1000).toFixed(2)+' kHz'}`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('점선: −3dB(=0.707) 점이 차단 주파수',40,50);
+      ctx.fillText('주파수 (log)',W-100,H-15);
+    }
+    document.getElementById('bR').addEventListener('input',draw);
+    document.getElementById('bC').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>4. ADC — 아날로그를 디지털로</h2>
+  <p>아날로그 신호를 MCU가 처리할 수 있는 비트열로 변환. 두 단계로 나뉩니다.</p>
+
+  <h3>4.1 표본화(Sampling)</h3>
+  <p>연속 신호 $x(t)$를 일정 간격 $T_s$로 측정 → 이산 신호 $x[n] = x(nT_s)$. 측정 빈도를 표본화 주파수 $f_s = 1/T_s$라 합니다.</p>
+
+  <h3>4.2 양자화(Quantization)</h3>
+  <p>각 표본의 값을 유한한 비트로 표현. $N$비트 ADC라면 $2^N$단계로 분해. Arduino UNO의 ADC는 10비트 = 1024단계 = 0~5V를 약 4.88mV 단위로.</p>
+
+  <h3>4.3 ADC 분해능과 양자화 오차</h3>
+  $$ \text{LSB} = \frac{V_{\text{ref}}}{2^N} $$
+  <p>분해능은 LSB와 같고, 양자화 오차는 ±LSB/2. 5V·10비트면 LSB ≈ 4.88mV, 오차 ±2.44mV. 이보다 작은 신호 변화는 ADC가 인식 못 합니다 — 그래서 증폭이 필요한 또 다른 이유.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: ADC 비트 수와 양자화 계단</h4>
+    <p>비트 수를 4 → 12로 키우면 계단이 잘게 쪼개져 원 신호에 가까워집니다. <strong>계단과 원 곡선의 차</strong>가 양자화 오차예요. 4비트면 16단계라 일그러짐이 한눈에 보이고, 10비트(Arduino 기본)면 거의 매끈해집니다.</p>
+    <canvas id="adcDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>ADC 비트 수 N <span class="val" id="adcNV">4</span><input type="range" id="adcN" min="2" max="12" step="1" value="4"></label>
+      <label>입력 진폭 <span class="val" id="adcAV">2.0</span> V<input type="range" id="adcA" min="0.5" max="2.5" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('adcDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const N=+document.getElementById('adcN').value;
+      const A=+document.getElementById('adcA').value;
+      document.getElementById('adcNV').textContent=N;
+      document.getElementById('adcAV').textContent=A.toFixed(1);
+      const Vref=5, levels=Math.pow(2,N), LSB=Vref/levels;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=60,oy=H/2,w=W-90,h=H-60;
+      function px(t){return ox+t*w;}
+      function py(v){return oy-(v-Vref/2)/(Vref/2)*h*0.45;}
+      // levels (light gray)
+      ctx.strokeStyle='#eee';
+      for(let i=0;i<=levels;i++){const v=i*LSB;const yy=py(v);if(yy>30&&yy<H-20){ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      // analog
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      const offset=Vref/2;
+      for(let i=0;i<=400;i++){const t=i/400; const v=offset+A*Math.sin(2*Math.PI*2*t);if(i===0)ctx.moveTo(px(t),py(v));else ctx.lineTo(px(t),py(v));}
+      ctx.stroke();
+      // quantized
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();
+      const samples=80;let prev=null;
+      for(let i=0;i<=samples;i++){const t=i/samples;const v=offset+A*Math.sin(2*Math.PI*2*t);
+        const q=Math.max(0,Math.min(levels-1,Math.round(v/LSB)))*LSB;
+        const xx=px(t),yy=py(q);
+        if(prev){ctx.lineTo(xx,prev);ctx.lineTo(xx,yy);}else ctx.moveTo(xx,yy);
+        prev=yy;}
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`N = ${N} bit → ${levels} 단계, LSB = ${(LSB*1000).toFixed(1)} mV`,ox,25);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`최대 양자화 오차 ≈ ±${(LSB/2*1000).toFixed(1)} mV`,ox,H-15);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 아날로그',ox+260,H-15);
+      ctx.fillStyle='#c62828';ctx.fillText('— ADC 양자화',ox+360,H-15);
+    }
+    document.getElementById('adcN').addEventListener('input',draw);
+    document.getElementById('adcA').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>5. 표본화 정리와 에일리어싱</h2>
+
+  <h3>5.1 나이퀴스트-섀넌 정리</h3>
+  <p>"신호의 최고 주파수 성분의 <strong>2배 이상</strong>으로 표본화하면 원 신호를 완전히 복원할 수 있다."</p>
+  $$ \boxed{f_s \ge 2 f_{\max}} $$
+  <p>이 한계 $f_s/2$를 <strong>나이퀴스트 주파수</strong>라 합니다. 음성(20kHz) 녹음의 표본화율 44.1kHz가 이 정리에서 나온 값이에요.</p>
+
+  <h3>5.2 에일리어싱(Aliasing)</h3>
+  <p>표본화율이 $2f_{\max}$ 미만이면 고주파 성분이 저주파로 <strong>잘못 보입니다</strong>. 회전하는 바퀴가 영화에서 거꾸로 도는 것처럼 보이는 현상이 그 예. 한 번 에일리어싱이 일어나면 어떤 디지털 처리로도 복원 불가.</p>
+
+  <h3>5.3 안티앨리어싱 필터</h3>
+  <p>예방책 — ADC 직전에 LPF를 둬 $f_s/2$ 이상의 성분을 미리 제거. 이를 <strong>안티앨리어싱 필터(anti-aliasing filter)</strong>라 합니다. 모든 데이터 수집 시스템의 표준 구성:</p>
+  <p><em>센서 → 증폭 → 안티앨리어싱 LPF → ADC → MCU</em></p>
+
+  <h3>5.4 예제 — 10Hz 신호의 표본화</h3>
+  <p>$x(t) = \cos(2\pi \cdot 10 \cdot t)$를 다양한 $f_s$로 표본화하면:</p>
+  <ul>
+    <li>$f_s = 100\,\text{Hz}$ → 매 주기당 10점 → 잘 표현됨.</li>
+    <li>$f_s = 25\,\text{Hz}$ → 주기당 2.5점 → 한계 근처지만 OK.</li>
+    <li>$f_s = 18\,\text{Hz}$ → 나이퀴스트(20Hz) 미만 → 에일리어싱! 2Hz 신호처럼 보임.</li>
+  </ul>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 에일리어싱 직접 만들기</h4>
+    <p>신호 주파수를 $f_s/2$ 위로 올려보세요. 점들이 갑자기 <em>훨씬 느린 가짜 신호</em>를 그립니다. 이 가짜 신호의 주파수 = $|f - f_s|$. 이게 영화에서 빠르게 도는 바퀴가 거꾸로 도는 것처럼 보이는 이유입니다.</p>
+    <canvas id="aliasDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>신호 주파수 f <span class="val" id="aFV">8</span> Hz<input type="range" id="aF" min="1" max="40" step="0.5" value="8"></label>
+      <label>표본화 fs <span class="val" id="aFsV">20</span> Hz<input type="range" id="aFs" min="5" max="50" step="1" value="20"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('aliasDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const f=+document.getElementById('aF').value;
+      const fs=+document.getElementById('aFs').value;
+      document.getElementById('aFV').textContent=f.toFixed(1);
+      document.getElementById('aFsV').textContent=fs;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H/2,w=W-70,h=H-80,T=1.0;
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      // continuous truth
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1.5;ctx.beginPath();
+      for(let i=0;i<=600;i++){const t=i/600*T;const v=Math.cos(2*Math.PI*f*t);
+        const xx=ox+t/T*w, yy=oy-v*h*0.4;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // sampled points
+      ctx.fillStyle='#c62828';
+      const Ns=Math.floor(fs*T);
+      for(let i=0;i<=Ns;i++){const t=i/fs;const v=Math.cos(2*Math.PI*f*t);
+        const xx=ox+t/T*w, yy=oy-v*h*0.4;
+        ctx.beginPath();ctx.arc(xx,yy,3.5,0,Math.PI*2);ctx.fill();}
+      // alias line connecting the points (perceived signal)
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=Ns;i++){const t=i/fs;const v=Math.cos(2*Math.PI*f*t);
+        const xx=ox+t/T*w, yy=oy-v*h*0.4;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // verdict
+      const Nyq=fs/2;
+      const aliasF = f<=Nyq ? f : Math.abs(f - Math.round(f/fs)*fs);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`나이퀴스트 = fs/2 = ${Nyq.toFixed(1)} Hz`,ox,25);
+      ctx.fillStyle=f>Nyq?'#c62828':'#2e7d32';
+      ctx.fillText(f>Nyq?`⚠ 에일리어싱! ${f.toFixed(1)}Hz가 ${aliasF.toFixed(1)}Hz로 보임`:`✓ 안전 (${f.toFixed(1)}Hz < ${Nyq.toFixed(1)}Hz)`,ox+220,25);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('— 진짜 신호 (연속)',ox+10,H-15);
+      ctx.fillStyle='#c62828';ctx.fillText('● 표본 → 인식되는 신호',ox+170,H-15);
+    }
+    document.getElementById('aF').addEventListener('input',draw);
+    document.getElementById('aFs').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>6. 이동 평균 필터(Moving Average)</h2>
+  <p>가장 단순한 디지털 LPF. 최근 $N$개 샘플의 평균을 출력으로 내보냅니다.</p>
+  $$ y[n] = \frac{1}{N}\sum_{k=0}^{N-1} x[n-k] $$
+
+  <h3>6.1 효과와 한계</h3>
+  <ul>
+    <li><strong>효과</strong>: 평균이 잡음을 누르고 신호의 추세를 부드럽게 함. 구현이 매우 쉬움 (3~4줄 C 코드).</li>
+    <li><strong>한계</strong>: 응답이 늦어짐(평균창 크기만큼 지연). 빠른 변화에 둔감해짐.</li>
+  </ul>
+
+  <h3>6.2 Python 예제</h3>
+  <pre><code>import numpy as np
+def moving_average(x, N):
+    return np.convolve(x, np.ones(N)/N, mode='valid')
+
+# 잡음 섞인 신호
+t = np.linspace(0, 1, 200)
+clean = np.sin(2*np.pi*5*t)
+noisy = clean + 0.3*np.random.randn(len(t))
+
+filtered = moving_average(noisy, N=10)</code></pre>
+
+  <p>이동 평균은 연산량이 적어 임베디드에 자주 쓰지만 정밀 측정에는 IIR/FIR 필터를 별도로 설계합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 이동 평균 윈도우 N의 효과</h4>
+    <p>$N$을 키우면 잡음이 더 부드럽게 눌리지만, 신호의 빠른 변화에 늦게 반응(<strong>지연 ≈ N/2 샘플</strong>)합니다. 이게 LPF/이동평균의 본질적 trade-off입니다.</p>
+    <canvas id="maDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>윈도우 N <span class="val" id="maNV">5</span><input type="range" id="maN" min="1" max="40" step="1" value="5"></label>
+      <label>잡음 σ <span class="val" id="maNV2">0.3</span><input type="range" id="maS" min="0" max="0.8" step="0.02" value="0.3"></label>
+      <button id="maNew">새 잡음</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('maDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Nx=300;
+    let noise=Array.from({length:Nx},()=>{const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);});
+    document.getElementById('maNew').onclick=()=>{noise=noise.map(()=>{const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);});draw();};
+    function draw(){
+      const N=+document.getElementById('maN').value;
+      const sN=+document.getElementById('maS').value;
+      document.getElementById('maNV').textContent=N;
+      document.getElementById('maNV2').textContent=sN.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=40,oy=H/2,w=W-60,h=H-60;
+      // axis
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      const clean=Array.from({length:Nx},(_,i)=>{const t=i/Nx*4;return Math.sin(2*Math.PI*1.5*t)+(t>2?0.5:0);});
+      const noisy=clean.map((v,i)=>v+noise[i]*sN);
+      const filt=[];for(let i=0;i<Nx;i++){let s=0,k=0;for(let j=Math.max(0,i-N+1);j<=i;j++){s+=noisy[j];k++;}filt.push(s/k);}
+      function plot(arr,col,lw){ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();
+        arr.forEach((v,i)=>{const xx=ox+i/Nx*w, yy=oy-v*h*0.3;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();}
+      plot(noisy,'#cfd8e3',1);
+      plot(clean,'#2e7d32',1.5);
+      plot(filt,'#0b5fff',2.5);
+      // metrics
+      const rmse=(a,b)=>Math.sqrt(a.reduce((s,v,i)=>s+(v-b[i])**2,0)/a.length);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`잡음 RMSE: ${rmse(noisy,clean).toFixed(3)}  →  필터 후: ${rmse(filt,clean).toFixed(3)}`,ox,25);
+      ctx.fillText(`예상 지연 ≈ N/2 = ${(N/2).toFixed(1)} 샘플`,ox+360,25);
+      ctx.fillStyle='#cfd8e3';ctx.fillText('— 잡음 섞인 입력',ox,H-15);
+      ctx.fillStyle='#2e7d32';ctx.fillText('— 진짜 신호',ox+130,H-15);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 이동평균 출력',ox+220,H-15);
+    }
+    document.getElementById('maN').addEventListener('input',draw);
+    document.getElementById('maS').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>7. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>단계</th><th>도구</th><th>해결하는 문제</th></tr></thead>
+    <tbody>
+      <tr><td>증폭</td><td>op-amp (비반전·계측)</td><td>너무 작은 신호</td></tr>
+      <tr><td>필터</td><td>RC LPF, op-amp 필터</td><td>잡음·고주파 성분</td></tr>
+      <tr><td>안티앨리어싱</td><td>$f_s/2$ 이하만 통과</td><td>표본화 왜곡 예방</td></tr>
+      <tr><td>ADC</td><td>SAR/시그마-델타</td><td>아날로그 → 디지털</td></tr>
+      <tr><td>디지털 후처리</td><td>이동 평균, IIR/FIR</td><td>SW에서 추가 잡음 제거</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <strong>다음 주차로의 다리</strong> — 필터·평균은 잡음을 줄이지만 <em>물리 모델을 모릅니다</em>. 그러나 우리가 측정하는 시스템(예: 자동차 위치)은 가속·감속 같은 동역학 모델이 있어요. 이 모델 정보까지 함께 활용해 잡음을 더 잘 누르는 도구가 다음 주(W4)의 <strong>칼만 필터</strong>입니다.
+  </div>
+
+  <nav class="prevnext">
+    <a href="02-sensor.html"><small>← 이전</small>W2. 센서와 트랜스듀서</a>
+    <a href="04-kalman-1d.html" class="next"><small>다음 →</small>W4. 칼만 필터 (1D)</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

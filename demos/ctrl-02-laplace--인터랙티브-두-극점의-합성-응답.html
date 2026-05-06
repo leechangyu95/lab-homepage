@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 두 극점의 합성 응답 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 두 극점의 합성 응답</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/02-laplace.html">Week 2. 라플라스 변환</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 극점의 합성 응답</h4>
+    <p>$F(s) = \dfrac{A}{s + a_1} + \dfrac{B}{s + a_2}$ 꼴에서 두 극점 $-a_1, -a_2$의 위치와 계수 $A, B$를 직접 움직여
+    $f(t) = A e^{-a_1 t} + B e^{-a_2 t}$ 가 어떻게 변하는지 봅니다. 같은 부호의 두 항을 더하면 단조 응답,
+    부호가 다르면 처음엔 빠르게 변했다가 천천히 가라앉는 응답이 됩니다.</p>
+    <canvas id="c2sum" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>a₁ <span class="val" id="c2a1V">1.0</span><input type="range" id="c2a1" min="0.1" max="5" step="0.1" value="1.0"></label>
+      <label>A <span class="val" id="c2AV">2.0</span><input type="range" id="c2A" min="-3" max="3" step="0.1" value="2.0"></label>
+      <label>a₂ <span class="val" id="c2a2V">3.0</span><input type="range" id="c2a2" min="0.1" max="6" step="0.1" value="3.0"></label>
+      <label>B <span class="val" id="c2BV">-1.0</span><input type="range" id="c2B" min="-3" max="3" step="0.1" value="-1.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c2sum');if(!c)return;
+    const x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{
+      $('c2a1V').textContent=(+$('c2a1').value).toFixed(1);
+      $('c2a2V').textContent=(+$('c2a2').value).toFixed(1);
+      $('c2AV').textContent=(+$('c2A').value).toFixed(1);
+      $('c2BV').textContent=(+$('c2B').value).toFixed(1);
+    };
+    ['c2a1','c2a2','c2A','c2B'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const a1=+$('c2a1').value, a2=+$('c2a2').value, A=+$('c2A').value, B=+$('c2B').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40,oy=200,w=560,h=160;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy+50);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('t',ox+w+5,oy+4);x.fillText('f(t)',ox-30,oy-h+10);
+      const draw=(fn,col,lab,off)=>{
+        x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+        for(let i=0;i<300;i++){const t=i*0.04, y=fn(t); const xx=ox+i*w/300, yy=oy-y*30;
+          if(yy<oy-h+5||yy>oy+45)continue;
+          if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+        x.stroke();
+        x.fillStyle=col;x.font='12px sans-serif';x.fillText(lab,ox+10,oy-h+25+off);
+      };
+      draw(t=>A*Math.exp(-a1*t),'#0b5fff','A·e^(-a₁t) (파랑)',0);
+      draw(t=>B*Math.exp(-a2*t),'#f57c00','B·e^(-a₂t) (주황)',16);
+      draw(t=>A*Math.exp(-a1*t)+B*Math.exp(-a2*t),'#2e7d32','합성 f(t) (초록)',32);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

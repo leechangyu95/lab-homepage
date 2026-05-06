@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 거리 측정으로 위치 추정 (삼각측량 직감) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 거리 측정으로 위치 추정 (삼각측량 직감)</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/05-kalman-2d.html">Lecture 5. 칼만 필터 (2D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 거리 측정으로 위치 추정 (삼각측량 직감)</h4>
+    <p>3개의 랜드마크(빨강) 각각에서 잡음 섞인 거리 측정값이 옵니다. 각 측정은 원 모양 분포가 되고, 세 원이 겹치는 곳에 진짜 위치가 있습니다. 마우스를 움직여 진짜 로봇 위치를 옮겨보세요.</p>
+    <canvas id="ekf" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>측정 잡음 σ <span class="val" id="ekfRV">5</span><input type="range" id="ekfR" min="1" max="20" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ekf'),x=c.getContext('2d');
+    const lm=[{x:140,y:100,z:0,zd:0},{x:520,y:120,z:0,zd:0},{x:340,y:320,z:0,zd:0}];
+    let robot={x:320,y:200},frame=0;
+    lm.forEach(L=>{const d=Math.hypot(robot.x-L.x,robot.y-L.y);L.z=d;L.zd=d;});
+    c.onmousemove=e=>{const r=c.getBoundingClientRect();robot.x=(e.clientX-r.left)*c.width/r.width;robot.y=(e.clientY-r.top)*c.height/r.height;};
+    function loop(){
+      const sg=+document.getElementById('ekfR').value;
+      document.getElementById('ekfRV').textContent=sg;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 새 측정은 약 4Hz로만 (60fps / 15)
+      const measure=(frame++%15===0);
+      lm.forEach(L=>{
+        const d=Math.hypot(robot.x-L.x,robot.y-L.y);
+        if(measure) L.z=d+(Math.random()*2-1)*sg;
+        // 표시 반지름은 EWMA로 부드럽게 보간
+        L.zd+=(L.z-L.zd)*0.15;
+        // 측정값에 해당하는 원 (잡음 두께 ±2σ)
+        x.strokeStyle='rgba(11,95,255,0.6)';x.lineWidth=2;
+        x.beginPath();x.arc(L.x,L.y,L.zd,0,Math.PI*2);x.stroke();
+        x.strokeStyle='rgba(11,95,255,0.15)';x.lineWidth=2*sg;
+        x.beginPath();x.arc(L.x,L.y,L.zd,0,Math.PI*2);x.stroke();
+        x.fillStyle='#c62828';x.beginPath();x.arc(L.x,L.y,7,0,Math.PI*2);x.fill();
+      });
+      // 로봇 (진짜 위치)
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(robot.x,robot.y,8,0,Math.PI*2);x.fill();
+      x.strokeStyle='#fff';x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('🟢 로봇 (마우스로 이동)  ·  🔴 랜드마크  ·  🔵 거리 측정 원',12,25);
+      x.fillText('세 원이 겹치는 영역이 EKF의 추정 분포 (대략 가우시안 타원)',12,365);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 중첩의 원리 — 두 전원의 분해 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 중첩의 원리 — 두 전원의 분해</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/04-dc-analysis-1.html">Week 4. 직류회로 해석 1 — KCL · KVL · 중첩</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 중첩의 원리 — 두 전원의 분해</h4>
+    <p>두 전압원 회로(섹션 4.3 예제)에서 각 전원이 만드는 $I_3$를 따로 계산해 합칩니다. <strong>전원 선택</strong>을 바꾸면 한 전원만 살리고 나머지를 끈 결과를 보고, "둘 다"를 고르면 전체 회로의 답이 두 케이스의 합인지 확인할 수 있어요.</p>
+    <canvas id="supCanvas" width="640" height="260"></canvas>
+    <div class="controls">
+      <label>전원 선택
+        <select id="supSel"><option value="both">둘 다 (=합)</option><option value="v1">84V만</option><option value="v2">21V만</option></select>
+      </label>
+      <label>R₁ <span class="val" id="supR1V">12</span> Ω<input type="range" id="supR1" min="1" max="30" step="1" value="12"></label>
+      <label>R₂ <span class="val" id="supR2V">3</span> Ω<input type="range" id="supR2" min="1" max="30" step="1" value="3"></label>
+      <label>R₃ <span class="val" id="supR3V">6</span> Ω<input type="range" id="supR3" min="1" max="30" step="1" value="6"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('supCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function calc(V1,V2,R1,R2,R3){
+      // Node A KCL: (V1-Va)/R1 + (V2-Va)/R2 = Va/R3
+      const Va=(V1/R1+V2/R2)/(1/R1+1/R2+1/R3);
+      const I3=Va/R3;
+      const I1=(V1-Va)/R1, I2=(V2-Va)/R2;
+      return {Va,I1,I2,I3};
+    }
+    function draw(){
+      const sel=document.getElementById('supSel').value;
+      const R1=+document.getElementById('supR1').value;
+      const R2=+document.getElementById('supR2').value;
+      const R3=+document.getElementById('supR3').value;
+      document.getElementById('supR1V').textContent=R1;
+      document.getElementById('supR2V').textContent=R2;
+      document.getElementById('supR3V').textContent=R3;
+      const V1=84,V2=21;
+      const both=calc(V1,V2,R1,R2,R3);
+      const c1=calc(V1,0,R1,R2,R3);
+      const c2=calc(0,V2,R1,R2,R3);
+      const cur=sel==='both'?both:(sel==='v1'?c1:c2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      // Left source
+      ctx.beginPath();ctx.moveTo(60,80);ctx.lineTo(60,160);ctx.stroke();
+      ctx.fillStyle=sel!=='v2'?'#0b5fff':'#999';ctx.font='12px sans-serif';
+      ctx.fillText(sel==='v2'?'단락':'84V',30,75);
+      // R1
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(110,120);ctx.lineTo(190,120);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_1=${R1}Ω`,120,110);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(60,120);ctx.lineTo(110,120);ctx.stroke();
+      // Node A
+      ctx.beginPath();ctx.moveTo(190,120);ctx.lineTo(320,120);ctx.stroke();
+      ctx.beginPath();ctx.arc(255,120,4,0,Math.PI*2);ctx.fillStyle='#1b5e20';ctx.fill();
+      ctx.fillText(`A: ${cur.Va.toFixed(2)}V`,225,108);
+      // R3 to ground
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(255,140);ctx.lineTo(255,200);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_3=${R3}Ω`,265,170);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(255,120);ctx.lineTo(255,140);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(245,210);ctx.lineTo(265,210);ctx.moveTo(248,215);ctx.lineTo(262,215);ctx.stroke();
+      // R2
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(380,120);ctx.lineTo(460,120);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_2=${R2}Ω`,400,110);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(320,120);ctx.lineTo(380,120);ctx.stroke();
+      // Right source
+      ctx.beginPath();ctx.moveTo(460,120);ctx.lineTo(530,120);ctx.lineTo(530,80);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(530,160);ctx.lineTo(530,200);ctx.lineTo(60,200);ctx.lineTo(60,160);ctx.stroke();
+      ctx.fillStyle=sel!=='v1'?'#0b5fff':'#999';ctx.fillText(sel==='v1'?'단락':'21V',520,75);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`I_3 = ${cur.I3.toFixed(3)} A`,40,30);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`84V만: I_3 = ${c1.I3.toFixed(3)},  21V만: I_3 = ${c2.I3.toFixed(3)},  합 = ${(c1.I3+c2.I3).toFixed(3)},  실제 = ${both.I3.toFixed(3)} ✓`,40,52);
+    }
+    ['supSel','supR1','supR2','supR3'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.addEventListener('input',draw);el.addEventListener('change',draw);
+    });
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

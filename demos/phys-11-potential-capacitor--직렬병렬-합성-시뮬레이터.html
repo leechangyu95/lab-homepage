@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>직렬·병렬 합성 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">직렬·병렬 합성 시뮬레이터</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/11-potential-capacitor.html">Week 11. 전위와 축전기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>직렬·병렬 합성 시뮬레이터</h4>
+    <p>$C_1$, $C_2$ 두 슬라이더를 움직여 직렬과 병렬 결과를 동시에 비교. 입력 전압 $V$도 함께 조절.</p>
+    <canvas id="w11_seriesCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>$C_1$ <span class="val" id="w11_C1v">10</span> μF
+        <input type="range" id="w11_C1" min="1" max="50" step="1" value="10"></label>
+      <label>$C_2$ <span class="val" id="w11_C2v">20</span> μF
+        <input type="range" id="w11_C2" min="1" max="50" step="1" value="20"></label>
+      <label>전압 $V$ <span class="val" id="w11_seVv">12</span> V
+        <input type="range" id="w11_seV" min="1" max="50" step="1" value="12"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li><strong>병렬</strong>: $C_\text{eq} = C_1 + C_2$. 단순 합. (저항의 직렬과 같은 모양.)</li>
+        <li><strong>직렬</strong>: $1/C_\text{eq} = 1/C_1 + 1/C_2$, 즉 $C_\text{eq} = C_1 C_2 / (C_1+C_2)$. <em>가장 작은 것보다 더 작아짐.</em></li>
+        <li>$C_1=C_2$일 때 직렬 = $C/2$, 병렬 = $2C$. 4배 차이.</li>
+        <li>직렬에선 두 축전기에 같은 전하 $Q$ 분배. 병렬에선 같은 전압 $V$ 분배.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w11_seriesCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const C1=+document.getElementById('w11_C1').value;
+      const C2=+document.getElementById('w11_C2').value;
+      const V=+document.getElementById('w11_seV').value;
+      document.getElementById('w11_C1v').textContent=C1;
+      document.getElementById('w11_C2v').textContent=C2;
+      document.getElementById('w11_seVv').textContent=V;
+      const Cpar=C1+C2;
+      const Cser=(C1*C2)/(C1+C2);
+      const Qpar=Cpar*V, Upar=0.5*Cpar*V*V;
+      const Qser=Cser*V, User=0.5*Cser*V*V;
+      const V1ser=Qser/C1, V2ser=Qser/C2; // series voltage split
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // left: parallel
+      ctx.fillStyle='#222';ctx.font='bold 14px sans-serif';
+      ctx.fillText('병렬 (Parallel)',40,24);
+      ctx.fillText('직렬 (Series)',360,24);
+      // parallel diagram
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(60,60);ctx.lineTo(60,180);ctx.moveTo(220,60);ctx.lineTo(220,180);
+      ctx.moveTo(60,90);ctx.lineTo(110,90);ctx.moveTo(170,90);ctx.lineTo(220,90);
+      ctx.moveTo(60,150);ctx.lineTo(110,150);ctx.moveTo(170,150);ctx.lineTo(220,150);
+      // capacitor symbols (||)
+      ctx.moveTo(110,80);ctx.lineTo(110,100);ctx.moveTo(120,80);ctx.lineTo(120,100);
+      ctx.moveTo(170,80);ctx.lineTo(170,100);
+      ctx.moveTo(110,140);ctx.lineTo(110,160);ctx.moveTo(120,140);ctx.lineTo(120,160);
+      ctx.moveTo(170,140);ctx.lineTo(170,160);
+      ctx.stroke();
+      // series diagram
+      ctx.beginPath();
+      ctx.moveTo(360,60);ctx.lineTo(360,180);ctx.moveTo(560,60);ctx.lineTo(560,180);
+      ctx.moveTo(360,120);ctx.lineTo(420,120);
+      ctx.moveTo(480,120);ctx.lineTo(520,120);
+      ctx.moveTo(420,110);ctx.lineTo(420,130);ctx.moveTo(430,110);ctx.lineTo(430,130);
+      ctx.moveTo(470,110);ctx.lineTo(470,130);ctx.moveTo(480,110);ctx.lineTo(480,130);
+      ctx.moveTo(520,110);ctx.lineTo(520,130);ctx.moveTo(530,110);ctx.lineTo(530,130);
+      // wait, fix series: two caps in series on one wire
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('C₁='+C1+'μF',125,86);
+      ctx.fillText('C₂='+C2+'μF',125,146);
+      ctx.fillText('C₁',438,108);ctx.fillText('C₂',498,108);
+      // results box
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(40,200,260,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(40,200,260,72);
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';
+      ctx.fillText('C_eq = '+Cpar.toFixed(2)+' μF',50,220);
+      ctx.fillText('Q_total = '+Qpar.toFixed(1)+' μC',50,240);
+      ctx.fillText('U = '+Upar.toFixed(1)+' μJ',50,260);
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(340,200,260,72);
+      ctx.strokeRect(340,200,260,72);
+      ctx.fillStyle='#d62728';
+      ctx.fillText('C_eq = '+Cser.toFixed(2)+' μF',350,220);
+      ctx.fillText('Q (each) = '+Qser.toFixed(2)+' μC',350,240);
+      ctx.fillText('U = '+User.toFixed(2)+' μJ  (V₁='+V1ser.toFixed(1)+', V₂='+V2ser.toFixed(1)+')',350,260);
+    }
+    ['w11_C1','w11_C2','w11_seV'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

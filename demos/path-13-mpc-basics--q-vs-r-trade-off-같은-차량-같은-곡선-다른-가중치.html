@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>$Q$ vs $R$ trade-off — 같은 차량, 같은 곡선, 다른 가중치 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">$Q$ vs $R$ trade-off — 같은 차량, 같은 곡선, 다른 가중치</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/13-mpc-basics.html">Week 13. MPC 기초 — 미래를 보고 제어하는 법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>$Q$ vs $R$ trade-off — 같은 차량, 같은 곡선, 다른 가중치</h4>
+    <p>$Q$를 크게 하면 차가 곡선을 더 정확히 따라가지만 조향이 거칠어집니다. $R$을 크게 하면 조향은
+    부드러워지지만 차선 안쪽으로 잘려나가는 컷 인(cut-in) 현상이 생깁니다. 슬라이더를 만져 trade-off를
+    체감해보세요.</p>
+    <canvas id="qr_canvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Q (상태 페널티) <span class="val" id="qrQ_v">10</span><input type="range" id="qrQ" min="0.5" max="50" step="0.5" value="10"></label>
+      <label>R (입력 페널티) <span class="val" id="qrR_v">5</span><input type="range" id="qrR" min="0.1" max="50" step="0.1" value="5"></label>
+      <button id="qrReset" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('qr_canvas'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{
+      $('qrQ_v').textContent=(+$('qrQ').value).toFixed(1);
+      $('qrR_v').textContent=(+$('qrR').value).toFixed(1);
+    };
+    ['qrQ','qrR'].forEach(id=>$(id).oninput=upd);
+    let car={s:0,ey:0,ep:0},hist=[],steerHist=[];
+    $('qrReset').onclick=()=>{car={s:0,ey:0,ep:0};hist=[];steerHist=[];};
+    const dt=0.05, v=10, L=2.9, N=15;
+    const refCurv=s=>0.08*Math.sin(s/8); // sinusoidal track
+    // Approximate analytic optimal steering: minimize Q*ey^2 + R*delta^2 + future
+    // Use proportional-like form derived from steady-state: delta ~ atan(L*kappa) - K_y*ey - K_p*epsi
+    // K_y, K_p depend on Q/R ratio
+    function mpcSteer(ey,ep,kappaPred){
+      const Q=+$('qrQ').value, R=+$('qrR').value;
+      const ratio=Math.sqrt(Q/R);
+      const kY=0.4*ratio, kP=1.2*ratio;
+      // average future curvature
+      let avgK=0; for(let i=0;i<kappaPred.length;i++) avgK+=kappaPred[i];
+      avgK/=kappaPred.length;
+      let d=Math.atan(L*avgK)-kY*ey-kP*ep;
+      d=Math.max(-0.52,Math.min(0.52,d));
+      return d;
+    }
+    function loop(){
+      // future curvature samples
+      const kp=[];
+      for(let i=0;i<N;i++) kp.push(refCurv(car.s + v*i*dt));
+      const delta=mpcSteer(car.ey,car.ep,kp);
+      const kr=refCurv(car.s);
+      // dynamics in error frame
+      car.ey += dt*(v*Math.sin(car.ep));
+      car.ep += dt*(v/L*Math.tan(delta) - v*kr);
+      car.s  += dt*v;
+      hist.push({s:car.s,ey:car.ey,ep:car.ep,kr,delta});
+      steerHist.push(delta);
+      if(hist.length>500) hist.shift();
+      if(steerHist.length>500) steerHist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // top: track view (curvature) - convert to lateral offset of ref centerline
+      const x0=20, w=600, y0=80, h=80;
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(x0,y0);x.lineTo(x0+w,y0);x.stroke();
+      // draw centerline based on integrated heading
+      let psi=0,xp=0,yp=y0;
+      x.strokeStyle='#999';x.lineWidth=1;x.beginPath();x.moveTo(x0,y0);
+      for(let i=0;i<300;i++){
+        const ss=car.s-300*v*dt + i*v*dt;
+        const k=refCurv(ss);
+        psi += k*v*dt;
+        xp += v*dt*Math.cos(psi);
+        yp += v*dt*Math.sin(psi);
+      }
+      // simpler: draw historic ey trace
+      x.strokeStyle='#999';x.setLineDash([3,3]);x.beginPath();x.moveTo(x0,y0+h/2);x.lineTo(x0+w,y0+h/2);x.stroke();x.setLineDash([]);
+      x.fillStyle='#444';x.font='12px sans-serif';x.fillText('lateral error e_y (시간 →)',x0,y0-6);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.slice(-300).forEach((h2,i)=>{const px=x0+i*2,py=y0+h/2-h2.ey*30;
+        if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});x.stroke();
+      // bottom: steering trace
+      const y1=200,h1=80;
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(x0,y1+h1/2);x.lineTo(x0+w,y1+h1/2);x.stroke();
+      x.fillStyle='#444';x.fillText('조향 δ (rad, ±0.52 한계)',x0,y1-6);
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      steerHist.slice(-300).forEach((d,i)=>{const px=x0+i*2,py=y1+h1/2-d*60;
+        if(i==0)x.moveTo(px,py);else x.lineTo(px,py);});x.stroke();
+      // limits
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();
+      x.moveTo(x0,y1+h1/2-0.52*60);x.lineTo(x0+w,y1+h1/2-0.52*60);
+      x.moveTo(x0,y1+h1/2+0.52*60);x.lineTo(x0+w,y1+h1/2+0.52*60);x.stroke();x.setLineDash([]);
+      // metrics
+      const last=hist.slice(-200);
+      const rmse=Math.sqrt(last.reduce((a,b)=>a+b.ey*b.ey,0)/Math.max(1,last.length));
+      const stdDelta=Math.sqrt(steerHist.slice(-200).reduce((a,d)=>a+d*d,0)/Math.max(1,steerHist.slice(-200).length));
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('lateral RMSE = '+rmse.toFixed(3)+' m    조향 RMS = '+stdDelta.toFixed(3)+' rad',x0,310);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

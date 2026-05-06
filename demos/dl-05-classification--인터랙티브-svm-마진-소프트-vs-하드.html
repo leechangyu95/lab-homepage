@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: SVM 마진 (소프트 vs 하드) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: SVM 마진 (소프트 vs 하드)</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/05-classification.html">Week 5. 분류 알고리즘 — KNN, SVM, 결정트리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: SVM 마진 (소프트 vs 하드)</h4>
+    <p>두 가우시안 클러스터를 분리하는 SVM의 마진을 그립니다. C 슬라이더로 마진의 폭이 어떻게 달라지는지 봅니다(시각화 단순화 버전).</p>
+    <canvas id="svmCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>C (위반 비용) <span class="val" id="ccV">1</span><input type="range" id="cc" min="0.1" max="10" step="0.1" value="1"></label>
+      <button id="svmRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('svmCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<25;i++)pts.push({x:0.25+Math.random()*0.2,y:0.3+Math.random()*0.4,c:0});
+      for(let i=0;i<25;i++)pts.push({x:0.55+Math.random()*0.2,y:0.3+Math.random()*0.4,c:1});
+      draw();
+    }
+    function draw(){
+      const C=+document.getElementById('cc').value;
+      document.getElementById('ccV').textContent=C.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // simple boundary at x=0.5 plus margin width inversely proportional to C
+      const margin=0.12/Math.sqrt(C);
+      ctx.fillStyle='rgba(11,95,255,0.08)';ctx.fillRect(0,0,0.5*W,H);
+      ctx.fillStyle='rgba(255,140,0,0.10)';ctx.fillRect(0.5*W,0,0.5*W,H);
+      ctx.fillStyle='rgba(150,150,150,0.25)';ctx.fillRect((0.5-margin)*W,0,2*margin*W,H);
+      ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0.5*W,0);ctx.lineTo(0.5*W,H);ctx.stroke();
+      ctx.setLineDash([5,5]);ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo((0.5-margin)*W,0);ctx.lineTo((0.5-margin)*W,H);ctx.stroke();
+      ctx.beginPath();ctx.moveTo((0.5+margin)*W,0);ctx.lineTo((0.5+margin)*W,H);ctx.stroke();
+      ctx.setLineDash([]);
+      pts.forEach(p=>{ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(p.x*W,p.y*H,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('회색 띠 = 마진',10,20);
+    }
+    document.getElementById('cc').addEventListener('input',draw);
+    document.getElementById('svmRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

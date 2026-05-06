@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 랜덤포레스트 — 약한 트리들의 다수결 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 랜덤포레스트 — 약한 트리들의 다수결</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/05-classification.html">Week 5. 분류 알고리즘 — KNN, SVM, 결정트리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 랜덤포레스트 — 약한 트리들의 다수결</h4>
+    <p>$T$개의 얕은 결정트리를 각각 다른 부트스트랩 표본으로 학습시킵니다. 단일 트리는 들쭉날쭉하지만 평균(다수결)을 내면 매끈한 경계가 나오는 걸 보세요. <strong>나무 수</strong>를 늘리면 분산이 줄고, <strong>최대 깊이</strong>를 키우면 개별 트리는 강해지지만 다양성이 줄어요.</p>
+    <canvas id="rf" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>나무 수 $T$ <span class="val" id="rfTV">12</span><input type="range" id="rfT" min="1" max="40" step="1" value="12"></label>
+      <label>최대 깊이 <span class="val" id="rfDV">3</span><input type="range" id="rfD" min="1" max="6" step="1" value="3"></label>
+      <button id="rfRegen">새 데이터</button>
+      <button id="rfShow" class="alt">개별 트리 보이기</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rf');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[],trees=[],showSingle=false;
+    function gen(){
+      pts=[];
+      for(let i=0;i<70;i++){
+        const x=Math.random(),y=Math.random();
+        const r=Math.hypot(x-0.5,y-0.5);
+        const c=(r<0.22||r>0.36)?0:1;
+        if(Math.random()<0.05)pts.push({x,y,c:1-c});
+        else pts.push({x,y,c});
+      }
+      build();
+    }
+    function gini(arr){if(!arr.length)return 0;const c0=arr.filter(p=>p.c==0).length/arr.length;return 1-c0*c0-(1-c0)*(1-c0);}
+    function buildTree(arr,depth,box){
+      if(depth===0||arr.length<3||gini(arr)<0.1){
+        const c0=arr.filter(p=>p.c==0).length;
+        return {leaf:true,pred:c0>=arr.length/2?0:1,box};
+      }
+      let best=null;const f=Math.random()<0.5?0:1;
+      for(let t=0.1;t<0.9;t+=0.08){
+        const L=arr.filter(p=>(f?p.y:p.x)<t),R=arr.filter(p=>(f?p.y:p.x)>=t);
+        if(!L.length||!R.length)continue;
+        const g=(L.length*gini(L)+R.length*gini(R))/arr.length;
+        if(!best||g<best.g)best={g,t,L,R,f};
+      }
+      if(!best){const c0=arr.filter(p=>p.c==0).length;return {leaf:true,pred:c0>=arr.length/2?0:1,box};}
+      const b1={...box},b2={...box};
+      if(best.f===0){b1.x1=best.t;b2.x0=best.t;}else{b1.y1=best.t;b2.y0=best.t;}
+      return {leaf:false,f:best.f,t:best.t,L:buildTree(best.L,depth-1,b1),R:buildTree(best.R,depth-1,b2)};
+    }
+    function predict(node,p){if(node.leaf)return node.pred;const v=node.f?p.y:p.x;return predict(v<node.t?node.L:node.R,p);}
+    function build(){
+      const T=+document.getElementById('rfT').value;
+      const D=+document.getElementById('rfD').value;
+      document.getElementById('rfTV').textContent=T;
+      document.getElementById('rfDV').textContent=D;
+      trees=[];
+      for(let i=0;i<T;i++){
+        const samp=[];for(let k=0;k<pts.length;k++)samp.push(pts[Math.floor(Math.random()*pts.length)]);
+        trees.push(buildTree(samp,D,{x0:0,y0:0,x1:1,y1:1}));
+      }
+      draw();
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const STEP=8;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const p={x:i/W,y:j/H};
+        let s=0;
+        if(showSingle){s=predict(trees[0],p);}
+        else{trees.forEach(t=>{s+=predict(t,p);});s=s/trees.length;}
+        const a=Math.abs(s-0.5)*0.5;
+        ctx.fillStyle=s<0.5?`rgba(11,95,255,${a})`:`rgba(255,140,0,${a})`;
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach(p=>{ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(p.x*W,p.y*H,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(showSingle?'단일 트리 (들쭉날쭉)':`${trees.length}개 트리 다수결 (매끈)`,12,22);
+    }
+    document.getElementById('rfT').addEventListener('input',build);
+    document.getElementById('rfD').addEventListener('input',build);
+    document.getElementById('rfRegen').addEventListener('click',gen);
+    document.getElementById('rfShow').addEventListener('click',()=>{showSingle=!showSingle;draw();});
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

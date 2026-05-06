@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: ε에 따른 행동 분포 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: ε에 따른 행동 분포</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/14-rl-basics.html">Week 14. 강화학습(RL) 기초 — 경험으로 배우는 제어</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: ε에 따른 행동 분포</h4>
+    <p>두 슬롯머신 A, B 중에 진짜 보상은 B가 더 큽니다. ε 값에 따라 에이전트의 행동 분포와 누적 보상이 어떻게 바뀌는지 보세요.</p>
+    <canvas id="banditCv" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>ε <span class="val" id="eV">0.20</span><input type="range" id="e" min="0" max="1" step="0.02" value="0.2"></label>
+      <button id="rstE" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('banditCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('eV').textContent=(+$('e').value).toFixed(2);};$('e').oninput=upd;
+    const trueQ={A:0.4,B:0.7};
+    let estQ,nA,nB,total,history;
+    function reset(){estQ={A:0,B:0};nA=0;nB=0;total=0;history=[];}
+    reset();$('rstE').onclick=reset;
+    function step(){
+      const eps=+$('e').value;
+      const action=Math.random()<eps?(Math.random()<0.5?'A':'B'):(estQ.A>=estQ.B?'A':'B');
+      const reward=Math.random()<trueQ[action]?1:0;
+      if(action==='A'){nA++;estQ.A+=(reward-estQ.A)/nA;}else{nB++;estQ.B+=(reward-estQ.B)/nB;}
+      total+=reward;history.push({a:action,r:reward,total});if(history.length>200)history.shift();
+    }
+    function loop(){
+      for(let k=0;k<2;k++)step();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h=c.height;
+      // bars
+      const drawBar=(label,val,mx,col,y0,truth)=>{
+        x.fillStyle='#eee';x.fillRect(60,y0-12,400,20);
+        x.fillStyle=col;x.fillRect(60,y0-12,Math.max(0,Math.min(400,val/mx*400)),20);
+        x.fillStyle='#444';x.font='12px sans-serif';x.fillText(label,12,y0+4);
+        x.fillText('Q='+val.toFixed(3),470,y0+4);
+        x.strokeStyle='#c62828';x.beginPath();x.moveTo(60+truth/mx*400,y0-16);x.lineTo(60+truth/mx*400,y0+12);x.stroke();
+      };
+      drawBar('슬롯 A',estQ.A,1,'#0b5fff',38,trueQ.A);
+      drawBar('슬롯 B',estQ.B,1,'#2e7d32',74,trueQ.B);
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('빨간 선 = 진짜 Q*. 막대 = 추정 Q.',12,98);
+      // pulls
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('당김 횟수  A: '+nA+'    B: '+nB+'    누적 보상: '+total,12,124);
+      // history bar (action color)
+      x.fillStyle='#444';x.fillText('최근 행동 (좌→우, 파랑=A, 초록=B):',12,150);
+      history.slice(-180).forEach((h_,i)=>{x.fillStyle=h_.a==='A'?'#0b5fff':'#2e7d32';x.fillRect(12+i*3,158,2,18);});
+      // total reward curve
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      history.forEach((h_,i)=>{const xx=12+i*3,yy=h-20-h_.total/200*100;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#f57c00';x.fillText('주황 = 누적 보상',12,h-12);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

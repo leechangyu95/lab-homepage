@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W4. 곡선 운동학(n-t, 극) — 동역학</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html" class="active">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../dynamics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 4. 곡선 운동학 — 접선·법선 좌표 & 극좌표</h1>
+  <p class="lead">곡선 위에서 움직일 때 가속도를 "앞으로 / 옆으로" 두 성분으로 자연스럽게 나누는 방법.</p>
+
+  <h2>0. 학습 목표</h2>
+  <ul>
+    <li>접선·법선 좌표(n-t)에서 가속도를 두 성분으로 분해할 수 있다.</li>
+    <li>곡률반경 $\rho$의 의미를 알고, 함수 $y(x)$로부터 계산할 수 있다.</li>
+    <li>극좌표(r, θ)에서 위치·속도·가속도를 적고, 등속 원운동에서 n-t와 일치함을 보인다.</li>
+    <li>좌표계 선택 — 어느 좌표계가 식을 가장 단순하게 만들지 직관적으로 판단한다.</li>
+  </ul>
+
+  <h2>1. 접선·법선 좌표 (n-t)</h2>
+  <p>입자가 그리는 곡선 위에 좌표축을 박아둡니다. <strong>접선 $\hat{\mathbf{e}}_t$</strong>는 진행 방향, <strong>법선 $\hat{\mathbf{e}}_n$</strong>은 곡선의 휘어지는 안쪽 방향. 속도는 항상 접선 방향이지만 가속도는 두 성분으로 나뉩니다.</p>
+
+  <div class="tip">
+    <strong>곡률반경 $\rho$ 직관</strong> — 곡선의 한 점에서 가장 잘 들어맞는 원("원진)의 반지름이 $\rho$. 직선이면 $\rho = \infty$(아예 안 휨), 작은 원을 그리면 $\rho$가 작음. 사거리 큰 고속도로 곡선 vs 좁은 골목 회전 — 같은 속도로 돌아도 골목이 더 어지러운 이유가 $a_n = v^2/\rho$의 분모가 작아서입니다.
+  </div>
+  $$ \mathbf{v} = v\,\hat{\mathbf{e}}_t $$
+  $$ \mathbf{a} = \dot v\,\hat{\mathbf{e}}_t + \frac{v^2}{\rho}\,\hat{\mathbf{e}}_n $$
+  <ul>
+    <li><strong>접선 성분 $a_t = \dot v$</strong> — 빨라지거나 느려지는 정도. 접선 방향 힘이 일을 함.</li>
+    <li><strong>법선 성분 $a_n = v^2/\rho$</strong> — 방향이 휘는 정도. 항상 곡률중심을 향함. $\rho$는 곡률반경.</li>
+  </ul>
+  <div class="tip"><strong>차에 탄 사람 비유</strong> — 액셀을 밟거나 브레이크를 밟으면 몸이 앞뒤로 쏠립니다($a_t$). 핸들을 꺾으면 옆으로 쏠립니다($a_n$). 같은 속도라도 더 좁은 커브에서 옆으로 더 세게 쏠리죠 — $\rho$가 작으면 $v^2/\rho$가 커지기 때문입니다.</div>
+
+  <svg viewBox="0 0 540 230" width="100%" style="max-width:540px;background:#fafbfc;border:1px solid #e0e0e0;border-radius:8px">
+    <path d="M 30 180 Q 130 30, 260 110 T 500 80" stroke="#666" stroke-width="2" fill="none"/>
+    <circle cx="260" cy="110" r="7" fill="#1a1a1a"/>
+    <line x1="260" y1="110" x2="350" y2="92" stroke="#0b5fff" stroke-width="2.5"/>
+    <polygon points="350,92 342,87 343,98" fill="#0b5fff"/>
+    <text x="358" y="92" fill="#0b5fff" font-size="13" font-style="italic">e_t (접선)</text>
+    <line x1="260" y1="110" x2="278" y2="200" stroke="#c62828" stroke-width="2.5"/>
+    <polygon points="278,200 269,193 287,193" fill="#c62828"/>
+    <text x="285" y="207" fill="#c62828" font-size="13" font-style="italic">e_n (법선, 곡률중심 방향)</text>
+    <circle cx="290" cy="205" r="100" stroke="#aaa" stroke-dasharray="3,3" fill="none" stroke-width="1"/>
+    <circle cx="290" cy="205" r="3" fill="#888"/>
+    <text x="298" y="220" fill="#888" font-size="11">곡률중심 C</text>
+    <line x1="260" y1="110" x2="290" y2="205" stroke="#aaa" stroke-dasharray="2,3"/>
+    <text x="240" y="160" fill="#888" font-size="12" font-style="italic">ρ</text>
+    <text x="20" y="20" fill="#333" font-size="13" font-weight="bold">곡선 위 한 점에서의 n-t 분해와 접촉원</text>
+  </svg>
+
+  <p>왜 좌표계 자체를 입자에 묶어 움직이게 만들까요? 직각좌표(W3)는 공간에 고정되어 있지만, 곡선 운동에서는 "지금 이 순간의 진행 방향"이 가장 중요한 정보예요. 그래서 좌표축이 입자와 함께 회전합니다. 이를 "이동 좌표계(moving frame)" 또는 프레네(Frenet) 프레임이라 부르고, 미분기하학·로봇 궤적 계획·자율주행 차선 추종에서 핵심 도구가 됩니다. 같은 운동을 직각좌표에서 적으면 식이 두 축 모두 복잡해지지만, n-t에서는 한쪽이 항상 0(법선 방향 속도)이라 식이 절반 줄어듭니다.</p>
+
+  <div class="note">
+    <strong>핵심 식 정리</strong>
+    <ul style="margin:6px 0 0 0">
+      <li>속도 크기 $v = ds/dt$ — 호 길이를 시간으로 미분</li>
+      <li>접선 가속도 $a_t = dv/dt = v\,(dv/ds)$ — 두 형태 모두 자주 쓰임. 두 번째 형태는 시간이 직접 안 나올 때 유용.</li>
+      <li>법선 가속도 $a_n = v^2/\rho$ — 항상 $\ge 0$, 곡률중심을 향함</li>
+      <li>가속도 크기 $|\mathbf{a}| = \sqrt{a_t^2 + a_n^2}$</li>
+      <li>가속도 방향이 진행 방향과 이루는 각 $\alpha$: $\tan\alpha = a_n/a_t$</li>
+    </ul>
+  </div>
+
+  <h3>1-0. $a_t$와 $a_n$의 물리적 차이</h3>
+  <p>둘 다 단위는 m/s²이지만 의미가 완전히 다릅니다.</p>
+  <ul>
+    <li><strong>$a_t$(접선)</strong>는 <em>속도 크기를 변화</em>시킵니다. 양수면 가속, 음수면 감속. 작용하는 힘이 일($W = \int \mathbf{F}\cdot d\mathbf{r}$)을 합니다 — 운동에너지가 변함. 자동차의 액셀·브레이크가 만드는 가속도.</li>
+    <li><strong>$a_n$(법선)</strong>는 <em>속도 방향을 변화</em>시킵니다. 절대로 속력에는 영향이 없어요. 작용하는 힘이 진행 방향과 수직이라 일을 0만큼 합니다 — 운동에너지가 보존됨. 자동차 핸들 조작이 만드는 가속도.</li>
+  </ul>
+  <p>등속 원운동에서 운동에너지가 보존되는 이유가 바로 이것 — 구심력이 항상 진행 방향과 수직이라 일이 0이거든요. 인공위성이 원궤도에 한 번 올려놓으면 연료 소모 없이 영원히 돌 수 있는 원리도 동일.</p>
+
+  <svg viewBox="0 0 540 200" width="100%" style="max-width:540px;background:#fafbfc;border:1px solid #e0e0e0;border-radius:8px">
+    <text x="20" y="22" fill="#333" font-size="13" font-weight="bold">곡률반경 비교 — 같은 속도 v로 통과 시 a_n = v²/ρ</text>
+    <path d="M 20 80 L 180 80" stroke="#0b5fff" stroke-width="3" fill="none"/>
+    <text x="60" y="105" fill="#333" font-size="12">직선: ρ = ∞</text>
+    <text x="60" y="120" fill="#666" font-size="11">a_n = 0</text>
+    <path d="M 200 80 Q 280 30, 360 80" stroke="#2e7d32" stroke-width="3" fill="none"/>
+    <text x="220" y="105" fill="#333" font-size="12">큰 ρ (고속도로)</text>
+    <text x="220" y="120" fill="#666" font-size="11">a_n 작음</text>
+    <path d="M 380 80 Q 420 50, 460 80 Q 500 110, 520 80" stroke="#c62828" stroke-width="3" fill="none"/>
+    <text x="380" y="105" fill="#333" font-size="12">작은 ρ (시내·골목)</text>
+    <text x="380" y="120" fill="#666" font-size="11">a_n 큼!</text>
+    <text x="20" y="170" fill="#666" font-size="11">같은 v라도 ρ가 작으면 옆으로 쏠리는 가속이 폭증 — 골목에서 차가 어지러운 이유</text>
+  </svg>
+
+  <h2>1-1. n-t 가속도 식의 도출 — 한 번만</h2>
+  <p>왜 $\mathbf{a} = \dot v\,\hat e_t + (v^2/\rho)\,\hat e_n$인가? 한 줄씩 따라가 봅시다.</p>
+  <p>속도는 항상 접선 방향: $\mathbf{v} = v\,\hat e_t$. 시간 미분:</p>
+  $$ \mathbf{a} = \frac{d\mathbf{v}}{dt} = \dot v\,\hat e_t + v\,\frac{d\hat e_t}{dt} $$
+  <p>접선 방향 단위벡터 $\hat e_t$가 곡선을 따라 움직이며 방향이 바뀜. 작은 호 길이 $ds$ 동안 회전한 각도 $d\phi = ds/\rho$. 그래서</p>
+  $$ \frac{d\hat e_t}{dt} = \frac{d\hat e_t}{d\phi}\frac{d\phi}{dt} = \hat e_n \cdot \frac{1}{\rho}\frac{ds}{dt} = \hat e_n\,\frac{v}{\rho} $$
+  <p>대입: $\mathbf{a} = \dot v\,\hat e_t + (v^2/\rho)\,\hat e_n$. 두 항이 자연스럽게 분리되는 이유는 단위벡터가 회전하기 때문 — 직각좌표에서는 단위벡터가 고정이라 미분이 0이지만, n-t에서는 그렇지 않음.</p>
+
+  <h2>2. 등속 원운동 — n-t의 가장 깔끔한 예</h2>
+  <p>속도 크기 $v$가 일정하면 $\dot v = 0$이므로 접선 가속도는 0이고, 가속도는 항상 법선(중심 방향)뿐입니다.</p>
+  $$ a_n = \frac{v^2}{r} = r\omega^2 $$
+  <p>이게 <strong>구심가속도</strong>입니다. "속도가 일정한데 왜 가속도가 있나?" — 속도의 <em>방향</em>이 계속 바뀌니까요. 속도가 벡터라는 점이 핵심.</p>
+
+  <p>$\omega$는 각속도(rad/s), $v = r\omega$는 선속도. 각속도와 주기 $T$의 관계는 $\omega = 2\pi/T$. 회전수 $f$(Hz, 또는 rps)와는 $\omega = 2\pi f$. rpm(분당 회전수)과는 $\omega = 2\pi N/60$. 이 변환들은 자주 헷갈리니까 미리 한 번 익혀두세요.</p>
+
+  <div class="note">
+    <strong>구심가속도 비교 — 일상에서 얼마나 큰가?</strong>
+    <table style="margin-top:6px">
+      <thead><tr><th>상황</th><th>$r$, $v$ (또는 $\omega$)</th><th>$a_n$</th><th>g 단위</th></tr></thead>
+      <tbody>
+        <tr><td>지구 자전(적도)</td><td>$r=6378$ km, $T=24$ h</td><td>0.034 m/s²</td><td>0.0034 g</td></tr>
+        <tr><td>지구 공전</td><td>$r = 1.5\times 10^{11}$ m, $T = 1$ y</td><td>0.0059 m/s²</td><td>0.0006 g</td></tr>
+        <tr><td>자동차 시내 회전</td><td>$r=20$ m, $v=10$ m/s</td><td>5 m/s²</td><td>0.51 g</td></tr>
+        <tr><td>F1 헤어핀</td><td>$r=15$ m, $v=20$ m/s</td><td>27 m/s²</td><td>2.7 g</td></tr>
+        <tr><td>전투기 급선회</td><td>$r=200$ m, $v=200$ m/s</td><td>200 m/s²</td><td>20 g (한계)</td></tr>
+        <tr><td>세탁기 탈수</td><td>$r=0.25$ m, 1200 rpm</td><td>$\approx 3950$ m/s²</td><td>403 g</td></tr>
+        <tr><td>원심분리기 (실험실)</td><td>$r=0.1$ m, 15000 rpm</td><td>$\approx 2.47\times 10^5$</td><td>25000 g</td></tr>
+      </tbody>
+    </table>
+    이걸 보면 $a_n = v^2/r = r\omega^2$의 두 표현이 어떤 상황에 쓰기 좋은지 감이 잡힙니다. 회전수가 표시되는 기계는 $r\omega^2$이 편하고, 속도가 표시되는 차량은 $v^2/r$이 편함.
+  </div>
+
+  <h3>2-0-1. 회전 각속도 벡터 $\boldsymbol{\omega}$ 도입</h3>
+  <p>지금까지 $\omega$를 스칼라로 다뤘지만, 3D에서는 회전축 방향을 가지는 벡터 $\boldsymbol{\omega}$입니다. 회전축이 종이 면에 수직이면 화면 안쪽 또는 바깥쪽 — 오른손 법칙으로 결정. 입자 위치 $\mathbf r$에서의 속도는 다음 cross product로 표현됩니다.</p>
+  $$ \mathbf{v} = \boldsymbol{\omega} \times \mathbf{r} $$
+  $$ \mathbf{a} = \boldsymbol{\alpha} \times \mathbf{r} + \boldsymbol{\omega} \times (\boldsymbol{\omega} \times \mathbf{r}) $$
+  <p>$\boldsymbol{\alpha} = d\boldsymbol{\omega}/dt$는 각가속도 벡터. 두 항 중 첫 번째가 접선 가속도, 두 번째가 구심가속도(안쪽 방향). 평면 운동에서는 $\boldsymbol{\omega} = \omega\hat k$ (종이에 수직)라 cross product가 $\omega r$ 형태로 줄어드는 것입니다.</p>
+  <p>이 표기는 강체 운동(W14)에서 본격적으로 사용됩니다. 입자의 운동에서는 익숙해 두는 정도로.</p>
+
+  <h3>2-1. 단위 정리 — 라디안의 마법</h3>
+  <p>각도 단위로 도(°) 대신 라디안(rad)을 쓰는 이유. 호 길이 식 $s = r\theta$가 라디안에서만 단순하게 성립합니다(도라면 $s = r\theta\cdot\pi/180$). 미분 식 $v = r\dot\theta$도 마찬가지. 라디안은 "호 길이/반지름"의 무차원 비율이라 수학적으로 깔끔. 동역학 문제에서는 거의 항상 라디안 단위로 계산합니다.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 1: 곡선 위 가속도 분해</h4>
+    <p>입자가 타원 트랙을 도는 모습입니다. <strong>속도(파랑) · 접선 가속도(초록) · 법선 가속도(빨강)</strong>를 화살표로 보여줍니다. 트랙의 곡률($\rho$)을 슬라이더로 바꿔보고, 속도를 바꾸면 어떻게 두 성분이 변하는지 확인하세요.</p>
+    <canvas id="ntC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>각속도 ω <span class="val" id="ntWV">1.5</span><input type="range" id="ntW" min="0.3" max="3" step="0.05" value="1.5"></label>
+      <label>접선 가속 (속도 변화) <span class="val" id="ntDV">0.4</span><input type="range" id="ntD" min="-1.5" max="1.5" step="0.05" value="0.4"></label>
+      <label>타원 종횡비 b/a <span class="val" id="ntRV">0.6</span><input type="range" id="ntR" min="0.3" max="1" step="0.02" value="0.6"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ntC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['ntW','ntD','ntR'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['ntW','ntD','ntR'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0,v=2;
+    function loop(){
+      const wBase=+sl('ntW').value,dvdt=+sl('ntD').value,ratio=+sl('ntR').value;
+      const dt=0.025;
+      v+=dvdt*dt;
+      if(v<0.5)v=0.5;if(v>5)v=5;
+      t+=wBase*dt*0.5;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height/2;
+      const A=180,B=A*ratio;
+      // ellipse
+      x.strokeStyle='#bbb';x.lineWidth=1.5;x.beginPath();x.ellipse(cx,cy,A,B,0,0,Math.PI*2);x.stroke();
+      // position
+      const px=cx+A*Math.cos(t),py=cy+B*Math.sin(t);
+      // tangent direction (derivative)
+      const tdx=-A*Math.sin(t),tdy=B*Math.cos(t);
+      const tnorm=Math.sqrt(tdx*tdx+tdy*tdy);
+      const ex=tdx/tnorm,ey=tdy/tnorm;
+      // normal (inward) — perpendicular to tangent, pointing toward center of curvature
+      // for ellipse, normal points generally toward center for inside
+      let nx=-ey,ny=ex;
+      // ensure points inward
+      if((px+nx-cx)*(px+nx-cx)/(A*A)+(py+ny-cy)*(py+ny-cy)/(B*B)>1){nx=-nx;ny=-ny;}
+      // radius of curvature for ellipse
+      const rho=Math.pow(A*A*Math.sin(t)**2+B*B*Math.cos(t)**2,1.5)/(A*B);
+      // velocity arrow
+      const vScale=20;
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+ex*v*vScale,py+ey*v*vScale);
+      x.lineTo(px+ex*v*vScale-ex*8-ey*4,py+ey*v*vScale-ey*8+ex*4);
+      x.moveTo(px+ex*v*vScale,py+ey*v*vScale);
+      x.lineTo(px+ex*v*vScale-ex*8+ey*4,py+ey*v*vScale-ey*8-ex*4);x.stroke();
+      // tangential acc arrow
+      const aScale=30;
+      x.strokeStyle='#2e7d32';x.lineWidth=2;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+ex*dvdt*aScale*2,py+ey*dvdt*aScale*2);x.stroke();
+      // normal acc
+      const an=v*v/rho*aScale*2;
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      x.beginPath();x.moveTo(px,py);x.lineTo(px+nx*an,py+ny*an);x.stroke();
+      // particle
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px,py,6,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#0b5fff';x.font='12px sans-serif';x.fillText('v',px+ex*v*vScale+5,py+ey*v*vScale);
+      x.fillStyle='#2e7d32';x.fillText('a_t',px+ex*dvdt*aScale*2+5,py+ey*dvdt*aScale*2-3);
+      x.fillStyle='#c62828';x.fillText('a_n',px+nx*an+5,py+ny*an);
+      // info
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('|v| = '+v.toFixed(2),20,30);
+      x.fillText('a_t = dv/dt = '+dvdt.toFixed(2),20,48);
+      x.fillText('a_n = v²/ρ = '+(v*v/rho).toFixed(3),20,66);
+      x.fillText('곡률반경 ρ = '+rho.toFixed(1)+' (위치마다 변함)',20,84);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h3>2-1-1. 시각적 직관 — 속도 벡터의 끝이 그리는 호</h3>
+  <p>등속 원운동을 시각적으로 보면 속도 벡터의 크기가 $v$로 일정한데 방향이 회전합니다. 시간 $\Delta t$ 동안 각도 $\Delta\theta = \omega\Delta t$만큼 회전. 속도의 끝이 그리는 짧은 호의 길이 $\approx v\Delta\theta$. 이게 속도의 변화량 $|\Delta\mathbf{v}|$이고, 이를 $\Delta t$로 나누면 $a = v\omega = v(v/r) = v^2/r$. 이게 가장 시각적인 구심가속도 도출입니다.</p>
+  <p>중요한 것은 $\Delta\mathbf{v}$의 <em>방향</em> — 속도 벡터의 회전 방향. 속도가 접선이고, 그것이 회전 방향(곡률중심 쪽)으로 휘니까 $\Delta\mathbf{v}$도 곡률중심을 향함. 그래서 $\mathbf{a}_n$이 곡률중심 방향이라는 자연스러운 결론.</p>
+
+  <h2>2-2. 등속이 아닌 원운동 — 두 성분 모두 살아 있음</h2>
+  <p>속도가 변하면(가속·감속하며 도는 차) 접선 성분이 살아남습니다.</p>
+  $$ \mathbf{a} = \dot v\,\hat{\mathbf{e}}_t + \frac{v^2}{r}\,\hat{\mathbf{e}}_n,\qquad |\mathbf{a}| = \sqrt{\dot v^2 + \left(\frac{v^2}{r}\right)^2} $$
+
+  <div class="note">
+    <strong>예제 (등가속 원운동)</strong> — 반지름 100 m 원형 트랙에서 자동차가 정지 상태로 출발해 일정한 접선가속도 $a_t = 3$ m/s²로 가속한다. (a) 4초 후 속도 (b) 4초 후 합 가속도 크기와 방향(접선과의 각).
+    <br><br>
+    <strong>풀이</strong>
+    <br>(a) $v = a_t t = 3 \cdot 4 = 12$ m/s.
+    <br>(b) $a_n = v^2/r = 144/100 = 1.44$ m/s². $|\mathbf{a}| = \sqrt{9 + 2.07} = \sqrt{11.07} \approx 3.33$ m/s². 각도 $\alpha = \arctan(1.44/3) \approx 25.6°$ (안쪽으로 기운 방향).
+    <br><br>
+    <strong>관찰</strong> — 처음 1초간은 $v$가 작아 $a_n$이 거의 0이고 $\dot v$만 살아있음. 시간이 갈수록 $v$가 커져 $a_n \propto v^2$이 폭발적으로 커지고 $\dot v$는 그대로라, 가속도 벡터가 점점 "곡률중심 쪽으로 누움". 트랙 한 바퀴를 돌 때쯤이면 $a_n \gg \dot v$가 되어 거의 완전한 구심가속도가 됩니다.
+  </div>
+
+  <h2>2-3. 회전 운동학 — 등각가속도 모델</h2>
+  <p>각가속도 $\alpha = d\omega/dt$가 일정한 경우(드릴이 정지에서 가속, 모터 출발 등)는 직선 등가속도 운동의 회전 버전과 똑같은 식을 따릅니다.</p>
+  $$ \theta = \theta_0 + \omega_0 t + \tfrac{1}{2}\alpha t^2,\quad \omega = \omega_0 + \alpha t,\quad \omega^2 = \omega_0^2 + 2\alpha\Delta\theta $$
+  <p>접선가속도 $a_t = r\alpha$, 법선가속도 $a_n = r\omega^2$ — 둘 다 시간이 갈수록 변합니다(각속도가 변하니까).</p>
+
+  <div class="note">
+    <strong>예제 — 드릴 가속</strong>: 정지된 드릴이 일정 각가속도 $\alpha = 50$ rad/s²로 가속. 2초 후의 (a) 각속도 (b) 회전수 (c) 드릴 비트 끝(반경 5 mm)의 선속도와 두 가속도 성분.
+    <br><br>
+    <strong>풀이</strong>
+    <br>(a) $\omega = 0 + 50 \cdot 2 = 100$ rad/s ≈ 955 rpm
+    <br>(b) $\theta = \tfrac{1}{2}(50)(4) = 100$ rad ≈ 15.9 회전
+    <br>(c) $v = r\omega = 0.005 \cdot 100 = 0.5$ m/s. $a_t = r\alpha = 0.25$ m/s². $a_n = r\omega^2 = 0.005 \cdot 10000 = 50$ m/s².
+    <br><br>
+    $a_n$이 $a_t$의 200배. 빠르게 회전하는 기계의 가속도 분포는 거의 전적으로 법선 성분이라는 사실 — 회전 기계 진동·균형 설계의 출발점.
+  </div>
+
+  <h2>2-4. 회전 + 진동 — 동차 진동(Banked Pendulum)</h2>
+  <p>줄에 매단 진자가 수직 평면에서 흔들리며 동시에 천천히 회전(원뿔 진자)하는 경우는 두 효과의 결합. 작은 진폭에서는 두 운동을 분리해 풀 수 있어요(W11에서 자세히). 동역학의 매력은 이런 결합 운동을 적절한 좌표계로 분해하면 단순한 부분의 합으로 환원된다는 점.</p>
+
+  <h2>3. 극좌표 (r, θ)</h2>
+  <p>중심이 있는 운동에서 가장 자연스러운 좌표계입니다. 위치를 거리 $r$과 각도 $\theta$로 표시.</p>
+  $$ \mathbf{v} = \dot r\,\hat{\mathbf{e}}_r + r\dot\theta\,\hat{\mathbf{e}}_\theta $$
+  $$ \mathbf{a} = (\ddot r - r\dot\theta^2)\,\hat{\mathbf{e}}_r + (r\ddot\theta + 2\dot r\dot\theta)\,\hat{\mathbf{e}}_\theta $$
+
+  <div class="note">
+    <strong>네 항을 한 줄씩 직관으로</strong> — 이 식은 도출이 쉽지 않지만, 각 항의 의미는 직관적입니다.
+    <ul style="margin:8px 0 0 0">
+      <li>$\ddot r$ — <em>밖으로</em> 멀어지는 가속(반지름 방향). 엘리베이터가 위로 가속하면 발이 무거워지는 그것.</li>
+      <li>$-r\dot\theta^2$ — <em>중심으로 끌리는</em> 가속(=구심가속도). 등속 원운동의 핵심. 빙판 위에 줄로 매단 공이 도는 이유.</li>
+      <li>$r\ddot\theta$ — <em>회전이 빨라지는</em> 가속(접선 방향). 멈춰 있던 회전판이 가속하면 위에 있던 사람이 뒤로 쏠리는 효과.</li>
+      <li>$2\dot r\dot\theta$ — <strong>코리올리 가속</strong>. 회전 + 반지름 변화가 동시에 있을 때만 나옴.</li>
+    </ul>
+  </div>
+
+  <p><strong>특수한 경우 — 등속 원운동</strong>: $r$이 일정 ($\dot r = \ddot r = 0$), $\dot\theta$도 일정 ($\ddot\theta = 0$)이면 가속도는 $\mathbf{a} = -r\dot\theta^2\,\hat{\mathbf{e}}_r$ 한 항만 남습니다. n-t 좌표계의 $a_n = v^2/r$과 정확히 일치($v=r\dot\theta$이므로 $r\dot\theta^2 = v^2/r$).</p>
+
+  <div class="tip"><strong>코리올리 항 직관</strong> — 회전하는 원판 위에서 반지름 방향으로 걷는다고 생각해 보세요. 안쪽보다 바깥쪽 트랙이 <em>더 빠르게</em> 움직이고 있으니까, 한 발짝 밖으로 디딜 때마다 발 밑이 "가속하는 트레드밀"처럼 느껴집니다. 이게 옆으로 미는 듯한 가짜 힘으로 느껴지는데, 식에서 $2\dot r \dot\theta$가 그걸 정확히 표현합니다. 지구 자전(=회전 좌표계) 때문에 북반구의 태풍이 반시계로 도는 이유이기도 합니다.</div>
+
+  <div class="demo">
+    <h4>🎮 데모 2: 극좌표 trace — r과 θ를 직접 흔들어 보기</h4>
+    <p>$r(t)$와 $\theta(t)$를 슬라이더로 직접 만들고, 그 결과의 궤적을 봅니다. <strong>$r$ 일정 + $\theta$ 일정 증가</strong> → 원, <strong>$r$ 선형 증가 + $\theta$ 일정 증가</strong> → 아르키메데스 나선, <strong>$r = \cos(2\theta)$</strong> 같은 식 → 장미 곡선.</p>
+    <canvas id="polarC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>모드
+        <select id="polarMode">
+          <option value="circle">원: r=상수</option>
+          <option value="spiral" selected>나선: r∝t</option>
+          <option value="rose">장미: r=2cos(3θ)</option>
+          <option value="custom">사인 변동: r=2+sin(3θ)</option>
+        </select>
+      </label>
+      <label>각속도 dθ/dt <span class="val" id="poWV">1</span><input type="range" id="poW" min="0.2" max="3" step="0.05" value="1"></label>
+      <button id="poReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('polarC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>sl('poWV').textContent=sl('poW').value;
+    sl('poW').oninput=upd;upd();
+    let t=0,trail=[];
+    sl('poReset').onclick=()=>{t=0;trail=[];};
+    sl('polarMode').onchange=()=>{t=0;trail=[];};
+    function loop(){
+      const w=+sl('poW').value,mode=sl('polarMode').value;
+      t+=0.025*w;
+      let r,th=t;
+      if(mode==='circle')r=2;
+      else if(mode==='spiral')r=0.3*t;
+      else if(mode==='rose')r=2*Math.abs(Math.cos(3*th));
+      else r=2+Math.sin(3*th);
+      const cx=c.width/2,cy=c.height/2,scale=50;
+      const px=cx+r*Math.cos(th)*scale,py=cy-r*Math.sin(th)*scale;
+      trail.push({x:px,y:py});if(trail.length>800)trail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // axes
+      x.strokeStyle='#e0e0e0';x.beginPath();x.moveTo(0,cy);x.lineTo(c.width,cy);x.moveTo(cx,0);x.lineTo(cx,c.height);x.stroke();
+      // concentric circles
+      x.strokeStyle='#ececec';
+      for(let R=1;R<=4;R++){x.beginPath();x.arc(cx,cy,R*scale,0,Math.PI*2);x.stroke();}
+      // trail
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i===0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});
+      x.stroke();
+      // r vector
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();x.moveTo(cx,cy);x.lineTo(px,py);x.stroke();
+      // angle arc
+      x.strokeStyle='#2e7d32';x.beginPath();x.arc(cx,cy,30,0,-th,th>0);x.stroke();
+      // particle
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px,py,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('r = '+r.toFixed(2)+',  θ = '+(((th*180/Math.PI)%360).toFixed(0))+'°',20,30);
+      x.fillText('직각좌표: x = '+(r*Math.cos(th)).toFixed(2)+',  y = '+(r*Math.sin(th)).toFixed(2),20,48);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>3-0. 극좌표 단위벡터의 시간 미분 — 가속도 식이 어디서 오는가</h2>
+  <p>극좌표에서는 단위벡터 $\hat{\mathbf{e}}_r$와 $\hat{\mathbf{e}}_\theta$가 입자의 위치(각도)에 따라 회전합니다. 그래서 시간 미분이 0이 아닙니다.</p>
+  $$ \frac{d\hat{\mathbf{e}}_r}{dt} = \dot\theta\,\hat{\mathbf{e}}_\theta,\qquad \frac{d\hat{\mathbf{e}}_\theta}{dt} = -\dot\theta\,\hat{\mathbf{e}}_r $$
+  <p>이 두 식이 모든 항을 만들어냅니다. 위치 $\mathbf{r} = r\,\hat{\mathbf{e}}_r$를 미분하면 곱의 법칙으로 두 항.</p>
+  $$ \mathbf{v} = \dot r\,\hat{\mathbf{e}}_r + r\,\dot{\hat{\mathbf{e}}}_r = \dot r\,\hat{\mathbf{e}}_r + r\dot\theta\,\hat{\mathbf{e}}_\theta $$
+  <p>속도를 한 번 더 미분하면 4개 항으로 갈라지고, 같은 방향끼리 묶으면 가속도 식이 나옵니다. 코리올리 항 $2\dot r\dot\theta$는 $r\dot\theta$를 미분하면서 $\dot r \dot\theta$가 한 번, $\dot{\hat{\mathbf{e}}}_\theta$에서 또 한 번 — 합쳐 2가 붙는 것입니다.</p>
+
+  <svg viewBox="0 0 480 220" width="100%" style="max-width:480px;background:#fafbfc;border:1px solid #e0e0e0;border-radius:8px">
+    <line x1="40" y1="180" x2="440" y2="180" stroke="#333" stroke-width="1"/>
+    <line x1="40" y1="180" x2="40" y2="20" stroke="#333" stroke-width="1"/>
+    <text x="445" y="184" fill="#333" font-size="11">x</text>
+    <text x="32" y="16" fill="#333" font-size="11">y</text>
+    <!-- particle -->
+    <circle cx="280" cy="80" r="6" fill="#1a1a1a"/>
+    <!-- r vector -->
+    <line x1="40" y1="180" x2="280" y2="80" stroke="#c62828" stroke-width="2"/>
+    <polygon points="280,80 273,84 280,90" fill="#c62828"/>
+    <text x="160" y="120" fill="#c62828" font-size="13" font-style="italic">r</text>
+    <!-- e_r at particle -->
+    <line x1="280" y1="80" x2="320" y2="63" stroke="#c62828" stroke-width="2"/>
+    <polygon points="320,63 313,62 316,69" fill="#c62828"/>
+    <text x="324" y="60" fill="#c62828" font-size="11" font-style="italic">e_r</text>
+    <!-- e_theta perpendicular to e_r, in direction of increasing theta -->
+    <line x1="280" y1="80" x2="263" y2="40" stroke="#2e7d32" stroke-width="2"/>
+    <polygon points="263,40 264,48 270,42" fill="#2e7d32"/>
+    <text x="248" y="32" fill="#2e7d32" font-size="11" font-style="italic">e_θ</text>
+    <!-- angle theta arc -->
+    <path d="M 80 180 A 40 40 0 0 0 75 165" stroke="#888" fill="none"/>
+    <text x="62" y="170" fill="#888" font-size="11" font-style="italic">θ</text>
+    <text x="20" y="14" fill="#333" font-size="13" font-weight="bold">극좌표 단위벡터</text>
+  </svg>
+
+  <h3>3-0-1. 극좌표 가속도 4항의 물리적 의미 자세히</h3>
+  <p>$\mathbf{a} = (\ddot r - r\dot\theta^2)\,\hat e_r + (r\ddot\theta + 2\dot r\dot\theta)\,\hat e_\theta$의 4항을 다시 정리하면:</p>
+  <table>
+    <thead><tr><th>항</th><th>방향</th><th>이름</th><th>언제 0이 아닌가</th><th>예</th></tr></thead>
+    <tbody>
+      <tr><td>$\ddot r$</td><td>$\hat e_r$ (밖)</td><td>반지름 가속</td><td>$r$이 비선형으로 변할 때</td><td>스프링에 매단 추 진동</td></tr>
+      <tr><td>$-r\dot\theta^2$</td><td>$-\hat e_r$ (안)</td><td>구심가속도</td><td>회전 중일 때 항상</td><td>등속 원운동의 핵심</td></tr>
+      <tr><td>$r\ddot\theta$</td><td>$\hat e_\theta$ (접선)</td><td>각가속도 항</td><td>각가속이 있을 때</td><td>모터 시동 회전</td></tr>
+      <tr><td>$2\dot r\dot\theta$</td><td>$\hat e_\theta$ (접선)</td><td>코리올리</td><td>회전 + 반지름 변화 동시</td><td>회전판 위 걷기</td></tr>
+    </tbody>
+  </table>
+
+  <p>특정 운동에서 어느 항이 살아남는지 미리 분류하는 게 첫 단계.</p>
+  <ul>
+    <li>등속 원운동: $\dot r = 0$, $\ddot r = 0$, $\ddot\theta = 0$. 살아남는 항: $-r\dot\theta^2$ 한 항만.</li>
+    <li>등각가속 원운동: $\dot r = 0$, $\ddot r = 0$. 살아남는 항: $-r\dot\theta^2$, $r\ddot\theta$ 두 항.</li>
+    <li>중심 방향 운동(직선): $\dot\theta = 0$, $\ddot\theta = 0$. 살아남는 항: $\ddot r$ 한 항.</li>
+    <li>자유낙하(중력만, 회전판 위): 모든 항이 살아남을 수 있음. 가장 일반.</li>
+  </ul>
+
+  <h2>3-1. 곡률반경 $\rho$ 계산하기</h2>
+  <p>경로가 함수 $y = f(x)$로 주어질 때 곡률반경은 다음 공식으로 구합니다.</p>
+  $$ \rho = \frac{\left[1 + (dy/dx)^2\right]^{3/2}}{\left|d^2 y/dx^2\right|} $$
+  <p>매개변수 표현 $\mathbf{r}(t) = (x(t), y(t))$일 때는</p>
+  $$ \rho = \frac{(\dot x^2 + \dot y^2)^{3/2}}{|\dot x \ddot y - \dot y \ddot x|} $$
+  <div class="note">
+    <strong>예제 — 포물선의 곡률반경</strong>: $y = x^2/4$의 원점에서 곡률반경은? 미분하면 $y' = x/2$, $y'' = 1/2$. 원점($x=0$)에서 $y'=0$이므로 $\rho = (1+0)^{3/2}/(1/2) = \mathbf{2}$ m. 위로 갈수록 $y'$이 커져 $\rho$도 커지므로 곡률은 정점에서 가장 큼(가장 좁게 굽었음).
+  </div>
+
+  <div class="note">
+    <strong>예제 — 사인 곡선의 곡률반경</strong>: $y = A\sin(kx)$의 정점 $(x = \pi/(2k))$에서 곡률반경은? 미분 $y' = Ak\cos(kx)$, $y'' = -Ak^2\sin(kx)$. 정점에서 $y' = 0$, $|y''| = Ak^2$. 따라서 $\rho = 1/(Ak^2)$. 진폭 $A$가 크거나 진동수 $k$가 클수록 정점이 더 좁게 굽음 → $\rho$가 작아짐. 직관적: 잔물결처럼 빠르게 진동하는 사인은 정점이 뾰족하니까.
+  </div>
+
+  <div class="note">
+    <strong>예제 — 매개변수 곡선(사이클로이드)</strong>: $x = R(\phi - \sin\phi)$, $y = R(1 - \cos\phi)$. $\phi = \pi$(꼭대기)에서 곡률반경?
+    <br>$\dot x = R(1 - \cos\phi)$, $\dot y = R\sin\phi$. $\phi = \pi$: $\dot x = 2R$, $\dot y = 0$. $\ddot x = R\sin\phi = 0$, $\ddot y = R\cos\phi = -R$.
+    <br>$\rho = (4R^2)^{3/2}/|2R \cdot (-R) - 0| = 8R^3/(2R^2) = \mathbf{4R}$. 사이클로이드의 꼭대기에서 곡률반경은 굴림원 반지름의 4배입니다 — 등속하강 곡선(하위헌스의 시계 추) 설계의 핵심 결과.
+  </div>
+
+  <h2>3-2. 응용 — 도로·고속도로 설계</h2>
+  <p>고속도로 곡선 구간은 슈퍼엘리베이션(편경사) — 바깥쪽이 약간 높음 — 을 둬서 차량이 빠른 속도에서도 안전하게 회전하도록 설계합니다. 핵심 식은 W6에서 다시 나오지만, 곡률반경의 영향만 보면:</p>
+  $$ a_n = \frac{v^2}{\rho} $$
+  <p>예: 시속 100 km(=27.8 m/s)로 곡률반경 200 m 곡선을 돌면 옆 가속도 $a_n = 27.8^2/200 \approx 3.86$ m/s² ≈ 0.39 g. 일반 차량의 마찰 한계가 0.7~0.9 g이므로 마진 안. 같은 속도에 곡률반경 50 m면 $\approx 1.55$ g — 마찰만으로는 못 돌고 길에서 미끄러짐.</p>
+
+  <table>
+    <thead><tr><th>도로 종류</th><th>일반적 곡률반경 $\rho$</th><th>설계 속도</th></tr></thead>
+    <tbody>
+      <tr><td>고속도로 본선</td><td>≥ 700 m</td><td>100~120 km/h</td></tr>
+      <tr><td>지방 일반도로</td><td>200~400 m</td><td>60~80 km/h</td></tr>
+      <tr><td>도시 도로</td><td>50~150 m</td><td>40~60 km/h</td></tr>
+      <tr><td>주차장 진출입</td><td>5~10 m</td><td>~10 km/h</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3-2-1. 응용 — 슈퍼엘리베이션(편경사) 정량 분석</h2>
+  <p>곡선 도로의 노면을 안쪽으로 기울이면(편경사 각도 $\alpha$), 차에 작용하는 수직항력의 일부가 곡률중심 방향이 되어 마찰 없이도 코너링이 가능. 마찰 없이 정확히 도는 설계 속도:</p>
+  $$ v_{\text{설계}} = \sqrt{g \rho \tan\alpha} $$
+  <p>예: 곡률반경 200 m, 편경사 6° → $v \approx \sqrt{9.81 \cdot 200 \cdot 0.105} \approx 14.4$ m/s ≈ 52 km/h. 이 속도에서는 마찰 없이도 노면이 자동으로 차량을 곡선 안으로 밀어줌. 더 빠르거나 느리면 마찰이 보충.</p>
+  <p>벨로드롬 사이클링 트랙은 편경사가 40~50°까지 — 자전거가 90 km/h를 넘는 속도로 곡선을 도는 게 가능한 이유.</p>
+
+  <h3>3-1-1. 곡률 $\kappa$와 곡률반경 $\rho$ — 표기와 부호 약속</h3>
+  <p>$\kappa = 1/\rho$를 곡률(curvature)이라 부릅니다. 직선이면 $\kappa = 0$, 원이면 $\kappa = 1/R$. 곡률은 부호를 가질 수 있어요(좌회전이면 +, 우회전이면 -와 같이) — 자율주행에서 차량의 핸들 각도와 곡률은 거의 비례 관계: $\kappa \approx \delta/L$ ($\delta$는 핸들로 결정되는 앞바퀴 각, $L$은 휠베이스).</p>
+  <p>$\kappa$를 쓰는 게 자연스러운 이유: 직선에서 곡선으로 점진적으로 들어가는 클로소이드는 $\kappa(s) = c\cdot s$로 명확. $\rho$를 쓰면 $\rho(s) = 1/(cs)$로 0에서 발산하는 형태가 되어 다루기 어려움.</p>
+
+  <h3>3-2-0. 슈퍼엘리베이션 + 마찰의 결합 — 실제 도로 한계 속도</h3>
+  <p>곡선 도로가 슈퍼엘리베이션 각 $\beta$를 가지고 마찰계수 $\mu$도 있을 때, 마찰 한계까지 활용하면 더 빠른 속도가 가능. 식을 도출해 보면(W6에서 자세히):</p>
+  $$ v_{\max} = \sqrt{g\rho\,\frac{\sin\beta + \mu\cos\beta}{\cos\beta - \mu\sin\beta}} = \sqrt{g\rho\,\frac{\tan\beta + \mu}{1 - \mu\tan\beta}} $$
+  <p>이 식의 두 가지 한계:</p>
+  <ul>
+    <li>$\mu = 0$ (얼음판): $v_{\max} = \sqrt{g\rho\tan\beta}$ — 슈퍼엘리베이션만으로 결정. 안 그러면 곡선 안쪽으로 미끄러짐.</li>
+    <li>$\beta = 0$ (평지): $v_{\max} = \sqrt{\mu g\rho}$ — 마찰만으로 결정.</li>
+    <li>일반: 두 효과 더해져 한계가 높아짐.</li>
+  </ul>
+  <p>예: $\rho = 200$ m, $\beta = 8°$, $\mu = 0.6$: $v_{\max} = \sqrt{9.81 \cdot 200 \cdot (0.141+0.6)/(1 - 0.6\cdot 0.141)} = \sqrt{1962 \cdot 0.741/0.915} = \sqrt{1589} \approx 39.9$ m/s ≈ 144 km/h. 같은 곡선이 평지면 $v_{\max} \approx 34.3$ m/s ≈ 124 km/h. 슈퍼엘리베이션의 효과는 약 16% 한계 속도 상승.</p>
+
+  <h3>3-2-1. 클로소이드(완화곡선) — 직선과 원호 사이</h3>
+  <p>도로·철도 설계에서 직선 구간 다음에 갑자기 원호로 들어가면 운전자가 핸들을 순간적으로 꺾어야 해서 위험합니다(곡률이 0에서 $1/R$로 점프). 그래서 그 사이에 곡률이 호 길이에 비례해 점진적으로 증가하는 <strong>클로소이드</strong>(또는 오일러 나선)를 끼워 넣습니다.</p>
+  $$ \rho \cdot s = A^2 \quad(\text{상수}) $$
+  <p>이러면 운전자가 일정한 각속도로 핸들을 천천히 돌리며 자연스럽게 원호로 진입할 수 있어요. 고속철도와 고속도로 곡선 진입부의 표준 설계입니다. KTX 노선 곡선 진입 구간이 모두 클로소이드로 되어 있습니다.</p>
+
+  <h3>3-2-2. 슈퍼엘리베이션 — 외측을 들어 올리는 이유</h3>
+  <p>곡선의 바깥쪽을 각도 $\beta$만큼 들어 올리면, 수직항력의 수평 성분 $N\sin\beta$가 구심력의 일부를 담당. 마찰에 의존하지 않고도 안정적인 회전이 가능합니다. 마찰 없는 이상적 슈퍼엘리베이션의 식:</p>
+  $$ \tan\beta = \frac{v^2}{g\rho} $$
+  <p>설계 속도 100 km/h(=27.8 m/s), 곡률반경 500 m면 $\tan\beta = 27.8^2/(9.81 \cdot 500) = 0.158 \Rightarrow \beta \approx 9°$. 실제로는 마찰 여유를 두기 위해 더 작게 설계 (보통 6° 이내).</p>
+
+  <h2>3-2-3. 응용 — 컨베이어 벨트와 곡선 가이드</h2>
+  <p>공장 컨베이어 벨트가 직선 → 곡선 → 직선으로 진행하면 곡선 구간에서 물체에 법선 가속도 $v^2/\rho$가 작용. 만약 마찰만으로 물체가 벨트와 함께 회전해야 한다면, $\mu g \ge v^2/\rho$여야 미끄러지지 않습니다. 가벼운 패키지가 빠르게 흐르는 공정에서 곡선 반경을 충분히 크게 잡거나 외측 가이드를 설치하는 이유. 너무 빠르거나 곡률이 너무 작으면 패키지가 곡률중심 바깥쪽으로 던져져 라인을 이탈합니다.</p>
+
+  <h3>3-2-4. 응용 — 수직순환 운동(롤러코스터 루프)</h3>
+  <p>원형 루프 안에서 차량이 어디서 가장 어려운가? 가장 위(꼭대기)입니다. 그곳에서는 중력이 곡률중심을 향하니, 줄·레일이 추가로 차량을 안쪽으로 당기는 힘이 작을수록 좋음. 최소 속도 조건은 레일이 차량을 미는 힘 $N$이 0이 되는 시점:</p>
+  $$ mg = m v_{\min}^2/r \;\Rightarrow\; v_{\min} = \sqrt{gr} $$
+  <p>그 이하의 속도면 차량이 레일에서 떨어집니다. 반지름 8 m 루프면 $v_{\min} = \sqrt{9.81 \cdot 8} \approx 8.86$ m/s ≈ 32 km/h가 최소 통과 속도. 실제로는 안전 마진을 두고 1.5~2배 속도로 통과.</p>
+  <p>가장 아래(골짜기)에서는 정반대 — 중력은 곡률중심 반대 방향이라 레일이 차량을 더 강하게 위로 받쳐 올려야 함. 그곳에서 승객이 받는 수직항력은 $N = m(g + v^2/r) = m(g + a_n)$. 4g까지 받는 코스도 있음 — 일시적으로 체중이 4배가 된 듯한 느낌.</p>
+
+  <h2>3-3. 응용 — 인공위성 궤도(극좌표)</h2>
+  <p>지구 둘레를 도는 위성은 극좌표가 자연스러움. 원궤도($r$ 일정)에서 중력이 구심력 역할:</p>
+  $$ \frac{GMm}{r^2} = m \frac{v^2}{r} \Rightarrow v = \sqrt{\frac{GM}{r}} $$
+  <p>저궤도 위성($r \approx R_E + 400$ km)의 궤도 속도 ≈ 7.7 km/s, 주기 ≈ 90분. 정지궤도($r \approx 42{,}000$ km, $T = 24$ h) 위성은 적도 위 한 지점 위에 떠 있는 듯 보입니다 — 통신·방송에 핵심 인프라.</p>
+
+  <h2>3-4. 응용 — 로봇 팔의 끝단 운동학</h2>
+  <p>로봇 매니퓰레이터의 첫 관절(어깨)이 각도 $\theta_1$, 팔 길이가 $L$이면 끝단의 위치는 $r = L$, $\theta = \theta_1$의 극좌표. 끝단 속도/가속도가 극좌표 식으로 직접 나옴.</p>
+  $$ \mathbf{v}_{\text{끝단}} = L\dot\theta_1\,\hat e_\theta, \qquad \mathbf{a}_{\text{끝단}} = -L\dot\theta_1^2\,\hat e_r + L\ddot\theta_1\,\hat e_\theta $$
+  <p>이 식은 다관절 로봇의 자코비안(Jacobian) 행렬 도출에 그대로 쓰임 — 로봇공학특론 W2의 출발점.</p>
+
+  <h2>3-5. 응용 — 회전 좌표계와 코리올리(추가)</h2>
+  <p>지구 자전(반시계 방향, 위에서 봤을 때) 위에서 북반구로 발사된 미사일/포탄은 동쪽으로 쏠리는 듯한 효과. 정확히 코리올리 항 $-2\boldsymbol{\omega}_E \times \mathbf{v}_{\text{rel}}$의 결과. 장거리 사격(예: 1차 대전 파리 거포는 사거리 130 km)에서 무시 못할 효과 — 수 km 빗나갈 수 있음.</p>
+  <p>지구의 자전 각속도는 $\omega_E = 2\pi/(24 \cdot 3600) \approx 7.27 \times 10^{-5}$ rad/s. 위도 35°에서 기상 시스템의 코리올리 효과가 태풍 회전 방향(북반구 반시계)을 결정.</p>
+
+  <h3>3-3-0. 위성 궤도 종류 비교</h3>
+  <table>
+    <thead><tr><th>이름</th><th>고도 $h$</th><th>속도 $v$</th><th>주기 $T$</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td>저궤도(LEO)</td><td>200~2000 km</td><td>≈ 7.5~7.8 km/s</td><td>≈ 90~120 분</td><td>국제우주정거장, 광학정찰</td></tr>
+      <tr><td>중궤도(MEO)</td><td>2000~35786 km</td><td>≈ 4~7 km/s</td><td>2~24 시간</td><td>GPS, 갈릴레오</td></tr>
+      <tr><td>정지궤도(GEO)</td><td>35786 km</td><td>3.07 km/s</td><td>23.93 시간</td><td>방송·통신</td></tr>
+      <tr><td>고타원(HEO)</td><td>가변(타원)</td><td>가변</td><td>가변</td><td>몰니야(러시아 통신)</td></tr>
+      <tr><td>달 궤도</td><td>$\sim 380000$ km</td><td>≈ 1 km/s</td><td>27.3 일</td><td>달 탐사</td></tr>
+    </tbody>
+  </table>
+  <p>각 궤도는 사용 목적에 따라 다른 trade-off — 저궤도는 통신 지연이 짧고 송신 출력이 작아도 되지만 전 지구를 커버하려면 위성이 많이 필요(스타링크 5000+ 위성). 정지궤도는 위성 한 대로 큰 면적 커버하지만 거리가 멀어 지연·출력 큼.</p>
+
+  <h3>3-3-1. 케플러의 제2법칙 — 면적속도 일정</h3>
+  <p>중심력(중력) 운동에서는 $r\ddot\theta + 2\dot r\dot\theta$ 항이 0이 됨을 보일 수 있어요. 이를 변형하면</p>
+  $$ \frac{1}{r}\frac{d}{dt}(r^2\dot\theta) = 0 \;\Rightarrow\; r^2\dot\theta = \text{상수} $$
+  <p>이것이 각운동량 보존(W11에서 자세히)이고, 위성이 가까울 때 빨리, 멀 때 천천히 움직인다는 케플러 제2법칙입니다. 단위 시간 동안 위성이 그리는 부채꼴 면적 $dA = \tfrac{1}{2} r^2 d\theta$가 일정.</p>
+
+  <div class="demo">
+    <h4>🎮 데모 3: 자동차 곡선 진입 — 한계 속도 시뮬레이션</h4>
+    <p>차량이 직선 → 곡선 → 직선으로 트랙을 따라 달립니다. 슬라이더로 진입 속도와 곡률반경을 바꿔보세요. <strong>$a_n$이 마찰 한계 $\mu g$를 넘으면 차량이 곡선 바깥쪽으로 미끄러져 나갑니다</strong>(빨간색으로 표시). 안전한 진입 한계 $v_{max} = \sqrt{\mu g \rho}$를 직관적으로 확인할 수 있어요.</p>
+    <canvas id="d4cornC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>진입 속도 v (m/s) <span class="val" id="d4VV">15</span><input type="range" id="d4V" min="5" max="35" step="0.5" value="15"></label>
+      <label>곡률반경 ρ (m) <span class="val" id="d4RV">40</span><input type="range" id="d4R" min="15" max="100" step="2" value="40"></label>
+      <label>마찰계수 μ <span class="val" id="d4MV">0.7</span><input type="range" id="d4M" min="0.2" max="1.2" step="0.05" value="0.7"></label>
+      <button id="d4Reset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d4cornC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['d4V','d4R','d4M'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let s=0,slipped=false,sx=0,sy=0,svx=0,svy=0;
+    sl('d4Reset').onclick=()=>{s=0;slipped=false;};
+    ks.forEach(k=>sl(k).addEventListener('input',()=>{s=0;slipped=false;}));
+    function loop(){
+      const v=+sl('d4V').value,R=+sl('d4R').value,mu=+sl('d4M').value;
+      const g=9.81;
+      const vMax=Math.sqrt(mu*g*R);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // track: straight (left) → arc (top) → straight (right)
+      // arc center at (320, 180), radius R*scale
+      const scale=2;
+      const Rd=R*scale*0.8;
+      const cx=320,cy=180+Rd;
+      // road
+      x.strokeStyle='#999';x.lineWidth=Math.min(20,Rd*0.4);
+      x.beginPath();
+      x.moveTo(40,cy);x.lineTo(cx-Rd,cy);
+      x.stroke();
+      x.beginPath();x.arc(cx,cy,Rd,Math.PI,0,false);x.stroke();
+      x.beginPath();x.moveTo(cx+Rd,cy);x.lineTo(600,cy);x.stroke();
+      // centerline
+      x.strokeStyle='#fff';x.lineWidth=1.5;x.setLineDash([8,8]);
+      x.beginPath();x.moveTo(40,cy);x.lineTo(cx-Rd,cy);
+      x.stroke();
+      x.beginPath();x.arc(cx,cy,Rd,Math.PI,0,false);x.stroke();
+      x.beginPath();x.moveTo(cx+Rd,cy);x.lineTo(600,cy);x.stroke();
+      x.setLineDash([]);
+      // car position
+      const totalLen=(cx-Rd-40)+Math.PI*Rd+(600-cx-Rd);
+      let dist=s%totalLen;
+      let px,py,ang;
+      if(!slipped){
+        s+=v*0.5;
+        if(dist<cx-Rd-40){
+          px=40+dist;py=cy;ang=0;
+        } else if(dist<cx-Rd-40+Math.PI*Rd){
+          const arcDist=dist-(cx-Rd-40);
+          const th=Math.PI - arcDist/Rd;
+          px=cx+Rd*Math.cos(th);py=cy+Rd*Math.sin(th);
+          ang=th-Math.PI/2;
+          // check slipping at arc entry
+          if(v>vMax){
+            slipped=true;
+            sx=px;sy=py;
+            // tangent direction at entry
+            svx=-Math.sin(th)*v*4;
+            svy=Math.cos(th)*v*4;
+          }
+        } else {
+          const d=dist-(cx-Rd-40)-Math.PI*Rd;
+          px=cx+Rd+d;py=cy;ang=0;
+        }
+      } else {
+        sx+=svx*0.025;sy+=svy*0.025;
+        px=sx;py=sy;ang=Math.atan2(svy,svx);
+        if(px>700||py>500||py<-50||px<-50){slipped=false;s=0;}
+      }
+      // draw car
+      x.save();x.translate(px,py);x.rotate(ang);
+      x.fillStyle=slipped?'#c62828':'#0b5fff';
+      x.fillRect(-12,-7,24,14);
+      x.strokeStyle='#333';x.strokeRect(-12,-7,24,14);
+      x.restore();
+      // info panel
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      const an=v*v/R;
+      x.fillText('진입 속도 v = '+v+' m/s ('+Math.round(v*3.6)+' km/h)',20,25);
+      x.fillText('곡률반경 ρ = '+R+' m,  μ = '+mu,20,43);
+      x.fillText('a_n = v²/ρ = '+an.toFixed(2)+' m/s²,  마찰 한계 μg = '+(mu*g).toFixed(2)+' m/s²',20,61);
+      if(v>vMax){
+        x.fillStyle='#c62828';x.fillText('⚠ v > v_max = √(μgρ) ≈ '+vMax.toFixed(2)+' m/s — 곡선에서 미끄러짐!',20,79);
+      } else {
+        x.fillStyle='#2e7d32';x.fillText('✓ v_max ≈ '+vMax.toFixed(2)+' m/s 이내 — 안전',20,79);
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h3>3-3-1-1. 케플러 제3법칙 — 주기와 거리</h3>
+  <p>원궤도에서 $T = 2\pi r/v = 2\pi r/\sqrt{GM/r} = 2\pi\sqrt{r^3/GM}$. 즉 $T^2 \propto r^3$. 이걸 일반 타원 궤도의 반장축 $a$로 일반화하면 $T^2 = 4\pi^2 a^3/GM$ — 케플러 제3법칙.</p>
+  <p>지구의 경우 $T = 1$ y, $a = 1$ AU (1.496×10¹¹ m). 화성의 $a = 1.524$ AU → $T_{\text{화성}} = 1.524^{3/2} = 1.881$ y ≈ 687 일. 이렇게 거리 하나로 주기를 즉시 예측.</p>
+
+  <h3>3-3-2. 응용 — 행성 운동(타원 궤도)</h3>
+  <p>일반 타원 궤도는 $r(\theta) = p/(1 + e\cos\theta)$ ($p$는 반잠재반경, $e$는 이심률). $e = 0$이면 원, $0 < e < 1$이면 타원, $e = 1$이면 포물선, $e > 1$이면 쌍곡선. 각운동량 보존 $r^2\dot\theta = h$ (상수)와 에너지 보존을 함께 쓰면 행성의 궤도 방정식이 얻어집니다(W11 자세히).</p>
+  <p>이심률 $e$를 가지는 타원 궤도에서 근지점 거리 $r_p = p/(1+e)$, 원지점 거리 $r_a = p/(1-e)$. 두 거리의 비 $r_a/r_p = (1+e)/(1-e)$. 지구는 $e \approx 0.017$로 거의 원에 가깝고, 핼리 혜성은 $e \approx 0.97$로 매우 길쭉.</p>
+
+  <h2>3-4. 응용 — 회전 그네와 원심력</h2>
+  <p>놀이공원의 회전 그네: 중심 기둥에 줄이 달려 있고 그 끝에 의자가 매달려 있습니다. 회전 시 줄이 수직선과 각도 $\theta$를 이루며 비스듬히 펴집니다. 의자에 작용하는 힘: 중력 $mg$ ↓, 줄의 장력 $T$ (줄을 따라 안쪽 위). 등속 원운동이라 가속도는 수평 안쪽 방향뿐. 반지름은 $r = L\sin\theta$ ($L$ = 줄 길이).</p>
+  <ul>
+    <li>수직: $T\cos\theta = mg$</li>
+    <li>수평(구심): $T\sin\theta = mv^2/r = m\omega^2 r = m\omega^2 L\sin\theta$</li>
+  </ul>
+  <p>$\sin\theta$ 약분해서 $T = m\omega^2 L$. 또 첫 식과 결합: $\cos\theta = g/(\omega^2 L)$. 즉 회전 속도가 빨라질수록 그네가 더 옆으로 펴짐(줄이 거의 수평). 천천히 돌면 $\cos\theta \to 1$, $\theta \to 0$ — 거의 수직으로 늘어짐. 의자가 펴지는 각도만 보고도 회전 속도를 추정할 수 있습니다.</p>
+
+  <h2>4. 어느 좌표계를 언제 쓰나</h2>
+  <table>
+    <thead><tr><th>좌표계</th><th>잘 맞는 상황</th><th>예</th></tr></thead>
+    <tbody>
+      <tr><td>직각 (x,y)</td><td>일정한 방향의 힘, 두 축이 독립</td><td>발사체, 직선 트랙</td></tr>
+      <tr><td>접선·법선 (n,t)</td><td>경로가 곡선이고 진행/휨을 분리하고 싶을 때</td><td>레이싱 트랙, 롤러코스터</td></tr>
+      <tr><td>극 (r,θ)</td><td>중심점이 있는 운동, 회전</td><td>행성 궤도, 회전 그네</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4-1. 좌표계 변환 — 같은 운동, 다른 식</h3>
+  <p>같은 등속 원운동을 세 좌표계로 적어보면:</p>
+  <ul>
+    <li><strong>직각</strong>: $x = R\cos(\omega t)$, $y = R\sin(\omega t)$. $\ddot x = -\omega^2 x$, $\ddot y = -\omega^2 y$ — 두 식 모두 사인꼴, 결합돼 있음.</li>
+    <li><strong>n-t</strong>: $a_t = 0$, $a_n = R\omega^2$. 한 식, 깔끔.</li>
+    <li><strong>극</strong>: $\ddot r - r\dot\theta^2 = -R\omega^2$, $r\ddot\theta + 2\dot r\dot\theta = 0$. 두 식이지만 $\dot r = 0$, $\ddot r = 0$, $\ddot\theta = 0$이 자명.</li>
+  </ul>
+  <p>같은 물리적 운동이지만 좌표계 선택에 따라 식의 모양이 천차만별이죠. 좌표계 선택의 핵심은 "<em>어느 변수가 자명하게 0이거나 일정한가?</em>"를 미리 보고 그걸 살리는 좌표를 고르는 것입니다.</p>
+
+  <h2>4-2. 좌표계 변환 — 직각 ↔ 극</h2>
+  <p>같은 위치를 두 좌표계로 표현했을 때의 관계.</p>
+  $$ x = r\cos\theta,\quad y = r\sin\theta $$
+  $$ r = \sqrt{x^2 + y^2},\quad \theta = \arctan(y/x) $$
+  <p>속도와 가속도도 변환 가능하지만, 단위 벡터의 회전 때문에 직접 미분으로는 깔끔하지 않습니다. 보통은 두 좌표계 식을 별개로 적은 다음 필요한 결과만 변환 — "좌표계는 답에 영향을 주지 않는다, 식의 모양에만 영향"이라는 사실을 기억.</p>
+
+  <h2>4-3. n-t와 극의 관계 — 같은 운동의 다른 분해</h2>
+  <p>일반 곡선 운동에서 n-t와 극의 두 분해는 다음 관계.</p>
+  <ul>
+    <li>속도 크기 $v = |\mathbf{v}| = \sqrt{\dot r^2 + (r\dot\theta)^2}$ (n-t에서는 한 항이지만 극에서는 두 성분)</li>
+    <li>접선 방향: $\hat e_t$가 속도 방향. 속도가 $\dot r\,\hat e_r + r\dot\theta\,\hat e_\theta$니까, 접선 방향은 두 단위벡터의 선형결합.</li>
+    <li>접선과 반지름이 이루는 각 $\psi$: $\tan\psi = r\dot\theta/\dot r$. 이 각이 90°면 원운동(반지름 일정), 0°면 직선 통과.</li>
+  </ul>
+
+  <h2>5. 풀이 예제 — n-t로 접근</h2>
+  <div class="note">
+    <strong>예제 1</strong> — 자동차가 $\rho = 80$ m 곡선 도로에서 출발했을 때 속도가 8 m/s였고, 일정한 접선가속도 $a_t = 2$ m/s²로 가속한다. 5초 후의 (a) 속도 (b) 접선가속도 (c) 법선가속도 (d) 합 가속도 크기를 구하라.
+    <br><br>
+    <strong>풀이</strong>
+    <br>(a) $v = v_0 + a_t t = 8 + 2(5) = \mathbf{18\text{ m/s}}$
+    <br>(b) $a_t = \mathbf{2\text{ m/s}^2}$ (변하지 않음 — 가정)
+    <br>(c) $a_n = v^2/\rho = 18^2/80 = \mathbf{4.05\text{ m/s}^2}$
+    <br>(d) $|a| = \sqrt{a_t^2 + a_n^2} = \sqrt{4 + 16.4} = \sqrt{20.4} \approx \mathbf{4.52\text{ m/s}^2}$
+  </div>
+
+  <div class="note">
+    <strong>예제 2 — 우주 비행체의 재진입</strong>: 위성이 $r = 7000$ km 원궤도에서 $v = 7.55$ km/s로 운동 중. 어떤 한 시점에 약간의 후진 추력으로 $\Delta v = -100$ m/s를 가했다. 직후의 (a) 속도 크기 (b) 가속도(중력만, $g = GM/r^2$, $GM = 3.986\times 10^{14}$).
+    <br><br>
+    <strong>풀이</strong>
+    <br>(a) 새로운 속도 $v' = 7550 - 100 = 7450$ m/s.
+    <br>(b) 추력은 순간적이고 일정한 중력만 있으니 가속도는 중심을 향한 중력. $g = 3.986\times 10^{14}/(7\times 10^6)^2 = 8.13$ m/s². 이게 한 항이고, 새로 만들어진 운동의 곡률중심은 더 이상 지구 중심이 아닐 수도 있지만, 이 순간에는 가속도 $\mathbf{a} = -8.13\,\hat e_r$. n-t 분해: 속도가 줄었으니 새로운 궤도는 타원이 되고, 접선과 반지름이 이루는 각이 90°에서 약간 벗어남. 자세한 분석은 W11에서 다시.
+    <br><br>
+    <strong>관찰</strong> — 위성에서의 가속도는 거의 모든 경우 중력만으로 결정. n-t 분해보다 극좌표가 자연스러우니 W11 천체역학에서는 극을 메인으로 사용.
+  </div>
+
+  <div class="note">
+    <strong>예제 3 — 트럭이 산길 내려오기</strong>: 산악 도로 곡률반경 60 m 곡선을 트럭(질량 8000 kg)이 일정 속도 12 m/s로 내려옴. 도로 경사 5° 내리막. (a) 트럭이 받는 법선가속도 (b) 옆 가드레일이 받는 수평력 (마찰만으로는 부족하다고 가정).
+    <br><br>
+    <strong>풀이</strong>
+    <br>(a) $a_n = v^2/\rho = 144/60 = 2.4$ m/s². 곡률중심을 향함(거의 수평).
+    <br>(b) 마찰 무시하면 가드레일이 모든 구심력 제공. $F_{\text{rail}} = m a_n = 8000 \cdot 2.4 = \mathbf{19200\text{ N}}$ (약 2 톤중). 실제 가드레일 설계 기준치 (10~30톤중)보다는 작지만, 큰 트럭이 빠르게 들어오면 한계 초과 가능.
+    <br><br>
+    <strong>점검</strong> — 만약 노면 마찰계수 $\mu = 0.5$가 있다면 마찰력은 $\mu m g \cos 5° = 0.5 \cdot 8000 \cdot 9.81 \cdot 0.996 \approx 39000$ N로 충분. 마찰만으로 곡선 통과 가능. 가드레일은 비상시 백업.
+  </div>
+
+  <div class="note">
+    <strong>예제 — 롤러코스터 골짜기</strong>: 롤러코스터가 가장 낮은 골짜기 점을 통과할 때 속도 25 m/s, 그 점의 곡률반경 30 m. 70 kg 승객이 좌석에서 받는 수직항력은?
+    <br><br>
+    <strong>풀이</strong> — 골짜기 점에서 곡률중심은 위쪽. 좌석이 아래를 잡아당기는 게 아니라 위로 미는 수직항력 $N$. FBD: 위로 $N$, 아래로 $mg$. n 방향(위쪽이 양): $N - mg = m v^2/\rho$.
+    $$ N = m(g + v^2/\rho) = 70(9.81 + 625/30) = 70(9.81 + 20.83) = 70 \cdot 30.64 \approx \mathbf{2145\text{ N}} $$
+    체중의 약 3.1배. 이게 골짜기에서 "엉덩이가 무거워지는" 느낌. 롤러코스터 좌석·지지 구조는 이만큼의 힘을 견디도록 설계됨.
+  </div>
+
+  <div class="note">
+    <strong>예제 — 자동차 곡선 진입(접선 + 법선 가속도 동시)</strong>: 차가 직선 도로에서 30 m/s로 달리다 곡률반경 80 m 곡선에 들어선다. 운전자가 동시에 일정 비율로 감속해 곡선의 끝에서 20 m/s가 되도록 한다. 곡선의 호 길이는 60 m. 곡선 진입 직후의 (a) 접선가속도 (b) 법선가속도 (c) 합 가속도 크기를 구하라.
+    <br><br>
+    <strong>풀이</strong>
+    <br>(a) 일정 감속: $v\,dv/ds = a_t$. $\int_0^{60} a_t\,ds = \tfrac{1}{2}(20^2 - 30^2) = -250 \Rightarrow a_t \cdot 60 = -250 \Rightarrow a_t = -\mathbf{4.17\text{ m/s}^2}$.
+    <br>(b) 진입 직후 $v = 30$ m/s, $a_n = 30^2/80 = \mathbf{11.25\text{ m/s}^2}$.
+    <br>(c) $|\mathbf{a}| = \sqrt{4.17^2 + 11.25^2} = \sqrt{17.4 + 126.6} \approx \mathbf{12.0\text{ m/s}^2}$ ≈ 1.22 g.
+    <br><br>
+    <strong>관찰</strong> — 한 사람이 옆으로 1.15g, 뒤로 0.42g를 동시에 받음. 곡선 끝에서는 $v=20$이라 $a_n = 5$ m/s²로 줄어듦. $a_n$ 변화가 더 큼.
+  </div>
+
+  <h2>5-1. 풀이 예제 — 극좌표로 접근</h2>
+  <div class="note">
+    <strong>예제 — 회전판 위 곤충</strong>: 반지름 일정 $r = 0.4$ m 위치에 곤충이 회전판에 붙어 있다. 회전판이 정지에서 일정 각가속도 $\alpha = 2$ rad/s²로 돌아가기 시작한다. $t = 3$ s에서의 (a) 곤충의 속도 (b) 가속도의 두 성분 (c) 가속도 크기.
+    <br><br>
+    <strong>풀이</strong> ($\dot r = 0$, $\ddot r = 0$이므로 4항 중 두 항만 살아 있음)
+    <br>(a) $\dot\theta = \alpha t = 6$ rad/s. $v = r\dot\theta = 0.4 \cdot 6 = \mathbf{2.4\text{ m/s}}$ (접선 방향).
+    <br>(b) 반지름 방향: $a_r = -r\dot\theta^2 = -0.4 \cdot 36 = \mathbf{-14.4\text{ m/s}^2}$ (안쪽). 접선 방향: $a_\theta = r\ddot\theta = 0.4 \cdot 2 = \mathbf{0.8\text{ m/s}^2}$.
+    <br>(c) $|\mathbf{a}| = \sqrt{14.4^2 + 0.8^2} \approx \mathbf{14.4\text{ m/s}^2}$. 거의 모든 가속도가 구심 성분 — 빠르게 회전하는 시스템의 전형적 양상.
+    <br><br>
+    <strong>결과 해석</strong> — 곤충이 회전판에 붙어 있으려면 마찰력이 14.4 m/s² 가속도를 제공해야. $\mu m g \ge m \cdot 14.4 \Rightarrow \mu \ge 14.4/9.81 \approx 1.47$. 일반 마찰계수(<1)로는 부족 → 곤충은 곧 미끄러지기 시작.
+  </div>
+
+  <div class="note">
+    <strong>예제 — 코리올리 항이 살아 있는 경우</strong>: 회전 원판($\dot\theta = 2$ rad/s, 일정)에 사람이 중심에서 바깥으로 일정 속도 $\dot r = 1$ m/s로 걷는다. $r = 0.5$ m 지점에서 가속도의 두 성분?
+    <br><br>
+    <strong>풀이</strong>
+    <br>$a_r = \ddot r - r\dot\theta^2 = 0 - 0.5 \cdot 4 = \mathbf{-2\text{ m/s}^2}$ (안쪽 — 구심)
+    <br>$a_\theta = r\ddot\theta + 2\dot r\dot\theta = 0 + 2 \cdot 1 \cdot 2 = \mathbf{4\text{ m/s}^2}$ (회전 방향)
+    <br><br>
+    <strong>관찰</strong> — 코리올리 항이 가장 큼. 사람의 발 밑이 옆으로 미끄러지는 듯한 느낌의 원천. 회전 좌표계에서 본 사람은 자기 의지로 직선으로 걷는 듯하지만, 관성계 관찰자에게는 휘어진 경로로 보임. 지구 자전(=회전 좌표계) 때문에 북반구의 발사체가 오른쪽으로 휘는 이유와 같은 메커니즘.
+  </div>
+
+  <h2>6. 연습 문제</h2>
+  <div class="note" style="background:#f5f8fc;border-color:#0b5fff">
+    <ol style="margin:6px 0 0 0">
+      <li>반지름 0.5 m 회전 그네에 사람이 매달려 일정 각속도 $\omega = 2$ rad/s로 회전 중. 사람의 속도 크기와 구심가속도는?</li>
+      <li>$y = x^2$ 포물선 위의 점 $(2, 4)$에서 곡률반경은? <em>(힌트: $y'(2) = 4$, $y''(2) = 2$)</em></li>
+      <li>고속도로 곡선 $\rho = 300$ m, 노면 마찰 $\mu = 0.7$. 미끄러지지 않고 안전하게 통과 가능한 최대 속도는? <em>(힌트: $\mu g = v^2/\rho$, 이 식은 W6에서 다시 나옴)</em></li>
+      <li>저궤도 위성($r = R_E + h$, $h = 600$ km)의 궤도 속도와 주기를 구하라. ($GM_E = 3.986 \times 10^{14}$, $R_E = 6371$ km)</li>
+      <li>회전 원판 위에서 한 사람이 반지름 방향으로 $\dot r = 0.5$ m/s로 걸어 나오는데, 원판은 $\dot\theta = 1$ rad/s로 회전 중이고 그 사람은 현재 $r = 1$ m. 코리올리 가속도 크기는?</li>
+      <li>롤러코스터 루프 꼭대기에서 차량의 속도가 8 m/s, 곡률반경 6 m. 승객이 받는 구심가속도는 몇 g?</li>
+    </ol>
+    <strong>약식 답</strong>: 1) $v=1$ m/s, $a_n=2$ m/s² &nbsp;&nbsp; 2) $\rho = (1+16)^{3/2}/2 = 17^{1.5}/2 \approx 35.0$ &nbsp;&nbsp; 3) $v_{max} = \sqrt{\mu g \rho} = \sqrt{0.7 \cdot 9.81 \cdot 300} \approx 45.4$ m/s ≈ 163 km/h &nbsp;&nbsp; 4) $r = 6971$ km, $v \approx 7.56$ km/s, $T \approx 5790$ s ≈ 96.5분 &nbsp;&nbsp; 5) $|2\dot r \dot\theta| = 1$ m/s² &nbsp;&nbsp; 6) $a_n = 64/6 \approx 10.7$ m/s² ≈ 1.09 g
+  </div>
+
+  <h2>7. 추가 연습 문제 — 종합</h2>
+  <div class="note" style="background:#f5f8fc;border-color:#0b5fff">
+    <ol style="margin:6px 0 0 0">
+      <li>자동차가 일정 속도 20 m/s로 사인꼴 진동(swerve) 도로 $y = 5\sin(0.1\,x)$를 따라 달린다. $x = 0$에서의 곡률반경과 그 점에서의 법선가속도는?</li>
+      <li>회전판이 $\theta(t) = 0.5\,t^2$ rad(각가속도 일정 1 rad/s²)로 가속 중. $r$이 일정 2 m인 점에서의 (a) 속도 크기 (b) 가속도의 두 성분 ($t = 3$ s).</li>
+      <li>인공위성이 타원 궤도. 근지점($r_p$)에서 속도가 $v_p$, 원지점($r_a$)에서 속도가 $v_a$일 때 두 속도의 비를 각운동량 보존만으로 유도하라.</li>
+      <li>차량이 곡률반경 60 m 곡선을 일정 속도로 돌고 있는데, 운전자가 갑자기 브레이크를 밟아 $a_t = -3$ m/s² 감속을 추가한다. 그 순간 속도가 18 m/s였다면 합 가속도의 크기와 방향각은?</li>
+      <li>회전 그네 줄 길이 4 m. 의자가 수직선과 30° 기울어 펴졌다. (a) 회전 각속도 (b) 줄의 장력 (질량 60 kg).</li>
+      <li>고속도로 곡선 설계 속도 120 km/h, 마찰계수 무시한 이상 슈퍼엘리베이션 6° 적용. 안전한 곡률반경 최솟값은?</li>
+      <li>$y = e^x$ 위의 $x = 0$ 점에서 곡률반경.</li>
+    </ol>
+    <strong>약식 답</strong>: 1) $y'=0.5\cos(0.1x)$|_0=0.5, $y''=-0.05\sin(0.1x)$|_0=0. → $\rho = \infty$, $a_n = 0$ (직선 통과 순간). $x=\pi/0.2$에서 정점 $\rho \approx 1/(5\cdot 0.01)=20$, $a_n = 400/20 = 20$ m/s². &nbsp;&nbsp; 2) $\dot\theta=t=3$, $\ddot\theta=1$. (a) $v=r\dot\theta=6$ m/s. (b) $a_t=r\ddot\theta=2$ m/s², $a_n=r\dot\theta^2=18$ m/s². &nbsp;&nbsp; 3) $r_p v_p = r_a v_a$ → $v_p/v_a = r_a/r_p$. &nbsp;&nbsp; 4) $a_n = 18^2/60 = 5.4$, $|\mathbf{a}|=\sqrt{9+29.16}\approx 6.18$ m/s², 각 = $\arctan(5.4/3) \approx 60.9°$ &nbsp;&nbsp; 5) (a) $\cos 30° = g/(\omega^2 L)$ → $\omega = \sqrt{g/(L\cos 30°)} = \sqrt{9.81/(4 \cdot 0.866)} \approx 1.68$ rad/s. (b) $T = mg/\cos 30° = 60(9.81)/0.866 \approx 680$ N. &nbsp;&nbsp; 6) $\tan 6° = 0.105$, $v=33.3$ m/s. $\rho = v^2/(g\tan\beta) = 1109/(9.81 \cdot 0.105) \approx 1077$ m. &nbsp;&nbsp; 7) $y'(0)=1$, $y''(0)=1$. $\rho = (1+1)^{3/2}/1 = 2\sqrt{2} \approx 2.83$.
+  </div>
+
+  <h2>8. 흔한 오개념·자주 틀리는 곳</h2>
+  <ul>
+    <li><strong>"등속 원운동에는 가속도가 없다"</strong> — 속도의 <em>크기</em>가 일정해도 <em>방향</em>이 바뀌면 가속도가 있습니다. 가속도는 벡터의 변화이지 크기의 변화만이 아닙니다.</li>
+    <li><strong>"$a_n$의 부호는 양수 or 음수에 따라 안쪽/바깥쪽"</strong> — 정의상 $a_n = v^2/\rho \ge 0$이고 항상 곡률중심 방향. "원심가속도"라는 표현은 회전 좌표계의 가짜 가속도이므로 관성계 식에서는 쓰지 않습니다.</li>
+    <li><strong>"법선 방향과 수직항력 방향이 같다"</strong> — 항상 그런 건 아닙니다. 평지 곡선에서는 수직항력이 위쪽(중력 반대), 법선은 수평(곡률중심) 방향이라 90° 다름. 슈퍼엘리베이션이나 루프에서는 다른 관계가 됩니다.</li>
+    <li><strong>"코리올리 항이 항상 있다"</strong> — $2\dot r\dot\theta$는 회전 + 반지름 변화 둘 다 있을 때만. 등속 원운동에서는 $\dot r = 0$이라 0.</li>
+    <li><strong>"$\rho$ 공식의 분자가 그냥 $1 + (y')^2$"</strong> — 거듭제곱 잊지 마세요: $\rho = [1+(y')^2]^{3/2}/|y''|$. $3/2$ 거듭제곱 안 붙이면 단위가 안 맞음.</li>
+    <li><strong>"극좌표 가속도에 4개 항이 다 살아있는 게 일반적"</strong> — 실제 문제 대부분은 한두 항만 살아있고 나머지는 0(원운동에서는 $\ddot r = \dot r = 0$, 직선 통과에서는 $\dot\theta = 0$). 제약 조건을 미리 살피면 식이 단순해짐.</li>
+  </ul>
+
+  <h2>8-1. 풀이 절차 정리 — 어떻게 시작하나</h2>
+  <ol>
+    <li><strong>경로의 형태를 그림으로 그린다</strong>. 곡선이면 곡률중심이 어느 쪽인지 표시. 좌표축을 그 점에 박아둠.</li>
+    <li><strong>주어진 정보를 분류</strong>. $v$, $a_t$, $a_n$, $\rho$, $\omega$, $r$ 중 무엇이 주어지고 무엇을 구해야 하나?</li>
+    <li><strong>$\rho$가 필요한가?</strong> 경로 함수가 주어졌다면 공식으로 계산. 원이라면 $\rho = R$ 자명. 다른 경우는 $\rho = v^2/a_n$로 역산도 가능.</li>
+    <li><strong>접선 가속도 정보를 챙긴다</strong>. "일정 가속" 또는 "$v(t)$ 함수" 또는 "정지 출발 후 시간"인지에 따라 식이 다름.</li>
+    <li><strong>합 가속도가 필요하면</strong> 두 성분 결합: $|\mathbf a| = \sqrt{a_t^2 + a_n^2}$, 방향각은 $\arctan(a_n/a_t)$.</li>
+  </ol>
+  <p>이 절차는 W6에서 힘이 들어와도(F=ma) 그대로 적용됩니다 — 가속도 분해를 같은 방식으로 한 다음 $\sum F_n = m a_n$, $\sum F_t = m a_t$를 적기만 하면 됨.</p>
+
+  <h2>8-2. 좌표계 선택 가이드 — Quick Reference</h2>
+  <table>
+    <thead><tr><th>문제 상황</th><th>추천 좌표계</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>발사체, 자유낙하</td><td>직각 (x,y)</td><td>중력이 일정한 한 방향. 두 축 독립.</td></tr>
+      <tr><td>원형 트랙·롤러코스터 루프</td><td>n-t</td><td>곡률반경이 일정하거나 명확함.</td></tr>
+      <tr><td>일반 곡선 위의 운동</td><td>n-t</td><td>$a_t$, $a_n$ 분리가 자연스러움.</td></tr>
+      <tr><td>중심을 향하는 끈·중력</td><td>극 (r,θ)</td><td>$r$ 방향 힘이 자연 변수.</td></tr>
+      <tr><td>레이더 추적, 회전 안테나</td><td>극 (r,θ)</td><td>관측자가 회전하며 거리 측정.</td></tr>
+      <tr><td>로봇 매니퓰레이터 끝점</td><td>관절 좌표 (W14에서)</td><td>조인트 각도가 자연 변수.</td></tr>
+      <tr><td>3D 회전, 자이로</td><td>구면 좌표 (r, θ, φ)</td><td>2자유도 회전 + 반경.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8-3. 자율주행과 n-t 좌표계</h2>
+  <p>자율주행차 제어에서는 차선의 중심선을 기준으로 한 "Frenet 좌표계(s-d 좌표)"를 표준으로 씁니다. $s$는 차선을 따라 진행한 거리(접선 방향), $d$는 차선 중심에서 옆으로 벗어난 거리(법선 방향). 이렇게 하면 "차선 추종"이 단순히 "$d$를 0으로 유지"하는 제어 문제로 환원됩니다. 또 곡률반경 $\rho(s)$를 미리 알면, 핸들 각 $\delta = \arctan(L/\rho)$ ($L$은 휠베이스)로 곡선을 따라가기. 이게 W4에서 배우는 n-t 좌표계의 직접 응용입니다 — 단순히 학술적 도구가 아니라 현대 산업에서 매일 쓰이는 도구.</p>
+
+  <h2>9. 한 페이지 요약</h2>
+  <table>
+    <thead><tr><th>구분</th><th>n-t</th><th>극(r,θ)</th></tr></thead>
+    <tbody>
+      <tr><td>속도</td><td>$\mathbf{v} = v\hat e_t$</td><td>$\mathbf{v} = \dot r\,\hat e_r + r\dot\theta\,\hat e_\theta$</td></tr>
+      <tr><td>가속도</td><td>$\mathbf{a} = \dot v\,\hat e_t + (v^2/\rho)\hat e_n$</td><td>$\mathbf{a} = (\ddot r - r\dot\theta^2)\hat e_r + (r\ddot\theta + 2\dot r\dot\theta)\hat e_\theta$</td></tr>
+      <tr><td>$\rho$</td><td>곡률반경(=접촉원 반경)</td><td>—</td></tr>
+      <tr><td>잘 맞는 상황</td><td>경로 형상이 주어짐</td><td>중심점에서의 거리·각이 자연 변수</td></tr>
+      <tr><td>등속 원운동에서</td><td>$a_t = 0$, $a_n = v^2/r$</td><td>$\mathbf{a} = -r\dot\theta^2\,\hat e_r$</td></tr>
+    </tbody>
+  </table>
+
+  <div class="demo">
+    <h4>🎮 데모 4: 곡률반경 시각화 — 함수 $y = f(x)$의 접촉원</h4>
+    <p>함수 $y = a x^2$ 형태의 포물선을 그리고, 슬라이더로 위치 $x_0$를 움직이면 그 점에서의 <strong>접촉원(곡률원)</strong>을 표시합니다. 정점에서 가장 작고, 멀어질수록 커지는 모습을 보세요.</p>
+    <canvas id="d4rhoC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>계수 a (곡률 강도) <span class="val" id="d4aV">0.05</span><input type="range" id="d4a" min="0.01" max="0.2" step="0.005" value="0.05"></label>
+      <label>위치 x₀ <span class="val" id="d4xV">0</span><input type="range" id="d4x" min="-15" max="15" step="0.2" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d4rhoC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['d4a','d4x'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['d4a','d4x'].forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const a=+sl('d4a').value,x0=+sl('d4x').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height-60,scale=18;
+      // axes
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(0,cy);x.lineTo(c.width,cy);x.moveTo(cx,0);x.lineTo(cx,c.height);x.stroke();
+      x.fillStyle='#888';x.font='11px sans-serif';
+      x.fillText('x',c.width-12,cy-4);x.fillText('y',cx+4,12);
+      // parabola
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let xx=-18;xx<=18;xx+=0.1){
+        const yy=a*xx*xx;
+        const px=cx+xx*scale,py=cy-yy*scale;
+        if(first){x.moveTo(px,py);first=false;}else x.lineTo(px,py);
+      }
+      x.stroke();
+      // selected point
+      const y0=a*x0*x0;
+      const px0=cx+x0*scale,py0=cy-y0*scale;
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px0,py0,6,0,Math.PI*2);x.fill();
+      // derivatives
+      const dy=2*a*x0,d2y=2*a;
+      const rho=Math.pow(1+dy*dy,1.5)/Math.abs(d2y);
+      // normal direction (rotate tangent by 90°)
+      const tlen=Math.sqrt(1+dy*dy);
+      const tx=1/tlen,ty=dy/tlen;
+      // normal: rotate by 90° counterclockwise (toward concave side, which is up for y=ax²)
+      const nx=-ty,ny=tx;
+      // center of curvature
+      const ccx=px0+nx*rho*scale,ccy=py0-ny*rho*scale;
+      // osculating circle
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=1.5;
+      x.beginPath();x.arc(ccx,ccy,rho*scale,0,Math.PI*2);x.stroke();
+      x.setLineDash([]);
+      // line from point to center
+      x.strokeStyle='#c62828';x.lineWidth=1;
+      x.beginPath();x.moveTo(px0,py0);x.lineTo(ccx,ccy);x.stroke();
+      // center marker
+      x.fillStyle='#c62828';x.beginPath();x.arc(ccx,ccy,3,0,Math.PI*2);x.fill();
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('y = '+a+'x²',20,25);
+      x.fillText('x₀ = '+x0+',  y₀ = '+y0.toFixed(2),20,43);
+      x.fillText('y\'(x₀) = '+dy.toFixed(3)+',  y\'\'(x₀) = '+d2y.toFixed(3),20,61);
+      x.fillText('ρ = (1+y\'²)^(3/2)/|y\'\'| = '+rho.toFixed(2),20,79);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>10. 부록 — 자주 쓰는 공식 모음</h2>
+  <h3>10-1. n-t 좌표계</h3>
+  <ul>
+    <li>$ds = v\,dt$ (호 길이 미분)</li>
+    <li>$a_t = dv/dt$ (시간 미분 형태)</li>
+    <li>$a_t = v\,dv/ds$ (변수 변환 후 — $s$만 알 때 쓰기 좋음)</li>
+    <li>$v\,dv = a_t\,ds$ → 적분: $\tfrac{1}{2}(v^2 - v_0^2) = \int a_t\,ds$ (일-에너지 정리의 운동학적 형태)</li>
+    <li>$a_n = v^2/\rho$, 항상 곡률중심 방향, 항상 $\ge 0$</li>
+  </ul>
+
+  <h3>10-2. 극좌표</h3>
+  <ul>
+    <li>위치: $\mathbf{r} = r\,\hat e_r$ (단순!)</li>
+    <li>속도: $\mathbf{v} = \dot r\,\hat e_r + r\dot\theta\,\hat e_\theta$</li>
+    <li>가속도: $\mathbf{a} = (\ddot r - r\dot\theta^2)\hat e_r + (r\ddot\theta + 2\dot r\dot\theta)\hat e_\theta$</li>
+    <li>속도 크기: $|\mathbf{v}| = \sqrt{\dot r^2 + (r\dot\theta)^2}$</li>
+    <li>$\hat e_r$, $\hat e_\theta$ 미분: $\dot{\hat e}_r = \dot\theta\,\hat e_\theta$, $\dot{\hat e}_\theta = -\dot\theta\,\hat e_r$</li>
+  </ul>
+
+  <h3>10-3. 곡률반경</h3>
+  <ul>
+    <li>경로 $y = f(x)$: $\rho = [1 + (y')^2]^{3/2}/|y''|$</li>
+    <li>매개변수 $\mathbf{r}(t) = (x(t), y(t))$: $\rho = (\dot x^2 + \dot y^2)^{3/2}/|\dot x \ddot y - \dot y \ddot x|$</li>
+    <li>극좌표 $r = r(\theta)$: $\rho = (r^2 + r'^2)^{3/2}/|r^2 + 2r'^2 - r r''|$</li>
+    <li>3D 일반 곡선: $\rho = |\mathbf{v}|^3/|\mathbf{v}\times\mathbf{a}|$</li>
+  </ul>
+
+  <h3>10-4. 회전 운동학 (등각가속도)</h3>
+  <ul>
+    <li>$\theta = \theta_0 + \omega_0 t + \tfrac{1}{2}\alpha t^2$</li>
+    <li>$\omega = \omega_0 + \alpha t$</li>
+    <li>$\omega^2 = \omega_0^2 + 2\alpha(\theta - \theta_0)$</li>
+    <li>호 길이: $s = r\theta$, 선속도: $v = r\omega$, 접선가속도: $a_t = r\alpha$</li>
+  </ul>
+
+  <h2>10-5. 자주 쓰는 단위 변환</h2>
+  <table>
+    <thead><tr><th>변환</th><th>관계</th><th>예</th></tr></thead>
+    <tbody>
+      <tr><td>km/h ↔ m/s</td><td>÷3.6 / ×3.6</td><td>72 km/h = 20 m/s</td></tr>
+      <tr><td>rpm ↔ rad/s</td><td>×2π/60 / ×60/(2π)</td><td>1200 rpm ≈ 125.7 rad/s</td></tr>
+      <tr><td>도 ↔ rad</td><td>×π/180 / ×180/π</td><td>30° ≈ 0.524 rad</td></tr>
+      <tr><td>g ↔ m/s²</td><td>×9.81 / ÷9.81</td><td>2g ≈ 19.62 m/s²</td></tr>
+      <tr><td>마일 ↔ km</td><td>×1.609</td><td>60 mph ≈ 96.6 km/h</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10-6. 차원 분석으로 식 검증</h2>
+  <p>$a_n = v^2/\rho$의 단위가 정말 m/s²인가? $[v^2] = $ m²/s², $[\rho] = $ m이므로 $[v^2/\rho] = $ m/s² ✓.</p>
+  <p>$a = r\omega^2$도 검증: $[r] = $ m, $[\omega] = $ rad/s = 1/s (라디안은 무차원). $[r\omega^2] = $ m/s² ✓.</p>
+  <p>식 도출이 헷갈릴 때 차원으로 답을 검증하는 습관은 매우 유용합니다. 단위가 안 맞는 답은 무조건 틀렸다는 신호.</p>
+
+  <h2>10-6-1. 풀이 검증 — 답이 맞는지 확인하는 법</h2>
+  <p>풀이 후에 항상 다음 점검을 해보면 실수의 80%는 잡힙니다.</p>
+  <ol>
+    <li><strong>단위 점검</strong> — 답의 단위가 m/s²인가? km/h인가? 식 도출이 올바르면 단위가 자동으로 맞음. 안 맞으면 어딘가에 빠뜨린 게 있음.</li>
+    <li><strong>크기 점검</strong> — 일상 경험에 비추어 답이 그럴듯한가? 자동차 곡선 가속이 100 m/s²이라면 분명히 잘못된 답(F1도 30 m/s² 이내).</li>
+    <li><strong>극단값 점검</strong> — 매개변수를 0이나 무한대로 보내면 답이 자명한 한계로 가는가? 예: 곡률반경이 무한대면 $a_n \to 0$ (직선이니까).</li>
+    <li><strong>대칭성 점검</strong> — 좌우대칭 문제면 답도 대칭이어야 함. 비대칭 답이 나오면 부호 실수 가능성.</li>
+    <li><strong>벡터 방향 점검</strong> — $a_n$이 곡률중심을 향하는가? $\hat e_t$ 방향이 진행 방향인가? 화살표 방향이 정성적으로 맞는지 그림으로 확인.</li>
+  </ol>
+
+  <h2>10-7. 운동학 vs 운동역학 — 이번 주의 위치</h2>
+  <p>지난 W3까지(직각좌표 운동학)와 이번 W4까지는 모두 <strong>운동학(kinematics)</strong> — 힘을 보지 않고 위치·속도·가속도의 기하학적 관계만 다룹니다. 다음 주(W5)도 운동학(상대운동·종속운동). W6부터 본격적으로 <strong>운동역학(kinetics)</strong>이 시작 — 힘이 등장하면서 F=ma. 이번 주 n-t 좌표가 W6에서 그대로 핵심 도구로 다시 쓰입니다.</p>
+  <p>운동학과 운동역학의 차이를 한 줄로 — 운동학은 "<em>어떻게 움직이나</em>"의 기술, 운동역학은 "<em>왜 그렇게 움직이나</em>"의 설명. 두 단계가 분리되어 있어야 동역학 문제를 체계적으로 풀 수 있습니다.</p>
+
+  <h2>10-8. 학기 후반과의 연결</h2>
+  <p>이번 주 배운 곡률반경·n-t 분해는 이후 학기 거의 모든 주에서 다시 나옵니다.</p>
+  <ul>
+    <li><strong>W6</strong>: 입자 운동역학에서 $\sum F_n = m v^2/\rho$가 핵심 식</li>
+    <li><strong>W7</strong>: 일-에너지 정리에서 $\int F_t\,ds = \Delta T$ — 접선 방향 힘만 일을 함</li>
+    <li><strong>W8</strong>: 충격량-운동량에서 곡선 충돌 분석</li>
+    <li><strong>W11</strong>: 각운동량 보존이 극좌표의 자연스러운 결론</li>
+    <li><strong>W14</strong>: 강체 운동학에서 한 점이 아닌 전체 강체의 n-t 분해</li>
+  </ul>
+  <p>그러므로 이번 주 식들은 단순히 외우는 게 아니라 손이 익도록 여러 예제로 반복 연습하기를 권장.</p>
+
+  <h2>10-9. 곡률중심의 위치 — 부호 약속</h2>
+  <p>n-t 좌표계에서 법선 방향 $\hat e_n$의 정의는 "곡률중심을 향함"입니다. 곡선이 위로 휘면 곡률중심이 위쪽이라 $\hat e_n$이 위, 아래로 휘면 아래쪽. 그러므로 같은 직선 도로라도 좌커브와 우커브에서 $\hat e_n$ 방향이 반대.</p>
+  <p>3D 공간에서는 추가로 종법선(binormal) $\hat e_b = \hat e_t \times \hat e_n$이 필요. 평면 곡선이라면 $\hat e_b$가 종이 면에서 튀어나오는 방향으로 일정. 비평면(공간) 곡선이라면 $\hat e_b$도 회전하는데, 그 회전율이 비틀림(torsion) $\tau$. 이번 강의에서는 평면 곡선만 다루므로 $\tau = 0$.</p>
+
+  <h2>10-10. 좌표계 행렬 표기</h2>
+  <p>고급 분석을 위한 행렬 표기. 직각좌표 단위벡터 $\hat i$, $\hat j$와 극좌표 단위벡터 $\hat e_r$, $\hat e_\theta$의 관계는 회전 행렬 한 번이면 됩니다.</p>
+  $$ \begin{bmatrix} \hat e_r \\ \hat e_\theta \end{bmatrix} = \begin{bmatrix} \cos\theta & \sin\theta \\ -\sin\theta & \cos\theta \end{bmatrix} \begin{bmatrix} \hat i \\ \hat j \end{bmatrix} $$
+  <p>이 회전 행렬을 시간 미분하면(W5에서 본격적으로) 원래 행렬에 90° 회전을 곱한 것이 나오고, 이게 단위벡터 시간 미분의 본질입니다.</p>
+
+  <h2>10-11. 평면 운동 vs 3D 운동</h2>
+  <p>이번 W4는 평면 곡선 운동만 다뤘지만, 실제 비행체·로봇은 3D입니다. 3D에서 일반 곡선 운동에는 다음 식이 추가:</p>
+  <ul>
+    <li>접촉원(곡률 평면)이 입자의 위치에 따라 회전 — 비틀림 $\tau$ 도입</li>
+    <li>$d\hat e_t/ds = \kappa\,\hat e_n$, $d\hat e_n/ds = -\kappa\,\hat e_t + \tau\,\hat e_b$, $d\hat e_b/ds = -\tau\,\hat e_n$ (프레네-세레 공식)</li>
+    <li>가속도 분해: $\mathbf a = \dot v\,\hat e_t + (v^2/\rho)\,\hat e_n$ — 종법선 성분은 0이라는 사실. 가속도는 항상 접촉 평면(접선·법선이 만드는 평면) 안에 있음.</li>
+  </ul>
+  <p>이 사실(가속도가 종법선 방향 성분이 없음)은 3D 곡선 운동의 핵심 결론. 비행체가 3D 공간을 누비더라도 그 순간의 가속도 벡터는 접선과 법선이 이루는 2D 평면에 갇혀 있음 — 좌석 안전벨트 설계나 우주비행체 자세 제어에 활용.</p>
+
+  <h2>10-12. 핵심 식의 자기 검증 — 손으로 한번 적어보기</h2>
+  <p>강의를 듣고 끝내지 말고, 다음 식들을 보지 않고 적어보세요. 잘 안 적히는 식이 있다면 그 부분의 도출을 다시 봐야 한다는 신호.</p>
+  <ol>
+    <li>$\mathbf{v}_{\text{n-t}} = ?$ 그리고 $\mathbf{a}_{\text{n-t}} = ?$ ← 두 식</li>
+    <li>$\mathbf{v}_{\text{극}} = ?$ 그리고 $\mathbf{a}_{\text{극}} = ?$ ← 두 식</li>
+    <li>$\rho$ 공식 (직각 함수 / 매개변수 / 극) ← 세 식</li>
+    <li>등속 원운동에서 $a_n = ? = ?$ ← 두 표현</li>
+    <li>케플러 제2법칙: $r^2\dot\theta = ?$</li>
+  </ol>
+  <p>위 8개 식을 즉시 적을 수 있으면 W4 운동학은 완전히 흡수한 것입니다.</p>
+
+  <h2>10-13. 흔한 계산 실수 모음</h2>
+  <ul>
+    <li><strong>$\rho$ 공식의 거듭제곱 $3/2$를 빠뜨림</strong> — 항상 $[1+(y')^2]^{3/2}$. $1+(y')^2$가 자주 나오는 이유는 호 길이 미분 $ds = \sqrt{1+(y')^2}\,dx$에서 옴.</li>
+    <li><strong>각도 단위 혼용</strong> — $v = r\omega$에서 $\omega$는 무조건 rad/s. rpm이나 도/초로 적으면 답이 틀림. 변환 먼저!</li>
+    <li><strong>$a_n$의 부호 혼동</strong> — 식 $a_n = v^2/\rho$는 항상 양수. 음수가 나오면 어디선가 부호 실수.</li>
+    <li><strong>접선 가속도와 합 가속도 혼동</strong> — $a_t$만 묻는 문제에 $\sqrt{a_t^2 + a_n^2}$를 적으면 틀림. 질문이 "가속도" 또는 "전체 가속도 크기"인지 확인.</li>
+    <li><strong>"등속"의 의미</strong> — "등속"은 속도 크기 $v$가 일정. 속도 벡터가 일정한 게 아님. 등속 원운동에서도 가속도가 0이 아닌 이유.</li>
+    <li><strong>곡률중심을 곡선의 한쪽으로 잘못 잡기</strong> — 곡률중심은 곡선이 휘는 안쪽. 그림에서 명확히 표시하면 부호 실수 줄어듦.</li>
+  </ul>
+
+  <h2>11. 더 깊이 — 다음 단계로</h2>
+  <ul>
+    <li><strong>W5</strong>에서 두 좌표계 간 변환(상대운동)을 배웁니다. 회전 좌표계 추가하면 코리올리·원심 가짜 가속도가 등장.</li>
+    <li><strong>W6</strong>에서 F=ma를 n-t·극에서 적기. 이번 주의 운동학이 그대로 운동역학으로 확장.</li>
+    <li><strong>W11</strong>에서 각운동량 보존 — 케플러 제2법칙, 피겨스케이팅 회전, 자이로스코프.</li>
+    <li><strong>W14</strong>(강체)에서 "한 점이 아닌 강체 전체"의 운동학 — n-t·극의 일반화.</li>
+    <li><strong>경로계획·자율주행</strong> 강의에서 Frenet 좌표(s, d)와 클로소이드 곡선이 다시 등장.</li>
+  </ul>
+
+  <h2>12. 한 학기 학습 흐름에서 이번 주의 위치</h2>
+  <p>동역학 한 학기를 큰 그림으로 보면 다음 흐름:</p>
+  <ol>
+    <li><strong>W1-W2</strong>: 입자 운동학(직선·1D) — 위치·속도·가속도의 시간적 관계.</li>
+    <li><strong>W3</strong>: 입자 운동학(곡선·직각좌표) — 발사체 운동.</li>
+    <li><strong>W4 (이번 주)</strong>: 곡선 운동을 n-t·극으로 — 곡률반경·구심가속도.</li>
+    <li><strong>W5</strong>: 상대운동·종속운동 — 두 입자, 두 좌표계.</li>
+    <li><strong>W6</strong>: F=ma 본격 도입 — 운동학 도구로 운동역학 풀기.</li>
+    <li><strong>W7-W8</strong>: 일-에너지·충격량-운동량 — 적분된 형태의 F=ma.</li>
+    <li><strong>W11</strong>: 각운동량 — 회전 운동의 보존 법칙.</li>
+    <li><strong>W12-W14</strong>: 강체 — 한 점이 아니라 전체 강체로 일반화.</li>
+  </ol>
+  <p>운동학(이번 주까지)은 "기술", 운동역학(W6부터)은 "원인 분석". 두 단계를 명확히 분리하는 게 동역학 학습의 핵심.</p>
+
+  <h2>12-0. 자주 받는 질문(FAQ)</h2>
+  <ul>
+    <li><strong>Q: $a_n$은 항상 $v^2/\rho$인가?</strong> — 네, n-t 좌표계에서 항상. 단 $\rho$가 위치마다 변할 수 있다는 점 주의(원이 아닌 일반 곡선).</li>
+    <li><strong>Q: 곡률반경이 음수일 수 있나?</strong> — 정의상 양수. 부호는 곡률 $\kappa = \pm 1/\rho$로 표현 (좌커브/우커브 구분).</li>
+    <li><strong>Q: 극좌표는 항상 평면인가?</strong> — 2D 극좌표는 평면. 3D는 원통좌표 $(r, \theta, z)$ 또는 구면좌표 $(r, \theta, \phi)$로 확장.</li>
+    <li><strong>Q: "원심력"이라는 말은 잘못된 건가?</strong> — 관성좌표계에서는 원심력이 없습니다(법칙으로). 회전좌표계에서 보면 가짜 힘으로 등장. 일상 표현에서 "원심"은 종종 "법선 가속도의 결과"를 가리키는데 엄밀하지 않음.</li>
+    <li><strong>Q: 왜 항상 라디안만 쓰나?</strong> — $s = r\theta$, $v = r\omega$ 같은 식이 라디안에서만 단순. 도(°)를 쓰면 매번 $\pi/180$ 곱해야 해서 번거로움.</li>
+    <li><strong>Q: 컴퓨터 시뮬레이션은 어느 좌표계가 좋은가?</strong> — 보통 직각좌표가 안전. 단위벡터 회전이 없어서 수치 적분이 단순. n-t·극은 손계산·해석 분석에 좋고, 시뮬레이션은 그 결과를 시각화하는 데 쓰임.</li>
+  </ul>
+
+  <h2>12-1. 학습 자료·참고문헌</h2>
+  <ul>
+    <li>Hibbeler, "Engineering Mechanics: Dynamics" (14th ed) Ch.12-13 — 표준 학부 교재. n-t·극좌표가 12.7-12.8절에 자세히.</li>
+    <li>Meriam & Kraige, "Engineering Mechanics: Dynamics" (8th ed) Ch.2 — 미국식 표기.</li>
+    <li>김상달, "동역학" (한글 교재) — 한국 공학용어 정리에 유용.</li>
+    <li>3Blue1Brown YouTube "Curvature and the radius of curvature" — 시각적 직관 강력 추천.</li>
+    <li>MIT OpenCourseWare 8.01 Classical Mechanics, Lecture 5-6 — 영어로 더 깊이.</li>
+    <li>NASA Kepler page — 행성 궤도와 케플러 법칙 시각 자료 풍부.</li>
+  </ul>
+
+  <h2>12-2. 실험·관찰로 직접 느껴보기</h2>
+  <p>이론을 넘어 직접 체험하면 직관이 살아납니다.</p>
+  <ul>
+    <li><strong>회전 의자 실험</strong> — 사무실 회전 의자에 앉아 빠르게 돌면서 다리를 펴면 회전이 느려지고, 몸쪽으로 당기면 빨라짐. 각운동량 보존(W11)의 직접 체험.</li>
+    <li><strong>휴대전화 가속도계</strong> — Phyphox 같은 앱으로 차의 곡선 코너링 시 옆 방향 가속도를 측정. 곡선 진입과 출구에서 신호가 올라가고 떨어지는 모양 관찰.</li>
+    <li><strong>물 채운 양동이 흔들기</strong> — 양동이를 줄에 매달아 수직 평면에서 빠르게 휘두르면 정점에서도 물이 안 떨어짐. 정점에서의 최소 속도 $v_{\min} = \sqrt{gr}$ 직접 확인.</li>
+    <li><strong>놀이공원·자동차 코너링</strong> — 다음에 탈 때 옆으로 쏠리는 정도로 $a_n$의 크기를 추정. 1g 정도까지는 일상에서 자주 경험하는 양.</li>
+  </ul>
+
+  <h2>13. 마무리 — 한 줄 요약</h2>
+  <p style="background:#f5f8fc;border-left:4px solid #0b5fff;padding:12px;font-style:italic">
+    <strong>곡선 운동의 가속도는 항상 두 성분으로 깔끔하게 분리된다 — 진행 방향(접선)으로 빨라지거나 느려지는 것($a_t = \dot v$), 옆으로(법선, 곡률중심 방향) 휘는 것($a_n = v^2/\rho$). 직각좌표로 적으면 길고 결합된 식이 n-t에서는 한두 줄로 깔끔. 적절한 좌표계 선택은 단순히 미학이 아니라 식 길이를 절반으로 줄이고 직관을 살린다.</strong>
+  </p>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:40px"><a href="03-particle-curvilinear-xy.html">← W3</a> · <a href="../../dynamics.html">강의 목록</a> · <a href="05-relative-dependent.html">W5 상대운동·종속운동 →</a></p>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

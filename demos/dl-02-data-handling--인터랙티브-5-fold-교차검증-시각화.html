@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 5-fold 교차검증 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 5-fold 교차검증 시각화</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/02-data-handling.html">Week 2. 데이터 핸들링</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 5-fold 교차검증 시각화</h4>
+    <p>같은 데이터를 5조각으로 나눠 매 회차마다 어느 조각이 테스트로 쓰이는지 봅니다. 5번의 학습이 일어나고 각 회차마다 다른 정확도가 나옵니다.</p>
+    <canvas id="kfold" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>K (fold 수) <span class="val" id="kfV">5</span><input type="range" id="kf" min="3" max="10" step="1" value="5"></label>
+      <label>현재 fold <span class="val" id="curV">1</span><input type="range" id="cur" min="1" max="5" step="1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kfold');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const K=+document.getElementById('kf').value;
+      const curEl=document.getElementById('cur');
+      curEl.max=K;
+      let cur=Math.min(+curEl.value,K);curEl.value=cur;
+      document.getElementById('kfV').textContent=K;
+      document.getElementById('curV').textContent=cur;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const N=50,cellW=(W-100)/N;
+      const fold=Array.from({length:N},(_,i)=>Math.floor(i*K/N)+1);
+      for(let r=0;r<K;r++){
+        const y=30+r*40;
+        ctx.fillStyle='#333';ctx.font='13px sans-serif';
+        ctx.fillText(`회차 ${r+1}`,10,y+18);
+        for(let i=0;i<N;i++){
+          const isTest=(fold[i]===r+1);
+          ctx.fillStyle=isTest?'#ff8c00':'#0b5fff';
+          ctx.fillRect(80+i*cellW,y,cellW-1,28);
+        }
+        // simulated accuracy for this fold
+        const acc=0.78+0.10*Math.sin(r*0.7+1)+0.02;
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(`acc ${(acc*100).toFixed(1)}%`,80+N*cellW+8,y+18);
+      }
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('파랑 = 학습, 주황 = 테스트',10,H-10);
+    }
+    document.getElementById('kf').addEventListener('input',draw);
+    document.getElementById('cur').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

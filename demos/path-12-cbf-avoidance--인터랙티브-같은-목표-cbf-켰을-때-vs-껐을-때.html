@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 같은 목표, CBF 켰을 때 vs 껐을 때 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 같은 목표, CBF 켰을 때 vs 껐을 때</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/12-cbf-avoidance.html">Week 12. CBF — 안전을 수학적으로 보장하기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 같은 목표, CBF 켰을 때 vs 껐을 때</h4>
+    <p>차량(녹색)이 목표(빨강)로 직선 진행을 시도합니다. 장애물(분홍)을 지나가는 도중 — CBF OFF는 그대로 충돌, CBF ON은 살짝 우회합니다.</p>
+    <canvas id="cbf2d" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>α <span class="val" id="a2V">1.5</span><input type="range" id="a2" min="0.2" max="4.0" step="0.1" value="1.5"></label>
+      <label><input type="checkbox" id="cbfOn" checked> CBF 활성</label>
+      <button id="rst2d" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cbf2d'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('a2V').textContent=(+$('a2').value).toFixed(1);};$('a2').oninput=upd;
+    const W=24,H=12;const sc=Math.min(c.width/W,c.height/H);
+    const goal=[22,6],obsArr=[[10,5,2.0],[14,7,1.5]];
+    let ego,trail;
+    function reset(){ego=[1,5];trail=[];}
+    reset();$('rst2d').onclick=reset;
+    function loop(){
+      const al=+$('a2').value,on=$('cbfOn').checked;
+      const dt=0.05;
+      // desired velocity: toward goal, speed 2.0
+      let vd=[goal[0]-ego[0],goal[1]-ego[1]];const dn=Math.hypot(vd[0],vd[1]);if(dn>1e-3){vd=[vd[0]/dn*2.0,vd[1]/dn*2.0];}
+      let v=vd.slice();
+      if(on){
+        for(const o of obsArr){
+          const d=[ego[0]-o[0],ego[1]-o[1]];const h=d[0]*d[0]+d[1]*d[1]-o[2]*o[2];
+          const gh=[2*d[0],2*d[1]];const lhs=gh[0]*v[0]+gh[1]*v[1]+al*h;
+          if(lhs<0){const g2=gh[0]*gh[0]+gh[1]*gh[1];v=[v[0]-(lhs/g2)*gh[0],v[1]-(lhs/g2)*gh[1]];}
+        }
+      }
+      ego=[ego[0]+v[0]*dt,ego[1]+v[1]*dt];trail.push(ego.slice());if(trail.length>500)trail.shift();
+      if(Math.hypot(goal[0]-ego[0],goal[1]-ego[1])<0.5)reset();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obsArr.forEach(o=>{x.beginPath();x.arc(o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,7,0,2*Math.PI);x.fill();
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      trail.forEach((p,i)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(ego[0]*sc,c.height-ego[1]*sc,7,0,2*Math.PI);x.fill();
+      x.fillStyle='#222';x.font='13px sans-serif';x.fillText('CBF: '+(on?'ON':'OFF'),12,18);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

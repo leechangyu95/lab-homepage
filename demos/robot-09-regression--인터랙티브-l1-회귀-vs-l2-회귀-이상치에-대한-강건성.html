@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: L1 회귀 vs L2 회귀 (이상치에 대한 강건성) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: L1 회귀 vs L2 회귀 (이상치에 대한 강건성)</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/09-regression.html">Lecture 9. 선형 회귀</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: L1 회귀 vs L2 회귀 (이상치에 대한 강건성)</h4>
+    <p>같은 데이터에 L2(파랑)과 L1(주황) 회귀 직선을 동시에 적합합니다. "이상치 강도" 슬라이더를 키우면 한 점의 y값이 크게 튀고, L2 직선만 크게 휘는 것을 볼 수 있습니다. 이것이 L1이 이상치에 강건한 이유입니다.</p>
+    <canvas id="l1l2" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>이상치 크기 <span class="val" id="outV">3.0</span><input type="range" id="out" min="0" max="8" step="0.1" value="3.0"></label>
+      <button id="l1l2Rs" class="alt">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('l1l2');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const CW=c.width,CH=c.height;
+    const PX=60,PY=CH-40,PW=CW-100,PH=CH-80;
+    const xmin=0,xmax=10,ymin=-2,ymax=14;
+    function toPx(u){return PX+(u-xmin)/(xmax-xmin)*PW;}
+    function toPy(v){return PY-(v-ymin)/(ymax-ymin)*PH;}
+    let base=[];
+    function gen(){
+      base=[];
+      for(let i=0;i<12;i++){
+        const xi=0.5+i*0.8;
+        const yi=0.8*xi+1+(Math.random()*2-1)*0.6;
+        base.push([xi,yi]);
+      }
+    }
+    gen();
+    // L2 closed form
+    function fitL2(pts){
+      let n=pts.length,sx=0,sy=0,sxx=0,sxy=0;
+      pts.forEach(([u,v])=>{sx+=u;sy+=v;sxx+=u*u;sxy+=u*v;});
+      const det=n*sxx-sx*sx;
+      if(Math.abs(det)<1e-12)return [0,0];
+      return [(sxx*sy-sx*sxy)/det,(n*sxy-sx*sy)/det]; // [b0, b1]
+    }
+    // L1 fit by coordinate-descent / iterated reweighted least squares (IRLS)
+    function fitL1(pts){
+      let [b0,b1]=fitL2(pts);
+      for(let it=0;it<60;it++){
+        const w=pts.map(([u,v])=>{const r=Math.abs(v-(b0+b1*u));return 1/Math.max(r,1e-3);});
+        let sw=0,swx=0,swy=0,swxx=0,swxy=0;
+        pts.forEach(([u,v],i)=>{const wi=w[i];sw+=wi;swx+=wi*u;swy+=wi*v;swxx+=wi*u*u;swxy+=wi*u*v;});
+        const det=sw*swxx-swx*swx;
+        if(Math.abs(det)<1e-12)break;
+        b0=(swxx*swy-swx*swxy)/det;
+        b1=(sw*swxy-swx*swy)/det;
+      }
+      return [b0,b1];
+    }
+    function draw(){
+      const out=parseFloat(document.getElementById('out').value);
+      document.getElementById('outV').textContent=out.toFixed(1);
+      // current data: base + one outlier on the 4th point shifted up
+      const pts=base.map(p=>[p[0],p[1]]);
+      if(pts.length>4)pts[4]=[pts[4][0],pts[4][1]+out*1.2];
+      const [a2,b2]=fitL2(pts);
+      const [a1,b1]=fitL1(pts);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,CW,CH);
+      // grid
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;
+      for(let gx=xmin;gx<=xmax;gx+=2){ctx.beginPath();ctx.moveTo(toPx(gx),toPy(ymin));ctx.lineTo(toPx(gx),toPy(ymax));ctx.stroke();}
+      for(let gy=0;gy<=12;gy+=2){ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(gy));ctx.lineTo(toPx(xmax),toPy(gy));ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(0));ctx.lineTo(toPx(xmax),toPy(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(toPx(0),toPy(ymin));ctx.lineTo(toPx(0),toPy(ymax));ctx.stroke();
+      // L2 line
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(a2+b2*xmin));ctx.lineTo(toPx(xmax),toPy(a2+b2*xmax));ctx.stroke();
+      // L1 line
+      ctx.strokeStyle='#f57c00';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(a1+b1*xmin));ctx.lineTo(toPx(xmax),toPy(a1+b1*xmax));ctx.stroke();
+      // points
+      pts.forEach((p,i)=>{
+        const isOut=(i===4&&out>0.5);
+        ctx.fillStyle=isOut?'#c62828':'#333';
+        ctx.beginPath();ctx.arc(toPx(p[0]),toPy(p[1]),isOut?7:4,0,Math.PI*2);ctx.fill();
+      });
+      // legend
+      ctx.font='12px sans-serif';
+      ctx.fillStyle='#0b5fff';ctx.fillText('■ L2 (MSE): β₀='+a2.toFixed(2)+', β₁='+b2.toFixed(2),12,20);
+      ctx.fillStyle='#f57c00';ctx.fillText('■ L1 (MAE): β₀='+a1.toFixed(2)+', β₁='+b1.toFixed(2),290,20);
+    }
+    document.getElementById('out').addEventListener('input',draw);
+    document.getElementById('l1l2Rs').addEventListener('click',()=>{gen();draw();});
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

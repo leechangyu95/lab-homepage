@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브: 오일러 한 걸음씩 — 커피 식는 곡선 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브: 오일러 한 걸음씩 — 커피 식는 곡선</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/04-euler-simulation.html">Week 4. 오일러 방법 &amp; 시뮬레이션</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브: 오일러 한 걸음씩 — 커피 식는 곡선</h4>
+    <p>뉴턴 냉각 법칙 $\dot{T} = -k(T - T_\text{room})$을 오일러로 풀어봅니다.
+    "한 걸음" 버튼을 누를 때마다 빨간 점이 한 스텝씩 전진합니다. $\Delta t$를 키워보면
+    같은 시간 동안 정답(검정 곡선)에서 점점 멀어지는 걸 볼 수 있어요.</p>
+    <canvas id="cool" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$\Delta t$ <span class="val" id="dtV">2.0</span><input type="range" id="dt" min="0.2" max="6" step="0.2" value="2.0"></label>
+      <label>냉각계수 k <span class="val" id="kV">0.05</span><input type="range" id="kCool" min="0.01" max="0.2" step="0.01" value="0.05"></label>
+      <button id="stepC">한 걸음</button>
+      <button id="autoC">자동 진행</button>
+      <button id="rstC" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cool'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    const Tmax=600, T0=90, Troom=20;
+    let T=T0, t=0, hist=[{t:0,T:T0}], auto=null;
+    const upd=()=>{$('dtV').textContent=(+$('dt').value).toFixed(1);
+      $('kV').textContent=(+$('kCool').value).toFixed(2);};
+    ['dt','kCool'].forEach(id=>$(id).oninput=upd);
+    function step(){
+      const dt=+$('dt').value, k=+$('kCool').value;
+      const dT=-k*(T-Troom);
+      T+=dT*dt; t+=dt;
+      hist.push({t,T});
+      if(t>Tmax){clearInterval(auto);auto=null;}
+      draw();
+    }
+    function reset(){T=T0;t=0;hist=[{t:0,T:T0}];if(auto){clearInterval(auto);auto=null;}draw();}
+    $('stepC').onclick=step;
+    $('autoC').onclick=()=>{if(auto){clearInterval(auto);auto=null;}else{auto=setInterval(step,80);}};
+    $('rstC').onclick=reset;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // axes
+      const px=t2x=>40+t2x/Tmax*(W-60), py=T2y=>H-30-(T2y-15)/85*(H-60);
+      x.strokeStyle='#ddd';x.beginPath();
+      x.moveTo(40,10);x.lineTo(40,H-30);x.lineTo(W-20,H-30);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('time [s]',W-60,H-12);x.fillText('T [°C]',6,20);
+      for(let tt=0;tt<=Tmax;tt+=120){x.fillText(tt,px(tt)-8,H-15);}
+      for(let TT=20;TT<=100;TT+=20){x.fillText(TT,8,py(TT)+4);}
+      // exact solution
+      x.strokeStyle='#222';x.lineWidth=1.5;x.setLineDash([4,3]);x.beginPath();
+      const k=+$('kCool').value;
+      for(let tt=0;tt<=Tmax;tt+=2){
+        const Te=Troom+(T0-Troom)*Math.exp(-k*tt);
+        const xx=px(tt),yy=py(Te);
+        if(tt==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();x.setLineDash([]);
+      // euler trace
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=px(h.t),yy=py(h.T);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
+      x.stroke();
+      // markers
+      x.fillStyle='#0b5fff';
+      hist.forEach(h=>{const xx=px(h.t),yy=py(h.T);x.beginPath();x.arc(xx,yy,3,0,7);x.fill();});
+      // current
+      x.fillStyle='#c62828';const cx0=px(t),cy0=py(T);
+      x.beginPath();x.arc(cx0,cy0,6,0,7);x.fill();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('정확해 (검정 점선)', W-160,30);
+      x.fillText('오일러 (파랑) — 스텝 '+(hist.length-1), W-160,46);
+      x.fillText('현재 T = '+T.toFixed(2)+'°C, t='+t.toFixed(1)+'s', W-220,62);
+    }
+    upd();draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

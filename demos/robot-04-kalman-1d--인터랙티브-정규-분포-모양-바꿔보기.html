@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 정규 분포 모양 바꿔보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 정규 분포 모양 바꿔보기</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/04-kalman-1d.html">Lecture 4. 칼만 필터 (1D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정규 분포 모양 바꿔보기</h4>
+    <p>평균과 표준편차를 바꿔보며 가우시안의 모양을 익혀보세요. 1σ 안에 약 68%, 2σ 안에 95%, 3σ 안에 99.7%의 확률이 들어 있습니다.</p>
+    <canvas id="gauss" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>평균 μ <span class="val" id="muV">0</span><input type="range" id="mu" min="-3" max="3" step="0.1" value="0"></label>
+      <label>표준편차 σ <span class="val" id="sgV">1</span><input type="range" id="sg" min="0.3" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gauss');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const x0=W/2,y0=H-40,sx=60,peakH=170;
+    function pdf(xx,mu,sg){return Math.exp(-(xx-mu)*(xx-mu)/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));}
+    function draw(){
+      const muEl=document.getElementById('mu'),sgEl=document.getElementById('sg');
+      const mu=parseFloat(muEl.value),sg=parseFloat(sgEl.value);
+      document.getElementById('muV').textContent=mu.toFixed(1);
+      document.getElementById('sgV').textContent=sg.toFixed(1);
+      const peak=pdf(mu,mu,sg);
+      const yScale=peakH/peak;
+      // clear
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // axes
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(20,y0);ctx.lineTo(W-20,y0);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x0,40);ctx.lineTo(x0,y0+10);ctx.stroke();
+      // 2σ shading
+      function shade(k,fill){
+        ctx.fillStyle=fill;
+        ctx.beginPath();
+        const a=mu-k*sg,b=mu+k*sg,N=80;
+        ctx.moveTo(x0+a*sx,y0);
+        for(let i=0;i<=N;i++){
+          const xx=a+(b-a)*i/N;
+          ctx.lineTo(x0+xx*sx,y0-pdf(xx,mu,sg)*yScale);
+        }
+        ctx.lineTo(x0+b*sx,y0);
+        ctx.closePath();ctx.fill();
+      }
+      shade(2,'rgba(11,95,255,0.08)');
+      shade(1,'rgba(11,95,255,0.18)');
+      // main curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      const N=300;
+      for(let i=0;i<=N;i++){
+        const xx=-5+10*i/N;
+        const px=x0+xx*sx,py=y0-pdf(xx,mu,sg)*yScale;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // mean line
+      ctx.strokeStyle='#c62828';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(x0+mu*sx,40);ctx.lineTo(x0+mu*sx,y0);ctx.stroke();
+      ctx.setLineDash([]);
+      // labels
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';
+      ctx.fillText('μ = '+mu.toFixed(1),x0+mu*sx+4,55);
+      ctx.fillStyle='#555';
+      ctx.fillText('1σ ≈ 68%',x0+0.5*sg*sx,y0-peakH*0.35);
+      ctx.fillText('2σ ≈ 95%',x0+1.5*sg*sx,y0-peakH*0.1);
+      ctx.fillText('피크 높이 정규화 (실제 높이 = '+peak.toFixed(3)+')',20,25);
+    }
+    document.getElementById('mu').addEventListener('input',draw);
+    document.getElementById('sg').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

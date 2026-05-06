@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎯 발사체 궤적 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎯 발사체 궤적 시뮬레이터</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/01-kinematics.html">Week 1. 수학 도구와 운동학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎯 발사체 궤적 시뮬레이터</h4>
+    <p>같은 초기 속도라도 각도가 30°와 60°일 때 사거리가 <strong>같다</strong>는 사실에 주목하세요. 이는 $\sin 2\theta$의 대칭성 때문입니다.</p>
+    <canvas id="projDemo" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>초기 속도 $v_0$ <span class="val" id="p_v0V">20</span> m/s
+        <input type="range" id="p_v0" min="5" max="40" step="1" value="20"></label>
+      <label>발사각 $\theta$ <span class="val" id="p_angV">45°</span>
+        <input type="range" id="p_ang" min="10" max="80" step="1" value="45"></label>
+      <label>중력 $g$ <span class="val" id="p_gV">9.8</span> m/s²
+        <input type="range" id="p_g" min="1.6" max="20" step="0.1" value="9.8"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>이렇게 가지고 놀아 보세요</strong>
+      <ul>
+        <li>각도 슬라이더를 30°와 60°로 번갈아 가며 → 사거리가 같음을 확인</li>
+        <li>중력을 1.6 (달)로 설정하고 같은 발사각/속도 → 사거리가 약 6배로 늘어남</li>
+        <li>각도를 90°에 가깝게 → 위로만 솟구치고 사거리는 0에 수렴</li>
+        <li>각도 45°에서 사거리가 최대인지 슬라이더로 확인</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('projDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const v0=+document.getElementById('p_v0').value;
+      const ang=+document.getElementById('p_ang').value;
+      const g=+document.getElementById('p_g').value;
+      document.getElementById('p_v0V').textContent=v0;
+      document.getElementById('p_angV').textContent=ang+'°';
+      document.getElementById('p_gV').textContent=g.toFixed(1);
+      const rad=ang*Math.PI/180;
+      const vx=v0*Math.cos(rad),vy=v0*Math.sin(rad);
+      const T=2*vy/g,R=v0*v0*Math.sin(2*rad)/g,Hmax=vy*vy/(2*g);
+      const margin=44;
+      const sx=(W-2*margin)/Math.max(R,5);
+      const sy=(H-2*margin)/Math.max(Hmax*1.25,3);
+      const sc=Math.min(sx,sy);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;ctx.beginPath();
+      ctx.moveTo(margin,H-margin);ctx.lineTo(W-margin,H-margin);
+      ctx.moveTo(margin,H-margin);ctx.lineTo(margin,margin);
+      ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('수평 거리 (m)',W/2-30,H-12);
+      ctx.save();ctx.translate(14,H/2);ctx.rotate(-Math.PI/2);
+      ctx.fillText('높이 (m)',0,0);ctx.restore();
+      ctx.strokeStyle='#eef0f4';
+      const stepX=R<20?2:R<50?5:10;
+      for(let m=stepX;m<=Math.ceil(R);m+=stepX){
+        const px=margin+m*sc;if(px>=W-margin)break;
+        ctx.beginPath();ctx.moveTo(px,H-margin);ctx.lineTo(px,margin);ctx.stroke();
+        ctx.fillStyle='#999';ctx.fillText(m,px-6,H-margin+14);
+      }
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=120;i++){
+        const t=(T*i)/120;
+        const x=vx*t,y=vy*t-0.5*g*t*t;
+        const px=margin+x*sc,py=H-margin-y*sc;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.beginPath();
+      ctx.arc(margin+vx*(T/2)*sc,H-margin-Hmax*sc,5,0,Math.PI*2);ctx.fill();
+      ctx.fillText('최고점',margin+vx*(T/2)*sc+8,H-margin-Hmax*sc-4);
+      ctx.fillStyle='#2e7d32';ctx.beginPath();
+      ctx.arc(margin+R*sc,H-margin,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-180,30,160,90);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-180,30,160,90);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('사거리 R = '+R.toFixed(1)+' m',W-170,52);
+      ctx.fillText('최고점 H = '+Hmax.toFixed(1)+' m',W-170,72);
+      ctx.fillText('체공 T = '+T.toFixed(2)+' s',W-170,92);
+      ctx.fillText('수평속도 v_x = '+vx.toFixed(1)+' m/s',W-170,112);
+    }
+    ['p_v0','p_ang','p_g'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

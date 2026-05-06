@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 정류 회로 비교 — 반파 vs 전파 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 정류 회로 비교 — 반파 vs 전파</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/09-diode.html">Week 9. 반도체와 다이오드 — 한 방향만 흐르는 전기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정류 회로 비교 — 반파 vs 전파</h4>
+    <p>같은 AC 입력에 대해 반파 정류와 전파(브릿지) 정류 출력을 비교합니다. 평균값은 전파가 두 배($V_p/\pi$ vs $2V_p/\pi$), 리플도 전파가 작아요.</p>
+    <canvas id="rectCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>입력 V_p <span class="val" id="rectVpV">10</span> V<input type="range" id="rectVp" min="2" max="20" step="0.5" value="10"></label>
+      <label>모드
+        <select id="rectMode"><option value="half">반파</option><option value="full">전파(브릿지)</option><option value="both">둘 다</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rectCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Tspan=4*Math.PI;
+    function draw(){
+      const Vp=+document.getElementById('rectVp').value;
+      const m=document.getElementById('rectMode').value;
+      document.getElementById('rectVpV').textContent=Vp.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(t){return 60+t/Tspan*(W-90);}
+      function y(v){return H/2 - v*(H-60)/2/(Vp+1);}
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Tspan),y(0));ctx.stroke();
+      // Input
+      ctx.strokeStyle='#999';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=0.02){
+        const v=Vp*Math.sin(t);
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();ctx.setLineDash([]);
+      // VD drop
+      const Vd=0.7;
+      // Half
+      if(m==='half'||m==='both'){
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+        for(let t=0;t<=Tspan;t+=0.01){
+          const v=Math.max(0,Vp*Math.sin(t)-Vd);
+          if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+        }
+        ctx.stroke();
+      }
+      // Full
+      if(m==='full'||m==='both'){
+        ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.beginPath();
+        for(let t=0;t<=Tspan;t+=0.01){
+          const v=Math.max(0,Math.abs(Vp*Math.sin(t))-2*Vd);
+          if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+        }
+        ctx.stroke();
+      }
+      const avgHalf=(Vp-Vd)/Math.PI;
+      const avgFull=2*(Vp-2*Vd)/Math.PI;
+      // Avg lines
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=1;ctx.setLineDash([6,3]);
+      if(m!=='full'){ctx.beginPath();ctx.moveTo(x(0),y(avgHalf));ctx.lineTo(x(Tspan),y(avgHalf));ctx.stroke();}
+      ctx.strokeStyle='#c62828';
+      if(m!=='half'){ctx.beginPath();ctx.moveTo(x(0),y(avgFull));ctx.lineTo(x(Tspan),y(avgFull));ctx.stroke();}
+      ctx.setLineDash([]);
+      ctx.fillStyle='#999';ctx.font='12px sans-serif';
+      ctx.fillText('입력 v_s(t) (점선)',70,28);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText(`반파: 평균 ${avgHalf.toFixed(2)} V`,260,28);
+      ctx.fillStyle='#c62828';
+      ctx.fillText(`전파: 평균 ${avgFull.toFixed(2)} V`,460,28);
+      ctx.fillStyle='#666';
+      ctx.fillText(`다이오드 강하 0.7V 반영. 전파는 음반주기를 뒤집어 효율 2배.`,40,H-15);
+    }
+    ['rectVp','rectMode'].forEach(id=>{const el=document.getElementById(id);el.addEventListener('input',draw);el.addEventListener('change',draw);});
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

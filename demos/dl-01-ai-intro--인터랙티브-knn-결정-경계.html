@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: KNN 결정 경계 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: KNN 결정 경계</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/01-ai-intro.html">Week 1. AI의 세계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: KNN 결정 경계</h4>
+    <p>도미(파랑)와 빙어(주황) 데이터입니다. K를 조절하며 결정 경계가 어떻게 변하는지 보세요. 캔버스를 클릭해 새 데이터를 추가할 수 있고, 우클릭은 빙어입니다.</p>
+    <canvas id="knn" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>K (이웃 수) <span class="val" id="kV">5</span><input type="range" id="k" min="1" max="29" step="2" value="5"></label>
+      <button id="rst">리셋</button>
+      <span style="font-size:12px;color:#666">🔵 도미 &nbsp; 🟠 빙어 &nbsp; 클릭: 도미 추가, 우클릭: 빙어 추가</span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('knn');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    let pts=[];
+    function seed(){
+      pts=[];
+      for(let i=0;i<25;i++)pts.push({x:380+Math.random()*180,y:80+Math.random()*120,c:0});
+      for(let i=0;i<15;i++)pts.push({x:80+Math.random()*150,y:230+Math.random()*120,c:1});
+    }
+    seed();
+    c.oncontextmenu=e=>{e.preventDefault();const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height,c:1});draw();};
+    c.onclick=e=>{const r=c.getBoundingClientRect();pts.push({x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height,c:0});draw();};
+    document.getElementById('rst').onclick=()=>{seed();draw();};
+    document.getElementById('k').addEventListener('input',()=>{
+      document.getElementById('kV').textContent=document.getElementById('k').value;
+      draw();
+    });
+    function draw(){
+      const K=+document.getElementById('k').value;
+      const STEP=12;
+      ctx.clearRect(0,0,c.width,c.height);
+      for(let i=0;i<c.width;i+=STEP)for(let j=0;j<c.height;j+=STEP){
+        const ds=pts.map(p=>({d:Math.hypot(p.x-i,p.y-j),c:p.c})).sort((a,b)=>a.d-b.d).slice(0,K);
+        const v=ds.reduce((s,d)=>s+(d.c==0?1:-1),0);
+        ctx.fillStyle=v>=0?'rgba(11,95,255,0.10)':'rgba(255,140,0,0.12)';
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      pts.forEach(p=>{ctx.fillStyle=p.c==0?'#0b5fff':'#ff8c00';ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

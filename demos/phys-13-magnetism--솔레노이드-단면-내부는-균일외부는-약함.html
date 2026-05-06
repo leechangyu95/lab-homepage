@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>솔레노이드 단면 — 내부는 균일·외부는 약함 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">솔레노이드 단면 — 내부는 균일·외부는 약함</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/13-magnetism.html">Week 13. 자기장과 자기력</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>솔레노이드 단면 — 내부는 균일·외부는 약함</h4>
+    <p>위쪽 코일 단면은 ⊙(밖으로), 아래쪽은 ⊗(안으로) — 모든 코일이 같은 방향으로 감겨 있을 때.</p>
+    <canvas id="w13_sole" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>권수 $N$ <span class="val" id="w13_NV">200</span>
+        <input type="range" id="w13_N" min="50" max="500" step="10" value="200"></label>
+      <label>길이 $L$ <span class="val" id="w13_LV">0.20</span> m
+        <input type="range" id="w13_L" min="0.05" max="0.5" step="0.01" value="0.20"></label>
+      <label>전류 $I$ <span class="val" id="w13_IsV">2.0</span> A
+        <input type="range" id="w13_Is" min="0.1" max="10" step="0.1" value="2.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$N$을 늘리면 → 코일 단면이 촘촘해짐 → 내부 $B$ 비례 증가.</li>
+        <li>$L$을 늘리면 → $n = N/L$ 감소 → 내부 $B$ 약해짐.</li>
+        <li>전류만 두 배 → $B$도 두 배. 매우 직선적.</li>
+        <li>외부 자기장은 $\approx 0$ — 모든 화살표가 안으로 모임. 막대자석의 N극(왼쪽)·S극(오른쪽).</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w13_sole');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const N=+document.getElementById('w13_N').value;
+      const L=+document.getElementById('w13_L').value;
+      const I=+document.getElementById('w13_Is').value;
+      document.getElementById('w13_NV').textContent=N;
+      document.getElementById('w13_LV').textContent=L.toFixed(2);
+      document.getElementById('w13_IsV').textContent=I.toFixed(1);
+      const mu0=4*Math.PI*1e-7;
+      const n=N/L;
+      const B=mu0*n*I;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // solenoid box
+      const x0=80,y0=H/2-60,x1=W-80,y1=H/2+60;
+      ctx.strokeStyle='#888';ctx.lineWidth=1;
+      ctx.strokeRect(x0,y0,x1-x0,y1-y0);
+      // top row: dots (out), bottom row: x (in)
+      const turns=Math.min(40, Math.floor(N/8));
+      const step=(x1-x0)/(turns+1);
+      ctx.font='14px sans-serif';
+      for(let k=1;k<=turns;k++){
+        const xx=x0+k*step;
+        // top: ⊙
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(xx,y0,7,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(xx,y0,2.5,0,Math.PI*2);ctx.fill();
+        // bottom: ⊗
+        ctx.beginPath();ctx.arc(xx,y1,7,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(xx-4,y1-4);ctx.lineTo(xx+4,y1+4);
+        ctx.moveTo(xx+4,y1-4);ctx.lineTo(xx-4,y1+4);ctx.stroke();
+      }
+      // inside arrows (uniform)
+      const Bscale=Math.min(40, B*1e5);
+      const rows=3,cols=8;
+      for(let r=0;r<rows;r++){
+        for(let cc=0;cc<cols;cc++){
+          const ax=x0+30+cc*((x1-x0-60)/(cols-1));
+          const ay=y0+30+r*((y1-y0-60)/(rows-1));
+          ctx.strokeStyle='#c62828';ctx.fillStyle='#c62828';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(ax-Bscale/2,ay);ctx.lineTo(ax+Bscale/2,ay);ctx.stroke();
+          ctx.beginPath();ctx.moveTo(ax+Bscale/2,ay);
+          ctx.lineTo(ax+Bscale/2-7,ay-4);ctx.lineTo(ax+Bscale/2-7,ay+4);
+          ctx.closePath();ctx.fill();
+        }
+      }
+      // labels
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('N극',x0-30,H/2+5);
+      ctx.fillText('S극',x1+10,H/2+5);
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,300,68);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,300,68);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('n = N/L = '+n.toFixed(0)+' turns/m',16,28);
+      ctx.fillText('B = μ₀ n I = '+B.toExponential(2)+' T',16,46);
+      ctx.fillText('= '+(B*1e4).toFixed(2)+' G  (지구≈0.5 G, MRI≈10⁴ G)',16,64);
+    }
+    ['w13_N','w13_L','w13_Is'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

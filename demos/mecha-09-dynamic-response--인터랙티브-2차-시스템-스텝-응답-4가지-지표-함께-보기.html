@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 2차 시스템 스텝 응답 — 4가지 지표 함께 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 2차 시스템 스텝 응답 — 4가지 지표 함께 보기</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/09-dynamic-response.html">Week 9. 동적 응답 — 1차·2차 시스템의 시간 응답</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2차 시스템 스텝 응답 — 4가지 지표 함께 보기</h4>
+    <p>$\zeta$와 $\omega_n$을 바꾸면 각 지표가 어떻게 변하는지 표시점이 따라 움직입니다. 핵심 발견 — <strong>$M_p$는 $\zeta$만 보고, $t_p$·$t_s$는 $\omega_n$도 같이 봅니다</strong>. 설계 사양($M_p &lt; X\%$, $t_s &lt; Y\,\text{s}$)을 만족시키려면 두 값을 별도로 잡아야 한다는 뜻이에요.</p>
+    <canvas id="secondOrderDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>감쇠비 ζ <span class="val" id="soZV">0.5</span><input type="range" id="soZ" min="0.1" max="1.5" step="0.02" value="0.5"></label>
+      <label>고유 주파수 ωₙ <span class="val" id="soWV">2.0</span> rad/s<input type="range" id="soW" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('secondOrderDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function step(t,z,wn){
+      if(z<0.001) return 1-Math.cos(wn*t);
+      if(z<1){const wd=wn*Math.sqrt(1-z*z);
+        return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z)*Math.sin(wd*t+Math.acos(z));}
+      if(Math.abs(z-1)<1e-3) return 1-(1+wn*t)*Math.exp(-wn*t);
+      const a=z*wn,b=wn*Math.sqrt(z*z-1);
+      const r1=-a+b,r2=-a-b;
+      return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);
+    }
+    function draw(){
+      const z=+document.getElementById('soZ').value;
+      const wn=+document.getElementById('soW').value;
+      document.getElementById('soZV').textContent=z.toFixed(2);
+      document.getElementById('soWV').textContent=wn.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=55,oy=H-50,w=W-80,h=H-90,T=Math.max(8/(z*wn+0.1),6);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let g=0;g<=5;g++){const yy=oy-g/5*h;ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      // ±2% bands
+      const ymax=2;
+      function py(v){return oy-v/ymax*h;}
+      ctx.fillStyle='rgba(46,125,50,0.08)';
+      ctx.fillRect(ox,py(1.02),w,py(0.98)-py(1.02));
+      // 1.0 line
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(ox,py(1));ctx.lineTo(ox+w,py(1));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='11px sans-serif';ctx.fillText('1.0',ox-25,py(1)+4);
+      ctx.fillText('±2%',ox+w-30,py(1.02)-2);
+      // response curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      let yPrev=0,tp=0,Mp=0,tsFound=Infinity,tr10=0,tr90=0;
+      for(let i=0;i<=600;i++){
+        const t=i/600*T, y=step(t,z,wn);
+        const xx=ox+t/T*w, yy=py(Math.max(0,Math.min(2,y)));
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+        if(z<1 && y>Mp){Mp=y;tp=t;}
+        if(tr10===0 && y>=0.1)tr10=t;
+        if(tr90===0 && y>=0.9)tr90=t;
+        if(Math.abs(y-1)>0.02)tsFound=t;
+        yPrev=y;
+      }
+      ctx.stroke();
+      // markers for t_p / M_p (if underdamped)
+      if(z<1 && Mp>1.001){
+        const xx=ox+tp/T*w, yy=py(Mp);
+        ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(xx,yy,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(198,40,40,0.4)';ctx.setLineDash([2,2]);
+        ctx.beginPath();ctx.moveTo(xx,oy);ctx.lineTo(xx,yy);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(xx,yy);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle='#c62828';ctx.font='11px sans-serif';
+        ctx.fillText(`Mp = ${((Mp-1)*100).toFixed(1)}%`,xx+8,yy-4);
+        ctx.fillText(`tp = ${tp.toFixed(2)}s`,xx+8,yy+12);
+      }
+      // settling time
+      if(isFinite(tsFound) && tsFound<T){
+        const xx=ox+tsFound/T*w;
+        ctx.strokeStyle='#7b1fa2';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(xx,30);ctx.lineTo(xx,oy);ctx.stroke();
+        ctx.fillStyle='#7b1fa2';ctx.font='11px sans-serif';
+        ctx.fillText(`ts ≈ ${tsFound.toFixed(2)}s`,xx+4,40);
+      }
+      // rise time markers
+      if(tr10>0 && tr90>0){
+        const x1=ox+tr10/T*w, x2=ox+tr90/T*w;
+        ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(x1,py(0.1));ctx.lineTo(x2,py(0.1));ctx.stroke();
+        ctx.fillStyle='#ff8c00';ctx.font='11px sans-serif';
+        ctx.fillText(`tr = ${(tr90-tr10).toFixed(2)}s`,x1+2,py(0.1)-4);
+      }
+      // formulas
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`ζ = ${z.toFixed(2)},  ωₙ = ${wn.toFixed(1)} rad/s`,ox,22);
+      const MpForm = z<1 ? Math.exp(-Math.PI*z/Math.sqrt(1-z*z))*100 : 0;
+      const tsForm = z>0.001 ? 4/(z*wn) : Infinity;
+      const tpForm = z<1 ? Math.PI/(wn*Math.sqrt(1-z*z)) : Infinity;
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`공식값: Mp = ${MpForm.toFixed(1)}%,  tp = ${isFinite(tpForm)?tpForm.toFixed(2)+'s':'없음'},  ts ≈ ${isFinite(tsForm)?tsForm.toFixed(2)+'s':'∞'}`,ox+170,22);
+      ctx.fillText('시간 t (s)',W-90,oy+22);
+    }
+    document.getElementById('soZ').addEventListener('input',draw);
+    document.getElementById('soW').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

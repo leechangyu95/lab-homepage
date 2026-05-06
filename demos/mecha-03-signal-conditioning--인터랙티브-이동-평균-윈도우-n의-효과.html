@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 이동 평균 윈도우 N의 효과 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 이동 평균 윈도우 N의 효과</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/03-signal-conditioning.html">Week 3. 신호 조절(Signal Conditioning)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 이동 평균 윈도우 N의 효과</h4>
+    <p>$N$을 키우면 잡음이 더 부드럽게 눌리지만, 신호의 빠른 변화에 늦게 반응(<strong>지연 ≈ N/2 샘플</strong>)합니다. 이게 LPF/이동평균의 본질적 trade-off입니다.</p>
+    <canvas id="maDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>윈도우 N <span class="val" id="maNV">5</span><input type="range" id="maN" min="1" max="40" step="1" value="5"></label>
+      <label>잡음 σ <span class="val" id="maNV2">0.3</span><input type="range" id="maS" min="0" max="0.8" step="0.02" value="0.3"></label>
+      <button id="maNew">새 잡음</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('maDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Nx=300;
+    let noise=Array.from({length:Nx},()=>{const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);});
+    document.getElementById('maNew').onclick=()=>{noise=noise.map(()=>{const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);});draw();};
+    function draw(){
+      const N=+document.getElementById('maN').value;
+      const sN=+document.getElementById('maS').value;
+      document.getElementById('maNV').textContent=N;
+      document.getElementById('maNV2').textContent=sN.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=40,oy=H/2,w=W-60,h=H-60;
+      // axis
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      const clean=Array.from({length:Nx},(_,i)=>{const t=i/Nx*4;return Math.sin(2*Math.PI*1.5*t)+(t>2?0.5:0);});
+      const noisy=clean.map((v,i)=>v+noise[i]*sN);
+      const filt=[];for(let i=0;i<Nx;i++){let s=0,k=0;for(let j=Math.max(0,i-N+1);j<=i;j++){s+=noisy[j];k++;}filt.push(s/k);}
+      function plot(arr,col,lw){ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();
+        arr.forEach((v,i)=>{const xx=ox+i/Nx*w, yy=oy-v*h*0.3;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();}
+      plot(noisy,'#cfd8e3',1);
+      plot(clean,'#2e7d32',1.5);
+      plot(filt,'#0b5fff',2.5);
+      // metrics
+      const rmse=(a,b)=>Math.sqrt(a.reduce((s,v,i)=>s+(v-b[i])**2,0)/a.length);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText(`잡음 RMSE: ${rmse(noisy,clean).toFixed(3)}  →  필터 후: ${rmse(filt,clean).toFixed(3)}`,ox,25);
+      ctx.fillText(`예상 지연 ≈ N/2 = ${(N/2).toFixed(1)} 샘플`,ox+360,25);
+      ctx.fillStyle='#cfd8e3';ctx.fillText('— 잡음 섞인 입력',ox,H-15);
+      ctx.fillStyle='#2e7d32';ctx.fillText('— 진짜 신호',ox+130,H-15);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 이동평균 출력',ox+220,H-15);
+    }
+    document.getElementById('maN').addEventListener('input',draw);
+    document.getElementById('maS').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

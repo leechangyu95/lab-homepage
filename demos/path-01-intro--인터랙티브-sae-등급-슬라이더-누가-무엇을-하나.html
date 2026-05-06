@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: SAE 등급 슬라이더 — &quot;누가 무엇을 하나?&quot; — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: SAE 등급 슬라이더 — &quot;누가 무엇을 하나?&quot;</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/01-intro.html">Week 1. 강의 개요 &amp; 자율주행 개론</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: SAE 등급 슬라이더 — "누가 무엇을 하나?"</h4>
+    <p>슬라이더를 0~5로 움직여 각 레벨에서 <span style="color:#0b5fff;font-weight:600">사람</span>과
+    <span style="color:#c62828;font-weight:600">차량</span>이 각각 무엇을 책임지는지 시각화합니다.
+    경계가 어디서 바뀌는지 손으로 확인해 보세요.</p>
+    <canvas id="sae" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>SAE Level <span class="val" id="lvV">2</span><input type="range" id="lv" min="0" max="5" step="1" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('sae'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const tasks=[
+      // [steer, accel, monitor, fallback]   1=사람, 0=차량, 0.5=둘 다 가능
+      {n:'Lv.0 No Automation',     s:1,a:1,m:1,f:1, desc:'운전자가 모든 것을 직접 조작.'},
+      {n:'Lv.1 Driver Assistance', s:0.5,a:0.5,m:1,f:1, desc:'조향 OR 가감속 중 하나만 시스템 보조 (예: ACC).'},
+      {n:'Lv.2 Partial',           s:0.5,a:0.5,m:1,f:1, desc:'조향+가감속 동시 보조. 손·눈은 항상 운전자가.'},
+      {n:'Lv.3 Conditional',       s:0,a:0,m:0,f:1, desc:'특정 조건 내 차량이 주행. 요청 시 운전자 즉시 개입.'},
+      {n:'Lv.4 High',              s:0,a:0,m:0,f:0, desc:'지정 ODD 내에서 차량이 비상 상황까지 처리.'},
+      {n:'Lv.5 Full',              s:0,a:0,m:0,f:0, desc:'어떤 도로·환경·기상도 차량 단독 운행. ODD 무제한.'}
+    ];
+    function draw(){
+      const lv=+$('lv').value; $('lvV').textContent=lv;
+      const t=tasks[lv];
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#1a1a1a'; x.font='bold 18px sans-serif';
+      x.fillText(t.n, 20, 30);
+      x.font='13px sans-serif'; x.fillStyle='#444';
+      x.fillText(t.desc, 20, 52);
+      const items=[
+        ['조향 (Steering)',  t.s],
+        ['가감속 (Throttle/Brake)', t.a],
+        ['주변 감시 (Monitoring)', t.m],
+        ['비상 대응 (Fallback)', t.f]
+      ];
+      items.forEach((it,i)=>{
+        const y=80+i*54;
+        x.fillStyle='#444'; x.font='14px sans-serif';
+        x.fillText(it[0], 20, y+18);
+        // bar: left = human (blue), right = car (red)
+        x.fillStyle='#eee'; x.fillRect(260,y,340,28);
+        const v=it[1];
+        if(v===1){ x.fillStyle='#0b5fff'; x.fillRect(260,y,340,28); }
+        else if(v===0){ x.fillStyle='#c62828'; x.fillRect(260,y,340,28); }
+        else { x.fillStyle='#0b5fff'; x.fillRect(260,y,170,28);
+               x.fillStyle='#c62828'; x.fillRect(430,y,170,28); }
+        x.fillStyle='#fff'; x.font='bold 12px sans-serif';
+        x.fillText(v===1?'사람':v===0?'차량':'사람·차량 협조', 280, y+18);
+      });
+      // legend
+      x.fillStyle='#0b5fff'; x.fillRect(20,290,16,12);
+      x.fillStyle='#c62828'; x.fillRect(140,290,16,12);
+      x.fillStyle='#444'; x.font='12px sans-serif';
+      x.fillText('사람', 42, 300); x.fillText('차량', 162, 300);
+    }
+    $('lv').oninput=draw; draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

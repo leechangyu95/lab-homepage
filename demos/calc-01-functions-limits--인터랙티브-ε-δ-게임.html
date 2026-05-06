@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: ε-δ 게임 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: ε-δ 게임</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/01-functions-limits.html">Week 1. 함수·극한·연속</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: ε-δ 게임</h4>
+    <p>$\varepsilon$ 슬라이더로 도전자의 정밀도를 정하고, $\delta$ 슬라이더를 움직여 모든 곡선이 가로 띠 안에 들어오도록 만들어 보세요.
+    $\varepsilon$을 더 빡빡하게 줄였을 때 $\delta$도 따라 작아져야 한다는 걸 손으로 느껴 봅니다.</p>
+    <canvas id="ed" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>ε (출력 허용 오차) <span class="val" id="edEV">0.50</span><input type="range" id="edE" min="0.05" max="1.5" step="0.01" value="0.5"></label>
+      <label>δ (입력 창의 폭) <span class="val" id="edDV">0.30</span><input type="range" id="edD" min="0.02" max="0.8" step="0.01" value="0.3"></label>
+      <span id="edStatus" style="font-weight:600"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ed'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const a=1,L=1;
+    const xR=[-0.2,2.4],yR=[-0.5,4.8];
+    const M={l:50,r:20,t:20,b:40};
+    function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+    function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function f(v){return v*v;}
+    function loop(){
+      const eps=+document.getElementById('edE').value;
+      const del=+document.getElementById('edD').value;
+      document.getElementById('edEV').textContent=eps.toFixed(2);
+      document.getElementById('edDV').textContent=del.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';x.lineWidth=1;
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      // axes
+      x.strokeStyle='#888';x.lineWidth=1.2;
+      x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // ε band (horizontal)
+      x.fillStyle='rgba(11,95,255,0.13)';
+      x.fillRect(px(xR[0]),py(L+eps),W-M.l-M.r,py(L-eps)-py(L+eps));
+      // δ band (vertical)
+      x.fillStyle='rgba(245,124,0,0.13)';
+      x.fillRect(px(a-del),py(yR[1]),px(a+del)-px(a-del),py(yR[0])-py(yR[1]));
+      // function curve
+      x.strokeStyle='#222';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=0.01){
+        const y=f(v);
+        if(y<yR[0]||y>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(y));first=false;}else x.lineTo(px(v),py(y));
+      }
+      x.stroke();
+      // check: for all x in (a-δ,a+δ) is |f(x)-L| < ε ?
+      let ok=true,worst=0;
+      for(let v=a-del;v<=a+del;v+=del/200){
+        const dy=Math.abs(f(v)-L);
+        if(dy>worst)worst=dy;
+        if(dy>=eps){ok=false;}
+      }
+      // mark target point (a,L)
+      x.fillStyle='#c62828';x.beginPath();x.arc(px(a),py(L),4.5,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#0742b8';x.font='12px sans-serif';
+      x.fillText('L+ε',px(xR[0])+4,py(L+eps)-2);
+      x.fillText('L−ε',px(xR[0])+4,py(L-eps)+12);
+      x.fillStyle='#b35c00';
+      x.fillText('a−δ',px(a-del)-12,py(yR[0])+14);
+      x.fillText('a+δ',px(a+del)-12,py(yR[0])+14);
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('y = f(x) = x²',px(1.6),py(2.6));
+      x.fillText('a = 1, L = 1',px(0.05),py(4.5));
+      // status text
+      const s=document.getElementById('edStatus');
+      if(ok){s.textContent='✓ 약속 성공 — 입력 창 안의 모든 점이 출력 띠 안에 있음 (worst |f(x)−L| ≈ '+worst.toFixed(3)+')';s.style.color='#1b5e20';}
+      else{s.textContent='✗ 실패 — δ를 더 줄여보세요 (worst |f(x)−L| ≈ '+worst.toFixed(3)+' > ε)';s.style.color='#c62828';}
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

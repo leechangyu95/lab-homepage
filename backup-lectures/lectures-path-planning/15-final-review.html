@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W15. 기말 전체 정리 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+.quiz{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:12px 0}
+.quiz .ans{display:none;margin-top:8px;color:#2e7d32}
+.quiz.open .ans{display:block}
+.quiz button{margin-top:6px;padding:5px 12px;background:#fff;color:var(--accent);border:1px solid var(--accent);border-radius:6px;cursor:pointer;font-size:12px}
+.recommend-out{font-family:Consolas,monospace;color:var(--accent-d);font-weight:600;background:#eef3ff;padding:8px 10px;border-radius:6px;display:inline-block;min-width:300px}
+.algo-box{display:inline-block;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin:6px}
+.algo-box h4{margin:0 0 4px;color:var(--accent-d);font-size:14px}
+.algo-box small{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html" class="active">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 15. 기말 전체 정리</h1>
+  <p class="lead">15주의 여정을 한 페이지로 압축합니다. 전체 흐름을 클릭으로 따라가고, 상황에 맞는 알고리즘을 추천받고,
+  주제별 예시 문제로 자기 실력을 점검하세요. <strong>기말고사 직전 30분 복습</strong>과 다음 학습 단계 안내를 함께 담았습니다.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>15주 전체 지도</li>
+    <li>인터랙티브: 자율주행 파이프라인 클릭 다이어그램</li>
+    <li>꼭 외울 후반부 10개 수식</li>
+    <li>인터랙티브: 알고리즘 추천기 (상황 → 추천)</li>
+    <li>인터랙티브: 통합 시뮬 미니 데모 (마무리)</li>
+    <li>예시 문제 (해답 토글)</li>
+    <li>흔한 후반부 실수</li>
+    <li>다음 학습 단계 (어디로 더 갈까?)</li>
+  </ol></div>
+
+  <h2>1. 15주 전체 지도</h2>
+
+  <table>
+    <thead><tr><th>블록</th><th>주차</th><th>주제</th><th>핵심 산출물</th></tr></thead>
+    <tbody>
+      <tr><td>시작</td><td>W1</td><td>자율주행 개요, SAE Lv0–5, 파이프라인</td><td>큰 그림</td></tr>
+      <tr><td>모델</td><td>W2–W3</td><td>좌표계, Kinematic / Dynamic Bicycle</td><td>차량을 식 한 줄로</td></tr>
+      <tr><td>시뮬</td><td>W4</td><td>Euler / RK4</td><td>식 → 그림 변환기</td></tr>
+      <tr><td>지도</td><td>W5</td><td>Occupancy Grid, Costmap, Frenet</td><td>환경의 디지털 표현</td></tr>
+      <tr><td>계획</td><td>W6–W7</td><td>RRT (샘플링) / A* (격자)</td><td>"어디로 갈까" 답</td></tr>
+      <tr><td><strong>중간</strong></td><td>W8</td><td>중간고사</td><td>전반부 점검</td></tr>
+      <tr><td>제어 기초</td><td>W9</td><td>PID</td><td>속도 추종</td></tr>
+      <tr><td>유도제어</td><td>W10</td><td>Pure Pursuit, Stanley, PN</td><td>조향 추종</td></tr>
+      <tr><td>통합</td><td>W11</td><td>전체 시뮬레이션</td><td>레고 조립 완성</td></tr>
+      <tr><td>안전</td><td>W12</td><td>CBF</td><td>안전 보장 필터</td></tr>
+      <tr><td>고급</td><td>W13–W14</td><td>MPC, RL</td><td>예측 최적화 + 학습</td></tr>
+      <tr><td><strong>기말</strong></td><td>W15</td><td>기말고사 (오늘)</td><td>전체 통합 점검</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. 인터랙티브: 파이프라인 클릭 다이어그램</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 각 블록을 클릭하면 어느 주차에서 배웠는지 보여줍니다</h4>
+    <canvas id="pipe" width="640" height="220"></canvas>
+    <p id="pipeMsg" style="margin-top:8px;color:var(--muted);font-size:13px">블록을 클릭하면 설명이 여기에 나옵니다.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pipe'),x=c.getContext('2d'),msg=document.getElementById('pipeMsg');
+    const blocks=[
+      {label:'Perception',sub:'(입력 가정)',col:'#f3e5f5',bd:'#9c27b0',w:120,info:'본 강의 범위 외. 카메라·LiDAR·Radar로 세상을 인식.'},
+      {label:'Planning',sub:'W5–W7',col:'#eef3ff',bd:'#0b5fff',w:120,info:'W5 지도 표현 → W6 RRT / W7 A*. "어디로 갈까"의 답.'},
+      {label:'Tracking',sub:'W9–W11',col:'#e8f5e9',bd:'#2e7d32',w:120,info:'W9 PID + W10 Pure Pursuit/Stanley + W11 통합 시뮬레이션.'},
+      {label:'Safety',sub:'W12 CBF',col:'#fce4ec',bd:'#c62828',w:100,info:'W12 Control Barrier Function. 모든 명령에 안전 제약을 부여.'},
+      {label:'Advanced',sub:'W13–W14',col:'#fff3e0',bd:'#f57c00',w:120,info:'W13 MPC: 미래 예측 + 최적화. W14 RL: 경험 기반 학습.'}
+    ];
+    const y0=70,h=70;let xs=20;blocks.forEach(b=>{b.x=xs;b.y=y0;b.h=h;xs+=b.w+12;});
+    function draw(highlight){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      blocks.forEach(b=>{
+        x.fillStyle=b.col;x.strokeStyle=b.bd;x.lineWidth=highlight===b?3:1.2;
+        x.fillRect(b.x,b.y,b.w,b.h);x.strokeRect(b.x,b.y,b.w,b.h);
+        x.fillStyle='#222';x.font='14px sans-serif';x.fillText(b.label,b.x+10,b.y+28);
+        x.fillStyle='#666';x.font='12px sans-serif';x.fillText(b.sub,b.x+10,b.y+48);
+      });
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('자율주행 파이프라인 (좌→우)',12,24);
+    }
+    draw();
+    c.addEventListener('click',e=>{const r=c.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;
+      const hit=blocks.find(b=>px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h);
+      if(hit){draw(hit);msg.textContent=hit.label+' — '+hit.info;}});
+  })();
+  </script>
+
+  <h2>3. 꼭 외울 후반부 10개 수식</h2>
+
+  <div class="tip">
+    <ol>
+      <li><strong>PID</strong>: $u = K_p e + K_i\int e\,dt + K_d \dot e$</li>
+      <li><strong>Pure Pursuit</strong>: $\delta = \arctan\!\big(2L\sin\alpha / L_d\big)$</li>
+      <li><strong>Look-ahead 적응형</strong>: $L_d = k v + L_{fc}$</li>
+      <li><strong>Stanley</strong>: $\delta = \theta_e + \arctan\!\big(k\,e_{fa}/(v + v_s)\big)$</li>
+      <li><strong>PN (비례 항법)</strong>: $a_\perp = N V_c \dot\lambda$</li>
+      <li><strong>MPC 비용</strong>: $\sum_{k=0}^{N-1}\|x_k - x_\text{ref}\|_Q^2 + \|u_k\|_R^2$</li>
+      <li><strong>Receding Horizon</strong>: 매 스텝 풀고 첫 입력만 적용 후 반복.</li>
+      <li><strong>CBF 조건</strong>: $\dot h(x, u) + \alpha h(x) \ge 0$</li>
+      <li><strong>Safe Set</strong>: $h(x) \ge 0 \Rightarrow$ 안전.</li>
+      <li><strong>Q-Update</strong>: $Q(s,a) \leftarrow Q(s,a) + \alpha\big[r + \gamma\max_{a'}Q(s',a') - Q(s,a)\big]$</li>
+    </ol>
+  </div>
+
+  <h2>4. 인터랙티브: 알고리즘 추천기</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 상황을 고르면 적합한 알고리즘 조합을 추천</h4>
+    <div class="controls">
+      <label>환경
+        <select id="env">
+          <option value="grid">2D 격자 도심 (정적 장애물)</option>
+          <option value="cont">연속 공간 (좁은 통로 / 주차)</option>
+          <option value="hwy">고속도로 (고속·완만 곡률)</option>
+          <option value="dyn">동적 보행자 빈번</option>
+        </select>
+      </label>
+      <label>속도
+        <select id="spd">
+          <option value="lo">저속 (≤ 30 km/h)</option>
+          <option value="mid">중속 (30~60)</option>
+          <option value="hi">고속 (≥ 60)</option>
+        </select>
+      </label>
+      <label>요구
+        <select id="req">
+          <option value="simple">단순/구현 빠르게</option>
+          <option value="opt">최적성 중요</option>
+          <option value="safe">안전 보장</option>
+          <option value="data">데이터 풍부, 학습 가능</option>
+        </select>
+      </label>
+    </div>
+    <p>추천: <span class="recommend-out" id="rec">—</span></p>
+    <p id="recExp" style="font-size:13px;color:var(--muted)"></p>
+  </div>
+  <script>
+  (function(){
+    const $=id=>document.getElementById(id);
+    function refresh(){
+      const env=$('env').value,spd=$('spd').value,req=$('req').value;
+      let plan='A* + Costmap',track='Pure Pursuit + PID',safety='—';
+      if(env==='cont')plan='Hybrid A* / RRT*';
+      if(env==='hwy')plan='Frenet 기반 다항식 궤적';
+      if(env==='dyn')plan='A* + 동적 재계획';
+      if(spd==='hi')track='Stanley 또는 LQR (W12) / MPC (W13)';
+      if(req==='opt')track='MPC';
+      if(req==='safe')safety='+ CBF 안전 필터 (W12)';
+      if(req==='data')track='DDPG/PPO + 안전 필터';
+      $('rec').textContent='Plan: '+plan+'   /   Track: '+track+'   '+safety;
+      let exp='';
+      if(env==='hwy'&&spd==='hi')exp+='고속도로에서는 곡선 진입에서 슬립이 중요해 Stanley/LQR/MPC가 안정적입니다. ';
+      if(req==='safe')exp+='CBF는 기본 컨트롤러를 그대로 두고 위험할 때만 살짝 수정하는 안전 필터로 끼워 넣으세요. ';
+      if(env==='dyn')exp+='보행자가 빈번하면 정적 A* 결과를 100~500ms 주기로 재계획해야 합니다. ';
+      if(req==='data'&&spd!=='hi')exp+='RL은 시뮬에서 충분히 학습한 뒤 안전 필터와 함께 실차에 옮기는 게 표준입니다. ';
+      $('recExp').textContent=exp||'기본 조합. 가장 단순·견고한 출발점입니다.';
+    }
+    ['env','spd','req'].forEach(id=>$(id).onchange=refresh);refresh();
+  })();
+  </script>
+
+  <h2>5. 인터랙티브: 통합 시뮬 미니 데모 (마무리)</h2>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 클릭으로 목표 변경 → A* + Pure Pursuit + PID 즉시 동작</h4>
+    <p>이 강의 전체의 결과물 — 클릭으로 목표를 옮기면 즉시 재계획·재추종합니다.</p>
+    <canvas id="finalCv" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="rstFin" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('finalCv'),x=c.getContext('2d');
+    const W=22,H=11;const sc=Math.min(c.width/W,c.height/H);
+    let start=[2,2],goal=[20,9];
+    const obs=[[8,4,1.4],[12,7,1.3],[16,3,1.0],[6,8,1.0]];
+    let path=null,car;
+    function planA(){
+      const N=44,M=22;const gx=W/N,gy=H/M;
+      const blocked=(i,j)=>{const x_=i*gx+gx/2,y_=j*gy+gy/2;for(const o of obs){if(Math.hypot(x_-o[0],y_-o[1])<o[2]+0.4)return true;}return false;};
+      const si=Math.round(start[0]/gx),sj=Math.round(start[1]/gy);
+      const ti=Math.round(goal[0]/gx),tj=Math.round(goal[1]/gy);
+      const open=new Map(),closed=new Set(),parent=new Map(),g=new Map();
+      const k0=si+','+sj;g.set(k0,0);open.set(k0,{i:si,j:sj,f:Math.hypot(si-ti,sj-tj)});
+      let found=null,it=0;
+      while(open.size>0&&it<6000){it++;let bk=null,bf=1e9;for(const[k,n]of open){if(n.f<bf){bf=n.f;bk=k;}}
+        const cur=open.get(bk);open.delete(bk);closed.add(bk);
+        if(cur.i===ti&&cur.j===tj){found=bk;break;}
+        for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){if(di===0&&dj===0)continue;
+          const ni=cur.i+di,nj=cur.j+dj;if(ni<0||ni>=N||nj<0||nj>=M)continue;if(blocked(ni,nj))continue;
+          const nk=ni+','+nj;if(closed.has(nk))continue;const cost=(di&&dj)?Math.SQRT2:1;
+          const ng=g.get(bk)+cost;if(!g.has(nk)||ng<g.get(nk)){g.set(nk,ng);parent.set(nk,bk);
+            open.set(nk,{i:ni,j:nj,f:ng+Math.hypot(ni-ti,nj-tj)});}}}
+      if(!found)return null;const pts=[];let k=found;while(k){const[ii,jj]=k.split(',').map(Number);pts.push([ii*gx+gx/2,jj*gy+gy/2]);k=parent.get(k);}pts.reverse();return pts;
+    }
+    function plan(){path=planA();car={x:start[0],y:start[1],psi:0,v:0,I:0,e_p:null};}
+    plan();
+    document.getElementById('rstFin').onclick=plan;
+    c.addEventListener('click',e=>{const r=c.getBoundingClientRect();goal=[(e.clientX-r.left)/sc,(c.height-(e.clientY-r.top))/sc];plan();});
+    function loop(){
+      if(path){
+        const Lfc=1.5,k=0.1;const Ld=k*car.v+Lfc;
+        let bi=0,bd=1e9;path.forEach((p,i)=>{const d=Math.hypot(p[0]-car.x,p[1]-car.y);if(d<bd){bd=d;bi=i;}});
+        let tg=path[path.length-1];for(let j=bi;j<path.length;j++){if(Math.hypot(path[j][0]-car.x,path[j][1]-car.y)>=Ld){tg=path[j];break;}}
+        const alpha=Math.atan2(tg[1]-car.y,tg[0]-car.x)-car.psi;const wa=Math.atan2(Math.sin(alpha),Math.cos(alpha));
+        const L=2.5;const delta=Math.atan2(2*L*Math.sin(wa),Ld);
+        const vRef=Math.hypot(car.x-goal[0],car.y-goal[1])>1.5?6.0:1.0;
+        const e=vRef-car.v;car.I+=e*0.02;const dedt=car.e_p===null?0:(e-car.e_p)/0.02;car.e_p=e;
+        let a=1.5*e+0.4*car.I+0.05*dedt;a=Math.max(-3,Math.min(2,a));
+        const dt=0.02;car.x+=car.v*Math.cos(car.psi)*dt;car.y+=car.v*Math.sin(car.psi)*dt;
+        car.psi+=car.v/L*Math.tan(delta)*dt;car.v=Math.max(0,car.v+a*dt);
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      if(path){x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+        path.forEach((p,i)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0]*sc,c.height-start[1]*sc,7,0,2*Math.PI);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,7,0,2*Math.PI);x.fill();
+      x.save();x.translate(car.x*sc,c.height-car.y*sc);x.rotate(-car.psi);
+      x.fillStyle='#0b5fff';x.fillRect(-12,-6,24,12);x.fillStyle='#fff';x.fillRect(7,-5,4,10);x.restore();
+      x.fillStyle='#222';x.font='12px sans-serif';x.fillText('클릭으로 목표 이동.  v='+car.v.toFixed(2)+' m/s',12,18);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>6. 예시 문제 (해답 토글)</h2>
+
+  <div class="quiz">
+    <strong>Q1.</strong> PID 제어에서 적분 항 $I$의 주 역할은? (① 즉시 대응 ② 정상상태 오차 제거 ③ 빠른 변화에 브레이크 ④ 모델 예측)
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">정답: ②. P는 즉시, I는 누적, D는 변화율 대응. 외란/중력 같은 정상 오차는 I만 메꿀 수 있습니다.</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q2.</strong> Pure Pursuit에서 $v = 10$ m/s, $k = 0.2$, $L_{fc} = 2$ m일 때 look-ahead 거리 $L_d$는?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">$L_d = k v + L_{fc} = 0.2 \times 10 + 2 = 4$ m.</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q3.</strong> 안전 함수 $h(x) = 10 - x$, $\alpha = 0.5$인 CBF 조건이 $x = 6$에서 요구하는 $\dot x$의 최댓값은?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">$h(6) = 4$. CBF: $-\dot x + 0.5 \cdot 4 \ge 0 \Rightarrow \dot x \le 2$. 답 = 2 m/s.</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q4.</strong> MPC의 Receding Horizon 원칙은?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">매 샘플마다 $N$-step 미래를 풀고, <strong>첫 입력만</strong> 적용. 다음 스텝에 새 측정값으로 다시 풀이. "예측은 길게, 적용은 한 스텝".</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q5.</strong> RL에서 ε-greedy 정책의 ε이 0.0이라면 어떤 문제가 생기나?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">탐험이 전혀 없어 처음 운 좋게 발견된 그저 그런 정책에 갇힘. 더 좋은 행동을 못 찾습니다.</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q6 (서술).</strong> PID·MPC·RL을 (1) 설계 방법, (2) 계산 시간, (3) 안전성 세 기준으로 비교하라.
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">
+      <table>
+        <thead><tr><th>기준</th><th>PID</th><th>MPC</th><th>RL</th></tr></thead>
+        <tbody>
+          <tr><td>설계</td><td>3개 게인 튜닝</td><td>모델 + 비용 + 제약</td><td>보상 + 학습</td></tr>
+          <tr><td>계산</td><td>매우 빠름</td><td>QP 풀이 (실시간 가능)</td><td>학습 후 추론은 빠름</td></tr>
+          <tr><td>안전</td><td>분석/실험으로 검증</td><td>제약을 명시적으로 부과 가능</td><td>일반적으로 보장 어려움 (CBF와 결합 필요)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>7. 흔한 후반부 실수</h2>
+
+  <table>
+    <thead><tr><th>#</th><th>실수</th><th>예방</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Pure Pursuit 부호 혼동 (왼쪽이 +α)</td><td>각도 wrap + 좌표계 정확히 정의</td></tr>
+      <tr><td>2</td><td>적분 와인드업</td><td>포화 시 적분 클램핑 (back-calculation)</td></tr>
+      <tr><td>3</td><td>MPC에서 전체 N-step 입력 모두 적용</td><td>매 스텝 첫 입력만, 다음에 다시 풀이</td></tr>
+      <tr><td>4</td><td>CBF의 부호 ($h \ge 0$ 유지)</td><td>"안전 영역 안 = h 양수" 약속</td></tr>
+      <tr><td>5</td><td>RL 보상이 의도와 다른 행동을 유발</td><td>여러 보상 설계로 정책 비교 후 채택</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. 다음 학습 단계 — 어디로 더 갈까?</h2>
+
+  <div>
+    <div class="algo-box"><h4>MPC 깊게</h4><small><a href="../../mpc.html">MPC 특강 10주</a> — 상태공간, LQR, CFTOC, NMPC, 강건 MPC.</small></div>
+    <div class="algo-box"><h4>고전 제어 정석</h4><small><a href="../../control.html">자동제어 14주</a> — 라플라스, Bode, Root Locus, PID 설계.</small></div>
+    <div class="algo-box"><h4>딥러닝/RL</h4><small><a href="../../dl.html">딥러닝 &amp; 머신러닝 13주</a> — 신경망부터 Transformer까지.</small></div>
+    <div class="algo-box"><h4>SLAM/측위</h4><small><a href="../../lectures/05-kalman-2d.html">로봇공학특론 L5</a> — 칼만 필터 2D, 공분산 타원.</small></div>
+    <div class="algo-box"><h4>시뮬레이터</h4><small><a href="https://carla.org" target="_blank">CARLA</a>, <a href="https://github.com/AtsushiSakai/PythonRobotics" target="_blank">PythonRobotics</a> 실습.</small></div>
+    <div class="algo-box"><h4>실차 실험</h4><small>F1TENTH, MIT RACECAR 같은 학생용 자율주행 플랫폼.</small></div>
+  </div>
+
+  <h2>8b. 추가 손풀이 — 시험 직전 추가 도전</h2>
+
+  <div class="quiz">
+    <strong>Q7.</strong> Stanley 제어에서 $v=0$ (정지) 상태에 $v_s$ 가 없으면 어떤 일이?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">분모 $v + v_s$가 0이 되어 발산. $v_s \ge 1.0$ 권장.</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q8.</strong> MPC 비용함수 $\|x\|_Q^2 + \|u\|_R^2$ 에서 $Q$ 를 두 배로 키우면 무슨 일이?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">상태 오차 페널티 ↑ → 더 적극적으로 추종. 단, 입력 사용량도 늘어 부드러움 ↓. $Q$와 $R$의 비율이 핵심.</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q9.</strong> CBF 의 $\alpha$ 를 매우 크게 (예: 100) 설정하면?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">장애물 직전까지 풀가속 후 급제동 → 승차감 ↓, 가속도 한계 위반 가능. "공격적" 거동이지만 안전 자체는 여전히 보장.</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q10.</strong> Q-Learning에서 학습률 $\alpha$ 를 1.0 으로 두면?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">매 업데이트마다 $Q(s,a)$ 가 새 추정값으로 완전 대체 → 잡음에 매우 민감, 학습 불안정. 권장 0.01~0.3.</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q11.</strong> Pure Pursuit과 Stanley의 결정적 차이를 한 줄로?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">PP = "후륜 기준 + 앞 점 따라가기" / Stanley = "전륜 기준 + 헤딩 + 횡오차 직접". PP는 저속 좋고, Stanley는 고속 좋다.</div>
+  </div>
+
+  <div class="quiz">
+    <strong>Q12.</strong> 통합 시뮬에서 Pure Pursuit이 곡선 안쪽으로 컷하는 이유는?
+    <button onclick="this.parentNode.classList.toggle('open')">정답 보기</button>
+    <div class="ans">$L_d$가 너무 길어 look-ahead 점이 곡선 끝쪽 (직선부)에 위치 → 차가 그쪽으로 직선 이동 시도 → 곡선 안쪽 컷. 해결: 속도 적응형 $L_d$ 또는 곡선 진입시 $L_d$ 감소.</div>
+  </div>
+
+  <h2>8c. 서술형 모범답안 골자</h2>
+
+  <h3>S1. "PID, MPC, RL의 시간 예측 능력 비교"</h3>
+  <div class="tip">
+    <ol>
+      <li><strong>PID</strong>: 미래 예측 X. 현재 오차만 본다 → "반사신경"</li>
+      <li><strong>MPC</strong>: $N$ 스텝 미래 예측 → "체스 플레이어, 몇 수 앞 본다"</li>
+      <li><strong>RL</strong>: 학습 단계에서 모든 미래 시나리오 경험 → "경험 많은 운전자"</li>
+    </ol>
+    <p>핵심: PID는 즉시 반응, MPC는 능동 회피, RL은 패턴 인식.</p>
+  </div>
+
+  <h3>S2. "통합 자율주행 시스템에서 각 모듈의 역할"</h3>
+  <div class="tip">
+    <p>전형적 자율주행 스택 (Apollo, Autoware 표준):</p>
+    <ol>
+      <li><strong>Perception</strong>: 카메라/LiDAR → 객체·차선·자기위치 (이 강의 범위 외)</li>
+      <li><strong>Mission Planning</strong>: A* on road graph → 출발지~목적지 경로</li>
+      <li><strong>Behavior Planning</strong>: 차선변경/양보/정지 결정 → FSM 또는 RL</li>
+      <li><strong>Motion Planning</strong>: 실시간 궤적 → Frenet planner, MPC-plan</li>
+      <li><strong>Control</strong>: 조향·가속 → Pure Pursuit/Stanley + PID + (CBF/MPC)</li>
+      <li><strong>Actuator</strong>: 명령을 차량 하드웨어로 전달</li>
+    </ol>
+    <p>본 강의는 <strong>Mission + Motion + Control</strong> 의 가운데 3 단계 집중. Perception/Behavior는 별도 과목.</p>
+  </div>
+
+  <h3>S3. "시뮬에서 잘 되는데 실차에서 왜 잘 안 될까?"</h3>
+  <div class="tip">
+    <ol>
+      <li><strong>Sim-to-Real Gap</strong>: 시뮬 모델이 실차 동역학을 완벽히 표현 X (타이어 슬립, 노면 마찰 변동)</li>
+      <li><strong>지연 (Latency)</strong>: 실차는 명령→작동에 50~200 ms. 시뮬에선 무시됨</li>
+      <li><strong>센서 노이즈</strong>: 카메라/LiDAR 측정 오차, 시뮬에선 깨끗</li>
+      <li><strong>외란 (Disturbance)</strong>: 바람, 경사, 노면 — 시뮬에선 부재</li>
+      <li><strong>모델 오차</strong>: 차량 파라미터 (질량, 관성) 의 실측 어려움</li>
+    </ol>
+    <p>대응: ① 시뮬에 노이즈/지연 주입, ② Domain Randomization, ③ Robust 제어, ④ 안전 마진 추가.</p>
+  </div>
+
+  <h2>8d. 진로 인터뷰 대비</h2>
+
+  <p>"<em>자율주행 회사 면접 자주 나오는 질문</em>" 모음 — 이 강의 내용으로 답변 가능.</p>
+
+  <h3>기초 지식</h3>
+  <ul>
+    <li>"Bicycle 모델을 설명해 보세요" → W2 내용 + 회전반경 공식</li>
+    <li>"PID와 MPC의 차이는?" → 본 페이지 S1</li>
+    <li>"A*와 RRT는 어느 경우에 쓰나요?" → 격자 vs 연속 공간</li>
+  </ul>
+
+  <h3>경험 / 프로젝트</h3>
+  <ul>
+    <li>"통합 시뮬레이션을 만든 경험이 있나요?" → W11 프로젝트 활용</li>
+    <li>"안전을 어떻게 보장했나요?" → CBF 또는 Costmap 마진 설명</li>
+    <li>"디버깅 경험을 공유해 보세요" → 좌표계, 각도 wrap, 와인드업 사례</li>
+  </ul>
+
+  <h3>최신 기술</h3>
+  <ul>
+    <li>"엔드투엔드 RL은 왜 실차에 적용 어려운가요?" → W14 안전 RL 내용</li>
+    <li>"CBF가 무엇인지 한 줄로?" → "$\dot h + \alpha h \ge 0$ 부등식으로 안전 영역 유지"</li>
+    <li>"Foundation Model + 자율주행 트렌드는?" → W14 미래 동향</li>
+  </ul>
+
+  <h2>9. 마지막 한 마디</h2>
+
+  <div class="tip">
+    <p>15주 동안 우리는 <strong>"점 A에서 점 B까지, 차가 스스로 안전하게 가게 만드는 법"</strong>을 처음부터 끝까지 한 번 훑었습니다.
+    수식·코드·인터랙티브 데모로 만진 만큼, 이제는 새 알고리즘 논문을 봐도 그 위치(파이프라인의 어느 블록인가, 어떤 가정 위에 서 있는가)를 빠르게 파악할 수 있을 거예요.</p>
+    <p>마지막은 한 줄로: <strong>"자율주행 = 어디로 갈까(Planning) + 어떻게 갈까(Control). 그 위에 안전을 얹는 일."</strong></p>
+  </div>
+
+  <h2>9b. 자기 진단 — 어디까지 왔나?</h2>
+
+  <p>다음 질문에 답할 수 있다면 학부 자율주행 기초가 탄탄합니다.</p>
+  <ul>
+    <li>☐ Bicycle 모델 상태방정식을 종이에 적을 수 있다</li>
+    <li>☐ A* 격자 5×5 손풀이를 시간 안에 풀 수 있다</li>
+    <li>☐ Pure Pursuit과 Stanley의 차이를 한 줄로 설명할 수 있다</li>
+    <li>☐ PID 의 anti-windup 이 왜 필요한지 설명할 수 있다</li>
+    <li>☐ Frenet 좌표 $(s, d)$ 의 부호 규칙을 안다</li>
+    <li>☐ MPC 의 Receding Horizon 원칙을 설명할 수 있다</li>
+    <li>☐ CBF 의 핵심 부등식을 안다</li>
+    <li>☐ RL 의 4 요소 (S, A, R, π) 를 외운다</li>
+    <li>☐ 통합 시뮬의 데이터 흐름을 그릴 수 있다</li>
+    <li>☐ 시뮬에서 잘 되는데 실차에서 안 되는 이유를 셋 이상 안다</li>
+  </ul>
+
+  <p>8 개 이상 ☑ → 시험 준비 완료. 5~7 개 → D-1 에 부족한 부분 보충. 4 개 이하 → D-3 부터 차근차근.</p>
+
+  <h2>9c. 한 페이지 시각 요약</h2>
+
+  <p>15주 전체를 한 다이어그램으로:</p>
+
+  <pre>
+            [Perception (외부 입력으로 가정)]
+                       ↓ {장애물·자기 위치}
+   ┌─────────────────────────────────────────┐
+   │  Map (W5)  ─→  A* (W7)  ─→  Spline (W5) │
+   │     ↓                              ↓     │
+   │  Costmap                    속도 프로파일  │
+   │                                    ↓     │
+   │              ┌─────────────────────┘     │
+   │              ↓                            │
+   │  ┌───── Pure Pursuit / Stanley (W10) ──┐ │
+   │  │  + PID (W9)                          │ │
+   │  │  + CBF 안전 필터 (W12)               │ │
+   │  │  + MPC 고급 제어 (W13)               │ │
+   │  │  + RL 의사결정 (W14)                 │ │
+   │  └──────────┬───────────────────────────┘ │
+   │             ↓                              │
+   │   Bicycle 모델 (W2/W3) + Euler 적분 (W4)   │
+   │             ↓                              │
+   │  [차량 명령 δ, a]                          │
+   └─────────────────────────────────────────────┘
+                  ↓
+            [Actuator → 차량]
+                  ↓
+            [상태 피드백]  ← 50 Hz 루프
+  </pre>
+
+  <p>이 다이어그램을 그리면서 각 블록이 어느 주차에서 다뤄졌는지 말할 수 있으면 <strong>학부 자율주행 마스터</strong>!</p>
+
+  <h2>10. 시험 정보 &amp; 시간 배분</h2>
+  <ul>
+    <li>시험 시간: 80분 / 객관식 15 + 단답 5 + 계산 3 + 서술 2.</li>
+    <li>범위: 9~14주차 중심 (85%) + 1~7주차 핵심 (15%).</li>
+    <li>허용: 공학용 계산기, A4 1장 수기 요약, 학생증.</li>
+    <li>금지: 전자기기, 프린트물.</li>
+    <li>시간 배분: 5분 훑기 → 20분 객관식 → 15분 단답·계산 → 30분 서술 → 10분 점검.</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="14-rl-basics.html"><small>← 이전</small>W14. 강화학습 기초</a>
+    <a href="../../path-planning.html" class="next"><small>마지막 주차</small>강의 목록으로</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

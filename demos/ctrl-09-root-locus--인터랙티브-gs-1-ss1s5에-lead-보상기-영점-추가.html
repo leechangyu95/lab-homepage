@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브: $G(s) = 1/[s(s+1)(s+5)]$에 Lead 보상기 영점 추가 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브: $G(s) = 1/[s(s+1)(s+5)]$에 Lead 보상기 영점 추가</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/09-root-locus.html">Week 9. 근궤적 (Root Locus)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브: $G(s) = 1/[s(s+1)(s+5)]$에 Lead 보상기 영점 추가</h4>
+    <p>P 단독에서 안정 K 범위는 $0 < K < 30$. Lead 보상기 $C(s) = K(s + a)/(s + 10)$를 추가하면 영점 $-a$가 궤적을 좌반평면으로 끌어당깁니다. $a$를 움직이면서 안정 영역이 어떻게 넓어지는지 보세요.</p>
+    <canvas id="c9KSlider2" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>K <span class="val" id="c9KV2">10</span><input type="range" id="c9K2" min="0.5" max="200" step="0.5" value="10"></label>
+      <label>영점 위치 a <span class="val" id="c9aV">3</span><input type="range" id="c9a" min="0.5" max="20" step="0.1" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c9KSlider2'), x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c9KV2').textContent=(+$('c9K2').value).toFixed(1);$('c9aV').textContent=(+$('c9a').value).toFixed(1);};
+    ['c9K2','c9a'].forEach(id=>$(id).oninput=upd);
+    function quartRoots(coeffs){
+      const [a,b,c2,d,e]=coeffs;
+      let r=[{re:0.5,im:0.5},{re:0.5,im:-0.5},{re:-1,im:0.5},{re:-1,im:-0.5}];
+      for(let it=0;it<80;it++){
+        r=r.map((zi,i)=>{
+          const z2={re:zi.re*zi.re-zi.im*zi.im, im:2*zi.re*zi.im};
+          const z3={re:z2.re*zi.re-z2.im*zi.im, im:z2.re*zi.im+z2.im*zi.re};
+          const z4={re:z3.re*zi.re-z3.im*zi.im, im:z3.re*zi.im+z3.im*zi.re};
+          const f={re:a*z4.re+b*z3.re+c2*z2.re+d*zi.re+e, im:a*z4.im+b*z3.im+c2*z2.im+d*zi.im};
+          let dn={re:1,im:0};
+          r.forEach((zj,j)=>{if(i===j)return;
+            const dr=zi.re-zj.re, di=zi.im-zj.im;
+            dn={re:dn.re*dr-dn.im*di, im:dn.re*di+dn.im*dr};});
+          const denom=dn.re*dn.re+dn.im*dn.im+1e-20;
+          const dz={re:(f.re*dn.re+f.im*dn.im)/denom, im:(f.im*dn.re-f.re*dn.im)/denom};
+          return {re:zi.re-dz.re, im:zi.im-dz.im};
+        });
+      }
+      return r;
+    }
+    function loop(){
+      const K=+$('c9K2').value, a=+$('c9a').value;
+      // L(s) = K(s+a) / [s(s+1)(s+5)(s+10)]
+      // closed loop: s(s+1)(s+5)(s+10) + K(s+a) = 0
+      // Expand: s^4 + 16 s^3 + 65 s^2 + 50 s + K(s+a) = s^4 + 16 s^3 + 65 s^2 + (50+K) s + K a
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=400, cy=190, sc=28;
+      x.fillStyle='rgba(198,40,40,0.06)';x.fillRect(cx,10,240,360);
+      x.strokeStyle='#eee';for(let r=-15;r<=8;r++){const xx=cx+r*sc;x.beginPath();x.moveTo(xx,10);x.lineTo(xx,370);x.stroke();}
+      for(let i=-6;i<=6;i++){const yy=cy-i*sc;x.beginPath();x.moveTo(20,yy);x.lineTo(630,yy);x.stroke();}
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,cy);x.lineTo(630,cy);x.moveTo(cx,10);x.lineTo(cx,370);x.stroke();
+      // open-loop poles 0,-1,-5,-10
+      [0,-1,-5,-10].forEach(p=>{const px=cx+p*sc, py=cy;
+        x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+        x.moveTo(px-7,py-7);x.lineTo(px+7,py+7);x.moveTo(px-7,py+7);x.lineTo(px+7,py-7);x.stroke();});
+      // open-loop zero -a
+      const zx=cx+(-a)*sc, zy=cy;
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();x.arc(zx,zy,7,0,Math.PI*2);x.stroke();
+      // sweep K to draw locus
+      x.fillStyle='rgba(150,150,150,0.5)';
+      for(let Ks=0.1;Ks<300;Ks+=2){
+        const r=quartRoots([1,16,65,50+Ks,Ks*a]);
+        r.forEach(p=>{const px=cx+p.re*sc, py=cy-p.im*sc;
+          x.fillRect(px-1.2,py-1.2,2.4,2.4);});
+      }
+      // current K poles
+      const r=quartRoots([1,16,65,50+K,K*a]);
+      r.forEach(p=>{const px=cx+p.re*sc, py=cy-p.im*sc;
+        x.strokeStyle='#c62828';x.lineWidth=2.5;x.beginPath();
+        x.moveTo(px-9,py-9);x.lineTo(px+9,py+9);x.moveTo(px-9,py+9);x.lineTo(px+9,py-9);x.stroke();});
+      const unstable=r.some(p=>p.re>0.001);
+      x.fillStyle='#444';x.font='13px sans-serif';
+      x.fillText('파랑 X = 개루프 극점,  초록 ○ = Lead 영점,  회색 = 전체 궤적,  빨강 X = 현재 K',20,20);
+      x.fillStyle=unstable?'#c62828':'#2e7d32';x.font='14px sans-serif';
+      x.fillText(unstable?'불안정':'안정',20,40);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('영점 a를 좌반평면 가까이(예: a=2)에 두면 궤적이 좌반평면 안에 더 오래 머무름.',20,375);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

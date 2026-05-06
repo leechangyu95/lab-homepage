@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W10. Pure Pursuit · Stanley · PN — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html" class="active">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../path-planning.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 10. Guidance — Pure Pursuit · Stanley · PN</h1>
+  <p class="lead">9주차에서는 PID 로 <strong>속도</strong>를 잡았습니다. 이번 주는 같은 차에서 <strong>조향</strong>을 결정짓는
+  세 가지 유도(guidance) 법칙 — Pure Pursuit, Stanley, Proportional Navigation — 을 직관·수식·인터랙티브로 한 번에 익힙니다.
+  "어디로 핸들을 얼마나 돌릴까?"에 답하는 한 시간.</p>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>Guidance 가 뭐길래 — PID 와의 분업</li>
+    <li>Pure Pursuit — 강아지가 먹이 쫓듯</li>
+    <li>인터랙티브: lookahead $L_d$ 의 효과</li>
+    <li>Stanley — 횡오차 + 헤딩오차</li>
+    <li>인터랙티브: Pure Pursuit vs Stanley 동시 비교</li>
+    <li>Proportional Navigation — 미사일이 적기 잡는 법</li>
+    <li>인터랙티브: PN 으로 움직이는 표적 요격</li>
+    <li>실전 통합 패턴 · 흔한 실수 · 코드</li>
+  </ol></div>
+
+  <h2>1. Guidance 가 뭐길래</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>친구 차에 동승해서 코스를 도는 모습을 떠올려 보세요. 운전석엔 세 사람의 역할이 합쳐져 있습니다.
+  (1) 머릿속에 코스 전체를 그린 <strong>네비게이터</strong> — "200 m 가서 좌회전",
+  (2) 매 순간 "지금은 저 빨간 콘 쪽으로 핸들을 살짝 꺾어"라고 짚어주는 <strong>코치</strong>,
+  (3) 실제로 핸들과 페달을 조작하는 <strong>운전자</strong>. 자율주행에서 이 셋이 각각
+  <strong>경로계획(W6–W7)</strong>, <strong>유도(이번 주)</strong>, <strong>제어(W9 PID)</strong>입니다.</p>
+
+  <h3>왜 PID 만으로는 안 되는가</h3>
+  <p>PID 는 "<em>오차를 0 으로 만드는 법</em>"은 알지만 "<em>오차를 어떤 기준으로 잴지</em>"는 모릅니다.
+  그 기준을 정해주는 것이 유도. Pure Pursuit, Stanley, PN 은 결국 "<strong>오차의 정의</strong>"가 다른 세 가지 유도법입니다.</p>
+
+  <ul>
+    <li><strong>경로계획(Planning, W6–W7)</strong> — 점들의 나열 $\{p_1, \ldots, p_N\}$. 시간 개념 없음.</li>
+    <li><strong>유도(Guidance, 이번 주)</strong> — 매 순간 상태 $x(t)$ 를 보고 "지금 어디를 향할지"를 출력. 실시간 갱신.</li>
+    <li><strong>제어(Control, W9)</strong> — 유도가 준 목표를 모터·핸들로 실제 실행.</li>
+  </ul>
+
+  <p>실차에선 보통 다른 주기로 동작합니다 — 계획 1 Hz, 유도 20–50 Hz, 제어 100–1000 Hz.
+  빠른 쪽이 위 단계의 출력을 받아 실시간으로 결정합니다.</p>
+
+  <table>
+    <thead><tr><th>법칙</th><th>비유</th><th>주 사용처</th><th>이번 주 위치</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Pure Pursuit</strong></td><td>앞에 있는 사람 따라가기</td><td>저속 자율주행, 농기계, 로봇</td><td>가장 쉬움 ⭐</td></tr>
+      <tr><td><strong>Stanley</strong></td><td>차선에 딱 붙이기</td><td>고속 자율주행</td><td>표준 ⭐⭐</td></tr>
+      <tr><td><strong>Proportional Navigation</strong></td><td>미사일이 적기 앞질러가기</td><td>항공·미사일·동적 추적</td><td>특수 ⭐⭐⭐</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Pure Pursuit — 강아지가 먹이 쫓듯</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>강아지에게 막대를 멀리 던지면, 강아지는 막대까지 일직선으로 가지 않습니다.
+  <strong>현재 머리가 향한 방향에서 막대 쪽으로 호를 그리며</strong> 달려가요. 머리를 살짝 돌리고 한 발 내딛고,
+  또 살짝 돌리고… Pure Pursuit 이 정확히 그 동작입니다.</p>
+
+  <p>구체적으로는 차의 뒷바퀴축에서 일정 거리 $L_d$ 앞에 있는 경로상의 점(<em>lookahead point</em>)을 골라,
+  차가 그 점에 도달하는 호를 그리도록 조향각을 계산합니다.</p>
+
+  <h3>왜 일직선이 아니라 호인가</h3>
+  <p>자동차는 비홀로노믹입니다(W2). 옆으로 직접 못 가고, 핸들을 꺾어 호를 그릴 수밖에 없어요.
+  그래서 "현재 위치 → 목표점"을 잇는 가장 자연스러운 자동차 궤적은 <strong>호(원호)</strong>이고,
+  Pure Pursuit 은 그 호의 곡률에 맞는 조향각을 한 번에 계산합니다.</p>
+
+  <h3>식 한 줄씩 풀어보기</h3>
+  <p>핵심 식은 정확히 한 줄입니다.</p>
+  $$ \boxed{\;\delta = \arctan\!\left(\frac{2 L \sin\alpha}{L_d}\right)\;} $$
+  <ul>
+    <li>$L$ — 차의 휠베이스(앞·뒷바퀴축 사이 거리). W2 자전거 모델 그림을 떠올리세요.</li>
+    <li>$\alpha$ — 차체 헤딩과 "차 → lookahead 점" 사이 각도. "얼마나 옆을 봐야 하는가".</li>
+    <li>$L_d$ — lookahead 거리. 차에서 경로상 목표점까지의 거리.</li>
+    <li>$\delta$ — 우리가 구하려는 앞바퀴 조향각.</li>
+  </ul>
+
+  <h3>기하 유도 — 왜 이 식이 나오는가</h3>
+  <p>종이에 그림 하나 그리면 풀립니다.</p>
+  <ol>
+    <li>차의 뒷바퀴를 점 $A$, lookahead 점을 점 $B$. 거리 $|AB| = L_d$.</li>
+    <li>차가 그리는 호의 반지름을 $R$ 이라 하면, $A$ 에서 호를 따라 $B$ 에 도달.</li>
+    <li>중심·$A$·$B$ 로 이루어진 이등변삼각형에서 $R = \dfrac{L_d}{2\sin\alpha}$.</li>
+    <li>자전거 모델: 휠베이스 $L$ 차가 곡률 반경 $R$ 로 회전하려면 $\tan\delta = L/R$.</li>
+    <li>둘을 합치면 $\tan\delta = \dfrac{2L\sin\alpha}{L_d}$ → 양변에 $\arctan$.</li>
+  </ol>
+
+  <p>핵심은 "<strong>호 한 개를 기하로 그리는 것</strong>"이지 적분이나 최적화가 들어가지 않는다는 점.
+  그래서 Pure Pursuit 은 임베디드 환경에서도 매우 가볍게 돕니다.</p>
+
+  <div class="tip">
+    <strong>숫자로 직접 풀어보기</strong><br>
+    휠베이스 $L = 2.5$ m, lookahead $L_d = 6$ m, 각도 $\alpha = 20°$ 일 때 조향각은?<br>
+    $\sin 20° \approx 0.342$, 따라서<br>
+    $\delta = \arctan\!\left(\dfrac{2 \cdot 2.5 \cdot 0.342}{6}\right) = \arctan(0.285) \approx 15.9°$.<br>
+    곡률 반경 $R = L_d / (2\sin\alpha) \approx 8.77$ m.
+  </div>
+
+  <h3>속도 적응형 lookahead $L_d = k v + L_{fc}$</h3>
+  <p>$L_d$ 를 어떻게 정하느냐가 Pure Pursuit 성능의 거의 모든 것을 좌우합니다. 운전 경험과 정확히 일치해요.</p>
+  <ul>
+    <li><strong>$L_d$ 가 작으면</strong> — 가까운 점만 보고 운전. 작은 흔들림이 큰 핸들 조작으로 증폭돼 <em>지그재그(oscillation)</em>.
+    초보가 보닛 끝만 보며 운전하는 모습.</li>
+    <li><strong>$L_d$ 가 크면</strong> — 멀리 보고 운전. 부드럽지만 코너 안쪽을 잘라먹는 <em>cutting corners</em>. 베테랑이 코너 진입 전 미리 핸들을 꺾는 느낌.</li>
+  </ul>
+
+  <p>실무 표준은 속도 적응형:</p>
+  $$ L_d = k\, v + L_{fc}, \quad k \in [0.1, 0.2],\ L_{fc} \in [2, 3]\text{ m} $$
+
+  <table>
+    <thead><tr><th>$L_d$</th><th>직선</th><th>곡선</th></tr></thead>
+    <tbody>
+      <tr><td>1 m (짧음)</td><td>정확</td><td>지그재그 진동</td></tr>
+      <tr><td>3 m (중간)</td><td>양호</td><td>양호</td></tr>
+      <tr><td>6 m (길음)</td><td>부드러움</td><td>내측 컷</td></tr>
+      <tr><td><strong>$0.1 v + 2$ (적응형)</strong></td><td><strong>균형 ✅</strong></td><td><strong>균형 ✅</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>실패 모드 — "내 차가 자꾸 흔들려요"</strong> — 거의 100% $L_d$ 가 너무 작거나, 차가 너무 빨라 $L_d$ 를 늘려야 할 때입니다.
+    디버깅 순서: ① $L_d$ 두 배 → 흔들림 감소? lookahead 문제. ② 그래도 그러면 조향 actuator 의 시간지연(latency) 가능성.
+  </div>
+
+  <h2>3. 인터랙티브: lookahead $L_d$ 의 효과</h2>
+
+  <div class="demo">
+    <h4>🎮 Pure Pursuit — Lookahead 와 호 그리기</h4>
+    <p>곡선 경로(초록)를 자전거 모델 차량(파랑)이 추종합니다. 주황 점이 lookahead 점, 점선이 차량과 lookahead 사이 시선,
+    빨간 화살표가 앞바퀴와 조향각 $\delta$. <strong>$L_d$ 를 작게</strong> 줄이면 지그재그가, <strong>크게</strong> 늘리면 코너 안쪽 자르기가 보입니다.
+    "속도 적응형" 토글을 켜면 $L_d = 0.1 v \cdot \text{scale} + L_{fc}$ 로 자동 조절됩니다.</p>
+    <canvas id="pp" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Lookahead L_d <span class="val" id="ppLdV">70</span><input type="range" id="ppLd" min="20" max="180" value="70"></label>
+      <label>속도 v <span class="val" id="ppVV">2.0</span><input type="range" id="ppV" min="0.5" max="4" step="0.1" value="2"></label>
+      <label><input type="checkbox" id="ppAdapt"> 속도 적응형 L_d</label>
+      <button id="ppRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pp'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const path=[];
+    for(let s=0;s<W+50;s+=2){
+      path.push({x:s,y:H/2+55*Math.sin(s*0.012)});
+    }
+    const arc=[0];
+    for(let i=1;i<path.length;i++) arc.push(arc[i-1]+Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y));
+    const L=24;
+    let car;
+    function init(){car={x:30,y:H/2-40,th:0.0,trail:[],errSum:0,n:0};}
+    init();
+    document.getElementById('ppRst').onclick=init;
+    function nearestIdx(px,py){
+      let best=0,bd=1e9;
+      for(let i=0;i<path.length;i++){
+        const d=(path[i].x-px)**2+(path[i].y-py)**2;
+        if(d<bd){bd=d;best=i;}
+      }
+      return best;
+    }
+    function loop(){
+      const v=+document.getElementById('ppV').value;
+      const adapt=document.getElementById('ppAdapt').checked;
+      let Ld=+document.getElementById('ppLd').value;
+      if(adapt){Ld=15*v+30;}
+      document.getElementById('ppLdV').textContent=Ld.toFixed(0);
+      document.getElementById('ppVV').textContent=v.toFixed(1);
+      const ni=nearestIdx(car.x,car.y);
+      let li=ni;
+      while(li<path.length-1 && arc[li]-arc[ni]<Ld) li++;
+      const tgt=path[li];
+      const lookAng=Math.atan2(tgt.y-car.y,tgt.x-car.x);
+      const alpha=((lookAng-car.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+      const delta=Math.atan2(2*L*Math.sin(alpha),Ld);
+      const dt=0.05;
+      car.x+=v*Math.cos(car.th)*dt*15;
+      car.y+=v*Math.sin(car.th)*dt*15;
+      car.th+=v/L*Math.tan(delta)*dt*15;
+      // track lateral error
+      const ne=path[ni];
+      const dxe=car.x-ne.x,dye=car.y-ne.y;
+      const eLat=Math.hypot(dxe,dye);
+      car.errSum+=eLat*eLat;car.n++;
+      car.trail.push({x:car.x,y:car.y});
+      if(car.trail.length>600) car.trail.shift();
+      if(car.x>W-20) init();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#2e7d32';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(11,95,255,0.4)';x.lineWidth=2;x.beginPath();
+      car.trail.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='#ff8c00';x.setLineDash([4,4]);x.lineWidth=1;
+      x.beginPath();x.moveTo(car.x,car.y);x.lineTo(tgt.x,tgt.y);x.stroke();
+      x.setLineDash([]);
+      x.fillStyle='#ff8c00';x.beginPath();x.arc(tgt.x,tgt.y,6,0,Math.PI*2);x.fill();
+      x.save();x.translate(car.x,car.y);x.rotate(car.th);
+      x.fillStyle='#0b5fff';x.fillRect(-2,-7,L+2,14);
+      x.fillStyle='#222';x.fillRect(-3,-7,3,14);
+      x.translate(L,0);x.rotate(delta);
+      x.fillStyle='#c62828';x.fillRect(-3,-6,6,12);
+      x.restore();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      const rmse=car.n?Math.sqrt(car.errSum/car.n):0;
+      x.fillText('α = '+(alpha*180/Math.PI).toFixed(1)+'°   ·   δ = '+(delta*180/Math.PI).toFixed(1)+'°   ·   곡률 반경 R ≈ '+(Ld/(2*Math.sin(Math.abs(alpha))+0.001)).toFixed(0)+' px   ·   RMSE = '+rmse.toFixed(1)+' px',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p><strong>꼭 만져볼 시나리오</strong></p>
+  <ul>
+    <li>$L_d = 25$ + $v = 4$ → 곡선에서 핸들이 휙휙 — <em>지그재그</em>.</li>
+    <li>$L_d = 170$ → 곡선 안쪽을 잘라먹음 — <em>cutting corners</em>.</li>
+    <li><strong>속도 적응형</strong> 체크 → 속도 슬라이더만 흔들면 $L_d$ 가 자동으로 따라옴. RMSE 가 안정적임을 확인.</li>
+  </ul>
+
+  <h3>코드 — Pure Pursuit (PythonRobotics 단순화)</h3>
+
+<pre><code class="language-python">import numpy as np
+
+WB = 2.9   # 휠베이스 (m)
+
+def pure_pursuit(state, path, Lfc=2.0, k=0.1):
+    """
+    state = (x, y, yaw, v),  path = ndarray[N, 2]
+    return: (delta, target_index)
+    """
+    x, y, yaw, v = state
+    Ld = k * v + Lfc                          # 속도 적응형 lookahead
+
+    # 1) 가장 가까운 경로 점
+    dx = path[:, 0] - x
+    dy = path[:, 1] - y
+    d  = np.hypot(dx, dy)
+    i  = int(np.argmin(d))
+
+    # 2) Ld 이상 떨어진 점까지 전진
+    while i &lt; len(path) - 1 and d[i] &lt; Ld:
+        i += 1
+    tx, ty = path[i]
+
+    # 3) 조향각
+    alpha = np.arctan2(ty - y, tx - x) - yaw
+    delta = np.arctan2(2 * WB * np.sin(alpha), Ld)
+    return delta, i</code></pre>
+
+  <h2>4. Stanley — 횡오차 + 헤딩오차</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>자전거를 타고 도로 위 흰 차선을 따라간다고 상상하세요. 차선에서 벗어나면 두 가지를 동시에 신경 씁니다 —
+  (1) "지금 차선에서 얼마나 옆으로 떨어졌나?"(<strong>횡방향 오차 $e_{fa}$</strong>),
+  (2) "내 자전거가 차선과 같은 방향을 보고 있나?"(<strong>헤딩 오차 $\theta_e$</strong>).
+  이 두 오차를 <em>각도로 환산해 더한 값</em>이 핸들을 꺾어야 할 양 — 정확히 Stanley 의 정의입니다.</p>
+
+  <h3>왜 두 오차를 더하나</h3>
+  <ul>
+    <li><strong>횡오차만 보면</strong> — 차선에서 옆으로 1 m 떨어졌는데 차가 차선과 평행하면 핸들을 꺾어 차선 쪽으로 가다가 통과해 반대편으로 1 m 떨어집니다 — <em>진동</em>.</li>
+    <li><strong>헤딩오차만 보면</strong> — 차 방향만 차선과 맞추면 그 자리를 그대로 평행 이동만. 영영 안 돌아옴.</li>
+    <li><strong>둘을 더하면</strong> — 옆으로 떨어졌으니 핸들을 꺾고($\arctan$ 항), 동시에 비스듬한 만큼 보정($\theta_e$ 항). 자연스럽게 매끄럽게 합류.</li>
+  </ul>
+
+  <h3>핵심 식</h3>
+  $$ \boxed{\;\delta = \theta_e + \arctan\!\left(\frac{k\, e_{fa}}{v + v_s}\right)\;} $$
+  <ul>
+    <li>$\theta_e = \psi_r - \psi$ — <strong>헤딩 오차</strong>. 경로 접선과 차 헤딩의 차.</li>
+    <li>$e_{fa}$ — 차의 <strong>앞바퀴 위치</strong>에서 잰 횡방향 오차. Stanley 의 핵심 — Pure Pursuit 이 뒷바퀴 기준이라면 Stanley 는 앞바퀴 기준.</li>
+    <li>$k$ — 횡오차 게인(보통 $0.5$).</li>
+    <li>$v_s$ — softening 항. 저속에서 분모 폭발 방지(보통 $1.0$).</li>
+  </ul>
+
+  <p>속도가 분모에 들어가는 이유 — 빠르게 달릴 때 같은 횡오차에도 핸들 보정량을 자동으로 줄여서 부드럽게 만듭니다.
+  고속에서 부드럽게, 저속에서 민첩하게 — <strong>속도 보정이 식 안에 내장</strong>돼 있어요.</p>
+
+  <div class="tip">
+    <strong>숫자로 직접 풀어보기</strong><br>
+    $e_{fa} = 0.5$ m, $\theta_e = 5° \approx 0.087$ rad, $v = 10$ m/s, $k = 1$, $v_s = 1$.<br>
+    $\arctan(1 \cdot 0.5 / 11) \approx 0.045$ rad $\approx 2.6°$, 따라서 $\delta \approx 5° + 2.6° = 7.6°$.<br>
+    같은 상황 $v = 20$ → 조향각이 $5° + 1.3° = 6.3°$ 로 자동으로 줄어듭니다.
+  </div>
+
+  <h3>왜 그 이름?</h3>
+  <div class="note">
+    2005 DARPA Grand Challenge 우승차의 이름이 "Stanley"였습니다(Stanford, Thrun 팀, VW 투아렉 베이스).
+    사막 212 km 를 6시간 54분에 완주했고, 그때 사용된 lateral controller 가 이 식이라 "Stanley method" 라 부릅니다.
+  </div>
+
+  <h3>Pure Pursuit vs Stanley — 한눈에</h3>
+  <table>
+    <thead><tr><th></th><th>Pure Pursuit</th><th>Stanley</th></tr></thead>
+    <tbody>
+      <tr><td>기준점</td><td>뒷바퀴</td><td>앞바퀴</td></tr>
+      <tr><td>오차 정의</td><td>lookahead 점까지 각도</td><td>횡오차 + 헤딩오차</td></tr>
+      <tr><td>주요 튜닝</td><td>$L_d$ 한 개</td><td>$k$ 한 개 (속도 보정 자동)</td></tr>
+      <tr><td>저속</td><td>✅ 좋음</td><td>양호 ($v_s$ 필요)</td></tr>
+      <tr><td>고속</td><td>약함 (내측 컷)</td><td>✅ 좋음</td></tr>
+      <tr><td>구현 난이도</td><td>★</td><td>★★</td></tr>
+      <tr><td>유래</td><td>Coulter, CMU 1992</td><td>Stanford Stanley, DARPA 2005</td></tr>
+    </tbody>
+  </table>
+
+  <h3>코드 — Stanley</h3>
+
+<pre><code class="language-python">def stanley(state, path, yaw_path, k=0.5, vs=1.0):
+    x, y, yaw, v = state
+    # 전륜 위치
+    fx = x + WB * np.cos(yaw)
+    fy = y + WB * np.sin(yaw)
+
+    # 가장 가까운 경로 점 (전륜 기준)
+    dx = fx - path[:, 0]; dy = fy - path[:, 1]
+    d  = np.hypot(dx, dy)
+    i  = int(np.argmin(d))
+
+    # Cross-track error (부호 포함)
+    yaw_p = yaw_path[i]
+    e_fa  = -np.cos(yaw_p) * dy[i] + np.sin(yaw_p) * dx[i]
+
+    # Heading error (wrap 필수!)
+    theta_e = wrap(yaw_p - yaw)
+
+    delta = theta_e + np.arctan2(k * e_fa, v + vs)
+    return np.clip(delta, -np.deg2rad(30), np.deg2rad(30)), i
+
+def wrap(a):
+    return (a + np.pi) % (2 * np.pi) - np.pi</code></pre>
+
+  <h2>5. 인터랙티브: Pure Pursuit vs Stanley</h2>
+
+  <div class="demo">
+    <h4>🎮 같은 S-커브에서 두 기법 동시 비교</h4>
+    <p><span style="color:#0b5fff;font-weight:600">파랑 차 = Pure Pursuit</span>,
+    <span style="color:#c62828;font-weight:600">빨강 차 = Stanley</span>. 같은 속도, 같은 시작점에서
+    같은 경로(초록)를 따라갑니다. RMSE 가 화면 하단에 누적 표시됩니다.
+    Pure Pursuit 의 $L_d$ 를 키우면 코너에서 밀려나는 게(내측 컷) 보입니다.</p>
+    <canvas id="cmp" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>속도 v <span class="val" id="cmpVV">2.5</span><input type="range" id="cmpV" min="0.5" max="4" step="0.1" value="2.5"></label>
+      <label>PP L_d <span class="val" id="cmpLdV">80</span><input type="range" id="cmpLd" min="30" max="180" value="80"></label>
+      <label>Stanley k <span class="val" id="cmpKV">2.0</span><input type="range" id="cmpK" min="0.2" max="6" step="0.1" value="2"></label>
+      <button id="cmpRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cmp'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const path=[],yaws=[];
+    for(let s=0;s<W+50;s+=2){
+      const px=s,py=H/2+45*Math.sin(s*0.014);
+      path.push({x:px,y:py});
+      const dyx=45*0.014*Math.cos(s*0.014);
+      yaws.push(Math.atan2(dyx,1));
+    }
+    const arc=[0];
+    for(let i=1;i<path.length;i++) arc.push(arc[i-1]+Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y));
+    const L=22;
+    let pp,st;
+    function init(){
+      pp={x:30,y:H/2-30,th:0.0,trail:[],errSum:0,n:0};
+      st={x:30,y:H/2-30,th:0.0,trail:[],errSum:0,n:0};
+    }
+    init();
+    document.getElementById('cmpRst').onclick=init;
+    function nearestIdx(px,py){
+      let best=0,bd=1e9;
+      for(let i=0;i<path.length;i++){
+        const d=(path[i].x-px)**2+(path[i].y-py)**2;
+        if(d<bd){bd=d;best=i;}
+      }
+      return best;
+    }
+    function step(car,delta,v){
+      const dt=0.05;
+      car.x+=v*Math.cos(car.th)*dt*15;
+      car.y+=v*Math.sin(car.th)*dt*15;
+      car.th+=v/L*Math.tan(delta)*dt*15;
+      const ni=nearestIdx(car.x,car.y);
+      const ne=path[ni];
+      const eLat=Math.hypot(car.x-ne.x,car.y-ne.y);
+      car.errSum+=eLat*eLat;car.n++;
+      car.trail.push({x:car.x,y:car.y});
+      if(car.trail.length>700) car.trail.shift();
+    }
+    function loop(){
+      const v=+document.getElementById('cmpV').value;
+      const Ld=+document.getElementById('cmpLd').value;
+      const k=+document.getElementById('cmpK').value;
+      document.getElementById('cmpVV').textContent=v.toFixed(1);
+      document.getElementById('cmpLdV').textContent=Ld;
+      document.getElementById('cmpKV').textContent=k.toFixed(1);
+      // PP
+      {
+        const ni=nearestIdx(pp.x,pp.y);
+        let li=ni;
+        while(li<path.length-1 && arc[li]-arc[ni]<Ld) li++;
+        const tgt=path[li];
+        const a=((Math.atan2(tgt.y-pp.y,tgt.x-pp.x)-pp.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+        const d=Math.atan2(2*L*Math.sin(a),Ld);
+        step(pp,d,v);
+      }
+      // Stanley
+      {
+        const fx=st.x+L*Math.cos(st.th),fy=st.y+L*Math.sin(st.th);
+        let bi=0,bd=1e9;
+        for(let i=0;i<path.length;i++){
+          const dd=(path[i].x-fx)**2+(path[i].y-fy)**2;
+          if(dd<bd){bd=dd;bi=i;}
+        }
+        const yp=yaws[bi];
+        const tx=Math.cos(yp),ty=Math.sin(yp);
+        const dxp=fx-path[bi].x,dyp=fy-path[bi].y;
+        const efa=tx*dyp-ty*dxp;
+        const thE=((yp-st.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+        let d=thE-Math.atan2(k*efa,v+1.0);
+        d=Math.max(-0.7,Math.min(0.7,d));
+        step(st,d,v);
+      }
+      if(pp.x>W-20||st.x>W-20) init();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#2e7d32';x.lineWidth=3;x.beginPath();
+      path.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      // trails
+      x.strokeStyle='rgba(11,95,255,0.5)';x.lineWidth=2;x.beginPath();
+      pp.trail.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(198,40,40,0.5)';x.lineWidth=2;x.beginPath();
+      st.trail.forEach((p,i)=>{i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y);});x.stroke();
+      // PP car
+      x.save();x.translate(pp.x,pp.y);x.rotate(pp.th);
+      x.fillStyle='#0b5fff';x.fillRect(-2,-7,L+2,14);
+      x.restore();
+      // Stanley car
+      x.save();x.translate(st.x,st.y);x.rotate(st.th);
+      x.fillStyle='#c62828';x.fillRect(-2,-7,L+2,14);
+      x.restore();
+      const ppRMSE=pp.n?Math.sqrt(pp.errSum/pp.n):0;
+      const stRMSE=st.n?Math.sqrt(st.errSum/st.n):0;
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('Pure Pursuit RMSE: '+ppRMSE.toFixed(1)+' px',12,H-26);
+      x.fillText('Stanley RMSE:      '+stRMSE.toFixed(1)+' px',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <p><strong>관찰 포인트</strong> — 기본값에서 둘 다 비슷한 RMSE 가 나오지만,
+  $v$ 를 4.0 까지 올리고 PP $L_d = 30$ 으로 줄이면 Pure Pursuit 만 진동합니다(RMSE 급증).
+  반대로 $L_d = 180$ 으로 키우면 PP 가 코너 안쪽을 자르며 Stanley 보다 RMSE 가 커집니다.</p>
+
+  <h2>6. Proportional Navigation — 미사일이 적기 잡는 법</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>친구가 던지는 공을 강아지가 잡는 모습을 떠올려 보세요. 강아지는 공이 <em>지금 있는 곳</em>으로 뛰지 않습니다.
+  공이 <em>지나갈 자리</em>를 예측해 그쪽으로 달려요. 이 "미래 위치 가로채기"가 바로
+  <strong>Proportional Navigation(PN)</strong>입니다.</p>
+
+  <h3>LOS(Line-of-Sight)와 회전율 $\dot\lambda$</h3>
+  <p>미사일에서 표적을 잇는 직선이 <strong>LOS</strong>. 그 직선이 시간에 따라 회전하는 각속도가 $\dot\lambda$.
+  미사일과 표적이 실제로 충돌하려면 — 두 점의 상대 속도가 LOS 와 평행해야 하므로 — <strong>$\dot\lambda = 0$ </strong>이어야 합니다.</p>
+
+  <h3>핵심 식</h3>
+  $$ \boxed{\;a_\perp = N\, V_c\, \dot\lambda\;} \qquad \text{또는 회전 형태로}\quad \dot\psi_M = N\, \dot\lambda $$
+  <ul>
+    <li>$a_\perp$ — 미사일에 줄 수직 가속(조향 명령에 해당).</li>
+    <li>$N$ — <strong>항법상수</strong>. 보통 3–5. 비조작 표적 요격에서 횡가속 적분 $\int a^2\,dt$ 가 최소가 되는 값이 $N=3$(Bryson–Ho, 1975).</li>
+    <li>$V_c = -\dot R$ — 접근 속도(거리가 줄어드는 비율).</li>
+    <li>$\dot\lambda$ — LOS 회전율.</li>
+  </ul>
+
+  <p><strong>왜 이게 통하는가</strong> — <em>병렬 항법(parallel navigation)</em>의 원리입니다.
+  $\dot\lambda \neq 0$ 이면 충돌하지 못한다는 것이 기하적 사실. PN 은 그 회전을 즉시 $N$ 배만큼 강하게 보정해 자동으로 0 으로 끌어당깁니다.</p>
+
+  <h3>PN vs Pure Pursuit — 정적 vs 움직이는 표적</h3>
+  <table>
+    <thead><tr><th></th><th>Pure Pursuit (PPG)</th><th>Proportional Navigation</th></tr></thead>
+    <tbody>
+      <tr><td>입력</td><td>표적 <em>현재 위치</em></td><td>표적 <em>현재 위치 + 상대 속도</em></td></tr>
+      <tr><td>핵심 변수</td><td>$\lambda - \psi_M$</td><td>$\dot\lambda$</td></tr>
+      <tr><td>궤적</td><td>꼬리 추격, 휘어 들어감</td><td>거의 직선 인터셉트</td></tr>
+      <tr><td>비유</td><td>먹이 좇는 개</td><td>공 잡는 강아지</td></tr>
+      <tr><td>주 사용</td><td>정적 경로 추종</td><td>이동 표적 요격, 항공·미사일</td></tr>
+    </tbody>
+  </table>
+
+  <h3>자율주행에서의 PN</h3>
+  <p>자율주행 차에 직접 PN 을 쓰는 일은 드물지만, 아이디어 — "<strong>표적의 미래 위치</strong>를 고려해 지금 조향" — 는
+  여러 곳에서 다시 등장합니다.</p>
+  <ul>
+    <li>차선 변경 시 옆차의 미래 위치를 예측해 내 경로 조정</li>
+    <li>동적 장애물 회피 (특히 W12 CBF 와 결합)</li>
+    <li>Frenet planner + PN 조합</li>
+  </ul>
+
+  <h2>7. 인터랙티브: PN 으로 움직이는 표적 요격</h2>
+
+  <div class="demo">
+    <h4>🎮 PN(파랑) vs PPG(주황) 동시 발사</h4>
+    <p>같은 시작점·속도·표적에서 두 미사일을 동시에 발사. PPG 는 매 순간 표적의 <em>지금 위치</em>로 돌고,
+    PN 은 LOS 회전율 $\dot\lambda$ 에 비례해 회전합니다. 표적 패턴(직선/사인/급기동)과 항법상수 $N$ 을 만져보세요.
+    PN 이 거의 항상 더 빨리 명중합니다.</p>
+    <canvas id="pn" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>표적 패턴
+        <select id="pnPat">
+          <option value="straight">직선</option>
+          <option value="sine" selected>사인 회피</option>
+          <option value="evade">급기동 회피</option>
+        </select>
+      </label>
+      <label>항법상수 N <span class="val" id="pnNV">3.0</span><input type="range" id="pnN" min="1" max="6" step="0.1" value="3"></label>
+      <label>회전 한계 ω_max <span class="val" id="pnOmaxV">3</span><input type="range" id="pnOmax" min="0.5" max="6" step="0.1" value="3"></label>
+      <button id="pnRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pn'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    const W=c.width,H=c.height;
+    const aDiff=(a,b)=>((a-b+Math.PI*3)%(2*Math.PI))-Math.PI;
+    let mp,mn,t,tk,lamPrev,hist,phitT,nhitT;
+    function reset(){
+      mp={x:60,y:340,th:-0.4,v:120,alive:true,latAcc:0};
+      mn={x:60,y:340,th:-0.4,v:120,alive:true,latAcc:0};
+      t={x:560,y:60,th:Math.PI*0.65,v:55};
+      tk=0;
+      lamPrev=Math.atan2(t.y-mn.y,t.x-mn.x);
+      hist={mp:[],mn:[],t:[]};
+      phitT=null;nhitT=null;
+    }
+    reset();
+    sl('pnRst').onclick=reset;
+    function moveTarget(dt){
+      const pat=sl('pnPat').value;
+      if(pat==='sine')t.th+=1.8*Math.cos(tk*1.5)*dt;
+      else if(pat==='evade')t.th+=2.4*Math.cos(tk*2.2)*dt;
+      t.x+=t.v*Math.cos(t.th)*dt;
+      t.y+=t.v*Math.sin(t.th)*dt;
+      if(t.x<20){t.x=20;t.th=Math.PI-t.th;}
+      if(t.x>W-20){t.x=W-20;t.th=Math.PI-t.th;}
+      if(t.y<20){t.y=20;t.th=-t.th;}
+      if(t.y>H-20){t.y=H-20;t.th=-t.th;}
+      tk+=dt;
+    }
+    function loop(){
+      sl('pnNV').textContent=(+sl('pnN').value).toFixed(1);
+      sl('pnOmaxV').textContent=sl('pnOmax').value;
+      const dt=0.04,omegaMax=+sl('pnOmax').value,N=+sl('pnN').value;
+      moveTarget(dt);
+      if(mp.alive){
+        const lam=Math.atan2(t.y-mp.y,t.x-mp.x);
+        const desiredTurn=aDiff(lam,mp.th);
+        const omega=Math.max(-omegaMax,Math.min(omegaMax,desiredTurn/dt));
+        mp.latAcc=omega*mp.v;
+        mp.th+=omega*dt;
+        mp.x+=mp.v*Math.cos(mp.th)*dt;
+        mp.y+=mp.v*Math.sin(mp.th)*dt;
+        if(Math.hypot(t.x-mp.x,t.y-mp.y)<10){mp.alive=false;phitT=tk;}
+      }
+      if(mn.alive){
+        const lam=Math.atan2(t.y-mn.y,t.x-mn.x);
+        const lamDot=aDiff(lam,lamPrev)/dt;
+        lamPrev=lam;
+        const omega=Math.max(-omegaMax,Math.min(omegaMax,N*lamDot));
+        mn.latAcc=omega*mn.v;
+        mn.th+=omega*dt;
+        mn.x+=mn.v*Math.cos(mn.th)*dt;
+        mn.y+=mn.v*Math.sin(mn.th)*dt;
+        if(Math.hypot(t.x-mn.x,t.y-mn.y)<10){mn.alive=false;nhitT=tk;}
+      }
+      hist.mp.push({x:mp.x,y:mp.y});
+      hist.mn.push({x:mn.x,y:mn.y});
+      hist.t.push({x:t.x,y:t.y});
+      if(hist.mp.length>500){hist.mp.shift();hist.mn.shift();hist.t.shift();}
+      if((!mp.alive&&!mn.alive&&tk>Math.max(phitT||0,nhitT||0)+1.5)||tk>18)reset();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let i=0;i<W;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke();}
+      for(let j=0;j<H;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(W,j);x.stroke();}
+      x.strokeStyle='rgba(245,124,0,0.7)';x.lineWidth=2;x.beginPath();
+      hist.mp.forEach((p,i)=>{if(i==0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(11,95,255,0.7)';x.beginPath();
+      hist.mn.forEach((p,i)=>{if(i==0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});x.stroke();
+      x.strokeStyle='rgba(198,40,40,0.4)';x.beginPath();
+      hist.t.forEach((p,i)=>{if(i==0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});x.stroke();
+      if(mp.alive){
+        x.save();x.translate(mp.x,mp.y);x.rotate(mp.th);
+        x.fillStyle='#f57c00';
+        x.beginPath();x.moveTo(14,0);x.lineTo(-9,-6);x.lineTo(-9,6);x.closePath();x.fill();
+        x.restore();
+      }
+      if(mn.alive){
+        x.save();x.translate(mn.x,mn.y);x.rotate(mn.th);
+        x.fillStyle='#0b5fff';
+        x.beginPath();x.moveTo(14,0);x.lineTo(-9,-6);x.lineTo(-9,6);x.closePath();x.fill();
+        x.restore();
+      }
+      x.fillStyle='#c62828';x.beginPath();x.arc(t.x,t.y,7,0,Math.PI*2);x.fill();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('🟠 PPG (꼬리 추격)   ·   🔵 PN (N='+(+sl('pnN').value).toFixed(1)+')   ·   🔴 표적',12,22);
+      const sp=mp.alive?'추적':'명중@'+phitT.toFixed(1)+'s';
+      const sn=mn.alive?'추적':'명중@'+nhitT.toFixed(1)+'s';
+      x.fillStyle='#666';
+      x.fillText('PPG '+sp+'   ·   PN '+sn+'   ·   |a_PPG|='+Math.abs(mp.latAcc).toFixed(0)+'   ·   |a_PN|='+Math.abs(mn.latAcc).toFixed(0)+'   ·   t='+tk.toFixed(1)+'s',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <ul>
+    <li><strong>$N = 3$</strong> — 비조작 표적 요격에서 이론적으로 최적.</li>
+    <li><strong>$N &lt; 2$</strong> — 반응이 너무 느려 표적을 놓침.</li>
+    <li><strong>$N &gt; 5$</strong> — LOS 측정 잡음에도 과민 반응.</li>
+  </ul>
+
+  <h3>코드 — PN guidance</h3>
+
+<pre><code class="language-python">def pn_guidance(ego_state, target_state, N=4):
+    ex, ey, evx, evy = ego_state
+    tx, ty, tvx, tvy = target_state
+    dx, dy = tx - ex, ty - ey
+    R      = np.hypot(dx, dy)
+
+    dvx, dvy = tvx - evx, tvy - evy
+    # LOS 회전율 λ_dot
+    lam_dot = (dx * dvy - dy * dvx) / (R**2 + 1e-9)
+    # 접근 속도
+    Vc      = -(dx * dvx + dy * dvy) / R
+    # 수직 가속 명령
+    a_perp  = N * Vc * lam_dot
+    return a_perp</code></pre>
+
+  <h2>8. 실전 통합 패턴 — 횡(Stanley) + 종(PID)</h2>
+
+  <p>실차에서 가장 흔한 자율주행 구조 — <strong>횡·종 분리</strong>. 횡방향은 Pure Pursuit/Stanley, 종방향은 PID:</p>
+
+<pre><code class="language-python">while running:
+    # 1) 횡방향 — Stanley
+    delta, i = stanley(state, ref_path, ref_yaws)
+    # 2) 종방향 — PID (속도 프로파일은 W11 에서)
+    v_ref = speed_profile[i]
+    a     = pid_speed.step(v_ref - state[3], dt)
+    # 3) 차량에 인가
+    car.step(a, delta, dt)</code></pre>
+
+  <h3>곡률 기반 Feedforward — Pure Pursuit 의 약점 보완</h3>
+  <p>Pure Pursuit 의 내측 컷은 곡률 기반 feedforward 한 줄로 대부분 해결됩니다.</p>
+  $$ \delta = \underbrace{\arctan\!\left(\frac{2L\sin\alpha}{L_d}\right)}_{\text{Pure Pursuit (FB)}} + \underbrace{\arctan(L\,\kappa)}_{\text{곡률 FF}} $$
+  <p>이 강의 W11 통합 시뮬에서도 <strong>PP + FF</strong> 조합을 기본으로 사용합니다.</p>
+
+  <h2>9. 흔한 실수 TOP 5</h2>
+  <table>
+    <thead><tr><th>#</th><th>실수</th><th>증상</th><th>해결</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>$L_d$ 고정값</td><td>저속 OK, 고속 진동</td><td>속도 적응형 $L_d = kv + L_{fc}$</td></tr>
+      <tr><td>2</td><td>lookahead index 역주행</td><td>경로 거꾸로 따라감</td><td><code>i = max(i, last_i)</code></td></tr>
+      <tr><td>3</td><td>yaw wrap 누락</td><td>$\theta_e$ 가 $\pm\pi$ 점프</td><td>항상 <code>(a+π)%(2π)−π</code></td></tr>
+      <tr><td>4</td><td>Stanley 저속 분모 0</td><td>조향각 폭발</td><td>$v_s \geq 1.0$ 의무</td></tr>
+      <tr><td>5</td><td>조향 한계 누락</td><td>비현실적 명령</td><td><code>np.clip(δ, ±30°)</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. 손풀이 연습 3개</h2>
+
+  <p><strong>Q1.</strong> $v = 10$ m/s, $k = 0.15$, $L_{fc} = 2$ → $L_d$ = ?<br>
+  <em>풀이</em>: $L_d = 0.15 \cdot 10 + 2 = 3.5$ m.</p>
+
+  <p><strong>Q2.</strong> Stanley 에서 정지($v = 0$) 시 $v_s = 0$ 이면 어떻게 되나?<br>
+  <em>풀이</em>: $\arctan(k e_{fa} / 0)$ 으로 발산. $v_s \geq 1.0$ 가 의무.</p>
+
+  <p><strong>Q3.</strong> 같은 트랙에서 Pure Pursuit 이 내측 컷을 만드는 이유?<br>
+  <em>풀이</em>: lookahead 점이 곡선 안쪽에 있고, 차가 그 점으로 호를 그리는 동안 실제 경로보다 안쪽 궤적이 됨.</p>
+
+  <h2>11. 핵심 정리</h2>
+  <div class="tip">
+    <ul>
+      <li><strong>Pure Pursuit</strong>: $\delta = \arctan(2L\sin\alpha / L_d)$ — "앞 점 따라가기". 후륜 기준, 한 식, $L_d$ 한 개.</li>
+      <li><strong>Stanley</strong>: $\delta = \theta_e + \arctan(k e_{fa}/(v + v_s))$ — "헤딩 맞추기 + 거리 줄이기". 전륜 기준, 속도 보정 내장.</li>
+      <li><strong>PN</strong>: $a_\perp = N V_c \dot\lambda$ — "LOS 회전율 죽이기". 움직이는 표적용.</li>
+      <li>저속 로봇 → PP, 고속 자율주행 → Stanley, 동적 표적 → PN(아이디어 차용).</li>
+      <li>다음 주(W11)에서 PP + PID + A* + Spline 을 한 시뮬레이터에서 통합.</li>
+    </ul>
+  </div>
+
+  <h2>12. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Coulter, <em>Implementation of the Pure Pursuit Path Tracking Algorithm</em>, CMU 1992.</li>
+    <li>Thrun et al., <em>Stanley: The Robot that Won the DARPA Grand Challenge</em>, 2006.</li>
+    <li>Zarchan, <em>Tactical and Strategic Missile Guidance</em> — PN 표준 참고서.</li>
+    <li>PythonRobotics (MIT, A. Sakai): <code>PathTracking/pure_pursuit/</code>, <code>PathTracking/stanley_control/</code>.</li>
+    <li>관련 강의: <a href="../../lectures/08-guidance-cbf.html">로봇공학특론 L8 유도 &amp; CBF</a> — 해상(LOS)·미사일(PN) 관점에서의 같은 주제.</li>
+  </ul>
+
+  <div class="prevnext">
+    <a href="09-pid-basics.html"><small>← 이전</small>W9. PID 제어 기초</a>
+    <a href="11-integrated-sim.html" class="next"><small>다음 →</small>W11. 통합 시뮬레이션</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

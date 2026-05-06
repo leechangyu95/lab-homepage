@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 기저를 바꿔도 점은 그대로 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 기저를 바꿔도 점은 그대로</h1>
+  <p class="demo-meta">
+    선형대수학 · <a href="../backup-lectures/lectures-linear-algebra/10-basis-dimension.html">Week 10. 기저·차원</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 기저를 바꿔도 점은 그대로</h4>
+    <p>표준기저(빨강 격자)와 사용자 기저 $\{\mathbf{b}_1, \mathbf{b}_2\}$ (파랑 격자) 를 동시에 그립니다.
+       파란 화살표 끝점을 마우스로 끌어 기저를 바꿔 보세요. 같은 점 $\mathbf{v}$ 라도
+       <strong>표준 좌표 $(v_1, v_2)$</strong> 와 <strong>새 기저 좌표 $[\mathbf{v}]_B = (c_1, c_2)$</strong> 가
+       다르게 나오는 모습을 직접 비교할 수 있습니다.</p>
+    <canvas id="basisDemo" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>v_x <span class="val" id="bvxV">3</span><input type="range" id="bvx" min="-4" max="4" step="0.1" value="3"></label>
+      <label>v_y <span class="val" id="bvyV">1</span><input type="range" id="bvy" min="-4" max="4" step="0.1" value="1"></label>
+    </div>
+    <p id="basisInfo" style="margin-top:8px;font-size:13px;font-family:Consolas,monospace"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('basisDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=W/2,oy=H/2,scale=40;
+    let b1={x:1,y:1},b2={x:1,y:-1};
+    let dragging=null;
+    function px(p){return [ox+p.x*scale,oy-p.y*scale];}
+    function getMouse(e){const r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)};}
+    function draw(){
+      const vx=+document.getElementById('bvx').value,vy=+document.getElementById('bvy').value;
+      document.getElementById('bvxV').textContent=vx.toFixed(1);
+      document.getElementById('bvyV').textContent=vy.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // standard grid (red, faint)
+      ctx.strokeStyle='rgba(207,19,34,0.20)';ctx.lineWidth=1;
+      for(let i=-7;i<=7;i++){ctx.beginPath();ctx.moveTo(ox+i*scale,0);ctx.lineTo(ox+i*scale,H);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,oy+i*scale);ctx.lineTo(W,oy+i*scale);ctx.stroke();}
+      // basis grid (blue) — lines parallel to b1 and b2
+      ctx.strokeStyle='rgba(22,119,255,0.30)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      for(let s=-6;s<=6;s++){
+        // lines along b1 direction at offsets s*b2
+        const p0={x:s*b2.x-7*b1.x,y:s*b2.y-7*b1.y},p1={x:s*b2.x+7*b1.x,y:s*b2.y+7*b1.y};
+        const [a1x,a1y]=px(p0),[a2x,a2y]=px(p1);
+        ctx.beginPath();ctx.moveTo(a1x,a1y);ctx.lineTo(a2x,a2y);ctx.stroke();
+        const q0={x:s*b1.x-7*b2.x,y:s*b1.y-7*b2.y},q1={x:s*b1.x+7*b2.x,y:s*b1.y+7*b2.y};
+        const [b1x,b1y]=px(q0),[b2x,b2y]=px(q1);
+        ctx.beginPath();ctx.moveTo(b1x,b1y);ctx.lineTo(b2x,b2y);ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      // axes
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(0,oy);ctx.lineTo(W,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,H);ctx.stroke();
+      // basis arrows
+      function arrow(p,col,lw){const [x,y]=px(p);
+        ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x,y);ctx.stroke();
+        const ang=Math.atan2(y-oy,x-ox);
+        ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y);
+        ctx.lineTo(x-12*Math.cos(ang-0.4),y-12*Math.sin(ang-0.4));
+        ctx.lineTo(x-12*Math.cos(ang+0.4),y-12*Math.sin(ang+0.4));ctx.closePath();ctx.fill();
+        ctx.fillStyle='#fff';ctx.strokeStyle=col;ctx.beginPath();ctx.arc(x,y,5,0,2*Math.PI);ctx.fill();ctx.stroke();}
+      arrow(b1,'#1677ff',3);arrow(b2,'#2e7d32',3);
+      const [b1x,b1y]=px(b1),[b2x,b2y]=px(b2);
+      ctx.fillStyle='#1677ff';ctx.font='bold 14px sans-serif';ctx.fillText('b₁',b1x+8,b1y-5);
+      ctx.fillStyle='#2e7d32';ctx.fillText('b₂',b2x+8,b2y-5);
+      // point v
+      const [vxp,vyp]=px({x:vx,y:vy});
+      ctx.fillStyle='#cf1322';ctx.beginPath();ctx.arc(vxp,vyp,7,0,2*Math.PI);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle='#cf1322';ctx.font='bold 14px sans-serif';ctx.fillText(`v = (${vx.toFixed(1)}, ${vy.toFixed(1)})`,vxp+10,vyp-8);
+      // compute coords in basis B
+      const det=b1.x*b2.y-b1.y*b2.x;
+      const info=document.getElementById('basisInfo');
+      if(Math.abs(det)<1e-6){
+        info.innerHTML='<b style="color:#cf1322">현재 b₁, b₂ 가 평행 — 기저가 아닙니다 (일차독립 실패).</b>';
+      } else {
+        const c1=(b2.y*vx-b2.x*vy)/det,c2=(-b1.y*vx+b1.x*vy)/det;
+        info.innerHTML=`표준 좌표: <b style="color:#cf1322">v = (${vx.toFixed(2)}, ${vy.toFixed(2)})</b><br>
+          B 좌표: <b style="color:#1677ff">[v]_B = (${c1.toFixed(3)}, ${c2.toFixed(3)})</b> &nbsp;
+          (즉 v = ${c1.toFixed(2)}·b₁ + ${c2.toFixed(2)}·b₂)<br>
+          <span style="color:#666">→ 점은 같지만 좌표는 다름. 기저변환은 같은 점을 다른 숫자로 적을 뿐.</span>`;
+      }
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('● 파랑·녹색 끝점을 끌어 기저를 바꿔 보세요',10,H-10);
+    }
+    c.addEventListener('mousedown',e=>{
+      const m=getMouse(e);
+      const [b1x,b1y]=px(b1),[b2x,b2y]=px(b2);
+      if((m.x-b1x)**2+(m.y-b1y)**2<400) dragging='b1';
+      else if((m.x-b2x)**2+(m.y-b2y)**2<400) dragging='b2';
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!dragging) return;
+      const m=getMouse(e);const v={x:(m.x-ox)/scale,y:(oy-m.y)/scale};
+      if(dragging==='b1') b1=v; else b2=v;draw();
+    });
+    window.addEventListener('mouseup',()=>dragging=null);
+    ['bvx','bvy'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 롤러코스터 — KE ↔ PE 막대그래프 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 롤러코스터 — KE ↔ PE 막대그래프</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/07-work-energy.html">Week 7. 일과 에너지</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 롤러코스터 — KE ↔ PE 막대그래프</h4>
+    <p>공이 곡선 트랙을 따라 굴러 내려갑니다. <strong>운동에너지(KE) · 위치에너지(PE) · 마찰로 손실된 에너지</strong>를 막대로 보여줍니다. 마찰이 0이면 KE+PE가 일정하게 유지되고, 마찰을 키우면 합이 점점 줄어드는 것을 볼 수 있습니다.</p>
+    <canvas id="rcC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>마찰계수 μ <span class="val" id="rcMV">0</span><input type="range" id="rcM" min="0" max="0.3" step="0.01" value="0"></label>
+      <label>초기 높이 (m) <span class="val" id="rcHV">3</span><input type="range" id="rcH" min="1" max="4" step="0.1" value="3"></label>
+      <button id="rcReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rcC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['rcM','rcH'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let s=0,v=0,Eloss=0;
+    sl('rcReset').onclick=()=>{s=0;v=0;Eloss=0;};
+    sl('rcH').addEventListener('input',()=>{s=0;v=0;Eloss=0;});
+    // track: y = h*0.5*(1+cos(πs/L)) approx; let's do segments — sin curve
+    const L=520,m=1,g=9.81;
+    function trackY(sx,h){
+      // sx in [0, L]; height from h to 0 to h*0.4 (small bump) to 0
+      const t=sx/L;
+      return h*(0.5+0.5*Math.cos(Math.PI*t*1.4))*Math.exp(-t*0.3);
+    }
+    function trackSlope(sx,h){
+      const e=1;
+      return (trackY(sx+e,h)-trackY(sx-e,h))/(2*e);
+    }
+    function loop(){
+      const mu=+sl('rcM').value,h0=+sl('rcH').value;
+      const dt=0.025;
+      const sl_=trackSlope(s,h0);
+      const sinTh=-sl_/Math.sqrt(1+sl_*sl_); // negative because going down means y decreasing as s increases
+      const cosTh=1/Math.sqrt(1+sl_*sl_);
+      const fric=mu*m*g*cosTh;
+      const a=g*sinTh-Math.sign(v)*fric;
+      v+=a*dt;
+      s+=v*dt*15;
+      if(s<0){s=0;v=0;}
+      if(s>L-1){v=0;}
+      const yPos=trackY(s,h0);
+      const T=0.5*m*v*v,V=m*g*yPos;
+      // loss is the integral; approximate
+      Eloss+=fric*Math.abs(v)*dt*15/40;  // arbitrary scale to fit
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // track
+      x.strokeStyle='#888';x.lineWidth=2;x.beginPath();
+      const yScale=60,yBase=300;
+      for(let sx=0;sx<=L;sx+=4){
+        const ty=trackY(sx,h0);
+        const px=60+sx,py=yBase-ty*yScale;
+        if(sx===0)x.moveTo(px,py);else x.lineTo(px,py);
+      }
+      x.stroke();
+      // ball
+      const bx=60+s,by=yBase-yPos*yScale-10;
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(bx,by,10,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+      // bars
+      const E0=m*g*h0;
+      const barX=20,barW=40,barTop=40,barBot=240;
+      function bar(idx,val,col,label){
+        const fx=barX+idx*60;
+        const h=Math.min(val/E0,1)*(barBot-barTop);
+        x.fillStyle='#eee';x.fillRect(fx,barTop,barW,barBot-barTop);
+        x.fillStyle=col;x.fillRect(fx,barBot-h,barW,h);
+        x.strokeStyle='#333';x.strokeRect(fx,barTop,barW,barBot-barTop);
+        x.fillStyle='#333';x.font='11px sans-serif';x.textAlign='center';x.fillText(label,fx+barW/2,barBot+15);
+        x.fillText(val.toFixed(1),fx+barW/2,barBot+30);
+      }
+      bar(0,T,'#0b5fff','KE');
+      bar(1,V,'#2e7d32','PE');
+      bar(2,Eloss,'#c62828','손실');
+      bar(3,T+V+Eloss,'#888','합계');
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('초기 에너지 E₀ = mgh = '+E0.toFixed(2)+' J',280,25);
+      x.fillText('합계가 E₀와 같다 ⇒ 에너지 보존',280,43);
+      x.fillText('μ > 0이면 합계가 점점 줄어듦 (마찰로 열 손실)',280,61);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

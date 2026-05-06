@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 두 알고리즘 동시 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 두 알고리즘 동시 비교</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/06-rrt-sampling.html">Week 6. RRT — 뿌리처럼 뻗어 길을 찾는 알고리즘</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 알고리즘 동시 비교</h4>
+    <p>왼쪽은 기본 RRT(최초 발견에서 멈춤), 오른쪽은 RRT*(계속 다듬음). 자동 재생으로 RRT*가 어떻게 점차 짧아지는지 보세요.</p>
+    <canvas id="rsCv" width="640" height="340"></canvas>
+    <div class="controls">
+      <button id="goBtn3">실행</button>
+      <button id="rstBtn3" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rsCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const W=20,H=11;const sc=(c.width/2)/W;const start=[2,2],goal=[18,9];
+    const obs=[[8,4,1.5],[13,7,1.4],[7,8,1.0],[15,3,1.0]];
+    let RRT,STAR,running=false;
+    function makeRun(isStar){return{star:isStar,nodes:[start.slice()],parents:[-1],cost:[0],path:null,best:1e9,iter:0};}
+    function reset(){RRT=makeRun(false);STAR=makeRun(true);draw();}
+    reset();$('rstBtn3').onclick=reset;
+    function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+    function colFree(a,b){
+      for(const o of obs){const[cx,cy,r]=o;const ab=[b[0]-a[0],b[1]-a[1]];const ap=[cx-a[0],cy-a[1]];
+        const ab2=ab[0]*ab[0]+ab[1]*ab[1];const t=Math.max(0,Math.min(1,(ap[0]*ab[0]+ap[1]*ab[1])/(ab2+1e-9)));
+        const px=a[0]+t*ab[0],py=a[1]+t*ab[1];if(Math.hypot(px-cx,py-cy)<r)return false;}
+      if(b[0]<0||b[0]>W||b[1]<0||b[1]>H)return false;return true;
+    }
+    function extract(r,id){const p=[];while(id>=0){p.push(r.nodes[id]);id=r.parents[id];}return p;}
+    function step(r){
+      if(r.iter>3000)return;r.iter++;
+      const q=Math.random()<0.05?goal.slice():[Math.random()*W,Math.random()*H];
+      let bi=0,bd=1e9;r.nodes.forEach((p,i)=>{const d=dist(p,q);if(d<bd){bd=d;bi=i;}});
+      const a=r.nodes[bi];const v=[q[0]-a[0],q[1]-a[1]];const d=Math.hypot(v[0],v[1]);
+      const nq=d<=0.6?q.slice():[a[0]+v[0]/d*0.6,a[1]+v[1]/d*0.6];
+      if(!colFree(a,nq))return;
+      let parent=bi,cst=r.cost[bi]+dist(a,nq);
+      if(r.star){const R=1.5;r.nodes.forEach((p,i)=>{if(dist(p,nq)<R&&colFree(p,nq)){const c=r.cost[i]+dist(p,nq);if(c<cst){cst=c;parent=i;}}});}
+      r.nodes.push(nq);r.parents.push(parent);r.cost.push(cst);const newId=r.nodes.length-1;
+      if(r.star){const R=1.5;r.nodes.forEach((p,i)=>{if(i===newId)return;if(dist(p,nq)<R&&colFree(nq,p)){const c=cst+dist(nq,p);if(c<r.cost[i]){r.parents[i]=newId;r.cost[i]=c;}}});}
+      if(dist(nq,goal)<0.6){const totalCost=cst+dist(nq,goal);
+        if(!r.path||totalCost<r.best){r.best=totalCost;r.path=extract(r,newId);}
+        if(!r.star)r.iter=99999;
+      }
+    }
+    $('goBtn3').onclick=()=>{if(running)return;running=true;reset();const id=setInterval(()=>{
+      for(let k=0;k<10;k++){step(RRT);step(STAR);}draw();
+      if(STAR.iter>3000){clearInterval(id);running=false;}},30);};
+    function drawOne(r,ox,label){
+      x.strokeStyle='#ddd';x.strokeRect(ox,0,c.width/2,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(ox+o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      x.strokeStyle='rgba(80,80,80,0.35)';x.lineWidth=0.7;
+      for(let i=1;i<r.nodes.length;i++){const a=r.nodes[r.parents[i]],b=r.nodes[i];
+        x.beginPath();x.moveTo(ox+a[0]*sc,c.height-a[1]*sc);x.lineTo(ox+b[0]*sc,c.height-b[1]*sc);x.stroke();}
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(ox+start[0]*sc,c.height-start[1]*sc,5,0,2*Math.PI);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(ox+goal[0]*sc,c.height-goal[1]*sc,5,0,2*Math.PI);x.fill();
+      if(r.path){x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+        r.path.forEach((p,i)=>{const xx=ox+p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle='#222';x.font='13px sans-serif';x.fillText(label,ox+8,18);
+      x.fillStyle='#444';x.font='12px sans-serif';x.fillText('노드 '+r.nodes.length+(r.path?' · 길이 '+r.best.toFixed(1):''),ox+8,c.height-10);
+    }
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      drawOne(RRT,0,'RRT (멈춤)');drawOne(STAR,c.width/2,'RRT* (계속 다듬음)');
+    }
+  })();
+  </script>
+</main>
+</body>
+</html>

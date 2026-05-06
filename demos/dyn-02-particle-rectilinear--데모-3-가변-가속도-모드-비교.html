@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>데모 3 — 가변 가속도 모드 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">데모 3 — 가변 가속도 모드 비교</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/02-particle-rectilinear.html">Week 2. 입자의 직선 운동학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>데모 3 — 가변 가속도 모드 비교</h4>
+    <canvas id="d2VarC" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>모드
+        <select id="d2Mode">
+          <option value="const">일정 a (등가속도)</option>
+          <option value="lin">a = bt (선형 증가)</option>
+          <option value="drag">a = a0 − kv (감쇠)</option>
+        </select>
+      </label>
+      <label>초속 v₀ (m/s) <span class="val" id="d2V0V">0</span><input type="range" id="d2V0" min="0" max="30" step="0.5" value="0"></label>
+      <label>파라미터 (a 또는 b 또는 a0) <span class="val" id="d2P1V">3</span><input type="range" id="d2P1" min="-5" max="10" step="0.1" value="3"></label>
+      <label>감쇠 k <span class="val" id="d2P2V">0.2</span><input type="range" id="d2P2" min="0" max="1" step="0.02" value="0.2"></label>
+      <button id="d2Reset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d2VarC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['d2V0','d2P1','d2P2'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['d2V0','d2P1','d2P2'].forEach(k=>sl(k).oninput=upd);upd();
+    let t=0;sl('d2Reset').onclick=()=>{t=0;};
+    function loop(){
+      const mode=sl('d2Mode').value,v0=+sl('d2V0').value,p1=+sl('d2P1').value,k=+sl('d2P2').value;
+      const T=10,N=400,dt=T/N;
+      const aArr=new Array(N),vArr=new Array(N),sArr=new Array(N);
+      vArr[0]=v0;sArr[0]=0;aArr[0]=p1;
+      for(let i=1;i<N;i++){
+        const tt=i*dt,v=vArr[i-1];
+        let aV;
+        if(mode==='const')aV=p1;
+        else if(mode==='lin')aV=p1*tt;
+        else aV=p1-k*v;
+        aArr[i]=aV;
+        vArr[i]=v+aV*dt;
+        sArr[i]=sArr[i-1]+vArr[i-1]*dt;
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      function panel(yT,yH,arr,col,label){
+        const minV=Math.min(0,...arr),maxV=Math.max(...arr,0.1);
+        const range=maxV-minV||1;
+        x.fillStyle='#fff';x.fillRect(40,yT,580,yH);
+        x.strokeStyle='#d0d4d9';x.strokeRect(40,yT,580,yH);
+        const zy=yT+yH-((0-minV)/range)*yH;
+        x.strokeStyle='#bbb';x.setLineDash([3,3]);x.beginPath();x.moveTo(40,zy);x.lineTo(620,zy);x.stroke();x.setLineDash([]);
+        x.strokeStyle=col;x.lineWidth=1.6;x.beginPath();
+        for(let i=0;i<N;i++){const px=40+i/(N-1)*580;const py=yT+yH-((arr[i]-minV)/range)*yH;if(i===0)x.moveTo(px,py);else x.lineTo(px,py);}
+        x.stroke();
+        x.fillStyle='#333';x.font='bold 11px sans-serif';x.fillText(label,46,yT+12);
+      }
+      panel(10,80,aArr,'#c62828','a(t) [m/s²]');
+      panel(100,80,vArr,'#0b5fff','v(t) [m/s]');
+      panel(190,80,sArr,'#2e7d32','s(t) [m]');
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

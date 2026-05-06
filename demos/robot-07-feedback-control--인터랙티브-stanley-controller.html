@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Stanley Controller — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Stanley Controller</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/07-feedback-control.html">Lecture 7. 피드백 제어 (PID)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Stanley Controller</h4>
+    <p>같은 경로를 Stanley 방식으로 따라갑니다. $k$와 속도를 조절해 보세요.</p>
+    <canvas id="st" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>게인 k <span class="val" id="skV">2</span><input type="range" id="sk" min="0.2" max="8" step="0.1" value="2"></label>
+      <label>속도 v <span class="val" id="svV">2</span><input type="range" id="sv" min="0.5" max="5" step="0.1" value="2"></label>
+      <button id="stRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('st'),x=c.getContext('2d');
+    const path=[];for(let t=0;t<=Math.PI*2;t+=0.05){path.push([320+180*Math.cos(t),190+90*Math.sin(t*2)]);}
+    let car;
+    function init(){car={x:path[0][0],y:path[0][1]+30,th:0};}
+    init();document.getElementById('stRst').onclick=init;
+    function loop(){
+      const k=+document.getElementById('sk').value;
+      const v=+document.getElementById('sv').value;
+      ['sk','sv'].forEach(id=>document.getElementById(id+'V').textContent=document.getElementById(id).value);
+      const L=20;
+      // front axle position
+      const fx=car.x+L/2*Math.cos(car.th),fy=car.y+L/2*Math.sin(car.th);
+      // nearest path point
+      let bi=0,bd=Infinity;
+      path.forEach((p,i)=>{const d=(p[0]-fx)**2+(p[1]-fy)**2;if(d<bd){bd=d;bi=i;}});
+      const ni=(bi+1)%path.length;
+      const tx=path[ni][0]-path[bi][0],ty=path[ni][1]-path[bi][1];
+      const pathTh=Math.atan2(ty,tx);
+      // cross-track error (signed)
+      const dx=fx-path[bi][0],dy=fy-path[bi][1];
+      const e=dx*(-Math.sin(pathTh))+dy*(Math.cos(pathTh));
+      const thE=((pathTh-car.th+Math.PI*3)%(2*Math.PI))-Math.PI;
+      const delta=thE+Math.atan2(-k*e,v*15);
+      car.x+=v*Math.cos(car.th);
+      car.y+=v*Math.sin(car.th);
+      car.th+=v/L*Math.tan(Math.max(-0.6,Math.min(0.6,delta)));
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#a5d6a7';x.lineWidth=2;x.beginPath();
+      path.forEach((p,i)=>{if(i==0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);});x.closePath();x.stroke();
+      // cross-track marker
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(fx,fy);x.lineTo(path[bi][0],path[bi][1]);x.stroke();x.setLineDash([]);
+      x.save();x.translate(car.x,car.y);x.rotate(car.th);
+      x.fillStyle='#0b5fff';x.fillRect(-14,-7,28,14);
+      x.fillStyle='#fff';x.fillRect(8,-5,4,10);
+      x.restore();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('횡오차 e = '+e.toFixed(1)+' px',12,370);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

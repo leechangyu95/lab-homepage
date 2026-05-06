@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 평균값 정리 — 평행 접선 찾기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 평균값 정리 — 평행 접선 찾기</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/05-mvt-monotonicity-convexity.html">Week 5. 평균값 정리·단조성·볼록성</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 평균값 정리 — 평행 접선 찾기</h4>
+    <p>구간 $[a, b]$의 끝점을 슬라이더로 잡으면, 두 점을 잇는 할선과 평행한 접선의 위치(MVT의 $c$)가 자동으로 표시됩니다. 어떤 함수에서도 그런 $c$가 항상 존재함을 확인하세요.</p>
+    <canvas id="mvt" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>a <span class="val" id="mvAV">-1.50</span><input type="range" id="mvA" min="-2.5" max="0.5" step="0.05" value="-1.5"></label>
+      <label>b <span class="val" id="mvBV">2.00</span><input type="range" id="mvB" min="0.5" max="2.8" step="0.05" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mvt'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const xR=[-3,3],yR=[-3,5];
+    const M={l:50,r:20,t:20,b:30};
+    function px(v){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+    function py(v){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function f(v){return 0.5*v*v*v - v + 1;}
+    function fp(v){return 1.5*v*v - 1;}
+    function loop(){
+      const a=+document.getElementById('mvA').value;
+      const b=+document.getElementById('mvB').value;
+      document.getElementById('mvAV').textContent=a.toFixed(2);
+      document.getElementById('mvBV').textContent=b.toFixed(2);
+      const slope=(f(b)-f(a))/(b-a);
+      // find c: fp(c) = slope. Since fp(v)=1.5v^2-1, c=±sqrt((slope+1)/1.5)
+      const arg=(slope+1)/1.5;
+      let cs=[];
+      if(arg>=0){cs=[Math.sqrt(arg),-Math.sqrt(arg)].filter(v=>v>a&&v<b);}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      x.strokeStyle='#eee';
+      for(let v=Math.ceil(xR[0]);v<=xR[1];v++){x.beginPath();x.moveTo(px(v),py(yR[0]));x.lineTo(px(v),py(yR[1]));x.stroke();}
+      for(let v=Math.ceil(yR[0]);v<=yR[1];v++){x.beginPath();x.moveTo(px(xR[0]),py(v));x.lineTo(px(xR[1]),py(v));x.stroke();}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(px(xR[0]),py(0));x.lineTo(px(xR[1]),py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),py(yR[0]));x.lineTo(px(0),py(yR[1]));x.stroke();
+      // function
+      x.strokeStyle='#222';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=0.01){
+        const yv=f(v);if(yv<yR[0]||yv>yR[1]){first=true;continue;}
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // secant a-b (red)
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      x.moveTo(px(a),py(f(a)));x.lineTo(px(b),py(f(b)));x.stroke();
+      x.fillStyle='#c62828';x.beginPath();x.arc(px(a),py(f(a)),5,0,Math.PI*2);x.fill();
+      x.beginPath();x.arc(px(b),py(f(b)),5,0,Math.PI*2);x.fill();
+      // tangent at c (green dashed) — same slope as secant
+      x.strokeStyle='#1b5e20';x.lineWidth=2;x.setLineDash([6,4]);
+      cs.forEach(cv=>{
+        const fc=f(cv);
+        const x0=xR[0],y0=fc+slope*(x0-cv);
+        const x1=xR[1],y1=fc+slope*(x1-cv);
+        x.beginPath();x.moveTo(px(x0),py(y0));x.lineTo(px(x1),py(y1));x.stroke();
+        x.fillStyle='#1b5e20';x.beginPath();x.arc(px(cv),py(fc),5,0,Math.PI*2);x.fill();
+      });
+      x.setLineDash([]);
+      // labels
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('y = 0.5x³ − x + 1',M.l+10,M.t+18);
+      x.fillStyle='#c62828';
+      x.fillText('할선 기울기 = '+slope.toFixed(3),M.l+10,M.t+38);
+      x.fillStyle='#1b5e20';
+      const cstr=cs.map(v=>v.toFixed(3)).join(', ');
+      x.fillText('MVT 점 c ≈ '+(cstr||'(범위 밖)'),M.l+10,M.t+58);
+      requestAnimationFrame(()=>setTimeout(loop,40));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

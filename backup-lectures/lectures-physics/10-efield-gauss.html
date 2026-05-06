@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W10. 전기장과 가우스 법칙 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html" class="active">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../physics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 10. 전기장과 가우스 법칙</h1>
+  <p class="lead">이번 주 한 줄 요약 — <strong>"전하 주변에는 전기장이 있고, 전기장의 총 흐름은 안에 있는 전하의 양만큼이다."</strong></p>
+
+  <div class="note"><strong>📌 들어가기 전에 — 학기 후반의 시작</strong>
+    <p>오늘부터 5주(10–14주)가 전자기학 입문. 1–6주 역학과 다른 새 영역 같지만 <strong>수학 도구는 똑같다</strong>:</p>
+    <table>
+      <thead><tr><th>역학에서 본 것</th><th>전자기에서 다시 만남</th></tr></thead>
+      <tbody>
+        <tr><td>중력 $F = -G m_1 m_2/r^2$</td><td>쿨롱 $F = k q_1 q_2/r^2$ — 같은 모양</td></tr>
+        <tr><td>위치에너지 $U_g = mgh$</td><td>전위에너지 $U_e = qV$ (다음 주)</td></tr>
+        <tr><td>일 $W = \vec F\cdot\vec d$</td><td>전기장이 한 일 → 전압</td></tr>
+        <tr><td>벡터 분해</td><td>전기장 성분 분해</td></tr>
+      </tbody>
+    </table>
+    핵심: <strong>전혀 새로운 학문이 아니다</strong>. 도구는 같고 이름만 바뀐다.
+  </div>
+
+  <div class="toc"><h4>학습 목표</h4><ul>
+    <li>쿨롱 법칙을 적용한다.</li>
+    <li>전기장 $\vec{E}=\vec{F}/q$를 정의하고 전기장선을 그린다.</li>
+    <li>점·선·면 분포의 전기장을 가우스 법칙으로 구한다.</li>
+    <li>도체 내부 전기장 0임을 설명한다.</li>
+  </ul></div>
+
+  <h2>도입 훅 — "풍선과 머리카락"</h2>
+  <p>풍선을 머리카락에 비비면 머리카락이 풍선을 따라 일어선다. 두 충전된 풍선은 서로 밀어낸다. 가는 물줄기에 대면 물줄기가 휘어진다. <strong>접촉 없이</strong> 작용하는 힘을 가능하게 하는 것이 <em>전기장</em>.</p>
+
+  <h2>1. 전하의 두 종류</h2>
+  <ul>
+    <li>양전하(+, 양성자) / 음전하(-, 전자)</li>
+    <li>같은 부호 → 반발 / 다른 부호 → 인력</li>
+    <li>전자 한 개 = $-1.6\times 10^{-19}$ C</li>
+  </ul>
+  <h3>데모 1 — 비누거품 + 풍선</h3>
+  <p>충전 풍선 위에 비누거품 띄우면 거품이 풍선 주변에 머물거나 이끌림.</p>
+
+  <h2>2. 쿨롱 법칙</h2>
+  $$ F = k\frac{|q_1 q_2|}{r^2},\qquad k = 8.99\times 10^9 \text{ N·m}^2/\text{C}^2 $$
+  <p>전자-양성자 사이 전기력 ≈ 중력의 $10^{39}$배. 일상의 마찰·압력·화학결합은 전기력의 변형.</p>
+
+  <h2>3. 전기장 (E)</h2>
+  $$ \vec{E} = \frac{\vec{F}}{q},\qquad E_{\text{point}} = k\frac{|Q|}{r^2} $$
+  <p>전하가 주변 공간에 만드는 영향. 시험전하는 측정 도구일 뿐.</p>
+  <h3>데모 2 — 전기장선 시각화</h3>
+  <p>식물성 기름 + 가루 위에 전압을 걸면 가루가 전기장선 모양으로 정렬. 또는 PhET <em>Charges and Fields</em> 사용.</p>
+
+  <h3>인터랙티브 데모 1 — 점전하 주변 전기장 그리드 🎮</h3>
+  <p>전하 $q_1$의 부호와 크기를 슬라이더로 바꿔 보세요. 전기장 화살표가 격자 위에 그려집니다. <strong>양전하는 바깥으로 뻗어 나가고, 음전하는 안으로 빨려 들어가는</strong> 모양을 직접 확인할 수 있습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 점전하 전기장 시각화</h4>
+    <p>화살표의 길이 ∝ 전기장 세기, 방향은 전기장 방향. 색이 진할수록 더 강한 영역. 격자 한 셀의 가로 = 약 1 m로 가정하고, 화살표의 색·길이가 $1/r^2$로 빠르게 줄어드는 것을 관찰하세요.</p>
+    <canvas id="w10_pointE" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>전하량 $q$ <span class="val" id="w10_qVal">+5</span> nC
+        <input type="range" id="w10_q" min="-10" max="10" step="0.5" value="5"></label>
+      <label>전하 위치 $x$ <span class="val" id="w10_xVal">0</span>
+        <input type="range" id="w10_x" min="-4" max="4" step="0.5" value="0"></label>
+      <label>전하 위치 $y$ <span class="val" id="w10_yVal">0</span>
+        <input type="range" id="w10_y" min="-3" max="3" step="0.5" value="0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$q$를 양수에서 음수로 바꿔 보세요 — 화살표 방향이 정반대로 뒤집힙니다.</li>
+        <li>$|q|$를 2배로 늘리면 모든 화살표 길이도 2배 — 전기장은 $q$에 비례.</li>
+        <li>전하 가까이 (작은 $r$)의 화살표는 매우 길고, 멀어지면 급격히 짧아짐 — $1/r^2$ 법칙.</li>
+        <li>전하 위치를 옮겨도 전기장은 항상 전하 중심에서 방사형으로 뻗어 나갑니다.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w10_pointE');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const k=8.99e9; // SI
+    function arrow(x1,y1,x2,y2,col,lw){
+      ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw||1.5;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1),hl=6;
+      ctx.beginPath();ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+      ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fill();
+    }
+    function draw(){
+      const q=+document.getElementById('w10_q').value*1e-9; // C
+      const qx=+document.getElementById('w10_x').value;
+      const qy=+document.getElementById('w10_y').value;
+      document.getElementById('w10_qVal').textContent=(q*1e9>=0?'+':'')+(q*1e9).toFixed(1);
+      document.getElementById('w10_xVal').textContent=qx.toFixed(1);
+      document.getElementById('w10_yVal').textContent=qy.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const sc=44, ox=W/2, oy=H/2;
+      // grid
+      ctx.strokeStyle='#eef0f4';ctx.lineWidth=1;
+      for(let g=-7;g<=7;g++){
+        ctx.beginPath();ctx.moveTo(ox+g*sc,0);ctx.lineTo(ox+g*sc,H);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,oy+g*sc);ctx.lineTo(W,oy+g*sc);ctx.stroke();
+      }
+      // arrows
+      const arrows=[];
+      let maxE=0;
+      for(let gx=-7;gx<=7;gx++){
+        for(let gy=-4;gy<=4;gy++){
+          const dx=gx-qx, dy=gy-qy;
+          const r2=dx*dx+dy*dy;
+          if(r2<0.05) continue;
+          const r=Math.sqrt(r2);
+          const Em=k*Math.abs(q)/r2; // N/C
+          const ux=dx/r, uy=dy/r;
+          const sgn=q>=0?1:-1;
+          arrows.push({gx,gy,ux:ux*sgn,uy:uy*sgn,Em});
+          if(Em>maxE) maxE=Em;
+        }
+      }
+      arrows.forEach(a=>{
+        const px=ox+a.gx*sc, py=oy-a.gy*sc;
+        // log scale length
+        const ln=Math.min(0.45*sc, 0.45*sc*Math.log10(1+9*a.Em/maxE));
+        const intensity=Math.min(1, Math.log10(1+9*a.Em/maxE));
+        const r=Math.round(11+200*intensity), gC=Math.round(95-60*intensity), b=Math.round(255-200*intensity);
+        const col=`rgb(${r},${gC},${b})`;
+        arrow(px,py,px+a.ux*ln,py-a.uy*ln,col,1+1.5*intensity);
+      });
+      // charge dot
+      const cpx=ox+qx*sc, cpy=oy-qy*sc;
+      ctx.fillStyle=q>=0?'#c62828':'#1565c0';
+      ctx.beginPath();ctx.arc(cpx,cpy,9+Math.min(8,Math.abs(q*1e9)/2),0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+      ctx.fillText(q>=0?'+':'−',cpx,cpy+5);
+      ctx.textAlign='left';
+      // legend box
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,228,52);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,228,52);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('q = '+(q*1e9>=0?'+':'')+(q*1e9).toFixed(1)+' nC at ('+qx.toFixed(1)+', '+qy.toFixed(1)+')',16,28);
+      ctx.fillText('진한 빨강 = E 큼  ·  연한 파랑 = E 작음',16,46);
+    }
+    ['w10_q','w10_x','w10_y'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>3-B. 중첩 원리 — 여러 전하의 전기장</h2>
+  <p>여러 전하가 만든 전기장은 각 전하가 만드는 전기장의 <strong>벡터 합</strong>:</p>
+  $$ \vec E_\text{total} = \vec E_1 + \vec E_2 + \cdots $$
+  <p>학생들이 가장 자주 막히는 부분 — <em>벡터를 더한다</em>(스칼라가 아니다). 부호가 같든 다르든 화살표를 그려 더해야.</p>
+
+  <h3>전기 쌍극자 (Electric Dipole)</h3>
+  <p>크기 같고 부호 반대인 두 전하 $\pm q$가 거리 $d$ 떨어진 시스템. 쌍극자 모멘트:</p>
+  $$ \vec p = q\vec d \quad (\text{음에서 양으로}) $$
+  <p>먼 곳에서의 전기장: $E \propto 1/r^3$ (점전하의 $1/r^2$보다 빨리 감소). 분자 결합·물 분자의 모델.</p>
+
+  <h3>인터랙티브 데모 2 — 두 전하의 합성 전기장 🎮</h3>
+  <p>두 전하 $q_1, q_2$를 동시에 두고 그 사이 공간의 합성 전기장 $\vec E = \vec E_1 + \vec E_2$를 시각화합니다. <strong>같은 부호 두 개</strong>(반발 쌍극자)와 <strong>반대 부호</strong>(전형적 쌍극자)를 비교해 보세요.</p>
+
+  <div class="demo">
+    <h4>🎮 두 전하의 합성 전기장 (벡터 합)</h4>
+    <p>왼쪽 전하 $q_1$, 오른쪽 전하 $q_2$. 각 점에서 두 전하가 만드는 $\vec E$를 벡터 합한 결과의 방향만 화살표로 그렸습니다 (길이는 시각화 한계로 정규화). 부호가 같으면 사이 공간이 비고, 다르면 한쪽에서 다른 쪽으로 흐르는 전기장선이 만들어집니다.</p>
+    <canvas id="w10_dipole" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>$q_1$ (왼쪽) <span class="val" id="w10_q1V">+5</span> nC
+        <input type="range" id="w10_q1" min="-10" max="10" step="0.5" value="5"></label>
+      <label>$q_2$ (오른쪽) <span class="val" id="w10_q2V">-5</span> nC
+        <input type="range" id="w10_q2" min="-10" max="10" step="0.5" value="-5"></label>
+      <label>두 전하 거리 $d$ <span class="val" id="w10_dV">3.0</span>
+        <input type="range" id="w10_d" min="1" max="6" step="0.5" value="3"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$q_1=+5, q_2=-5$ (쌍극자) → 양에서 음으로 곡선처럼 휘는 전기장선이 보입니다.</li>
+        <li>$q_1=+5, q_2=+5$ (같은 부호) → 두 전하 사이 중점에 $\vec E = 0$인 점이 생깁니다.</li>
+        <li>$q_1=+10, q_2=-2$ → 작은 전하의 약 $5\times 1.5\approx 1.86$배 거리 떨어진 곳에 영점.</li>
+        <li>거리 $d$를 늘리면 두 전하의 영향이 분리되고, 줄이면 점점 점전하 1개처럼.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w10_dipole');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function arrow(x1,y1,x2,y2,col,lw){
+      ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw||1.5;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1),hl=6;
+      ctx.beginPath();ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+      ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fill();
+    }
+    function draw(){
+      const q1=+document.getElementById('w10_q1').value;
+      const q2=+document.getElementById('w10_q2').value;
+      const d=+document.getElementById('w10_d').value;
+      document.getElementById('w10_q1V').textContent=(q1>=0?'+':'')+q1.toFixed(1);
+      document.getElementById('w10_q2V').textContent=(q2>=0?'+':'')+q2.toFixed(1);
+      document.getElementById('w10_dV').textContent=d.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const sc=44, ox=W/2, oy=H/2;
+      ctx.strokeStyle='#eef0f4';ctx.lineWidth=1;
+      for(let g=-7;g<=7;g++){
+        ctx.beginPath();ctx.moveTo(ox+g*sc,0);ctx.lineTo(ox+g*sc,H);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,oy+g*sc);ctx.lineTo(W,oy+g*sc);ctx.stroke();
+      }
+      const x1=-d/2, x2=d/2;
+      // arrow grid
+      const arrows=[];let maxE=0;
+      for(let gx=-7;gx<=7;gx+=0.7){
+        for(let gy=-4;gy<=4;gy+=0.7){
+          // E from each charge (in arbitrary units)
+          let Ex=0, Ey=0;
+          [[q1,x1],[q2,x2]].forEach(qq=>{
+            const dx=gx-qq[1], dy=gy;
+            const r2=dx*dx+dy*dy;
+            if(r2<0.05) return;
+            const r=Math.sqrt(r2);
+            const E=qq[0]/r2; // signed
+            Ex += E*dx/r; Ey += E*dy/r;
+          });
+          const Em=Math.hypot(Ex,Ey);
+          if(Em>maxE) maxE=Em;
+          arrows.push({gx,gy,Ex,Ey,Em});
+        }
+      }
+      arrows.forEach(a=>{
+        if(a.Em<0.001) return;
+        const px=ox+a.gx*sc, py=oy-a.gy*sc;
+        const norm=Math.hypot(a.Ex,a.Ey);
+        const ux=a.Ex/norm, uy=a.Ey/norm;
+        const ln=12;
+        const intensity=Math.min(1, Math.log10(1+9*a.Em/maxE));
+        const r=Math.round(11+200*intensity), gC=Math.round(95-60*intensity), b=Math.round(255-200*intensity);
+        arrow(px,py,px+ux*ln,py-uy*ln,`rgb(${r},${gC},${b})`,1+intensity);
+      });
+      // charges
+      [[q1,x1],[q2,x2]].forEach(qq=>{
+        const cpx=ox+qq[1]*sc, cpy=oy;
+        ctx.fillStyle=qq[0]>=0?'#c62828':'#1565c0';
+        ctx.beginPath();ctx.arc(cpx,cpy,9+Math.min(7,Math.abs(qq[0])/2),0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+        ctx.fillText(qq[0]>=0?'+':'−',cpx,cpy+5);
+        ctx.textAlign='left';
+      });
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,260,40);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,260,40);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('q1='+(q1>=0?'+':'')+q1+' nC,  q2='+(q2>=0?'+':'')+q2+' nC, d='+d+' m',16,30);
+    }
+    ['w10_q1','w10_q2','w10_d'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>4. 가우스 법칙 ★</h2>
+  $$ \oint \vec{E}\cdot d\vec{A} = \frac{Q_{\text{enc}}}{\varepsilon_0} $$
+
+  <h3>직관 1: "공의 표면을 통한 빛"</h3>
+  <p>전구 주위 비누 막의 모양이 어떻든 통과하는 빛 총량은 일정. 전기장도 같다.</p>
+
+  <h3>직관 2: 선속(Flux)이란?</h3>
+  <p>비유 — <strong>창문을 통과하는 비</strong>. 비가 똑바로 내릴 때 창문이 바닥에 평행이면 비가 가장 많이 통과. 90° 세우면 한 방울도 안 들어옴.</p>
+  $$ \Phi = E A \cos\theta = \vec E \cdot \vec A $$
+  <ul>
+    <li>$\theta$ = 전기장과 면의 <em>법선</em>이 이루는 각도</li>
+    <li>0이면 최대(정통 통과), 90°면 0(스쳐 지나감)</li>
+  </ul>
+  <pre><code>       E⃗   →     →     →   (균일 전기장)
+              ┌───┐
+              │ A │ ← θ = 0 (정통으로 뚫음): Φ = E·A 최대
+              └───┘
+              ─────
+              ║ A ║   ← θ = 90° (면을 따라 흐름): Φ = 0
+              ─────</code></pre>
+
+  <h3>대칭이 있는 3가지 경우만 풀린다</h3>
+  <ul>
+    <li><strong>점·구 대칭</strong> → 가우스 면 = 구 → $E = \dfrac{Q}{4\pi\varepsilon_0 r^2}$ (쿨롱)</li>
+    <li><strong>선 대칭</strong> (긴 직선 전하 $\lambda$) → 원기둥 → $E = \dfrac{\lambda}{2\pi\varepsilon_0 r}$ ($1/r$로 감소)</li>
+    <li><strong>면 대칭</strong> (무한 평면 $\sigma$) → 양 면 통과 원기둥 → $E = \dfrac{\sigma}{2\varepsilon_0}$ (거리 무관!)</li>
+  </ul>
+
+  <h3>가우스 법칙 풀이 4단계</h3>
+  <ol>
+    <li><strong>대칭 파악:</strong> 구·선·면 중 어느 것?</li>
+    <li><strong>가우스 면 선택:</strong> 대칭에 맞춰 (구/원기둥/원기둥)</li>
+    <li><strong>$\Phi$ 계산:</strong> 곡면 위에서 $E$가 일정하면 $\Phi = E \cdot A_\text{표면}$</li>
+    <li><strong>등식 풀기:</strong> $E\cdot A = Q_\text{enc}/\varepsilon_0$ → $E$ 풀기</li>
+  </ol>
+
+  <h3>인터랙티브 데모 3 — 가우스 면을 통과하는 선속 🎮</h3>
+  <p>구형 가우스 면의 반지름과 가운데 전하의 양을 바꿔 보세요. 안에 든 전하 $Q_\text{enc}$만이 총 선속을 결정한다는 가우스 법칙의 핵심을 실시간으로 확인할 수 있습니다.</p>
+
+  <div class="demo">
+    <h4>🎮 가우스 구면의 선속 계산기</h4>
+    <p>중심에 점전하 $Q$가 있고 반지름 $R$의 구를 그렸습니다. 그 구를 통과하는 총 선속 $\Phi = Q/\varepsilon_0$이 <strong>구의 반지름과 무관</strong>하게 일정함에 주목.</p>
+    <canvas id="w10_gauss" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>중심 전하 $Q$ <span class="val" id="w10_QV">+5</span> nC
+        <input type="range" id="w10_Q" min="-10" max="10" step="1" value="5"></label>
+      <label>가우스 구의 반지름 $R$ <span class="val" id="w10_RV">2.0</span> m
+        <input type="range" id="w10_R" min="0.5" max="5" step="0.1" value="2"></label>
+      <label>외부 추가 전하 $Q_\text{ext}$ <span class="val" id="w10_QextV">0</span> nC
+        <input type="range" id="w10_Qext" min="-10" max="10" step="1" value="0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>발견할 것</strong>
+      <ul>
+        <li>$R$을 바꿔도 총 선속 $\Phi$는 일정 — <strong>가우스 법칙의 핵심</strong>.</li>
+        <li>$Q_\text{ext}$를 켜고 끄면 외부 전하는 총 선속에 <em>전혀</em> 영향 안 줌(들어오는 만큼 나감).</li>
+        <li>$R$이 작아지면 표면 위 $E = Q/(4\pi\varepsilon_0 R^2)$이 빠르게 커짐 — 면적과 $E$의 곱이 일정.</li>
+        <li>$Q$ 부호를 바꾸면 화살표가 들어오는 방향(음의 선속)으로 뒤집힘.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w10_gauss');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const eps0=8.854e-12;
+    function arrow(x1,y1,x2,y2,col,lw){
+      ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw||1.5;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1),hl=7;
+      ctx.beginPath();ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+      ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fill();
+    }
+    function draw(){
+      const Q=+document.getElementById('w10_Q').value*1e-9;
+      const R=+document.getElementById('w10_R').value;
+      const Qext=+document.getElementById('w10_Qext').value*1e-9;
+      document.getElementById('w10_QV').textContent=(Q*1e9>=0?'+':'')+(Q*1e9).toFixed(0);
+      document.getElementById('w10_RV').textContent=R.toFixed(1);
+      document.getElementById('w10_QextV').textContent=(Qext*1e9>=0?'+':'')+(Qext*1e9).toFixed(0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const sc=50, ox=W/2, oy=H/2;
+      ctx.strokeStyle='#eef0f4';ctx.lineWidth=1;
+      for(let g=-6;g<=6;g++){
+        ctx.beginPath();ctx.moveTo(ox+g*sc,0);ctx.lineTo(ox+g*sc,H);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,oy+g*sc);ctx.lineTo(W,oy+g*sc);ctx.stroke();
+      }
+      // gauss circle
+      ctx.strokeStyle='#7b1fa2';ctx.setLineDash([8,4]);ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.arc(ox,oy,R*sc,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      // E arrows along radii
+      const N=16;
+      for(let i=0;i<N;i++){
+        const a=i*2*Math.PI/N;
+        const cosA=Math.cos(a), sinA=Math.sin(a);
+        const r1=R-0.4, r2=R+0.4;
+        const x1=ox+r1*sc*cosA, y1=oy-r1*sc*sinA;
+        const x2=ox+r2*sc*cosA, y2=oy-r2*sc*sinA;
+        const col=Q>=0?'#c62828':'#1565c0';
+        if(Q>=0) arrow(x1,y1,x2,y2,col,1.7);
+        else arrow(x2,y2,x1,y1,col,1.7);
+      }
+      // central charge
+      ctx.fillStyle=Q>=0?'#c62828':'#1565c0';
+      ctx.beginPath();ctx.arc(ox,oy,11,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+      ctx.fillText(Q>=0?'+':'−',ox,oy+5);
+      // external charge (outside)
+      if(Math.abs(Qext)>1e-15){
+        const epx=ox+(R+1.6)*sc, epy=oy-(R+1.0)*sc;
+        ctx.fillStyle=Qext>=0?'#c62828':'#1565c0';
+        ctx.beginPath();ctx.arc(epx,epy,9,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fff';ctx.fillText(Qext>=0?'+':'−',epx,epy+5);
+        ctx.fillStyle='#666';ctx.font='11px sans-serif';
+        ctx.fillText('Q_ext (선속 기여 = 0)',epx-50,epy-12);
+      }
+      ctx.textAlign='left';
+      // panel
+      const Phi=Q/eps0; // SI
+      const Esurf=Q/(4*Math.PI*eps0*R*R);
+      const A=4*Math.PI*R*R;
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(8,8,302,82);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,302,82);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('Q_enc = '+(Q*1e9).toFixed(1)+' nC',16,28);
+      ctx.fillText('Φ = Q/ε₀ = '+Phi.toExponential(2)+' N·m²/C',16,46);
+      ctx.fillText('표면 E = '+Esurf.toExponential(2)+' N/C',16,64);
+      ctx.fillText('표면적 A = 4πR² = '+A.toFixed(1)+' m²',16,82);
+    }
+    ['w10_Q','w10_R','w10_Qext'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>4-B. 단계별 사고 과정 — 가우스 법칙 5단계 풀이 🪜</h2>
+  <p>"식이 갑자기 튀어나온다"고 느낄 때, 가우스 법칙 문제는 <strong>5단계</strong>로 쪼개면 외울 게 거의 없습니다.</p>
+
+  <div class="note">
+    <strong>예제 (단계별로 풀어보기).</strong> 균일하게 대전된 무한히 긴 직선 도선의 선밀도가 $\lambda = 4$ nC/m이다. 도선에서 $r=0.05$ m 떨어진 점의 전기장 크기와 방향은?
+  </div>
+
+  <h3>1단계 — 대칭성 식별</h3>
+  <p>"이 분포가 어떤 변환에 대해 같아 보이는가?"
+  <strong>(a) 구 대칭</strong>(점·구) — 어떤 회전에도 같음.
+  <strong>(b) 선 대칭</strong>(긴 도선·실린더) — 도선 회전 + 도선 따라 평행이동에 같음.
+  <strong>(c) 면 대칭</strong>(무한 평면판) — 면 안에서 평행이동에 같음.</p>
+  <p>이 문제는 무한 직선이라 <em>선 대칭</em>. → $\vec E$는 도선에 수직, 거리만 함수, 도선 따라 일정.</p>
+
+  <h3>2단계 — 가우스 면 그리기</h3>
+  <p>대칭에 따라 자연스러운 표면을 잡습니다.</p>
+  <ul>
+    <li>구 대칭 → <strong>구</strong> (반지름 $r$)</li>
+    <li>선 대칭 → <strong>원기둥</strong> (도선 중심, 반지름 $r$, 길이 $L$)</li>
+    <li>면 대칭 → <strong>약통 모양 원기둥</strong> (양 면 통과, 면적 $A$ 두 개)</li>
+  </ul>
+  <p>이 문제는 도선을 축으로 하는 반지름 $r=0.05$ m, 길이 $L$의 원기둥.</p>
+
+  <h3>3단계 — 선속 적분 분해</h3>
+  <p>원기둥은 <strong>옆면</strong>과 <strong>위·아래 뚜껑</strong>으로 나뉩니다.</p>
+  <ul>
+    <li>뚜껑: $\vec E$가 면과 평행 → $\vec E\cdot d\vec A = 0$. 기여 0.</li>
+    <li>옆면: $\vec E$가 면과 수직(법선과 같은 방향) + $E$가 일정. → $\Phi_\text{side} = E\cdot 2\pi r L$.</li>
+  </ul>
+  <p>그래서 총 선속 $\Phi = E\cdot 2\pi r L$.</p>
+
+  <h3>4단계 — 갇힌 전하와 등식 세우기</h3>
+  $$ E\cdot 2\pi r L = \frac{Q_\text{enc}}{\varepsilon_0} = \frac{\lambda L}{\varepsilon_0} $$
+  <p>$L$이 양변에서 사라집니다 — 길이를 모르고도 풀린다는 점이 가우스 법칙의 묘미.</p>
+  $$ E = \frac{\lambda}{2\pi\varepsilon_0 r} $$
+
+  <h3>5단계 — 수치 대입과 검증</h3>
+  $$ E = \frac{4\times 10^{-9}}{2\pi\cdot 8.854\times 10^{-12}\cdot 0.05} \approx 1438 \text{ N/C} $$
+  <ul>
+    <li><strong>단위:</strong> C/m ÷ (C²/(N·m²) · m) = N/C ✓</li>
+    <li><strong>방향:</strong> $\lambda > 0$이므로 도선에서 바깥 방향(법선).</li>
+    <li><strong>합리성:</strong> 같은 거리 점전하(예: $Q=4$ nC) 대비 식이 $1/r$로 더 천천히 감소. → 멀리서는 직선이 점전하보다 강함, 가까이서는 점전하가 강함.</li>
+  </ul>
+  <div class="tip"><strong>핵심 메시지</strong> — 가우스 법칙은 "대칭이 있으면 적분이 사라지고 곱셈만 남는 마법". 대칭이 없는 임의 분포는 가우스 법칙으로 풀리지 않으니 쿨롱 적분으로 돌아가세요.</div>
+
+  <h3>두 번째 예제 — 평면 분포</h3>
+  <div class="note">
+    <strong>예제.</strong> 평면 표면에 균일하게 대전된 면밀도 $\sigma = 2\times10^{-7}$ C/m²의 무한 평면판. 평면판 양쪽으로 1 m, 0.1 m 떨어진 점의 $E$는?
+  </div>
+
+  <ol>
+    <li><strong>대칭:</strong> 면 안에서 평행이동에 같음 → 면 대칭. $\vec E$는 평면에 수직, 거리만 함수.</li>
+    <li><strong>가우스 면:</strong> 평면을 가로지르는 약통형 원기둥(양쪽 뚜껑이 평면에 평행, 면적 $A$).</li>
+    <li><strong>선속 분해:</strong> 옆면(평면에 평행, 법선 직교) → 0. 양 뚜껑(평면에 수직 방향 $\vec E$) → 각각 $EA$. 합 $\Phi = 2EA$.</li>
+    <li><strong>등식:</strong> $2EA = \sigma A/\varepsilon_0$ → $E = \sigma/(2\varepsilon_0)$. 면적 $A$가 양변에서 사라짐 — <strong>거리에도 무관</strong>.</li>
+    <li><strong>수치:</strong> $E = 2\times10^{-7}/(2\cdot 8.854\times10^{-12}) \approx 1.13\times10^4$ N/C. 1 m든 0.1 m든 <strong>완전히 똑같음</strong>. 이게 무한 평면 가정의 신기한 점.</li>
+  </ol>
+  <p>실제 유한 평면(예: 1 m × 1 m)은 면 가까이에서만 무한 근사가 성립. 멀리 가면 점전하처럼 $1/r^2$ 감소.</p>
+
+  <h2>5. 도체와 가우스 법칙</h2>
+  <p>도체 내부 정전기 평형에서 $E = 0$. 자유전자가 외부 전기장을 정확히 상쇄하도록 표면에 재배치. 모든 전하는 표면에.</p>
+  <h3>데모 3 — 패러데이 새장</h3>
+  <p>알루미늄 호일로 핸드폰 감싸고 다른 폰으로 전화 → 연결 안 됨. 차에 번개가 떨어져도 안의 사람이 무사한 이유.</p>
+  <h3>데모 4 — 반 데 그라프 + 사슬</h3>
+  <p>큰 전압에 사슬을 걸면 사슬이 털처럼 곤두선다(같은 부호 반발). 안의 종이공은 가만히(내부 $E=0$).</p>
+
+  <h2>흔한 오개념</h2>
+  <table>
+    <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
+    <tbody>
+      <tr><td>"같은 부호 끌린다"</td><td>밀어낸다</td></tr>
+      <tr><td>"전기장은 전하 있을 때만"</td><td>전하 자체가 항상 만든다. 시험전하는 측정 도구</td></tr>
+      <tr><td>"가우스는 점전하만"</td><td>모든 폐곡면에 성립. 단 대칭 있어야 풀림</td></tr>
+      <tr><td>"도체 내부에 전하 들어가 있다"</td><td>정전기 평형에서 모두 표면에</td></tr>
+      <tr><td>"전기장선 = 입자 궤적"</td><td>방향만 표시. 궤적 ≠ 장선</td></tr>
+    </tbody>
+  </table>
+
+  <h2>강의실 예제</h2>
+  <div class="tip"><strong>예제 1.</strong> +2 μC, -3 μC가 0.1 m. 힘?<br>
+  $F = (8.99\times10^9)(6\times10^{-12})/0.01 \approx 5.4$ N. 끌림.</div>
+  <div class="tip"><strong>예제 2.</strong> +5 nC에서 0.2 m 거리 전기장?<br>
+  $E = kQ/r^2 \approx 1124$ N/C. 바깥.</div>
+  <div class="tip"><strong>예제 3.</strong> $\sigma=2\times10^{-6}$ C/m² 무한 평면판 전기장?<br>
+  $E = \sigma/(2\varepsilon_0) \approx 1.13\times 10^5$ N/C. 거리 무관.</div>
+  <div class="tip"><strong>예제 4 (중첩).</strong> +q와 −q가 $x = \pm a$에 위치. $y$축 위 거리 $a$ 점에서 $\vec E$의 크기와 방향?<br>
+  각 전하가 만든 $E$가 대각선. $y$ 성분은 상쇄, $x$ 성분만 더해짐. 크기 $E_\text{total} = kq/(2\sqrt{2}a^2)$, $-x$ 방향.</div>
+  <div class="tip"><strong>예제 5 (가우스, 구).</strong> 반경 $R=0.1$ m 도체 구에 $Q=10$ nC. 표면 바로 바깥의 $E$?<br>
+  $E = kQ/R^2 = 8990$ N/C. 표면에서 멀어질수록 $1/r^2$로 감소.</div>
+  <div class="tip"><strong>예제 6 (가우스, 직선).</strong> 무한 직선에 선밀도 $\lambda = 5$ nC/m. 0.05 m 떨어진 점의 $E$?<br>
+  $E = \lambda/(2\pi\varepsilon_0 r) = 5\times10^{-9}/(2\pi\cdot 8.85\times 10^{-12}\cdot 0.05) \approx 1798$ N/C.</div>
+  <div class="tip"><strong>예제 7 (가속).</strong> 균일 전기장 $E = 10^4$ N/C 안에 정지한 전자가 0.01 s 가속. 도달 속도?<br>
+  $a = qE/m = 1.6\times10^{-19}\cdot 10^4/9.1\times 10^{-31} = 1.76\times 10^{15}$ m/s². $v = at = 1.76\times 10^{13}$ m/s. (← 비현실적; 실제는 상대론 적용. 1학년 수준에선 식 적용까지만.)</div>
+
+  <h2>자기 점검 ✅</h2>
+  <div class="note">
+    <ol>
+      <li>두 전하 사이 거리를 2배로 하면 힘은 몇 배?</li>
+      <li>가우스 면 안에 0이 아닌 전하가 있는데 그 면을 통과하는 선속이 0일 수 있나?</li>
+      <li>도체 안에 빈 공간이 있고 그 안에 +Q 전하가 있다. 도체 외부 표면의 전하는?</li>
+      <li>전기장선이 서로 교차할 수 없는 이유는?</li>
+    </ol>
+    <strong>정답</strong>: (1) 1/4배($1/r^2$). (2) 없음. 가우스 법칙은 정확히 $Q_\text{enc}/\varepsilon_0$ 만큼의 선속을 보장. (3) +Q (전하 보존 + 도체 내부 표면에는 −Q 유도). (4) 한 점에서 $\vec E$ 방향이 두 개일 수 없으므로.
+  </div>
+
+  <h2>응용·확장</h2>
+  <table>
+    <thead><tr><th>분야</th><th>어떻게 쓰나</th></tr></thead>
+    <tbody>
+      <tr><td>피뢰침</td><td>뾰족한 곳에 전하 집중 → 번개 유도</td></tr>
+      <tr><td>전자기파 차폐</td><td>패러데이 새장(차·비행기·전자레인지 도어)</td></tr>
+      <tr><td>잉크젯·복사기</td><td>전기장으로 잉크/토너 입자 조작</td></tr>
+      <tr><td>전기 영동</td><td>DNA·단백질 분리 (생화학)</td></tr>
+      <tr><td>입자 가속기</td><td>전기장으로 전하 가속 → CERN, 의료 가속기</td></tr>
+      <tr><td>뉴런</td><td>막 사이 전위차로 신호 전달</td></tr>
+    </tbody>
+  </table>
+
+  <h2>연습문제 — 집에서 풀어보기 ✏️</h2>
+  <p>한 문제당 풀이 토글이 있습니다. 본인이 먼저 풀어보고, 막히면 펼치세요. 시험 1주 전에 다시 풀어보길 권장합니다. ($k = 8.99\times10^9\ \mathrm{N\cdot m^2/C^2}$, $\varepsilon_0 = 8.854\times10^{-12}\ \mathrm{C^2/(N\cdot m^2)}$.)</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 1</strong> (쿨롱 — 1차원) — $+3$ μC와 $+5$ μC가 0.20 m 떨어져 있다. 둘 사이 작용하는 힘의 크기와 방향은?</summary>
+    <p style="margin-top:10px">$F = k|q_1 q_2|/r^2 = 8.99\times10^9 \cdot (3\times5\times10^{-12})/0.04 = 3.37$ N. 같은 부호 → 서로 밀어냄(척력).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 2</strong> (전기장 — 점전하) — $-4$ nC 점전하에서 0.10 m 떨어진 점의 전기장은?</summary>
+    <p style="margin-top:10px">$E = k|Q|/r^2 = 8.99\times10^9 \cdot 4\times10^{-9}/0.01 = 3596$ N/C. 방향: 음전하이므로 점전하 쪽으로(들어가는 방향).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 3</strong> (중첩) — $+q$가 $(0,0)$, $-q$가 $(d,0)$. $x$축 위 점 $(d/2, 0)$의 전기장 크기?</summary>
+    <p style="margin-top:10px">두 전하로부터 같은 거리 $d/2$. $+q$의 $E$는 $+x$ 방향, $-q$의 $E$도 $+x$ 방향(음전하 향함). 같은 방향이라 더해짐.<br>$E = 2 \cdot kq/(d/2)^2 = 8kq/d^2$.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 4</strong> (가우스 — 구) — 반경 $R=0.05$ m 도체 구에 $Q=20$ nC. 표면 바로 바깥과 표면에서 0.20 m 거리의 $E$?</summary>
+    <p style="margin-top:10px">표면 바로 바깥: $E = kQ/R^2 = 8.99\times10^9 \cdot 20\times10^{-9}/0.0025 = 7.19\times10^4$ N/C.<br>0.20 m 거리(중심에서 0.25 m): $E = kQ/(0.25)^2 \approx 2876$ N/C. ($1/r^2$ 감소 비교: $(0.25/0.05)^2 = 25$배 감소 → $7.19\times 10^4/25 \approx 2876$ ✓)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 5</strong> (가우스 — 직선) — 무한히 긴 직선전하 $\lambda = -2$ nC/m. 도선에서 $r=0.10$ m 거리 점의 $E$ 크기와 방향?</summary>
+    <p style="margin-top:10px">$E = |\lambda|/(2\pi\varepsilon_0 r) = 2\times10^{-9}/(2\pi \cdot 8.854\times10^{-12}\cdot 0.10) \approx 359.7$ N/C. 방향: $\lambda<0$이므로 도선을 향함.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 6</strong> (가우스 — 면) — 무한 평면판에 표면전하밀도 $\sigma = 5\times10^{-7}$ C/m². 평면판 양쪽 어디에서나 $E$는?</summary>
+    <p style="margin-top:10px">$E = \sigma/(2\varepsilon_0) = 5\times10^{-7}/(2\cdot 8.854\times10^{-12}) \approx 2.82\times10^4$ N/C. 거리에 무관(이상적 무한 평면). 양쪽으로 나가는 방향($\sigma>0$).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 7</strong> (가우스 — 두 평면판) — 두 무한 평행 평면판이 있고 한쪽은 $+\sigma$, 다른 쪽은 $-\sigma$. 사이 $E$와 바깥 $E$는?</summary>
+    <p style="margin-top:10px">사이: 두 판이 같은 방향($+\sigma$ → 음판 쪽, $-\sigma$도 음판 쪽 향함) → $E_\text{in} = \sigma/\varepsilon_0$. 바깥: 두 기여가 반대 방향 → $E_\text{out} = 0$. 이것이 평행판 축전기 모델의 출발점(다음 주).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 8</strong> (선속) — 균일 전기장 $E=500$ N/C가 $+x$ 방향. $0.20\times0.30$ m 사각형 평면이 $yz$ 면(즉 법선이 $x$ 방향). 선속은? 이 평면을 30° 기울이면?</summary>
+    <p style="margin-top:10px">정통: $\Phi = EA\cos 0 = 500\cdot 0.06 = 30$ N·m²/C. 30° 기울면(법선과 $\vec E$ 사이가 30°): $\Phi = 30\cos30° \approx 26.0$ N·m²/C.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 9</strong> (도체 구의 갇힌 전하) — 속이 빈 도체 껍질의 내부 빈 공간에 $+Q$ 전하를 띄워 놓았다. 도체 안쪽 표면, 바깥 표면에 유도된 전하는?</summary>
+    <p style="margin-top:10px">도체 내부에 $\vec E = 0$이 성립하려면 안쪽 표면에 $-Q$가 유도되어야 함(가우스 면을 도체 두께 안에 그리면 $Q_\text{enc} = +Q + (-Q) = 0$ → 그 면을 통과하는 $\Phi=0$ → 도체 내부 $E=0$ ✓). 도체가 전기적 중성이라면 바깥 표면엔 $+Q$가 유도됨(전하 보존).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 10</strong> (전자의 가속) — 균일 전기장 $E = 2000$ N/C 안에 정지한 전자. $1.0$ μs 후 속도와 이동 거리는? ($m_e = 9.11\times10^{-31}$ kg, $|e|=1.6\times10^{-19}$ C)</summary>
+    <p style="margin-top:10px">$a = eE/m_e = 1.6\times10^{-19}\cdot 2000/9.11\times10^{-31} \approx 3.51\times10^{14}$ m/s². $v = at = 3.51\times10^{8}$ m/s. (광속 $\approx 3\times10^{8}$ — 이미 상대론 영역, 학부 1학년 수준에서는 식 적용까지만.) 거리 $x = \tfrac12 at^2 \approx 176$ m.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 11</strong> (쌍극자 모멘트) — 물 분자의 쌍극자 모멘트 $p \approx 6.2\times10^{-30}$ C·m. 이것을 $+e$와 $-e$가 $d$ 떨어진 모델로 나타내면 $d$는?</summary>
+    <p style="margin-top:10px">$p = qd$ → $d = p/e = 6.2\times10^{-30}/1.6\times10^{-19} \approx 3.9\times10^{-11}$ m = 0.039 nm. 실제 H–O 결합 길이(약 0.10 nm)보다 작음 → 전하가 완전히 분리되지 않은 부분 이온성 결합.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 12</strong> (직선과 점전하 비교) — 동일 거리 $r=0.10$ m에서 점전하 $Q=1$ nC와 선밀도 $\lambda=1$ nC/m의 직선이 만드는 $E$를 비교. 어느 쪽이 더 강한가? 거리를 두 배로 늘리면?</summary>
+    <p style="margin-top:10px">점전하: $E_p = kQ/r^2 = 899$ N/C. 직선: $E_l = \lambda/(2\pi\varepsilon_0 r) = 179.8$ N/C. 점전하가 약 5배 강함.<br>거리 두 배($r=0.20$ m): 점전하 $1/4$로 → 224.8 N/C, 직선 $1/2$로 → 89.9 N/C. 비율은 약 2.5배로 좁혀짐. 더 멀어지면 직선이 점전하보다 강해질 수 있음 — $1/r$이 $1/r^2$보다 천천히 감소.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐1</strong> (균일 대전된 구) — 반경 $R$, 총 전하 $Q$가 부피에 균일 분포. 중심에서 $r$ 거리의 $E(r)$를 안($r<R$)과 바깥($r>R$)에서 각각 구하고 그래프로 그리시오.</summary>
+    <p style="margin-top:10px">바깥($r\geq R$): 가우스 구면 안에 모든 $Q$ 포함 → $E = kQ/r^2$. 점전하처럼.<br>안($r<R$): 부피 비율로 갇힌 전하 $Q_\text{enc} = Q\cdot r^3/R^3$. → $E\cdot 4\pi r^2 = Q r^3/(R^3\varepsilon_0)$ → $E = kQr/R^3$. <strong>중심에서 0, 표면에서 최대($kQ/R^2$), 바깥에서 $1/r^2$ 감소</strong>. $r=R$에서 두 식이 매끄럽게 연결.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐2</strong> (도체에 구멍이 있는 가우스 면) — 도체 내부에 빈 공간이 있고 그 빈 공간 안에 $+Q$ 전하가 있다. 도체 표면(외부)의 $E$를 계산하면 어떤 분포가 보이는가? 도체가 구일 때, 임의 모양일 때 차이는?</summary>
+    <p style="margin-top:10px">도체 외부에서는 갇힌 전하 정보가 정확히 $+Q$(도체가 중성이라 가정)로 보임. 도체가 <strong>구</strong>면 외부 $E$는 점전하 $+Q$가 도체 중심에 있을 때와 동일($kQ/r^2$). 임의 모양이면 외부 $E$는 도체 외부 표면 모양에만 의존하고 내부 빈 공간 안 전하 위치엔 무관! (내부 표면 유도전하가 모든 정보를 흡수). 이를 응용한 것이 패러데이 새장(외부에서 봐도 내부가 안 보이고, 내부에서 봐도 외부가 안 보임).</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐3</strong> (대칭이 깨지면?) — 두 점전하 $+q, +q$가 거리 $2a$. 그 정중간 점에서 $E=0$인 것은 안다. 그 정중간 점에서 약간 옆($y$축 방향 $\delta$만큼)으로 옮긴 점의 $E$는? 1차 근사로 $\delta$에 비례하는 응답 항을 구하라.</summary>
+    <p style="margin-top:10px">두 점전하로부터의 거리 $r = \sqrt{a^2+\delta^2}$. 두 전하의 $E$ 벡터합에서 $x$ 성분은 정확히 상쇄되고 $y$ 성분만 남음. $E_y = 2\cdot kq\cdot\delta/r^3 \approx 2kq\delta/a^3$ ($\delta\ll a$). 즉 옮긴 방향과 같은 방향으로 복원력 반대(불안정 평형). 같은 부호 두 전하는 안정 평형점이 없다는 Earnshaw 정리의 한 단면.</p>
+  </details>
+
+  <h2>🧪 5분 실험 — 정전기 직접 만들기</h2>
+  <p>이론은 머리로, 실험은 손으로. 집에 있는 도구만으로 전기장과 정전기 유도를 체험할 수 있습니다.</p>
+
+  <h3>실험 A — 빗 + 종이 조각 (1분)</h3>
+  <ol>
+    <li>플라스틱 빗(또는 PVC 펜)을 머리카락(또는 모직 천)에 10초간 비빈다.</li>
+    <li>색종이를 작게 (5 mm × 5 mm) 잘라 책상 위에.</li>
+    <li>빗을 종이 가까이(2~3 cm) 가져가면 종이가 <strong>붕 뛰어올라</strong> 빗에 붙음.</li>
+    <li>빗에 음전하가 모여 있고, 그 전기장이 종이 안 전자 분포를 비대칭으로 만들어(쌍극자 유도) 빗 쪽으로 끌림.</li>
+  </ol>
+  <p><em>관찰 포인트:</em> 종이는 중성인데 끌림 → <strong>유도 분극</strong>. 가우스 법칙: 종이 가까이의 전기장이 약한 비균일성에서도 유도력이 생김.</p>
+
+  <h3>실험 B — 풍선 + 머리카락 (2분)</h3>
+  <ol>
+    <li>고무풍선을 부풀려 머리카락 위에서 10회 비빈다.</li>
+    <li>천천히 들어 올리면 머리카락이 풍선을 따라 <strong>곤두선다</strong>.</li>
+    <li>풍선을 벽에 가져가면 풍선이 벽에 붙음(중성 벽이 분극되어 끌림).</li>
+    <li>친구 풍선과 가까이 두면 둘 사이가 서로 밀어냄(같은 부호 척력).</li>
+  </ol>
+  <p><em>학습 포인트:</em> 같은 부호 척력 + 중성 물체에 대한 인력(분극 유도). 두 효과가 동시에 보임.</p>
+
+  <h3>실험 C — 가는 물줄기 휘기 (1분)</h3>
+  <ol>
+    <li>수도꼭지를 살짝 열어 가는 물줄기를 만든다.</li>
+    <li>비빈 빗 또는 풍선을 물줄기 옆 5 cm에 가져간다.</li>
+    <li>물줄기가 빗 쪽으로 <strong>휘어진다</strong>.</li>
+    <li>물 분자(영구 쌍극자)가 빗의 전기장에서 정렬되어 끌리는 현상.</li>
+  </ol>
+  <p><em>물의 영구 쌍극자 모멘트:</em> $p \approx 6.2\times10^{-30}$ C·m. 이 작은 값이 마이크로 단위에선 중력보다 큰 영향.</p>
+
+  <h3>실험 D — 알루미늄 캔 굴리기 (2분)</h3>
+  <ol>
+    <li>빈 알루미늄 캔을 책상 위에 옆으로 눕혀 놓음.</li>
+    <li>비빈 풍선을 캔 옆에 가까이(닿지 않게) 가져가면 캔이 풍선을 향해 <strong>굴러간다</strong>.</li>
+    <li>도체(알루미늄)에 정전 유도가 일어나, 풍선 쪽 표면에 반대 부호 전하가 모여 끌림.</li>
+  </ol>
+  <p><em>왜 도체는 더 강하게 반응?</em> 자유전자가 풍부해 분극이 거의 100% 가능 → 더 큰 인력. 본 강의 5절(도체와 가우스 법칙)의 직접 시연.</p>
+
+  <h3>실험 E — 패러데이 새장 (전자레인지 안 핸드폰 — 5분, 안전)</h3>
+  <ol>
+    <li>전자레인지를 <strong>작동시키지 말고</strong>, 핸드폰을 그 안에 넣고 문을 닫는다.</li>
+    <li>다른 폰으로 전화 → 신호가 매우 약해지거나 연결 안 됨.</li>
+    <li>알루미늄 호일로 핸드폰을 감싸도 같은 결과.</li>
+    <li>전자레인지 문의 격자(구멍 크기 ≪ 전자레인지 마이크로파 파장)는 전기장을 외부로 못 나가게 막는 패러데이 새장.</li>
+  </ol>
+  <p><em>왜 격자만 있어도 차단?</em> 가우스 법칙으로 도체 내부 $E=0$. 전자레인지 안 마이크로파(2.45 GHz, $\lambda \approx 12$ cm)가 격자 구멍(약 1 mm)보다 훨씬 길어 통과 못함. <strong>주의:</strong> 절대 전자레인지를 켜지 마세요 — 안의 핸드폰이 손상되고 전자레인지도 망가질 수 있습니다.</p>
+
+  <h2>🌍 다양한 곳의 전기장 — 수치 감각</h2>
+  <p>식의 답이 합리적인지 판단하려면 평소에 "현실 세계의 전기장 크기"를 기억하는 게 큰 도움이 됩니다.</p>
+
+  <table>
+    <thead><tr><th>장소·상황</th><th>전기장 (대략)</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>지구 표면(맑은 날)</td><td>약 100~150 N/C, 아래 방향</td><td>평소 우리 머리는 + 로 대전</td></tr>
+      <tr><td>실내 공기</td><td>약 1~10 N/C</td><td>벽지·가구의 잔류 정전기</td></tr>
+      <tr><td>TV 화면 앞</td><td>약 100 N/C</td><td>먼지 끌림의 원인</td></tr>
+      <tr><td>형광등 표면</td><td>약 1000 N/C</td><td>방전관 내부 전기장</td></tr>
+      <tr><td>비빈 풍선/머리카락 부근</td><td>약 $10^4$ N/C</td><td>본문 실험과 일치</td></tr>
+      <tr><td>건물 정전기 (저습도 겨울)</td><td>약 $10^4$ N/C</td><td>문 손잡이에서 “찌릿"</td></tr>
+      <tr><td>번개 직전(뇌운 아래)</td><td>약 $3\times10^6$ N/C</td><td>공기 절연파괴 한계</td></tr>
+      <tr><td>전자레인지(작동 중 내부)</td><td>약 $10^4$ N/C</td><td>마이크로파의 진폭</td></tr>
+      <tr><td>X선관 내부</td><td>약 $10^7$~$10^8$ N/C</td><td>의료 영상 장비</td></tr>
+      <tr><td>신경 세포막</td><td>약 $10^7$ N/C</td><td>막 두께 4 nm × 70 mV</td></tr>
+      <tr><td>수소 원자 안 (Bohr 반경)</td><td>약 $5\times10^{11}$ N/C</td><td>전자 궤도에서 양성자 향한</td></tr>
+      <tr><td>핵(원자핵 표면)</td><td>약 $10^{21}$ N/C</td><td>강한 핵력의 영향권</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>활용</strong> — 시험에서 답이 "전기장 $10^{15}$ N/C"가 나오면, 일상의 풍선($10^4$)보다 11자릿수 큰 값. 핵 내부 정도이므로 거의 확실히 단위 누락이나 식 오류. 매 답마다 위 표에 비춰 합리성 점검.</div>
+
+  <h2>📝 자주 틀리는 계산 실수 BEST 10</h2>
+  <p>전자기학 입문에서 시험 점수를 가장 자주 잃는 10가지. 개념을 알면서도 실수로 틀리는 항목들이라, 한 번 읽어두면 점수가 한 학점 오릅니다.</p>
+
+  <table>
+    <thead><tr><th>실수</th><th>예시</th><th>예방법</th></tr></thead>
+    <tbody>
+      <tr><td>1. nC/μC/mC를 그대로</td><td>$Q=5$ nC을 5로 대입</td><td><strong>SI 단위(C)로 환산 후 식에</strong>: nC=$10^{-9}$, μC=$10^{-6}$</td></tr>
+      <tr><td>2. cm를 m로 안 바꿈</td><td>$r=10$ cm을 10으로</td><td>모든 길이는 m로 통일</td></tr>
+      <tr><td>3. $r$이 아닌 $r^2$ 누락</td><td>점전하 $E=kQ/r$로 적음</td><td>점전하·구는 $1/r^2$, 직선은 $1/r$, 면은 $1/r^0$</td></tr>
+      <tr><td>4. 계수 $1/(4\pi\varepsilon_0)$ vs $k$</td><td>같은 식에 둘을 섞어 씀</td><td>$k = 1/(4\pi\varepsilon_0)$ 동일. 식 시작에 한 표기로 통일</td></tr>
+      <tr><td>5. 가우스 면 면적 실수</td><td>구의 면적 $\pi r^2$로(원 공식)</td><td>구는 $4\pi r^2$, 원기둥 옆면은 $2\pi r L$</td></tr>
+      <tr><td>6. 평면 가우스에서 $1/2$ 누락</td><td>$E=\sigma/\varepsilon_0$로 적음</td><td>면 양쪽으로 나가므로 $E=\sigma/(2\varepsilon_0)$. 평행판에선 양면 합쳐 $\sigma/\varepsilon_0$</td></tr>
+      <tr><td>7. 부호 누락(전하 부호와 방향)</td><td>$+Q$, $-Q$ 모두 같은 방향 화살표</td><td>$+$는 바깥으로, $-$는 안쪽으로 향함을 그림에 명시</td></tr>
+      <tr><td>8. 벡터를 스칼라처럼 더함</td><td>두 전하 $E$의 합을 단순 덧셈</td><td>벡터 합! 성분 분해 후 같은 성분끼리 더함</td></tr>
+      <tr><td>9. 가우스 법칙 적용 조건 무시</td><td>비대칭 분포에 가우스로 풀려 함</td><td>대칭이 있어야만 면 위에서 $E$가 일정 → 적분이 곱셈으로</td></tr>
+      <tr><td>10. 단위 누락</td><td>"$E=500$"만 쓰고 N/C 빠짐</td><td>매 답에 단위 표기. 전기장은 N/C(=V/m), 선속은 N·m²/C</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>한 줄 시험장 체크리스트</strong> — ① 단위 환산(nC→C, cm→m), ② 분포에 따라 $r$의 거듭제곱 다른 점, ③ 면적 공식(구·원기둥), ④ 평면 가우스의 $1/2$, ⑤ 답에 부호와 단위. 이 5가지를 매 문제 끝마다 확인하세요.
+  </div>
+
+  <h2>🗺️ 개념 지도 — 10주차가 어디로 이어지는가</h2>
+  <p>"전기장 식을 이렇게 외우면 어디 쓰지?"가 가끔 들 때, 다음 그림을 보세요. 10주차의 모든 개념은 11~14주에 직접 사용됩니다.</p>
+
+  <pre><code>             ┌── (W11) 전위 V = -∫E·dl     ──→ 전기장의 적분 = 전압
+             │       축전기 C = εA/d         ──→ 평행판 E = σ/ε₀ 그대로 사용
+             │
+   W10       ├── (W12) 전류와 저항             ──→ E가 만든 전류, 옴 법칙
+   전기장      │       I = nqv_d A
+   가우스 법칙 │
+             ├── (W13) 자기력 F = qv × B    ──→ 전기장의 자매 개념
+             │       전하 운동 → 자기장
+             │
+             └── (W14) 패러데이·맥스웰      ──→ 변하는 자기장 → 전기장 유도
+                     전자기파, 빛 = E·B 진동
+   더 멀리:
+     • 메카트로닉스: 전기 모터·센서의 동작 원리
+     • 자율주행: 라이다·레이더(전자기파)
+     • 머신러닝: GPU 칩 안 트랜지스터(전기장 제어)
+     • 의료: MRI, X선, 심전도(ECG)
+     • 통신: 와이파이·5G(전자기파)</code></pre>
+
+  <p><strong>한 줄 결론</strong> — "<em>전하 → 전기장 → 선속 → 가우스 법칙</em>" 이 한 사슬이 11~14주 모든 식의 출발점입니다. 이 흐름이 자동으로 떠오르면 10주차는 마스터.</p>
+
+  <h2>🏟️ 실생활 응용 깊게 보기</h2>
+  <p>전기장과 가우스 법칙이 어떻게 실제 기술에 쓰이는지, 5가지 예로 확장.</p>
+
+  <h3>응용 1 — 복사기·레이저 프린터</h3>
+  <p>드럼(원통)에 광전도체 코팅. 전체에 +전하를 띄움 → 레이저로 글자 부분만 비춰 그곳 전하 제거 → 음전하를 띤 토너 가루를 뿌리면 +남은 곳에만 붙음 → 종이로 옮겨 열로 고정. <strong>전기장 분포 = 인쇄될 이미지</strong>. 1938년 Chester Carlson이 발명, 1959년 Xerox가 상용화.</p>
+
+  <h3>응용 2 — 잉크젯 프린터</h3>
+  <p>잉크 방울을 노즐에서 분사 → 충전 전극으로 방울에 전하 부여 → 편향판의 균일 전기장(약 $10^6$ N/C)에서 옆으로 휘어짐 → 종이의 정확한 위치에 떨어짐. 발사체 운동 + 점전하의 가속 결합. (가속도 $a = qE/m$, 발사체처럼 좌우 분리.)</p>
+
+  <h3>응용 3 — 전자레인지(전기장 방출)</h3>
+  <p>마그네트론에서 2.45 GHz 마이크로파 전기장 발생. 진폭 약 $10^4$ N/C. 물 분자의 영구 쌍극자가 1초에 24억 번 회전하며 마찰열 발생. <strong>주의:</strong> 금속 안에 넣으면 가우스 법칙에 의해 표면에 강한 전하 분포 → 뾰족한 곳에서 방전·스파크. 그래서 "은박지 금지".</p>
+
+  <h3>응용 4 — 입자가속기 (선형·원형)</h3>
+  <p>전기장이 전하에 일을 해 운동에너지로 바꾸는 장치. SLAC 선형가속기 길이 3.2 km, 전기장 $\sim 2\times10^7$ V/m → 전자를 50 GeV까지 가속. 의료용 가속기는 작은 형태로 암 치료(방사선 치료)에 사용. 식 $W = qE\cdot d$가 그대로.</p>
+
+  <h3>응용 5 — 정전 도장(자동차 외장)</h3>
+  <p>도장용 분무 입자에 - 전하를 강제 부여, 차체에 + 고전압. 분무 입자가 전기력선을 따라 차체에 정확히 도달. <strong>가우스 법칙 활용:</strong> 차체가 도체이므로 표면 전체가 등전위 → 입자가 사각지대 없이 균일하게 코팅. 효율 80%+(보통 분무는 50% 이하).</p>
+
+  <h3>응용 6 — 번개와 피뢰침</h3>
+  <p>뇌운 아래 전기장이 $3\times10^6$ N/C(공기 절연파괴 한계)에 이르면 번개. 피뢰침은 끝이 뾰족해서 그곳에 전하 집중 → 국소 전기장이 더 큼($\sigma/\varepsilon_0$, 곡률 작을수록 $\sigma$ 큼) → 그곳에서 먼저 방전 발생 → 안전한 경로로 땅으로. <strong>비행기 동체</strong>(거의 도체)에 번개가 떨어져도 내부 $E=0$이라 승객 무사.</p>
+
+  <h3>응용 7 — 전기집진기(공기청정기)</h3>
+  <p>실내 미세먼지 입자에 +전하를 강제 부여 → −전극판으로 끌려가 흡착. 화력발전소 굴뚝의 큰 집진기는 효율 99% 이상. 가우스 법칙으로 보면 평행판 사이 균일 $E$가 입자에 등가속 부여 → 발사체 운동의 응용. 가정용은 약 $10^4$ V/m 전기장.</p>
+
+  <h3>응용 8 — 터치스크린(정전식)</h3>
+  <p>스마트폰 화면 아래 격자 모양 투명 전극에 약한 전기장 형성. 손가락(인체는 도체) 닿으면 그 위치 전기장 분포가 변함 → 어느 지점인지 좌표 계산. <strong>장갑 끼면 안 되는 이유:</strong> 장갑이 절연체라 전기장 변형이 약해 감지 안 됨. 정전식 터치 장갑은 손끝에 도전성 실을 박은 것.</p>
+
+  <h2>📚 부록 — 대표 전하 분포의 전기장 표</h2>
+  <p>시험 직전 5분에 한 번 훑어두면 좋은 정리표. <strong>외우지 말고 식 모양과 거리 의존성($1/r^n$)만</strong> 머리에 남기세요.</p>
+
+  <table>
+    <thead><tr><th>분포</th><th>$E(r)$ 식</th><th>거리 의존</th><th>가우스 면</th></tr></thead>
+    <tbody>
+      <tr><td>점전하 $Q$</td><td>$E = kQ/r^2$</td><td>$1/r^2$</td><td>구 (반지름 $r$)</td></tr>
+      <tr><td>균일 대전 구 (밖)</td><td>$E = kQ/r^2$</td><td>$1/r^2$</td><td>구</td></tr>
+      <tr><td>균일 대전 구 (안)</td><td>$E = kQr/R^3$</td><td>$r$ (선형)</td><td>구</td></tr>
+      <tr><td>도체 구 (안)</td><td>$E = 0$</td><td>—</td><td>임의</td></tr>
+      <tr><td>도체 구 (밖)</td><td>$E = kQ/r^2$</td><td>$1/r^2$</td><td>구</td></tr>
+      <tr><td>무한 직선전하 $\lambda$</td><td>$E = \lambda/(2\pi\varepsilon_0 r)$</td><td>$1/r$</td><td>원기둥</td></tr>
+      <tr><td>무한 평면전하 $\sigma$</td><td>$E = \sigma/(2\varepsilon_0)$</td><td>거리 무관</td><td>약통(원기둥)</td></tr>
+      <tr><td>두 평행판 (반대 부호)</td><td>$E = \sigma/\varepsilon_0$ (사이), 0 (밖)</td><td>거리 무관</td><td>약통</td></tr>
+      <tr><td>도체 표면 (바로 바깥)</td><td>$E = \sigma/\varepsilon_0$</td><td>표면값</td><td>약통</td></tr>
+      <tr><td>전기 쌍극자 ($p$, 축 위)</td><td>$E \approx 2kp/r^3$</td><td>$1/r^3$</td><td>(가우스X, 적분)</td></tr>
+      <tr><td>전기 쌍극자 (수직축)</td><td>$E \approx kp/r^3$</td><td>$1/r^3$</td><td>(가우스X, 적분)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip"><strong>패턴 한 줄</strong> — 점전하·구 $\to 1/r^2$, 직선 $\to 1/r$, 면 $\to$ 거리 무관, 쌍극자 $\to 1/r^3$. <em>분포의 차원이 한 단계 내려갈 때마다 거리 의존도 한 단계 약해짐</em>.</div>
+
+  <h2>📐 SI 단위 빠른 참조</h2>
+  <p>전자기학 입문에서 가장 자주 단위 실수가 일어나는 곳은 <strong>전하 단위(C, nC, μC) 환산과 N/C ↔ V/m</strong>입니다.</p>
+
+  <table>
+    <thead><tr><th>양</th><th>SI 단위</th><th>외워둘 환산</th></tr></thead>
+    <tbody>
+      <tr><td>전하</td><td>C (쿨롬)</td><td>1 nC = $10^{-9}$ C, 1 μC = $10^{-6}$ C, 전자 1개 = $1.6\times10^{-19}$ C</td></tr>
+      <tr><td>전기장</td><td>N/C 또는 V/m</td><td><strong>1 N/C = 1 V/m</strong> (정확히 같은 단위)</td></tr>
+      <tr><td>전기력</td><td>N (뉴턴)</td><td>$F = qE$, $F = kq_1 q_2/r^2$</td></tr>
+      <tr><td>선속</td><td>N·m²/C 또는 V·m</td><td>$\Phi = E\cdot A\cos\theta$</td></tr>
+      <tr><td>선전하밀도</td><td>C/m</td><td>$\lambda$ — 단위 길이당 전하</td></tr>
+      <tr><td>면전하밀도</td><td>C/m²</td><td>$\sigma$ — 단위 면적당 전하</td></tr>
+      <tr><td>부피전하밀도</td><td>C/m³</td><td>$\rho$ — 단위 부피당 전하</td></tr>
+      <tr><td>유전율(진공)</td><td>C²/(N·m²) = F/m</td><td>$\varepsilon_0 = 8.854\times10^{-12}$</td></tr>
+      <tr><td>쿨롱 상수</td><td>N·m²/C²</td><td>$k = 8.99\times10^9 = 1/(4\pi\varepsilon_0)$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>차원 일관성 — 식이 맞는지 확인</h3>
+  <ul>
+    <li>$F = kq_1 q_2/r^2$ → (N·m²/C²)·C·C/m² = N ✓</li>
+    <li>$E = kQ/r^2$ → (N·m²/C²)·C/m² = N/C ✓</li>
+    <li>$E = \lambda/(2\pi\varepsilon_0 r)$ → (C/m)/((C²/N·m²)·m) = N/C ✓</li>
+    <li>$\Phi = Q/\varepsilon_0$ → C/(C²/N·m²) = N·m²/C ✓</li>
+  </ul>
+  <p>식을 쓸 때 양변의 단위가 같은지 확인하면 식 오류의 90%를 잡을 수 있습니다.</p>
+
+  <h2>❓ 학생 단골 질문 (FAQ)</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q1.</strong> 쿨롱 법칙과 만유인력 법칙이 식 모양이 똑같은데 우연인가요?</summary>
+    <p style="margin-top:10px">우연이 아니라 둘 다 <strong>3차원 공간에서 점원의 보존장</strong>이라 그렇습니다. 가우스 정리에 의해 $1/r^2$이 자연스러운 결과. 4차원 공간이라면 $1/r^3$이 됐을 겁니다. 다만 두 힘은 강도가 $10^{39}$배 차이 — 일상에서 중력은 거의 무시.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q2.</strong> 전기장이라는 게 정말 "있는" 건가요, 아니면 계산 편의 도구인가요?</summary>
+    <p style="margin-top:10px">진짜 있는 물리적 실체입니다. 빛(전자기파)이 전기장과 자기장의 진동이고, 전기장에 에너지($\tfrac12\varepsilon_0 E^2$ per volume)가 저장됩니다. 14주 전자기파에서 그 진동이 진공을 통해 어떻게 전파되는지 봅니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q3.</strong> 가우스 법칙이 모든 폐곡면에 성립한다면, 왜 모든 문제에 쓸 수 없나요?</summary>
+    <p style="margin-top:10px">법칙 자체는 항상 성립하지만, "$E$를 풀어낼 수 있는가"는 별개. 가우스 면 위에서 $\vec E$가 일정해야 적분이 단순 곱셈($EA$)이 됩니다. 그래서 <strong>대칭성(구·선·면)</strong>이 필수. 대칭이 없으면 가우스 면 위 $E$가 위치마다 달라 적분이 계산 불가능 → 쿨롱 적분으로 돌아가야.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q4.</strong> 도체 내부 $E=0$이 항상 성립하나요? 전류가 흐르면 어떡하죠?</summary>
+    <p style="margin-top:10px">"정전기 평형(static equilibrium)"에서만 성립. 즉 자유전자가 더 이상 안 움직이는 상태. 전류가 흐르는 도체 안에는 $E\neq 0$이라 자유전자가 가속(평균) → 전류. 12주 옴 법칙은 $J = \sigma E$ (도체 안 전기장 × 전도도). 평형은 그 특수 경우.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q5.</strong> 점전하의 전기장이 $r=0$에서 무한대인데 물리적으로 문제 없나요?</summary>
+    <p style="margin-top:10px">엄밀히는 문제이고, 양자장론에서 "재규격화"로 처리합니다. 학부 1학년에서는 점전하를 이상화 모델로 받아들이고, 실제 입자(전자)는 크기가 $10^{-18}$ m 이하로 매우 작아 거시적 문제에선 점전하 근사가 잘 맞습니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q6.</strong> 무한 평면전하의 $E$가 거리에 무관하다는 게 비현실적이지 않나요?</summary>
+    <p style="margin-top:10px">"무한 평면"이 이상화입니다. 실제는 유한 평면. 평면 크기가 $L$이라면 거리 $r \ll L$에서는 평면 가까이에서 $E \approx \sigma/(2\varepsilon_0)$로 근사 OK. $r \gg L$이면 점전하처럼 $1/r^2$로 감소. 시험에서 $\sigma$ 식을 쓰는 건 "거리가 평면 크기보다 매우 작다"는 가정.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q7.</strong> 전기력선을 그리는 규칙이 정확히 뭔가요?</summary>
+    <p style="margin-top:10px">(1) +에서 출발해 −에서 끝(또는 무한). (2) 한 점에서 접선이 $\vec E$ 방향. (3) 단위면적당 선의 수가 $|\vec E|$에 비례. (4) <strong>서로 교차하지 않음</strong>(한 점에서 두 방향이면 모순). (5) 도체 표면에 항상 수직.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q8.</strong> 음전하의 전기장도 $\vec E = \vec F/q_0$로 정의하는데, 시험전하 $q_0$의 부호에 따라 답이 달라지지 않나요?</summary>
+    <p style="margin-top:10px">$q_0$의 부호와 무관해야 정의가 일관됩니다. $q_0 = +1$ C로 잡는 게 관습. 시험전하가 $-$면 받는 힘이 반대지만, $\vec E = \vec F/q_0$의 분모도 $-$라 결과는 같음. 즉 $\vec E$는 시험전하와 독립.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q9.</strong> 가우스 면 안에 $+Q$와 $-Q$가 같이 있으면 선속은?</summary>
+    <p style="margin-top:10px">$\Phi = (Q + (-Q))/\varepsilon_0 = 0$. 단 그 면 위에서 $\vec E$가 0이라는 뜻은 아닙니다. 들어오는 만큼 나가서 합이 0일 뿐, 면 위 각 지점의 $E$는 일반적으로 0이 아님. 식 $\oint \vec E\cdot d\vec A = 0$은 <em>적분 결과</em>가 0.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q10.</strong> 식 $E = \sigma/\varepsilon_0$ (도체 표면)와 $E = \sigma/(2\varepsilon_0)$ (무한 평면)의 차이는 어디서?</summary>
+    <p style="margin-top:10px">평면(얇은 판)은 양쪽으로 전기장이 나가므로 한쪽 기여 $\sigma/(2\varepsilon_0)$. 도체 표면은 도체 내부 $E=0$이라 한쪽(외부)으로만 전기장이 존재 → 같은 표면밀도라도 외부 $E$는 두 배.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q11.</strong> 전기 쌍극자 $\vec p$가 외부 전기장 $\vec E$ 안에 있으면 어떻게 움직이나요?</summary>
+    <p style="margin-top:10px">균일 $\vec E$에선 알짜힘 0(두 전하가 받는 힘이 반대), 다만 <strong>토크</strong> $\vec\tau = \vec p\times\vec E$로 회전. 비균일 $\vec E$에선 알짜힘이 생겨 끌림(분극된 종이가 빗에 끌리는 이유). 14주에 더 자세히.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q12.</strong> 절연체(부도체)에는 가우스 법칙이 다르게 적용되나요?</summary>
+    <p style="margin-top:10px">법칙 자체는 동일. 다만 절연체 안에선 자유전하가 없는 대신 <em>분극전하</em>가 생겨 효과적인 전기장이 약해짐. 식 $E = E_0/\kappa$ ($\kappa$는 유전상수). 11주 축전기에서 다시 만남.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q13.</strong> 비행기에 번개가 떨어져도 안전한 이유를 한 문장으로?</summary>
+    <p style="margin-top:10px">비행기 동체가 도체라 정전기 평형에서 내부 $E=0$ → 모든 전하는 외피에 머물고, 그 전하의 흐름은 외피를 따라 흘러가며 동체를 통과해 다시 공기로 빠져나갑니다. 패러데이 새장의 직접 응용.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q14.</strong> 전기장과 다음 주에 배울 전위(전압)는 정확히 어떤 관계?</summary>
+    <p style="margin-top:10px">$V(\vec r) = -\int \vec E\cdot d\vec l$ (적분), $\vec E = -\nabla V$ (미분). 즉 전기장은 전위의 기울기. 운동학에서 $v = dx/dt$, $a = dv/dt$의 사슬과 같은 구조. 한 번 더 미분/적분으로 연결되는 사슬이 11주.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q15.</strong> 시험 1주 전에 무엇부터 봐야 할까요?</summary>
+    <p style="margin-top:10px">(1) 부록의 분포별 $E$ 표 외우기보단 식 모양 익히기. (2) 단계별 사고 5단계로 가우스 문제 한 번 직접 풀어보기. (3) 위 연습문제 12개 중 8개. (4) Halliday 22장 끝 문제 5개. (5) 자주 틀리는 실수 BEST 10 한 번 읽기. — 이 순서면 충분.</p>
+  </details>
+
+  <h2>🎯 한 페이지 요약 — 시험 직전 5분 노트</h2>
+  <div class="tip">
+    <h4 style="margin-top:0">절대 잊지 말 것</h4>
+    <ol>
+      <li><strong>쿨롱:</strong> $F = kq_1 q_2/r^2$, $k = 8.99\times10^9$. 같은 부호 척력, 다른 부호 인력.</li>
+      <li><strong>전기장:</strong> $\vec E = \vec F/q$, 점전하 $E = kQ/r^2$. 시험전하는 측정 도구.</li>
+      <li><strong>중첩:</strong> $\vec E_\text{tot} = \vec E_1 + \vec E_2 + \cdots$ (벡터 합! 성분 분해 후).</li>
+      <li><strong>가우스 법칙:</strong> $\oint\vec E\cdot d\vec A = Q_\text{enc}/\varepsilon_0$. 모든 폐곡면에 성립, 풀려면 대칭 필요.</li>
+      <li><strong>3가지 대칭:</strong> 구$\to 1/r^2$, 직선$\to 1/r$, 면$\to$무관. 거리 의존도가 한 단계씩.</li>
+      <li><strong>도체:</strong> 정전기 평형에서 내부 $E=0$, 모든 전하는 표면에. 표면 바로 밖 $E=\sigma/\varepsilon_0$.</li>
+      <li><strong>5단계 풀이:</strong> 대칭 식별 → 가우스 면 → 선속 분해 → 등식 → 수치+검증.</li>
+      <li><strong>단위:</strong> $\varepsilon_0 = 8.854\times10^{-12}$, N/C = V/m. 답에 단위 항상.</li>
+    </ol>
+  </div>
+
+  <h2>🎓 1분 미니퀴즈 — 5문항</h2>
+  <p>아래 5문항을 1분 안에 머릿속으로 답해 보고 토글로 확인. 4개 이상 맞으면 10주차 OK.</p>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 1.</strong> 두 점전하 사이 거리를 3배로 늘리면 힘은 몇 배?</summary>
+    <p style="margin-top:8px">$1/9$배. ($1/r^2$의 결과)</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 2.</strong> 가우스 면을 통과하는 총 선속이 0인데, 면 안에 전하가 있을 수 있나?</summary>
+    <p style="margin-top:8px">없음. $\Phi = Q_\text{enc}/\varepsilon_0$이 정확히 성립하므로 $\Phi=0$이면 갇힌 전하의 합도 0. (단 +와 -가 함께 있어 합이 0인 경우는 가능.)</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 3.</strong> 무한 평면 $\sigma=10^{-6}$ C/m²에서 1 m 떨어진 점의 $E$는?</summary>
+    <p style="margin-top:8px">$E = \sigma/(2\varepsilon_0) = 10^{-6}/(2\cdot 8.854\times10^{-12}) \approx 5.65\times10^4$ N/C. 거리 1 m와 무관.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 4.</strong> 도체 표면에서 전기장의 방향은?</summary>
+    <p style="margin-top:8px">표면에 정확히 수직. (평행 성분이 있으면 자유전자가 표면 따라 움직여 평형 깨짐.)</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 5.</strong> 무한 직선전하에서 거리 $r$를 두 배로 늘리면 $E$는 몇 배?</summary>
+    <p style="margin-top:8px">$1/2$배. ($1/r$의 결과 — 점전하의 $1/4$배와 다름)</p>
+  </details>
+
+  <h2>📖 더 깊이 — 참고자료</h2>
+  <ul>
+    <li><strong>Halliday, Resnick, Walker</strong>, <em>Fundamentals of Physics</em> — 22장(전기장), 23장(가우스 법칙). 한국어판 풍부한 예제.</li>
+    <li><strong>Walter Lewin MIT 8.02 Lecture 1, 2, 3</strong> (YouTube): 풍선·물줄기·번개 라이브 시연. 영어, 자막 가능. 본 강의의 영감 출처.</li>
+    <li><strong>3Blue1Brown</strong>, <em>Divergence and curl</em> 영상: 가우스 정리의 시각화.</li>
+    <li><strong>Khan Academy 한국어 — 정전기학 단원</strong>: 영상 + 채점 문제. 무료.</li>
+    <li><strong>PhET Interactive Simulations</strong>: <em>Charges and Fields</em>, <em>Electric Field Hockey</em>. 무료 시뮬.</li>
+    <li><strong>Griffiths</strong>, <em>Introduction to Electrodynamics</em>: 학부 고급 교재. 가우스 법칙의 미분형(맥스웰 1식) 유도 명쾌.</li>
+  </ul>
+
+  <h2>📋 학습 체크리스트</h2>
+  <div class="tip">
+    이번 주 끝나기 전에 다음을 모두 ✅ 표시할 수 있는지 확인하세요:
+    <ul style="list-style:none;padding-left:0">
+      <li>☐ 쿨롱 법칙 식과 $k$의 값을 외워 적용할 수 있다.</li>
+      <li>☐ 점전하의 $E = kQ/r^2$를 단위까지 일관되게 계산할 수 있다.</li>
+      <li>☐ 두 전하의 합성 전기장을 성분 분해해 벡터 합으로 구할 수 있다.</li>
+      <li>☐ 전기력선의 5가지 규칙(시작·끝·접선·교차X·도체수직)을 그릴 수 있다.</li>
+      <li>☐ 가우스 법칙 $\oint\vec E\cdot d\vec A = Q_\text{enc}/\varepsilon_0$을 식으로 쓰고 설명할 수 있다.</li>
+      <li>☐ 구·선·면 세 대칭에 대해 5단계 풀이를 직접 수행할 수 있다.</li>
+      <li>☐ 도체 내부 $E=0$인 이유와 그 응용(패러데이 새장)을 설명할 수 있다.</li>
+      <li>☐ 데모 1·2·3의 슬라이더를 직접 가지고 놀아봤다.</li>
+      <li>☐ 연습문제 12개 중 8개 이상을 풀이 없이 풀 수 있다.</li>
+      <li>☐ 1분 미니퀴즈 5문제를 모두 맞췄다.</li>
+      <li>☐ 5분 실험 A(빗+종이) 또는 B(풍선+머리카락)를 직접 시도했다.</li>
+      <li>☐ 자주 틀리는 계산 실수 BEST 10을 한 번 읽어봤다.</li>
+    </ul>
+    하나라도 막히면 그 섹션으로 돌아가 5분만 다시 보세요.
+  </div>
+
+  <h3>진단 트리 — 막혔을 때 어디로 돌아갈지</h3>
+  <pre><code>  문제를 풀다 막혔다면…
+   │
+   ├─ 식이 어디서 나왔는지 모름?  → 4절(가우스 법칙) + 단계별 5단계 다시
+   │
+   ├─ 어떤 식을 쓸지 모름?         → 부록 분포별 $E$ 표 + 대칭 구분
+   │
+   ├─ 답이 단위 안 맞음?           → 📐 SI 단위 빠른 참조
+   │
+   ├─ 벡터 합이 헷갈림?            → 데모 2(쌍극자) 직접 조작 + W1 벡터 분해
+   │
+   ├─ 도체 내부에서 헤맴?          → 5절(도체와 가우스) + 데모 4(반 데 그라프)
+   │
+   └─ 답이 비현실적 크기?         → 🌍 다양한 곳의 전기장 표로 합리성 점검</code></pre>
+
+  <h2>과제 9</h2>
+  <ol>
+    <li>(개념) 비행기에 번개가 떨어져도 승객이 무사한 이유를 가우스 법칙과 도체 내부 $E=0$로 5문장 이내로 설명.</li>
+    <li>(계산) Halliday 22·23장 끝 4문제 (점전하 합성·가우스 면 응용 포함).</li>
+    <li>(시뮬) PhET <em>Charges and Fields</em>: 점전하·쌍극자·평행판 전기장선 캡처. A4 한 장 정리.</li>
+    <li>(실험) 본인 집에서 5분 실험 A~D 중 둘을 직접 시도하고 사진/메모 제출.</li>
+  </ol>
+
+  <div class="note" style="margin-top:18px">
+    <strong>학습 시간 가이드</strong> — 평균적인 학생이 본 페이지를 처음 끝까지 읽는 데 약 90분.
+    데모와 연습문제까지 모두 따라가면 약 3시간이 적정.
+    시험 1주 전에는 미니퀴즈 + 연습문제 + 시험 직전 5분 노트 위주로 1.5시간이면 복습 끝.
+    <ul style="margin-top:8px">
+      <li>1차 학습(이론): 1·2·3·4절 + 데모 1·2 — 약 60분.</li>
+      <li>2차 학습(가우스 법칙): 4·4-B·5절 + 데모 3 + 단계별 풀이 두 예제 — 약 60분.</li>
+      <li>3차 학습(연습): 연습문제 12개 + 도전 3개 — 약 90분.</li>
+      <li>심화(선택): 실생활 응용 8가지 + 부록 표 + Halliday 22·23장 — 추가 60분.</li>
+    </ul>
+  </div>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 전기장이 일을 할 수 있다. 그 일을 위치에너지처럼 다루면 — <strong>전위(전압)</strong>. 9V 건전지에서 번개의 1억 V까지. 그리고 두 도체판 사이 전기장을 가두면 → <strong>축전기</strong>. 스마트폰 배터리·플래시·터치스크린의 핵심 부품.</div>
+
+  <div class="prevnext">
+    <a href="09-thermodynamics.html"><small>← 이전</small>W9. 열역학</a>
+    <a href="11-potential-capacitor.html" class="next"><small>다음 →</small>W11. 전위와 축전기</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

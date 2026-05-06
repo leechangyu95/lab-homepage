@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>데모 4 — 운동학·동역학·진동의 식 모양 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">데모 4 — 운동학·동역학·진동의 식 모양 비교</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/01-intro.html">Week 1. 강의 소개 (OT)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>데모 4 — 운동학·동역학·진동의 식 모양 비교</h4>
+    <canvas id="d1FamC" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>초속 v₀ (m/s) <span class="val" id="d1V0V">10</span><input type="range" id="d1V0" min="0" max="30" step="0.5" value="10"></label>
+      <label>가속도 a (m/s²) <span class="val" id="d1AaV">2</span><input type="range" id="d1Aa" min="-5" max="5" step="0.1" value="2"></label>
+      <label>감쇠 k (1/s) <span class="val" id="d1KkV">0.3</span><input type="range" id="d1Kk" min="0" max="1.5" step="0.05" value="0.3"></label>
+      <label>고유진동수 ω (rad/s) <span class="val" id="d1OmV">2.0</span><input type="range" id="d1Om" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d1FamC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['d1V0','d1Aa','d1Kk','d1Om'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['d1V0','d1Aa','d1Kk','d1Om'].forEach(k=>sl(k).oninput=upd);upd();
+    function plot(arr,col,yo,sc){
+      x.strokeStyle=col;x.lineWidth=1.8;x.beginPath();
+      arr.forEach((v,i)=>{const px=40+i/(arr.length-1)*580;const py=yo - v*sc;if(i===0)x.moveTo(px,py);else x.lineTo(px,py);});
+      x.stroke();
+    }
+    function loop(){
+      const v0=+sl('d1V0').value,a=+sl('d1Aa').value,k=+sl('d1Kk').value,om=+sl('d1Om').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // axes for 4 panels
+      x.strokeStyle='#d0d4d9';
+      [60,140,220,300].forEach(y=>{x.beginPath();x.moveTo(40,y);x.lineTo(620,y);x.stroke();});
+      // labels
+      x.fillStyle='#0b5fff';x.font='bold 11px sans-serif';x.textAlign='left';
+      x.fillText('① 등속: s = v₀ t (W2)',46,52);
+      x.fillStyle='#c62828';x.fillText('② 등가속: s = v₀ t + ½ a t² (W2)',46,132);
+      x.fillStyle='#2e7d32';x.fillText('③ 지수감쇠: v = v₀ e^(−k t) (W2 후반)',46,212);
+      x.fillStyle='#9e35b8';x.fillText('④ 진동: x = v₀/ω · sin(ω t) e^(−k t) (W12)',46,292);
+      const N=200,T=8;
+      const a1=[],a2=[],a3=[],a4=[];
+      for(let i=0;i<N;i++){
+        const t=i/(N-1)*T;
+        a1.push(v0*t);
+        a2.push(v0*t+0.5*a*t*t);
+        a3.push(v0*Math.exp(-k*t));
+        a4.push((v0/om)*Math.sin(om*t)*Math.exp(-k*t));
+      }
+      plot(a1,'#0b5fff',60,0.6);
+      plot(a2,'#c62828',140,0.4);
+      plot(a3,'#2e7d32',220,2);
+      plot(a4,'#9e35b8',300,5);
+      x.fillStyle='#666';x.font='10px sans-serif';x.fillText('t = 0~8 s →',560,316);
+    }
+    setInterval(loop,80);loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

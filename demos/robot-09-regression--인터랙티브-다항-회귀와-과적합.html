@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 다항 회귀와 과적합 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 다항 회귀와 과적합</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/09-regression.html">Lecture 9. 선형 회귀</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 다항 회귀와 과적합</h4>
+    <p>점을 클릭해 추가/제거하고, 차수를 바꿔가며 곡선이 어떻게 변하는지 관찰하세요.</p>
+    <canvas id="reg" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>다항 차수 d <span class="val" id="dV">1</span><input type="range" id="d" min="1" max="9" value="1"></label>
+      <button id="clr" class="alt">초기화</button>
+    </div>
+    <p style="font-size:12px;color:#666">왼쪽 클릭: 점 추가 · 오른쪽 클릭: 점 제거</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('reg');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    let pts=[];
+    for(let i=0;i<10;i++){const xi=60+i*55,yi=300-(80+i*15+(Math.random()-0.5)*60);pts.push([xi,yi]);}
+
+    function solve(XTX,XTY,N){
+      const A=XTX.map((r,i)=>[...r,XTY[i]]);
+      for(let i=0;i<N;i++){
+        let mx=i;
+        for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;
+        [A[i],A[mx]]=[A[mx],A[i]];
+        if(Math.abs(A[i][i])<1e-12)return null;
+        const piv=A[i][i];
+        for(let j=0;j<=N;j++)A[i][j]/=piv;
+        for(let k=0;k<N;k++){
+          if(k===i)continue;
+          const f=A[k][i];
+          for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];
+        }
+      }
+      return A.map(r=>r[N]);
+    }
+    function fit(d){
+      const n=pts.length;
+      if(n<d+1)return null;
+      // Normalize x to [0,1] for numerical stability
+      const X=pts.map(p=>{const r=[];for(let k=0;k<=d;k++)r.push(Math.pow(p[0]/W,k));return r;});
+      const Y=pts.map(p=>p[1]);
+      const m=d+1;
+      const XTX=Array.from({length:m},()=>Array(m).fill(0));
+      const XTY=Array(m).fill(0);
+      for(let i=0;i<m;i++){
+        for(let j=0;j<m;j++){
+          let s=0;for(let k=0;k<n;k++)s+=X[k][i]*X[k][j];
+          XTX[i][j]=s;
+        }
+        let s=0;for(let k=0;k<n;k++)s+=X[k][i]*Y[k];
+        XTY[i]=s;
+      }
+      return solve(XTX,XTY,m);
+    }
+    function draw(){
+      const d=parseInt(document.getElementById('d').value);
+      document.getElementById('dV').textContent=d;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;
+      for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+      for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+      const beta=fit(d);
+      if(beta){
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();
+        for(let xx=0;xx<=W;xx+=2){
+          const u=xx/W;
+          let yy=0;
+          for(let k=0;k<beta.length;k++)yy+=beta[k]*Math.pow(u,k);
+          if(xx===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+        }
+        ctx.stroke();
+      }else{
+        ctx.fillStyle='#c62828';ctx.font='13px sans-serif';
+        ctx.fillText('점이 d+1개 이상 필요합니다 (현재 '+pts.length+'개, 필요 '+(d+1)+'개)',20,30);
+      }
+      ctx.fillStyle='#c62828';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(p[0],p[1],5,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(p[0],p[1],5,0,Math.PI*2);ctx.stroke();});
+    }
+
+    c.addEventListener('click',e=>{
+      const r=c.getBoundingClientRect();
+      pts.push([(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]);
+      draw();
+    });
+    c.addEventListener('contextmenu',e=>{
+      e.preventDefault();
+      const r=c.getBoundingClientRect();
+      const px=(e.clientX-r.left)*W/r.width,py=(e.clientY-r.top)*H/r.height;
+      let bi=-1,bd=25;
+      pts.forEach((p,i)=>{const dd=Math.hypot(p[0]-px,p[1]-py);if(dd<bd){bd=dd;bi=i;}});
+      if(bi>=0){pts.splice(bi,1);draw();}
+    });
+    document.getElementById('d').addEventListener('input',draw);
+    document.getElementById('clr').addEventListener('click',()=>{pts=[];draw();});
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 4: 곡률반경 시각화 — 함수 $y = f(x)$의 접촉원 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 4: 곡률반경 시각화 — 함수 $y = f(x)$의 접촉원</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/04-particle-curvilinear-nt.html">Week 4. 곡선 운동학 — 접선·법선 좌표 &amp; 극좌표</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 4: 곡률반경 시각화 — 함수 $y = f(x)$의 접촉원</h4>
+    <p>함수 $y = a x^2$ 형태의 포물선을 그리고, 슬라이더로 위치 $x_0$를 움직이면 그 점에서의 <strong>접촉원(곡률원)</strong>을 표시합니다. 정점에서 가장 작고, 멀어질수록 커지는 모습을 보세요.</p>
+    <canvas id="d4rhoC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>계수 a (곡률 강도) <span class="val" id="d4aV">0.05</span><input type="range" id="d4a" min="0.01" max="0.2" step="0.005" value="0.05"></label>
+      <label>위치 x₀ <span class="val" id="d4xV">0</span><input type="range" id="d4x" min="-15" max="15" step="0.2" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d4rhoC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>['d4a','d4x'].forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ['d4a','d4x'].forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const a=+sl('d4a').value,x0=+sl('d4x').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height-60,scale=18;
+      // axes
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(0,cy);x.lineTo(c.width,cy);x.moveTo(cx,0);x.lineTo(cx,c.height);x.stroke();
+      x.fillStyle='#888';x.font='11px sans-serif';
+      x.fillText('x',c.width-12,cy-4);x.fillText('y',cx+4,12);
+      // parabola
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let xx=-18;xx<=18;xx+=0.1){
+        const yy=a*xx*xx;
+        const px=cx+xx*scale,py=cy-yy*scale;
+        if(first){x.moveTo(px,py);first=false;}else x.lineTo(px,py);
+      }
+      x.stroke();
+      // selected point
+      const y0=a*x0*x0;
+      const px0=cx+x0*scale,py0=cy-y0*scale;
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px0,py0,6,0,Math.PI*2);x.fill();
+      // derivatives
+      const dy=2*a*x0,d2y=2*a;
+      const rho=Math.pow(1+dy*dy,1.5)/Math.abs(d2y);
+      // normal direction (rotate tangent by 90°)
+      const tlen=Math.sqrt(1+dy*dy);
+      const tx=1/tlen,ty=dy/tlen;
+      // normal: rotate by 90° counterclockwise (toward concave side, which is up for y=ax²)
+      const nx=-ty,ny=tx;
+      // center of curvature
+      const ccx=px0+nx*rho*scale,ccy=py0-ny*rho*scale;
+      // osculating circle
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=1.5;
+      x.beginPath();x.arc(ccx,ccy,rho*scale,0,Math.PI*2);x.stroke();
+      x.setLineDash([]);
+      // line from point to center
+      x.strokeStyle='#c62828';x.lineWidth=1;
+      x.beginPath();x.moveTo(px0,py0);x.lineTo(ccx,ccy);x.stroke();
+      // center marker
+      x.fillStyle='#c62828';x.beginPath();x.arc(ccx,ccy,3,0,Math.PI*2);x.fill();
+      x.fillStyle='#1a1a1a';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('y = '+a+'x²',20,25);
+      x.fillText('x₀ = '+x0+',  y₀ = '+y0.toFixed(2),20,43);
+      x.fillText('y\'(x₀) = '+dy.toFixed(3)+',  y\'\'(x₀) = '+d2y.toFixed(3),20,61);
+      x.fillText('ρ = (1+y\'²)^(3/2)/|y\'\'| = '+rho.toFixed(2),20,79);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

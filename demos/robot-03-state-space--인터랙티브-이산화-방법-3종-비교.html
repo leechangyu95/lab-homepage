@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 이산화 방법 3종 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 이산화 방법 3종 비교</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/03-state-space.html">Lecture 3. 상태공간 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 이산화 방법 3종 비교</h4>
+    <p>같은 질량-스프링-댐퍼 시스템을 세 가지 이산화 방법으로 동시에 시뮬레이션합니다. $\Delta t$가 커질수록 정확도가 갈립니다 — 정확한 ZOH($A_d = e^{A\Delta t}$), 사다리꼴인 Tustin, 그리고 가장 단순한 Forward Euler($A_d = I + A\Delta t$).</p>
+    <canvas id="disc" width="640" height="300"></canvas>
+    <div class="controls">
+      <label>샘플링 Δt <span class="val" id="dtV">0.1</span><input type="range" id="dt" min="0.01" max="0.5" step="0.01" value="0.1"></label>
+      <button id="discRst">재시작</button>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>관찰</strong> — $\Delta t$가 작으면 셋 모두 거의 같음. 키울수록 Forward Euler가 가장 먼저 어긋나고(에너지가 커짐 → 발산), Tustin은 진폭 보존이 우수, ZOH는 LTI 시스템에서는 정확합니다.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('disc'),x=c.getContext('2d');
+    let cont,xe,xt,xz,t,frame=0,hC,hE,hT,hZ;
+    function init(){cont=[1,0];xe=[1,0];xt=[1,0];xz=[1,0];t=0;hC=[];hE=[];hT=[];hZ=[];}
+    init();document.getElementById('discRst').onclick=init;
+    // m=1, k=2, c=0.3
+    const A=[[0,1],[-2,-0.3]];
+    const I2=[[1,0],[0,1]];
+    function mv(M,v){return [M[0][0]*v[0]+M[0][1]*v[1],M[1][0]*v[0]+M[1][1]*v[1]];}
+    function mscale(M,s){return [[M[0][0]*s,M[0][1]*s],[M[1][0]*s,M[1][1]*s]];}
+    function madd(M,N){return [[M[0][0]+N[0][0],M[0][1]+N[0][1]],[M[1][0]+N[1][0],M[1][1]+N[1][1]]];}
+    function msub(M,N){return [[M[0][0]-N[0][0],M[0][1]-N[0][1]],[M[1][0]-N[1][0],M[1][1]-N[1][1]]];}
+    function mmul(M,N){return [
+      [M[0][0]*N[0][0]+M[0][1]*N[1][0], M[0][0]*N[0][1]+M[0][1]*N[1][1]],
+      [M[1][0]*N[0][0]+M[1][1]*N[1][0], M[1][0]*N[0][1]+M[1][1]*N[1][1]]];}
+    function minv(M){const det=M[0][0]*M[1][1]-M[0][1]*M[1][0];
+      return [[M[1][1]/det,-M[0][1]/det],[-M[1][0]/det,M[0][0]/det]];}
+    function expmA(dt){
+      // e^{A dt} = Σ (A dt)^n / n!
+      let result=I2, Xn=I2, fac=1;
+      const X=mscale(A,dt);
+      for(let n=1;n<20;n++){
+        Xn=mmul(Xn,X); fac*=n;
+        result=madd(result,mscale(Xn,1/fac));
+      }
+      return result;
+    }
+    function f(s){return mv(A,s);}
+    function loop(){
+      if(frame++%5===0){
+        const dt=+document.getElementById('dt').value;
+        // 연속 reference: 작은 substep RK4
+        for(let i=0;i<20;i++){
+          const ddt=dt/20;
+          const k1=f(cont);
+          const k2=f([cont[0]+k1[0]*ddt/2,cont[1]+k1[1]*ddt/2]);
+          const k3=f([cont[0]+k2[0]*ddt/2,cont[1]+k2[1]*ddt/2]);
+          const k4=f([cont[0]+k3[0]*ddt,cont[1]+k3[1]*ddt]);
+          cont=[cont[0]+ddt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]),cont[1]+ddt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1])];
+        }
+        // Forward Euler
+        xe=mv(madd(I2,mscale(A,dt)),xe);
+        // Tustin (bilinear)
+        const Aplus=madd(I2,mscale(A,dt/2));
+        const Aminus=msub(I2,mscale(A,dt/2));
+        xt=mv(mmul(minv(Aminus),Aplus),xt);
+        // ZOH
+        xz=mv(expmA(dt),xz);
+        hC.push(cont[0]);hE.push(xe[0]);hT.push(xt[0]);hZ.push(xz[0]);
+        if(hC.length>200){hC.shift();hE.shift();hT.shift();hZ.shift();}
+        t+=dt;
+      }
+      const dtv=+document.getElementById('dt').value;
+      document.getElementById('dtV').textContent=dtv.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#ccc';x.beginPath();x.moveTo(20,160);x.lineTo(620,160);x.stroke();
+      const sx=i=>20+i*3, sy=v=>160-v*55;
+      function draw(h,col,w){
+        if(!h.length)return;
+        x.strokeStyle=col;x.lineWidth=w;x.beginPath();
+        h.forEach((v,i)=>{const yv=sy(Math.max(-3,Math.min(3,v)));if(i==0)x.moveTo(sx(i),yv);else x.lineTo(sx(i),yv);});x.stroke();
+      }
+      draw(hC,'rgba(46,125,50,0.35)',3);   // 연속 — 옅은 두꺼운 줄로 reference
+      draw(hZ,'#0b5fff',1.5);
+      draw(hT,'#9c27b0',1.5);
+      draw(hE,'#c62828',1.5);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillStyle='#2e7d32';x.fillText('━ 연속 reference (RK4)',20,28);
+      x.fillStyle='#0b5fff';x.fillText('━ ZOH  Aₐ = exp(AΔt)',230,28);
+      x.fillStyle='#9c27b0';x.fillText('━ Tustin (bilinear)',20,48);
+      x.fillStyle='#c62828';x.fillText('━ Forward Euler  Aₐ = I+AΔt',230,48);
+      x.fillStyle='#666';x.fillText('Δt = '+dtv.toFixed(2)+' s   (작게 두면 셋 다 거의 일치, 키우면 Euler 먼저 발산)',20,285);
+      if(t>30)init();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 경사 하강법으로 손실 최소점 찾기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 경사 하강법으로 손실 최소점 찾기</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/12-deep-learning.html">Week 12. 딥러닝 in 메카트로닉스</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 경사 하강법으로 손실 최소점 찾기</h4>
+    <p>1차원 손실 $L(w) = (w-2)^2$의 최소점은 $w=2$입니다. 시작점과 학습률을 바꾸며 경로를 관찰하세요. 학습률이 너무 크면(>1) 발산하고, 너무 작으면(<0.05) 한참 걸려요. <strong>"적당히 큰 학습률 + 모멘텀"</strong>이 실무의 표준입니다.</p>
+    <canvas id="gdDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>시작점 w₀ <span class="val" id="gdWV">-3</span><input type="range" id="gdW" min="-5" max="5" step="0.1" value="-3"></label>
+      <label>학습률 η <span class="val" id="gdLV">0.3</span><input type="range" id="gdL" min="0.01" max="1.1" step="0.01" value="0.3"></label>
+      <label>스텝 수 <span class="val" id="gdNV">15</span><input type="range" id="gdN" min="1" max="40" step="1" value="15"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gdDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function L(w){return (w-2)*(w-2);}
+    function dL(w){return 2*(w-2);}
+    function draw(){
+      const w0=+document.getElementById('gdW').value;
+      const eta=+document.getElementById('gdL').value;
+      const N=+document.getElementById('gdN').value;
+      document.getElementById('gdWV').textContent=w0.toFixed(1);
+      document.getElementById('gdLV').textContent=eta.toFixed(2);
+      document.getElementById('gdNV').textContent=N;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-40,w=W-70,h=H-70;
+      const wMin=-6,wMax=6;
+      function px(wv){return ox+(wv-wMin)/(wMax-wMin)*w;}
+      const Lmax=Math.max(L(wMin),L(wMax),L(w0))*1.1;
+      function py(Lv){return oy-Lv/Lmax*h;}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('w',ox+w-15,oy+22);ctx.fillText('L(w)',12,40);
+      // tick marks
+      for(let wv=-6;wv<=6;wv+=2){const xx=px(wv);ctx.fillStyle='#888';ctx.font='11px sans-serif';
+        ctx.fillText(wv.toString(),xx-4,oy+18);}
+      // L curve
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=200;i++){const wv=wMin+(wMax-wMin)*i/200;const Lv=L(wv);
+        const xx=px(wv),yy=py(Math.min(Lmax,Lv));if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // gradient descent steps
+      let wCurr=w0;
+      const path=[wCurr];
+      for(let i=0;i<N;i++){
+        const grad=dL(wCurr);
+        wCurr -= eta*grad;
+        if(Math.abs(wCurr)>50){path.push(wCurr);break;}
+        path.push(wCurr);
+      }
+      // draw arrows along path
+      for(let i=0;i<path.length-1;i++){
+        const wa=path[i], wb=path[i+1];
+        if(Math.abs(wa)>20||Math.abs(wb)>20)continue;
+        const xa=px(wa), ya=py(L(wa));
+        const xb=px(wb), yb=py(L(wb));
+        const t=Math.min(1,i/(path.length-1));
+        ctx.strokeStyle=`rgba(11,95,255,${0.3+0.6*t})`;
+        ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke();
+        ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(xb,yb,3,0,Math.PI*2);ctx.fill();
+      }
+      // start point
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(px(w0),py(L(w0)),6,0,Math.PI*2);ctx.fill();
+      // optimum
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(px(2),py(0),6,0,Math.PI*2);ctx.fill();
+      // status
+      const wFin=path[path.length-1];
+      let cls='';
+      if(Math.abs(wFin)>20){cls='⚠ 발산 (η가 너무 큼)';ctx.fillStyle='#c62828';}
+      else if(Math.abs(wFin-2)<0.01){cls='✓ 수렴';ctx.fillStyle='#2e7d32';}
+      else if(Math.abs(wFin-2)<0.5){cls='수렴 진행 중';ctx.fillStyle='#f57c00';}
+      else {cls='더 많은 스텝 필요 (η가 작음)';ctx.fillStyle='#f57c00';}
+      ctx.font='13px sans-serif';
+      ctx.fillText(`최종 w = ${wFin.toFixed(3)}  (목표 w*=2)  ${cls}`,ox,22);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('🔴 시작 → 🔵 매 스텝 → 🟢 최소점',ox,oy+22);
+    }
+    ['gdW','gdL','gdN'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

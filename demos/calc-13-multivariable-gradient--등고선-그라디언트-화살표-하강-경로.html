@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 등고선 + 그라디언트 화살표 + 하강 경로 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 등고선 + 그라디언트 화살표 + 하강 경로</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/13-multivariable-gradient.html">Week 13. 다변수 함수 &amp; 그라디언트</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 등고선 + 그라디언트 화살표 + 하강 경로</h4>
+    <p>함수의 등고선(파랑/주황 색칠)과 각 점에서의 그라디언트 화살표가 보입니다. 클릭한 점에서 $-\nabla f$ 방향으로 굴러 내려가는 경로가 그려져요 — 등산하면서 가장 가파른 길로 내려가는 모습.</p>
+    <canvas id="gd" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>함수
+        <select id="gdFn">
+          <option value="bowl" selected>그릇: x² + y²</option>
+          <option value="rosen">로젠브록: (1-x)² + 5(y-x²)²</option>
+          <option value="saddle">안장: x² − y²</option>
+          <option value="bumpy">울퉁불퉁: sin x + cos y</option>
+        </select>
+      </label>
+      <span style="font-size:12px;color:#666">캔버스 클릭 → 그 점에서 −∇f 따라 굴러내림</span>
+      <button id="gdRst" class="alt">경로 초기화</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gd'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:30,r:20,t:20,b:20};
+    function f(p){
+      const m=document.getElementById('gdFn').value;
+      if(m==='bowl')return p[0]*p[0]+p[1]*p[1];
+      if(m==='rosen')return(1-p[0])*(1-p[0])+5*(p[1]-p[0]*p[0])*(p[1]-p[0]*p[0]);
+      if(m==='saddle')return p[0]*p[0]-p[1]*p[1];
+      return Math.sin(p[0])+Math.cos(p[1]);
+    }
+    function grad(p){
+      const m=document.getElementById('gdFn').value;
+      if(m==='bowl')return[2*p[0],2*p[1]];
+      if(m==='rosen')return[-2*(1-p[0])-20*p[0]*(p[1]-p[0]*p[0]),10*(p[1]-p[0]*p[0])];
+      if(m==='saddle')return[2*p[0],-2*p[1]];
+      return[Math.cos(p[0]),-Math.sin(p[1])];
+    }
+    function fnRange(){
+      const m=document.getElementById('gdFn').value;
+      if(m==='bowl')return{xR:[-3,3],yR:[-3,3],vmax:18};
+      if(m==='rosen')return{xR:[-2,2],yR:[-1,3],vmax:30};
+      if(m==='saddle')return{xR:[-3,3],yR:[-3,3],vmax:9};
+      return{xR:[-Math.PI*1.5,Math.PI*1.5],yR:[-Math.PI*1.5,Math.PI*1.5],vmax:2};
+    }
+    let trail=[];
+    document.getElementById('gdRst').onclick=()=>{trail=[];};
+    document.getElementById('gdFn').onchange=()=>{trail=[];};
+    function pxX(v,xR){return M.l+(v-xR[0])/(xR[1]-xR[0])*(W-M.l-M.r);}
+    function pxY(v,yR){return H-M.b-(v-yR[0])/(yR[1]-yR[0])*(H-M.t-M.b);}
+    function invX(px0,xR){return xR[0]+(px0-M.l)/(W-M.l-M.r)*(xR[1]-xR[0]);}
+    function invY(py0,yR){return yR[0]+(H-M.b-py0)/(H-M.t-M.b)*(yR[1]-yR[0]);}
+    c.onclick=e=>{
+      const r=c.getBoundingClientRect();
+      const cx=(e.clientX-r.left)*c.width/r.width;
+      const cy=(e.clientY-r.top)*c.height/r.height;
+      const{xR,yR}=fnRange();
+      const start=[invX(cx,xR),invY(cy,yR)];
+      // gradient descent from start
+      let p=start.slice();const path=[p.slice()];
+      const lr=0.04;
+      for(let i=0;i<150;i++){
+        const g=grad(p);
+        p[0]-=lr*g[0];p[1]-=lr*g[1];
+        if(p[0]<xR[0]||p[0]>xR[1]||p[1]<yR[0]||p[1]>yR[1])break;
+        path.push(p.slice());
+        if(Math.hypot(g[0],g[1])<1e-3)break;
+      }
+      trail.push(path);
+    };
+    function loop(){
+      const{xR,yR,vmax}=fnRange();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // contour fill
+      const cell=8;
+      for(let i=M.l;i<W-M.r;i+=cell){
+        for(let j=M.t;j<H-M.b;j+=cell){
+          const xv=invX(i,xR),yv=invY(j,yR);
+          const vv=f([xv,yv]);
+          const t=Math.min(1,Math.max(0,vv/vmax));
+          const r=Math.floor(40+t*200),g=Math.floor(140-t*100),b=Math.floor(255-t*200);
+          x.fillStyle=`rgb(${r},${g},${b})`;
+          x.fillRect(i,j,cell,cell);
+        }
+      }
+      // gradient arrows
+      x.strokeStyle='rgba(255,255,255,0.7)';x.lineWidth=1.2;
+      const NX=12,NY=8;
+      for(let i=0;i<NX;i++){
+        for(let j=0;j<NY;j++){
+          const xv=xR[0]+(i+0.5)/NX*(xR[1]-xR[0]);
+          const yv=yR[0]+(j+0.5)/NY*(yR[1]-yR[0]);
+          const g=grad([xv,yv]);
+          const sc=Math.min(0.35,0.35/(Math.hypot(g[0],g[1])+0.5));
+          const x0=pxX(xv,xR),y0=pxY(yv,yR);
+          const x1=pxX(xv+g[0]*sc,xR),y1=pxY(yv+g[1]*sc,yR);
+          x.beginPath();x.moveTo(x0,y0);x.lineTo(x1,y1);x.stroke();
+          // arrowhead
+          const ang=Math.atan2(y1-y0,x1-x0);
+          x.beginPath();x.moveTo(x1,y1);
+          x.lineTo(x1-7*Math.cos(ang-0.4),y1-7*Math.sin(ang-0.4));
+          x.moveTo(x1,y1);
+          x.lineTo(x1-7*Math.cos(ang+0.4),y1-7*Math.sin(ang+0.4));
+          x.stroke();
+        }
+      }
+      // trails (descent paths)
+      trail.forEach(path=>{
+        x.strokeStyle='#fff';x.lineWidth=2;x.beginPath();
+        path.forEach((p,i)=>{i?x.lineTo(pxX(p[0],xR),pxY(p[1],yR)):x.moveTo(pxX(p[0],xR),pxY(p[1],yR));});x.stroke();
+        x.fillStyle='#222';x.beginPath();x.arc(pxX(path[0][0],xR),pxY(path[0][1],yR),5,0,Math.PI*2);x.fill();
+        const last=path[path.length-1];
+        x.fillStyle='#1b5e20';x.beginPath();x.arc(pxX(last[0],xR),pxY(last[1],yR),5,0,Math.PI*2);x.fill();
+      });
+      // legend
+      x.fillStyle='#fff';x.font='12px sans-serif';x.fillText('흰색 화살표: ∇f (최대 증가 방향)',M.l+8,M.t+15);
+      x.fillStyle='#fff';x.fillText('클릭 → 그 점에서 −∇f 따라 굴러 내림',M.l+8,M.t+32);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

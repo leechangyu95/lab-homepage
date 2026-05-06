@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 전달 함수 → 시간 응답 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 전달 함수 → 시간 응답</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/10-transfer-function.html">Week 10. 전달 함수 — 라플라스 변환으로 풀이를 자동화</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 전달 함수 → 시간 응답</h4>
+    <p>좌측은 $s$ 평면(복소 평면)의 극점 위치, 우측은 단위 스텝 응답. 1차/2차를 토글하고 파라미터를 만져보세요. <strong>극점이 좌반평면에 깊숙이</strong> 들어갈수록 응답이 빨라지고, <strong>허수축에 가까울수록</strong> 느려지며, <strong>실수부가 양수가 되면 발산</strong>합니다.</p>
+    <canvas id="tfStepDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>시스템 종류
+        <select id="tfKind">
+          <option value="1">1차: K/(τs+1)</option>
+          <option value="2" selected>2차: Kωn²/(s²+2ζωn·s+ωn²)</option>
+        </select>
+      </label>
+      <label>τ 또는 ζ <span class="val" id="tfP1V">0.5</span><input type="range" id="tfP1" min="0.05" max="1.5" step="0.02" value="0.5"></label>
+      <label>K 또는 ωn <span class="val" id="tfP2V">2.0</span><input type="range" id="tfP2" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tfStepDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function step1(t,tau,K){return K*(1-Math.exp(-t/tau));}
+    function step2(t,z,wn){
+      if(z<0.001) return 1-Math.cos(wn*t);
+      if(z<1){const wd=wn*Math.sqrt(1-z*z);
+        return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z)*Math.sin(wd*t+Math.acos(z));}
+      if(Math.abs(z-1)<1e-3) return 1-(1+wn*t)*Math.exp(-wn*t);
+      const a=z*wn,b=wn*Math.sqrt(z*z-1),r1=-a+b,r2=-a-b;
+      return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);
+    }
+    function draw(){
+      const kind=document.getElementById('tfKind').value;
+      const p1=+document.getElementById('tfP1').value;
+      const p2=+document.getElementById('tfP2').value;
+      // labels
+      const isFirst=kind==='1';
+      document.getElementById('tfP1V').textContent=isFirst?p1.toFixed(2):p1.toFixed(2);
+      document.getElementById('tfP2V').textContent=p2.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // ----- left: s-plane -----
+      const cx=140,cy=H/2,SC=45,box=240;
+      ctx.fillStyle='#fff';ctx.strokeStyle='#bbb';
+      ctx.fillRect(20,40,box,box-30);ctx.strokeRect(20,40,box,box-30);
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(20,cy);ctx.lineTo(20+box,cy);ctx.moveTo(cx,40);ctx.lineTo(cx,40+box-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('Re',20+box-15,cy-4);ctx.fillText('Im',cx+4,50);
+      // shade right half-plane = unstable
+      ctx.fillStyle='rgba(198,40,40,0.08)';ctx.fillRect(cx,40,20+box-cx,box-30);
+      ctx.fillStyle='#c62828';ctx.font='10px sans-serif';ctx.fillText('불안정 영역',cx+10,55);
+      ctx.fillStyle='#2e7d32';ctx.fillText('안정 영역',cx-90,55);
+      // poles
+      let poles=[];
+      if(isFirst){
+        poles=[{re:-1/p1,im:0}];
+      }else{
+        const z=p1, wn=p2;
+        if(z<1){poles=[{re:-z*wn,im:wn*Math.sqrt(1-z*z)},{re:-z*wn,im:-wn*Math.sqrt(1-z*z)}];}
+        else if(Math.abs(z-1)<1e-3){poles=[{re:-wn,im:0},{re:-wn,im:0}];}
+        else{const a=z*wn,b=wn*Math.sqrt(z*z-1);poles=[{re:-a+b,im:0},{re:-a-b,im:0}];}
+      }
+      poles.forEach(p=>{
+        const xx=cx+p.re*SC, yy=cy-p.im*SC;
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(xx-7,yy-7);ctx.lineTo(xx+7,yy+7);ctx.moveTo(xx-7,yy+7);ctx.lineTo(xx+7,yy-7);ctx.stroke();
+      });
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText('✕ = 극점 (분모=0인 s)',30,box+25);
+      // formula
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      if(isFirst){
+        ctx.fillText(`H(s) = K/(${p1.toFixed(2)}s+1),  K=${p2.toFixed(1)}`,30,30);
+      }else{
+        ctx.fillText(`H(s) = ωn²/(s²+2ζωn·s+ωn²)`,30,22);
+        ctx.fillText(`ζ=${p1.toFixed(2)}, ωn=${p2.toFixed(1)}`,30,38);
+      }
+      // ----- right: step response -----
+      const ox2=300,oy2=H-40,w2=W-320,h2=H-70;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox2,oy2);ctx.lineTo(ox2+w2,oy2);ctx.moveTo(ox2,30);ctx.lineTo(ox2,oy2);ctx.stroke();
+      const Kgain = isFirst?p2:1;
+      const T = isFirst?5*p1+1 : Math.max(8/(p1*p2+0.1),5);
+      const ymax = isFirst ? Kgain*1.2 : 2;
+      function py2(v){return oy2-v/ymax*h2;}
+      // final
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      const fin=isFirst?Kgain:1;
+      ctx.moveTo(ox2,py2(fin));ctx.lineTo(ox2+w2,py2(fin));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='11px sans-serif';
+      ctx.fillText(`y∞ = ${fin.toFixed(2)}`,ox2+w2-70,py2(fin)-4);
+      // curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=400;i++){
+        const t=i/400*T;
+        const y = isFirst ? step1(t,p1,Kgain) : step2(t,p1,p2);
+        const xx=ox2+t/T*w2, yy=py2(Math.max(0,Math.min(ymax,y)));
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('단위 스텝 응답 y(t)',ox2,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 t (s)',ox2+w2-70,oy2+22);
+    }
+    document.getElementById('tfKind').addEventListener('change',draw);
+    document.getElementById('tfP1').addEventListener('input',draw);
+    document.getElementById('tfP2').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: K 선택을 위한 검증 곡선 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: K 선택을 위한 검증 곡선</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/01-ai-intro.html">Week 1. AI의 세계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: K 선택을 위한 검증 곡선</h4>
+    <p>훈련 정확도(파랑)와 검증 정확도(주황). K=1에서는 훈련은 100%인데 검증은 낮은 전형적 과적합. K가 너무 커지면 둘 다 떨어지는 과소적합. 두 곡선의 차이가 가장 작아지는 지점이 보통 좋은 K입니다.</p>
+    <canvas id="kcurve" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>잡음 <span class="val" id="kcN">0.4</span><input type="range" id="kcn" min="0.0" max="1.0" step="0.05" value="0.4"></label>
+      <button id="kcReg">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kcurve');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let train=[],val=[];
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(){
+      const noise=+document.getElementById('kcn').value;
+      train=[];val=[];
+      for(let i=0;i<80;i++){
+        const c=Math.random()<0.5?0:1;
+        const cx=c?-1:1,cy=c?-1:1;
+        train.push({x:cx+gauss()*noise,y:cy+gauss()*noise,c});
+      }
+      for(let i=0;i<60;i++){
+        const c=Math.random()<0.5?0:1;
+        const cx=c?-1:1,cy=c?-1:1;
+        val.push({x:cx+gauss()*noise,y:cy+gauss()*noise,c});
+      }
+      draw();
+    }
+    function score(K,query,db){
+      let correct=0;
+      for(const q of query){
+        const ds=db.map(p=>({d:Math.hypot(p.x-q.x,p.y-q.y),c:p.c})).sort((a,b)=>a.d-b.d).slice(0,K);
+        let v=0;for(const d of ds)v+=(d.c==0?1:-1);
+        const pred=v>=0?0:1;
+        if(pred===q.c)correct++;
+      }
+      return correct/query.length;
+    }
+    function draw(){
+      document.getElementById('kcN').textContent=(+document.getElementById('kcn').value).toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const PL=50,PR=20,PT=30,PB=40;
+      const plotW=W-PL-PR,plotH=H-PT-PB;
+      const Kmax=25;
+      // axes
+      ctx.strokeStyle='#bbb';ctx.beginPath();ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+plotH);ctx.lineTo(PL+plotW,PT+plotH);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('K (이웃 수)',PL+plotW/2-30,H-12);
+      ctx.save();ctx.translate(14,PT+plotH/2+30);ctx.rotate(-Math.PI/2);ctx.fillText('정확도',0,0);ctx.restore();
+      for(let v=0.4;v<=1.0001;v+=0.1){const y=PT+plotH*(1-(v-0.4)/0.6);ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+plotW,y);ctx.stroke();ctx.fillStyle='#888';ctx.fillText(v.toFixed(1),PL-30,y+4);}
+      const tr=[],va=[];
+      for(let K=1;K<=Kmax;K++){
+        // training accuracy: leave-self-out
+        let tc=0;
+        for(const q of train){
+          const ds=train.filter(p=>p!==q).map(p=>({d:Math.hypot(p.x-q.x,p.y-q.y),c:p.c})).sort((a,b)=>a.d-b.d).slice(0,K);
+          let v=0;for(const d of ds)v+=(d.c==0?1:-1);
+          const pred=v>=0?0:1;
+          if(pred===q.c)tc++;
+        }
+        tr.push(tc/train.length);
+        va.push(score(K,val,train));
+      }
+      function plot(arr,color){
+        ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+        arr.forEach((v,i)=>{const x=PL+plotW*(i)/(Kmax-1);const y=PT+plotH*(1-(v-0.4)/0.6);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+        ctx.fillStyle=color;arr.forEach((v,i)=>{const x=PL+plotW*(i)/(Kmax-1);const y=PT+plotH*(1-(v-0.4)/0.6);ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();});
+      }
+      plot(tr,'#0b5fff');plot(va,'#ff8c00');
+      ctx.fillStyle='#0b5fff';ctx.fillText('훈련(leave-one-out)',PL+10,PT+12);
+      ctx.fillStyle='#ff8c00';ctx.fillText('검증',PL+170,PT+12);
+      // best K
+      let bestK=1,bestV=0;va.forEach((v,i)=>{if(v>bestV){bestV=v;bestK=i+1;}});
+      ctx.fillStyle='#222';ctx.fillText(`최적 K (검증 기준) = ${bestK} (acc ${(bestV*100).toFixed(0)}%)`,PL+260,PT+12);
+    }
+    document.getElementById('kcn').addEventListener('input',gen);
+    document.getElementById('kcReg').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

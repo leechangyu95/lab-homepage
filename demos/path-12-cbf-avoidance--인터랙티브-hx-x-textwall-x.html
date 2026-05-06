@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: $h(x) = x_\text{wall} - x$ — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: $h(x) = x_\text{wall} - x$</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/12-cbf-avoidance.html">Week 12. CBF — 안전을 수학적으로 보장하기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: $h(x) = x_\text{wall} - x$</h4>
+    <p>1차원 차량이 벽($x = 10$)을 향해 갑니다. PID는 항상 "5 m/s로 가자"고 명령하지만, CBF가 "벽에서 멀 때만 그렇게 가도 된다"고 자동 제한합니다.
+    α를 흔들어 보세요.</p>
+    <canvas id="cbf1d" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>α <span class="val" id="aV">1.0</span><input type="range" id="a" min="0.2" max="3.0" step="0.1" value="1.0"></label>
+      <label>희망 속도 v_des <span class="val" id="vdV">5</span><input type="range" id="vd" min="1" max="10" step="0.5" value="5"></label>
+      <button id="rst1d" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cbf1d'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('aV').textContent=(+$('a').value).toFixed(1);$('vdV').textContent=(+$('vd').value).toFixed(1);};
+    ['a','vd'].forEach(id=>$(id).oninput=upd);
+    let X,V,t,hist;
+    function reset(){X=0;V=0;t=0;hist=[];}
+    reset();$('rst1d').onclick=reset;
+    function loop(){
+      const al=+$('a').value,vd=+$('vd').value,xw=10,dt=0.04;
+      const h=xw-X;const vmax=al*Math.max(0,h);V=Math.min(vd,vmax);X+=V*dt;t+=dt;
+      hist.push({t,X,V,h});if(hist.length>500)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h2=c.height,pad=42;const xa=tt=>pad+tt/15*(w-2*pad);const ya=v=>h2-pad-v/12*(h2-2*pad);
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(pad,ya(0));x.lineTo(w-pad,ya(0));x.moveTo(pad,h2-pad);x.lineTo(pad,pad);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('t [s]',w-pad-30,h2-pad+18);
+      // wall line
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();x.moveTo(pad,ya(10));x.lineTo(w-pad,ya(10));x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.fillText('벽 x=10',pad+8,ya(10)-4);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=ya(p.X);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='#f57c00';x.lineWidth=1.6;x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=ya(p.V);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#0b5fff';x.fillText('파랑 X(t)',12,18);x.fillStyle='#f57c00';x.fillText('주황 V(t) (CBF 제한 후)',12,34);
+      x.fillStyle='#222';x.fillText('지금 X='+X.toFixed(2)+', V='+V.toFixed(2)+', h='+(10-X).toFixed(2),12,h2-10);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

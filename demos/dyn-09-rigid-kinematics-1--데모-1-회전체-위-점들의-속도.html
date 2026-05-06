@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 회전체 위 점들의 속도 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 회전체 위 점들의 속도</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/09-rigid-kinematics-1.html">Week 9. 강체의 평면 운동학 — 병진과 고정축 회전</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 회전체 위 점들의 속도</h4>
+    <p>원판이 일정 각가속도로 회전합니다. <strong>축에서 거리가 다른 세 점</strong>의 속도와 접선/법선 가속도를 화살표로 봅니다. 같은 $\omega$인데 바깥 점이 더 빠른 것을 직접 확인하세요.</p>
+    <canvas id="rotC" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>각가속도 α (rad/s²) <span class="val" id="rtAV">0.5</span><input type="range" id="rtA" min="-2" max="2" step="0.1" value="0.5"></label>
+      <button id="rtReset">재시작</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rotC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    sl('rtA').oninput=()=>sl('rtAV').textContent=sl('rtA').value;
+    let th=0,w=0;
+    sl('rtReset').onclick=()=>{th=0;w=0;};
+    function loop(){
+      const a=+sl('rtA').value,dt=0.025;
+      w+=a*dt;
+      if(Math.abs(w)>3)w=Math.sign(w)*3;
+      th+=w*dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=c.width/2,cy=c.height/2+30;
+      // disk
+      x.fillStyle='#e8e8e8';x.beginPath();x.arc(cx,cy,160,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.lineWidth=1.5;x.stroke();
+      // line indicating angle
+      x.strokeStyle='#888';x.lineWidth=2;x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+160*Math.cos(th),cy-160*Math.sin(th));x.stroke();
+      // axis dot
+      x.fillStyle='#333';x.beginPath();x.arc(cx,cy,5,0,Math.PI*2);x.fill();
+      // three points at radii 50, 100, 150
+      const radii=[50,100,150];
+      const cols=['#0b5fff','#2e7d32','#c62828'];
+      radii.forEach((r,i)=>{
+        const px=cx+r*Math.cos(th),py=cy-r*Math.sin(th);
+        // velocity (tangent, perp to radius, in CCW direction)
+        const vx=-r*w*Math.sin(th),vy=-r*w*Math.cos(th);
+        const vScale=20;
+        x.strokeStyle=cols[i];x.lineWidth=2.5;
+        x.beginPath();x.moveTo(px,py);x.lineTo(px+vx*vScale*0.05,py+vy*vScale*0.05);x.stroke();
+        // tangential acc
+        const atx=-r*a*Math.sin(th),aty=-r*a*Math.cos(th);
+        x.strokeStyle=cols[i];x.setLineDash([3,3]);
+        x.beginPath();x.moveTo(px,py);x.lineTo(px+atx*30,py+aty*30);x.stroke();x.setLineDash([]);
+        // normal acc (toward center)
+        const an=r*w*w;
+        const ndx=(cx-px)/r,ndy=(cy-py)/r;
+        x.strokeStyle=cols[i]+'88';
+        x.beginPath();x.moveTo(px,py);x.lineTo(px+ndx*an*30,py+ndy*an*30);x.stroke();
+        x.fillStyle=cols[i];x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+        x.fillStyle=cols[i];x.font='11px sans-serif';x.fillText('r='+r,px+10,py-10);
+        x.fillText('v='+(r*w).toFixed(2),px+10,py+5);
+      });
+      // info
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('θ = '+(th*180/Math.PI%360).toFixed(0)+'°,  ω = '+w.toFixed(2)+' rad/s,  α = '+a.toFixed(2)+' rad/s²',20,25);
+      x.fillText('점의 v = r·ω,  a_t = r·α (실선),  a_n = r·ω² (점선, 중심 방향)',20,43);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 커널 트릭 — &quot;들어 올리면 직선이 된다&quot; — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 커널 트릭 — &quot;들어 올리면 직선이 된다&quot;</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/05-classification.html">Week 5. 분류 알고리즘 — KNN, SVM, 결정트리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 커널 트릭 — "들어 올리면 직선이 된다"</h4>
+    <p>왼쪽은 원래 2D 공간 — 안쪽 클래스(파랑)와 바깥쪽 클래스(주황)가 동심원을 이루어 어떤 직선으로도 분리 불가능합니다. 오른쪽은 같은 데이터를 $\phi(x_1, x_2) = (x_1, x_2, x_1^2 + x_2^2)$로 3차원에 들어 올린 모습 — 회전시켜보면 <strong>수평면 하나로 깔끔히 분리</strong>되는 것을 볼 수 있습니다. 이게 바로 SVM이 비선형 데이터를 푸는 비밀입니다.</p>
+    <canvas id="lift" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>회전 각도 <span class="val" id="liftAV">30</span>°<input type="range" id="liftA" min="0" max="80" step="2" value="30"></label>
+      <label>리프트 강도 <span class="val" id="liftLV">1.0</span><input type="range" id="liftL" min="0" max="2" step="0.05" value="1.0"></label>
+      <button id="liftAnim">▶ 애니메이션</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lift');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[],anim=null;
+    function gen(){
+      pts=[];
+      for(let i=0;i<35;i++){const a=Math.random()*Math.PI*2,r=0.05+Math.random()*0.18;pts.push({x:r*Math.cos(a),y:r*Math.sin(a),c:0});}
+      for(let i=0;i<45;i++){const a=Math.random()*Math.PI*2,r=0.5+Math.random()*0.18;pts.push({x:r*Math.cos(a),y:r*Math.sin(a),c:1});}
+    }
+    gen();
+    function draw(){
+      const ang=+document.getElementById('liftA').value*Math.PI/180;
+      const L=+document.getElementById('liftL').value;
+      document.getElementById('liftAV').textContent=document.getElementById('liftA').value;
+      document.getElementById('liftLV').textContent=L.toFixed(2);
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      // left: 2D
+      const lx=20,ly=20,lw=W/2-30,lh=H-60;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(lx,ly,lw,lh);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('① 원래 2D 공간 — 직선으로 못 가름',lx,ly-4);
+      pts.forEach(p=>{
+        const px=lx+lw/2+p.x*lw*0.8;
+        const py=ly+lh/2+p.y*lh*0.8;
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+      });
+      // try a line: any line will fail — draw a sample line to make point
+      ctx.strokeStyle='#888';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(lx+10,ly+lh/2);ctx.lineTo(lx+lw-10,ly+lh/2);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#888';ctx.font='11px sans-serif';ctx.fillText('어떤 직선도 두 클래스를 못 가름',lx+8,ly+lh-6);
+
+      // right: 3D
+      const rx=W/2+15,ry=20,rw=W/2-30,rh=H-60;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(rx,ry,rw,rh);
+      ctx.fillStyle='#333';ctx.fillText('② 3D로 리프트: z = x²+y² ⇒ 평면 하나로 분리',rx,ry-4);
+      // Project 3D (x,y,z) where z = L*(x*x+y*y) to 2D:
+      // First rotate around x-axis by ang
+      const cx=rx+rw/2,cy=ry+rh/2;
+      const scale=Math.min(rw,rh)*0.42;
+      const proj3d=(x,y,z)=>{
+        // rotate around x-axis: (y,z) -> (y*cos - z*sin, y*sin + z*cos)
+        const ry2=y*Math.cos(ang)-z*Math.sin(ang);
+        const rz2=y*Math.sin(ang)+z*Math.cos(ang);
+        return {px:cx+x*scale,py:cy+ry2*scale-rz2*scale*0.0,depth:rz2};
+      };
+      // draw separating plane z = 0.15 (in lifted coords)
+      const zPlane=0.15*L;
+      const corners=[[-0.85,-0.85],[0.85,-0.85],[0.85,0.85],[-0.85,0.85]].map(([x,y])=>proj3d(x,y,zPlane));
+      ctx.fillStyle='rgba(46,125,50,0.18)';ctx.strokeStyle='rgba(46,125,50,0.6)';
+      ctx.beginPath();ctx.moveTo(corners[0].px,corners[0].py);
+      for(let k=1;k<4;k++)ctx.lineTo(corners[k].px,corners[k].py);
+      ctx.closePath();ctx.fill();ctx.stroke();
+      // axes
+      const O=proj3d(0,0,0),Xa=proj3d(0.9,0,0),Ya=proj3d(0,0.9,0),Za=proj3d(0,0,0.9);
+      ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(O.px,O.py);ctx.lineTo(Xa.px,Xa.py);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(O.px,O.py);ctx.lineTo(Ya.px,Ya.py);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(O.px,O.py);ctx.lineTo(Za.px,Za.py);ctx.stroke();
+      ctx.fillStyle='#888';ctx.font='11px sans-serif';
+      ctx.fillText('x',Xa.px+2,Xa.py);ctx.fillText('y',Ya.px+2,Ya.py);ctx.fillText('z=x²+y²',Za.px+4,Za.py);
+      // points lifted, sorted by depth so far points draw first
+      const lifted=pts.map(p=>{const z=L*(p.x*p.x+p.y*p.y);const pr=proj3d(p.x,p.y,z);return {...p,...pr,z};});
+      lifted.sort((a,b)=>a.depth-b.depth);
+      lifted.forEach(p=>{
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(p.px,p.py,4,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.stroke();
+      });
+    }
+    document.getElementById('liftA').addEventListener('input',draw);
+    document.getElementById('liftL').addEventListener('input',draw);
+    document.getElementById('liftAnim').onclick=function(){
+      if(anim){clearInterval(anim);anim=null;this.textContent='▶ 애니메이션';return;}
+      let t=0;
+      anim=setInterval(()=>{
+        t+=0.04;
+        const a=30+25*Math.sin(t);
+        const L=1+0.5*Math.sin(t*0.7);
+        document.getElementById('liftA').value=a;
+        document.getElementById('liftL').value=L;
+        draw();
+      },50);
+      this.textContent='⏸ 정지';
+    };
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

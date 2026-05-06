@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 두 정의가 정말 같은지 직접 확인 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 두 정의가 정말 같은지 직접 확인</h1>
+  <p class="demo-meta">
+    선형대수학 · <a href="../backup-lectures/lectures-linear-algebra/03-vector-dot-angle.html">Week 3. 벡터 (2) — 내적·길이·각도</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 정의가 정말 같은지 직접 확인</h4>
+    <p>두 화살표를 마우스로 끌어서 움직여 보세요. 좌측 그림 위쪽의
+       <strong>좌표식 $a_1b_1+a_2b_2$</strong> 값과 아래쪽의
+       <strong>기하식 $\|\mathbf{a}\|\|\mathbf{b}\|\cos\theta$</strong> 값이 항상 같다는 걸
+       눈으로 확인할 수 있습니다. 또한 각도가 90°에 가까워지면 두 값이 어떻게 0으로 수렴하는지도 보입니다.</p>
+    <canvas id="dotDemo" width="780" height="360"></canvas>
+    <p style="margin-top:8px;color:#666;font-size:13px">파랑·주황 화살표의 끝점을 마우스로 끌어 보세요.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dotDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=200,oy=200,scale=30;
+    let A={x:5,y:1},B={x:2,y:3};
+    let dragging=null;
+    function px(p){return [ox+p.x*scale,oy-p.y*scale];}
+    function getMouse(e){const r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)};}
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#eee';
+      for(let i=-7;i<=7;i++){ctx.beginPath();ctx.moveTo(ox+i*scale,20);ctx.lineTo(ox+i*scale,H-20);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(20,oy+i*scale);ctx.lineTo(2*ox-20,oy+i*scale);ctx.stroke();}
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(2*ox-20,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,20);ctx.lineTo(ox,H-20);ctx.stroke();
+      function arrow(p,col){const [x,y]=px(p);
+        ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x,y);ctx.stroke();
+        const ang=Math.atan2(y-oy,x-ox);
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-12*Math.cos(ang-0.4),y-12*Math.sin(ang-0.4));
+        ctx.lineTo(x-12*Math.cos(ang+0.4),y-12*Math.sin(ang+0.4));ctx.closePath();ctx.fillStyle=col;ctx.fill();
+        ctx.fillStyle='#fff';ctx.strokeStyle=col;ctx.beginPath();ctx.arc(x,y,5,0,2*Math.PI);ctx.fill();ctx.stroke();}
+      arrow(A,'#1677ff');arrow(B,'#fa8c16');
+      const [ax,ay]=px(A),[bx,by]=px(B);
+      ctx.fillStyle='#1677ff';ctx.font='bold 16px sans-serif';ctx.fillText('a',ax+10,ay-5);
+      ctx.fillStyle='#fa8c16';ctx.fillText('b',bx+10,by-5);
+      const dot=A.x*B.x+A.y*B.y;
+      const na=Math.sqrt(A.x*A.x+A.y*A.y),nb=Math.sqrt(B.x*B.x+B.y*B.y);
+      const cosT=dot/(na*nb);const theta=Math.acos(Math.max(-1,Math.min(1,cosT)));
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      const px2=420;
+      ctx.fillStyle='#0b5fff';ctx.font='bold 15px sans-serif';
+      ctx.fillText('① 좌표식', px2, 50);
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      ctx.fillText(`a·b = ${A.x.toFixed(1)}·${B.x.toFixed(1)} + ${A.y.toFixed(1)}·${B.y.toFixed(1)}`, px2, 75);
+      ctx.fillText(`     = ${(A.x*B.x).toFixed(2)} + ${(A.y*B.y).toFixed(2)}`, px2, 95);
+      ctx.fillStyle='#0b5fff';ctx.font='bold 16px Consolas,monospace';
+      ctx.fillText(`     = ${dot.toFixed(3)}`, px2, 118);
+      ctx.fillStyle='#fa8c16';ctx.font='bold 15px sans-serif';
+      ctx.fillText('② 기하식', px2, 165);
+      ctx.fillStyle='#222';ctx.font='14px Consolas,monospace';
+      ctx.fillText(`‖a‖ = ${na.toFixed(3)},  ‖b‖ = ${nb.toFixed(3)}`, px2, 190);
+      ctx.fillText(`θ = ${(theta*180/Math.PI).toFixed(1)}°,  cos θ = ${cosT.toFixed(3)}`, px2, 210);
+      ctx.fillText(`‖a‖‖b‖ cos θ = ${na.toFixed(2)} × ${nb.toFixed(2)} × ${cosT.toFixed(2)}`, px2, 232);
+      ctx.fillStyle='#fa8c16';ctx.font='bold 16px Consolas,monospace';
+      ctx.fillText(`             = ${(na*nb*cosT).toFixed(3)}`, px2, 254);
+      ctx.fillStyle=Math.abs(dot)<0.5?'#cf1322':(dot>0?'#2e7d32':'#7b1fa2');
+      ctx.font='bold 14px sans-serif';
+      let verdict;
+      if(Math.abs(dot)<0.3) verdict='≈ 0  →  거의 직교 (90°)';
+      else if(dot>0) verdict='> 0  →  같은 방향 쪽 (예각)';
+      else verdict='< 0  →  반대 방향 쪽 (둔각)';
+      ctx.fillText('판정: a·b ' + verdict, px2, 295);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('두 값이 항상 정확히 같음 → 두 정의는 동치', px2, 325);
+    }
+    c.addEventListener('mousedown',e=>{
+      const m=getMouse(e);
+      const [ax,ay]=px(A),[bx,by]=px(B);
+      if((m.x-ax)**2+(m.y-ay)**2<400) dragging='A';
+      else if((m.x-bx)**2+(m.y-by)**2<400) dragging='B';
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!dragging) return;
+      const m=getMouse(e);
+      const nv={x:(m.x-ox)/scale,y:(oy-m.y)/scale};
+      if(dragging==='A') A=nv; else B=nv;draw();
+    });
+    window.addEventListener('mouseup',()=>dragging=null);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 1D Explicit MPC — 영역 분할 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 1D Explicit MPC — 영역 분할</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/09-explicit.html">Week 9. Explicit MPC</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D Explicit MPC — 영역 분할</h4>
+    <p>1D 적분기에 호라이즌 $N=3$, 입력 제약 $|u| \le 1$인 MPC. 각 점은 해가 어느 활성 패턴에 속하는지를 색으로 보여줍니다. <strong>커서를 움직여</strong> 각 영역의 affine 해를 확인.</p>
+    <canvas id="empc" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>현재 위치 x <span class="val" id="emXV">0.5</span><input type="range" id="emX" min="-3" max="3" step="0.1" value="0.5"></label>
+      <label>현재 속도 v <span class="val" id="emVV">0.0</span><input type="range" id="emV" min="-3" max="3" step="0.1" value="0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('empc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function solveMPC(x,v){
+      const N=3,uMax=1,a=1,dt=1;
+      // greedy MPC
+      let bestU=0,bestC=Infinity;
+      for(let u0g=-100;u0g<=100;u0g++){
+        const u0=u0g/100*uMax;
+        for(let u1g=-50;u1g<=50;u1g++){
+          const u1=u1g/50*uMax;
+          for(let u2g=-20;u2g<=20;u2g++){
+            const u2=u2g/20*uMax;
+            let xx=x,vv=v,cost=0;
+            const us=[u0,u1,u2];
+            for(let k=0;k<N;k++){
+              vv=vv+dt*us[k];
+              xx=xx+dt*vv;
+              cost+=xx*xx+0.1*vv*vv+0.05*us[k]*us[k];
+            }
+            cost+=5*xx*xx+5*vv*vv;
+            if(cost<bestC){bestC=cost;bestU=u0;}
+          }
+        }
+      }
+      return {u0:bestU,saturated:Math.abs(bestU)>0.99};
+    }
+    function draw(){
+      const x0=+document.getElementById('emX').value;
+      const v0=+document.getElementById('emV').value;
+      document.getElementById('emXV').textContent=x0.toFixed(1);
+      document.getElementById('emVV').textContent=v0.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,sc=60;
+      const STEP=8;
+      // Color by saturation pattern
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const x=(i-cx)/sc,v=(cy-j)/sc;
+        if(Math.abs(x)>3||Math.abs(v)>3)continue;
+        const sol=solveMPC(x,v);
+        let col;
+        if(sol.u0>0.99)col='rgba(255,140,0,0.20)';
+        else if(sol.u0<-0.99)col='rgba(11,95,255,0.20)';
+        else col='rgba(46,125,50,0.10)';
+        ctx.fillStyle=col;ctx.fillRect(i,j,STEP,STEP);
+      }
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();
+      ctx.moveTo(40,cy);ctx.lineTo(W-40,cy);ctx.moveTo(cx,40);ctx.lineTo(cx,H-40);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('x →',W-50,cy-5);
+      ctx.fillText('v',cx+5,45);
+      // current point
+      const sol=solveMPC(x0,v0);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(cx+x0*sc,cy-v0*sc,8,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`현재 (x, v) = (${x0.toFixed(1)}, ${v0.toFixed(1)}) → u₀ = ${sol.u0.toFixed(3)}`,12,22);
+      const region=sol.u0>0.99?'영역 A: u₀=+1 (포화 +)':sol.u0<-0.99?'영역 C: u₀=-1 (포화 -)':'영역 B: 비포화 (LQR-like)';
+      ctx.fillStyle=sol.u0>0.99?'#ff8c00':sol.u0<-0.99?'#0b5fff':'#2e7d32';
+      ctx.fillText(region,12,40);
+      // legend
+      ctx.fillStyle='rgba(11,95,255,0.6)';ctx.fillRect(W-180,30,15,15);
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';ctx.fillText('u₀=-1 포화',W-160,42);
+      ctx.fillStyle='rgba(46,125,50,0.4)';ctx.fillRect(W-180,50,15,15);
+      ctx.fillStyle='#2e7d32';ctx.fillText('비포화 (선형)',W-160,62);
+      ctx.fillStyle='rgba(255,140,0,0.6)';ctx.fillRect(W-180,70,15,15);
+      ctx.fillStyle='#ff8c00';ctx.fillText('u₀=+1 포화',W-160,82);
+    }
+    document.getElementById('emX').addEventListener('input',draw);
+    document.getElementById('emV').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 연쇄 법칙: 두 변화율의 곱 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 연쇄 법칙: 두 변화율의 곱</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/03-differentiation-rules.html">Week 3. 미분 규칙</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 연쇄 법칙: 두 변화율의 곱</h4>
+    <p>슬라이더로 $x$를 움직여 보세요. 안쪽 변화율 $g'(x)$, 바깥쪽 변화율 $f'(g(x))$, 그리고 둘의 곱 $h'(x)$가 실시간으로 표시됩니다.</p>
+    <canvas id="ch" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>x <span class="val" id="chXV">0.50</span><input type="range" id="chX" min="-1.5" max="1.5" step="0.01" value="0.5"></label>
+      <label>안쪽 g(x)
+        <select id="chG">
+          <option value="sq" selected>g(x) = x²</option>
+          <option value="2x">g(x) = 2x</option>
+          <option value="exp">g(x) = eˣ</option>
+        </select>
+      </label>
+      <label>바깥쪽 f(u)
+        <select id="chF">
+          <option value="sin" selected>f(u) = sin u</option>
+          <option value="sq">f(u) = u²</option>
+          <option value="inv">f(u) = 1/(1+u²)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ch'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    function gFn(v){const m=document.getElementById('chG').value;if(m==='sq')return{g:v*v,gp:2*v};if(m==='2x')return{g:2*v,gp:2};const e=Math.exp(v);return{g:e,gp:e};}
+    function fFn(u){const m=document.getElementById('chF').value;if(m==='sin')return{f:Math.sin(u),fp:Math.cos(u)};if(m==='sq')return{f:u*u,fp:2*u};const d=1+u*u;return{f:1/d,fp:-2*u/(d*d)};}
+    function loop(){
+      const v=+document.getElementById('chX').value;
+      document.getElementById('chXV').textContent=v.toFixed(2);
+      const G=gFn(v),u=G.g;
+      const F=fFn(u);
+      const hp=F.fp*G.gp;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // three boxes representing input → g → f → output
+      const bx=[60,250,440],by=120,bw=120,bh=80;
+      const labels=['입력 x','중간 u = g(x)','출력 h = f(u)'];
+      const vals=[v.toFixed(2),u.toFixed(2),F.f.toFixed(2)];
+      bx.forEach((xx,i)=>{
+        x.fillStyle=i===0?'#fff3e0':(i===1?'#e3f2fd':'#e8f5e9');
+        x.strokeStyle='#888';x.lineWidth=1.5;
+        x.fillRect(xx,by,bw,bh);x.strokeRect(xx,by,bw,bh);
+        x.fillStyle='#444';x.font='13px sans-serif';
+        x.fillText(labels[i],xx+8,by+20);
+        x.fillStyle='#222';x.font='bold 22px Consolas,monospace';
+        x.fillText(vals[i],xx+30,by+55);
+      });
+      // arrows between boxes with slope labels
+      x.strokeStyle='#222';x.lineWidth=2;
+      x.beginPath();x.moveTo(bx[0]+bw,by+bh/2);x.lineTo(bx[1],by+bh/2);x.stroke();
+      x.beginPath();x.moveTo(bx[1]-8,by+bh/2-5);x.lineTo(bx[1],by+bh/2);x.lineTo(bx[1]-8,by+bh/2+5);x.stroke();
+      x.beginPath();x.moveTo(bx[1]+bw,by+bh/2);x.lineTo(bx[2],by+bh/2);x.stroke();
+      x.beginPath();x.moveTo(bx[2]-8,by+bh/2-5);x.lineTo(bx[2],by+bh/2);x.lineTo(bx[2]-8,by+bh/2+5);x.stroke();
+      // slope labels above arrows
+      x.fillStyle='#0742b8';x.font='13px sans-serif';
+      x.fillText("g'(x) = "+G.gp.toFixed(2),bx[0]+bw+12,by+bh/2-12);
+      x.fillText("f'(u) = "+F.fp.toFixed(2),bx[1]+bw+12,by+bh/2-12);
+      // bottom: chain rule equation
+      x.fillStyle='#222';x.font='bold 16px sans-serif';
+      x.fillText("h'(x) = f'(g(x)) · g'(x) = "+F.fp.toFixed(2)+" × "+G.gp.toFixed(2)+" = "+hp.toFixed(3),60,H-30);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('"바깥 변화율" × "안쪽 변화율" = "전체 변화율"',60,H-10);
+      requestAnimationFrame(()=>setTimeout(loop,40));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

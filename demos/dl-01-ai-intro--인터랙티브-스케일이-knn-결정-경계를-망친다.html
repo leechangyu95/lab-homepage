@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 스케일이 KNN 결정 경계를 망친다 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 스케일이 KNN 결정 경계를 망친다</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/01-ai-intro.html">Week 1. AI의 세계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 스케일이 KNN 결정 경계를 망친다</h4>
+    <p>X축(길이)에는 두 클래스의 진짜 신호가 있고, Y축(무게)은 잡음입니다. <strong>무게 스케일</strong>을 키우면 잡음 축이 거리를 지배해 KNN이 길이 정보를 무시하고 정확도가 떨어져요. 표준화를 켜면 두 축이 동일 비중으로 돌아옵니다.</p>
+    <canvas id="knnScale" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>무게 스케일 <span class="val" id="ksUV">1</span>×<input type="range" id="ksU" min="-2" max="3" step="0.1" value="0"></label>
+      <label><input type="checkbox" id="ksZ"> 표준화 적용</label>
+      <button id="ksRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('knnScale');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      pts=[];
+      // signal in x (length), pure noise in y (weight)
+      for(let i=0;i<25;i++)pts.push({len:6+Math.random()*4,wt:Math.random()*10,c:0});
+      for(let i=0;i<25;i++)pts.push({len:14+Math.random()*4,wt:Math.random()*10,c:1});
+      draw();
+    }
+    function draw(){
+      const uExp=+document.getElementById('ksU').value;
+      const u=Math.pow(10,uExp);
+      const z=document.getElementById('ksZ').checked;
+      document.getElementById('ksUV').textContent=u<1?u.toFixed(2):u.toFixed(0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const xmin=4,xmax=20,ymin=0,ymax=10*u;
+      const xR=xmax-xmin,yR=Math.max(0.001,ymax-ymin);
+      // For KNN distance: use scaled units (or standardized). For display: always fit to fixed canvas frame.
+      let xsK=pts.map(p=>p.len);
+      let ysK=pts.map(p=>p.wt*u);
+      let mx=0,sx=1,my=0,sy=1;
+      if(z){
+        mx=xsK.reduce((a,b)=>a+b)/xsK.length;
+        sx=Math.sqrt(xsK.reduce((a,b)=>a+(b-mx)**2,0)/xsK.length)||1;
+        my=ysK.reduce((a,b)=>a+b)/ysK.length;
+        sy=Math.sqrt(ysK.reduce((a,b)=>a+(b-my)**2,0)/ysK.length)||1;
+        xsK=xsK.map(v=>(v-mx)/sx);ysK=ysK.map(v=>(v-my)/sy);
+      }
+      // grid: each pixel maps to a fixed (length, weight) data point; KNN uses scaled coords
+      const STEP=12;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const datX=xmin+(i/W)*xR;
+        const datY=ymin+(1-j/H)*yR;
+        let qx=datX,qy=datY;
+        if(z){qx=(datX-mx)/sx;qy=(datY-my)/sy;}
+        const ds=pts.map((p,k)=>({d:Math.hypot(qx-xsK[k],qy-ysK[k]),c:p.c})).sort((a,b)=>a.d-b.d).slice(0,5);
+        const v=ds.reduce((s,d)=>s+(d.c==0?1:-1),0);
+        ctx.fillStyle=v>=0?'rgba(11,95,255,0.12)':'rgba(255,140,0,0.12)';
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      // training accuracy
+      let correct=0;
+      pts.forEach((p,k)=>{
+        const ds=pts.map((q,kk)=>kk===k?{d:Infinity,c:q.c}:{d:Math.hypot(xsK[kk]-xsK[k],ysK[kk]-ysK[k]),c:q.c}).sort((a,b)=>a.d-b.d).slice(0,5);
+        const v=ds.reduce((s,d)=>s+(d.c==0?1:-1),0);
+        const pred=v>=0?0:1;
+        if(pred===p.c)correct++;
+      });
+      // points (on fixed display frame)
+      pts.forEach(p=>{
+        const px=(p.len-xmin)/xR*W;
+        const py=(1-p.wt/10)*H;
+        ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';
+        ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.stroke();
+      });
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      const tag=z?'표준화 적용':`Y 스케일 ${u<1?u.toFixed(2):u.toFixed(0)}×`;
+      ctx.fillText(`훈련 정확도: ${correct}/${pts.length} = ${(100*correct/pts.length).toFixed(0)}% (${tag})`,12,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('X=길이(신호), Y=무게(잡음). Y 스케일↑ → KNN이 잡음 축에 끌려가 정확도↓',12,H-10);
+    }
+    document.getElementById('ksU').addEventListener('input',draw);
+    document.getElementById('ksZ').addEventListener('change',draw);
+    document.getElementById('ksRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

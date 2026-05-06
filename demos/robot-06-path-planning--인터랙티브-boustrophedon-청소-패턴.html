@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Boustrophedon 청소 패턴 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Boustrophedon 청소 패턴</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Boustrophedon 청소 패턴</h4>
+    <p>장애물(빨강)을 피하며 영역 전체를 훑는 모습입니다. 줄 간격(로봇 폭)을 바꾸면 커버리지 밀도와 전체 길이가 달라집니다.</p>
+    <canvas id="cov" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>줄 간격 (로봇 폭) <span class="val" id="covSpV">22</span><input type="range" id="covSp" min="12" max="50" value="22"></label>
+      <button id="covPlay">진행 / 정지</button>
+      <button id="covRst" class="alt">처음부터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cov'),x=c.getContext('2d');
+    const field={x:40,y:40,w:560,h:300};
+    const obs=[{x:240,y:140,w:120,h:60},{x:430,y:230,w:90,h:70}];
+    let path=[],idx=0,running=false;
+    function inObs(px,py){return obs.some(o=>px>=o.x&&px<=o.x+o.w&&py>=o.y&&py<=o.y+o.h);}
+    function genPath(){
+      const sp=+document.getElementById('covSp').value;
+      path=[];
+      let dir=1;
+      for(let y=field.y+sp/2;y<field.y+field.h;y+=sp){
+        const segs=[];
+        // 한 줄을 장애물로 분할
+        let segStart=field.x;
+        for(let px=field.x;px<=field.x+field.w;px+=2){
+          const inO=inObs(px,y);
+          if(inO){
+            if(segStart<px-2)segs.push([segStart,px-3]);
+            // skip until exit
+            while(px<field.x+field.w&&inObs(px,y))px+=2;
+            segStart=px+2;
+          }
+        }
+        if(segStart<field.x+field.w)segs.push([segStart,field.x+field.w]);
+        if(segs.length===0)continue;
+        if(dir<0)segs.reverse().forEach(s=>s.reverse());
+        segs.forEach(s=>{path.push([s[0],y]);path.push([s[1],y]);});
+        dir*=-1;
+      }
+      idx=0;
+    }
+    document.getElementById('covSp').oninput=()=>{document.getElementById('covSpV').textContent=document.getElementById('covSp').value;genPath();};
+    document.getElementById('covPlay').onclick=()=>{running=!running;};
+    document.getElementById('covRst').onclick=()=>{idx=0;running=false;};
+    genPath();
+    function loop(){
+      if(running&&idx<path.length-1)idx=Math.min(path.length-1,idx+3);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 영역
+      x.fillStyle='rgba(46,125,50,0.08)';x.fillRect(field.x,field.y,field.w,field.h);
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.strokeRect(field.x,field.y,field.w,field.h);
+      // 장애물
+      obs.forEach(o=>{x.fillStyle='#c62828';x.fillRect(o.x,o.y,o.w,o.h);});
+      // 진행한 경로
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let i=0;i<=idx;i++){const p=path[i];if(i===0)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);}
+      x.stroke();
+      // 남은 경로
+      x.strokeStyle='rgba(11,95,255,0.18)';x.lineWidth=1.5;x.beginPath();
+      for(let i=idx;i<path.length;i++){const p=path[i];if(i===idx)x.moveTo(p[0],p[1]);else x.lineTo(p[0],p[1]);}
+      x.stroke();
+      // 로봇
+      if(path[idx]){const p=path[idx];x.fillStyle='#ff8c00';x.beginPath();x.arc(p[0],p[1],8,0,Math.PI*2);x.fill();}
+      let totalLen=0;for(let i=1;i<path.length;i++)totalLen+=Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]);
+      let doneLen=0;for(let i=1;i<=idx;i++)doneLen+=Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('진행 '+(path.length>0?(idx*100/(path.length-1)).toFixed(0):0)+'% · 경로 길이 '+totalLen.toFixed(0)+' px · 누적 '+doneLen.toFixed(0)+' px',12,c.height-12);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

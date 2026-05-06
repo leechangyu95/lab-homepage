@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 최대 전력 전달 — $R_L = R_{Th}$일 때 봉우리 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 최대 전력 전달 — $R_L = R_{Th}$일 때 봉우리</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/05-dc-analysis-2.html">Week 5. 직류회로 해석 2 — 등가회로와 휘트스톤 브릿지</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 최대 전력 전달 — $R_L = R_{Th}$일 때 봉우리</h4>
+    <p>$R_L$을 바꿔가며 부하 전력 $P_L$ 곡선을 봅니다. $R_L = R_{Th}$에서 정확히 $P_{\max} = V_{Th}^2/(4 R_{Th})$로 봉우리가 형성됩니다.</p>
+    <canvas id="mptCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>V_Th <span class="val" id="mptVthV">10</span> V<input type="range" id="mptVth" min="1" max="20" step="0.5" value="10"></label>
+      <label>R_Th <span class="val" id="mptRthV">5</span> Ω<input type="range" id="mptRth" min="1" max="20" step="0.5" value="5"></label>
+      <label>R_L <span class="val" id="mptRLV">5</span> Ω<input type="range" id="mptRL" min="0.5" max="40" step="0.5" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mptCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const Vth=+document.getElementById('mptVth').value;
+      const Rth=+document.getElementById('mptRth').value;
+      const RL=+document.getElementById('mptRL').value;
+      document.getElementById('mptVthV').textContent=Vth.toFixed(1);
+      document.getElementById('mptRthV').textContent=Rth.toFixed(1);
+      document.getElementById('mptRLV').textContent=RL.toFixed(1);
+      const Pmax=Vth*Vth/(4*Rth);
+      const RLmax=Math.max(40,4*Rth);
+      function P(r){const i=Vth/(Rth+r);return i*i*r;}
+      const Pcur=P(RL);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(r){return 60+(r/RLmax)*(W-90);}
+      function y(p){return H-50-(p/(Pmax*1.1))*(H-90);}
+      ctx.strokeStyle='#ddd';
+      for(let r=0;r<=RLmax;r+=Rth){ctx.beginPath();ctx.moveTo(x(r),y(0));ctx.lineTo(x(r),y(Pmax*1.1));ctx.stroke();}
+      ctx.strokeStyle='#666';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(RLmax),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(0),y(Pmax*1.1));ctx.stroke();
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();
+      for(let r=0.1;r<=RLmax;r+=0.1){
+        const p=P(r);
+        if(r<=0.1)ctx.moveTo(x(r),y(p));else ctx.lineTo(x(r),y(p));
+      }
+      ctx.stroke();
+      ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(x(Rth),y(0));ctx.lineTo(x(Rth),y(Pmax));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),y(Pmax));ctx.lineTo(x(Rth),y(Pmax));ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#1b5e20';
+      ctx.beginPath();ctx.arc(x(Rth),y(Pmax),5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#c62828';
+      ctx.beginPath();ctx.arc(x(RL),y(Pcur),7,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#333';ctx.font='12px sans-serif';
+      ctx.fillText('R_L [Ω]',W/2-20,H-15);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('P_L [W]',-25,0);ctx.restore();
+      ctx.fillText(`현재 R_L=${RL.toFixed(1)}Ω → P_L=${Pcur.toFixed(3)} W`,40,30);
+      ctx.fillStyle='#1b5e20';
+      ctx.fillText(`최대점: R_L=R_Th=${Rth} Ω → P_max=${Pmax.toFixed(3)} W`,40,50);
+    }
+    ['mptVth','mptRth','mptRL'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

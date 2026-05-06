@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎯 진자 에너지 변환 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎯 진자 에너지 변환 시뮬레이터</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/03-energy-conservation.html">Week 3. 일·에너지 보존</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎯 진자 에너지 변환 시뮬레이터</h4>
+    <p>최저점에서 K가 최대, 최고점에서 U가 최대. 마찰이 0이면 두 막대가 시소처럼 움직이며 합은 일정합니다.</p>
+    <canvas id="w3_pendCanvas" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>줄 길이 $L$ <span class="val" id="w3_pendLval">1.0</span> m
+        <input type="range" id="w3_pendL" min="0.4" max="2.0" step="0.05" value="1.0"></label>
+      <label>초기각 $\theta_0$ <span class="val" id="w3_pendAval">40°</span>
+        <input type="range" id="w3_pendA" min="5" max="80" step="1" value="40"></label>
+      <label>마찰 계수 (감쇠) <span class="val" id="w3_pendMval">0.00</span>
+        <input type="range" id="w3_pendM" min="0" max="0.05" step="0.005" value="0"></label>
+      <label><input type="checkbox" id="w3_pendReset"> 다시 던지기</label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>마찰 0 → K + U 보라 막대가 흔들리지 않고 일정한 높이에 유지</li>
+        <li>마찰 0.02 정도 → 보라 막대 천천히 줄어듦 (열로 빠져나감)</li>
+        <li>줄 길이만 바꿔도 주기 $T = 2\pi\sqrt{L/g}$가 변함을 시각적으로 확인</li>
+        <li>최저점 통과 순간 K 최대, U 최소 (기준선 = 최저점)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w3_pendCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let theta=0,omega=0,L=1,m=0.5,g=9.8,damp=0,t0=performance.now(),lastTime=t0;
+    function readControls(){
+      L=+document.getElementById('w3_pendL').value;
+      damp=+document.getElementById('w3_pendM').value;
+      const a0=+document.getElementById('w3_pendA').value;
+      document.getElementById('w3_pendLval').textContent=L.toFixed(2);
+      document.getElementById('w3_pendAval').textContent=a0+'°';
+      document.getElementById('w3_pendMval').textContent=damp.toFixed(3);
+      return a0*Math.PI/180;
+    }
+    function reset(){theta=readControls();omega=0;}
+    reset();
+    document.getElementById('w3_pendReset').addEventListener('change',e=>{if(e.target.checked){reset();e.target.checked=false;}});
+    ['w3_pendL','w3_pendA','w3_pendM'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+      if(id!=='w3_pendM')reset();else readControls();
+    }));
+    function step(dt){
+      const alpha=-(g/L)*Math.sin(theta)-damp*omega;
+      omega+=alpha*dt;theta+=omega*dt;
+    }
+    function frame(now){
+      const dt=Math.min(0.04,(now-lastTime)/1000);lastTime=now;
+      for(let i=0;i<4;i++)step(dt/4);
+      const ox=W*0.32,oy=80;
+      const px=4+(L*120)*Math.sin(theta);
+      const sc=120;
+      const bx=ox+L*sc*Math.sin(theta),by=oy+L*sc*Math.cos(theta);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(ox-90,oy);ctx.lineTo(ox+90,oy);ctx.stroke();
+      for(let i=-4;i<=4;i++){ctx.beginPath();ctx.moveTo(ox-80+i*20,oy);ctx.lineTo(ox-80+i*20+8,oy-8);ctx.stroke();}
+      ctx.strokeStyle='#444';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(bx,by);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(bx,by,16,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#888';ctx.setLineDash([3,3]);
+      const lowestY=oy+L*sc;
+      ctx.beginPath();ctx.moveTo(ox-100,lowestY);ctx.lineTo(ox+100,lowestY);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.fillText('기준 (U=0)',ox-100,lowestY-3);
+      const h=L*(1-Math.cos(theta));
+      const v=L*omega;
+      const K=0.5*m*v*v;
+      const U=m*g*h;
+      const E=K+U;
+      const bxL=W*0.62,bw=70,by0=H-50;
+      const Eref=m*g*L*(1-Math.cos(+document.getElementById('w3_pendA').value*Math.PI/180))*1.05+0.001;
+      const sH=180/Eref;
+      ctx.fillStyle='#fff';ctx.fillRect(bxL-10,30,260,H-50);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(bxL-10,30,260,H-50);
+      ctx.fillStyle='#222';ctx.font='bold 13px sans-serif';
+      ctx.fillText('에너지 막대',bxL,52);
+      function bar(x,col,val,label){
+        const hh=Math.min(180,val*sH);
+        ctx.fillStyle=col;ctx.fillRect(x,by0-hh,bw,hh);
+        ctx.strokeStyle='#333';ctx.strokeRect(x,by0-hh,bw,hh);
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(label,x+8,by0+15);
+        ctx.fillText(val.toFixed(3)+' J',x,by0-hh-4);
+      }
+      bar(bxL,'#c62828',K,'K');
+      bar(bxL+80,'#0b5fff',U,'U');
+      bar(bxL+160,'#7b1fa2',E,'E=K+U');
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('h = '+h.toFixed(3)+' m',16,H-22);
+      ctx.fillText('v = '+v.toFixed(2)+' m/s',16,H-6);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 작은 MLP가 XOR을 학습 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 작은 MLP가 XOR을 학습</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/07-mlp.html">Week 7. 퍼셉트론과 다층 신경망(MLP)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 작은 MLP가 XOR을 학습</h4>
+    <p>2-2-1 구조의 작은 신경망이 XOR을 학습합니다. "학습"을 누르면 결정경계가 점점 휘어집니다.</p>
+    <canvas id="mlpCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <button id="mlpRun">학습 시작/정지</button>
+      <button id="mlpReset">리셋</button>
+      <span id="mlpInfo" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mlpCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[[0,0,0],[0,1,1],[1,0,1],[1,1,0]];
+    let W1,b1,W2,b2,running=false,raf=null,epoch=0;
+    function init(){
+      W1=[[Math.random()-0.5,Math.random()-0.5],[Math.random()-0.5,Math.random()-0.5]];
+      b1=[0,0];W2=[Math.random()-0.5,Math.random()-0.5];b2=0;epoch=0;
+    }
+    init();
+    function sig(x){return 1/(1+Math.exp(-x));}
+    function fwd(x){
+      const z1=[W1[0][0]*x[0]+W1[0][1]*x[1]+b1[0],W1[1][0]*x[0]+W1[1][1]*x[1]+b1[1]];
+      const h=[sig(z1[0]),sig(z1[1])];
+      const z2=W2[0]*h[0]+W2[1]*h[1]+b2;const y=sig(z2);
+      return {h,y};
+    }
+    function train(){
+      const lr=0.5;
+      for(let e=0;e<50;e++){
+        data.forEach(d=>{
+          const x=[d[0],d[1]],t=d[2];
+          const f=fwd(x);
+          const dy=f.y-t;
+          const dW2=[dy*f.h[0],dy*f.h[1]],db2=dy;
+          const dh=[dy*W2[0]*f.h[0]*(1-f.h[0]),dy*W2[1]*f.h[1]*(1-f.h[1])];
+          const dW1=[[dh[0]*x[0],dh[0]*x[1]],[dh[1]*x[0],dh[1]*x[1]]];
+          W2[0]-=lr*dW2[0];W2[1]-=lr*dW2[1];b2-=lr*db2;
+          W1[0][0]-=lr*dW1[0][0];W1[0][1]-=lr*dW1[0][1];
+          W1[1][0]-=lr*dW1[1][0];W1[1][1]-=lr*dW1[1][1];
+          b1[0]-=lr*dh[0];b1[1]-=lr*dh[1];
+        });
+        epoch++;
+      }
+      draw();
+      if(running)raf=requestAnimationFrame(train);
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const STEP=10;
+      for(let i=0;i<W;i+=STEP)for(let j=0;j<H;j+=STEP){
+        const x=i/W,y=1-j/H;const v=fwd([x,y]).y;
+        ctx.fillStyle=v>0.5?'rgba(255,140,0,0.16)':'rgba(11,95,255,0.12)';
+        ctx.fillRect(i,j,STEP,STEP);
+      }
+      data.forEach(d=>{ctx.fillStyle=d[2]?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(d[0]*W,(1-d[1])*H,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#000';ctx.stroke();});
+      document.getElementById('mlpInfo').textContent=`epoch ${epoch}`;
+    }
+    document.getElementById('mlpRun').onclick=()=>{if(!running){running=true;train();}else{running=false;cancelAnimationFrame(raf);}};
+    document.getElementById('mlpReset').onclick=()=>{running=false;cancelAnimationFrame(raf);init();draw();};
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

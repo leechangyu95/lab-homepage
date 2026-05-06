@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 상황을 고르면 적합한 알고리즘 조합을 추천 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 상황을 고르면 적합한 알고리즘 조합을 추천</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/15-final-review.html">Week 15. 기말 전체 정리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 상황을 고르면 적합한 알고리즘 조합을 추천</h4>
+    <div class="controls">
+      <label>환경
+        <select id="env">
+          <option value="grid">2D 격자 도심 (정적 장애물)</option>
+          <option value="cont">연속 공간 (좁은 통로 / 주차)</option>
+          <option value="hwy">고속도로 (고속·완만 곡률)</option>
+          <option value="dyn">동적 보행자 빈번</option>
+        </select>
+      </label>
+      <label>속도
+        <select id="spd">
+          <option value="lo">저속 (≤ 30 km/h)</option>
+          <option value="mid">중속 (30~60)</option>
+          <option value="hi">고속 (≥ 60)</option>
+        </select>
+      </label>
+      <label>요구
+        <select id="req">
+          <option value="simple">단순/구현 빠르게</option>
+          <option value="opt">최적성 중요</option>
+          <option value="safe">안전 보장</option>
+          <option value="data">데이터 풍부, 학습 가능</option>
+        </select>
+      </label>
+    </div>
+    <p>추천: <span class="recommend-out" id="rec">—</span></p>
+    <p id="recExp" style="font-size:13px;color:var(--muted)"></p>
+  </div>
+  <script>
+  (function(){
+    const $=id=>document.getElementById(id);
+    function refresh(){
+      const env=$('env').value,spd=$('spd').value,req=$('req').value;
+      let plan='A* + Costmap',track='Pure Pursuit + PID',safety='—';
+      if(env==='cont')plan='Hybrid A* / RRT*';
+      if(env==='hwy')plan='Frenet 기반 다항식 궤적';
+      if(env==='dyn')plan='A* + 동적 재계획';
+      if(spd==='hi')track='Stanley 또는 LQR (W12) / MPC (W13)';
+      if(req==='opt')track='MPC';
+      if(req==='safe')safety='+ CBF 안전 필터 (W12)';
+      if(req==='data')track='DDPG/PPO + 안전 필터';
+      $('rec').textContent='Plan: '+plan+'   /   Track: '+track+'   '+safety;
+      let exp='';
+      if(env==='hwy'&&spd==='hi')exp+='고속도로에서는 곡선 진입에서 슬립이 중요해 Stanley/LQR/MPC가 안정적입니다. ';
+      if(req==='safe')exp+='CBF는 기본 컨트롤러를 그대로 두고 위험할 때만 살짝 수정하는 안전 필터로 끼워 넣으세요. ';
+      if(env==='dyn')exp+='보행자가 빈번하면 정적 A* 결과를 100~500ms 주기로 재계획해야 합니다. ';
+      if(req==='data'&&spd!=='hi')exp+='RL은 시뮬에서 충분히 학습한 뒤 안전 필터와 함께 실차에 옮기는 게 표준입니다. ';
+      $('recExp').textContent=exp||'기본 조합. 가장 단순·견고한 출발점입니다.';
+    }
+    ['env','spd','req'].forEach(id=>$(id).onchange=refresh);refresh();
+  })();
+  </script>
+</main>
+</body>
+</html>

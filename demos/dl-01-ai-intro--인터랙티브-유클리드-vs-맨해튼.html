@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 유클리드 vs 맨해튼 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 유클리드 vs 맨해튼</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/01-ai-intro.html">Week 1. AI의 세계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 유클리드 vs 맨해튼</h4>
+    <p>중심점에서 같은 거리에 있는 점들의 집합(=등거리원)을 그립니다. 유클리드는 동그란 원이지만 맨해튼은 마름모(정사각형 회전)입니다.</p>
+    <canvas id="dist" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>반지름 <span class="val" id="rV">80</span><input type="range" id="rr" min="20" max="140" step="2" value="80"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dist');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const r=+document.getElementById('rr').value;
+      document.getElementById('rV').textContent=r;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx1=W/4,cy=H/2,cx2=3*W/4;
+      // Euclidean
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx1,cy,r,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(cx1,cy,3,0,Math.PI*2);ctx.fill();
+      // Manhattan: diamond
+      ctx.strokeStyle='#ff8c00';
+      ctx.beginPath();
+      ctx.moveTo(cx2,cy-r);ctx.lineTo(cx2+r,cy);ctx.lineTo(cx2,cy+r);ctx.lineTo(cx2-r,cy);ctx.closePath();ctx.stroke();
+      ctx.fillStyle='#ff8c00';ctx.beginPath();ctx.arc(cx2,cy,3,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#333';ctx.font='14px sans-serif';
+      ctx.fillText('유클리드 (L2)',cx1-50,30);
+      ctx.fillText('맨해튼 (L1)',cx2-50,30);
+    }
+    document.getElementById('rr').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

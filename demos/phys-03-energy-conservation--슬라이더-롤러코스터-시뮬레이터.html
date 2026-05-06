@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎢 슬라이더 / 롤러코스터 시뮬레이터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎢 슬라이더 / 롤러코스터 시뮬레이터</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/03-energy-conservation.html">Week 3. 일·에너지 보존</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎢 슬라이더 / 롤러코스터 시뮬레이터</h4>
+    <p>트랙은 고정된 코사인 곡선. 구슬은 트랙 위를 미끄러지며 매 순간 $v(x) = \sqrt{2g[h_0 - h(x)] - 2\mu g \cdot s(x)}$ 형태로 속도가 결정됩니다.</p>
+    <canvas id="w3_coasterCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>출발 높이 $h_0$ <span class="val" id="w3_h0V">5.0</span> m
+        <input type="range" id="w3_h0" min="1.0" max="10.0" step="0.1" value="5.0"></label>
+      <label>마찰계수 $\mu$ <span class="val" id="w3_muV">0.00</span>
+        <input type="range" id="w3_mu" min="0" max="0.3" step="0.01" value="0"></label>
+      <label><input type="checkbox" id="w3_run" checked> 시뮬 실행</label>
+      <label><input type="checkbox" id="w3_reset"> 다시 출발</label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$\mu = 0$, $h_0 = 5$ m → 트랙 끝(높이 0)에서 $v = \sqrt{2gh_0} \approx 9.9$ m/s</li>
+        <li>$\mu = 0.1$ → 같은 높이에서 출발해도 도달 속도가 작아짐 (열로 일부 손실)</li>
+        <li>$h_0$ 너무 작으면 두 번째 언덕을 못 넘음 — 보라색 경로 끊김</li>
+        <li>마찰 없이도 출발 높이보다 더 높이는 절대 못 올라감 (에너지 보존)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w3_coasterCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const g=9.8;
+    let s=0,v=0,lastTime=performance.now();
+    function track(x){
+      // x in meters [0,20]; h(x) cosine bumps
+      return 1+1.5*Math.cos(x*0.7)+0.5*Math.cos(x*0.3+1);
+    }
+    function dhdx(x){
+      const dx=0.001;return (track(x+dx)-track(x-dx))/(2*dx);
+    }
+    function reset(){
+      s=0;v=0;
+    }
+    document.getElementById('w3_reset').addEventListener('change',e=>{if(e.target.checked){reset();e.target.checked=false;}});
+    function step(dt){
+      const x=s;const dh=dhdx(x);
+      const sinTheta=dh/Math.sqrt(1+dh*dh);
+      const cosTheta=1/Math.sqrt(1+dh*dh);
+      const mu=+document.getElementById('w3_mu').value;
+      const a=-g*sinTheta - mu*g*cosTheta*Math.sign(v||1);
+      v+=a*dt;
+      s+=v*dt;
+      if(s<0){s=0;if(v<0)v=0;}
+      if(s>20){s=20;v=0;}
+    }
+    function frame(now){
+      const dt=Math.min(0.04,(now-lastTime)/1000);lastTime=now;
+      const h0=+document.getElementById('w3_h0').value;
+      document.getElementById('w3_h0V').textContent=h0.toFixed(1);
+      document.getElementById('w3_muV').textContent=(+document.getElementById('w3_mu').value).toFixed(2);
+      // initial energy gives v at start point if released from h0
+      // we keep simple: when reset, start at h(0)+? -> use s=0,v=0; track has h(0)=...
+      const run=document.getElementById('w3_run').checked;
+      if(run){
+        // additional: drop the cart at simulated height h0 → assign extra energy initially when v=0 and s=0
+        if(s===0 && v===0){
+          // give starting kinetic to mimic "released from height h0"
+          const dE=g*Math.max(0,h0-track(0));
+          v=Math.sqrt(Math.max(0,2*dE));
+        }
+        for(let i=0;i<5;i++)step(dt/5);
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=30;
+      const sx=(W-2*margin)/20;
+      const maxH=8,sy=(H-2*margin)/maxH;
+      // draw track
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let x=0;x<=20;x+=0.1){
+        const px=margin+x*sx,py=H-margin-track(x)*sy;
+        if(x===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // axes
+      ctx.strokeStyle='#cfd8e3';
+      ctx.beginPath();ctx.moveTo(margin,H-margin);ctx.lineTo(W-margin,H-margin);ctx.stroke();
+      // start height marker
+      ctx.strokeStyle='#888';ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(margin,H-margin-h0*sy);ctx.lineTo(W-margin,H-margin-h0*sy);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('h₀ = '+h0.toFixed(1)+' m',W-margin-80,H-margin-h0*sy-3);
+      // ball
+      const bx=margin+s*sx,by=H-margin-track(s)*sy;
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(bx,by-6,7,0,Math.PI*2);ctx.fill();
+      // info box
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,210,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,210,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('s = '+s.toFixed(2)+' m',16,28);
+      ctx.fillText('h = '+track(s).toFixed(2)+' m',16,46);
+      ctx.fillText('|v| = '+Math.abs(v).toFixed(2)+' m/s',16,64);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>충격력-시간 시뮬레이터 — &quot;같은 $\Delta p$, 다른 $\Delta t$&quot; — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">충격력-시간 시뮬레이터 — &quot;같은 $\Delta p$, 다른 $\Delta t$&quot;</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/04-momentum-collision.html">Week 4. 운동량과 충돌</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>충격력-시간 시뮬레이터 — "같은 $\Delta p$, 다른 $\Delta t$"</h4>
+    <p>파랑(부드러운 충돌, 에어백)과 빨강(단단한 충돌, 콘크리트 벽)이 만드는 힘-시간 그래프입니다. 두 곡선 아래 면적(=충격량)은 항상 같지만, 최대 힘은 충돌 시간이 짧을수록 폭발적으로 커집니다.</p>
+    <canvas id="w4_impulseCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>질량 $m$ <span class="val" id="w4_imp_mV">70</span> kg
+        <input type="range" id="w4_imp_m" min="10" max="200" step="5" value="70"></label>
+      <label>충돌 전 속도 $v$ <span class="val" id="w4_imp_vV">10</span> m/s
+        <input type="range" id="w4_imp_v" min="1" max="40" step="1" value="10"></label>
+      <label>부드러운 $\Delta t_\text{soft}$ <span class="val" id="w4_imp_t1V">0.5</span> s
+        <input type="range" id="w4_imp_t1" min="0.05" max="1.0" step="0.05" value="0.5"></label>
+      <label>단단한 $\Delta t_\text{hard}$ <span class="val" id="w4_imp_t2V">0.05</span> s
+        <input type="range" id="w4_imp_t2" min="0.01" max="0.3" step="0.005" value="0.05"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$\Delta t_\text{hard}$를 0.01 s로 → 빨간 첨두값이 어디까지 치솟는지 확인 (인체 한계 ≈ 50 g)</li>
+        <li>두 시간을 같게 → 두 곡선이 겹쳐 같은 힘 (충돌 시간이 같으면 힘도 같음)</li>
+        <li>$v$를 두 배로 → 면적·첨두 모두 두 배. 속도가 위험한 이유</li>
+        <li>충격량은 두 색 모두 똑같이 $m\,v$ — 운동량을 멈추기 위한 "총량"은 변함없음</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w4_impulseCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const m=+document.getElementById('w4_imp_m').value;
+      const v=+document.getElementById('w4_imp_v').value;
+      const t1=+document.getElementById('w4_imp_t1').value;
+      const t2=+document.getElementById('w4_imp_t2').value;
+      document.getElementById('w4_imp_mV').textContent=m;
+      document.getElementById('w4_imp_vV').textContent=v;
+      document.getElementById('w4_imp_t1V').textContent=t1.toFixed(2);
+      document.getElementById('w4_imp_t2V').textContent=t2.toFixed(3);
+      const dp=m*v;
+      const Fpeak1=2*dp/t1, Fpeak2=2*dp/t2;
+      const Fmax=Math.max(Fpeak1,Fpeak2);
+      const Tmax=Math.max(t1,t2)*1.2;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const M=44;
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(M,H-M);ctx.lineTo(W-M,H-M);
+      ctx.moveTo(M,H-M);ctx.lineTo(M,M);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('시간 (s)',W/2-20,H-12);
+      ctx.save();ctx.translate(14,H/2);ctx.rotate(-Math.PI/2);
+      ctx.fillText('힘 F (N)',0,0);ctx.restore();
+      function curve(T,Fp,col,fill){
+        ctx.strokeStyle=col;ctx.fillStyle=fill;ctx.lineWidth=2.5;
+        ctx.beginPath();
+        for(let i=0;i<=80;i++){
+          const t=(T*i)/80;
+          const f=Fp*Math.sin(Math.PI*t/T);
+          const px=M+(t/Tmax)*(W-2*M);
+          const py=H-M-(f/Fmax)*(H-2*M);
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+        ctx.beginPath();ctx.moveTo(M,H-M);
+        for(let i=0;i<=80;i++){
+          const t=(T*i)/80;
+          const f=Fp*Math.sin(Math.PI*t/T);
+          const px=M+(t/Tmax)*(W-2*M);
+          const py=H-M-(f/Fmax)*(H-2*M);
+          ctx.lineTo(px,py);
+        }
+        ctx.lineTo(M+(T/Tmax)*(W-2*M),H-M);
+        ctx.closePath();ctx.fill();
+      }
+      curve(t1,Fpeak1,'#0b5fff','rgba(11,95,255,0.18)');
+      curve(t2,Fpeak2,'#c62828','rgba(198,40,40,0.22)');
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-220,30,200,108);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,30,200,108);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('Δp = '+dp.toFixed(0)+' N·s (공통)',W-210,50);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText('부드러움: F_peak ≈ '+Fpeak1.toFixed(0)+' N',W-210,72);
+      ctx.fillText('   ≈ '+(Fpeak1/(m*9.8)).toFixed(1)+'g',W-210,90);
+      ctx.fillStyle='#c62828';
+      ctx.fillText('단단함: F_peak ≈ '+Fpeak2.toFixed(0)+' N',W-210,110);
+      ctx.fillText('   ≈ '+(Fpeak2/(m*9.8)).toFixed(1)+'g',W-210,128);
+    }
+    ['w4_imp_m','w4_imp_v','w4_imp_t1','w4_imp_t2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

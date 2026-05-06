@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Bug 2 시뮬레이션 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Bug 2 시뮬레이션</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/06-path-planning.html">Lecture 6. 경로 계획</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Bug 2 시뮬레이션</h4>
+    <p>로봇(파랑)은 m-line(점선)을 따라 목표(빨강)로 향합니다. 장애물에 부딪히면 둘레를 시계반대 방향으로 돌다가 m-line과 다시 만나는 더 가까운 점에서 다시 직진합니다. <strong>시작</strong>을 눌러 보세요.</p>
+    <canvas id="bug" width="640" height="380"></canvas>
+    <div class="controls">
+      <button id="bugStart">시작 / 일시정지</button>
+      <button id="bugRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bug'),x=c.getContext('2d');
+    const obs=[{x:200,y:180,r:50},{x:380,y:130,r:42},{x:470,y:270,r:50}];
+    const start=[40,200],goal=[600,200];
+    let pos=[...start],state='goal',followObs=null,entryDist=0,trail=[],running=false,steps=0;
+    function reset(){pos=[...start];state='goal';followObs=null;trail=[start.slice()];running=false;steps=0;}
+    reset();
+    document.getElementById('bugStart').onclick=()=>{running=!running;};
+    document.getElementById('bugRst').onclick=reset;
+    function distGoal(p){return Math.hypot(p[0]-goal[0],p[1]-goal[1]);}
+    function distLine(p){
+      const dx=goal[0]-start[0],dy=goal[1]-start[1],L=Math.hypot(dx,dy);
+      return Math.abs(((p[0]-start[0])*dy-(p[1]-start[1])*dx)/L);
+    }
+    function obstacleAt(p,buf){
+      for(const o of obs){if(Math.hypot(p[0]-o.x,p[1]-o.y)<o.r+buf)return o;}
+      return null;
+    }
+    function step(){
+      if(distGoal(pos)<10){running=false;return;}
+      const STEP=1.6;
+      if(state==='goal'){
+        const dx=goal[0]-pos[0],dy=goal[1]-pos[1],d=Math.hypot(dx,dy);
+        const np=[pos[0]+dx/d*STEP,pos[1]+dy/d*STEP];
+        const o=obstacleAt(np,3);
+        if(o){state='wall';followObs=o;entryDist=distGoal(pos);steps=0;}
+        else pos=np;
+      }else{
+        const dx=pos[0]-followObs.x,dy=pos[1]-followObs.y,d=Math.hypot(dx,dy);
+        const tx=-dy/d, ty=dx/d;
+        const targetD=followObs.r+5;
+        const corr=(targetD-d)*0.15;
+        let np=[pos[0]+tx*STEP+(dx/d)*corr, pos[1]+ty*STEP+(dy/d)*corr];
+        for(const o of obs){
+          if(o===followObs)continue;
+          if(Math.hypot(np[0]-o.x,np[1]-o.y)<o.r+4){followObs=o;break;}
+        }
+        pos=np; steps++;
+        if(steps>20 && distLine(pos)<3 && distGoal(pos)<entryDist-2){
+          state='goal';followObs=null;
+        }
+      }
+      trail.push(pos.slice());
+      if(trail.length>3000)running=false;
+    }
+    function draw(){
+      if(running){for(let k=0;k<2;k++)step();}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#cfd8e3';x.setLineDash([6,4]);x.lineWidth=1.5;
+      x.beginPath();x.moveTo(start[0],start[1]);x.lineTo(goal[0],goal[1]);x.stroke();x.setLineDash([]);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('m-line',start[0]+10,start[1]-8);
+      obs.forEach(o=>{x.fillStyle='#c62828';x.beginPath();x.arc(o.x,o.y,o.r,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      trail.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke();
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0],start[1],8,0,Math.PI*2);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0],goal[1],10,0,Math.PI*2);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(pos[0],pos[1],6,0,Math.PI*2);x.fill();
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('상태: '+(state==='goal'?'🎯 목표 향해 직진':'🌀 장애물 둘레 추종'),12,22);
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('총 이동: '+trail.length+' 스텝 · 목표까지 '+distGoal(pos).toFixed(0)+' px',12,c.height-12);
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

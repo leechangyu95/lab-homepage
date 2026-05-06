@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 2차 시스템의 보드 플롯과 공진 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 2차 시스템의 보드 플롯과 공진</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/10-transfer-function.html">Week 10. 전달 함수 — 라플라스 변환으로 풀이를 자동화</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2차 시스템의 보드 플롯과 공진</h4>
+    <p>$\zeta$를 작게 키우면 보드 플롯의 크기 응답에 <strong>공진 봉우리</strong>(peaking)가 생깁니다. $\zeta &lt; 0.707$이면 항상 $\omega_n$ 부근에서 공진이 보여요. 위상은 항상 $\omega_n$에서 정확히 $-90°$를 통과합니다 — 이게 시스템 식별 실험에서 $\omega_n$을 찾는 방법.</p>
+    <canvas id="bodeDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>감쇠비 ζ <span class="val" id="bdZV">0.3</span><input type="range" id="bdZ" min="0.05" max="2" step="0.02" value="0.3"></label>
+      <label>고유 주파수 ωn <span class="val" id="bdWV">5</span> rad/s<input type="range" id="bdW" min="1" max="20" step="0.5" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bodeDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const z=+document.getElementById('bdZ').value;
+      const wn=+document.getElementById('bdW').value;
+      document.getElementById('bdZV').textContent=z.toFixed(2);
+      document.getElementById('bdWV').textContent=wn.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=60, w=W-90;
+      const fmin=wn/100, fmax=wn*100;
+      function fx(f){return ox+(Math.log10(f/fmin))/4*w;}
+      // top: magnitude (dB)
+      const oyM=130, hM=90;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oyM);ctx.lineTo(ox+w,oyM);ctx.moveTo(ox,30);ctx.lineTo(ox,oyM);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.fillText('|H| (dB)',12,40);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let dB=-60;dB<=20;dB+=20){const yy=oyM-(dB+60)/80*hM;
+        if(yy>30){ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}}
+      for(let p=-2;p<=2;p++){const f=wn*Math.pow(10,p);const xx=fx(f);
+        ctx.beginPath();ctx.moveTo(xx,30);ctx.lineTo(xx,oyM);ctx.stroke();}
+      // 0 dB line
+      ctx.strokeStyle='#aaa';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oyM-60/80*hM);ctx.lineTo(ox+w,oyM-60/80*hM);ctx.stroke();ctx.setLineDash([]);
+      // mag curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const w_=Math.pow(10,lf);
+        const re=wn*wn-w_*w_, im=2*z*wn*w_;
+        const mag=wn*wn/Math.sqrt(re*re+im*im);
+        const dB=20*Math.log10(Math.max(1e-3,mag));
+        const xx=fx(w_), yy=oyM-(dB+60)/80*hM;
+        if(lf===Math.log10(fmin))ctx.moveTo(xx,Math.max(30,Math.min(oyM,yy)));
+        else ctx.lineTo(xx,Math.max(30,Math.min(oyM,yy)));
+      }
+      ctx.stroke();
+      // mark wn
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(fx(wn),30);ctx.lineTo(fx(wn),oyM);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='11px sans-serif';ctx.fillText('ωn='+wn.toFixed(1),fx(wn)+4,40);
+      // bottom: phase
+      const oyP=H-40, hP=90, oyP0=oyP-hP;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oyP);ctx.lineTo(ox+w,oyP);ctx.moveTo(ox,oyP0);ctx.lineTo(ox,oyP);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.fillText('∠H (°)',12,oyP0+10);
+      ctx.strokeStyle='#eee';
+      for(let p=0;p>=-180;p-=45){const yy=oyP0+(-p)/180*hP;
+        ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();
+        ctx.fillStyle='#888';ctx.font='10px sans-serif';ctx.fillText(p+'°',ox-28,yy+3);}
+      // -90 line
+      ctx.strokeStyle='#aaa';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oyP0+90/180*hP);ctx.lineTo(ox+w,oyP0+90/180*hP);ctx.stroke();ctx.setLineDash([]);
+      // phase curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const w_=Math.pow(10,lf);
+        const re=wn*wn-w_*w_, im=2*z*wn*w_;
+        let phi=-Math.atan2(im,re)*180/Math.PI;
+        if(phi>0)phi-=360;
+        const xx=fx(w_), yy=oyP0+(-phi)/180*hP;
+        if(lf===Math.log10(fmin))ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(fx(wn),oyP0);ctx.lineTo(fx(wn),oyP);ctx.stroke();ctx.setLineDash([]);
+      // labels
+      const Mp_dB = z<1/Math.sqrt(2) ? 20*Math.log10(1/(2*z*Math.sqrt(1-z*z))) : 0;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`공진 피크: ${z<0.707?'+'+Mp_dB.toFixed(1)+' dB ('+(Math.pow(10,Mp_dB/20)).toFixed(2)+'배)':'없음 (ζ ≥ 0.707)'}`,ox+200,22);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('주파수 ω (log)',W-110,oyP+22);
+    }
+    document.getElementById('bdZ').addEventListener('input',draw);
+    document.getElementById('bdW').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

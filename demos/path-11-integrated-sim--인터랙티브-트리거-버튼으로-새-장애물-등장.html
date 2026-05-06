@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 트리거 버튼으로 새 장애물 등장 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 트리거 버튼으로 새 장애물 등장</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/11-integrated-sim.html">Week 11. 경로계획 + 유도제어 통합 시뮬레이션</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 트리거 버튼으로 새 장애물 등장</h4>
+    <p>주행 중 새 장애물이 경로 위로 떨어지면 시스템은 즉시 A*로 재계획하고 새 경로를 따라갑니다. 이게 자율주행의 표준 패턴입니다.</p>
+    <canvas id="rpCv" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="addObsB">장애물 추가</button>
+      <button id="rstRpB" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rpCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const W=20,H=10;const sc=Math.min(c.width/W,c.height/H);
+    const start=[1,5],goal=[19,5];
+    let obs=[[10,4,1.0]];let path=null,car;
+    function planA(){
+      const N=40,M=20;const gx=W/N,gy=H/M;
+      const blocked=(i,j)=>{const x_=i*gx+gx/2,y_=j*gy+gy/2;for(const o of obs){if(Math.hypot(x_-o[0],y_-o[1])<o[2]+0.3)return true;}return false;};
+      const si=Math.round(start[0]/gx),sj=Math.round(start[1]/gy);
+      const ti=Math.round(goal[0]/gx),tj=Math.round(goal[1]/gy);
+      const open=new Map(),closed=new Set(),parent=new Map(),g=new Map();
+      const k0=si+','+sj;g.set(k0,0);open.set(k0,{i:si,j:sj,f:Math.hypot(si-ti,sj-tj)});
+      let found=null,it=0;
+      while(open.size>0&&it<5000){it++;let bk=null,bf=1e9;for(const[k,n]of open){if(n.f<bf){bf=n.f;bk=k;}}
+        const cur=open.get(bk);open.delete(bk);closed.add(bk);
+        if(cur.i===ti&&cur.j===tj){found=bk;break;}
+        for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){if(di===0&&dj===0)continue;
+          const ni=cur.i+di,nj=cur.j+dj;if(ni<0||ni>=N||nj<0||nj>=M)continue;if(blocked(ni,nj))continue;
+          const nk=ni+','+nj;if(closed.has(nk))continue;const cost=(di&&dj)?Math.SQRT2:1;
+          const ng=g.get(bk)+cost;if(!g.has(nk)||ng<g.get(nk)){g.set(nk,ng);parent.set(nk,bk);
+            open.set(nk,{i:ni,j:nj,f:ng+Math.hypot(ni-ti,nj-tj)});}}}
+      if(!found)return null;const pts=[];let k=found;while(k){const[ii,jj]=k.split(',').map(Number);pts.push([ii*gx+gx/2,jj*gy+gy/2]);k=parent.get(k);}pts.reverse();return pts;
+    }
+    function reset(){obs=[[10,4,1.0]];path=planA();car={x:start[0],y:start[1],psi:0,v:6};}
+    reset();$('rstRpB').onclick=reset;
+    $('addObsB').onclick=()=>{obs.push([car.x+5,car.y+(Math.random()-0.5)*3,0.9]);path=planA();};
+    function loop(){
+      if(path){
+        // find next target on path
+        let bi=0,bd=1e9;path.forEach((p,i)=>{const d=Math.hypot(p[0]-car.x,p[1]-car.y);if(d<bd){bd=d;bi=i;}});
+        let tg=path[Math.min(bi+8,path.length-1)];
+        const alpha=Math.atan2(tg[1]-car.y,tg[0]-car.x)-car.psi;
+        const wa=Math.atan2(Math.sin(alpha),Math.cos(alpha));
+        const delta=Math.atan2(2*2.5*Math.sin(wa),1.5);
+        const dt=0.02;car.x+=car.v*Math.cos(car.psi)*dt;car.y+=car.v*Math.sin(car.psi)*dt;
+        car.psi+=car.v/2.5*Math.tan(delta)*dt;
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      if(path){x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+        path.forEach((p,i)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0]*sc,c.height-start[1]*sc,6,0,2*Math.PI);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,6,0,2*Math.PI);x.fill();
+      x.save();x.translate(car.x*sc,c.height-car.y*sc);x.rotate(-car.psi);
+      x.fillStyle='#0b5fff';x.fillRect(-12,-6,24,12);x.fillStyle='#fff';x.fillRect(7,-5,4,10);x.restore();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

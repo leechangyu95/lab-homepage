@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>변압기 시뮬레이터 — 발전소부터 핸드폰 어댑터까지 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">변압기 시뮬레이터 — 발전소부터 핸드폰 어댑터까지</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/14-induction-maxwell.html">Week 14. 전자기 유도 + 맥스웰 티저</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>변압기 시뮬레이터 — 발전소부터 핸드폰 어댑터까지</h4>
+    <p>이상 변압기에서 전력 보존 $V_1 I_1 = V_2 I_2$ → 전압이 올라가면 전류는 그만큼 떨어진다. 송전탑이 수백 kV로 올리는 이유는 손실 $P=I^2R$을 줄이기 위함.</p>
+    <canvas id="w14_xfmr" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>1차 전압 $V_1$ <span class="val" id="w14_xV1V">220</span> V
+        <input type="range" id="w14_xV1" min="10" max="500" step="10" value="220"></label>
+      <label>1차 권수 $N_1$ <span class="val" id="w14_xN1V">100</span>
+        <input type="range" id="w14_xN1" min="10" max="500" step="10" value="100"></label>
+      <label>2차 권수 $N_2$ <span class="val" id="w14_xN2V">500</span>
+        <input type="range" id="w14_xN2" min="10" max="2000" step="10" value="500"></label>
+      <label>부하 전류 $I_2$ <span class="val" id="w14_xI2V">0.5</span> A
+        <input type="range" id="w14_xI2" min="0.1" max="5" step="0.1" value="0.5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$N_1=100, N_2=500$ → 5배 승압 ($V_2 = 5 V_1$). 핸드폰 충전 어댑터는 그 반대(강압).</li>
+        <li>발전소 시뮬레이션: $V_1=10000$, $N_2/N_1 = 50$ → $V_2 = 500$ kV. 송전 손실 1/2500.</li>
+        <li>$N_2$가 클수록 $V_2$ 증가하지만 $I_1$도 증가 → 1차에서 더 많은 전류가 필요.</li>
+        <li>변압기는 <strong>DC에서 작동 안 함</strong> — $V_1$이 일정하면 $\Phi_B$ 일정 → 유도 0.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w14_xfmr');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const V1=+document.getElementById('w14_xV1').value;
+      const N1=+document.getElementById('w14_xN1').value;
+      const N2=+document.getElementById('w14_xN2').value;
+      const I2=+document.getElementById('w14_xI2').value;
+      document.getElementById('w14_xV1V').textContent=V1;
+      document.getElementById('w14_xN1V').textContent=N1;
+      document.getElementById('w14_xN2V').textContent=N2;
+      document.getElementById('w14_xI2V').textContent=I2.toFixed(1);
+      const V2=V1*N2/N1;
+      const I1=I2*N2/N1;
+      const P=V2*I2;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // iron core
+      const cx=W/2, cy=H/2;
+      ctx.strokeStyle='#444';ctx.lineWidth=8;ctx.fillStyle='#e8e8e8';
+      ctx.fillRect(cx-90,cy-80,180,160);ctx.strokeRect(cx-90,cy-80,180,160);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(cx-60,cy-50,120,100);ctx.strokeRect(cx-60,cy-50,120,100);
+      // primary coil
+      const np=Math.min(12,Math.max(3,Math.round(N1/30)));
+      ctx.strokeStyle='#b08000';ctx.lineWidth=3;
+      for(let i=0;i<np;i++){
+        const yy=cy-40+i*(80/(np-1||1));
+        ctx.beginPath();ctx.ellipse(cx-90,yy,8,5,0,0,Math.PI*2);ctx.stroke();
+      }
+      // secondary coil
+      const ns=Math.min(20,Math.max(3,Math.round(N2/30)));
+      ctx.strokeStyle='#0b5fff';
+      for(let i=0;i<ns;i++){
+        const yy=cy-40+i*(80/(ns-1||1));
+        ctx.beginPath();ctx.ellipse(cx+90,yy,8,5,0,0,Math.PI*2);ctx.stroke();
+      }
+      // labels
+      ctx.fillStyle='#b08000';ctx.font='bold 13px sans-serif';
+      ctx.fillText('1차 (N₁='+N1+')',cx-150,cy-90);
+      ctx.fillStyle='#0b5fff';
+      ctx.fillText('2차 (N₂='+N2+')',cx+50,cy-90);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('철심',cx-15,cy+5);
+      // info
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(8,8,200,108);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,200,108);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('V₁ = '+V1+' V',16,28);
+      ctx.fillText('I₁ = '+I1.toFixed(2)+' A',16,46);
+      ctx.fillText('V₂ = '+V2.toFixed(0)+' V',16,64);
+      ctx.fillText('I₂ = '+I2.toFixed(2)+' A',16,82);
+      ctx.fillText('P = '+P.toFixed(0)+' W',16,100);
+      // ratio
+      ctx.fillStyle=N2>N1?'#2e7d32':'#c62828';ctx.font='bold 13px sans-serif';
+      ctx.fillText((N2>N1?'승압 (step-up) ×':'강압 (step-down) ×')+(N2/N1).toFixed(2),W-220,30);
+    }
+    ['w14_xV1','w14_xN1','w14_xN2','w14_xI2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

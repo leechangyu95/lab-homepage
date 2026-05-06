@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 행렬 곱셈을 한 칸씩 채워보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 행렬 곱셈을 한 칸씩 채워보기</h1>
+  <p class="demo-meta">
+    선형대수학 · <a href="../backup-lectures/lectures-linear-algebra/05-matrix-basics.html">Week 5. 행렬 (1) — 정의·연산</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 행렬 곱셈을 한 칸씩 채워보기</h4>
+    <p>아래 결과 행렬 $C$ 의 빨간 칸을 클릭하세요. 그 칸을 채우는 데 쓰는
+       $A$ 의 <strong>행</strong>과 $B$ 의 <strong>열</strong>이 색칠되고,
+       <strong>"행 · 열" = 내적</strong> 계산이 단계별로 보입니다.
+       숫자도 슬라이더로 바꿔보세요 — 손계산이 어떻게 나오는지가 실시간으로 보입니다.</p>
+    <canvas id="mmDemo" width="780" height="320"></canvas>
+    <div class="controls">
+      <label>a₁₁ <span class="val" id="a11V">1</span><input type="range" id="a11" min="-5" max="5" step="1" value="1"></label>
+      <label>a₁₂ <span class="val" id="a12V">2</span><input type="range" id="a12" min="-5" max="5" step="1" value="2"></label>
+      <label>a₂₁ <span class="val" id="a21V">3</span><input type="range" id="a21" min="-5" max="5" step="1" value="3"></label>
+      <label>a₂₂ <span class="val" id="a22V">4</span><input type="range" id="a22" min="-5" max="5" step="1" value="4"></label>
+      <label>b₁₁ <span class="val" id="b11V">5</span><input type="range" id="b11" min="-5" max="5" step="1" value="5"></label>
+      <label>b₁₂ <span class="val" id="b12V">6</span><input type="range" id="b12" min="-5" max="5" step="1" value="6"></label>
+      <label>b₂₁ <span class="val" id="b21V">7</span><input type="range" id="b21" min="-5" max="5" step="1" value="7"></label>
+      <label>b₂₂ <span class="val" id="b22V">8</span><input type="range" id="b22" min="-5" max="5" step="1" value="8"></label>
+    </div>
+    <p id="mmExplain" style="margin-top:10px;font-family:Consolas,monospace;font-size:14px;color:#0b5fff"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mmDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pick={i:0,j:0};
+    const ids=['a11','a12','a21','a22','b11','b12','b21','b22'];
+    function getA(){return [[+document.getElementById('a11').value,+document.getElementById('a12').value],
+                           [+document.getElementById('a21').value,+document.getElementById('a22').value]];}
+    function getB(){return [[+document.getElementById('b11').value,+document.getElementById('b12').value],
+                           [+document.getElementById('b21').value,+document.getElementById('b22').value]];}
+    function mul(A,B){const C=[[0,0],[0,0]];for(let i=0;i<2;i++)for(let j=0;j<2;j++)C[i][j]=A[i][0]*B[0][j]+A[i][1]*B[1][j];return C;}
+    const cellW=70,cellH=70,gap=80;
+    const Ax=40,Bx=Ax+2*cellW+gap,Cx=Bx+2*cellW+gap,Ty=80;
+    function drawMat(x,y,M,name,hiRow,hiCol,clickRows,clickCols){
+      ctx.strokeStyle='#333';ctx.lineWidth=2;
+      ctx.strokeRect(x,y,2*cellW,2*cellH);
+      ctx.font='13px sans-serif';ctx.fillStyle='#666';ctx.fillText(name,x,y-8);
+      for(let i=0;i<2;i++)for(let j=0;j<2;j++){
+        const cx=x+j*cellW,cy=y+i*cellH;
+        let fill='#fff';
+        if(hiRow!==undefined&&i===hiRow)fill='rgba(22,119,255,0.18)';
+        if(hiCol!==undefined&&j===hiCol)fill='rgba(250,140,22,0.18)';
+        if(hiRow!==undefined&&i===hiRow&&hiCol!==undefined&&j===hiCol)fill='rgba(207,19,34,0.30)';
+        ctx.fillStyle=fill;ctx.fillRect(cx,cy,cellW,cellH);
+        ctx.strokeStyle='#ccc';ctx.strokeRect(cx,cy,cellW,cellH);
+        ctx.fillStyle='#222';ctx.font='18px sans-serif';ctx.textAlign='center';
+        ctx.fillText(M[i][j],cx+cellW/2,cy+cellH/2+6);
+      }
+      ctx.textAlign='left';
+    }
+    function draw(){
+      ids.forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const A=getA(),B=getB(),C=mul(A,B);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      drawMat(Ax,Ty,A,'A (2×2)',pick.i,undefined);
+      drawMat(Bx,Ty,B,'B (2×2)',undefined,pick.j);
+      drawMat(Cx,Ty,C,'C = AB',pick.i,pick.j);
+      ctx.fillStyle='#333';ctx.font='28px sans-serif';
+      ctx.fillText('×',Ax+2*cellW+25,Ty+cellH+8);
+      ctx.fillText('=',Bx+2*cellW+25,Ty+cellH+8);
+      ctx.font='13px sans-serif';ctx.fillStyle='#0b5fff';
+      ctx.fillText('파란색: A의 i행',Ax,Ty+2*cellH+30);
+      ctx.fillStyle='#fa8c16';ctx.fillText('주황: B의 j열',Bx,Ty+2*cellH+30);
+      ctx.fillStyle='#cf1322';ctx.fillText('빨강: 결과 위치 c_ij (클릭)',Cx,Ty+2*cellH+30);
+      const i=pick.i,j=pick.j;
+      const expl=document.getElementById('mmExplain');
+      expl.innerHTML=`c<sub>${i+1}${j+1}</sub> = (A의 ${i+1}행) · (B의 ${j+1}열)
+        = ${A[i][0]}·${B[0][j]} + ${A[i][1]}·${B[1][j]}
+        = ${A[i][0]*B[0][j]} + ${A[i][1]*B[1][j]}
+        = <b>${C[i][j]}</b>`;
+    }
+    c.addEventListener('click',e=>{
+      const r=c.getBoundingClientRect();
+      const x=(e.clientX-r.left)*(c.width/r.width);
+      const y=(e.clientY-r.top)*(c.height/r.height);
+      if(x>=Cx&&x<Cx+2*cellW&&y>=Ty&&y<Ty+2*cellH){
+        pick={i:Math.floor((y-Ty)/cellH),j:Math.floor((x-Cx)/cellW)};draw();
+      }
+    });
+    ids.forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

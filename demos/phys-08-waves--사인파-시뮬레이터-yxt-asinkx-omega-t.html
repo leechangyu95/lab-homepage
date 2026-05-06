@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🌊 사인파 시뮬레이터 — $y(x,t) = A\sin(kx - \omega t)$ — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🌊 사인파 시뮬레이터 — $y(x,t) = A\sin(kx - \omega t)$</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/08-waves.html">Week 8. 파동과 소리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🌊 사인파 시뮬레이터 — $y(x,t) = A\sin(kx - \omega t)$</h4>
+    <p>빨간 점은 한 입자($x=$중간 고정). 파동은 오른쪽으로 가지만 빨간 점은 제자리에서 위아래로만 움직입니다. <strong>매질은 가지 않고 모양만 간다.</strong></p>
+    <canvas id="w8_sineDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>진폭 $A$ <span class="val" id="w8_aV">1.0</span> m
+        <input type="range" id="w8_a" min="0.2" max="2.0" step="0.1" value="1.0"></label>
+      <label>파장 $\lambda$ <span class="val" id="w8_lV">2.0</span> m
+        <input type="range" id="w8_l" min="0.5" max="6.0" step="0.1" value="2.0"></label>
+      <label>진동수 $f$ <span class="val" id="w8_fV">1.0</span> Hz
+        <input type="range" id="w8_f" min="0.1" max="3.0" step="0.1" value="1.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$\lambda$만 두 배로 → 파동 모양은 더 길어지지만 빨간 점의 진동 빈도는 그대로</li>
+        <li>$f$만 두 배로 → 빨간 점이 두 배 빨리 진동, 파동도 더 빨리 흐름 ($v = f\lambda$)</li>
+        <li>$A$만 두 배로 → 위아래 폭만 두 배. 속도·진동수와 무관 (에너지 ∝ $A^2$만 변함)</li>
+        <li>$f$와 $\lambda$를 동시에 반대로 조정해 $v$를 일정하게 → 같은 매질이라는 의미</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w8_sineDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t0=performance.now();
+    function draw(){
+      const A=+document.getElementById('w8_a').value;
+      const L=+document.getElementById('w8_l').value;
+      const f=+document.getElementById('w8_f').value;
+      document.getElementById('w8_aV').textContent=A.toFixed(1);
+      document.getElementById('w8_lV').textContent=L.toFixed(1);
+      document.getElementById('w8_fV').textContent=f.toFixed(1);
+      const t=(performance.now()-t0)/1000;
+      const k=2*Math.PI/L,om=2*Math.PI*f,v=om/k;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=40,oy=H/2;const sx=(W-60)/8,sy=60;
+      ctx.strokeStyle='#e3e6ea';ctx.lineWidth=1;
+      for(let g=0;g<=8;g++){ctx.beginPath();ctx.moveTo(ox+g*sx,20);ctx.lineTo(ox+g*sx,H-30);ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(W-20,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,20);ctx.lineTo(ox,H-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      for(let g=0;g<=8;g+=2)ctx.fillText(g+' m',ox+g*sx-8,H-12);
+      ctx.fillText('y',8,oy+4);ctx.fillText('x',W-15,oy+14);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=400;i++){
+        const x=8*i/400;const y=A*Math.sin(k*x-om*t);
+        const px=ox+x*sx,py=oy-y*sy;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      const xfix=4,yfix=A*Math.sin(k*xfix-om*t);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(ox+xfix*sx,oy-yfix*sy,6,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox+xfix*sx,20);ctx.lineTo(ox+xfix*sx,H-30);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-180,28,160,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-180,28,160,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('v = fλ = '+(f*L).toFixed(2)+' m/s',W-172,46);
+      ctx.fillText('k = 2π/λ = '+k.toFixed(2),W-172,64);
+      ctx.fillText('ω = 2πf = '+om.toFixed(2),W-172,82);
+      ctx.fillText('T = 1/f = '+(1/f).toFixed(2)+' s',W-172,98);
+      requestAnimationFrame(draw);
+    }
+    ['w8_a','w8_l','w8_f'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{}));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

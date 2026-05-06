@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 과도응답 지표 + 튜닝 프리셋 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 과도응답 지표 + 튜닝 프리셋</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/07-feedback-control.html">Lecture 7. 피드백 제어 (PID)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 과도응답 지표 + 튜닝 프리셋</h4>
+    <p>플랜트 $G(s) = 1/(s+1)^3$를 PID로 제어합니다. 응답 곡선에 4가지 지표가 자동으로 측정·표시되고, 프리셋 버튼으로 Z-N 변종과 한계이득 상태를 즉시 비교할 수 있습니다. 이 플랜트의 이론값은 $K_u = 8$, $T_u \approx 3.628$ s (Routh-Hurwitz로 직접 풀어 구한 결과).</p>
+    <canvas id="tr" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="trkpV">4.80</span><input type="range" id="trkp" min="0" max="10" step="0.05" value="4.8"></label>
+      <label>Ki <span class="val" id="trkiV">2.65</span><input type="range" id="trki" min="0" max="10" step="0.05" value="2.65"></label>
+      <label>Kd <span class="val" id="trkdV">2.18</span><input type="range" id="trkd" min="0" max="5" step="0.05" value="2.18"></label>
+      <button id="trStep">스텝 토글 (0↔1)</button>
+      <button id="trRst" class="alt">처음부터</button>
+    </div>
+    <div class="controls" style="margin-top:6px">
+      <span style="font-size:13px;color:#666;margin-right:8px">튜닝 프리셋:</span>
+      <button data-tr-preset="zn-pid">Z-N PID</button>
+      <button data-tr-preset="zn-pi">Z-N PI</button>
+      <button data-tr-preset="zn-p">Z-N P-only</button>
+      <button data-tr-preset="ku">한계이득 K_u</button>
+      <button data-tr-preset="soft">소프트 (저게인)</button>
+    </div>
+    <p style="font-size:13px;color:#666"><strong>관찰 가이드</strong> — Z-N PID는 빠르지만 오버슈트 ~25%(전형적인 Z-N 특성). Z-N PI는 진동이 줄지만 느립니다. K_u에서는 지속진동이 보여 주기 $T_u$를 직접 잴 수 있습니다. 소프트 프리셋은 천천히, 부드럽게 — 대신 정상오차(작은 I)와 긴 정착이 보입니다.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tr'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    let st=[0,0,0],iE=0,prevE=0,t=0,ref=1;
+    let hist=[];
+    function reset(){st=[0,0,0];iE=0;prevE=0;t=0;hist=[];}
+    reset();
+    function updateLabels(){['trkp','trki','trkd'].forEach(k=>sl(k+'V').textContent=(+sl(k).value).toFixed(2));}
+    function setGains(kp,ki,kd){sl('trkp').value=kp;sl('trki').value=ki;sl('trkd').value=kd;updateLabels();ref=1;reset();}
+    ['trkp','trki','trkd'].forEach(k=>sl(k).oninput=updateLabels);
+    sl('trRst').onclick=()=>{ref=1;reset();};
+    sl('trStep').onclick=()=>{ref=ref>0.5?0:1;reset();};
+    document.querySelectorAll('[data-tr-preset]').forEach(b=>b.onclick=()=>{
+      const p=b.dataset.trPreset;
+      if(p==='zn-pid')setGains(4.80,2.65,2.18);
+      else if(p==='zn-pi')setGains(3.60,1.19,0);
+      else if(p==='zn-p')setGains(4.00,0,0);
+      else if(p==='ku')setGains(8.00,0,0);
+      else if(p==='soft')setGains(1.50,0.30,0.50);
+    });
+    const dt=0.02, T_END=14;
+    function stepSim(){
+      if(t>=T_END)return;
+      const Kp=+sl('trkp').value, Ki=+sl('trki').value, Kd=+sl('trkd').value;
+      const e=ref-st[0]; iE+=e*dt; const dE=(e-prevE)/dt; prevE=e;
+      const u=Kp*e+Ki*iE+Kd*dE;
+      const ds=[st[1],st[2],-st[0]-3*st[1]-3*st[2]+u];
+      st=[st[0]+ds[0]*dt,st[1]+ds[1]*dt,st[2]+ds[2]*dt];
+      t+=dt;
+      hist.push({t,y:st[0]});
+    }
+    function indicators(){
+      if(hist.length<5)return null;
+      if(Math.abs(ref)<1e-3)return null;
+      const tgt=ref;
+      const y10=0.1*tgt, y90=0.9*tgt;
+      let t10=null,t90=null;
+      for(const h of hist){
+        if(t10===null && h.y>=y10)t10=h.t;
+        if(t90===null && h.y>=y90){t90=h.t;break;}
+      }
+      const tr=(t10!==null&&t90!==null)?(t90-t10):null;
+      let yMax=hist[0].y, tPeak=hist[0].t;
+      hist.forEach(h=>{if(h.y>yMax){yMax=h.y;tPeak=h.t;}});
+      const Mp=Math.max(0,(yMax-tgt)/Math.abs(tgt)*100);
+      let ts=null;
+      for(let i=hist.length-1;i>=0;i--){
+        if(Math.abs(hist[i].y-tgt)>0.02*Math.abs(tgt)){
+          ts=(i+1<hist.length)?hist[i+1].t:null;break;
+        }
+      }
+      const tail=hist.slice(-Math.min(40,hist.length));
+      const ssY=tail.reduce((a,b)=>a+b.y,0)/tail.length;
+      const eInf=tgt-ssY;
+      return {tr,Mp,ts,eInf,yMax,tPeak,t10,t90};
+    }
+    function draw(){
+      stepSim();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const pl={x:46,y:30,w:430,h:300};
+      x.strokeStyle='#eef0f3';x.lineWidth=1;
+      for(let g=0;g<=T_END;g+=1){const xx=pl.x+(g/T_END)*pl.w;x.beginPath();x.moveTo(xx,pl.y);x.lineTo(xx,pl.y+pl.h);x.stroke();}
+      const Y_MAX=1.7;
+      for(let g=0;g<=Y_MAX;g+=0.25){const yy=pl.y+pl.h-(g/Y_MAX)*pl.h;x.beginPath();x.moveTo(pl.x,yy);x.lineTo(pl.x+pl.w,yy);x.stroke();}
+      x.strokeStyle='#666';x.lineWidth=1.5;
+      x.beginPath();x.moveTo(pl.x,pl.y+pl.h);x.lineTo(pl.x+pl.w,pl.y+pl.h);x.stroke();
+      x.beginPath();x.moveTo(pl.x,pl.y);x.lineTo(pl.x,pl.y+pl.h);x.stroke();
+      x.fillStyle='#666';x.font='10px sans-serif';
+      for(let g=0;g<=T_END;g+=2){const xx=pl.x+(g/T_END)*pl.w;x.fillText(g+'s',xx-7,pl.y+pl.h+13);}
+      for(let g=0;g<=Y_MAX;g+=0.5){const yy=pl.y+pl.h-(g/Y_MAX)*pl.h;x.fillText(g.toFixed(1),pl.x-22,yy+3);}
+      x.fillText('y(t)',pl.x-15,pl.y-6);
+      const refY=pl.y+pl.h-(ref/Y_MAX)*pl.h;
+      if(Math.abs(ref)>0.01){
+        const bandH=(0.02*Math.abs(ref)/Y_MAX)*pl.h;
+        x.fillStyle='rgba(46,125,50,0.13)';x.fillRect(pl.x,refY-bandH,pl.w,bandH*2);
+      }
+      x.strokeStyle='#c62828';x.lineWidth=1.5;x.setLineDash([6,4]);
+      x.beginPath();x.moveTo(pl.x,refY);x.lineTo(pl.x+pl.w,refY);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='11px sans-serif';
+      x.fillText('목표 r='+ref.toFixed(1),pl.x+pl.w-65,refY-5);
+      const ind=indicators();
+      if(ind){
+        if(ind.tr!==null && ind.t10!==null && ind.t90!==null){
+          const xa=pl.x+(ind.t10/T_END)*pl.w, xb=pl.x+(ind.t90/T_END)*pl.w;
+          x.fillStyle='rgba(255,140,0,0.13)';x.fillRect(xa,pl.y,xb-xa,pl.h);
+          x.strokeStyle='rgba(255,140,0,0.9)';x.lineWidth=1.2;
+          x.beginPath();x.moveTo(xa,pl.y);x.lineTo(xa,pl.y+pl.h);x.stroke();
+          x.beginPath();x.moveTo(xb,pl.y);x.lineTo(xb,pl.y+pl.h);x.stroke();
+          x.fillStyle='#ff8c00';x.font='11px sans-serif';
+          x.fillText('t_r',(xa+xb)/2-6,pl.y-4);
+        }
+        if(ind.Mp>0.5){
+          const px2=pl.x+(ind.tPeak/T_END)*pl.w, py2=pl.y+pl.h-(ind.yMax/Y_MAX)*pl.h;
+          x.fillStyle='#9c27b0';x.beginPath();x.arc(px2,py2,5,0,Math.PI*2);x.fill();
+          x.strokeStyle='rgba(156,39,176,0.55)';x.setLineDash([3,3]);x.lineWidth=1;
+          x.beginPath();x.moveTo(pl.x,py2);x.lineTo(px2,py2);x.stroke();x.setLineDash([]);
+          x.fillStyle='#9c27b0';x.font='11px sans-serif';x.fillText('M_p',px2+7,py2-2);
+        }
+        if(ind.ts!==null && ind.ts>0.05){
+          const xs=pl.x+(ind.ts/T_END)*pl.w;
+          x.strokeStyle='#2e7d32';x.lineWidth=1.2;x.setLineDash([4,4]);
+          x.beginPath();x.moveTo(xs,pl.y);x.lineTo(xs,pl.y+pl.h);x.stroke();x.setLineDash([]);
+          x.fillStyle='#2e7d32';x.font='11px sans-serif';x.fillText('t_s',xs+3,pl.y+14);
+        }
+      }
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{
+        const xx=pl.x+(h.t/T_END)*pl.w;
+        const yy=pl.y+pl.h-(Math.max(-0.2,Math.min(Y_MAX,h.y))/Y_MAX)*pl.h;
+        if(i===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      });
+      x.stroke();
+      const stx=pl.x+pl.w+22, sty=42;
+      x.fillStyle='#222';x.font='bold 13px sans-serif';
+      x.fillText('과도응답 지표',stx,sty);
+      if(ind){
+        const items=[
+          ['상승 t_r', ind.tr!==null?ind.tr.toFixed(2)+' s':'—', '#ff8c00'],
+          ['오버슈트 M_p', ind.Mp.toFixed(1)+' %', '#9c27b0'],
+          ['정착 t_s', ind.ts!==null?(ind.ts<0.05?'≈ 0':ind.ts.toFixed(2)+' s'):'> '+T_END+' s', '#2e7d32'],
+          ['정상오차 e∞', Math.abs(ind.eInf).toFixed(3), '#c62828']
+        ];
+        items.forEach((L,i)=>{
+          const yy=sty+24+i*30;
+          x.fillStyle=L[2];x.fillRect(stx,yy-8,8,8);
+          x.fillStyle='#222';x.font='11px sans-serif';x.fillText(L[0],stx+12,yy);
+          x.fillStyle='#222';x.font='bold 13px sans-serif';x.fillText(L[1],stx+12,yy+14);
+        });
+      }
+      x.fillStyle='#666';x.font='11px sans-serif';
+      const Kp=(+sl('trkp').value).toFixed(2), Ki=(+sl('trki').value).toFixed(2), Kd=(+sl('trkd').value).toFixed(2);
+      x.fillText('현재 게인',stx,sty+170);
+      x.fillStyle='#222';x.font='12px sans-serif';
+      x.fillText('Kp = '+Kp,stx,sty+187);
+      x.fillText('Ki = '+Ki,stx,sty+204);
+      x.fillText('Kd = '+Kd,stx,sty+221);
+      if(t>=T_END-0.01){
+        x.fillStyle='rgba(11,95,255,0.7)';x.font='11px sans-serif';
+        x.fillText('⏸ 종료 (스텝 토글로 재시작)',pl.x+pl.w/2-80,pl.y+15);
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

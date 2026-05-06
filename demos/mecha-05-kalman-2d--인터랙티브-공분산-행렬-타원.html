@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 공분산 행렬 → 타원 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 공분산 행렬 → 타원</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/05-kalman-2d.html">Week 5. 칼만 필터 (2D) — 위치+속도 동시 추정</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 공분산 행렬 → 타원</h4>
+    <p>$\sigma^2_x, \sigma^2_y$는 각 축 분산, $\sigma_{xy}$는 공분산. 비대각 항을 양수로 키우면 타원이 우상향, 음수로 키우면 좌상향으로 기웁니다. 1·2·3σ 등고선이 함께 그려져요.</p>
+    <canvas id="covMc" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>σ²ₓ <span class="val" id="cmsxV">2</span><input type="range" id="cmsx" min="0.5" max="6" step="0.1" value="2"></label>
+      <label>σ²ᵧ <span class="val" id="cmsyV">1</span><input type="range" id="cmsy" min="0.5" max="6" step="0.1" value="1"></label>
+      <label>σₓᵧ <span class="val" id="cmsxyV">0.5</span><input type="range" id="cmsxy" min="-3" max="3" step="0.1" value="0.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('covMc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const sx=+document.getElementById('cmsx').value, sy=+document.getElementById('cmsy').value, sxy=+document.getElementById('cmsxy').value;
+      ['cmsx','cmsy','cmsxy'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,SC=40;
+      ctx.strokeStyle='#eee';for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+      for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(20,cy);ctx.lineTo(W-20,cy);ctx.moveTo(cx,30);ctx.lineTo(cx,H-30);ctx.stroke();
+      const det=sx*sy-sxy*sxy;
+      if(det<=0){ctx.fillStyle='#c62828';ctx.font='14px sans-serif';ctx.fillText('⚠ 비양정부호 (det = '+det.toFixed(2)+')',20,30);return;}
+      const tr=sx+sy,disc=Math.sqrt((sx-sy)**2+4*sxy*sxy);
+      const l1=(tr+disc)/2,l2=(tr-disc)/2;
+      const ang=0.5*Math.atan2(2*sxy,sx-sy);
+      [[3,'rgba(11,95,255,0.05)'],[2,'rgba(11,95,255,0.10)'],[1,'rgba(11,95,255,0.20)']].forEach(([k,col])=>{
+        ctx.fillStyle=col;ctx.strokeStyle='#0b5fff';
+        ctx.beginPath();ctx.ellipse(cx,cy,Math.sqrt(l1)*k*SC,Math.sqrt(l2)*k*SC,ang,0,Math.PI*2);ctx.fill();ctx.stroke();
+      });
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(cx-Math.cos(ang)*Math.sqrt(l1)*SC*1.2,cy-Math.sin(ang)*Math.sqrt(l1)*SC*1.2);
+      ctx.lineTo(cx+Math.cos(ang)*Math.sqrt(l1)*SC*1.2,cy+Math.sin(ang)*Math.sqrt(l1)*SC*1.2);ctx.stroke();
+      ctx.strokeStyle='#ff8c00';
+      ctx.beginPath();ctx.moveTo(cx-Math.sin(ang)*Math.sqrt(l2)*SC*1.2,cy+Math.cos(ang)*Math.sqrt(l2)*SC*1.2);
+      ctx.lineTo(cx+Math.sin(ang)*Math.sqrt(l2)*SC*1.2,cy-Math.cos(ang)*Math.sqrt(l2)*SC*1.2);ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('λ₁='+l1.toFixed(2)+', λ₂='+l2.toFixed(2)+',  θ='+(ang*180/Math.PI).toFixed(1)+'°',20,30);
+      ctx.fillStyle='#c62828';ctx.fillText('— 가장 불확실한 방향 (1차 주축)',20,50);
+      ctx.fillStyle='#ff8c00';ctx.fillText('— 2차 주축',20,68);
+    }
+    ['cmsx','cmsy','cmsxy'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 손실 곡면 위의 경사 하강 — η와 모멘텀 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 손실 곡면 위의 경사 하강 — η와 모멘텀</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/10-ann.html">Lecture 10. 인공 신경망 (ANN)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 손실 곡면 위의 경사 하강 — η와 모멘텀</h4>
+    <p>늘어진 타원 손실 $f(x,y) = x^2 + 10y^2$ 위에서 GD가 골짜기로 내려갑니다. $\eta$가 너무 크면 진동·발산하고, 모멘텀 $\beta$를 키우면 진동이 누적 평균으로 잡혀 수렴이 빨라집니다. 캔버스를 클릭하면 시작점을 옮길 수 있어요.</p>
+    <canvas id="bp" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>학습률 η <span class="val" id="bpEtaV">0.05</span><input type="range" id="bpEta" min="0.005" max="0.20" step="0.005" value="0.05"></label>
+      <label>모멘텀 β <span class="val" id="bpMV">0.0</span><input type="range" id="bpM" min="0" max="0.95" step="0.01" value="0"></label>
+      <button id="bpRun">시작/정지</button>
+      <button id="bpStep" class="alt">한 스텝</button>
+      <button id="bpRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bp'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const xR=[-2.5,2.5],yR=[-1.2,1.2];
+    function f(p){return p[0]*p[0]+10*p[1]*p[1];}
+    function grad(p){return[2*p[0],20*p[1]];}
+    function px(p){return 30+(p[0]-xR[0])/(xR[1]-xR[0])*(W-60);}
+    function py(p){return H-30-(p[1]-yR[0])/(yR[1]-yR[0])*(H-60);}
+    let pt,vel,trail,running=false;
+    function init(){pt=[-2.0,1.0];vel=[0,0];trail=[pt.slice()];}
+    init();
+    document.getElementById('bpRst').onclick=()=>{init();running=false;};
+    document.getElementById('bpRun').onclick=()=>{running=!running;};
+    document.getElementById('bpStep').onclick=step;
+    c.addEventListener('click',(e)=>{
+      const r=c.getBoundingClientRect();
+      const cx=e.clientX-r.left,cy=e.clientY-r.top;
+      const xv=(cx-30)/(W-60)*(xR[1]-xR[0])+xR[0];
+      const yv=(H-30-cy)/(H-60)*(yR[1]-yR[0])+yR[0];
+      pt=[xv,yv];vel=[0,0];trail=[pt.slice()];
+    });
+    function step(){
+      const eta=+document.getElementById('bpEta').value;
+      const beta=+document.getElementById('bpM').value;
+      const g=grad(pt);
+      vel[0]=beta*vel[0]-eta*g[0];
+      vel[1]=beta*vel[1]-eta*g[1];
+      pt[0]=Math.max(xR[0],Math.min(xR[1],pt[0]+vel[0]));
+      pt[1]=Math.max(yR[0],Math.min(yR[1],pt[1]+vel[1]));
+      trail.push(pt.slice());
+      if(trail.length>200) trail.shift();
+    }
+    function loop(){
+      const eta=+document.getElementById('bpEta').value;
+      const beta=+document.getElementById('bpM').value;
+      document.getElementById('bpEtaV').textContent=eta.toFixed(3);
+      document.getElementById('bpMV').textContent=beta.toFixed(2);
+      if(running) step();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // contour fill
+      const cell=8;
+      let mx=f([xR[1],yR[1]]);
+      for(let i=30;i<W-30;i+=cell){
+        for(let j=30;j<H-30;j+=cell){
+          const xv=(i-30)/(W-60)*(xR[1]-xR[0])+xR[0];
+          const yv=(H-30-j)/(H-60)*(yR[1]-yR[0])+yR[0];
+          const v=f([xv,yv]);
+          const t=Math.min(1,v/mx);
+          const r=Math.floor(40+t*200),g=Math.floor(140-t*100),b=Math.floor(255-t*200);
+          x.fillStyle=`rgb(${r},${g},${b})`;
+          x.fillRect(i,j,cell,cell);
+        }
+      }
+      // contour lines
+      x.strokeStyle='rgba(255,255,255,0.55)';x.lineWidth=1;
+      [0.2,0.8,2,4,8,16].forEach(level=>{
+        x.beginPath();
+        for(let th=0;th<=Math.PI*2+0.05;th+=0.05){
+          const a=Math.sqrt(level),b=Math.sqrt(level/10);
+          const xv=a*Math.cos(th),yv=b*Math.sin(th);
+          const ix=px([xv,yv]),iy=py([xv,yv]);
+          if(th===0) x.moveTo(ix,iy); else x.lineTo(ix,iy);
+        }
+        x.stroke();
+      });
+      // trail
+      x.strokeStyle='#ffeb3b';x.lineWidth=2;x.beginPath();
+      trail.forEach((p,i)=>{i?x.lineTo(px(p),py(p)):x.moveTo(px(p),py(p));});x.stroke();
+      trail.forEach(p=>{x.fillStyle='rgba(255,235,59,0.7)';x.beginPath();x.arc(px(p),py(p),2,0,Math.PI*2);x.fill();});
+      // current
+      x.fillStyle='#fff';x.strokeStyle='#222';x.lineWidth=2;
+      x.beginPath();x.arc(px(pt),py(pt),6,0,Math.PI*2);x.fill();x.stroke();
+      // minimum at origin
+      x.fillStyle='#2e7d32';x.font='bold 18px sans-serif';
+      x.fillText('★',px([0,0])-6,py([0,0])+6);
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('손실 f = '+f(pt).toFixed(3)+'   ·   스텝 '+(trail.length-1)+'   ·   캔버스 클릭으로 시작점 변경',12,H-10);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

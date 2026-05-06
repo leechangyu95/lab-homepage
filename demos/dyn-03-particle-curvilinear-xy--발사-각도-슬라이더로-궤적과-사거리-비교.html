@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 발사 각도 슬라이더로 궤적과 사거리 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 발사 각도 슬라이더로 궤적과 사거리 비교</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/03-particle-curvilinear-xy.html">Week 3. 곡선 운동학 (직각좌표)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 발사 각도 슬라이더로 궤적과 사거리 비교</h4>
+    <p>같은 초기 속도로 각도를 바꾸면 사거리가 어떻게 달라지는지. $45°$ 가 정말 최대인가?</p>
+    <canvas id="d3ProjDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>초기 속도 v₀ (m/s) <span class="val" id="d3v0V">20</span><input type="range" id="d3v0" min="5" max="40" step="1" value="20"></label>
+      <label>발사각 θ (°) <span class="val" id="d3thV">45</span><input type="range" id="d3th" min="10" max="80" step="1" value="45"></label>
+      <label>중력 g (m/s²) <span class="val" id="d3gV">9.81</span><input type="range" id="d3g" min="1" max="20" step="0.1" value="9.81"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d3ProjDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const v0=+document.getElementById('d3v0').value;
+      const th=+document.getElementById('d3th').value*Math.PI/180;
+      const g=+document.getElementById('d3g').value;
+      ['d3v0','d3th','d3g'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(40,20);ctx.lineTo(40,H-30);ctx.stroke();
+      const vx=v0*Math.cos(th),vy=v0*Math.sin(th);
+      const tFly=2*vy/g,Range=vx*tFly,Hmax=vy*vy/(2*g);
+      const scale=Math.min((W-80)/(Range*1.1+0.1),(H-80)/(Hmax*1.5+0.1));
+      const ox=40,oy=H-30;
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let t=0;t<=tFly;t+=tFly/100){
+        const x=vx*t,y=vy*t-0.5*g*t*t;
+        const px=ox+x*scale,py=oy-y*scale;
+        if(t===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      const len=30;
+      ctx.strokeStyle='#cf1322';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+len*Math.cos(th),oy-len*Math.sin(th));ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px Consolas,monospace';
+      ctx.fillText(`사거리 R = ${Range.toFixed(2)} m`,ox+10,30);
+      ctx.fillText(`최대 높이 H = ${Hmax.toFixed(2)} m`,ox+10,50);
+      ctx.fillText(`체공 시간 t = ${tFly.toFixed(2)} s`,ox+10,70);
+      ctx.fillStyle='#cf1322';
+      ctx.beginPath();ctx.arc(ox+Range*scale,oy,5,0,2*Math.PI);ctx.fill();
+      ctx.fillText('착지점',ox+Range*scale-20,oy-10);
+    }
+    ['d3v0','d3th','d3g'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

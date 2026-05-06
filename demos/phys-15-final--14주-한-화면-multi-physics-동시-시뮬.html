@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>14주 한 화면 — Multi-physics 동시 시뮬 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">14주 한 화면 — Multi-physics 동시 시뮬</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/15-final.html">Week 15. 기말시험 — 14주 종합</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>14주 한 화면 — Multi-physics 동시 시뮬</h4>
+    <p>왼쪽 위: 발사체 (W1 운동학). 오른쪽 위: 단진자 (W6 SHM). 왼쪽 아래: 두 블록 충돌 (W4 운동량). 오른쪽 아래: RC 회로 충전 곡선 (W12). 모두 같은 시간축으로 흘러갑니다.</p>
+    <canvas id="w15_megaDemo" width="640" height="500"></canvas>
+    <div class="controls">
+      <label>시간 배율 <span class="val" id="w15_speedval">1.0</span>×
+        <input type="range" id="w15_speed" min="0.1" max="3" step="0.1" value="1"></label>
+      <label>발사 속도 <span class="val" id="w15_v0val">15</span> m/s
+        <input type="range" id="w15_v0" min="5" max="30" step="1" value="15"></label>
+      <label>발사각 <span class="val" id="w15_angval">45</span>°
+        <input type="range" id="w15_ang" min="10" max="80" step="1" value="45"></label>
+      <label>진자 길이 <span class="val" id="w15_Lval">1.0</span> m
+        <input type="range" id="w15_L" min="0.3" max="2" step="0.1" value="1"></label>
+      <label>RC 시정수 $\tau$ <span class="val" id="w15_tauval">2.0</span> s
+        <input type="range" id="w15_tau" min="0.5" max="5" step="0.1" value="2"></label>
+      <button id="w15_reset">⟲ 리셋</button>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>발사체의 포물선과 진자의 사인파가 <em>같은 시간 척도로</em> 흐르는 걸 보세요. 진자는 W6의 $T=2\pi\sqrt{L/g}$로 결정.</li>
+        <li>RC 충전 곡선 $V(t)=V_0(1-e^{-t/\tau})$는 SHM과 닮은 친척 — 둘 다 "현재값 - 평형값에 비례"하는 ODE.</li>
+        <li>충돌은 일정 주기로 반복. 운동량은 항상 보존, 비탄성 충돌이면 K가 줄어듦.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w15_megaDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let t=0,running=true;
+    let proj={x:30,y:H/2-20,vx:0,vy:0,active:false,launchT:0};
+    let circuit={V:0};
+    let collision={x1:330,v1:0,x2:480,v2:0,phase:'wait',T:0};
+    function reset(){t=0;proj.active=false;circuit.V=0;collision={x1:330,v1:0,x2:480,v2:0,phase:'wait',T:0};}
+    document.getElementById('w15_reset').addEventListener('click',reset);
+    function draw(dt){
+      const v0=+document.getElementById('w15_v0').value;
+      const ang=+document.getElementById('w15_ang').value*Math.PI/180;
+      const L=+document.getElementById('w15_L').value;
+      const tau=+document.getElementById('w15_tau').value;
+      document.getElementById('w15_speedval').textContent=(+document.getElementById('w15_speed').value).toFixed(1);
+      document.getElementById('w15_v0val').textContent=v0;
+      document.getElementById('w15_angval').textContent=Math.round(ang*180/Math.PI);
+      document.getElementById('w15_Lval').textContent=L.toFixed(1);
+      document.getElementById('w15_tauval').textContent=tau.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';
+      ctx.fillText('W1 발사체',10,16);
+      ctx.fillText('W6 단진자',W/2+10,16);
+      ctx.fillText('W4 충돌',10,H/2+16);
+      ctx.fillText('W12 RC 회로',W/2+10,H/2+16);
+      // W1 발사체
+      const px0=20, py0=H/2-20;
+      if(!proj.active && t-proj.launchT>1.5){
+        proj.active=true;proj.launchT=t;
+        proj.x=px0;proj.y=py0;
+        proj.vx=v0*Math.cos(ang)*4;
+        proj.vy=-v0*Math.sin(ang)*4;
+      }
+      if(proj.active){
+        proj.vy+=98*dt;
+        proj.x+=proj.vx*dt;
+        proj.y+=proj.vy*dt;
+        if(proj.y>py0||proj.x>W/2-10){proj.active=false;}
+      }
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(20,py0);ctx.lineTo(W/2-10,py0);ctx.stroke();
+      const traj=24;
+      ctx.strokeStyle='rgba(11,95,255,0.35)';
+      ctx.beginPath();
+      for(let i=0;i<traj;i++){
+        const tt=i*0.04;
+        const x=px0+v0*Math.cos(ang)*4*tt;
+        const y=py0+(-v0*Math.sin(ang)*4)*tt+0.5*98*tt*tt;
+        if(y>py0)break;
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      if(proj.active){
+        ctx.fillStyle='#0b5fff';
+        ctx.beginPath();ctx.arc(proj.x,proj.y,5,0,Math.PI*2);ctx.fill();
+      }
+      // W6 단진자
+      const omega=Math.sqrt(9.8/L);
+      const theta=0.6*Math.cos(omega*t);
+      const px=W*0.75, py=40, len=120*L/2;
+      const bx=px+len*Math.sin(theta), by=py+len*Math.cos(theta);
+      ctx.strokeStyle='#16a085';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(bx,by);ctx.stroke();
+      ctx.fillStyle='#16a085';
+      ctx.beginPath();ctx.arc(bx,by,9,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#222';ctx.font='11px sans-serif';
+      ctx.fillText('T='+(2*Math.PI/omega).toFixed(2)+' s',W*0.55+8,30);
+      // W4 충돌
+      const cy=H*0.78;
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(20,cy+20);ctx.lineTo(W/2-10,cy+20);ctx.stroke();
+      if(collision.phase==='wait'){
+        collision.T+=dt;
+        if(collision.T>0.5){collision.phase='run';collision.v1=80;collision.v2=0;collision.x1=40;collision.x2=W*0.4;}
+      } else if(collision.phase==='run'){
+        collision.x1+=collision.v1*dt;
+        collision.x2+=collision.v2*dt;
+        if(collision.x1+15>=collision.x2-15&&collision.v1>collision.v2){
+          // 완전 비탄성 (W4 단원)
+          const m1=2,m2=3;
+          const vf=(m1*collision.v1+m2*collision.v2)/(m1+m2);
+          collision.v1=vf;collision.v2=vf;
+        }
+        if(collision.x2>W/2-30){collision.phase='wait';collision.T=0;}
+      }
+      ctx.fillStyle='#e67e22';ctx.fillRect(collision.x1-15,cy,30,20);
+      ctx.fillStyle='#c0392b';ctx.fillRect(collision.x2-15,cy-2,30,22);
+      ctx.fillStyle='#222';ctx.font='10px sans-serif';
+      ctx.fillText('m=2',collision.x1-12,cy+13);
+      ctx.fillText('m=3',collision.x2-12,cy+13);
+      // W12 RC
+      const target=1.0;
+      circuit.V += (target-circuit.V)*(dt/tau);
+      const rx0=W*0.55, ry0=H*0.6, rw=W*0.4, rh=H*0.32;
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(rx0,ry0,rw,rh);
+      ctx.strokeStyle='#7b1fa2';ctx.lineWidth=2;
+      ctx.beginPath();
+      const N=60;
+      for(let i=0;i<N;i++){
+        const tt=t+(i-N+1)*dt;
+        if(tt<0)continue;
+        const v=1-Math.exp(-tt/tau);
+        const x=rx0+(i/(N-1))*rw;
+        const y=ry0+rh-v*rh*0.85;
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#7b1fa2';
+      ctx.fillText('V/V₀ = '+circuit.V.toFixed(3),rx0+10,ry0+rh-8);
+      ctx.fillText('τ='+tau.toFixed(1)+' s',rx0+10,ry0+18);
+      // global time
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('t = '+t.toFixed(2)+' s',W-90,H-8);
+    }
+    let last=performance.now();
+    function loop(now){
+      const sp=+document.getElementById('w15_speed').value;
+      const dt=Math.min(0.05,(now-last)/1000)*sp;
+      last=now;
+      t+=dt;
+      draw(dt);
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</main>
+</body>
+</html>

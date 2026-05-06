@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 질량-스프링-댐퍼 응답 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 질량-스프링-댐퍼 응답</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/03-state-space.html">Lecture 3. 상태공간 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 질량-스프링-댐퍼 응답</h4>
+    <p>스프링 강성 $k$, 감쇠 $c$, 그리고 외력 $u$의 종류를 바꿔보세요. 외력 종류를 바꾸면 같은 $A$ 행렬에 다른 입력을 주는 효과가 생깁니다 — $B$ 행렬의 의미가 보입니다.</p>
+    <canvas id="msd" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>질량 m <span class="val" id="mV">1</span><input type="range" id="m" min="0.5" max="3" step="0.1" value="1"></label>
+      <label>스프링 k <span class="val" id="kV">10</span><input type="range" id="k" min="1" max="50" value="10"></label>
+      <label>감쇠 c <span class="val" id="cV">0.5</span><input type="range" id="c" min="0" max="10" step="0.1" value="0.5"></label>
+      <label>외력 u
+        <select id="uMode">
+          <option value="free">없음 (자유 응답)</option>
+          <option value="impulse">임펄스 (잠깐 ‘툭’ 침)</option>
+          <option value="step">스텝 (꾸준한 일정 힘)</option>
+          <option value="sine">사인파 (주기적 가진)</option>
+        </select>
+      </label>
+      <button id="kick">초기화</button>
+    </div>
+    <p style="font-size:13px;color:#666">감쇠비 ζ = c / (2√(mk)). ζ&lt;1: 언더댐핑(진동), ζ=1: 임계감쇠, ζ&gt;1: 오버댐핑. 사인파의 진동수가 시스템 고유진동수 √(k/m)에 가까우면 <strong>공진</strong>이 일어납니다.</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('msd'),x=c.getContext('2d');
+    let y=2, yd=0, hist=[], uHist=[], t=0, impulseT=0;
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{['m','k','c'].forEach(k=>sl(k+'V').textContent=sl(k).value);};
+    sl('kick').onclick=()=>{y=2;yd=0;hist=[];uHist=[];t=0;impulseT=t;};
+    ['m','k','c'].forEach(k=>sl(k).oninput=upd);
+    sl('uMode').onchange=()=>{y=2;yd=0;hist=[];uHist=[];t=0;impulseT=t;};
+    function loop(){
+      const m=+sl('m').value,k=+sl('k').value,cc=+sl('c').value,dt=0.02;
+      const mode=sl('uMode').value;
+      let u=0;
+      if(mode==='impulse'){ u = (t-impulseT<0.05) ? 50 : 0; }
+      else if(mode==='step'){ u = 5; }
+      else if(mode==='sine'){ u = 5*Math.sin(2*t); }
+      const ydd=(-k*y-cc*yd+u)/m;
+      yd+=ydd*dt; y+=yd*dt; t+=dt;
+      hist.push(y); uHist.push(u);
+      if(hist.length>300){hist.shift();uHist.shift();}
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#999';x.fillRect(40,80,8,120);
+      const px=140+y*40;
+      x.strokeStyle='#666';x.lineWidth=2;x.beginPath();x.moveTo(48,140);
+      for(let i=0;i<10;i++){x.lineTo(48+(px-48)*i/10,140+(i%2?-10:10));}
+      x.lineTo(px,140);x.stroke();
+      x.fillStyle='#0b5fff';x.fillRect(px-15,115,30,50);
+      // 외력 화살표
+      if(Math.abs(u)>0.5){
+        x.strokeStyle='#c62828';x.lineWidth=2;
+        const ax0=px+18,ax1=ax0+Math.sign(u)*Math.min(40,Math.abs(u)*1.5);
+        x.beginPath();x.moveTo(ax0,140);x.lineTo(ax1,140);x.stroke();
+        x.beginPath();x.moveTo(ax1,140);x.lineTo(ax1-Math.sign(u)*6,136);x.lineTo(ax1-Math.sign(u)*6,144);x.closePath();x.fillStyle='#c62828';x.fill();
+        x.fillStyle='#c62828';x.font='11px sans-serif';x.fillText('u',ax1+4,136);
+      }
+      // y(t) 궤적
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((v,i)=>{const xx=300+i,yy=140-v*22;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
+      x.stroke();
+      // u(t) 궤적
+      x.strokeStyle='rgba(198,40,40,0.5)';x.lineWidth=1;x.beginPath();
+      uHist.forEach((v,i)=>{const xx=300+i,yy=140-v*3;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
+      x.stroke();
+      x.strokeStyle='#ccc';x.beginPath();x.moveTo(300,140);x.lineTo(600,140);x.stroke();
+      x.fillStyle='#0b5fff';x.font='11px sans-serif';x.fillText('y(t)',610,143);
+      x.fillStyle='#c62828';x.fillText('u(t)',610,156);
+      // damping ratio
+      const zeta=cc/(2*Math.sqrt(m*k));
+      x.fillStyle='#666';x.fillText('ζ = '+zeta.toFixed(2),300,30);
+      x.fillStyle=zeta<1?'#c62828':zeta>1?'#0b5fff':'#2e7d32';
+      x.fillText(zeta<1?'언더댐핑':zeta>1?'오버댐핑':'임계감쇠',360,30);
+      x.fillStyle='#666';x.fillText('고유진동수 ω₀ = √(k/m) ≈ '+Math.sqrt(k/m).toFixed(2)+' rad/s',300,46);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

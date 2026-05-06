@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 2차 계단응답 + 극점 위치 동시 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 2차 계단응답 + 극점 위치 동시 보기</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/06-second-order.html">Week 6. 2차 시스템 시간응답</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2차 계단응답 + 극점 위치 동시 보기</h4>
+    <p>왼쪽은 s-평면 극점, 오른쪽은 시간응답. ζ와 ωₙ 슬라이더를 움직여 보세요.
+    오버슈트·정착시간 수치를 실시간으로 표시합니다.</p>
+    <canvas id="so" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>감쇠비 ζ <span class="val" id="szV">0.4</span><input type="range" id="sz" min="0" max="2" step="0.02" value="0.4"></label>
+      <label>고유진동수 ωₙ <span class="val" id="swV">2.0</span><input type="range" id="sw" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('so'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('szV').textContent=(+$('sz').value).toFixed(2);$('swV').textContent=(+$('sw').value).toFixed(1);};
+    ['sz','sw'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const z=+$('sz').value, wn=+$('sw').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // s-plane left
+      const cx=140, cy=160, sc=30;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(20,cy);x.lineTo(280,cy);x.moveTo(cx,20);x.lineTo(cx,300);x.stroke();
+      x.fillStyle='rgba(198,40,40,0.07)';x.fillRect(cx,20,160,280);
+      x.fillStyle='#666';x.font='10px sans-serif';x.fillText('Re',272,cy-4);x.fillText('Im',cx+5,28);
+      // poles
+      let p1r,p1i,p2r,p2i;
+      if(z<1){p1r=-z*wn; p1i=wn*Math.sqrt(1-z*z); p2r=p1r; p2i=-p1i;}
+      else if(z===1){p1r=p2r=-wn; p1i=p2i=0;}
+      else{p1r=-z*wn+wn*Math.sqrt(z*z-1); p2r=-z*wn-wn*Math.sqrt(z*z-1); p1i=p2i=0;}
+      const drawPole=(r,i)=>{x.fillStyle='#c62828';x.beginPath();
+        x.arc(cx+r*sc,cy-i*sc,6,0,Math.PI*2);x.fill();
+        x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+        x.moveTo(cx+r*sc-5,cy-i*sc-5);x.lineTo(cx+r*sc+5,cy-i*sc+5);
+        x.moveTo(cx+r*sc-5,cy-i*sc+5);x.lineTo(cx+r*sc+5,cy-i*sc-5);x.stroke();};
+      drawPole(p1r,p1i); drawPole(p2r,p2i);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('극점: '+p1r.toFixed(2)+(p1i>=0?'+':'')+p1i.toFixed(2)+'j',20,295);
+      // time response right
+      const ox=320, oy=270, w=300, h=200, T=10;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,oy-h*0.5);x.lineTo(ox+w,oy-h*0.5);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='10px sans-serif';x.fillText('1.0',ox-22,oy-h*0.5+4);
+      // closed-form step response
+      const stepResp=t=>{
+        if(z<0.001) return 1-Math.cos(wn*t);
+        if(z<1){const wd=wn*Math.sqrt(1-z*z);
+          return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z) * Math.sin(wd*t + Math.acos(z));}
+        if(Math.abs(z-1)<1e-3) return 1 - (1+wn*t)*Math.exp(-wn*t);
+        const a=z*wn, b=wn*Math.sqrt(z*z-1);
+        const r1=-a+b, r2=-a-b;
+        return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);};
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      let yMax=0;
+      for(let i=0;i<=300;i++){const t=i*T/300, y=stepResp(t); yMax=Math.max(yMax,y);
+        const xx=ox+i*w/300, yy=oy-Math.max(0,Math.min(2,y))*h*0.5;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+      x.stroke();
+      // metrics
+      const Mp = z<1 ? Math.exp(-Math.PI*z/Math.sqrt(1-z*z))*100 : 0;
+      const ts = 4/(z*wn);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('오버슈트 Mp = '+Mp.toFixed(1)+'%', ox, 295);
+      x.fillText('정착시간 ts ≈ '+ts.toFixed(2)+'s', ox+150, 295);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

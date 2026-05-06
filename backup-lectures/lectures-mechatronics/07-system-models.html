@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W7. 시스템 모델 — 메카트로닉스</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 7. 시스템 모델 — 미분방정식으로 동역학을 적기</h1>
+  <p class="lead">스프링·매스·댐퍼 — 모든 기계 시스템의 ABC. 그리고 같은 식이 RLC 회로에서도 나타나는 신비로운 사실.</p>
+
+  <div class="note">
+    <strong>📐 미분이 처음이면 — 30초 정리</strong>
+    <ul style="margin:8px 0 0 20px">
+      <li><strong>미분 = "변화율"</strong>. 위치를 시간으로 미분하면 속도($\dot{x} = dx/dt$). 속도를 다시 미분하면 가속도($\ddot{x} = d^2x/dt^2$). 점 하나 = 한 번 미분, 점 두 개 = 두 번 미분.</li>
+      <li><strong>미분방정식</strong> = "변수와 그 변화율 사이의 관계를 적은 식". 예: 뉴턴 제2법칙 $F = ma = m\ddot{x}$도 미분방정식.</li>
+      <li>이번 주의 모든 식은 <strong>한 줄 미분방정식 $m\ddot{x} + b\dot{x} + kx = f$</strong>로 모입니다. <em>가속·속도·위치의 합이 외력과 같다</em>는 의미일 뿐.</li>
+    </ul>
+    이번 주가 한 학기 중 수학적으로 가장 추상적이지만, "스프링이 당기는 힘 + 댐퍼가 끌어내리는 힘 + 가속에 필요한 힘 = 외력" 한 문장만 잡고 시작하면 충분합니다.
+  </div>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 모델이 필요한가</li>
+    <li>3대 기계 요소: 스프링·댐퍼·질량</li>
+    <li>자유물체도(FBD)와 뉴턴 제2법칙</li>
+    <li>2차 미분방정식 표준형</li>
+    <li>전기적 유사 — 같은 수학, 다른 도메인</li>
+    <li>비선형 모델과 선형화</li>
+  </ol></div>
+
+  <h2>1. 왜 모델인가</h2>
+  <p>제어를 잘하려면 시스템이 <strong>어떻게 움직이는지</strong>부터 알아야 합니다. 그 "어떻게"를 수학으로 적은 것이 <strong>모델</strong>입니다. 모델이 있으면:</p>
+  <ul>
+    <li><strong>예측</strong>: 입력 명령에 대한 출력을 미리 계산.</li>
+    <li><strong>설계</strong>: 원하는 응답을 만드는 제어기 파라미터를 미리 계산.</li>
+    <li><strong>분석</strong>: 안정성·성능·한계를 수학적으로 검증.</li>
+  </ul>
+  <p>메카트로닉스의 모델은 보통 미분방정식 형태입니다. 이번 주에는 가장 보편적인 <strong>2차 시스템</strong>을 다룹니다.</p>
+
+  <h2>2. 3대 기계 요소</h2>
+  <p>거의 모든 기계 시스템은 다음 세 요소로 모델링됩니다.</p>
+
+  <h3>2.1 스프링(Spring) — 변위에 비례하는 복원력</h3>
+  $$ F_s = k\,x \qquad [\text{N}] $$
+  <p>$x$는 평형점에서의 변위, $k$는 스프링 상수 (단위: N/m). 변위가 클수록 더 큰 복원력. 늘어나면 당기고, 줄면 밀어내는 성질.</p>
+
+  <h3>2.2 댐퍼(Dashpot) — 속도에 비례하는 마찰</h3>
+  $$ F_d = b\,\dot{x} \qquad [\text{N}] $$
+  <p>$\dot{x}$는 속도, $b$는 감쇠 계수 (단위: N·s/m). 자동차 쇼크 옵서버, 문닫힘 댐퍼 등이 그 예. <strong>운동 에너지를 열로 소비</strong>하는 비가역 요소.</p>
+
+  <h3>2.3 질량(Mass) — 가속도에 비례하는 관성</h3>
+  $$ F_m = m\,\ddot{x} \qquad [\text{N}] $$
+  <p>뉴턴 제2법칙. 관성은 가속(상태 변화)을 거부하는 본성으로, 시스템에 <strong>에너지를 저장</strong>하는 요소(운동 에너지 $\frac{1}{2}m\dot{x}^2$).</p>
+
+  <h2>3. 스프링-매스-댐퍼 시스템</h2>
+  <p>가장 기본인 모델 — 질량 $m$이 스프링과 댐퍼로 벽에 묶여 있고, 외력 $f(t)$를 받습니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="40" x2="50" y2="160" stroke="#333" stroke-width="3"/>
+      <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#333" stroke-width="1"/>
+      </pattern>
+      <rect x="40" y="40" width="10" height="120" fill="url(#hatch)"/>
+      <path d="M50,80 L70,80 L80,70 L90,90 L100,70 L110,90 L120,70 L130,90 L140,80 L160,80" fill="none" stroke="#0742b8" stroke-width="2"/>
+      <text x="100" y="65" text-anchor="middle" font-size="11" fill="#0742b8">k</text>
+      <line x1="50" y1="120" x2="100" y2="120" stroke="#333" stroke-width="2"/>
+      <rect x="100" y="110" width="40" height="20" fill="none" stroke="#c1121f" stroke-width="2"/>
+      <line x1="100" y1="115" x2="140" y2="115" stroke="#c1121f"/>
+      <line x1="100" y1="125" x2="140" y2="125" stroke="#c1121f"/>
+      <text x="120" y="145" text-anchor="middle" font-size="11" fill="#c1121f">b (댐퍼)</text>
+      <line x1="140" y1="120" x2="160" y2="120" stroke="#333" stroke-width="2"/>
+      <line x1="160" y1="60" x2="160" y2="140" stroke="#333" stroke-width="2"/>
+      <line x1="160" y1="60" x2="260" y2="60" stroke="#333" stroke-width="2"/>
+      <line x1="160" y1="140" x2="260" y2="140" stroke="#333" stroke-width="2"/>
+      <line x1="260" y1="60" x2="260" y2="140" stroke="#333" stroke-width="2"/>
+      <text x="210" y="105" text-anchor="middle" font-size="20" font-weight="bold" fill="#1b5e20">m</text>
+      <line x1="260" y1="100" x2="320" y2="100" stroke="#666" stroke-width="2" marker-end="url(#aw)"/>
+      <text x="290" y="92" font-size="13" font-weight="bold" fill="#666">f(t)</text>
+      <line x1="160" y1="180" x2="280" y2="180" stroke="#333" stroke-dasharray="4,2"/>
+      <text x="210" y="195" text-anchor="middle" font-size="13" fill="#0742b8">x</text>
+      <defs><marker id="aw" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#666"/></marker></defs>
+    </svg>
+    <figcaption>그림 1. 스프링-매스-댐퍼 시스템. 외력 $f(t)$가 가해지면 질량이 변위 $x(t)$로 응답.</figcaption>
+  </figure>
+
+  <h3>3.1 자유물체도(FBD)와 뉴턴의 법칙</h3>
+  <p><strong>FBD란 단순히 "물체에 어떤 힘들이 붙어 있나" 화살표로 그린 그림</strong>이에요. 모든 동역학 문제의 첫 단계입니다. 질량 $m$에 작용하는 힘을 모두 적으면:</p>
+  <ul>
+    <li>외력 $f(t)$ (가해지는 힘) — 우리가 일부러 미는 힘</li>
+    <li>스프링 복원력 $-kx$ (변위 반대 방향) — 늘어나면 당기고, 줄면 밀어냄</li>
+    <li>댐퍼 마찰 $-b\dot{x}$ (속도 반대 방향) — 빨리 움직일수록 더 강하게 끌어내림</li>
+  </ul>
+  <p>뉴턴 제2법칙 "힘의 합 = 질량 × 가속도" $\sum F = m\ddot{x}$:</p>
+  $$ m\ddot{x} = f(t) - kx - b\dot{x} $$
+  <p>정리하면 표준형 2차 미분방정식:</p>
+  $$ \boxed{m\ddot{x} + b\dot{x} + kx = f(t)} $$
+  <p><strong>이 한 줄을 한국어로 풀면</strong>: <em>(가속에 드는 힘) + (속도에 비례한 마찰) + (위치에 비례한 스프링력) = (외력)</em>. 모든 항이 "힘"이며 단위는 N입니다. 이번 학기 W7~W11에서 계속 만날 식이니 친해져 두세요.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 스프링-매스-댐퍼 실시간 시뮬레이션</h4>
+    <p>스텝 외력을 가했을 때 질량이 어떻게 흔들리며 평형으로 가는지 실시간으로 봅니다. <strong>스프링 $k$↑이면 빨라지고, 댐퍼 $b$↑이면 진동이 잦아듭니다</strong>. 위쪽은 질량 애니메이션, 아래쪽은 시간응답 곡선.</p>
+    <canvas id="smdDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>질량 m <span class="val" id="smdMV">1.0</span> kg<input type="range" id="smdM" min="0.2" max="5" step="0.1" value="1"></label>
+      <label>스프링 k <span class="val" id="smdKV">10</span> N/m<input type="range" id="smdK" min="1" max="80" step="1" value="10"></label>
+      <label>댐퍼 b <span class="val" id="smdBV">1.0</span> N·s/m<input type="range" id="smdB" min="0" max="20" step="0.1" value="1"></label>
+      <label>외력 f <span class="val" id="smdFV">5</span> N<input type="range" id="smdF" min="0" max="20" step="0.5" value="5"></label>
+      <button id="smdRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('smdDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let x=0,v=0,t=0,hist=[];
+    document.getElementById('smdRst').onclick=()=>{x=0;v=0;t=0;hist=[];};
+    function loop(){
+      const m=+document.getElementById('smdM').value;
+      const k=+document.getElementById('smdK').value;
+      const b=+document.getElementById('smdB').value;
+      const f=+document.getElementById('smdF').value;
+      ['smdM','smdK','smdB','smdF'].forEach(id=>document.getElementById(id+'V').textContent=document.getElementById(id).value);
+      const dt=0.016;
+      // a = (f - b*v - k*x)/m
+      const a=(f - b*v - k*x)/m;
+      v += a*dt; x += v*dt;
+      t += dt;
+      hist.push({t,x});
+      if(hist.length>500)hist.shift();
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // top: animation
+      const ay=80,baseX=80,XScale=8;
+      ctx.strokeStyle='#333';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(baseX,40);ctx.lineTo(baseX,120);ctx.stroke();
+      // hatch wall
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      for(let yy=40;yy<120;yy+=8){ctx.beginPath();ctx.moveTo(baseX-8,yy);ctx.lineTo(baseX,yy+6);ctx.stroke();}
+      const massX=baseX+200+x*XScale;
+      // spring
+      ctx.strokeStyle='#0742b8';ctx.lineWidth=2;ctx.beginPath();
+      const turns=8, sStart=baseX, sEnd=massX-30;
+      ctx.moveTo(sStart,ay);
+      for(let i=0;i<=turns*4;i++){const fr=i/(turns*4);const xx=sStart+fr*(sEnd-sStart);
+        const yy=ay+(i%2===0?0:(Math.floor(i/2)%2===0?-12:12));ctx.lineTo(xx,yy);}
+      ctx.lineTo(sEnd,ay);ctx.stroke();
+      // damper
+      ctx.strokeStyle='#c1121f';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(sStart,ay+30);ctx.lineTo(sStart+60,ay+30);
+      ctx.rect(sStart+60,ay+18,40,24);
+      ctx.moveTo(sStart+90,ay+30);ctx.lineTo(massX-30,ay+30);ctx.stroke();
+      // mass
+      ctx.fillStyle='#1b5e20';ctx.fillRect(massX-30,ay-25,60,55);
+      ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.fillText('m',massX-7,ay+8);
+      // force arrow
+      if(f>0){ctx.strokeStyle='#666';ctx.lineWidth=2;ctx.beginPath();
+        ctx.moveTo(massX+30,ay);ctx.lineTo(massX+30+f*5,ay);
+        ctx.lineTo(massX+25+f*5,ay-5);ctx.moveTo(massX+30+f*5,ay);ctx.lineTo(massX+25+f*5,ay+5);ctx.stroke();
+        ctx.fillStyle='#666';ctx.font='12px sans-serif';ctx.fillText('f='+f,massX+35+f*5,ay+5);}
+      // x label
+      ctx.strokeStyle='#0742b8';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(baseX+200,ay+50);ctx.lineTo(massX,ay+50);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#0742b8';ctx.fillText(`x = ${x.toFixed(3)} m`,baseX+205,ay+65);
+      // bottom: time response
+      const ox=40,oy=H-30,w=W-60,h=130;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,oy-h);ctx.lineTo(ox,oy);ctx.stroke();
+      const xss = k>0 ? f/k : 0;
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oy-xss/(Math.max(2,xss*1.8))*h);ctx.lineTo(ox+w,oy-xss/(Math.max(2,xss*1.8))*h);ctx.stroke();ctx.setLineDash([]);
+      const xRange=Math.max(2,xss*1.8);
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      hist.forEach((h0,i)=>{const xx=ox+i/500*w,yy=oy-Math.max(0,h0.x)/xRange*h;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const wn=Math.sqrt(k/m), zeta=b/(2*Math.sqrt(k*m));
+      ctx.fillText(`ωₙ = ${wn.toFixed(2)} rad/s,  ζ = ${zeta.toFixed(3)}`,ox,oy-h-5);
+      const cls = zeta<0.001?'무감쇠':zeta<1?'저감쇠 (진동)':zeta<1.001?'임계감쇠':'과감쇠';
+      ctx.fillText(`정상상태 x∞ = f/k = ${xss.toFixed(3)} m  /  ${cls}`,ox+260,oy-h-5);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. 표준형의 의미 — 자연 주파수와 감쇠비</h2>
+  <p>위 식을 양변을 $m$으로 나누면:</p>
+  $$ \ddot{x} + \frac{b}{m}\dot{x} + \frac{k}{m}x = \frac{f(t)}{m} $$
+  <p>이를 표준형으로 다시 쓰면:</p>
+  $$ \ddot{x} + 2\zeta\omega_n\,\dot{x} + \omega_n^2\,x = \frac{f(t)}{m} $$
+
+  <p>두 핵심 파라미터:</p>
+  <ul>
+    <li><strong>고유 주파수(natural frequency)</strong> $\omega_n = \sqrt{k/m}$ — 댐퍼가 없을 때 자유진동 주파수.</li>
+    <li><strong>감쇠비(damping ratio)</strong> $\zeta = \frac{b}{2\sqrt{km}}$ — 진동이 얼마나 빨리 잦아드는가.</li>
+  </ul>
+
+  <p>$\zeta$ 값에 따라 시스템이 다르게 응답합니다.</p>
+  <table>
+    <thead><tr><th>$\zeta$</th><th>이름</th><th>응답</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr><td>$\zeta = 0$</td><td>무감쇠(undamped)</td><td>영원히 진동</td><td>이상화된 LC 회로</td></tr>
+      <tr><td>$0 &lt; \zeta &lt; 1$</td><td>저감쇠(underdamped)</td><td>진동하며 감쇠</td><td>자동차 서스펜션</td></tr>
+      <tr><td>$\zeta = 1$</td><td>임계감쇠(critical)</td><td>가장 빠르게 진동 없이</td><td>이상적 댐퍼</td></tr>
+      <tr><td>$\zeta &gt; 1$</td><td>과감쇠(overdamped)</td><td>느리게 비진동</td><td>건물 출입문 댐퍼</td></tr>
+    </tbody>
+  </table>
+
+  <p>이 분류와 실제 응답 곡선은 다음 주(W9)에서 자세히 그려봅니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 감쇠비 ζ에 따른 응답 모양</h4>
+    <p>$\zeta$를 0 → 0.5 → 0.7 → 1 → 1.5로 옮겨보세요. 무감쇠는 영원히 진동, 저감쇠는 오버슈트 후 진동하며 수렴, 임계감쇠는 가장 빠르게 진동 없이, 과감쇠는 느리게 비진동. <strong>$\zeta = 0.7$이 빠름과 안정의 균형점</strong>으로 대부분의 설계 기본값.</p>
+    <canvas id="zetaDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>감쇠비 ζ <span class="val" id="zV">0.4</span><input type="range" id="zVal" min="0" max="2" step="0.02" value="0.4"></label>
+      <label>고유 주파수 ωₙ <span class="val" id="wnV">2.0</span><input type="range" id="wnVal" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('zetaDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function step(t,z,wn){
+      if(z<0.001) return 1-Math.cos(wn*t);
+      if(z<1){const wd=wn*Math.sqrt(1-z*z);
+        return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z)*Math.sin(wd*t+Math.acos(z));}
+      if(Math.abs(z-1)<1e-3) return 1-(1+wn*t)*Math.exp(-wn*t);
+      const a=z*wn,b=wn*Math.sqrt(z*z-1);
+      const r1=-a+b,r2=-a-b;
+      return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);
+    }
+    function draw(){
+      const z=+document.getElementById('zVal').value;
+      const wn=+document.getElementById('wnVal').value;
+      document.getElementById('zV').textContent=z.toFixed(2);
+      document.getElementById('wnV').textContent=wn.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-30,w=W-70,h=H-80,T=10;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      // 1.0 reference
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(ox,oy-h*0.5);ctx.lineTo(ox+w,oy-h*0.5);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='10px sans-serif';ctx.fillText('1.0',ox-22,oy-h*0.5+4);
+      // overlay several zetas faded
+      const zetas=[0,0.3,0.7,1,1.5];
+      zetas.forEach(zz=>{
+        ctx.strokeStyle=zz===z?'#0b5fff':'rgba(180,180,200,0.5)';
+        ctx.lineWidth=zz===z?2.5:1;
+        ctx.beginPath();
+        for(let i=0;i<=400;i++){const t=i*T/400, y=step(t,zz,wn);
+          const xx=ox+i*w/400, yy=oy-Math.max(0,Math.min(2,y))*h*0.5;
+          if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+        ctx.stroke();
+      });
+      // current zeta in blue (recompute on top to be sure)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=400;i++){const t=i*T/400, y=step(t,z,wn);
+        const xx=ox+i*w/400, yy=oy-Math.max(0,Math.min(2,y))*h*0.5;
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      const Mp = z<1 ? Math.exp(-Math.PI*z/Math.sqrt(1-z*z))*100 : 0;
+      const ts = z>0.001 ? 4/(z*wn) : Infinity;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`ζ=${z.toFixed(2)}, ωₙ=${wn.toFixed(1)}`,ox,25);
+      ctx.fillText(`오버슈트 Mp = ${Mp.toFixed(1)}%, 정착시간 ts ≈ ${isFinite(ts)?ts.toFixed(2)+'s':'∞'}`,ox+170,25);
+      ctx.fillStyle='#999';ctx.font='11px sans-serif';
+      ctx.fillText('회색: 다른 ζ 비교 (0, 0.3, 0.7, 1, 1.5)',ox,oy+22);
+    }
+    document.getElementById('zVal').addEventListener('input',draw);
+    document.getElementById('wnVal').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>4.5 에너지로 보는 스프링-매스-댐퍼</h2>
+  <p>시스템을 <em>힘</em> 대신 <em>에너지</em>로 보면 또 다른 직관이 열립니다.</p>
+  <ul>
+    <li><strong>운동 에너지</strong> $T = \tfrac{1}{2} m \dot{x}^2$ — 질량이 가지는 에너지(속도가 클수록 큼).</li>
+    <li><strong>위치 에너지</strong> $V = \tfrac{1}{2} k x^2$ — 스프링이 가지는 에너지(많이 늘어날수록 큼).</li>
+    <li><strong>소산 에너지</strong> $D_d = b\dot{x}^2$ — 댐퍼가 단위 시간에 열로 버리는 에너지.</li>
+  </ul>
+  <p>댐퍼가 없으면 $T + V = \text{일정}$ — 운동 에너지와 위치 에너지가 끝없이 오고 갑니다(무감쇠 진동, $\zeta = 0$). 댐퍼가 있으면 그 에너지가 매 사이클마다 조금씩 열로 빠져 나가, 결국 정지 상태로 수렴(저감쇠 진동). <strong>"어디에 에너지를 저장하고 어디서 잃는가"</strong>가 시스템의 동특성을 결정합니다.</p>
+
+  <h2>4.6 더 많은 2차 시스템 — 같은 식, 다른 모습</h2>
+  <p>$m\ddot{x} + b\dot{x} + kx = f$의 모양이 메카트로닉스의 거의 모든 1자유도 시스템을 덮습니다.</p>
+
+  <table>
+    <thead><tr><th>시스템</th><th>$m$ 자리</th><th>$b$ 자리</th><th>$k$ 자리</th><th>$x$ 자리</th></tr></thead>
+    <tbody>
+      <tr><td>스프링-매스-댐퍼</td><td>질량</td><td>점성마찰</td><td>스프링</td><td>변위</td></tr>
+      <tr><td>회전계 (모터 축)</td><td>관성모멘트 $J$</td><td>점성토크 $b$</td><td>비틀림 강성 $k_t$</td><td>각변위 $\theta$</td></tr>
+      <tr><td>RLC 직렬 회로</td><td>인덕턴스 $L$</td><td>저항 $R$</td><td>$1/C$</td><td>전하 $q$</td></tr>
+      <tr><td>물탱크 + 파이프</td><td>유체 관성 $\rho L_{\text{관}}/A$</td><td>점성 저항</td><td>중력 헤드</td><td>유량</td></tr>
+      <tr><td>건물 (단일 모드)</td><td>건물 유효 질량</td><td>구조 감쇠</td><td>구조 강성</td><td>층 변위</td></tr>
+      <tr><td>RLC 진동</td><td>$L$</td><td>$R$</td><td>$1/C$</td><td>$q$</td></tr>
+    </tbody>
+  </table>
+  <p>한 시스템을 깊이 풀면 다른 시스템을 자동으로 풀 수 있다는 게 모델링의 위력입니다. 그래서 4년차 메카트로닉스 엔지니어가 처음 보는 분야의 시스템을 빨리 이해할 수 있어요.</p>
+
+  <h2>5. 전기-기계 유사 — 같은 수학, 다른 도메인</h2>
+  <p>흥미로운 사실: <strong>RLC 회로의 미분방정식이 스프링-매스-댐퍼와 정확히 같은 형태</strong>입니다.</p>
+
+  <table>
+    <thead><tr><th>기계</th><th>전기 (RLC)</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td>변위 $x$</td><td>전하 $q$</td><td>일반화 좌표</td></tr>
+      <tr><td>속도 $\dot{x}$</td><td>전류 $i = \dot{q}$</td><td>흐름</td></tr>
+      <tr><td>질량 $m$</td><td>인덕턴스 $L$</td><td>관성·에너지 저장</td></tr>
+      <tr><td>댐퍼 $b$</td><td>저항 $R$</td><td>에너지 소비</td></tr>
+      <tr><td>스프링 $k$</td><td>$1/C$</td><td>복원력·에너지 저장</td></tr>
+      <tr><td>외력 $f$</td><td>전압 $v$</td><td>입력</td></tr>
+    </tbody>
+  </table>
+
+  <p>한 도메인에서 푼 답이 다른 도메인에 그대로 적용됩니다 — 이래서 RLC 회로 분석을 마스터한 사람은 진동 시스템도 자연스럽게 이해해요. <a href="../../lectures-mech/08-impedance.html">기전공학기초 W8 임피던스</a>의 RLC 공진이 바로 위 표의 전기 버전입니다.</p>
+
+  <h2>6. 좀 더 복잡한 모델</h2>
+
+  <h3>6.1 다자유도(Multi-DOF) 시스템</h3>
+  <p>두 질량이 스프링으로 연결된 경우 등 — 각 질량의 변위를 변수로 두고 연립 미분방정식이 됩니다.</p>
+  $$ M\ddot{\mathbf{x}} + B\dot{\mathbf{x}} + K\mathbf{x} = \mathbf{f}(t) $$
+  <p>여기서 $M$, $B$, $K$는 행렬. 모드 분석으로 풀면 여러 개의 1자유도 시스템으로 분해됩니다(고유값-고유벡터).</p>
+
+  <h3>6.2 비선형 동역학</h3>
+  <p>실제 시스템은 비선형 항이 있습니다 — 정마찰, 스프링의 비선형성, 회전 운동의 $\sin\theta$ 등. 자전거 모델, 드론 동역학이 모두 비선형이에요. 일반 미분방정식 그대로 풀거나, 동작점 근처에서 <strong>선형화(linearization)</strong>해 위 표준형으로 근사합니다.</p>
+
+  <h3>6.3 선형화 예 — 진자</h3>
+  $$ \ddot{\theta} + \frac{g}{\ell}\sin\theta = 0 $$
+  <p>비선형. 작은 각에서 $\sin\theta \approx \theta$로 근사하면:</p>
+  $$ \ddot{\theta} + \frac{g}{\ell}\theta = 0 \quad \Rightarrow \quad \omega_n = \sqrt{g/\ell} $$
+  <p>이게 단진자의 주기 식 $T = 2\pi\sqrt{\ell/g}$의 출처. 작은 각 한정 — 큰 각에서는 비선형 효과가 무시 못 함.</p>
+
+  <p><strong>왜 $\sin\theta \approx \theta$인가</strong> — 테일러 전개 $\sin\theta = \theta - \theta^3/6 + \theta^5/120 - \cdots$에서 $\theta$가 작으면 첫 항 $\theta$만 남기고 나머지는 무시할 만큼 작습니다. 예: $\theta=10°\approx 0.175$ rad이면 $\theta^3/6 \approx 0.00089$로 $\theta$의 0.5%. 60°($\approx 1.05$ rad)면 $\theta^3/6 \approx 0.19$로 18% — 이때부터는 선형 근사가 명백히 잘못됩니다. 일반적인 <strong>선형화 절차</strong>는 동작점 $\bar{\mathbf{x}}$ 근처에서 $f(\mathbf{x}) \approx f(\bar{\mathbf{x}}) + \frac{\partial f}{\partial \mathbf{x}}\big|_{\bar{\mathbf{x}}}(\mathbf{x}-\bar{\mathbf{x}})$. 이 야코비언이 W5 EKF에 다시 등장합니다 — 같은 도구의 다른 응용.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 진자의 비선형 vs 선형 근사</h4>
+    <p>작은 초기각에서는 두 곡선이 거의 겹쳐요. 그런데 초기각을 60° 이상으로 키우면, <strong>선형 근사가 진동 주기를 짧게 잘못 예측</strong>합니다. 큰 각에서는 비선형 효과로 진자가 더 느리게 흔들립니다.</p>
+    <canvas id="penDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>초기각 θ₀ <span class="val" id="penAV">20</span> °<input type="range" id="penA" min="5" max="170" step="1" value="20"></label>
+      <label>줄 길이 ℓ <span class="val" id="penLV">1.0</span> m<input type="range" id="penL" min="0.2" max="3" step="0.1" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('penDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const a0=+document.getElementById('penA').value*Math.PI/180;
+      const L=+document.getElementById('penL').value;
+      document.getElementById('penAV').textContent=(a0*180/Math.PI).toFixed(0);
+      document.getElementById('penLV').textContent=L.toFixed(1);
+      const g=9.81, wn=Math.sqrt(g/L);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H/2,w=W-70,h=H-80,T=4*2*Math.PI/wn;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,H-30);ctx.stroke();
+      // simulate full nonlinear with RK4
+      const N=600,dt=T/N;
+      let th=a0,om=0;
+      const nl=[];
+      for(let i=0;i<=N;i++){nl.push(th);
+        const k1a=om, k1b=-g/L*Math.sin(th);
+        const k2a=om+k1b*dt/2, k2b=-g/L*Math.sin(th+k1a*dt/2);
+        const k3a=om+k2b*dt/2, k3b=-g/L*Math.sin(th+k2a*dt/2);
+        const k4a=om+k3b*dt, k4b=-g/L*Math.sin(th+k3a*dt);
+        th += dt/6*(k1a+2*k2a+2*k3a+k4a);
+        om += dt/6*(k1b+2*k2b+2*k3b+k4b);}
+      // linearized: th(t) = a0*cos(wn*t)
+      const yMax=Math.max(Math.abs(a0),0.3);
+      function yp(v){return oy-v/yMax*h*0.4;}
+      // linear (gray)
+      ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.beginPath();
+      for(let i=0;i<=N;i++){const t=i*dt;const v=a0*Math.cos(wn*t);
+        const xx=ox+i/N*w,yy=yp(v);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();ctx.setLineDash([]);
+      // nonlinear (blue)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      nl.forEach((v,i)=>{const xx=ox+i/N*w,yy=yp(v);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`선형 주기 T_lin = ${(2*Math.PI/wn).toFixed(2)} s`,ox,25);
+      // estimate nonlinear period
+      let Tnl=0;for(let i=1;i<N;i++)if(nl[i-1]>0&&nl[i]<=0&&nl[i-1]>0.01){Tnl=(i*dt)*2;break;}
+      ctx.fillText(`비선형 주기 ≈ ${Tnl.toFixed(2)} s  (편차 ${((Tnl-2*Math.PI/wn)/(2*Math.PI/wn)*100).toFixed(1)}%)`,ox+220,25);
+      ctx.fillStyle='#888';ctx.fillText('-- 선형 근사 (sinθ ≈ θ)',ox+10,H-15);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 비선형 (실제)',ox+200,H-15);
+    }
+    document.getElementById('penA').addEventListener('input',draw);
+    document.getElementById('penL').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>6.4 실전 모델링 예제 — DC 모터</h2>
+  <p>한 학기 가장 많이 만날 시스템. DC 모터는 전기 회로(인덕터·저항)와 기계 회전(관성·점성마찰)이 결합된 <strong>전기-기계 시스템</strong>입니다.</p>
+
+  <p><strong>전기 부분</strong>: 전압 $V$를 인가하면 전류 $i$가 흐르고, 모터가 돌면 역기전력 $K_e \omega$가 발생.</p>
+  $$ V = R\,i + L\frac{di}{dt} + K_e\,\omega $$
+
+  <p><strong>기계 부분</strong>: 전류는 토크 $\tau = K_t i$를 만들고, 이 토크가 관성·마찰을 이깁니다.</p>
+  $$ \tau = K_t\,i = J\frac{d\omega}{dt} + b\,\omega $$
+
+  <p>$L$을 무시(작은 시정수)할 수 있으면 두 식을 합쳐:</p>
+  $$ J\dot\omega + \left(b + \frac{K_t K_e}{R}\right)\omega = \frac{K_t}{R}V $$
+  <p>이건 <strong>1차 시스템</strong>! W2의 시정수 $\tau$ 식과 같은 모양입니다. 즉 모터에 5V를 갑자기 인가하면 회전수가 지수적으로 정상속도로 수렴해요. RC 회로와 정확히 같은 거동.</p>
+
+  <p>$L$까지 살리면 2차 시스템이 되고, 추가로 부하의 관성·스프링까지 더하면 더 고차 시스템이 됩니다. <strong>이 모델 하나가 W9의 응답, W10의 전달함수, W11의 PID 모터 제어로 그대로 이어집니다</strong>.</p>
+
+  <h2>7. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>식</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>$m\ddot{x} + b\dot{x} + kx = f$</td><td>2차 시스템 표준형</td></tr>
+      <tr><td>$\omega_n = \sqrt{k/m}$</td><td>고유 주파수</td></tr>
+      <tr><td>$\zeta = b/(2\sqrt{km})$</td><td>감쇠비</td></tr>
+      <tr><td>$\zeta \lessgtr 1$</td><td>저/임계/과감쇠 구분</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. 더 깊이 보기</h2>
+  <ul>
+    <li><a href="../../lectures/02-dynamics.html">로봇공학특론 L2 동역학</a> — 다축 로봇의 라그랑주 방정식, 자전거 모델, RK4 수치 적분.</li>
+    <li><a href="../../lectures/03-state-space.html">로봇공학특론 L3 상태공간</a> — 위 표준형을 1차 벡터식 $\dot{\mathbf{x}} = A\mathbf{x} + B\mathbf{u}$로 변환.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>다음 주차로의 다리</strong> — 모델 식을 적었으니 이제 실제로 풀어 응답을 봐야 합니다. 다음 주(W9)에서는 이 2차 미분방정식의 <strong>스텝·임펄스·정현파 응답</strong>을 그려보고, $\zeta$가 응답 모양을 어떻게 결정하는지 직관을 만듭니다. 그리고 W10에서 라플라스 변환으로 풀이를 자동화합니다.
+  </div>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:30px">※ W8은 중간고사 주차로 별도 콘텐츠 없습니다. 다음은 W9.</p>
+
+  <nav class="prevnext">
+    <a href="06-microprocessor.html"><small>← 이전</small>W6. 마이크로프로세서</a>
+    <a href="09-dynamic-response.html" class="next"><small>다음 →</small>W9. 동적 응답</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 반가산기 — 두 비트의 합과 자리올림 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 반가산기 — 두 비트의 합과 자리올림</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/12-digital.html">Week 12. 디지털 논리 — 0과 1로 짓는 컴퓨터</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 반가산기 — 두 비트의 합과 자리올림</h4>
+    <p>$S = A \oplus B$ (XOR), $C = A \cdot B$ (AND). 두 입력 비트로 단순한 1비트 덧셈을 시연합니다 — CPU 가산기의 첫 블록.</p>
+    <canvas id="haCanvas" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>A
+        <select id="haA"><option value="0">0</option><option value="1">1</option></select>
+      </label>
+      <label>B
+        <select id="haB"><option value="0">0</option><option value="1">1</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('haCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const A=+document.getElementById('haA').value;
+      const B=+document.getElementById('haB').value;
+      const S=A^B,Cy=A&B;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#222';ctx.font='15px sans-serif';
+      ctx.fillText(`입력 A=${A}, B=${B}`,30,30);
+      ctx.fillStyle=S?'#0b5fff':'#bbb';
+      ctx.fillRect(150,60,140,60);
+      ctx.strokeStyle='#222';ctx.strokeRect(150,60,140,60);
+      ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';
+      ctx.fillText('XOR (A⊕B)',160,80);
+      ctx.fillText('→ S = '+S,160,105);
+      ctx.fillStyle=Cy?'#c62828':'#bbb';
+      ctx.fillRect(150,140,140,60);
+      ctx.strokeStyle='#222';ctx.strokeRect(150,140,140,60);
+      ctx.fillStyle='#fff';
+      ctx.fillText('AND (A·B)',160,160);
+      ctx.fillText('→ C = '+Cy,160,185);
+      const sum=A+B;
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText(`A + B = ${A} + ${B} = ${sum}`,360,80);
+      ctx.fillText(`(C, S) = (${Cy}, ${S}) → 2진수 ${Cy}${S}`,360,105);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('S: 합의 LSB,  C: 자리올림(carry)',360,135);
+      ctx.fillText('1+1=10 (이진수)이므로 C=1, S=0',360,155);
+      const combos=[[0,0],[0,1],[1,0],[1,1]];
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('A B | S C',360,180);
+      combos.forEach((cb,i)=>{
+        const isCur=cb[0]===A&&cb[1]===B;
+        ctx.fillStyle=isCur?'#c62828':'#666';
+        ctx.fillText(`${cb[0]} ${cb[1]} | ${cb[0]^cb[1]} ${cb[0]&cb[1]}`,360,200+i*15);
+      });
+    }
+    ['haA','haB'].forEach(id=>document.getElementById(id).addEventListener('change',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

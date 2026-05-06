@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>데모 4: 에너지 우물 시각화 (d7-well) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">데모 4: 에너지 우물 시각화 (d7-well)</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/07-work-energy.html">Week 7. 일과 에너지</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>데모 4: 에너지 우물 시각화 (d7-well)</h4>
+    <p>$E$가 우물의 깊이보다 작으면 입자가 전환점 사이에서 진동. 충분히 크면 탈출. 우물 모양에 따라 진동 양상이 달라짐.</p>
+    <canvas id="d7w" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>k (조화) <span class="val" id="d7wKV">10</span><input type="range" id="d7wK" min="-20" max="20" step="0.5" value="10"></label>
+      <label>a (비선형) <span class="val" id="d7wAV">0.5</span><input type="range" id="d7wA" min="-2" max="5" step="0.1" value="0.5"></label>
+      <label>전체 에너지 E <span class="val" id="d7wEV">5</span><input type="range" id="d7wE" min="0.5" max="40" step="0.5" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d7w'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['d7wK','d7wA','d7wE'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    function loop(){
+      const k=+sl('d7wK').value,a=+sl('d7wA').value,E=+sl('d7wE').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const cx=320,cy=260,xs=60,ys=8;
+      x.strokeStyle='#333';x.lineWidth=1;
+      x.beginPath();x.moveTo(40,cy);x.lineTo(600,cy);x.stroke();
+      x.beginPath();x.moveTo(cx,cy);x.lineTo(cx,30);x.stroke();
+      x.fillStyle='#666';x.font='10px sans-serif';
+      x.fillText('x',590,cy-4);x.fillText('V',cx+6,40);
+      // V(x)
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let xv=-4;xv<=4;xv+=0.05){
+        const Vv=0.5*k*xv*xv+a*xv*xv*xv*xv;
+        const px=cx+xv*xs,py=cy-Vv*ys;
+        if(py<20)continue;
+        if(first){x.moveTo(px,py);first=false;}else x.lineTo(px,py);
+      }
+      x.stroke();
+      // E line
+      x.strokeStyle='#c62828';x.lineWidth=2;x.setLineDash([6,3]);
+      x.beginPath();x.moveTo(40,cy-E*ys);x.lineTo(600,cy-E*ys);x.stroke();
+      x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='11px Consolas,monospace';
+      x.fillText('E = '+E.toFixed(2),50,cy-E*ys-5);
+      // 도달 가능 영역 음영
+      x.fillStyle='#0b5fff22';
+      for(let xv=-4;xv<=4;xv+=0.05){
+        const Vv=0.5*k*xv*xv+a*xv*xv*xv*xv;
+        if(Vv<E){
+          x.fillRect(cx+xv*xs,cy-E*ys,xs*0.05+1,(E-Vv)*ys);
+        }
+      }
+      // 라벨
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('V(x) = ½kx² + ax⁴',40,30);
+      x.fillStyle='#0b5fff';x.fillText('파란 영역: KE = E - V > 0 (운동 가능)',40,46);
+      x.fillStyle='#444';x.font='11px Consolas,monospace';
+      x.fillText('k='+k.toFixed(1)+', a='+a.toFixed(2),40,60);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

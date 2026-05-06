@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 1차 vs 2차 시스템 응답 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 1차 vs 2차 시스템 응답 비교</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/03-transfer-function.html">Week 3. 전달함수 &amp; 시스템 모델링</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 vs 2차 시스템 응답 비교</h4>
+    <p>왼쪽은 1차 $G_1(s) = \dfrac{1}{\tau s + 1}$, 오른쪽은 2차 $G_2(s) = \dfrac{\omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2}$.
+    같은 단위 스텝을 입력했을 때 응답이 어떻게 다른지 보세요.</p>
+    <canvas id="tfdemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>τ (1차) <span class="val" id="tauV">2.0</span><input type="range" id="tau" min="0.2" max="5" step="0.1" value="2.0"></label>
+      <label>ωₙ (2차) <span class="val" id="wnV">2.0</span><input type="range" id="wn" min="0.5" max="5" step="0.1" value="2.0"></label>
+      <label>ζ (2차) <span class="val" id="zV">0.4</span><input type="range" id="z" min="0" max="2" step="0.05" value="0.4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tfdemo'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('tauV').textContent=(+$('tau').value).toFixed(1);$('wnV').textContent=(+$('wn').value).toFixed(1);$('zV').textContent=(+$('z').value).toFixed(2);};
+    ['tau','wn','z'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const tau=+$('tau').value, wn=+$('wn').value, z=+$('z').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const draw=(ox,title,col,fn)=>{
+        const oy=210, w=300, h=170;
+        x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+        x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+        x.moveTo(ox,oy-150);x.lineTo(ox+w,oy-150);x.stroke();x.setLineDash([]);
+        x.fillStyle='#666';x.font='11px sans-serif';x.fillText('1.0',ox-22,oy-148);x.fillText('0',ox-12,oy+4);
+        x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+        for(let i=0;i<300;i++){const t=i*0.05, y=fn(t); const xx=ox+i, yy=oy-y*150;
+          if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);} x.stroke();
+        x.fillStyle='#444';x.font='13px sans-serif';x.fillText(title,ox+10,oy-h-4);
+      };
+      // 1st order step response
+      draw(20,'1차: y(t) = 1 - e^(-t/τ)','#0b5fff', t=>1-Math.exp(-t/tau));
+      // 2nd order step response (closed form for under/critical/over damped)
+      draw(330,'2차: ζ='+z.toFixed(2),'#f57c00', t=>{
+        if(z<1){const wd=wn*Math.sqrt(1-z*z);
+          return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z) * Math.sin(wd*t + Math.acos(z));}
+        if(Math.abs(z-1)<1e-3) return 1 - (1+wn*t)*Math.exp(-wn*t);
+        const a=z*wn, b=wn*Math.sqrt(z*z-1);
+        const r1=-a+b, r2=-a-b;
+        return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);
+      });
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

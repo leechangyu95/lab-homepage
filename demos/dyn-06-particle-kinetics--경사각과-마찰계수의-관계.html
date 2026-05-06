@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 경사각과 마찰계수의 관계 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 경사각과 마찰계수의 관계</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/06-particle-kinetics.html">Week 6. 입자의 운동역학 — F = ma</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 경사각과 마찰계수의 관계</h4>
+    <p>경사각 $\theta$ 와 마찰계수 $\mu$ 를 바꾸면서 물체가 미끄러지는지, 가속도는 얼마인지 확인.
+       임계각 $\theta_c = \arctan(\mu_s)$ 를 직접 발견해 보세요.</p>
+    <canvas id="d6InclineDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>경사각 θ (°) <span class="val" id="d6thV">30</span><input type="range" id="d6th" min="0" max="60" step="1" value="30"></label>
+      <label>마찰계수 μ <span class="val" id="d6muV">0.3</span><input type="range" id="d6mu" min="0" max="1" step="0.05" value="0.3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d6InclineDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const th=+document.getElementById('d6th').value*Math.PI/180;
+      const mu=+document.getElementById('d6mu').value;
+      ['d6th','d6mu'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=80,oy=H-50,len=400;
+      const x2=ox+len*Math.cos(th),y2=oy-len*Math.sin(th);
+      ctx.fillStyle='#9c27b033';
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x2,y2);ctx.lineTo(x2,oy);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#9c27b0';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(x2,y2);ctx.stroke();
+      // block at midpoint
+      const mx=ox+len*0.5*Math.cos(th),my=oy-len*0.5*Math.sin(th);
+      const bs=30;
+      ctx.fillStyle='#0b5fff';
+      ctx.save();ctx.translate(mx,my);ctx.rotate(-th);
+      ctx.fillRect(-bs/2,-bs,bs,bs);
+      ctx.restore();
+      // physics
+      const g=9.81,driving=g*Math.sin(th),friction_max=mu*g*Math.cos(th);
+      let a,status,col;
+      if(driving<=friction_max){a=0;status='정지 ✓ (정적 마찰이 충분)';col='#2e7d32';}
+      else{a=driving-friction_max;status=`미끄러짐 → 가속도 a = g(sin θ − μ cos θ) = ${a.toFixed(2)} m/s²`;col='#cf1322';}
+      ctx.fillStyle='#222';ctx.font='13px Consolas,monospace';
+      ctx.fillText(`구동력 (성분): mg sin θ = ${driving.toFixed(2)}m N/kg`,30,30);
+      ctx.fillText(`최대 마찰력: μ N = μ mg cos θ = ${friction_max.toFixed(2)}m N/kg`,30,50);
+      ctx.fillStyle=col;ctx.font='bold 14px sans-serif';
+      ctx.fillText(status,30,75);
+      const thC=Math.atan(mu)*180/Math.PI;
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`임계각 θ_c = arctan(μ) = ${thC.toFixed(1)}°`,30,98);
+    }
+    ['d6th','d6mu'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

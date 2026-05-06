@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 결정트리 영역 분할 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 결정트리 영역 분할</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/05-classification.html">Week 5. 분류 알고리즘 — KNN, SVM, 결정트리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 결정트리 영역 분할</h4>
+    <p>2D 데이터를 단계별로 수직/수평선으로 나눕니다. 깊이가 깊어질수록 영역이 잘게 쪼개집니다.</p>
+    <canvas id="dtCanvas" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>최대 깊이 <span class="val" id="dpV">3</span><input type="range" id="dp" min="1" max="6" step="1" value="3"></label>
+      <button id="dtRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dtCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    function gen(){
+      pts=[];
+      for(let i=0;i<60;i++){
+        const x=Math.random(),y=Math.random();
+        const c=(x>0.5)^(y>0.5)?1:0;
+        pts.push({x,y,c});
+      }
+      draw();
+    }
+    function gini(arr){if(!arr.length)return 0;const c0=arr.filter(p=>p.c==0).length/arr.length;const c1=1-c0;return 1-c0*c0-c1*c1;}
+    function build(arr,depth,box){
+      if(depth===0||arr.length<3||gini(arr)<0.05){return {leaf:true,arr,box};}
+      let best=null;
+      for(let f=0;f<2;f++)for(let t=0.1;t<1;t+=0.05){
+        const L=arr.filter(p=>(f?p.y:p.x)<t),R=arr.filter(p=>(f?p.y:p.x)>=t);
+        if(!L.length||!R.length)continue;
+        const g=(L.length*gini(L)+R.length*gini(R))/arr.length;
+        if(!best||g<best.g)best={g,f,t,L,R};
+      }
+      if(!best)return{leaf:true,arr,box};
+      const b1={...box},b2={...box};
+      if(best.f===0){b1.x1=best.t;b2.x0=best.t;}else{b1.y1=best.t;b2.y0=best.t;}
+      return {leaf:false,f:best.f,t:best.t,L:build(best.L,depth-1,b1),R:build(best.R,depth-1,b2),box};
+    }
+    function drawNode(n){
+      if(n.leaf){
+        const arr=n.arr;const c0=arr.filter(p=>p.c==0).length;
+        ctx.fillStyle=c0>=arr.length/2?'rgba(11,95,255,0.18)':'rgba(255,140,0,0.18)';
+        ctx.fillRect(n.box.x0*W,n.box.y0*H,(n.box.x1-n.box.x0)*W,(n.box.y1-n.box.y0)*H);
+      }else{drawNode(n.L);drawNode(n.R);
+        ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.beginPath();
+        if(n.f===0){ctx.moveTo(n.t*W,n.box.y0*H);ctx.lineTo(n.t*W,n.box.y1*H);}
+        else{ctx.moveTo(n.box.x0*W,n.t*H);ctx.lineTo(n.box.x1*W,n.t*H);}
+        ctx.stroke();
+      }
+    }
+    function draw(){
+      const D=+document.getElementById('dp').value;
+      document.getElementById('dpV').textContent=D;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const tree=build(pts,D,{x0:0,y0:0,x1:1,y1:1});
+      drawNode(tree);
+      pts.forEach(p=>{ctx.fillStyle=p.c?'#ff8c00':'#0b5fff';ctx.beginPath();ctx.arc(p.x*W,p.y*H,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();});
+    }
+    document.getElementById('dp').addEventListener('input',draw);
+    document.getElementById('dtRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

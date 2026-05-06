@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 개루프 vs 폐루프 (외란·모델 오차 비교) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 개루프 vs 폐루프 (외란·모델 오차 비교)</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/07-feedback-control.html">Lecture 7. 피드백 제어 (PID)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 개루프 vs 폐루프 (외란·모델 오차 비교)</h4>
+    <p>같은 질량-스프링-댐퍼 시스템 두 대에 같은 목표 $r$을 줍니다.
+    <span style="color:#f57c00;font-weight:600">개루프(주황)</span>은 공칭 모델만 보고 미리 계산한 입력 $u_{ff} = \hat{k}\, r$을 그대로 보냅니다.
+    <span style="color:#0b5fff;font-weight:600">폐루프(파랑)</span>은 측정된 출력으로 $u = K_p(r-y) - K_d\dot{y}$를 매 순간 갱신합니다.
+    외란과 스프링 강성 오차를 흔들어 보세요.</p>
+    <canvas id="ol_cl" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>외란 d <span class="val" id="oclDV">0</span><input type="range" id="oclD" min="-3" max="3" step="0.1" value="0"></label>
+      <label>스프링 오차 Δk <span class="val" id="oclKV">0</span><input type="range" id="oclK" min="-1" max="1.5" step="0.05" value="0"></label>
+      <button id="oclStep">목표 변경</button>
+      <button id="oclRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ol_cl'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{sl('oclDV').textContent=(+sl('oclD').value).toFixed(1);
+                   sl('oclKV').textContent=(+sl('oclK').value).toFixed(2);};
+    ['oclD','oclK'].forEach(k=>sl(k).oninput=upd);
+    const m=1, c0=0.3, kNom=2;            // nominal plant the open-loop trusts
+    const Kp=8, Kd=3;                     // closed-loop gains (fixed)
+    let yo=0,ydo=0, yc=0,ydc=0, ref=3, hist=[];
+    const reset=()=>{yo=0;ydo=0;yc=0;ydc=0;hist=[];};
+    sl('oclRst').onclick=reset;
+    sl('oclStep').onclick=()=>{ref=ref>0?-3:3;};
+    function loop(){
+      const d=+sl('oclD').value, dk=+sl('oclK').value;
+      const kAct=kNom+dk;                 // actual spring the cart really sees
+      const dt=0.03;
+      // open-loop: feedforward computed from nominal model only
+      const uo=kNom*ref;
+      const yddo=(uo - kAct*yo - c0*ydo + d)/m;
+      ydo+=yddo*dt; yo+=ydo*dt;
+      // closed-loop: PD on measured y
+      const uc=Kp*(ref-yc)-Kd*ydc;
+      const yddc=(uc - kAct*yc - c0*ydc + d)/m;
+      ydc+=yddc*dt; yc+=ydc*dt;
+      hist.push({yo,yc,ref}); if(hist.length>320)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // top: two tracks
+      const drawCart=(y,cy,color,label)=>{
+        x.fillStyle='#999';x.fillRect(40,cy-24,8,48);
+        const px=140+y*40;
+        x.strokeStyle='#888';x.lineWidth=2;x.beginPath();x.moveTo(48,cy);
+        for(let i=0;i<10;i++)x.lineTo(48+(px-48)*i/10,cy+(i%2?-6:6));
+        x.lineTo(px,cy);x.stroke();
+        x.fillStyle=color;x.fillRect(px-15,cy-14,30,28);
+        x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+        x.moveTo(140+ref*40,cy-26);x.lineTo(140+ref*40,cy+26);x.stroke();x.setLineDash([]);
+        x.fillStyle='#444';x.font='12px sans-serif';x.fillText(label,12,cy-30);
+      };
+      drawCart(yo,40,'#f57c00','개루프 (u = k̂·r)');
+      drawCart(yc,110,'#0b5fff','폐루프 (PD)');
+      // disturbance arrow on both
+      if(Math.abs(d)>0.05){
+        const dirs=Math.sign(d);
+        x.strokeStyle='#9c27b0';x.lineWidth=2;
+        [40,110].forEach((cy,idx)=>{
+          const px=140+(idx?yc:yo)*40;
+          x.beginPath();x.moveTo(px,cy+22);x.lineTo(px+dirs*22,cy+22);x.stroke();
+          x.beginPath();x.moveTo(px+dirs*22,cy+22);x.lineTo(px+dirs*16,cy+18);
+          x.lineTo(px+dirs*16,cy+26);x.closePath();x.fillStyle='#9c27b0';x.fill();
+        });
+        x.fillStyle='#9c27b0';x.font='11px sans-serif';x.fillText('외란 d',12,160);
+      }
+      // bottom: response plot (y = 200 zero line, scale 15 px/unit)
+      const y0=270;
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(0,y0);x.lineTo(c.width,y0);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=y0-h.ref*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();x.setLineDash([]);
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=y0-h.yo*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=i*2,yy=y0-h.yc*15;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('응답 y(t)  —  빨강: 목표, 주황: 개루프, 파랑: 폐루프',10,200);
+      // numeric error readout
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('현재 오차    개루프: '+(ref-yo).toFixed(2)+'    폐루프: '+(ref-yc).toFixed(2),
+                 10,365);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

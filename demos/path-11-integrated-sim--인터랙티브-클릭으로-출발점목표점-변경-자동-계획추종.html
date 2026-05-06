@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 클릭으로 출발점·목표점 변경 → 자동 계획·추종 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 클릭으로 출발점·목표점 변경 → 자동 계획·추종</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/11-integrated-sim.html">Week 11. 경로계획 + 유도제어 통합 시뮬레이션</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 클릭으로 출발점·목표점 변경 → 자동 계획·추종</h4>
+    <p>좌클릭으로 <strong>출발점</strong>, 우클릭(또는 Shift+클릭)으로 <strong>목표점</strong>을 옮기면 즉시 A*로 재계획하고 차량이 따라가기 시작합니다.
+    Look-ahead와 Kp_speed를 조절해 추종 품질을 비교해 보세요.</p>
+    <canvas id="ipCv" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>look-ahead 기본 Lfc <span class="val" id="lfV">1.5</span><input type="range" id="lf" min="0.5" max="4.0" step="0.1" value="1.5"></label>
+      <label>속도 게인 Kp <span class="val" id="kpsV">1.2</span><input type="range" id="kps" min="0.2" max="3.0" step="0.1" value="1.2"></label>
+      <label>순항 속도 [m/s] <span class="val" id="vcV">8</span><input type="range" id="vc" min="3" max="15" step="0.5" value="8"></label>
+      <button id="rstBtn" class="alt">리셋</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:6px">팁 — 좌클릭: 출발점 / 우클릭(또는 Shift+클릭): 목표점</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ipCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('lfV').textContent=(+$('lf').value).toFixed(1);$('kpsV').textContent=(+$('kps').value).toFixed(1);$('vcV').textContent=(+$('vc').value).toFixed(1);};
+    ['lf','kps','vc'].forEach(id=>$(id).oninput=upd);
+    const W=20,H=12;const sc=Math.min(c.width/W,c.height/H);
+    let start=[2,2],goal=[18,10];
+    const obs=[[8,5,1.6],[12,9,1.4],[14,4,1.2],[5,9,1.0]];
+    let path=null,car,speedPID,running=true;
+    function makeCar(){return{x:start[0],y:start[1],psi:0,v:0};}
+    function makePID(){return{Kp:1.2,Ki:0.4,Kd:0.05,I:0,e_p:null,umin:-3,umax:2,step(e,dt){this.I+=e*dt;const dedt=this.e_p===null?0:(e-this.e_p)/dt;this.e_p=e;let u=this.Kp*e+this.Ki*this.I+this.Kd*dedt;const us=Math.max(this.umin,Math.min(this.umax,u));if(us!==u)this.I-=e*dt;return us;}};}
+    function planPath(){
+      // simple A* on a coarse grid
+      const N=40,M=24;const gx=W/N,gy=H/M;
+      const blocked=(i,j)=>{const x_=i*gx+gx/2,y_=j*gy+gy/2;for(const o of obs){if(Math.hypot(x_-o[0],y_-o[1])<o[2]+0.4)return true;}return false;};
+      const si=Math.round(start[0]/gx),sj=Math.round(start[1]/gy);
+      const ti=Math.round(goal[0]/gx),tj=Math.round(goal[1]/gy);
+      const open=new Map(),closed=new Set(),parent=new Map(),g=new Map();
+      const k0=si+','+sj;g.set(k0,0);open.set(k0,{i:si,j:sj,f:Math.hypot(si-ti,sj-tj)});
+      let found=null;let it=0;
+      while(open.size>0&&it<5000){it++;let bk=null,bf=1e9;for(const[k,n]of open){if(n.f<bf){bf=n.f;bk=k;}}
+        const cur=open.get(bk);open.delete(bk);closed.add(bk);
+        if(cur.i===ti&&cur.j===tj){found=bk;break;}
+        for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){if(di===0&&dj===0)continue;
+          const ni=cur.i+di,nj=cur.j+dj;if(ni<0||ni>=N||nj<0||nj>=M)continue;if(blocked(ni,nj))continue;
+          const nk=ni+','+nj;if(closed.has(nk))continue;const cost=(di&&dj)?Math.SQRT2:1;
+          const ng=g.get(bk)+cost;if(!g.has(nk)||ng<g.get(nk)){g.set(nk,ng);parent.set(nk,bk);
+            open.set(nk,{i:ni,j:nj,f:ng+Math.hypot(ni-ti,nj-tj)});}}}
+      if(!found)return null;
+      const pts=[];let k=found;while(k){const[ii,jj]=k.split(',').map(Number);pts.push([ii*gx+gx/2,jj*gy+gy/2]);k=parent.get(k);}pts.reverse();
+      // simple shortcut
+      const free=(a,b)=>{for(let t=0;t<=1;t+=0.05){const px=a[0]+(b[0]-a[0])*t,py=a[1]+(b[1]-a[1])*t;for(const o of obs){if(Math.hypot(px-o[0],py-o[1])<o[2]+0.3)return false;}}return true;};
+      let cleaned=[pts[0]];let i=0;while(i<pts.length-1){let j=pts.length-1;while(j>i+1&&!free(pts[i],pts[j]))j--;cleaned.push(pts[j]);i=j;}
+      // densify
+      const dense=[];for(let i=0;i<cleaned.length-1;i++){const a=cleaned[i],b=cleaned[i+1];const d=Math.hypot(b[0]-a[0],b[1]-a[1]);const n=Math.max(1,Math.ceil(d/0.2));for(let k=0;k<n;k++){dense.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]);}}dense.push(cleaned[cleaned.length-1]);return dense;
+    }
+    function plan(){path=planPath();car=makeCar();speedPID=makePID();speedPID.Kp=+$('kps').value;}
+    plan();$('rstBtn').onclick=plan;
+    c.addEventListener('contextmenu',e=>{e.preventDefault();const r=c.getBoundingClientRect();goal=[(e.clientX-r.left)/sc,(c.height-(e.clientY-r.top))/sc];plan();});
+    c.addEventListener('click',e=>{const r=c.getBoundingClientRect();const px=(e.clientX-r.left)/sc,py=(c.height-(e.clientY-r.top))/sc;
+      if(e.shiftKey)goal=[px,py];else start=[px,py];plan();});
+    function nearestIdx(){if(!path)return 0;let bi=0,bd=1e9;path.forEach((p,i)=>{const d=Math.hypot(p[0]-car.x,p[1]-car.y);if(d<bd){bd=d;bi=i;}});return bi;}
+    function loop(){
+      if(path){
+        const Lfc=+$('lf').value,k=0.1;const Ld=k*car.v+Lfc;
+        let i=nearestIdx();let tg=path[path.length-1];for(let j=i;j<path.length;j++){if(Math.hypot(path[j][0]-car.x,path[j][1]-car.y)>=Ld){tg=path[j];break;}}
+        const alpha=Math.atan2(tg[1]-car.y,tg[0]-car.x)-car.psi;
+        const wa=Math.atan2(Math.sin(alpha),Math.cos(alpha));
+        const L=2.5;const delta=Math.atan2(2*L*Math.sin(wa),Ld);
+        const vRef=+$('vc').value;const a=speedPID.step(vRef-car.v,0.02);
+        const dt=0.02;car.x+=car.v*Math.cos(car.psi)*dt;car.y+=car.v*Math.sin(car.psi)*dt;
+        car.psi+=car.v/L*Math.tan(delta)*dt;car.v+=a*dt;car.v=Math.max(0,car.v);
+        if(Math.hypot(car.x-goal[0],car.y-goal[1])<0.5)car.v*=0.95;
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#fce4ec';x.strokeStyle='#c62828';
+      obs.forEach(o=>{x.beginPath();x.arc(o[0]*sc,c.height-o[1]*sc,o[2]*sc,0,2*Math.PI);x.fill();x.stroke();});
+      if(path){x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+        path.forEach((p,i)=>{const xx=p[0]*sc,yy=c.height-p[1]*sc;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();}
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(start[0]*sc,c.height-start[1]*sc,7,0,2*Math.PI);x.fill();
+      x.fillStyle='#c62828';x.beginPath();x.arc(goal[0]*sc,c.height-goal[1]*sc,7,0,2*Math.PI);x.fill();
+      // car
+      x.save();x.translate(car.x*sc,c.height-car.y*sc);x.rotate(-car.psi);
+      x.fillStyle='#0b5fff';x.fillRect(-12,-6,24,12);x.fillStyle='#fff';x.fillRect(7,-5,4,10);x.restore();
+      x.fillStyle='#222';x.font='12px sans-serif';x.fillText('v = '+car.v.toFixed(2)+' m/s',12,18);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

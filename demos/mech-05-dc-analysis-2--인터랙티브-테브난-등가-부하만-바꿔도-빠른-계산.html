@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 테브난 등가 — 부하만 바꿔도 빠른 계산 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 테브난 등가 — 부하만 바꿔도 빠른 계산</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/05-dc-analysis-2.html">Week 5. 직류회로 해석 2 — 등가회로와 휘트스톤 브릿지</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 테브난 등가 — 부하만 바꿔도 빠른 계산</h4>
+    <p>본문 예제 ($V_s=27\,\text{V}$, $R_1=6\,\Omega$, $R_2=3\,\Omega$)에서 부하 $R_L$만 바꿔도 같은 등가($V_{Th}=9\,\text{V}$, $R_{Th}=2\,\Omega$)로 즉시 계산 가능합니다. 양쪽이 같은 답인지 비교해보세요.</p>
+    <canvas id="thevCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>전원 V_s <span class="val" id="thevVsV">27</span> V<input type="range" id="thevVs" min="5" max="50" step="1" value="27"></label>
+      <label>R₁ <span class="val" id="thevR1V">6</span> Ω<input type="range" id="thevR1" min="1" max="20" step="0.5" value="6"></label>
+      <label>R₂ <span class="val" id="thevR2V">3</span> Ω<input type="range" id="thevR2" min="1" max="20" step="0.5" value="3"></label>
+      <label>R_L <span class="val" id="thevRLV">4</span> Ω<input type="range" id="thevRL" min="0.5" max="20" step="0.5" value="4"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('thevCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const Vs=+document.getElementById('thevVs').value;
+      const R1=+document.getElementById('thevR1').value;
+      const R2=+document.getElementById('thevR2').value;
+      const RL=+document.getElementById('thevRL').value;
+      document.getElementById('thevVsV').textContent=Vs;
+      document.getElementById('thevR1V').textContent=R1.toFixed(1);
+      document.getElementById('thevR2V').textContent=R2.toFixed(1);
+      document.getElementById('thevRLV').textContent=RL.toFixed(1);
+      const Vth=Vs*R2/(R1+R2);
+      const Rth=R1*R2/(R1+R2);
+      // Original: full circuit voltage on RL
+      // Node A KCL: Vs/R1 = Va/R2 + Va/RL → Va = Vs*(R2*RL/(R2+RL))/(R1 + R2*RL/(R2+RL))
+      const Rpar=R2*RL/(R2+RL);
+      const Va=Vs*Rpar/(R1+Rpar);
+      const VLfull=Va;
+      const VLthev=Vth*RL/(Rth+RL);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText('원본 회로',60,28);
+      ctx.fillText('테브난 등가',380,28);
+      // Original
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(40,80);ctx.lineTo(40,180);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='11px sans-serif';ctx.fillText(`${Vs}V`,20,75);
+      ctx.beginPath();ctx.moveTo(40,80);ctx.lineTo(190,80);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(80,80);ctx.lineTo(140,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_1=${R1}`,90,72);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(190,80);ctx.lineTo(190,180);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(190,110);ctx.lineTo(190,150);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_2=${R2}`,200,135);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(190,80);ctx.lineTo(290,80);ctx.lineTo(290,180);ctx.lineTo(40,180);ctx.stroke();
+      ctx.strokeStyle='#1b5e20';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(290,110);ctx.lineTo(290,150);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.fillText(`R_L=${RL}`,300,135);
+      ctx.fillText(`V_L = ${VLfull.toFixed(3)} V`,40,210);
+      // Thevenin
+      const tx=370;
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(tx,80);ctx.lineTo(tx,180);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.font='11px sans-serif';ctx.fillText(`V_Th=${Vth.toFixed(2)}V`,tx-30,75);
+      ctx.beginPath();ctx.moveTo(tx,80);ctx.lineTo(tx+200,80);ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(tx+50,80);ctx.lineTo(tx+110,80);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.fillText(`R_Th=${Rth.toFixed(2)}`,tx+55,72);
+      ctx.strokeStyle='#1b5e20';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(tx+200,110);ctx.lineTo(tx+200,150);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.fillText(`R_L=${RL}`,tx+210,135);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(tx+200,80);ctx.lineTo(tx+200,110);ctx.moveTo(tx+200,150);ctx.lineTo(tx+200,180);ctx.lineTo(tx,180);ctx.stroke();
+      ctx.fillStyle='#1b5e20';ctx.font='12px sans-serif';
+      ctx.fillText(`V_L = ${VLthev.toFixed(3)} V  (차이 ${(VLfull-VLthev).toFixed(4)})`,tx,210);
+    }
+    ['thevVs','thevR1','thevR2','thevRL'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

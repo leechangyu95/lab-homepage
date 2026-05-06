@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L9. 선형 회귀 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../../index.html" class="active">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../index.html">← 강의 목록</a></p>
+  <h1 class="page-title">Lecture 9. 선형 회귀</h1>
+  <p class="lead">데이터 점들에 가장 잘 맞는 직선(또는 곡선)을 찾는 것 — 머신러닝의 첫걸음.</p>
+
+  <div class="note">
+    <strong>📋 한눈에</strong> — 이 강의가 끝나면 다음을 할 수 있어야 합니다.
+    <ul style="margin:6px 0 0 0">
+      <li>최소제곱법(MSE) 손실의 의미를 자기 말로 설명</li>
+      <li>다항 차수를 올렸을 때 과적합이 일어나는 이유 설명</li>
+      <li>Ridge 정규화가 왜 과적합을 줄이는지 그리기</li>
+    </ul>
+    <strong>선수지식</strong> — 미분(특히 손실을 0으로 놓고 푸는 것), 평균과 분산, 행렬 곱·전치·역행렬. 어렵다면 <a href="../../linear-algebra.html">선형대수학</a> 강의 참고.<br>
+    <strong>왜 갑자기 머신러닝?</strong> — 지금까지(L2~L8)는 로봇 동역학 모델을 직접 손으로 적었습니다. 하지만 모델에 안 들어간 마찰·바람·부품 마모는 데이터로 메워야 합니다. L9는 그 가장 단순한 도구.
+  </div>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>회귀 분석이란</li>
+    <li>최소제곱법</li>
+    <li>정규방정식</li>
+    <li>L2 vs L1 손실, Huber</li>
+    <li>다항 회귀와 과적합</li>
+    <li>Ridge 정규화</li>
+    <li>경사하강법 (Gradient Descent)</li>
+    <li>경사하강법 — 손으로 한 스텝 풀기</li>
+    <li>Lasso (L1 정규화) — 변수 선택</li>
+    <li>Bias-Variance Tradeoff</li>
+    <li>통계적 관점 — 최소제곱 = 최대우도</li>
+    <li>회귀의 변형 — 빠른 둘러보기</li>
+    <li>코드 예제</li>
+    <li>다음 강의 미리보기</li>
+  </ol></div>
+
+  <h2>1. 회귀란?</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>중간고사 점수($x$)와 기말고사 점수($y$)가 적힌 종이를 받아들고 산점도를 그렸다고 합시다. 점들이 대충 우상향으로 흩어져 있다면, 우리는 자연스럽게 "이 데이터를 가장 잘 설명하는 직선 한 줄을 그어 보자"고 생각합니다. 회귀(regression)란 바로 그 행위 — <strong>흩어진 데이터 점들 사이로 가장 잘 맞는 함수를 끼워 넣는 일</strong>입니다.</p>
+
+  <p>실생활 예시는 끝없이 많습니다.</p>
+  <ul>
+    <li><strong>키 → 몸무게</strong> — 신장 175 cm인 사람의 평균적인 몸무게는?</li>
+    <li><strong>면적 → 집값</strong> — 33평 아파트는 같은 동네에서 평균 얼마에 팔리나?</li>
+    <li><strong>광고비 → 매출</strong> — 광고비 100만 원을 더 쓰면 매출이 얼마나 오를까?</li>
+    <li><strong>공부 시간 → 성적</strong> — 하루 2시간 더 공부하면 평균 몇 점이 오를까?</li>
+  </ul>
+  <p>모두 "입력에서 출력으로 가는 함수 $y = f(x)$를 데이터로부터 찾는 문제"로 환원됩니다. 함수의 모양을 직선으로 가정한 가장 단순한 버전이 <strong>선형 회귀</strong>예요.</p>
+
+  <h3>왜 회귀가 머신러닝의 첫걸음인가?</h3>
+  <p>딥러닝, 강화학습, 트랜스포머... 화려한 이름이 많지만 본질은 결국 "데이터로부터 함수를 학습하는 일"입니다. 선형 회귀는 그 학습 절차를 가장 단순한 형태로 보여 줘요. 손실 함수를 정의하고, 미분해서 최적해를 구하고, 과적합을 정규화로 막고, 큰 문제는 경사하강법으로 푸는 — 이 네 단계가 그대로 GPT 훈련에도 쓰입니다. 그러니 선형 회귀를 이해하면 머신러닝의 70%를 이해한 셈이에요.</p>
+
+  <p>입력 $x$와 출력 $y$의 관계를 함수 $y = f(x)$로 추정하는 작업입니다.
+  가장 단순한 가설은 직선:</p>
+  $$ y = \beta_0 + \beta_1 x + \varepsilon $$
+  <p>$\varepsilon$은 데이터에 섞인 잡음입니다.</p>
+
+  <figure>
+    <canvas id="regIntro" width="560" height="260"></canvas>
+    <figcaption>🔴 데이터 (잡음 섞임) · 🔵 회귀가 찾아낸 추세선 $\hat y = \beta_0 + \beta_1 x$ · 회색 점선 = 각 점에서 직선까지의 잔차.</figcaption>
+  </figure>
+  <script>
+  (function(){
+    const c=document.getElementById('regIntro');if(!c)return;
+    const x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const ml=44,mr=14,mt=18,mb=30;
+    const pw=W-ml-mr,ph=H-mt-mb;
+    const xMin=0,xMax=10,yMin=0,yMax=10;
+    const X=u=>ml+(u-xMin)/(xMax-xMin)*pw, Y=v=>mt+ph-(v-yMin)/(yMax-yMin)*ph;
+    let rng=42;function rand(){rng=(rng*9301+49297)%233280;return rng/233280;}
+    const pts=[];
+    for(let i=0;i<14;i++){
+      const xi=0.6+i*0.65;
+      const yi=1+0.7*xi+(rand()*2-1)*1.1;
+      pts.push([xi,yi]);
+    }
+    let sx=0,sy=0,sxx=0,sxy=0;
+    pts.forEach(p=>{sx+=p[0];sy+=p[1];sxx+=p[0]*p[0];sxy+=p[0]*p[1];});
+    const n=pts.length;
+    const b1=(n*sxy-sx*sy)/(n*sxx-sx*sx);
+    const b0=(sy-b1*sx)/n;
+    x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+    x.strokeStyle='#e5e7eb';x.lineWidth=1;
+    for(let v=0;v<=10;v+=2){x.beginPath();x.moveTo(ml,Y(v));x.lineTo(W-mr,Y(v));x.stroke();}
+    for(let u=0;u<=10;u+=2){x.beginPath();x.moveTo(X(u),mt);x.lineTo(X(u),mt+ph);x.stroke();}
+    x.strokeStyle='#999';
+    x.beginPath();x.moveTo(ml,mt+ph);x.lineTo(W-mr,mt+ph);x.stroke();
+    x.beginPath();x.moveTo(ml,mt);x.lineTo(ml,mt+ph);x.stroke();
+    x.fillStyle='#555';x.font='11px sans-serif';
+    for(let u=0;u<=10;u+=2){x.fillText(u,X(u)-3,mt+ph+14);}
+    for(let v=0;v<=10;v+=2){x.fillText(v,ml-22,Y(v)+4);}
+    x.fillText('x',W-mr-6,mt+ph+14);x.fillText('y',ml-26,mt+8);
+    x.strokeStyle='rgba(150,150,150,0.7)';x.setLineDash([3,3]);
+    pts.forEach(p=>{const yh=b0+b1*p[0];x.beginPath();x.moveTo(X(p[0]),Y(p[1]));x.lineTo(X(p[0]),Y(yh));x.stroke();});
+    x.setLineDash([]);
+    x.strokeStyle='#0b5fff';x.lineWidth=2.5;
+    x.beginPath();x.moveTo(X(xMin),Y(b0+b1*xMin));x.lineTo(X(xMax),Y(b0+b1*xMax));x.stroke();
+    x.fillStyle='#c62828';
+    pts.forEach(p=>{x.beginPath();x.arc(X(p[0]),Y(p[1]),4,0,Math.PI*2);x.fill();});
+    x.fillStyle='#0b5fff';x.font='13px sans-serif';
+    x.fillText('ŷ = '+b0.toFixed(2)+' + '+b1.toFixed(2)+' x',W-mr-150,mt+18);
+  })();
+  </script>
+
+  <h2>2. 최소제곱법 (Least Squares)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>점들 사이로 직선 하나를 긋는 방법은 무한히 많습니다. 그중 어떤 직선이 "가장 잘 맞는" 걸까요? 가우스가 19세기 초에 내놓은 답은 단순합니다 — <strong>각 데이터 점에서 직선까지의 수직 거리(잔차)를 모두 제곱해서 더한 값이 가장 작은 직선</strong>이 정답이에요. 활을 쏘는데 과녁 중심에서 떨어진 거리를 제곱해서 합산한 점수가 제일 낮은 사수가 우승하는 게임이라고 생각해 보세요.</p>
+
+  <h3>왜 하필 "제곱"인가?</h3>
+  <p>잔차를 그냥 더하면 양수 오차와 음수 오차가 상쇄되어 "0인데 잘 맞는다"는 착각이 생깁니다. 그래서 부호를 없애야 해요. 부호를 없애는 방법은 두 가지 — 절댓값 $|e|$ 아니면 제곱 $e^2$. 제곱을 선택하는 데는 분명한 이유가 있습니다.</p>
+  <ul>
+    <li><strong>부호 상쇄 방지</strong> — $e^2 \ge 0$이라 양·음이 섞여도 줄어들지 않습니다.</li>
+    <li><strong>큰 오차에 더 큰 페널티</strong> — 잔차 1과 잔차 2의 비율은 1:2지만 제곱하면 1:4. 즉 "조금 어긋난 점은 봐주고, 많이 어긋난 점은 강하게 끌어당긴다"는 효과가 자동으로 생깁니다.</li>
+    <li><strong>미분이 깔끔하다</strong> — $e^2$는 어디서나 매끈하게 미분되어 닫힌 해(closed-form)가 나옵니다. 절댓값은 0에서 미분이 안 돼요.</li>
+  </ul>
+
+  <h3>기하학적 의미</h3>
+  <p>최소제곱법을 그림으로 보면, 데이터 점들에서 직선까지 <em>수직(세로) 점선</em>을 내리고 그 점선 길이를 모두 합한(제곱해서) 값이 최소가 되는 직선을 고르는 거예요. 위의 첫 그림에서 빨간 점에서 파란 직선까지 내려온 회색 점선이 바로 잔차 — 이 점선들의 길이 제곱 합이 작아지도록 직선의 기울기와 절편을 조정한 결과가 파란 직선입니다.</p>
+
+  <div class="note">
+    <strong>흔한 오해</strong> — "가장 가까운 직선"이라고 하면 학생들이 종종 점에서 직선까지의 <em>최단 거리(직각 거리)</em>를 떠올립니다. 그런데 최소제곱 회귀는 <em>$y$ 방향(수직)</em> 거리만 잽니다. 왜냐하면 회귀의 목적은 "주어진 $x$에서 $y$를 예측하는 것"이고, 따라서 $x$는 정확히 알고 있다고 보고 $y$의 어긋남만 책임지는 모델이기 때문이에요. (참고로 양쪽 거리를 모두 재는 모델은 Total Least Squares라고 따로 부릅니다.)
+  </div>
+
+  <p>"가장 잘 맞는" 직선이란 모든 점에서 직선까지 수직 거리(잔차)의 제곱합이 최소인 직선입니다.</p>
+  $$ \text{minimize}\;\; \sum_{i=1}^n \bigl(y_i - (\beta_0 + \beta_1 x_i)\bigr)^2 $$
+
+  <div class="tip">
+    <strong>숫자로 직접 풀어보기</strong> — 데이터가 단 세 점 $(1, 2), (2, 3), (3, 5)$. 직선 $y = \beta_0 + \beta_1 x$를 피팅한다고 하자.<br><br>
+    공식 $\beta_1 = \frac{\sum (x_i - \bar x)(y_i - \bar y)}{\sum (x_i - \bar x)^2}$, $\beta_0 = \bar y - \beta_1 \bar x$.<br>
+    평균: $\bar x = 2$, $\bar y = 10/3 \approx 3.33$.<br>
+    분자 = $(1-2)(2-3.33) + (2-2)(3-3.33) + (3-2)(5-3.33) = 1.33 + 0 + 1.67 = 3.0$.<br>
+    분모 = $(-1)^2 + 0^2 + 1^2 = 2$.<br>
+    그러므로 $\beta_1 = 3.0/2 = 1.5$, $\beta_0 = 3.33 - 1.5 \cdot 2 = 0.33$.<br>
+    예측 직선은 $\hat y = 0.33 + 1.5 x$. 검산해 보면 $x=1$에서 $\hat y = 1.83$ (실제 2와 잔차 0.17), $x=2$에서 $\hat y = 3.33$ (잔차 -0.33), $x=3$에서 $\hat y = 4.83$ (잔차 0.17). 잔차 합은 거의 0 — 깔끔합니다.
+  </div>
+
+  <h2>3. 정규방정식 (행렬 형태)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>위에서 본 1차원 공식 $\beta_1 = \frac{\sum(x-\bar x)(y-\bar y)}{\sum(x-\bar x)^2}$은 입력이 하나일 때만 통합니다. 그런데 집값을 예측할 때는 입력이 여럿이에요 — 면적, 방 개수, 역까지 거리, 층수, 건축년도... 이렇게 입력이 $p$개일 때도 같은 아이디어(잔차 제곱합 최소화)를 적용하면 깔끔한 한 줄짜리 행렬 공식이 나옵니다. 그게 <strong>정규방정식(normal equation)</strong>이에요.</p>
+
+  <h3>식 한 줄씩 풀어보기</h3>
+  <p>먼저 행렬 표기법으로 다시 쓰면, 손실 함수는</p>
+  $$ L(\boldsymbol\beta) = \|y - X\boldsymbol\beta\|^2 = (y - X\boldsymbol\beta)^\top (y - X\boldsymbol\beta) $$
+  <p>여기서 $X$는 한 행이 한 데이터인 $(n \times p)$ 행렬, $y$는 $(n \times 1)$ 벡터, $\boldsymbol\beta$는 $(p \times 1)$ 계수 벡터입니다. 이걸 전개하면:</p>
+  $$ L = y^\top y - 2\boldsymbol\beta^\top X^\top y + \boldsymbol\beta^\top X^\top X \boldsymbol\beta $$
+  <p>최솟값에서는 1차 조건 $\partial L / \partial \boldsymbol\beta = 0$을 만족해야 합니다. 행렬 미분 두 줄로:</p>
+  $$ \frac{\partial L}{\partial \boldsymbol\beta} = -2 X^\top y + 2 X^\top X \boldsymbol\beta = 0 $$
+  <p>정리하면 그 유명한 <strong>정규방정식</strong>이 떨어집니다.</p>
+  $$ (X^\top X) \boldsymbol\beta = X^\top y $$
+  <p>이걸 $\boldsymbol\beta$에 대해 풀면 닫힌 해 — 양변에 $(X^\top X)^{-1}$을 곱하기만 하면 끝입니다.</p>
+
+  <p>데이터를 행렬 $X$, 출력을 벡터 $y$로 쌓으면 한 번에 해를 구할 수 있습니다.</p>
+  $$ \boldsymbol{\beta} = (X^\top X)^{-1} X^\top y $$
+  <p>이 식 하나가 19세기 통계학에서 21세기 딥러닝까지 모든 것의 출발점입니다.</p>
+
+  <h3>MLE 관점 — 왜 "최소제곱"이 "최대우도"와 같은가</h3>
+  <p>최소제곱법은 통계학적으로도 정당화됩니다. 데이터에 가우시안(정규) 잡음이 섞여 있다고 가정해 보세요.</p>
+  $$ y_i = \mathbf x_i^\top \boldsymbol\beta + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0, \sigma^2) $$
+  <p>그러면 한 데이터의 우도(likelihood)는 가우시안 PDF 모양:</p>
+  $$ p(y_i \mid \mathbf x_i, \boldsymbol\beta) = \frac{1}{\sqrt{2\pi}\,\sigma}\exp\!\left(-\frac{(y_i - \mathbf x_i^\top \boldsymbol\beta)^2}{2\sigma^2}\right) $$
+  <p>전체 데이터의 로그 우도를 더해 보면:</p>
+  $$ \log\mathcal{L}(\boldsymbol\beta) = \text{상수} - \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mathbf x_i^\top \boldsymbol\beta)^2 $$
+  <p>로그 우도를 <em>최대</em>화하는 일은, 마이너스 부호를 빼면 잔차 제곱합을 <em>최소</em>화하는 일과 정확히 같아요. 즉 <strong>가우시안 잡음 가정 = 최소제곱법</strong>입니다. 잡음이 가우시안이 아니면 다른 손실 함수가 나옵니다 — 라플라스 잡음이면 L1 손실, 두꺼운 꼬리(두꺼운 분포)면 Huber 손실.</p>
+
+  <div class="tip">
+    <strong>핵심 직감</strong> — "가장 그럴듯한 직선을 찾는다"(MLE)와 "잔차 제곱합을 최소화한다"(LSE)는 보통 같은 답을 내놓습니다. 단, 그 동등성은 <em>가우시안 잡음이라는 가정 아래에서만</em> 성립해요. 그래서 이상치(outlier)가 많은 실제 데이터에서는 MSE 대신 Huber/L1을 쓰는 게 더 합리적입니다.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 정규방정식 — SSE 곡면 위의 유일한 최소점</h4>
+    <p>$\beta_0$(절편)과 $\beta_1$(기울기)을 직접 움직여 보세요. 빨강 막대가 잔차고, 그 제곱합 SSE가 위에 표시됩니다. <strong>SSE 곡면(우측)</strong>의 노란 점이 현재 위치, <strong>초록 ★</strong>이 정규방정식 해 $(X^\top X)^{-1}X^\top y$ — 유일한 최소점입니다. 버튼을 누르면 해로 점프합니다.</p>
+    <canvas id="ne" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>β₀ (절편) <span class="val" id="neB0V">0.0</span><input type="range" id="neB0" min="-3" max="3" step="0.05" value="0"></label>
+      <label>β₁ (기울기) <span class="val" id="neB1V">0.0</span><input type="range" id="neB1" min="-2" max="2" step="0.05" value="0"></label>
+      <button id="neSolve">정규방정식으로 점프</button>
+      <button id="neReg" class="alt">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ne'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const Lx={x0:30,x1:340,y0:30,y1:H-30};   // scatter panel
+    const Lc={x0:360,x1:W-30,y0:30,y1:H-30}; // SSE panel
+    let pts;
+    function regen(){
+      const trueB0=0.5+Math.random()*0.6,trueB1=0.7+Math.random()*0.5;
+      pts=[];
+      for(let i=0;i<10;i++){
+        const xi=-2+i*0.4+0.05*(Math.random()-0.5);
+        const yi=trueB0+trueB1*xi+(Math.random()-0.5)*0.8;
+        pts.push({x:xi,y:yi});
+      }
+    }
+    regen();
+    document.getElementById('neReg').onclick=regen;
+    function solve(){
+      let n=pts.length,sx=0,sy=0,sxx=0,sxy=0;
+      pts.forEach(p=>{sx+=p.x;sy+=p.y;sxx+=p.x*p.x;sxy+=p.x*p.y;});
+      const b1=(n*sxy-sx*sy)/(n*sxx-sx*sx);
+      const b0=(sy-b1*sx)/n;
+      return{b0,b1};
+    }
+    document.getElementById('neSolve').onclick=()=>{
+      const s=solve();
+      document.getElementById('neB0').value=s.b0.toFixed(2);
+      document.getElementById('neB1').value=s.b1.toFixed(2);
+    };
+    function sse(b0,b1){
+      let s=0;pts.forEach(p=>{const r=p.y-(b0+b1*p.x);s+=r*r;});return s;
+    }
+    function px(p){return Lx.x0+(p.x+3)/6*(Lx.x1-Lx.x0);}
+    function py(p){return Lx.y1-(p.y+1)/5*(Lx.y1-Lx.y0);}
+    function loop(){
+      const b0=+document.getElementById('neB0').value;
+      const b1=+document.getElementById('neB1').value;
+      document.getElementById('neB0V').textContent=b0.toFixed(2);
+      document.getElementById('neB1V').textContent=b1.toFixed(2);
+      const opt=solve();
+      const curSSE=sse(b0,b1),optSSE=sse(opt.b0,opt.b1);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // scatter panel
+      x.strokeStyle='#ddd';x.lineWidth=1;
+      x.strokeRect(Lx.x0,Lx.y0,Lx.x1-Lx.x0,Lx.y1-Lx.y0);
+      // axes (x=0, y=0 lines if visible)
+      x.strokeStyle='#eee';
+      const ox=px({x:0}),oy=py({y:0});
+      x.beginPath();x.moveTo(ox,Lx.y0);x.lineTo(ox,Lx.y1);x.moveTo(Lx.x0,oy);x.lineTo(Lx.x1,oy);x.stroke();
+      // residuals
+      x.strokeStyle='#c62828';x.lineWidth=2;
+      pts.forEach(p=>{
+        const yh=b0+b1*p.x;
+        x.beginPath();x.moveTo(px(p),py(p));x.lineTo(px(p),py({y:yh}));x.stroke();
+      });
+      // line
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;
+      x.beginPath();x.moveTo(px({x:-3}),py({y:b0+b1*(-3)}));x.lineTo(px({x:3}),py({y:b0+b1*3}));x.stroke();
+      // points
+      pts.forEach(p=>{x.fillStyle='#222';x.beginPath();x.arc(px(p),py(p),3.5,0,Math.PI*2);x.fill();});
+      x.fillStyle='#333';x.font='12px sans-serif';
+      x.fillText('SSE = '+curSSE.toFixed(2)+'   (최소 '+optSSE.toFixed(2)+')',Lx.x0+8,Lx.y0+15);
+      // SSE contour panel
+      x.strokeStyle='#ddd';x.strokeRect(Lc.x0,Lc.y0,Lc.x1-Lc.x0,Lc.y1-Lc.y0);
+      const Cw=Lc.x1-Lc.x0,Ch=Lc.y1-Lc.y0;
+      const NB=40;
+      const b0R=[-3,3],b1R=[-2,2];
+      let mx=0;
+      const grid=[];
+      for(let i=0;i<NB;i++){
+        const row=[];
+        for(let j=0;j<NB;j++){
+          const bb0=b0R[0]+(b0R[1]-b0R[0])*i/NB;
+          const bb1=b1R[0]+(b1R[1]-b1R[0])*j/NB;
+          const v=sse(bb0,bb1);row.push(v);if(v>mx)mx=v;
+        }
+        grid.push(row);
+      }
+      const minV=optSSE;
+      for(let i=0;i<NB;i++){
+        for(let j=0;j<NB;j++){
+          const v=grid[i][j];
+          const t=Math.min(1,(v-minV)/(mx-minV+1e-6));
+          const cx=Lc.x0+(i+0.5)/NB*Cw;
+          const cy=Lc.y1-(j+0.5)/NB*Ch;
+          const r=Math.floor(40+t*200),g=Math.floor(140-t*100),b=Math.floor(255-t*200);
+          x.fillStyle=`rgb(${r},${g},${b})`;
+          x.fillRect(cx-Cw/NB/2-0.5,cy-Ch/NB/2-0.5,Cw/NB+1,Ch/NB+1);
+        }
+      }
+      // current
+      const ux=Lc.x0+(b0-b0R[0])/(b0R[1]-b0R[0])*Cw;
+      const uy=Lc.y1-(b1-b1R[0])/(b1R[1]-b1R[0])*Ch;
+      x.fillStyle='#ffeb3b';x.strokeStyle='#222';x.lineWidth=2;
+      x.beginPath();x.arc(ux,uy,5,0,Math.PI*2);x.fill();x.stroke();
+      // optimum
+      const sx2=Lc.x0+(opt.b0-b0R[0])/(b0R[1]-b0R[0])*Cw;
+      const sy2=Lc.y1-(opt.b1-b1R[0])/(b1R[1]-b1R[0])*Ch;
+      x.fillStyle='#2e7d32';x.font='bold 18px sans-serif';
+      x.fillText('★',sx2-7,sy2+6);
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('SSE(β₀,β₁) 곡면',Lc.x0+8,Lc.y0+14);
+      x.fillText('β₀ →',Lc.x1-30,Lc.y1+12);
+      x.save();x.translate(Lc.x0-8,Lc.y0+30);x.rotate(-Math.PI/2);x.fillText('β₁ →',0,0);x.restore();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+
+  <h2>4. L2 vs L1 손실, 그리고 Huber</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>같은 반에서 평균 점수를 계산하는데, 한 학생이 90점이고 나머지가 모두 60점 근처라고 합시다. L2(제곱)는 90점 학생을 "유난히 멀리 있는 점"으로 받아들여 평균을 위로 끌어당깁니다. L1(절댓값)은 그 학생을 그저 "한 표"로만 취급하고 평균(정확히는 중앙값)을 60점에서 거의 그대로 둬요. <strong>L2는 이상치에 끌려 다니고, L1은 무시한다</strong> — 이 한 문장이 두 손실 함수의 차이를 다 설명합니다.</p>
+
+  <h3>왜 두 손실 함수가 모두 필요한가?</h3>
+  <ul>
+    <li><strong>이상치가 진짜 데이터일 때</strong> — 키 데이터에 농구선수 한 명이 섞여 있다면 그 사람도 진짜 데이터예요. L2가 적절합니다.</li>
+    <li><strong>이상치가 측정 오류일 때</strong> — 센서 고장으로 한 점만 100배 튀었다면 무시하는 게 좋아요. L1이 적절합니다.</li>
+    <li><strong>둘 다 신경 써야 할 때</strong> — 작은 잔차는 L2, 큰 잔차는 L1로 부드럽게 갈아타는 게 <strong>Huber 손실</strong>입니다.</li>
+  </ul>
+
+  <ul>
+    <li><strong>L2 (MSE)</strong>: 큰 오차에 더 큰 벌점. 이상치(outlier)에 민감.</li>
+    <li><strong>L1 (MAE)</strong>: 절댓값 합. 이상치에 강함.</li>
+    <li><strong>Huber</strong>: 작은 오차는 L2, 큰 오차는 L1로 처리. 두 장점을 결합.</li>
+  </ul>
+  $$ L_2 = \sum_i (y_i - \hat y_i)^2 \qquad L_1 = \sum_i |y_i - \hat y_i| $$
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: L1 회귀 vs L2 회귀 (이상치에 대한 강건성)</h4>
+    <p>같은 데이터에 L2(파랑)과 L1(주황) 회귀 직선을 동시에 적합합니다. "이상치 강도" 슬라이더를 키우면 한 점의 y값이 크게 튀고, L2 직선만 크게 휘는 것을 볼 수 있습니다. 이것이 L1이 이상치에 강건한 이유입니다.</p>
+    <canvas id="l1l2" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>이상치 크기 <span class="val" id="outV">3.0</span><input type="range" id="out" min="0" max="8" step="0.1" value="3.0"></label>
+      <button id="l1l2Rs" class="alt">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('l1l2');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const CW=c.width,CH=c.height;
+    const PX=60,PY=CH-40,PW=CW-100,PH=CH-80;
+    const xmin=0,xmax=10,ymin=-2,ymax=14;
+    function toPx(u){return PX+(u-xmin)/(xmax-xmin)*PW;}
+    function toPy(v){return PY-(v-ymin)/(ymax-ymin)*PH;}
+    let base=[];
+    function gen(){
+      base=[];
+      for(let i=0;i<12;i++){
+        const xi=0.5+i*0.8;
+        const yi=0.8*xi+1+(Math.random()*2-1)*0.6;
+        base.push([xi,yi]);
+      }
+    }
+    gen();
+    // L2 closed form
+    function fitL2(pts){
+      let n=pts.length,sx=0,sy=0,sxx=0,sxy=0;
+      pts.forEach(([u,v])=>{sx+=u;sy+=v;sxx+=u*u;sxy+=u*v;});
+      const det=n*sxx-sx*sx;
+      if(Math.abs(det)<1e-12)return [0,0];
+      return [(sxx*sy-sx*sxy)/det,(n*sxy-sx*sy)/det]; // [b0, b1]
+    }
+    // L1 fit by coordinate-descent / iterated reweighted least squares (IRLS)
+    function fitL1(pts){
+      let [b0,b1]=fitL2(pts);
+      for(let it=0;it<60;it++){
+        const w=pts.map(([u,v])=>{const r=Math.abs(v-(b0+b1*u));return 1/Math.max(r,1e-3);});
+        let sw=0,swx=0,swy=0,swxx=0,swxy=0;
+        pts.forEach(([u,v],i)=>{const wi=w[i];sw+=wi;swx+=wi*u;swy+=wi*v;swxx+=wi*u*u;swxy+=wi*u*v;});
+        const det=sw*swxx-swx*swx;
+        if(Math.abs(det)<1e-12)break;
+        b0=(swxx*swy-swx*swxy)/det;
+        b1=(sw*swxy-swx*swy)/det;
+      }
+      return [b0,b1];
+    }
+    function draw(){
+      const out=parseFloat(document.getElementById('out').value);
+      document.getElementById('outV').textContent=out.toFixed(1);
+      // current data: base + one outlier on the 4th point shifted up
+      const pts=base.map(p=>[p[0],p[1]]);
+      if(pts.length>4)pts[4]=[pts[4][0],pts[4][1]+out*1.2];
+      const [a2,b2]=fitL2(pts);
+      const [a1,b1]=fitL1(pts);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,CW,CH);
+      // grid
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;
+      for(let gx=xmin;gx<=xmax;gx+=2){ctx.beginPath();ctx.moveTo(toPx(gx),toPy(ymin));ctx.lineTo(toPx(gx),toPy(ymax));ctx.stroke();}
+      for(let gy=0;gy<=12;gy+=2){ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(gy));ctx.lineTo(toPx(xmax),toPy(gy));ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(0));ctx.lineTo(toPx(xmax),toPy(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(toPx(0),toPy(ymin));ctx.lineTo(toPx(0),toPy(ymax));ctx.stroke();
+      // L2 line
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(a2+b2*xmin));ctx.lineTo(toPx(xmax),toPy(a2+b2*xmax));ctx.stroke();
+      // L1 line
+      ctx.strokeStyle='#f57c00';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(toPx(xmin),toPy(a1+b1*xmin));ctx.lineTo(toPx(xmax),toPy(a1+b1*xmax));ctx.stroke();
+      // points
+      pts.forEach((p,i)=>{
+        const isOut=(i===4&&out>0.5);
+        ctx.fillStyle=isOut?'#c62828':'#333';
+        ctx.beginPath();ctx.arc(toPx(p[0]),toPy(p[1]),isOut?7:4,0,Math.PI*2);ctx.fill();
+      });
+      // legend
+      ctx.font='12px sans-serif';
+      ctx.fillStyle='#0b5fff';ctx.fillText('■ L2 (MSE): β₀='+a2.toFixed(2)+', β₁='+b2.toFixed(2),12,20);
+      ctx.fillStyle='#f57c00';ctx.fillText('■ L1 (MAE): β₀='+a1.toFixed(2)+', β₁='+b1.toFixed(2),290,20);
+    }
+    document.getElementById('out').addEventListener('input',draw);
+    document.getElementById('l1l2Rs').addEventListener('click',()=>{gen();draw();});
+    draw();
+  })();
+  </script>
+
+  <h2>5. 다항 회귀와 과적합</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>시험 공부를 한답시고 작년 기출문제 답을 통째로 외운 친구를 떠올려 보세요. 작년 시험에서는 100점 — 그런데 올해 새 문제가 나오니까 30점. 이게 바로 <strong>과적합(overfitting)</strong>입니다. 모델이 "이해"하지 않고 "암기"한 거예요. 다항 회귀에서 차수를 너무 높이면 모델이 데이터 점들을 통과하는 구불구불한 곡선을 그려 학습 데이터엔 완벽히 맞지만, 새 데이터에는 형편없이 망가집니다.</p>
+
+  <h3>왜 차수를 올리면 더 잘 맞는가? — 그리고 그게 왜 함정인가</h3>
+  <p>점이 10개 있을 때 9차 다항식($\beta_0 + \beta_1 x + \dots + \beta_9 x^9$)은 파라미터가 정확히 10개라 그 10개 점을 정확히 통과하도록 계수를 맞출 수 있어요. 학습 오차는 0. 하지만 점들 사이는 모델이 "마음대로 그린" 부분이라, 실제 함수 모양과는 한참 다른 멋대로 출렁이는 곡선이 됩니다. 점 사이가 진짜 답을 알 수 있는 새 데이터인데, 거기서 큰 오차가 납니다. <strong>학습 오차 ↓, 일반화 오차 ↑</strong> — 이 어긋남이 과적합의 본질이에요.</p>
+
+  <p>친근한 비유 하나 더 — 친구의 성격을 알기 위해 그 친구가 한 모든 말을 그대로 외우는 사람과, 핵심 패턴 몇 개만 파악하는 사람을 비교해 보세요. 모든 말을 외운 사람은 "어제 이 시간엔 이걸 말했어"라고 정확히 답할 수 있지만, "내일 친구가 무슨 말을 할까?"라는 질문에는 오히려 더 못 맞춥니다. 머신러닝도 똑같아요.</p>
+
+  <p>$y = \beta_0 + \beta_1 x + \beta_2 x^2 + \dots + \beta_d x^d$로 차수를 올리면 더 잘 맞춥니다. 하지만 차수가 너무 높으면 학습 데이터의 잡음까지 외워버리는 <strong>과적합</strong>이 발생합니다.</p>
+
+  <div class="note">
+    <strong>편향-분산 트레이드오프 한 줄</strong> — 차수가 낮으면 모델이 너무 단순해서 데이터의 진짜 패턴을 못 잡고(편향 ↑), 차수가 높으면 잡음까지 따라가서 매번 다른 답을 내놓습니다(분산 ↑). 일반화 오차는 둘의 합이라 가운데 어딘가에 최적점이 있어요. 이 최적점을 자동으로 찾아 주는 게 다음 절의 정규화입니다.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 다항 회귀와 과적합</h4>
+    <p>점을 클릭해 추가/제거하고, 차수를 바꿔가며 곡선이 어떻게 변하는지 관찰하세요.</p>
+    <canvas id="reg" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>다항 차수 d <span class="val" id="dV">1</span><input type="range" id="d" min="1" max="9" value="1"></label>
+      <button id="clr" class="alt">초기화</button>
+    </div>
+    <p style="font-size:12px;color:#666">왼쪽 클릭: 점 추가 · 오른쪽 클릭: 점 제거</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('reg');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    let pts=[];
+    for(let i=0;i<10;i++){const xi=60+i*55,yi=300-(80+i*15+(Math.random()-0.5)*60);pts.push([xi,yi]);}
+
+    function solve(XTX,XTY,N){
+      const A=XTX.map((r,i)=>[...r,XTY[i]]);
+      for(let i=0;i<N;i++){
+        let mx=i;
+        for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;
+        [A[i],A[mx]]=[A[mx],A[i]];
+        if(Math.abs(A[i][i])<1e-12)return null;
+        const piv=A[i][i];
+        for(let j=0;j<=N;j++)A[i][j]/=piv;
+        for(let k=0;k<N;k++){
+          if(k===i)continue;
+          const f=A[k][i];
+          for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];
+        }
+      }
+      return A.map(r=>r[N]);
+    }
+    function fit(d){
+      const n=pts.length;
+      if(n<d+1)return null;
+      // Normalize x to [0,1] for numerical stability
+      const X=pts.map(p=>{const r=[];for(let k=0;k<=d;k++)r.push(Math.pow(p[0]/W,k));return r;});
+      const Y=pts.map(p=>p[1]);
+      const m=d+1;
+      const XTX=Array.from({length:m},()=>Array(m).fill(0));
+      const XTY=Array(m).fill(0);
+      for(let i=0;i<m;i++){
+        for(let j=0;j<m;j++){
+          let s=0;for(let k=0;k<n;k++)s+=X[k][i]*X[k][j];
+          XTX[i][j]=s;
+        }
+        let s=0;for(let k=0;k<n;k++)s+=X[k][i]*Y[k];
+        XTY[i]=s;
+      }
+      return solve(XTX,XTY,m);
+    }
+    function draw(){
+      const d=parseInt(document.getElementById('d').value);
+      document.getElementById('dV').textContent=d;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;
+      for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+      for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+      const beta=fit(d);
+      if(beta){
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();
+        for(let xx=0;xx<=W;xx+=2){
+          const u=xx/W;
+          let yy=0;
+          for(let k=0;k<beta.length;k++)yy+=beta[k]*Math.pow(u,k);
+          if(xx===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+        }
+        ctx.stroke();
+      }else{
+        ctx.fillStyle='#c62828';ctx.font='13px sans-serif';
+        ctx.fillText('점이 d+1개 이상 필요합니다 (현재 '+pts.length+'개, 필요 '+(d+1)+'개)',20,30);
+      }
+      ctx.fillStyle='#c62828';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(p[0],p[1],5,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(p[0],p[1],5,0,Math.PI*2);ctx.stroke();});
+    }
+
+    c.addEventListener('click',e=>{
+      const r=c.getBoundingClientRect();
+      pts.push([(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]);
+      draw();
+    });
+    c.addEventListener('contextmenu',e=>{
+      e.preventDefault();
+      const r=c.getBoundingClientRect();
+      const px=(e.clientX-r.left)*W/r.width,py=(e.clientY-r.top)*H/r.height;
+      let bi=-1,bd=25;
+      pts.forEach((p,i)=>{const dd=Math.hypot(p[0]-px,p[1]-py);if(dd<bd){bd=dd;bi=i;}});
+      if(bi>=0){pts.splice(bi,1);draw();}
+    });
+    document.getElementById('d').addEventListener('input',draw);
+    document.getElementById('clr').addEventListener('click',()=>{pts=[];draw();});
+    draw();
+  })();
+  </script>
+
+  <p>차수를 1로 두면 직선, 9까지 올리면 모든 점을 지나는 구불구불한 곡선이 됩니다. 그게 바로 과적합입니다.</p>
+
+  <h2>6. Ridge 정규화 — 과적합 길들이기</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>차수를 올려도 곡선이 멋대로 출렁이지 않게 막으려면, 모델에게 "큰 계수를 쓰지 마"라고 야단치면 됩니다. 손실 함수에 $\lambda \|\boldsymbol\beta\|^2$ 항 하나만 추가하면 모델은 "잔차도 줄이고 싶지만, 계수가 커지면 벌점이라 적당히 작게 유지하자"는 절충을 하게 돼요. 이게 <strong>Ridge 회귀</strong>입니다. "다이어트하면서 운동도 하라"는 두 마리 토끼 잡기죠.</p>
+
+  <h3>왜 정규화가 필요한가?</h3>
+  <p>9차 다항식이 10개 점을 정확히 통과하려면 계수들이 보통 거대한 양·음수로 서로 상쇄하면서 미친 듯이 출렁이는 곡선을 만들어야 합니다(예: $\beta_3 = 1234$, $\beta_4 = -5678$ 같은 식). 즉 <strong>과적합된 모델은 계수가 크다</strong>는 경험적 규칙이 있어요. 그러니까 계수의 크기 자체에 페널티를 주면 자연스레 과적합이 줄어듭니다. 이게 정규화(regularization)의 핵심 아이디어예요.</p>
+
+  <p>$\lambda$를 0에 가깝게 두면 일반 최소제곱이고, $\lambda \to \infty$이면 모든 계수가 0에 가까워져 곡선이 평균선이 됩니다. 둘 사이 어딘가에 최적의 $\lambda$가 있는데, 보통 검증 데이터(validation set)에서 가장 좋은 일반화 성능을 내는 값을 골라요(이걸 교차 검증, cross-validation이라 합니다).</p>
+
+  <p>고차 다항 회귀의 과적합을 다루는 가장 단순한 방법은 <strong>계수의 크기</strong>에도 벌점을 주는 것입니다. L2 벌점을 추가하면 Ridge 회귀가 됩니다:</p>
+  $$ \boldsymbol{\beta}_\text{ridge} = \arg\min_\beta \|y - X\beta\|^2 + \lambda \|\beta\|^2 = (X^\top X + \lambda I)^{-1} X^\top y $$
+  <p>$\lambda$가 클수록 계수가 작아지고 곡선이 더 매끄러워집니다. L1 벌점을 쓰면 <strong>Lasso</strong>가 되고, 일부 계수가 정확히 0이 되어 자동 변수 선택 효과가 납니다.</p>
+
+  <h3>Ridge vs Lasso — 한눈에 비교</h3>
+  <p>둘 다 "큰 계수에 벌점을 준다"는 점에선 같지만, 벌점의 모양이 다릅니다.</p>
+  <ul>
+    <li><strong>Ridge (L2)</strong> — 벌점 $\lambda \sum \beta_j^2$. 계수들이 골고루 작아집니다. 100개 입력 변수가 있으면 100개 모두 작은 값으로 살아남아요. 모든 변수가 조금씩 의미 있을 때 적합.</li>
+    <li><strong>Lasso (L1)</strong> — 벌점 $\lambda \sum |\beta_j|$. 일부 계수가 정확히 0이 됩니다. 100개 입력 중 진짜 중요한 5개만 살아남고 나머지는 자동으로 꺼져요. 즉 <strong>특징 선택(feature selection)</strong>이 공짜로 따라옵니다.</li>
+  </ul>
+  <p>왜 L1만 0을 만들까요? 기하학적으로 L2 페널티 영역은 둥근 원이라 최적해가 거의 항상 축에서 떨어진 곳에 떨어지지만, L1 페널티 영역은 다이아몬드(꼭짓점이 축 위)라 최적해가 꼭짓점 — 즉 어느 좌표가 0인 점 — 에 잘 걸립니다. "둥근 공에 줄을 묶으면 한가운데로 떨어지지만, 모서리가 있는 다이아몬드에 줄을 묶으면 모서리에 걸린다"고 떠올리면 직관이 옵니다.</p>
+
+  <div class="tip">
+    <strong>실전 팁</strong> — 입력 변수가 수백 개인데 그중 일부만 결과에 영향을 줄 거라 의심된다면 <strong>Lasso</strong>. 모든 변수가 조금씩 다 영향을 준다고 믿으면 <strong>Ridge</strong>. 둘 다 섞어서 쓰는 <strong>ElasticNet</strong>도 있어요. scikit-learn에서는 다 한 줄로 갈아 끼울 수 있습니다.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: Ridge λ 효과</h4>
+    <p>9점으로 9차 다항식(파라미터 10개)을 맞추면 $\lambda=0$에서 심한 과적합이 일어납니다. 슬라이더를 오른쪽으로 옮겨 $\lambda$를 키우면 곡선이 점점 매끄러워지다가 결국 평균선에 가까워집니다.</p>
+    <canvas id="ridge" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>log₁₀ λ <span class="val" id="lamV">-6.0</span><input type="range" id="lam" min="-6" max="2" step="0.1" value="-6"></label>
+      <button id="ridgeRs" class="alt">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('ridge');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const CW=c.width,CH=c.height;
+    const DEG=9;
+    let pts=[];
+    function genData(){
+      pts=[];
+      // 9 sample points from a sine, with noticeable noise
+      for(let i=0;i<9;i++){
+        const xi=0.02+i*(0.96/8);
+        const yi=Math.sin(2*Math.PI*xi)+(Math.random()*2-1)*0.35;
+        pts.push([xi,yi]);
+      }
+    }
+    genData();
+    function solve(M,b,N){
+      const A=M.map((r,i)=>[...r,b[i]]);
+      for(let i=0;i<N;i++){
+        let mx=i;
+        for(let k=i+1;k<N;k++)if(Math.abs(A[k][i])>Math.abs(A[mx][i]))mx=k;
+        [A[i],A[mx]]=[A[mx],A[i]];
+        if(Math.abs(A[i][i])<1e-14)return null;
+        const piv=A[i][i];
+        for(let j=0;j<=N;j++)A[i][j]/=piv;
+        for(let k=0;k<N;k++){
+          if(k===i)continue;
+          const f=A[k][i];
+          for(let j=0;j<=N;j++)A[k][j]-=f*A[i][j];
+        }
+      }
+      return A.map(r=>r[N]);
+    }
+    function fitRidge(lam){
+      const n=pts.length,m=DEG+1;
+      const X=pts.map(p=>{const r=[];for(let k=0;k<m;k++)r.push(Math.pow(p[0],k));return r;});
+      const Y=pts.map(p=>p[1]);
+      const XTX=Array.from({length:m},()=>Array(m).fill(0));
+      const XTY=Array(m).fill(0);
+      for(let i=0;i<m;i++){
+        for(let j=0;j<m;j++){
+          let s=0;for(let k=0;k<n;k++)s+=X[k][i]*X[k][j];
+          XTX[i][j]=s+(i===j?lam:0);
+        }
+        let s=0;for(let k=0;k<n;k++)s+=X[k][i]*Y[k];
+        XTY[i]=s;
+      }
+      return solve(XTX,XTY,m);
+    }
+    const PX=40,PY=CH/2,PW=CW-80,PH=120;
+    function toPx(u){return PX+u*PW;}
+    function toPy(v){return PY-v*PH;}
+    function draw(){
+      const logLam=parseFloat(document.getElementById('lam').value);
+      const lam=Math.pow(10,logLam);
+      document.getElementById('lamV').textContent=logLam.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,CW,CH);
+      // plot box
+      ctx.strokeStyle='#ddd';ctx.lineWidth=1;
+      ctx.strokeRect(PX,PY-PH,PW,2*PH);
+      // zero line
+      ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(PX,PY);ctx.lineTo(PX+PW,PY);ctx.stroke();
+      // true function sin(2πx)
+      ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const u=i/200;
+        const v=Math.sin(2*Math.PI*u);
+        const px=toPx(u),py=toPy(v);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // fit
+      const beta=fitRidge(lam);
+      if(beta){
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+        for(let i=0;i<=400;i++){
+          const u=i/400;
+          let v=0;for(let k=0;k<beta.length;k++)v+=beta[k]*Math.pow(u,k);
+          v=Math.max(-1.8,Math.min(1.8,v)); // clip for visualization
+          const px=toPx(u),py=toPy(v);
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+      // data points
+      ctx.fillStyle='#c62828';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(toPx(p[0]),toPy(p[1]),5,0,Math.PI*2);ctx.fill();});
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(toPx(p[0]),toPy(p[1]),5,0,Math.PI*2);ctx.stroke();});
+      // legend
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';
+      ctx.fillText('■ 참값 sin(2πx)',12,25);
+      ctx.fillStyle='#0b5fff';ctx.fillText('■ Ridge 9차 적합',130,25);
+      ctx.fillStyle='#c62828';ctx.fillText('● 데이터 ('+pts.length+'개)',260,25);
+      ctx.fillStyle='#555';ctx.fillText('λ = '+lam.toExponential(2),380,25);
+    }
+    document.getElementById('lam').addEventListener('input',draw);
+    document.getElementById('ridgeRs').addEventListener('click',()=>{genData();draw();});
+    draw();
+  })();
+  </script>
+
+  <h2>7. 경사하강법 (Gradient Descent)</h2>
+
+  <h3>한 줄 비유부터</h3>
+  <p>안개 낀 산속에서 길을 잃었다고 상상해 보세요. 산 정상에서 내려가야 하는데 시야가 1 m밖에 안 됩니다. 가장 똑똑한 전략은 <strong>발끝 주변에서 가장 가파르게 내려가는 방향을 골라 한 걸음 옮기고, 새 위치에서 또 같은 일을 반복하는 것</strong>이에요. 이게 경사하강법(gradient descent)입니다. 손실 함수를 산의 높이라고 보면, 기울기 $\nabla L$의 반대 방향이 "가장 가파른 하강 방향"이에요.</p>
+
+  <h3>왜 닫힌 해 대신 반복 알고리즘이 필요한가?</h3>
+  <p>정규방정식 $\boldsymbol\beta = (X^\top X)^{-1} X^\top y$는 깔끔하지만, 입력 변수가 수만 개(예: 사진의 모든 픽셀)면 $X^\top X$가 수만 × 수만 행렬이 되어 역행렬을 구하는 데 시간이 어마어마하게 듭니다($O(p^3)$). 그래서 큰 문제에서는 한 번에 정답을 내는 대신, 적당한 시작점에서 출발해 손실이 줄어드는 방향으로 한 걸음씩 옮기는 <strong>반복 최적화</strong>를 씁니다. 한 걸음마다 행렬-벡터 곱 한 번이라 $O(np)$로 훨씬 가벼워요.</p>
+
+  <p>$X^\top X$의 역을 구하기 어려운 큰 문제(수만 개의 특징)에서는 <strong>반복적 최적화</strong>를 씁니다. MSE의 기울기를 따라 조금씩 내려갑니다:</p>
+  $$ \beta \leftarrow \beta - \eta\, \nabla_\beta L = \beta - \eta \cdot \tfrac{2}{n} X^\top (X\beta - y) $$
+  <p>$\eta$(학습률)가 너무 크면 발산, 너무 작으면 수렴이 느립니다. 딥러닝의 모든 훈련도 결국 이 식의 변형입니다.</p>
+
+  <h3>학습률 $\eta$ 고르기 — 골짜기 그릇 비유</h3>
+  <p>그릇 안에 구슬을 굴리는 장면을 떠올려 보세요. 구슬이 한 번에 너무 멀리 굴러가면 반대편 벽에 부딪혀 더 높이 올라가 버립니다 — $\eta$가 큰 경우. 발산이에요. 반대로 구슬이 한 걸음 1 mm씩만 굴러가면 바닥에 닿기까지 천 년이 걸려요 — $\eta$가 작은 경우. 그러니 적당한 크기를 골라야 합니다.</p>
+  <ul>
+    <li><strong>$\eta$ 너무 큼</strong> — 손실이 매 스텝 위로 튀어 오릅니다. 발산.</li>
+    <li><strong>$\eta$ 적당</strong> — 손실이 매 스텝 부드럽게 줄어듭니다. 빠른 수렴.</li>
+    <li><strong>$\eta$ 너무 작음</strong> — 손실이 천천히 줄어들지만 수천 스텝이 지나도 답에 못 닿습니다.</li>
+  </ul>
+  <p>실전에서는 보통 0.001 ~ 0.1 사이에서 시작해 손실 곡선을 보며 조정합니다. 딥러닝에서는 Adam, AdamW 같은 적응형 학습률 옵티마이저가 이 튜닝을 어느 정도 자동화해 줘요.</p>
+
+  <div class="note">
+    <strong>SGD가 뭐예요?</strong> — 전체 데이터로 매 스텝 기울기를 계산하는 게 부담스러우면, 매번 데이터를 일부(미니배치)만 뽑아 기울기를 계산합니다. 이게 <strong>확률적 경사하강법(Stochastic Gradient Descent, SGD)</strong>이에요. 배치마다 기울기에 잡음이 섞여 진동하지만, 평균적으로는 옳은 방향을 가리키고 — 흥미롭게도 그 잡음이 얕은 골짜기를 빠져나가는 데 도움이 되기도 합니다. 딥러닝 훈련은 99% SGD 계열입니다.
+  </div>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 회귀의 경사하강법</h4>
+    <p>왼쪽: 데이터와 현재 직선. 오른쪽: MSE 손실 표면($\beta_0, \beta_1$)에서 내려가는 궤적. <strong>Step</strong>을 누를 때마다 한 번 업데이트됩니다.</p>
+    <canvas id="gd" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>학습률 η <span class="val" id="etaV">0.02</span><input type="range" id="eta" min="0.001" max="0.1" step="0.001" value="0.02"></label>
+      <button id="gdStep">+1 Step</button>
+      <button id="gdAuto">자동</button>
+      <button id="gdRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('gd');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    // Data: 20 points, true slope 1.5, intercept 0.3
+    const data=[];
+    for(let i=0;i<20;i++){
+      const xi=i/10;   // [0, 1.9]
+      data.push([xi,1.5*xi+0.3+(Math.random()*2-1)*0.25]);
+    }
+    // Left plot box: data space x in [0, 2], y in [-0.5, 4]
+    const LX=40,LT=50,LW=260,LH=230;    // left box top-left + width/height
+    const xMin=0,xMax=2,yMin=-0.5,yMax=4;
+    function lx(u){return LX+(u-xMin)/(xMax-xMin)*LW;}
+    function ly(v){return LT+LH-(v-yMin)/(yMax-yMin)*LH;}
+    // clip line to box for visualization
+    function clipLine(a,b){
+      // y = a + b*x, return two endpoints within the box
+      const ptsOut=[];
+      // intersect with x=xMin, x=xMax
+      [xMin,xMax].forEach(xv=>{const yv=a+b*xv;if(yv>=yMin&&yv<=yMax)ptsOut.push([xv,yv]);});
+      // intersect with y=yMin, y=yMax
+      if(Math.abs(b)>1e-9){
+        [yMin,yMax].forEach(yv=>{const xv=(yv-a)/b;if(xv>=xMin&&xv<=xMax)ptsOut.push([xv,yv]);});
+      }
+      return ptsOut.slice(0,2);
+    }
+    // Right loss surface box
+    const RX=360,RT=50,RW=240,RH=230;
+    const bMin=-2,bMax=4;  // both beta0 and beta1 range
+    function rx(a){return RX+(a-bMin)/(bMax-bMin)*RW;}
+    function ry(b){return RT+RH-(b-bMin)/(bMax-bMin)*RH;}
+
+    const B0_INIT=3.5,B1_INIT=-1.8;
+    let b0=B0_INIT,b1=B1_INIT,traj=[[b0,b1]];
+    let auto=false;
+    function loss(a,b){let s=0;data.forEach(([u,v])=>{const e=a+b*u-v;s+=e*e;});return s/data.length;}
+    function step(){
+      const eta=parseFloat(document.getElementById('eta').value);
+      let g0=0,g1=0;
+      data.forEach(([u,v])=>{const e=b0+b1*u-v;g0+=2*e;g1+=2*e*u;});
+      g0/=data.length;g1/=data.length;
+      b0-=eta*g0;b1-=eta*g1;
+      traj.push([b0,b1]);
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,c.width,c.height);
+      document.getElementById('etaV').textContent=parseFloat(document.getElementById('eta').value).toFixed(3);
+      // === LEFT: data + line ===
+      ctx.strokeStyle='#ccc';ctx.lineWidth=1;ctx.strokeRect(LX,LT,LW,LH);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let gy=0;gy<=4;gy++){ctx.beginPath();ctx.moveTo(LX,ly(gy));ctx.lineTo(LX+LW,ly(gy));ctx.stroke();}
+      for(let gx=0;gx<=2;gx+=0.5){ctx.beginPath();ctx.moveTo(lx(gx),LT);ctx.lineTo(lx(gx),LT+LH);ctx.stroke();}
+      // data points
+      ctx.fillStyle='#c62828';
+      data.forEach(([u,v])=>{ctx.beginPath();ctx.arc(lx(u),ly(v),4,0,Math.PI*2);ctx.fill();});
+      // current line (clipped)
+      const seg=clipLine(b0,b1);
+      if(seg.length===2){
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(lx(seg[0][0]),ly(seg[0][1]));ctx.lineTo(lx(seg[1][0]),ly(seg[1][1]));ctx.stroke();
+      }
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('β₀='+b0.toFixed(2)+'  β₁='+b1.toFixed(2)+'  L='+loss(b0,b1).toFixed(3),LX,LT-12);
+      // === RIGHT: MSE loss surface + trajectory ===
+      const cell=8;
+      let lmin=Infinity,lmax=-Infinity;const vals=[];
+      for(let i=0;i<RW;i+=cell){
+        for(let j=0;j<RH;j+=cell){
+          const a=bMin+(i/RW)*(bMax-bMin);
+          const b=bMin+((RH-j)/RH)*(bMax-bMin);
+          const L=loss(a,b);
+          vals.push([i,j,L]);
+          if(L<lmin)lmin=L;if(L>lmax)lmax=L;
+        }
+      }
+      vals.forEach(([i,j,L])=>{
+        const t=Math.min(1,(L-lmin)/(lmax-lmin+1e-9));
+        ctx.fillStyle='rgba(11,95,255,'+(1-t)*0.55+')';
+        ctx.fillRect(RX+i,RT+j,cell,cell);
+      });
+      ctx.strokeStyle='#333';ctx.strokeRect(RX,RT,RW,RH);
+      // axes labels
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('β₀',RX+RW/2,RT+RH+15);
+      ctx.save();ctx.translate(RX-12,RT+RH/2);ctx.rotate(-Math.PI/2);ctx.fillText('β₁',0,0);ctx.restore();
+      // trajectory
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=2;ctx.beginPath();
+      traj.forEach((p,i)=>{
+        const px=rx(p[0]),py=ry(p[1]);
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      });
+      ctx.stroke();
+      // current point on surface
+      const cur=traj[traj.length-1];
+      ctx.fillStyle='#ff8c00';
+      ctx.beginPath();ctx.arc(rx(cur[0]),ry(cur[1]),5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('MSE(β₀,β₁) — step '+(traj.length-1),RX,RT-12);
+    }
+    function tick(){
+      if(auto)step();
+      draw();
+      requestAnimationFrame(tick);
+    }
+    document.getElementById('gdStep').addEventListener('click',()=>{step();});
+    document.getElementById('gdAuto').addEventListener('click',()=>{auto=!auto;});
+    document.getElementById('gdRst').addEventListener('click',()=>{b0=B0_INIT;b1=B1_INIT;traj=[[b0,b1]];});
+    document.getElementById('eta').addEventListener('input',()=>{});
+    tick();
+  })();
+  </script>
+
+  <h2>8. 경사하강법 — 한 스텝을 손으로 풀어보기</h2>
+  <p>식만 보면 어려우니, 가장 작은 예제에서 직접 따라가 봅시다. 데이터 점이 단 두 개밖에 없는 회귀 문제예요.</p>
+  <ul>
+    <li><strong>데이터</strong>: $(x_1, y_1) = (1, 2)$, $(x_2, y_2) = (2, 3)$.</li>
+    <li><strong>모델</strong>: $\hat y = \beta_0 + \beta_1 x$. 초기 추정 $\beta_0 = 0,\ \beta_1 = 0$.</li>
+    <li><strong>학습률</strong>: $\eta = 0.1$.</li>
+  </ul>
+  <p><strong>① 손실 계산.</strong> 잔차 $r_i = \hat y_i - y_i$ 가 $r_1 = 0 - 2 = -2$, $r_2 = 0 - 3 = -3$. 손실 $L = \tfrac1n \sum r_i^2 = (4+9)/2 = 6.5$.</p>
+  <p><strong>② 그라디언트 계산.</strong> 분자가 $\tfrac{2}{n}$이라서:</p>
+  <ul>
+    <li>$\partial L / \partial \beta_0 = \tfrac{2}{n} \sum r_i = (- 2 + (-3)) = -5$ (n=2이므로 곱이 1)</li>
+    <li>$\partial L / \partial \beta_1 = \tfrac{2}{n} \sum r_i x_i = (-2 \cdot 1 + (-3) \cdot 2) = -8$</li>
+  </ul>
+  <p><strong>③ 한 발 내려가기.</strong> $\beta_0 \gets 0 - 0.1 \cdot (-5) = 0.5$, $\beta_1 \gets 0 - 0.1 \cdot (-8) = 0.8$.</p>
+  <p><strong>④ 다음 스텝 손실.</strong> $\hat y_1 = 0.5 + 0.8 \cdot 1 = 1.3$, $\hat y_2 = 0.5 + 0.8 \cdot 2 = 2.1$. $r_1 = -0.7,\ r_2 = -0.9$. $L = (0.49 + 0.81)/2 = 0.65$. <strong>한 스텝에 손실이 6.5 → 0.65로 1/10이 됐어요.</strong></p>
+  <p>이걸 수십~수천 번 반복하면 정답 $\beta_0 = 1, \beta_1 = 1$로 수렴합니다(이 데이터의 정확한 해). 신경망이든 GPT든 본질은 같은 절차를 반복하는 일이에요.</p>
+
+  <h2>9. Lasso (L1 정규화) — 변수 선택까지 동시에</h2>
+  <p>Ridge(L2 정규화)는 모든 계수를 작게 만들지만 0으로는 잘 안 보내요. 그런데 입력 변수가 100개인데 그중 10개만 진짜로 의미가 있는 상황이라면, "어느 10개인가?"를 자동으로 골라주는 도구가 있으면 좋겠죠. 그게 <strong>Lasso(Least Absolute Shrinkage and Selection Operator)</strong>입니다.</p>
+  $$ L_{\text{Lasso}}(\boldsymbol\beta) = \tfrac{1}{n} \|y - X\boldsymbol\beta\|^2 + \lambda \sum_{j=1}^{p} |\beta_j| $$
+  <p>차이는 단 한 글자 — Ridge는 $\beta_j^2$, Lasso는 $|\beta_j|$. 그런데 이 한 글자 차이가 결과에서 큰 차이를 만듭니다.</p>
+  <table>
+    <thead><tr><th>항목</th><th>Ridge (L2)</th><th>Lasso (L1)</th></tr></thead>
+    <tbody>
+      <tr><td>벌점 항</td><td>$\sum \beta_j^2$</td><td>$\sum |\beta_j|$</td></tr>
+      <tr><td>계수의 운명</td><td>모두 작게 (잘 0으로 안 됨)</td><td>일부는 정확히 0 (변수 선택)</td></tr>
+      <tr><td>닫힌 해</td><td>있음 ($X^\top X + \lambda I$)$^{-1}\ldots$</td><td>없음 — 좌표하강법 등 반복법</td></tr>
+      <tr><td>언제 쓰나</td><td>상관 높은 다수 변수, 부드러운 정규화</td><td>"진짜 중요한 변수 몇 개만" 찾고 싶을 때</td></tr>
+      <tr><td>실생활 비유</td><td>모든 친구에게 조금씩 빌리기</td><td>핵심 친구 몇 명에게만 빌리기</td></tr>
+    </tbody>
+  </table>
+  <p>두 정규화를 합친 ElasticNet도 있어요 — $\lambda_1 \sum |\beta_j| + \lambda_2 \sum \beta_j^2$. scikit-learn의 <code>Lasso</code>·<code>ElasticNet</code> 클래스가 표준 구현입니다.</p>
+  <div class="tip">
+    <strong>왜 L1만 0을 만드는가?</strong> — 기하학적으로 L1 벌점의 등고선은 마름모(◇), L2는 원(○)입니다. 손실 등고선이 마름모와 만나는 지점은 보통 마름모의 모서리(축 위) — 즉 한 좌표가 0인 점이에요. 그래서 자동 변수 선택이 일어납니다.
+  </div>
+
+  <h2>10. Bias-Variance Tradeoff — "왜 모델은 단순할수록 좋을 때가 있나"</h2>
+  <p>같은 진짜 함수에서 데이터 100개를 뽑아 모델을 훈련시키는 일을 1000번 반복했다고 해봅시다. 매번 다른 모델이 만들어지죠. 이 1000개의 모델로 어느 새 입력 $x_0$에서의 예측을 평가하면, 예측이 어떻게 분포할까요?</p>
+  <ul>
+    <li><strong>편향(Bias)</strong> — 1000개 모델 예측의 <em>평균</em>이 진짜 답에서 얼마나 벗어나는가. 모델이 너무 단순하면(예: 직선만) 곡선을 못 잡아내서 편향이 커요.</li>
+    <li><strong>분산(Variance)</strong> — 1000개 모델 예측이 <em>서로 얼마나 흩어지는가</em>. 모델이 너무 복잡하면(예: 100차 다항) 데이터 잡음에까지 휘둘려 분산이 커요.</li>
+    <li><strong>잡음(Irreducible noise)</strong> — 데이터에 본질적으로 섞인 잡음. 어떤 모델로도 못 줄임.</li>
+  </ul>
+  <p>회귀의 기대 평균제곱오차는 다음과 같이 분해됩니다.</p>
+  $$ \mathbb E[(y - \hat f(x))^2] = \underbrace{(\mathbb E[\hat f] - f)^2}_{\text{Bias}^2} + \underbrace{\mathrm{Var}(\hat f)}_{\text{Variance}} + \underbrace{\sigma^2}_{\text{noise}} $$
+  <figure>
+    <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+      <g font-family="sans-serif" font-size="11">
+        <text x="360" y="20" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">모델 복잡도 vs 오차 (Bias-Variance)</text>
+        <line x1="60" y1="180" x2="660" y2="180" stroke="#333" stroke-width="1.5"/>
+        <line x1="60" y1="40" x2="60" y2="180" stroke="#333" stroke-width="1.5"/>
+        <text x="360" y="200" text-anchor="middle" fill="#555">모델 복잡도 (다항 차수, 신경망 파라미터 수)</text>
+        <text x="20" y="110" text-anchor="middle" fill="#555" transform="rotate(-90 20 110)">오차</text>
+        <path d="M80,60 Q200,80 360,140 Q500,170 640,178" stroke="#0d47a1" stroke-width="2" fill="none"/>
+        <text x="120" y="55" fill="#0d47a1">Bias² (편향)</text>
+        <path d="M80,178 Q220,170 360,140 Q500,80 640,55" stroke="#c62828" stroke-width="2" fill="none"/>
+        <text x="560" y="50" fill="#c62828">Variance (분산)</text>
+        <path d="M80,80 Q220,110 360,120 Q500,130 640,80" stroke="#1b5e20" stroke-width="3" fill="none"/>
+        <text x="380" y="100" fill="#1b5e20" font-weight="bold">Total = Bias² + Var + σ²</text>
+        <line x1="360" y1="40" x2="360" y2="180" stroke="#888" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="360" y="35" text-anchor="middle" fill="#555" font-size="10">최적 복잡도</text>
+        <text x="120" y="170" fill="#888" font-size="10">단순 모델</text>
+        <text x="560" y="170" fill="#888" font-size="10">복잡 모델</text>
+        <text x="200" y="195" fill="#555" font-size="10">underfit</text>
+        <text x="510" y="195" fill="#555" font-size="10">overfit</text>
+      </g>
+    </svg>
+    <figcaption>그림. 모델 복잡도가 커질수록 편향은 줄고 분산은 늘어, U자 모양의 총 오차 곡선이 생깁니다. 골짜기가 최적 복잡도.</figcaption>
+  </figure>
+  <p>이 관점에서 다시 보면, Ridge·Lasso의 정규화 파라미터 $\lambda$를 키우는 일은 "모델을 더 단순하게 — 분산을 줄이고 편향은 살짝 늘림"입니다. 교차검증으로 $\lambda$를 고르는 게 표준이에요.</p>
+
+  <h2>11. 통계적 관점 — 최소제곱 = 최대우도</h2>
+  <p>지금까지의 최소제곱법은 "잔차 제곱을 최소화하자"는 손가락 약속처럼 보였습니다. 그런데 사실 이 선택에는 깊은 통계적 이유가 있어요.</p>
+  <p><strong>가정</strong> — 진짜 모델이 $y = \beta_0 + \beta_1 x + \varepsilon$이고, 잡음 $\varepsilon$이 평균 0, 분산 $\sigma^2$인 정규분포를 따른다고 합시다. 그러면 데이터를 관측할 확률(우도, likelihood)은:</p>
+  $$ p(y_i | x_i, \boldsymbol\beta) = \frac{1}{\sqrt{2\pi}\sigma} \exp\!\left(-\frac{(y_i - \beta_0 - \beta_1 x_i)^2}{2\sigma^2}\right) $$
+  <p>로그를 취해 모든 데이터에 대해 합하면:</p>
+  $$ \log \mathcal L = -\frac{1}{2\sigma^2}\sum_i (y_i - \hat y_i)^2 + \text{const} $$
+  <p>이 우도를 <strong>최대화</strong>하는 $\boldsymbol\beta$는 곧 잔차 제곱합 $\sum (y_i - \hat y_i)^2$을 <strong>최소화</strong>하는 $\boldsymbol\beta$와 같습니다. 즉:</p>
+  <div class="tip">
+    <strong>최소제곱법(MSE) = 가우시안 잡음 가정 아래의 최대우도(MLE)</strong>. 우리가 무심코 골랐던 손실 함수가 실은 통계적으로 가장 자연스러운 선택이었던 거예요.
+  </div>
+  <p>이 시각이 강력한 이유는 다른 잡음 분포에서 다른 손실이 자동으로 따라온다는 것입니다.</p>
+  <ul>
+    <li><strong>가우시안 잡음</strong> → MSE (제곱 손실)</li>
+    <li><strong>라플라스 잡음 (이상치 많음)</strong> → MAE (절댓값 손실)</li>
+    <li><strong>이항 잡음 (분류 문제)</strong> → Cross-entropy 손실</li>
+  </ul>
+  <p>그리고 베이즈 정리로 $\boldsymbol\beta$에 사전 분포(prior)를 두면 정규화도 자연스럽게 따라옵니다.</p>
+  <ul>
+    <li>$\boldsymbol\beta$에 가우시안 사전 → <strong>Ridge 정규화</strong></li>
+    <li>$\boldsymbol\beta$에 라플라스 사전 → <strong>Lasso 정규화</strong></li>
+  </ul>
+  <p>"왜 하필 그 손실?", "왜 하필 그 정규화?"라는 모든 질문이 통계적 관점에서 자연스럽게 답을 얻습니다.</p>
+
+  <h2>12. 회귀의 다양한 변형 — 빠른 둘러보기</h2>
+  <table>
+    <thead><tr><th>방법</th><th>특징</th><th>전형적 용도</th></tr></thead>
+    <tbody>
+      <tr><td>OLS (최소제곱)</td><td>표준 선형회귀</td><td>가장 기본</td></tr>
+      <tr><td>Ridge / Lasso / ElasticNet</td><td>정규화 추가</td><td>변수 많고 데이터 적을 때</td></tr>
+      <tr><td>Logistic 회귀</td><td>출력에 시그모이드, 분류 문제</td><td>스팸/스팸 아님 같은 이진 분류</td></tr>
+      <tr><td>Polynomial 회귀</td><td>$x, x^2, x^3, \dots$ 추가</td><td>비선형 추세</td></tr>
+      <tr><td>Kernel 회귀 (RBF, etc.)</td><td>비선형 특징을 무한 차원으로</td><td>SVM의 사촌</td></tr>
+      <tr><td>Gaussian Process Regression</td><td>예측에 불확실성까지 동봉</td><td>로봇 모델 학습, 베이즈 최적화</td></tr>
+      <tr><td>Robust 회귀 (Huber, RANSAC)</td><td>이상치에 강건</td><td>센서 데이터, 컴퓨터 비전</td></tr>
+    </tbody>
+  </table>
+  <p>이 강의는 OLS·Ridge·Lasso만 다루지만, 대학원에서는 GPR이 로봇 모델링에 많이 쓰입니다. 출력에 신뢰구간이 자동으로 붙는 게 매력이에요.</p>
+
+  <h2>13. 코드 예제 (Python)</h2>
+  <pre><code>import numpy as np
+import matplotlib.pyplot as plt
+
+# 가짜 데이터
+x = np.linspace(0, 10, 30)
+y = 2*x + 1 + np.random.randn(30)*2
+
+# numpy 한 줄
+beta = np.polyfit(x, y, deg=1)    # [β1, β0]
+print(beta)
+
+# 직접 정규방정식
+X = np.column_stack([np.ones_like(x), x])
+beta2 = np.linalg.inv(X.T @ X) @ X.T @ y
+print(beta2)
+
+# scikit-learn — Ridge / Lasso 한 줄씩
+from sklearn.linear_model import Ridge, Lasso
+ridge = Ridge(alpha=0.5).fit(X, y)
+lasso = Lasso(alpha=0.5).fit(X, y)
+print("Ridge:", ridge.coef_, "Lasso:", lasso.coef_)
+
+plt.scatter(x, y); plt.plot(x, np.polyval(beta, x)); plt.show()</code></pre>
+
+  <h2>14. 다음 강의 미리보기</h2>
+  <p>선형 회귀 $\hat y = \beta_0 + \beta_1 x$는 입력에 가중치를 곱해 더하는 <strong>한 층</strong>짜리 모델이에요.
+  하지만 현실 데이터(예: "사진 속 동물이 고양이인가?")는 직선으로 못 가르는 경우가 훨씬 많습니다.</p>
+  <p><strong><a href="10-ann.html">L10. 인공 신경망</a></strong>에서는
+  선형 회귀를 여러 층으로 쌓고, 사이사이에 비선형 활성화 함수(ReLU·Sigmoid)를 끼워 넣어 임의의 비선형 함수를 학습합니다.
+  $\hat y = \sigma(W_2\,\sigma(W_1 x + b_1) + b_2)$ — 식이 복잡해 보이지만, L9의 회귀를 두 번 쌓고 사이에 함수 한 개 끼운 것뿐이에요.
+  학습 절차(손실 정의 → 미분 → 경사하강)는 L9와 똑같습니다.</p>
+
+  <h2>14.5. 회귀 분석의 한 줄 요약</h2>
+  <p>"가설을 정의하고, 손실을 정의하고, 미분으로 최소화" — 이 세 단계가 한 학기 모든 모델에 그대로 적용됩니다.
+  Ridge·Lasso는 손실에 정규화 항을 더한 것이고, 로지스틱 회귀는 출력에 시그모이드를 끼운 것이며, 신경망은 그것을 여러 층으로 쌓은 것입니다.</p>
+
+  <h2>15. 더 깊이 공부하기</h2>
+  <ul>
+    <li>Hastie, Tibshirani, Friedman, <em>The Elements of Statistical Learning</em> — 3장(선형회귀), 5장(기저함수). <a href="https://hastie.su.domains/ElemStatLearn/">PDF 공개</a>.</li>
+    <li>Murphy, <em>Probabilistic Machine Learning: An Introduction</em>, MIT Press 2022 — 베이지안 관점의 Ridge/Lasso 유도.</li>
+    <li>scikit-learn 문서: <a href="https://scikit-learn.org/stable/modules/linear_model.html">Linear Models</a> — Ridge, Lasso, ElasticNet, Huber 모두 한 페이지에.</li>
+    <li>Goodfellow, Bengio, Courville, <em>Deep Learning</em>, 5장: "왜 MSE가 가우시안 잡음 가정 아래 최대우도와 같은가"에 대한 명쾌한 유도.</li>
+  </ul>
+
+  <nav class="prevnext">
+    <a href="08-guidance-cbf.html"><small>← 이전</small>L8. 유도 & CBF</a>
+    <a href="10-ann.html" class="next"><small>다음 →</small>L10. 인공 신경망</a>
+  </nav>
+</main>
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

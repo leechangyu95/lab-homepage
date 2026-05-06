@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 두 변수의 가중치 효과 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 두 변수의 가중치 효과</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/04-regression-2.html">Week 4. 회귀 2: 다중회귀, 로지스틱, 소프트맥스</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 변수의 가중치 효과</h4>
+    <p>$\hat{y} = w_1 x_1 + w_2 x_2$의 예측 평면을 색으로 그립니다. 두 가중치를 움직이며 평면이 어떻게 기우는지 보세요.</p>
+    <canvas id="mvCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>w₁ <span class="val" id="w1V">1</span><input type="range" id="w1" min="-2" max="2" step="0.05" value="1"></label>
+      <label>w₂ <span class="val" id="w2V">0.5</span><input type="range" id="w2" min="-2" max="2" step="0.05" value="0.5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mvCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const w1=+document.getElementById('w1').value,w2=+document.getElementById('w2').value;
+      document.getElementById('w1V').textContent=w1.toFixed(2);
+      document.getElementById('w2V').textContent=w2.toFixed(2);
+      const img=ctx.createImageData(W,H);
+      let mn=Infinity,mx=-Infinity;const buf=new Float32Array(W*H);
+      for(let j=0;j<H;j++)for(let i=0;i<W;i++){
+        const x1=(i/W)*4-2,x2=(j/H)*4-2;
+        const v=w1*x1+w2*x2;buf[j*W+i]=v;if(v<mn)mn=v;if(v>mx)mx=v;
+      }
+      for(let j=0;j<H;j++)for(let i=0;i<W;i++){
+        const t=(buf[j*W+i]-mn)/(mx-mn+1e-9);
+        const r=Math.floor(255-t*200),g=Math.floor(255-Math.abs(t-0.5)*100),b=Math.floor(100+t*150);
+        const k=(j*W+i)*4;img.data[k]=r;img.data[k+1]=g;img.data[k+2]=b;img.data[k+3]=255;
+      }
+      ctx.putImageData(img,0,0);
+      ctx.fillStyle='#fff';ctx.font='13px sans-serif';
+      ctx.fillText(`ŷ = ${w1.toFixed(2)}·x₁ + ${w2.toFixed(2)}·x₂`,10,20);
+    }
+    ['w1','w2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

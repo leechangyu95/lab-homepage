@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 극점을 직접 끌어보기 — 위치가 응답을 결정한다 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 극점을 직접 끌어보기 — 위치가 응답을 결정한다</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/10-transfer-function.html">Week 10. 전달 함수 — 라플라스 변환으로 풀이를 자동화</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 극점을 직접 끌어보기 — 위치가 응답을 결정한다</h4>
+    <p>좌측 $s$ 평면의 빨간 ✕(극점)을 마우스로 끌어보세요. 위·아래 대칭(켤레쌍)으로 함께 움직이며, 우측에 시간 응답이 즉시 반영됩니다. 다음을 직접 확인해 보세요:</p>
+    <ol style="margin:6px 0 6px 20px;font-size:13px;color:#444">
+      <li>극점을 <strong>왼쪽으로 멀리</strong> 보내면 → 빠르게 정착.</li>
+      <li>극점이 <strong>허수축에 가까워지면</strong>(위·아래로 멀리) → 진동이 심해짐.</li>
+      <li>극점이 <strong>실수축 위(im=0)</strong>에 있으면 → 진동 없음(과/임계감쇠).</li>
+      <li>극점이 <strong>우반평면</strong>으로 넘어가면 → 응답이 발산(불안정).</li>
+    </ol>
+    <canvas id="poleDragDemo" width="640" height="320" style="cursor:grab"></canvas>
+    <div class="controls">
+      <button id="pdReset">기본값으로</button>
+      <span style="font-size:12px;color:#666;margin-left:10px">실수부 σ = <span id="pdSig">−1.0</span>, 허수부 ω = <span id="pdOmg">2.0</span></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('poleDragDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let sig=-1.0, omg=2.0, dragging=false;
+    const cx=140,cy=H/2,SC=45;
+    function reset(){sig=-1.0;omg=2.0;draw();}
+    document.getElementById('pdReset').onclick=reset;
+    function poleXY(){return {x:cx+sig*SC, y:cy-omg*SC};}
+    c.addEventListener('mousedown',e=>{
+      const r=c.getBoundingClientRect();
+      const mx=e.clientX-r.left, my=e.clientY-r.top;
+      const p=poleXY();
+      if(Math.hypot(mx-p.x,my-p.y)<14 || Math.hypot(mx-p.x,my-(2*cy-p.y))<14){dragging=true;c.style.cursor='grabbing';}
+    });
+    window.addEventListener('mousemove',e=>{
+      if(!dragging)return;
+      const r=c.getBoundingClientRect();
+      const mx=e.clientX-r.left, my=e.clientY-r.top;
+      sig=Math.max(-4,Math.min(1.5,(mx-cx)/SC));
+      omg=Math.max(-3.5,Math.min(3.5,(cy-my)/SC));
+      // touch handling: snap small omega to 0
+      if(Math.abs(omg)<0.15)omg=0;
+      draw();
+    });
+    window.addEventListener('mouseup',()=>{dragging=false;c.style.cursor='grab';});
+    function step(t){
+      // for poles at sig ± j*omg, response of  y'' - 2σy' + (σ²+ω²)y  to step is...
+      // standard 2nd-order response with poles at sig±jomg
+      const sig0=-Math.abs(sig)>0?-sig:0; // dummy
+      // We'll just do generic 2nd-order from these poles, unit gain at s=0
+      // H(s) = (sig²+omg²) / ((s-sig)²+omg²);  step response by inverse Laplace
+      const wn=Math.sqrt(sig*sig+omg*omg);
+      if(wn<0.01)return 0;
+      const z=-sig/wn;
+      if(sig>=0){
+        // unstable: simulate divergence
+        if(Math.abs(omg)<0.01)return 1-Math.exp(sig*t);
+        return 1 - Math.exp(sig*t)*(Math.cos(omg*t) - sig/omg*Math.sin(omg*t));
+      }
+      // stable
+      if(Math.abs(omg)<0.01){
+        // real poles
+        if(Math.abs(z-1)<1e-3) return 1-(1+wn*t)*Math.exp(-wn*t);
+        return 1-Math.exp(sig*t);
+      }
+      // complex
+      return 1 - Math.exp(sig*t)*(Math.cos(omg*t) - sig/omg*Math.sin(omg*t));
+    }
+    function draw(){
+      document.getElementById('pdSig').textContent=sig.toFixed(2);
+      document.getElementById('pdOmg').textContent=omg.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // left s-plane
+      const box=240;
+      ctx.fillStyle='#fff';ctx.strokeStyle='#bbb';ctx.fillRect(20,40,box,box-30);ctx.strokeRect(20,40,box,box-30);
+      // right half-plane shading
+      ctx.fillStyle='rgba(198,40,40,0.08)';ctx.fillRect(cx,40,20+box-cx,box-30);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let g=-3;g<=2;g++){const xx=cx+g*SC;if(xx>20&&xx<20+box){ctx.beginPath();ctx.moveTo(xx,40);ctx.lineTo(xx,40+box-30);ctx.stroke();}}
+      for(let g=-3;g<=3;g++){const yy=cy-g*SC;if(yy>40&&yy<40+box-30){ctx.beginPath();ctx.moveTo(20,yy);ctx.lineTo(20+box,yy);ctx.stroke();}}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(20,cy);ctx.lineTo(20+box,cy);ctx.moveTo(cx,40);ctx.lineTo(cx,40+box-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('Re',20+box-15,cy-4);ctx.fillText('Im',cx+4,50);
+      ctx.fillStyle='#c62828';ctx.font='10px sans-serif';ctx.fillText('불안정',cx+10,55);
+      ctx.fillStyle='#2e7d32';ctx.fillText('안정',cx-50,55);
+      // poles (conjugate pair if omg≠0)
+      const draws=[{re:sig,im:omg}];
+      if(Math.abs(omg)>0.01)draws.push({re:sig,im:-omg});
+      draws.forEach(p=>{
+        const xx=cx+p.re*SC, yy=cy-p.im*SC;
+        ctx.strokeStyle=sig>=0?'#c62828':'#0b5fff';ctx.lineWidth=3;
+        ctx.beginPath();ctx.moveTo(xx-9,yy-9);ctx.lineTo(xx+9,yy+9);ctx.moveTo(xx-9,yy+9);ctx.lineTo(xx+9,yy-9);ctx.stroke();
+      });
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText('극점을 끌어보세요 (켤레쌍 함께 이동)',30,box+25);
+      // status
+      ctx.font='13px sans-serif';
+      let cls='';
+      if(sig>=0){ctx.fillStyle='#c62828';cls='⚠ 불안정 (발산)';}
+      else if(Math.abs(omg)<0.01){ctx.fillStyle='#2e7d32';cls='과/임계감쇠 (진동 없음)';}
+      else if(Math.abs(sig)>Math.abs(omg)){ctx.fillStyle='#2e7d32';cls='저감쇠, 약한 진동';}
+      else{ctx.fillStyle='#f57c00';cls='저감쇠, 강한 진동';}
+      ctx.fillText(cls,30,30);
+      // right time response
+      const ox2=300,oy2=H-40,w2=W-320,h2=H-70;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox2,oy2);ctx.lineTo(ox2+w2,oy2);ctx.moveTo(ox2,30);ctx.lineTo(ox2,oy2);ctx.stroke();
+      const T=10, ymax=3;
+      function py2(v){return oy2-(v+0.5)/ymax*h2;}
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      ctx.moveTo(ox2,py2(1));ctx.lineTo(ox2+w2,py2(1));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='11px sans-serif';ctx.fillText('1.0 (목표)',ox2+w2-65,py2(1)-4);
+      ctx.strokeStyle=sig>=0?'#c62828':'#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=500;i++){
+        const t=i/500*T, y=step(t);
+        const yc=Math.max(-1,Math.min(3,y));
+        const xx=ox2+t/T*w2, yy=py2(yc);
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('단위 스텝 응답',ox2,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('t →',ox2+w2-30,oy2+22);
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

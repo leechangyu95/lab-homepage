@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 와인드업 ON/OFF — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 와인드업 ON/OFF</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/12-pid-design.html">Week 12. PID 제어기 설계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 와인드업 ON/OFF</h4>
+    <p>2차 시스템에 큰 setpoint 변화를 줍니다. 액추에이터 한계 $u \in [-1.5, 1.5]$. 와인드업 보호 없이는 적분기가 과도하게 누적되어 큰 오버슈트가 발생합니다.</p>
+    <canvas id="c12aw" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="c12awKpV">3.0</span><input type="range" id="c12awKp" min="0.5" max="10" step="0.1" value="3.0"></label>
+      <label>Ki <span class="val" id="c12awKiV">2.0</span><input type="range" id="c12awKi" min="0" max="8" step="0.1" value="2.0"></label>
+      <label>액추에이터 한계 <span class="val" id="c12awSatV">1.5</span><input type="range" id="c12awSat" min="0.3" max="5" step="0.1" value="1.5"></label>
+      <label><input type="checkbox" id="c12awOn" checked> 안티 와인드업 ON</label>
+      <button id="c12awRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c12aw'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c12awKpV').textContent=(+$('c12awKp').value).toFixed(1);$('c12awKiV').textContent=(+$('c12awKi').value).toFixed(2);$('c12awSatV').textContent=(+$('c12awSat').value).toFixed(2);};
+    ['c12awKp','c12awKi','c12awSat'].forEach(id=>$(id).oninput=upd);
+    let runHist=[];
+    function loop(){
+      const Kp=+$('c12awKp').value, Ki=+$('c12awKi').value, sat=+$('c12awSat').value;
+      const aw=$('c12awOn').checked;
+      const dt=0.02, N=500;
+      let y=0,yd=0,iE=0;
+      const hist=[], iHist=[];
+      for(let k=0;k<N;k++){
+        const r = k<50?0:1.0;
+        const e = r - y;
+        const u_pre = Kp*e + Ki*iE;
+        const u = Math.max(-sat, Math.min(sat, u_pre));
+        if(aw){ if(u===u_pre) iE += e*dt; }
+        else { iE += e*dt; }
+        const ydd = u - 0.5*yd - 0.7*y;
+        yd += ydd*dt; y += yd*dt;
+        hist.push(y); iHist.push(iE);
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40, oy=240, w=560, h=180;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+      x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();x.moveTo(ox,oy-h*0.4);x.lineTo(ox+w,oy-h*0.4);x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.font='11px sans-serif';x.fillText('1.0 (목표)',ox+w-60,oy-h*0.4-3);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-Math.max(-1,Math.min(2.5,v))*h*0.4;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      x.strokeStyle='#9c27b0';x.lineWidth=1.5;x.setLineDash([4,2]);x.beginPath();
+      iHist.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-Math.max(-1,Math.min(3,v*0.3))*h*0.4;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();x.setLineDash([]);
+      const Mp = Math.max(0,(Math.max(...hist)-1)*100);
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('파랑 = 출력 y,  보라(점선) = 적분 누적값 ×0.3',ox,oy+18);
+      x.fillText('오버슈트 ≈ '+Mp.toFixed(1)+'%   적분 최댓값 = '+Math.max(...iHist).toFixed(2),ox,oy+34);
+      x.fillStyle=aw?'#2e7d32':'#c62828';x.font='13px sans-serif';
+      x.fillText(aw?'안티 와인드업 ON':'안티 와인드업 OFF (적분기 폭주)',ox,oy+52);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

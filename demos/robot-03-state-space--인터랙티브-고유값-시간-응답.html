@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 고유값 ↔ 시간 응답 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 고유값 ↔ 시간 응답</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/03-state-space.html">Lecture 3. 상태공간 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 고유값 ↔ 시간 응답</h4>
+    <p>2차 시스템의 두 고유값 위치(실수부 σ, 허수부 ω)를 슬라이더로 옮기면, 그에 따른 시간 응답이 즉시 그려집니다. 왼쪽은 복소평면, 오른쪽은 단위 충격 응답입니다.</p>
+    <canvas id="pole" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>실수부 σ <span class="val" id="sgV">-0.5</span><input type="range" id="sg" min="-2" max="1" step="0.05" value="-0.5"></label>
+      <label>허수부 ω <span class="val" id="omV">2</span><input type="range" id="om" min="0" max="5" step="0.1" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pole'),x=c.getContext('2d');
+    function loop(){
+      const sg=+document.getElementById('sg').value;
+      const om=+document.getElementById('om').value;
+      document.getElementById('sgV').textContent=sg.toFixed(2);
+      document.getElementById('omV').textContent=om.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // 좌측: 복소 평면
+      const cx=140,cy=160,scP=50;
+      // 안정 영역 음영
+      x.fillStyle='rgba(46,125,50,0.10)';x.fillRect(20,30,cx-20,260);
+      x.fillStyle='rgba(198,40,40,0.10)';x.fillRect(cx,30,140,260);
+      x.strokeStyle='#999';x.beginPath();x.moveTo(20,cy);x.lineTo(280,cy);x.moveTo(cx,30);x.lineTo(cx,290);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('Re(λ)',250,cy-5);x.fillText('Im(λ)',cx+5,40);
+      x.fillText('안정',30,50);x.fillText('불안정',230,50);
+      // 두 켤레 폴
+      x.fillStyle='#0b5fff';
+      x.beginPath();x.arc(cx+sg*scP,cy-om*scP/2,7,0,Math.PI*2);x.fill();
+      x.beginPath();x.arc(cx+sg*scP,cy+om*scP/2,7,0,Math.PI*2);x.fill();
+      // X 표시
+      x.strokeStyle='#fff';x.lineWidth=2;
+      [[sg*scP,-om*scP/2],[sg*scP,om*scP/2]].forEach(p=>{x.beginPath();x.moveTo(cx+p[0]-3,cy+p[1]-3);x.lineTo(cx+p[0]+3,cy+p[1]+3);x.moveTo(cx+p[0]+3,cy+p[1]-3);x.lineTo(cx+p[0]-3,cy+p[1]+3);x.stroke();});
+      // 우측: 시간 응답 y(t) = e^{σt} cos(ωt)
+      const x0=320,y0=160,scX=25,scY=80;
+      x.strokeStyle='#999';x.beginPath();x.moveTo(x0,y0);x.lineTo(x0+300,y0);x.moveTo(x0,30);x.lineTo(x0,290);x.stroke();
+      x.fillStyle='#666';x.fillText('시간 →',x0+250,y0+15);x.fillText('y(t)',x0+5,40);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      for(let t=0;t<=12;t+=0.05){
+        const yv=Math.exp(sg*t)*Math.cos(om*t);
+        const xx=x0+t*scX, yy=y0-yv*scY;
+        if(t===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      // 라벨
+      x.fillStyle=sg<0?'#2e7d32':'#c62828';
+      x.fillText(sg<0?'✓ 안정 (수렴)':'✗ 불안정 (발산)',x0+5,290);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

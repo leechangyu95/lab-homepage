@@ -1,0 +1,1060 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W3. 일·에너지 보존 — Study Page</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html" class="active">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../physics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 3. 일·에너지 보존</h1>
+  <p class="lead">이번 주 한 줄 요약 — <strong>"에너지는 모양을 바꿀 뿐 사라지지 않는다."</strong></p>
+
+  <div class="note"><strong>📌 들어가기 전에 — 지난 주에서 가져올 것</strong>
+    <ul>
+      <li>$F = ma$ (2주). 오늘 일-에너지 정리는 <em>이 식을 변위에 대해 적분한 것</em>.</li>
+      <li>자유물체도(2주). 에너지 식을 세우기 전에도 FBD 먼저.</li>
+      <li>등가속도 4식(1주). 에너지 보존이 <em>왜 더 빠른지</em> 비교할 때 등장.</li>
+    </ul>
+  </div>
+
+  <div class="tip"><strong>🔧 새 수학 도구 — 내적(dot product)</strong>
+    <p>두 화살표가 <em>얼마나 같은 방향을 보고 있는지</em>를 숫자 하나로 표현한 것.</p>
+    $$ \vec A \cdot \vec B = |A|\,|B|\,\cos\theta = A_x B_x + A_y B_y $$
+    <ul>
+      <li>같은 방향($\theta = 0$): $|A||B|$ (최대)</li>
+      <li>수직($\theta = 90°$): <strong>0</strong></li>
+      <li>반대 방향($\theta = 180°$): $-|A||B|$ (음수)</li>
+    </ul>
+    일이 $\vec F\cdot\vec d$인 이유: 변위 방향 <em>성분</em>만 일을 한다는 사실을 한 번에 표현.
+  </div>
+
+  <div class="toc"><h4>학습 목표</h4><ul>
+    <li>일을 힘과 변위의 내적으로 정의한다.</li>
+    <li>운동에너지·중력·탄성 위치에너지를 식과 그림으로 표현한다.</li>
+    <li>일-에너지 정리로 속도·거리 문제를 푼다.</li>
+    <li>보존력·비보존력을 구분하고 에너지 보존 식을 세운다.</li>
+    <li>퍼텐셜 곡선을 보고 운동을 예측한다.</li>
+  </ul></div>
+
+  <h2>도입 훅 — "코끝까지 진자"</h2>
+  <p>천장에 매단 무거운 추(2–3 kg 볼링공)를 학생의 코앞까지 끌어당겨 그대로 놓는다. 추가 반대 방향으로 갔다가 돌아와 <strong>코끝 직전에서 멈춘다</strong>. 마찰만 없으면 출발 높이를 절대 넘지 못한다(에너지 보존).</p>
+  <div class="tip">학생이 움직이지 않는 한 코를 맞을 수가 없다 — 물리 법칙이 보장한다.</div>
+
+  <h2>1. 일(Work)이란 무엇인가</h2>
+  $$ W = \vec{F}\cdot\vec{d} = Fd\cos\theta $$
+  <ul>
+    <li>힘 방향 = 변위 방향 → 양의 일 (에너지 줌)</li>
+    <li>반대 방향 → 음의 일 (에너지 가져감)</li>
+    <li>수직 → 일은 <strong>0</strong></li>
+  </ul>
+  <h3>데모 1 — 무거운 가방 들고 평지 걷기</h3>
+  <p>피곤하지만 물리적으로 일은 0(들고 있는 힘 ⊥ 수평 변위). 학생들의 직관과 가장 충돌하는 첫 결과.</p>
+
+  <h2>2. 운동에너지와 일-에너지 정리</h2>
+  $$ K = \tfrac{1}{2} m v^2,\qquad W_{\text{net}} = \Delta K $$
+  <p>이건 2법칙을 변위에 대해 적분한 것일 뿐 — 새로운 법칙이 아니라 같은 법칙의 다른 모양.</p>
+
+  <h3>30초 유도 (1차원, 외울 필요 없음)</h3>
+  $$ F = m\frac{dv}{dt} \;\Longrightarrow\; F\,dx = m\,dv \cdot \frac{dx}{dt} = m v\,dv $$
+  <p>양변을 $x_i \to x_f$ 적분:</p>
+  $$ \int F\,dx = \int_{v_i}^{v_f} mv\,dv = \tfrac{1}{2}m v_f^2 - \tfrac{1}{2}m v_i^2 $$
+  <p>좌변 = 한 일, 우변 = $\Delta K$. <strong>끝.</strong></p>
+
+  <h3>데모 2 — 같은 힘, 다른 거리</h3>
+  <p>거리 2배 → 한 일 2배 → $K$ 2배 → 속도는 $\sqrt{2}$배. $v$가 비선형으로 따라온다.</p>
+
+  <h2>2-B. 일률(Power) — 시간이 들어간 일</h2>
+  $$ P = \frac{dW}{dt} = \vec F \cdot \vec v $$
+  <p>단위: 와트(W) = J/s. 마력(hp) = 약 746 W.</p>
+  <ul>
+    <li>같은 일을 <em>빨리</em> 하면 일률 큼. 100 W 전구는 1초에 100 J 소비.</li>
+    <li>자동차 엔진 출력은 일률(kW). 20 kW 차가 100 km/h로 갈 때 추력 ≈ 720 N.</li>
+  </ul>
+
+  <h2>3. 위치에너지</h2>
+  <ul>
+    <li>중력: $U_g = mgh$ (기준점은 임의, 차이만 의미)</li>
+    <li>탄성(스프링): $U_s = \tfrac{1}{2}kx^2$</li>
+  </ul>
+  <h3>데모 3 — 롤러코스터 모형</h3>
+  <p>플라스틱 트랙에 구슬을 굴린다. 트랙이 출렁여도 출발 높이만 알면 어느 지점에서도 속도 계산 가능. $K + U$는 어디서나 같다.</p>
+
+  <h3>인터랙티브 데모 1 — 진자의 에너지 변환 시계열 🎮</h3>
+  <p>진자의 길이와 초기 각도를 바꿔가며 <strong>운동에너지(K, 빨강)</strong>·<strong>위치에너지(U, 파랑)</strong>·<strong>총합 $E = K + U$ (보라)</strong>가 어떻게 변하는지 막대그래프와 추 위치를 동시에 관찰하세요. 마찰을 켜면 총합이 천천히 감소하면서 진폭이 줄어듭니다.</p>
+
+  <div class="demo">
+    <h4>🎯 진자 에너지 변환 시뮬레이터</h4>
+    <p>최저점에서 K가 최대, 최고점에서 U가 최대. 마찰이 0이면 두 막대가 시소처럼 움직이며 합은 일정합니다.</p>
+    <canvas id="w3_pendCanvas" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>줄 길이 $L$ <span class="val" id="w3_pendLval">1.0</span> m
+        <input type="range" id="w3_pendL" min="0.4" max="2.0" step="0.05" value="1.0"></label>
+      <label>초기각 $\theta_0$ <span class="val" id="w3_pendAval">40°</span>
+        <input type="range" id="w3_pendA" min="5" max="80" step="1" value="40"></label>
+      <label>마찰 계수 (감쇠) <span class="val" id="w3_pendMval">0.00</span>
+        <input type="range" id="w3_pendM" min="0" max="0.05" step="0.005" value="0"></label>
+      <label><input type="checkbox" id="w3_pendReset"> 다시 던지기</label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>마찰 0 → K + U 보라 막대가 흔들리지 않고 일정한 높이에 유지</li>
+        <li>마찰 0.02 정도 → 보라 막대 천천히 줄어듦 (열로 빠져나감)</li>
+        <li>줄 길이만 바꿔도 주기 $T = 2\pi\sqrt{L/g}$가 변함을 시각적으로 확인</li>
+        <li>최저점 통과 순간 K 최대, U 최소 (기준선 = 최저점)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w3_pendCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let theta=0,omega=0,L=1,m=0.5,g=9.8,damp=0,t0=performance.now(),lastTime=t0;
+    function readControls(){
+      L=+document.getElementById('w3_pendL').value;
+      damp=+document.getElementById('w3_pendM').value;
+      const a0=+document.getElementById('w3_pendA').value;
+      document.getElementById('w3_pendLval').textContent=L.toFixed(2);
+      document.getElementById('w3_pendAval').textContent=a0+'°';
+      document.getElementById('w3_pendMval').textContent=damp.toFixed(3);
+      return a0*Math.PI/180;
+    }
+    function reset(){theta=readControls();omega=0;}
+    reset();
+    document.getElementById('w3_pendReset').addEventListener('change',e=>{if(e.target.checked){reset();e.target.checked=false;}});
+    ['w3_pendL','w3_pendA','w3_pendM'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+      if(id!=='w3_pendM')reset();else readControls();
+    }));
+    function step(dt){
+      const alpha=-(g/L)*Math.sin(theta)-damp*omega;
+      omega+=alpha*dt;theta+=omega*dt;
+    }
+    function frame(now){
+      const dt=Math.min(0.04,(now-lastTime)/1000);lastTime=now;
+      for(let i=0;i<4;i++)step(dt/4);
+      const ox=W*0.32,oy=80;
+      const px=4+(L*120)*Math.sin(theta);
+      const sc=120;
+      const bx=ox+L*sc*Math.sin(theta),by=oy+L*sc*Math.cos(theta);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(ox-90,oy);ctx.lineTo(ox+90,oy);ctx.stroke();
+      for(let i=-4;i<=4;i++){ctx.beginPath();ctx.moveTo(ox-80+i*20,oy);ctx.lineTo(ox-80+i*20+8,oy-8);ctx.stroke();}
+      ctx.strokeStyle='#444';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(bx,by);ctx.stroke();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(bx,by,16,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#888';ctx.setLineDash([3,3]);
+      const lowestY=oy+L*sc;
+      ctx.beginPath();ctx.moveTo(ox-100,lowestY);ctx.lineTo(ox+100,lowestY);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.fillText('기준 (U=0)',ox-100,lowestY-3);
+      const h=L*(1-Math.cos(theta));
+      const v=L*omega;
+      const K=0.5*m*v*v;
+      const U=m*g*h;
+      const E=K+U;
+      const bxL=W*0.62,bw=70,by0=H-50;
+      const Eref=m*g*L*(1-Math.cos(+document.getElementById('w3_pendA').value*Math.PI/180))*1.05+0.001;
+      const sH=180/Eref;
+      ctx.fillStyle='#fff';ctx.fillRect(bxL-10,30,260,H-50);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(bxL-10,30,260,H-50);
+      ctx.fillStyle='#222';ctx.font='bold 13px sans-serif';
+      ctx.fillText('에너지 막대',bxL,52);
+      function bar(x,col,val,label){
+        const hh=Math.min(180,val*sH);
+        ctx.fillStyle=col;ctx.fillRect(x,by0-hh,bw,hh);
+        ctx.strokeStyle='#333';ctx.strokeRect(x,by0-hh,bw,hh);
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.fillText(label,x+8,by0+15);
+        ctx.fillText(val.toFixed(3)+' J',x,by0-hh-4);
+      }
+      bar(bxL,'#c62828',K,'K');
+      bar(bxL+80,'#0b5fff',U,'U');
+      bar(bxL+160,'#7b1fa2',E,'E=K+U');
+      ctx.fillStyle='#444';ctx.font='12px sans-serif';
+      ctx.fillText('h = '+h.toFixed(3)+' m',16,H-22);
+      ctx.fillText('v = '+v.toFixed(2)+' m/s',16,H-6);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
+
+  <h2>4. 보존력 vs 비보존력</h2>
+  <table>
+    <thead><tr><th>보존력</th><th>비보존력</th></tr></thead>
+    <tbody><tr>
+      <td>한 일이 경로 무관 / 위치에너지 정의 가능 (예: 중력, 스프링)</td>
+      <td>한 일이 경로 의존 / 위치에너지 정의 불가 (예: 마찰)</td>
+    </tr></tbody>
+  </table>
+  <h3>데모 4 — 같은 출발점, 다른 경로</h3>
+  <p>마찰 없으면 어느 경사로 굴려도 같은 높이로 다시 올라감. 마찰 있으면 긴 경로일수록 더 많이 잃음. 경로가 결과를 바꾸면 비보존력이 있다는 뜻.</p>
+
+  <h2>5. 에너지 보존 (총정리)</h2>
+  $$ K_i + U_i + W_{\text{외력}} = K_f + U_f + \Delta E_{\text{열}} $$
+  <h3>데모 5 — 슬링키 자유낙하 ★</h3>
+  <p>긴 슬링키를 천장에 매달아 평형 상태로 만든 뒤 위쪽 끝을 놓는다. <strong>아래쪽 끝은 그대로 정지</strong>하다가 슬링키 전체가 한 점으로 모인 뒤에야 떨어진다. 슬로모션 영상 필수.</p>
+  <h3>데모 6 — Galileo 진자(가로막대)</h3>
+  <p>큰 진자에 가로막대 추가. 끈이 짧아져도 출발 높이까지 정확히 못 넘는다. 에너지 보존이 "최대 높이 제한선"임을 시각화.</p>
+
+  <h3>인터랙티브 데모 2 — 롤러코스터 / 슬라이더 🎮</h3>
+  <p>출발 높이와 마찰계수를 바꿔가며 트랙 위 구슬의 속도가 어떻게 변하는지 보세요. 마찰을 켜면 같은 높이에서 출발해도 트랙 끝에 가까울수록 속도가 줄어듭니다.</p>
+
+  <div class="demo">
+    <h4>🎢 슬라이더 / 롤러코스터 시뮬레이터</h4>
+    <p>트랙은 고정된 코사인 곡선. 구슬은 트랙 위를 미끄러지며 매 순간 $v(x) = \sqrt{2g[h_0 - h(x)] - 2\mu g \cdot s(x)}$ 형태로 속도가 결정됩니다.</p>
+    <canvas id="w3_coasterCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>출발 높이 $h_0$ <span class="val" id="w3_h0V">5.0</span> m
+        <input type="range" id="w3_h0" min="1.0" max="10.0" step="0.1" value="5.0"></label>
+      <label>마찰계수 $\mu$ <span class="val" id="w3_muV">0.00</span>
+        <input type="range" id="w3_mu" min="0" max="0.3" step="0.01" value="0"></label>
+      <label><input type="checkbox" id="w3_run" checked> 시뮬 실행</label>
+      <label><input type="checkbox" id="w3_reset"> 다시 출발</label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$\mu = 0$, $h_0 = 5$ m → 트랙 끝(높이 0)에서 $v = \sqrt{2gh_0} \approx 9.9$ m/s</li>
+        <li>$\mu = 0.1$ → 같은 높이에서 출발해도 도달 속도가 작아짐 (열로 일부 손실)</li>
+        <li>$h_0$ 너무 작으면 두 번째 언덕을 못 넘음 — 보라색 경로 끊김</li>
+        <li>마찰 없이도 출발 높이보다 더 높이는 절대 못 올라감 (에너지 보존)</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w3_coasterCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const g=9.8;
+    let s=0,v=0,lastTime=performance.now();
+    function track(x){
+      // x in meters [0,20]; h(x) cosine bumps
+      return 1+1.5*Math.cos(x*0.7)+0.5*Math.cos(x*0.3+1);
+    }
+    function dhdx(x){
+      const dx=0.001;return (track(x+dx)-track(x-dx))/(2*dx);
+    }
+    function reset(){
+      s=0;v=0;
+    }
+    document.getElementById('w3_reset').addEventListener('change',e=>{if(e.target.checked){reset();e.target.checked=false;}});
+    function step(dt){
+      const x=s;const dh=dhdx(x);
+      const sinTheta=dh/Math.sqrt(1+dh*dh);
+      const cosTheta=1/Math.sqrt(1+dh*dh);
+      const mu=+document.getElementById('w3_mu').value;
+      const a=-g*sinTheta - mu*g*cosTheta*Math.sign(v||1);
+      v+=a*dt;
+      s+=v*dt;
+      if(s<0){s=0;if(v<0)v=0;}
+      if(s>20){s=20;v=0;}
+    }
+    function frame(now){
+      const dt=Math.min(0.04,(now-lastTime)/1000);lastTime=now;
+      const h0=+document.getElementById('w3_h0').value;
+      document.getElementById('w3_h0V').textContent=h0.toFixed(1);
+      document.getElementById('w3_muV').textContent=(+document.getElementById('w3_mu').value).toFixed(2);
+      // initial energy gives v at start point if released from h0
+      // we keep simple: when reset, start at h(0)+? -> use s=0,v=0; track has h(0)=...
+      const run=document.getElementById('w3_run').checked;
+      if(run){
+        // additional: drop the cart at simulated height h0 → assign extra energy initially when v=0 and s=0
+        if(s===0 && v===0){
+          // give starting kinetic to mimic "released from height h0"
+          const dE=g*Math.max(0,h0-track(0));
+          v=Math.sqrt(Math.max(0,2*dE));
+        }
+        for(let i=0;i<5;i++)step(dt/5);
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=30;
+      const sx=(W-2*margin)/20;
+      const maxH=8,sy=(H-2*margin)/maxH;
+      // draw track
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      for(let x=0;x<=20;x+=0.1){
+        const px=margin+x*sx,py=H-margin-track(x)*sy;
+        if(x===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // axes
+      ctx.strokeStyle='#cfd8e3';
+      ctx.beginPath();ctx.moveTo(margin,H-margin);ctx.lineTo(W-margin,H-margin);ctx.stroke();
+      // start height marker
+      ctx.strokeStyle='#888';ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(margin,H-margin-h0*sy);ctx.lineTo(W-margin,H-margin-h0*sy);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('h₀ = '+h0.toFixed(1)+' m',W-margin-80,H-margin-h0*sy-3);
+      // ball
+      const bx=margin+s*sx,by=H-margin-track(s)*sy;
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(bx,by-6,7,0,Math.PI*2);ctx.fill();
+      // info box
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,210,72);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,210,72);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('s = '+s.toFixed(2)+' m',16,28);
+      ctx.fillText('h = '+track(s).toFixed(2)+' m',16,46);
+      ctx.fillText('|v| = '+Math.abs(v).toFixed(2)+' m/s',16,64);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
+
+  <h3>인터랙티브 데모 3 — 일-에너지 정리: $F$-$x$ 면적 = $\Delta K$ 🎮</h3>
+  <p>힘이 거리에 따라 변할 때 한 일은 그래프 아래 면적입니다. 슬라이더로 가변력 모양을 바꾸면 면적이 곧 운동에너지 변화량으로 자동 환산됩니다.</p>
+
+  <div class="demo">
+    <h4>📊 가변력의 일 = 면적 시각화</h4>
+    <p>$F(x) = F_0 - kx$ 형태(스프링형 가변력). 색칠된 영역의 면적이 한 일이며, 같은 값이 정지 상태에서 출발한 1 kg 물체의 $K = \tfrac{1}{2}v^2$ 가 됩니다.</p>
+    <canvas id="w3_workCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>초기 힘 $F_0$ <span class="val" id="w3_F0V">10</span> N
+        <input type="range" id="w3_F0" min="2" max="30" step="1" value="10"></label>
+      <label>감소율 $k$ <span class="val" id="w3_kV">1.0</span> N/m
+        <input type="range" id="w3_k" min="0" max="3" step="0.1" value="1"></label>
+      <label>이동 거리 $d$ <span class="val" id="w3_dV">5.0</span> m
+        <input type="range" id="w3_d" min="0.5" max="10" step="0.1" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$k=0$ → 면적 = $F_0 \cdot d$ (사각형, 일정한 힘의 일)</li>
+        <li>$k>0$, 거리 길게 → 사다리꼴 면적, 힘이 0 이하로 떨어지면 음의 일도 생김</li>
+        <li>음의 일 영역(빨간색)은 운동에너지를 빼앗는 영역</li>
+        <li>총 일 = 양 - 음. 1 kg 가정 시 $v = \sqrt{2W}$ 자동 표시</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w3_workCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const F0=+document.getElementById('w3_F0').value;
+      const k=+document.getElementById('w3_k').value;
+      const d=+document.getElementById('w3_d').value;
+      document.getElementById('w3_F0V').textContent=F0;
+      document.getElementById('w3_kV').textContent=k.toFixed(1);
+      document.getElementById('w3_dV').textContent=d.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const margin=44,xmax=10;
+      const sx=(W-2*margin)/xmax;
+      const Fmax=Math.max(F0+1,5),Fmin=Math.min(0,F0-k*xmax-1);
+      const sy=(H-2*margin)/(Fmax-Fmin);
+      const xz=(0-Fmin)*sy;
+      const ox=margin,oy=H-margin-xz;
+      // axes
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(margin,oy);ctx.lineTo(W-margin,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(margin,margin);ctx.lineTo(margin,H-margin);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('x (m)',W-margin-30,oy+15);
+      ctx.fillText('F (N)',margin+4,margin+14);
+      for(let xx=0;xx<=xmax;xx++){
+        const px=margin+xx*sx;
+        ctx.strokeStyle='#eef0f4';ctx.beginPath();ctx.moveTo(px,margin);ctx.lineTo(px,H-margin);ctx.stroke();
+        ctx.fillStyle='#999';ctx.fillText(xx,px-3,oy+13);
+      }
+      // shaded area for [0,d]
+      // positive part green, negative part red
+      ctx.beginPath();ctx.moveTo(margin,oy);
+      let workPos=0,workNeg=0;
+      const N=200;
+      for(let i=0;i<=N;i++){
+        const xx=(d*i)/N;
+        const F=F0-k*xx;
+        const px=margin+xx*sx,py=oy-F*sy;
+        if(i===0)ctx.moveTo(px,oy);
+        ctx.lineTo(px,py);
+      }
+      ctx.lineTo(margin+d*sx,oy);
+      ctx.closePath();
+      ctx.fillStyle='rgba(76,175,80,0.18)';ctx.fill();
+      // rough work integral
+      let W_=0;
+      for(let i=0;i<N;i++){
+        const x1=(d*i)/N,x2=(d*(i+1))/N;
+        const F1=F0-k*x1,F2=F0-k*x2;
+        const dW=0.5*(F1+F2)*(x2-x1);
+        W_+=dW;
+        if(dW>0)workPos+=dW;else workNeg+=dW;
+      }
+      // F(x) curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=200;i++){
+        const xx=(xmax*i)/200;
+        const F=F0-k*xx;
+        const px=margin+xx*sx,py=oy-F*sy;
+        if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      // distance marker
+      ctx.strokeStyle='#c62828';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(margin+d*sx,margin);ctx.lineTo(margin+d*sx,H-margin);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.fillText('x = d',margin+d*sx-12,margin+12);
+      // info box
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(W-220,12,200,80);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(W-220,12,200,80);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('총 일 W = '+W_.toFixed(2)+' J',W-212,32);
+      ctx.fillText('양의 일 ≈ '+workPos.toFixed(2)+' J',W-212,50);
+      ctx.fillText('음의 일 ≈ '+workNeg.toFixed(2)+' J',W-212,68);
+      const v=W_>0?Math.sqrt(2*W_):0;
+      ctx.fillText('1 kg 정지 출발 → v = '+v.toFixed(2)+' m/s',W-212,86);
+    }
+    ['w3_F0','w3_k','w3_d'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+
+  <h2>6. 퍼텐셜 곡선 읽기</h2>
+  <p>$U(x)$ 그래프만 보면 운동을 거의 다 알 수 있다.</p>
+  <ul>
+    <li>최솟값 = 안정 평형점 (작게 움직이면 진동)</li>
+    <li>최댓값 = 불안정 평형점</li>
+    <li>총에너지 $E$의 가로선과 $U$ 곡선이 만나는 점 = 반환점</li>
+  </ul>
+
+  <h2>흔한 오개념</h2>
+  <table>
+    <thead><tr><th>학생 생각</th><th>사실</th></tr></thead>
+    <tbody>
+      <tr><td>"일이란 힘을 주는 것"</td><td>변위 0이거나 ⊥이면 일은 0</td></tr>
+      <tr><td>"마찰은 에너지를 없앤다"</td><td>열에너지로 변환. 우주 전체 에너지는 보존</td></tr>
+      <tr><td>"속도 2배면 운동에너지 2배"</td><td>$v^2$에 비례, 4배</td></tr>
+      <tr><td>"위로 던진 공의 꼭대기 = 에너지 0"</td><td>$K=0$이지만 $U$ 최대. 합은 그대로</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. 에너지 보존 풀이 절차 — 5단계</h2>
+  <ol>
+    <li>두 시점(처음·나중)을 정하고 화살표로 표시.</li>
+    <li>각 시점에서 가지고 있는 모든 에너지(K, U_g, U_s)를 식으로 적기.</li>
+    <li>마찰이 있으면 손실량 $\Delta E_\text{열} = \mu mg \cdot d$ 따로 계산.</li>
+    <li>에너지 보존: 처음 = 나중 + 손실.</li>
+    <li>풀고자 하는 양에 대해 정리.</li>
+  </ol>
+  <div class="tip"><strong>왜 에너지로 풀면 더 빠른가?</strong> $F=ma$는 시간을 다루는 식 — 매 순간 가속도를 알아야. 에너지는 <em>두 시점만 비교</em>하면 끝. 중간 경로 무관(보존력만 있을 때).</div>
+
+  <h2>강의실 예제</h2>
+  <div class="tip"><strong>예제 1.</strong> 10 m에서 가만히 떨어진 0.5 kg 공의 바닥 속도?<br>
+  $mgh = \tfrac{1}{2}mv^2 \Rightarrow v = \sqrt{2gh} = 14$ m/s.</div>
+  <div class="tip"><strong>예제 2.</strong> $k=200$ N/m을 0.1 m 압축, 0.2 kg 공 발사 속도?<br>
+  $v = x\sqrt{k/m} = 0.1\sqrt{1000} \approx 3.16$ m/s.</div>
+  <div class="tip"><strong>예제 3.</strong> $\mu=0.3$ 5 m 수평 + 3 m 높이 미끄럼틀, 2 kg 블록의 마지막 속도?<br>
+  시작 $mgh=58.8$ J. 마찰 손실 $\mu mg \cdot 5 = 29.4$ J. 남은 $K=29.4$ J → $v\approx 5.42$ m/s.</div>
+  <div class="tip"><strong>예제 4 (수직 원).</strong> 길이 1 m 줄에 0.2 kg 공. 최저점에서 5 m/s로 출발. 최고점 속도?<br>
+  높이차 $2L = 2$ m. $\tfrac{1}{2}mv_{\text{f}}^2 = \tfrac{1}{2}mv_i^2 - mg(2L)$. $v_f = \sqrt{25 - 39.2} \approx$ <strong>해 없음</strong> → 공은 최고점까지 못 감.</div>
+  <div class="tip"><strong>예제 5 (스프링총).</strong> 수평 스프링($k=500$ N/m, 압축 0.05 m)으로 0.1 kg 공을 발사. 마찰 0.2인 면을 1 m 미끄러진 후 속도?<br>
+  스프링 에너지 $\tfrac{1}{2}kx^2 = 0.625$ J. 마찰 손실 $\mu mg \cdot 1 = 0.196$ J. 남은 $K = 0.429$ J → $v = \sqrt{8.58} \approx 2.93$ m/s.</div>
+  <div class="tip"><strong>예제 6 (일률).</strong> 1500 kg 차가 정지 → 25 m/s, 10초 가속. 평균 일률?<br>
+  $\Delta K = \tfrac{1}{2}(1500)(625) = 469$ kJ. $P_\text{avg} = 469/10 = 46.9$ kW ≈ 63 hp.</div>
+  <div class="tip"><strong>예제 7 (퍼텐셜 곡선 해석).</strong> $U(x) = x^4 - 2x^2$ 형태. 평형점 위치와 안정성?<br>
+  $dU/dx = 4x^3 - 4x = 0$ → $x = 0, \pm 1$. $d^2U/dx^2 = 12x^2 - 4$. $x = 0$: $-4$ (불안정). $x = \pm 1$: $+8$ (안정). 이중 우물.</div>
+
+  <h2>자기 점검 ✅</h2>
+  <div class="note">
+    <ol>
+      <li>에너지 보존은 항상 맞는 법칙인가?</li>
+      <li>같은 높이 미끄럼틀 두 가지(짧은·긴) 중 마찰 있을 때 어느 쪽이 빨리 도착?</li>
+      <li>속도가 3배가 되면 운동에너지는 몇 배?</li>
+      <li>위치에너지의 절대값은 의미가 있는가?</li>
+    </ol>
+    <strong>정답</strong>: (1) 모든 에너지(열, 빛, 음 포함)를 세면 항상 맞음. (2) 짧은 쪽(마찰이 적게 작용). (3) 9배. (4) 없음. 차이만 의미.
+  </div>
+
+  <h2>응용·확장</h2>
+  <table>
+    <thead><tr><th>분야</th><th>어떻게 쓰나</th></tr></thead>
+    <tbody>
+      <tr><td>전기 자동차</td><td>회생 제동 — 운동에너지 → 전기에너지 변환</td></tr>
+      <tr><td>엘리베이터</td><td>위치에너지 ↔ 전기에너지 (균형추 활용)</td></tr>
+      <tr><td>롤러코스터 설계</td><td>첫 언덕이 최고 → 마찰 고려한 에너지 예산</td></tr>
+      <tr><td>스포츠</td><td>장대높이뛰기: 달리기 KE → 막대 탄성 PE → 중력 PE</td></tr>
+      <tr><td>분자 화학</td><td>퍼텐셜 곡선의 우물 = 안정한 결합</td></tr>
+    </tbody>
+  </table>
+
+  <h2>과제 3</h2>
+  <ol>
+    <li>(개념) 롤러코스터 첫 언덕이 가장 높은 이유를 에너지로 설명.</li>
+    <li>(계산) Halliday 7·8장 4문제.</li>
+    <li>(시뮬) PhET <em>Energy Skate Park</em>: 마찰 유무에 따른 에너지 막대 비교 캡처. A4 한 장.</li>
+  </ol>
+
+  <div class="note"><strong>다음 주 미리보기</strong> — 에너지의 형제 격인 <strong>운동량</strong>. 충돌에서 에너지보다 운동량이 더 강력한 이유, 뉴턴 요람의 비밀.</div>
+
+  <h2>예제를 한 번 더 — 단계별 사고 과정 🪜</h2>
+  <p>"식을 세우는 법"이 가장 자주 막히는 단계입니다. 같은 문제를 5단계로 천천히 풀면, 시험에서도 같은 패턴을 자동으로 따라갈 수 있게 됩니다.</p>
+
+  <div class="note">
+    <strong>예제 (다시 풀어보기).</strong> 마찰계수 $\mu = 0.20$인 수평면 위에 정지해 있는 2.0 kg 블록이, 경사각 $30°$, 길이 4.0 m, 마찰 없는 미끄럼틀의 꼭대기에서 미끄러져 내려와 수평면을 3.0 m 더 미끄러진 후 멈춘다. (a) 미끄럼틀 끝에서의 속도, (b) 수평면을 3.0 m 미끄러진 후의 속도, (c) 처음 미끄럼틀 꼭대기에서 출발해서 멈출 때까지 마찰이 한 일의 총량을 구하라.
+  </div>
+
+  <h3>1단계 — 그림과 좌표</h3>
+  <p>두 구간을 명확히 분리한다. ① 미끄럼틀(보존력만), ② 수평면(마찰 있음). 기준점 $U=0$은 수평면 높이로 잡으면 식이 깔끔.</p>
+  <pre><code>      ●──┐
+       ╲  │      ① 미끄럼틀: 4 m, 30°, 마찰 0
+   4 m  ╲ │ h0 = 4·sin30° = 2.0 m
+         ╲│
+          ●═══════════●     ② 수평면: μ=0.2, 3 m
+          v1 = ?       v2 = 0 (멈춤)</code></pre>
+
+  <h3>2단계 — 어떤 에너지가 각 구간에 있나?</h3>
+  <table>
+    <thead><tr><th>지점</th><th>K</th><th>U</th><th>마찰 손실</th></tr></thead>
+    <tbody>
+      <tr><td>출발 (꼭대기)</td><td>0</td><td>$mgh_0 = 2 \cdot 9.8 \cdot 2 = 39.2$ J</td><td>0</td></tr>
+      <tr><td>미끄럼틀 끝</td><td>$\tfrac{1}{2}mv_1^2$</td><td>0 (기준점)</td><td>0 (마찰 없음)</td></tr>
+      <tr><td>수평 3 m 후 (정지)</td><td>0</td><td>0</td><td>$\mu m g \cdot 3$</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3단계 — 식 세우기 (한 줄에 하나)</h3>
+  <p>(a) 미끄럼틀(보존력): $mgh_0 = \tfrac{1}{2}m v_1^2 \;\Rightarrow\; v_1 = \sqrt{2 g h_0}$.</p>
+  <p>(b) 수평면(마찰): $\tfrac{1}{2} m v_1^2 = \tfrac{1}{2} m v_2^2 + \mu m g \cdot 3$ $\Rightarrow\; v_2^2 = v_1^2 - 2 \mu g \cdot 3$.</p>
+  <p>(c) 마찰이 한 일은 음수: $W_f = -\mu m g \cdot d_{\text{수평}}$ — 미끄럼틀에는 마찰 없음, 수평면에서만 작용.</p>
+
+  <h3>4단계 — 수치 대입</h3>
+  $$ v_1 = \sqrt{2 \cdot 9.8 \cdot 2} = \sqrt{39.2} \approx 6.26 \text{ m/s} $$
+  $$ \mu m g \cdot 3 = 0.20 \cdot 2 \cdot 9.8 \cdot 3 = 11.76 \text{ J} $$
+  $$ v_2 = \sqrt{6.26^2 - 2 \cdot 0.20 \cdot 9.8 \cdot 3} = \sqrt{39.2 - 11.76} = \sqrt{27.44} \approx 5.24 \text{ m/s} $$
+  <p>잠깐, 문제 (b)는 "3 m 미끄러진 후" 속도를 묻는데, 문제 끝에서는 "멈출 때까지". 멈추기까지 필요한 거리부터 다시 보자.</p>
+  $$ d_{\text{stop}} = \frac{v_1^2}{2\mu g} = \frac{39.2}{2 \cdot 0.20 \cdot 9.8} = 10 \text{ m} $$
+  <p>3 m 후엔 아직 멈추지 않음 → 위 $v_2 \approx 5.24$ m/s. 그리고 (c) 마찰이 한 총 일은 시작 에너지 39.2 J가 모두 열로 변환되어 정지하므로 $W_f = -39.2$ J.</p>
+
+  <h3>5단계 — 단위·합리성·검증</h3>
+  <ul>
+    <li>단위: $\sqrt{\text{m}^2/\text{s}^2} = \text{m/s}$ ✓. J = kg·m²/s² ✓.</li>
+    <li>합리성: 6.26 m/s ≈ 22.5 km/h. 2 m 높이에서 출발했으니 자전거 정도 속도. 그럴 듯함.</li>
+    <li>에너지 합산: 처음 39.2 J = 멈출 때 0 J + 마찰 손실 39.2 J. 보존 ✓.</li>
+    <li>경사면 마찰 없음 + 수평 마찰만 있는 모델은 시험 단골. 비현실적이라 느낄 수 있지만 "분리해서 보는" 연습이 핵심.</li>
+  </ul>
+  <div class="tip"><strong>한 줄 요약</strong> — 두 시점 사이의 에너지 변화 = 비보존력이 한 일. $\sum E_i = \sum E_f + |W_{\text{비보존}}|$. 이 한 줄이면 W3 문제의 90%가 풀린다.</div>
+
+  <h2>연습문제 — 집에서 풀어보기 ✏️</h2>
+  <p>풀이 토글을 펼치기 전에 본인이 5분 내에 풀어보세요. 막히면 위 5단계 표를 옆에 두고 따라가면 됩니다.</p>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 1</strong> (자유낙하 KE) — 0.30 kg 사과를 5.0 m 높이에서 가만히 놓았다. 땅에 닿기 직전 운동에너지와 속도는?</summary>
+    <p style="margin-top:10px">$K = mgh = 0.30 \cdot 9.8 \cdot 5.0 = 14.7$ J. $v = \sqrt{2gh} = \sqrt{98} \approx 9.90$ m/s.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 2</strong> (스프링) — $k = 800$ N/m 스프링을 0.10 m 압축한 뒤 0.20 kg 공을 발사. 마찰 없는 수평면이라면 발사 속도?</summary>
+    <p style="margin-top:10px">$\tfrac{1}{2} k x^2 = \tfrac{1}{2} m v^2 \Rightarrow v = x\sqrt{k/m} = 0.10\sqrt{4000} \approx 6.32$ m/s.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 3</strong> (미끄럼틀 + 마찰) — 1.5 kg 블록을 마찰계수 0.25, 길이 4.0 m, 경사 $30°$ 미끄럼틀에서 정지에서 미끄러뜨림. 끝에서 속도?</summary>
+    <p style="margin-top:10px">출발 PE = $1.5 \cdot 9.8 \cdot 4 \sin30° = 29.4$ J. 마찰 손실 = $\mu m g \cos30° \cdot 4 = 0.25 \cdot 1.5 \cdot 9.8 \cdot 0.866 \cdot 4 \approx 12.73$ J. 남은 KE = 16.67 J → $v = \sqrt{2 \cdot 16.67/1.5} \approx 4.71$ m/s.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 4</strong> (회생제동) — 1200 kg 차가 25 m/s에서 10 m/s로 감속. 회수된 KE는?</summary>
+    <p style="margin-top:10px">$\Delta K = \tfrac{1}{2}(1200)(25^2 - 10^2) = 600 \cdot 525 = 315{,}000$ J = 315 kJ. 효율 60%면 약 189 kJ가 배터리로.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 5</strong> (수직 원) — 길이 0.80 m 줄에 매달린 0.30 kg 공을 최저점에서 4.0 m/s로 회전 시작. 최고점 속도와 줄 장력?</summary>
+    <p style="margin-top:10px">에너지: $\tfrac{1}{2}m v_t^2 = \tfrac{1}{2}m v_b^2 - m g (2L)$. $v_t^2 = 16 - 2 \cdot 9.8 \cdot 1.6 = 16 - 31.36 < 0$. <strong>해 없음 → 최고점까지 못 도달.</strong> 줄이 느슨해지는 임계점($T=0$): $v_{\min}^2 = gL$ at top.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 6</strong> (일률) — 70 kg 학생이 5.0 m 높이의 계단을 8.0 s에 올랐다. 평균 일률은?</summary>
+    <p style="margin-top:10px">$W = mgh = 70 \cdot 9.8 \cdot 5 = 3{,}430$ J. $P = W/t = 429$ W ≈ 0.57 hp. 사람의 지속 가능한 출력은 약 100 W → 8 s 단발성 운동에선 4배 가능.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 7</strong> (가변력의 일) — 힘 $F(x) = 5 - 2x$ N이 물체에 작용. $x = 0$에서 $x = 3$ m까지 한 일은?</summary>
+    <p style="margin-top:10px">$W = \int_0^3 (5-2x)\,dx = [5x - x^2]_0^3 = 15 - 9 = 6$ J. (그래프 아래 면적: 사다리꼴 + 음의 삼각형. 직접 그려서 확인.)</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 8</strong> (포물선 사거리 vs 에너지) — 발사체가 $v_0 = 20$ m/s로 $30°$ 발사됐다. 최고점 속도와 KE는?</summary>
+    <p style="margin-top:10px">최고점 수직속도 0, 수평속도 $v_x = 20\cos30° \approx 17.32$ m/s. $K = \tfrac{1}{2} m v_x^2$. 1 kg이라면 150 J. 출발 KE 200 J 중 50 J가 PE(=$mgh_{\max}$)로 변환.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 9</strong> (스프링 + 마찰) — 수평면($\mu = 0.30$)에서 $k = 600$ N/m 스프링을 0.08 m 압축, 0.5 kg 블록을 발사. 멈추기까지 거리?</summary>
+    <p style="margin-top:10px">스프링 에너지 $\tfrac{1}{2}(600)(0.08)^2 = 1.92$ J. 모두 마찰로 소실: $1.92 = \mu m g \cdot d \Rightarrow d = 1.92/(0.3 \cdot 0.5 \cdot 9.8) \approx 1.31$ m.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 10</strong> (퍼텐셜 곡선) — $U(x) = 2x^2 - x^4/2$ J. 평형점과 안정성?</summary>
+    <p style="margin-top:10px">$dU/dx = 4x - 2x^3 = 2x(2 - x^2) = 0 \Rightarrow x = 0, \pm\sqrt{2}$. $d^2U/dx^2 = 4 - 6x^2$. $x=0$: $+4$ (안정). $x=\pm\sqrt{2}$: $-8$ (불안정). 가운데 우물 + 양옆 언덕.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 11</strong> (롤러코스터 첫 언덕) — 마찰 없는 첫 언덕 25 m, 다음 언덕 18 m. 첫 언덕 정상에서 속도 0이라면 18 m 언덕 정상 통과 속도?</summary>
+    <p style="margin-top:10px">$mgh_1 = mg h_2 + \tfrac{1}{2} m v^2 \Rightarrow v = \sqrt{2g(h_1 - h_2)} = \sqrt{2 \cdot 9.8 \cdot 7} \approx 11.7$ m/s ≈ 42 km/h.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>문제 12</strong> (사람 vs 차) — 70 kg 사람이 8 m/s로 달릴 때 KE와, 1500 kg 차가 같은 KE를 가지려면 속도?</summary>
+    <p style="margin-top:10px">사람 $K = \tfrac{1}{2}(70)(64) = 2240$ J. 차 $v = \sqrt{2K/m} = \sqrt{4480/1500} \approx 1.73$ m/s ≈ 6.2 km/h. <em>달리는 사람도 천천히 달리는 차와 같은 운동에너지.</em></p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐</strong> (수직 원 minimum) — 길이 $L$ 줄에 매달린 질량 $m$ 공이 수직 원 운동을 한다. 최고점에서 줄이 느슨해지지 않을 최저점 속도의 최소값은?</summary>
+    <p style="margin-top:10px">최고점에서 줄 장력 $T \ge 0$. 구심력 조건 $mg + T = mv_{\text{top}}^2/L$. $T=0$일 때 $v_{\text{top}}^2 = gL$. 에너지 보존: $\tfrac{1}{2} m v_{\text{bot}}^2 = \tfrac{1}{2} m v_{\text{top}}^2 + 2mgL$ → $v_{\text{bot}}^2 = gL + 4gL = 5gL$ → <strong>$v_{\text{bot, min}} = \sqrt{5gL}$</strong>.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐⭐</strong> (탈출속도 입문) — 지구 중심에서 거리 $r$인 곳의 위치에너지는 $U(r) = -GMm/r$. 지표면에서 무한대로 보내는 데 필요한 최소 속도는?</summary>
+    <p style="margin-top:10px">$\tfrac{1}{2}m v_e^2 + (-GMm/R) = 0 + 0 \Rightarrow v_e = \sqrt{2GM/R} = \sqrt{2gR}$. 지구 $R = 6.37 \times 10^6$ m → $v_e \approx 11.2$ km/s ≈ 40,300 km/h. 로켓 속도의 기준값.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>도전 문제 ⭐⭐⭐</strong> (퍼텐셜 곡선 → 운동) — $U(x) = -10/(x^2 + 1)$ J(질량 1 kg). 총 에너지 $E = -3$ J일 때 운동 가능 영역과 반환점은?</summary>
+    <p style="margin-top:10px">운동 가능: $K = E - U \ge 0 \Rightarrow E \ge U \Rightarrow -3 \ge -10/(x^2+1) \Rightarrow x^2 + 1 \le 10/3 \Rightarrow |x| \le \sqrt{7/3} \approx 1.53$ m. 반환점 $\pm 1.53$ m. 우물 깊이는 $-10$ J(원점)이므로 $K_{\max} = 7$ J → $v_{\max} = \sqrt{14} \approx 3.74$ m/s.</p>
+  </details>
+
+  <h2>❓ 학생 단골 질문 (FAQ)</h2>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q1.</strong> 일이 0이라는 게 직관적으로 이해가 안 돼요. 가방을 들고 걸으면 분명히 힘들잖아요?</summary>
+    <p style="margin-top:10px">"피곤함"과 "물리적으로 한 일"은 다른 개념입니다. 가방을 든 손은 위로 힘을 주고, 걸음의 변위는 수평. 두 방향이 수직이라 $\vec F \cdot \vec d = 0$. 근육이 피곤한 이유는 근섬유가 미세하게 떨리며 <em>내부적으로</em> 일을 하고 열을 내기 때문 — 근육 입장에서는 일을 하는 게 맞아요. 다만 <em>가방에 한 일</em>은 0.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q2.</strong> 위치에너지 기준점이 임의라는데, 절대 0인 점은 정말 없나요?</summary>
+    <p style="margin-top:10px">중력 PE는 차이만 의미가 있어 임의로 잡습니다. 다만 만유인력 PE($U = -GMm/r$)는 $r \to \infty$를 0으로 잡는 게 자연스러워요. 결국 모든 PE는 "어떤 기준점과의 차이". 보고 싶은 두 시점 간의 차만 일정하면 답이 똑같이 나옵니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q3.</strong> 마찰력은 항상 운동에너지를 빼앗나요?</summary>
+    <p style="margin-top:10px">"운동마찰"은 운동 방향과 반대라 항상 음의 일. 단, "정지마찰"은 정지된 상태이므로 변위가 0 → 일도 0. 그리고 흥미롭게도 <em>걷기·달리기에서 발과 지면 사이 정지마찰</em>은 우리 몸을 앞으로 밀어주는 역할 — 변위가 0이라 외부에서 보면 일은 0이지만, 내부 에너지(근육의 화학에너지) → 운동에너지로 변환되는 통로 역할.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q4.</strong> $K = \tfrac{1}{2}mv^2$의 $\tfrac{1}{2}$는 어디서 왔나요?</summary>
+    <p style="margin-top:10px">$F = ma$를 변위에 대해 적분: $\int F\,dx = \int m a \, dx = \int m v\, dv = \tfrac{1}{2}m v^2$. 적분 상수에서 자연스럽게 $\tfrac{1}{2}$이 붙습니다. 외울 필요 없이 30초 유도면 끝.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q5.</strong> 에너지 보존이 정말 항상 맞나요? 마찰이 있으면 에너지가 사라지는 것처럼 보이는데.</summary>
+    <p style="margin-top:10px">"역학적 에너지" $K + U$는 마찰이 있으면 줄어들지만, 사라진 양은 정확히 <strong>열에너지</strong>로 바뀝니다(마찰면이 미세하게 따뜻해짐). 빛·소리까지 포함한 <em>총 에너지</em>는 우주적 보존량 — 노이터(Noether) 정리에 따르면 시간 평행 대칭성의 결과입니다.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q6.</strong> 속도가 2배가 되면 운동에너지가 4배라는데, 그게 운전·교통사고와 어떻게 연결되나요?</summary>
+    <p style="margin-top:10px">제동거리 $d = v^2/(2\mu g)$도 $v^2$에 비례. 50→100 km/h로 올리면 제동거리 4배, 충돌 에너지 4배. 사람이 받는 충격이 4배이므로 부상 위험이 폭발적으로 증가. <em>속도제한이 안전 마진의 핵심</em>인 이유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q7.</strong> 위치에너지를 음수로 잡아도 되나요?</summary>
+    <p style="margin-top:10px">완전히 OK. 기준점보다 아래로 내려가면 자동으로 음수. 만유인력 PE는 일부러 모든 곳에서 음수가 되도록 정의 — 무한대 = 0, 가까울수록 더 깊은 음수. 물리는 "차이"만 보므로 어디든 자유.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q8.</strong> 일률(power)은 일과 다른데, 시험에 자주 나오나요?</summary>
+    <p style="margin-top:10px">중간고사·기말고사 단골입니다. $P = dW/dt = \vec F \cdot \vec v$ 한 줄. 자동차 출력(kW), 계단 오르기 일률, 발전기 출력 등 응용이 많아 한두 문제는 거의 항상 출제.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q9.</strong> "보존력"이 정확히 뭔가요? 직관적으로 설명해 주세요.</summary>
+    <p style="margin-top:10px">"한 일이 경로에 무관하고 시작-끝점만 좌우하는 힘". 그래서 위치만으로 정의되는 위치에너지 함수가 존재. 중력·스프링·전기력은 보존력. 마찰·공기저항은 비보존(경로 길수록 더 많이 잃음). <em>한 점만 알면 에너지가 정해지는 힘</em> = 보존력.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q10.</strong> 일-에너지 정리와 에너지 보존은 같은 건가요?</summary>
+    <p style="margin-top:10px">관련은 있지만 다릅니다. 일-에너지 정리: $W_{\text{net}} = \Delta K$ (모든 힘이 한 일의 합 = KE 변화). 에너지 보존: $K_i + U_i = K_f + U_f + \Delta E_{\text{loss}}$ (보존력 PE로 흡수, 비보존력 손실 항으로). 일-에너지 정리는 더 일반적, 에너지 보존은 보존력 위주의 편한 표현.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q11.</strong> 1 J(줄)이 얼마나 큰 에너지인가요? 감이 안 와요.</summary>
+    <p style="margin-top:10px">중간 크기 사과(100 g)를 1 m 들어 올리는 일 ≈ 1 J. 사람 한 끼 식사 ≈ 2~3 MJ. 자동차 1 km 주행 ≈ 약 1 MJ. 손바닥 위 휴대폰 무게 들고 1 m 올리는 일 ≈ 1.5 J. <em>일상 운동 한 동작이 거의 모두 J 수준</em>.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q12.</strong> 진자가 영원히 흔들리지 않는 이유는?</summary>
+    <p style="margin-top:10px">공기저항·줄과 천장 사이 마찰이 매 흔들림마다 미량의 에너지를 빼앗아 열로 바꿈. 진폭이 점차 줄어들어 정지. 우주 공간(진공+무중력 회전)이라면 거의 영원히. 실제 진자시계는 태엽이나 추가 떨어지며 손실분을 보충.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q13.</strong> 회생제동(regenerative braking)은 어떻게 작동하나요?</summary>
+    <p style="margin-top:10px">감속 시 모터를 발전기로 작동시켜 운동에너지를 전기에너지로 변환, 배터리에 저장. 효율 60~70%. 일반 마찰 브레이크는 100% 열로 버림. 전기차/하이브리드의 도시 연비가 월등히 높은 핵심 메커니즘.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q14.</strong> "스프링 PE = $\tfrac{1}{2}kx^2$"의 $\tfrac{1}{2}$도 적분에서 왔나요?</summary>
+    <p style="margin-top:10px">예. $F = -kx$ (Hooke). $W = \int F\,dx = \int_0^x kx'\,dx' = \tfrac{1}{2}kx^2$. 모양이 $K$와 같지만 변수가 위치라는 차이.</p>
+  </details>
+
+  <details class="note" style="margin:10px 0">
+    <summary><strong>Q15.</strong> W4(운동량)와 W3의 차이가 자꾸 헷갈려요.</summary>
+    <p style="margin-top:10px">에너지: 스칼라(부호 없음, 방향 없음), $v^2$에 비례, 마찰 손실 가능. 운동량: 벡터(방향 있음), $v$에 비례, 외력 없으면 항상 보존. 충돌에서 운동량은 항상 보존, 에너지는 탄성 충돌일 때만. <em>한 사건에서 둘 다 적용해야 풀리는 문제</em>가 W4의 단골.</p>
+  </details>
+
+  <h2>📝 자주 틀리는 계산 실수 BEST 10</h2>
+  <p>같은 개념을 알면서도 답이 틀린다면 거의 99% 다음 중 하나입니다.</p>
+
+  <table>
+    <thead><tr><th>실수</th><th>예시</th><th>예방법</th></tr></thead>
+    <tbody>
+      <tr><td>1. $K$의 $\tfrac{1}{2}$ 누락</td><td>$K = mv^2$로 적음</td><td>유도 한 번이라도 직접 → $\tfrac{1}{2}$ 자동 기억</td></tr>
+      <tr><td>2. 속도 제곱 깜빡</td><td>"$v$ 두 배면 $K$ 두 배"</td><td>$v^2$이므로 4배. 표 옆에 두기</td></tr>
+      <tr><td>3. 위치에너지 부호</td><td>아래로 내려가는데 $U$ 양수 추가</td><td>기준점 아래 = 음수 $U$, 위 = 양수</td></tr>
+      <tr><td>4. 마찰 손실 부호</td><td>$K_i + U_i + W_f = K_f + U_f$ ($W_f$ 양수)</td><td>$W_f$는 음수. 또는 양변에 $|W_f|$ 더하기</td></tr>
+      <tr><td>5. 경사면 마찰거리</td><td>마찰 손실 = $\mu m g h$로 적음</td><td>$\mu m g \cos\theta \cdot d$ — $h$ 아닌 빗변 거리, $\cos\theta$ 곱</td></tr>
+      <tr><td>6. 단위 누락 (J vs N)</td><td>일을 N으로 적음</td><td>$W = F \cdot d$ → N·m = J</td></tr>
+      <tr><td>7. 일률 단위</td><td>kW와 kWh 혼동</td><td>kW = 일률(즉시), kWh = 에너지(시간 적분)</td></tr>
+      <tr><td>8. 일과 토크 혼동</td><td>$\tau = Fr$인데 $W$로 답</td><td>일 = 직선 변위, 토크 = 회전. 단위 같지만 의미 다름</td></tr>
+      <tr><td>9. 스프링 PE의 $x$</td><td>총 길이를 $x$로 대입</td><td>$x$ = 자연 길이로부터 변형량</td></tr>
+      <tr><td>10. 외력 일 부호</td><td>외부에서 가한 일과 비보존력 손실을 같이 더함</td><td>외력은 양/음 가능, 마찰 항상 음. 표로 나누기</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <strong>한 줄 시험장 체크리스트</strong> — ① 모든 길이 m로 통일, ② 속도는 m/s, ③ $\tfrac{1}{2}$, $v^2$, $\cos\theta$ 빠지지 않았는지, ④ 마찰 항 부호, ⑤ 답에 J/W/m/s 단위 표기. 매 문제 30초 점검.
+  </div>
+
+  <h2>🧪 핸드폰으로 5분 실험 — 직접 측정</h2>
+  <p>에너지 보존은 머리로만 이해하면 신비롭지만, 직접 손으로 측정해 보면 "정말 그렇네"라는 감각이 생깁니다.</p>
+
+  <h3>실험 A — 진자 진폭 감쇠 측정 (5분)</h3>
+  <ol>
+    <li>실 끝에 작은 물체(지우개·열쇠) 매단 진자 만듦. 길이 약 50 cm.</li>
+    <li>처음 진폭(예: 좌측 10 cm)에서 놓고, 1·5·10·20번째 흔들림에서 도달 높이를 자로 측정.</li>
+    <li>지수 감쇠 $A_n = A_0 e^{-n/\tau}$의 $\tau$ 추정. $A_n \approx 0.37 A_0$가 되는 $n$을 찾으면 그게 $\tau$.</li>
+    <li>5번 측정 평균 → 본인 진자의 Q-factor $\sim 2\pi \tau$ 계산.</li>
+  </ol>
+  <p><em>예상값:</em> 보통 끈이라면 $\tau \approx 30$~$80$ 흔들림. 우주에선 $\tau = \infty$.</p>
+
+  <h3>실험 B — 핸드폰 떨어뜨리기로 KE 측정 (3분, 부드러운 매트 위에서!)</h3>
+  <ol>
+    <li>핸드폰 무게(보통 200 g 내외)를 적음.</li>
+    <li>20 cm, 50 cm, 100 cm 높이에서 부드러운 매트 위에 떨어뜨림.</li>
+    <li>$K = mgh$ 공식으로 도달 직전 KE 계산: 0.4 J, 1.0 J, 2.0 J.</li>
+    <li>이 값이 핸드폰을 깨트릴 수 있는 임계 에너지($\sim$ 5~10 J)와 얼마나 가까운지 비교.</li>
+  </ol>
+  <p><em>학습 포인트:</em> $K \propto h$ → 1 m에서의 충격은 50 cm의 두 배. 케이스가 1 m 떨어뜨리는 충격에 안전한지 광고에 늘 등장하는 이유.</p>
+
+  <h3>실험 C — 계단 일률 측정 (5분)</h3>
+  <ol>
+    <li>본인 체중 + 가방 총 질량 $m$ (kg) 측정.</li>
+    <li>3층까지 계단 높이 ≈ 9 m. 평소 속도로 올라가는 데 걸린 시간 $t$ 측정 (스톱워치).</li>
+    <li>$P = mgh/t$. 일반 학생: 70 kg × 9.8 × 9 / 30 s ≈ 206 W.</li>
+    <li>전속력 → 약 500 W 가능. 자전거 일반 라이딩 약 100 W, 우사인 볼트 단발성 ≈ 2.5 kW.</li>
+  </ol>
+  <p><em>비교:</em> 100 W 전구 = 일반인 휴식 대사량 = 사람의 지속 가능한 평균 일률.</p>
+
+  <h2>🌍 운동·위치에너지의 실생활 감각</h2>
+  <p>답이 합리적인지 판단하는 가장 좋은 방법은 평소에 "현실의 KE·PE 수치"를 머릿속에 가지고 있는 것.</p>
+
+  <table>
+    <thead><tr><th>대상</th><th>운동에너지 (J)</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>걷는 사람 (70 kg, 1.4 m/s)</td><td>≈ 70 J</td><td>1초마다 70 W 정도 소비</td></tr>
+      <tr><td>달리는 사람 (70 kg, 5 m/s)</td><td>≈ 875 J</td><td>걷기의 12배 (속도 제곱)</td></tr>
+      <tr><td>야구 직구 (0.145 kg, 40 m/s)</td><td>≈ 116 J</td><td>맞으면 큰 부상</td></tr>
+      <tr><td>골프공 풀스윙 (0.046 kg, 75 m/s)</td><td>≈ 130 J</td><td>드라이버 임팩트</td></tr>
+      <tr><td>자동차 (1500 kg, 50 km/h)</td><td>≈ 145 kJ</td><td>도심 평균</td></tr>
+      <tr><td>자동차 (1500 kg, 100 km/h)</td><td>≈ 580 kJ</td><td>4배 (속도 두 배)</td></tr>
+      <tr><td>여객기 (200 t, 250 m/s)</td><td>≈ 6.25 GJ</td><td>이륙 후 순항</td></tr>
+      <tr><td>9 mm 권총탄 (8 g, 380 m/s)</td><td>≈ 580 J</td><td>치명적 에너지</td></tr>
+      <tr><td>1 kg 손바닥 위 (1 m)</td><td>≈ 9.8 J</td><td>중력 PE 기준</td></tr>
+      <tr><td>1 ton 자동차 옥상 주차 (5 m)</td><td>≈ 49 kJ</td><td>댐 발전과 같은 원리</td></tr>
+      <tr><td>댐 100 m 위 1 m³ 물 (1000 kg)</td><td>≈ 980 kJ</td><td>전기로 변환 시 약 270 Wh</td></tr>
+      <tr><td>1 kcal (음식 1 kcal)</td><td>≈ 4184 J</td><td>식품 라벨 표기 기준</td></tr>
+      <tr><td>한 끼 식사 (700 kcal)</td><td>≈ 2.93 MJ</td><td>= 100 W 8시간 소비</td></tr>
+      <tr><td>휘발유 1 L</td><td>≈ 32 MJ</td><td>식사의 약 11배</td></tr>
+      <tr><td>리튬 배터리 1 kWh</td><td>= 3.6 MJ</td><td>핸드폰 50회 충전 정도</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>활용</strong> — 답이 "1500 kg 차의 KE = 100 J"로 나오면 일상 감각상 너무 작음. 어딘가 식 실수가 났다는 신호.</div>
+
+  <h2>🏟️ 실생활 응용 깊게 보기</h2>
+  <p>에너지 보존은 단순한 시험 주제가 아니라 거의 모든 공학·일상의 설계 원리.</p>
+
+  <h3>응용 1 — 롤러코스터: 첫 언덕이 가장 높은 이유</h3>
+  <p>마찰 없는 이상적 롤러코스터라면 첫 언덕 = 다음 언덕 가능. 실제는 마찰·공기저항이 매 구간 에너지를 빼앗으므로, 다음 언덕은 항상 더 낮아야 함. 설계자는 마찰 손실을 추정해 "에너지 예산"을 세우고 다음 언덕 높이를 그보다 낮게 설계.</p>
+  <ul>
+    <li>예: 25 m 첫 언덕, 마찰 손실 ≈ 5 m → 다음 언덕은 18~20 m.</li>
+    <li>마지막 구간은 <em>제동 구간</em>(자기·마찰 브레이크)으로 KE를 안전하게 0으로.</li>
+    <li>정점에서 속도 0이라면 $v_{\text{bot}} = \sqrt{2gh}$ — 25 m에서 약 22 m/s = 79 km/h.</li>
+  </ul>
+
+  <h3>응용 2 — 진자시계의 정밀도</h3>
+  <p>주기 $T = 2\pi\sqrt{L/g}$ — 길이만 정해지면 시간이 정해짐. 17세기 호이겐스의 발명이 200년간 시간 측정의 표준이 된 이유. 단점: 진폭에 따라 미소 오차. 해결: 작은 진폭 + 일정 동력 보충(태엽).</p>
+  <ul>
+    <li>$L = 1$ m → $T = 2.0$ s. 1초당 한 번 좌→우 흔들림.</li>
+    <li>온도 변화 → 막대 길이 변화 → 시계 오차. 인바(invar) 합금 도입으로 해결.</li>
+    <li>현대 원자시계: 10⁻¹⁵ 정밀도, 진자시계의 10¹² 배.</li>
+  </ul>
+
+  <h3>응용 3 — 댐 수력 발전</h3>
+  <p>저수지의 물이 가진 위치에너지를 운동에너지(파이프 흐름) → 터빈 회전 → 전기에너지로 변환. 효율 약 80~90%(다른 발전 방식 중 최고).</p>
+  $$ P = \eta \cdot \rho Q g h $$
+  <p>예: $h = 100$ m, 유량 $Q = 100$ m³/s, $\eta = 0.85$ → $P = 0.85 \cdot 1000 \cdot 100 \cdot 9.8 \cdot 100 \approx 83$ MW. 약 5만 가구 동시 전력.</p>
+
+  <h3>응용 4 — 자동차의 운동에너지와 안전</h3>
+  <p>충돌 시 차의 KE는 어딘가로 가야 함. 차체의 변형(crumple zone), 에어백, 안전벨트 등 — 전부 같은 KE를 더 긴 시간·더 큰 변위에 분산시키는 장치.</p>
+  <ul>
+    <li>50 km/h 정면충돌 → 145 kJ. 전부 0.1 s에 흡수되면 평균 출력 ≈ 1.45 MW.</li>
+    <li>크럼플 존이 30 cm 변형 → 충격력 = $\Delta K / d = 145{,}000/0.3 \approx 480{,}000$ N. 변형 없으면 사람 머리에 그 힘이 그대로.</li>
+    <li>안전벨트는 인체와 차의 상대 변위를 만들어 흉부에 작용하는 평균력을 1/3로 감소.</li>
+  </ul>
+
+  <h3>응용 5 — 장대높이뛰기의 에너지 변환</h3>
+  <p>달리는 운동에너지 → 휘어진 막대의 탄성 PE → 몸의 중력 PE. 세 단계 변환의 효율이 결과를 결정.</p>
+  <ul>
+    <li>10 m/s 도움닫기, 70 kg 선수: $K_0 = 3500$ J.</li>
+    <li>이 모두가 PE로 가면 $h_{\max} = 3500/(70 \cdot 9.8) \approx 5.1$ m + 무게중심 출발 높이(허리, ≈ 1 m) → 약 6 m 가능.</li>
+    <li>실제 세계 기록 ≈ 6.2 m → 이론치에 매우 근접. 막대의 탄성 효율과 자세 최적화가 모든 것.</li>
+  </ul>
+
+  <h2>📚 단원별 부록 — 보존력·비보존력 정리표</h2>
+  <table>
+    <thead><tr><th>힘</th><th>보존?</th><th>위치에너지 형태</th><th>경로 의존?</th></tr></thead>
+    <tbody>
+      <tr><td>중력 (지표면)</td><td>예</td><td>$U = mgh$</td><td>아니오</td></tr>
+      <tr><td>만유인력</td><td>예</td><td>$U = -GMm/r$</td><td>아니오</td></tr>
+      <tr><td>스프링 (Hooke)</td><td>예</td><td>$U = \tfrac{1}{2}kx^2$</td><td>아니오</td></tr>
+      <tr><td>전기력 (Coulomb)</td><td>예</td><td>$U = kq_1 q_2/r$</td><td>아니오</td></tr>
+      <tr><td>운동마찰</td><td>아니오</td><td>정의 불가</td><td>예 (긴 경로 = 더 많은 손실)</td></tr>
+      <tr><td>공기저항</td><td>아니오</td><td>정의 불가</td><td>예</td></tr>
+      <tr><td>장력 (이상적인 끈)</td><td>둘 다 가능</td><td>일을 안 함 (수직)</td><td>—</td></tr>
+      <tr><td>수직항력</td><td>—</td><td>일 0</td><td>—</td></tr>
+      <tr><td>자기력 (운동전하)</td><td>—</td><td>일 0 (속도와 수직)</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <div class="note">"위치에너지가 정의되는 힘 = 보존력". 마찰의 PE를 정의하려 하면 같은 점에 두 값이 생겨 모순. 그래서 PE 정의가 불가능 = 비보존.</div>
+
+  <h2>📐 SI 단위 빠른 참조</h2>
+  <table>
+    <thead><tr><th>양</th><th>SI 단위</th><th>다른 표기 / 환산</th></tr></thead>
+    <tbody>
+      <tr><td>일·에너지</td><td>J (joule)</td><td><strong>1 J = 1 N·m = 1 kg·m²/s²</strong></td></tr>
+      <tr><td>힘</td><td>N (newton)</td><td>1 N = 1 kg·m/s²</td></tr>
+      <tr><td>일률</td><td>W (watt)</td><td>1 W = 1 J/s</td></tr>
+      <tr><td>마력</td><td>hp</td><td>1 hp ≈ 746 W</td></tr>
+      <tr><td>칼로리</td><td>cal</td><td>1 cal ≈ 4.184 J, 1 kcal = 1000 cal (음식)</td></tr>
+      <tr><td>전기에너지</td><td>kWh</td><td>1 kWh = 3.6 MJ = 3,600,000 J</td></tr>
+      <tr><td>전자볼트</td><td>eV</td><td>1 eV ≈ 1.602 × 10⁻¹⁹ J (원자·양자)</td></tr>
+      <tr><td>스프링 상수</td><td>N/m</td><td>$F/x$ 비율</td></tr>
+    </tbody>
+  </table>
+
+  <h3>차원 일관성 체크 — 식이 맞는지 빠르게</h3>
+  <ul>
+    <li>$K = \tfrac{1}{2} m v^2$ → kg·(m/s)² = kg·m²/s² = J ✓</li>
+    <li>$U = mgh$ → kg·(m/s²)·m = kg·m²/s² = J ✓</li>
+    <li>$U_s = \tfrac{1}{2}kx^2$ → (N/m)·m² = N·m = J ✓</li>
+    <li>$P = Fv$ → N·(m/s) = J/s = W ✓</li>
+    <li>식을 쓰면 항상 J·W·N 단위로 정리되는지 마지막 줄에 확인 — 단위가 안 맞으면 99% 식이 틀린 것.</li>
+  </ul>
+
+  <h2>🗺️ 개념 지도 — W3가 어디로 이어지는가</h2>
+  <pre><code>             ┌── (W4) 운동량·충돌      ──→ KE는 충돌에서 보존 안 될 수도(비탄성)
+             │                              운동량은 항상 보존 — 비교 학습
+   W3 일·에너지┼── (W5) 회전운동           ──→ 직선 K = ½mv² → 회전 K = ½Iω²
+   (K, U,    │                              일률 P = τω로 회전판 자동 일반화
+   보존, 일률)├── (W6) 단진동             ──→ 스프링 PE ½kx² + KE ½mv²
+             │                              총합 일정 → 사인 운동의 출발점
+             ├── (W9) 열역학 1법칙       ──→ "에너지는 형태만 바뀐다"의 양자화
+             │                              마찰의 ΔE_열이 그대로 일관 흐름
+             └── (W14) 전자기 에너지     ──→ 전기 PE U = qV
+                                            전자기 일·에너지 보존
+
+   더 멀리:
+     • 로봇 최적제어 → 에너지 코스트 함수 ∫½(F² + ‖x-x_d‖²) dt 최소화
+     • 머신러닝 손실함수 → "물리에너지"의 일반화
+     • 게임 물리엔진 → KE/PE 분리 후 적분기로 시뮬레이션
+     • 화학 반응 → 보존력 + 활성화 에너지 = 퍼텐셜 곡선 그대로</code></pre>
+
+  <p><strong>한 줄 결론</strong> — "<em>형태는 바뀌어도 총합은 일정</em>" 이 한 줄이 W3의 핵심이며, W4(운동량) / W6(진동) / W9(열) / W14(전자기) 모두에서 같은 패턴이 반복됩니다.</p>
+
+  <h2>🎯 시험 직전 5분 노트</h2>
+  <div class="tip">
+    <h4 style="margin-top:0">절대 잊지 말 것</h4>
+    <ol>
+      <li><strong>운동에너지:</strong> $K = \tfrac{1}{2} m v^2$. $\tfrac{1}{2}$, $v^2$ 둘 다 빠지지 말 것.</li>
+      <li><strong>위치에너지:</strong> 중력 $U = mgh$, 스프링 $U = \tfrac{1}{2}kx^2$. 기준점 명시.</li>
+      <li><strong>일-에너지 정리:</strong> $W_{\text{net}} = \Delta K$. 모든 힘이 한 일의 합.</li>
+      <li><strong>일:</strong> $W = \vec F \cdot \vec d = Fd\cos\theta$. 수직이면 0.</li>
+      <li><strong>일률:</strong> $P = dW/dt = \vec F \cdot \vec v$. 단위 W = J/s.</li>
+      <li><strong>에너지 보존 (정리식):</strong> $K_i + U_i = K_f + U_f + |W_{\text{비보존}}|$.</li>
+      <li><strong>마찰 손실 (수평면):</strong> $\Delta E_{\text{열}} = \mu m g \cdot d$. 경사면이면 $\mu m g \cos\theta \cdot d$.</li>
+      <li><strong>수직 원 최저속도:</strong> $v_{\text{bot, min}} = \sqrt{5 g L}$. $T \ge 0$ 조건.</li>
+      <li><strong>5단계 풀이:</strong> ①그림 ②각 시점 에너지 ③비보존력 항 ④에너지 보존 ⑤단위 검증.</li>
+      <li><strong>합리성 체크:</strong> 답에 단위 + 일상 비교 (예: 1500 kg 차 KE가 100 J? → 너무 작음).</li>
+    </ol>
+  </div>
+
+  <h2>🎓 1분 미니퀴즈 — 5문항</h2>
+  <p>아래 5문항을 머릿속으로 답해보고 토글로 확인. 4개 이상이면 W3 OK.</p>
+
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 1.</strong> 가방을 들고 평지를 1 km 걸었다. 가방에 한 일은?</summary>
+    <p style="margin-top:8px">0 J. 위로 가하는 힘과 수평 변위가 수직.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 2.</strong> 차가 20 m/s에서 40 m/s로 가속. KE는 몇 배?</summary>
+    <p style="margin-top:8px">4배. $v$ 두 배 → $v^2$ 네 배 → $K$ 네 배.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 3.</strong> 1 kg 물체를 1 m 들어 올리는 데 한 일은?</summary>
+    <p style="margin-top:8px">$W = mgh = 1 \cdot 9.8 \cdot 1 = 9.8$ J.</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 4.</strong> 마찰이 있는 면에서 미끄럼틀의 출발 높이를 두 배로 하면 도달 속도는?</summary>
+    <p style="margin-top:8px">단순 보존이면 $\sqrt 2$배. 마찰까지 고려하면 더 작은 비율(높이가 두 배지만 마찰 거리도 늘 수 있음).</p>
+  </details>
+  <details class="note" style="margin:8px 0">
+    <summary><strong>퀴즈 5.</strong> 100 W 전구를 1시간 켜면 소비되는 에너지는?</summary>
+    <p style="margin-top:8px">100 W × 3600 s = 360,000 J = 360 kJ = 0.1 kWh.</p>
+  </details>
+
+  <h2>📖 더 깊이 — 참고자료</h2>
+  <ul>
+    <li><strong>Halliday, Resnick, Walker</strong>, <em>Fundamentals of Physics</em> — 7장(운동에너지·일), 8장(위치에너지·에너지 보존). 한국어판 풍부한 예제.</li>
+    <li><strong>Khan Academy 한국어 — 일·에너지·일률 단원</strong> (무료): 영상 + 즉시 채점 문제. 보존력/비보존력 시각화 우수.</li>
+    <li><strong>3Blue1Brown</strong>, <em>"What is energy?" </em> 시리즈 (YouTube): 노이터 정리와 에너지 보존의 깊은 연결.</li>
+    <li><strong>Walter Lewin MIT 8.01 Lecture 11~13</strong>: 일-에너지·보존력·퍼텐셜 곡선. Lec 11 슬링키 자유낙하 데모 필수.</li>
+    <li><strong>PhET Energy Skate Park</strong> <a href="https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_ko.html">phet.colorado.edu</a>: 마찰 유무에 따른 에너지 막대 비교를 시각적으로 가지고 놀 수 있음.</li>
+    <li><strong>Phyphox</strong> <a href="https://phyphox.org/">phyphox.org</a>: 핸드폰 가속도계로 진자 주기·엘리베이터 일률 직접 측정.</li>
+    <li><strong>Feynman Lectures Vol 1, Ch 13~14</strong>: 일·에너지의 본질에 대한 가장 명료한 한국어 번역본 있음.</li>
+  </ul>
+
+  <h2>📋 학습 체크리스트</h2>
+  <div class="tip">
+    이번 주 끝나기 전에 다음을 모두 ✅ 표시할 수 있는지 확인하세요:
+    <ul style="list-style:none;padding-left:0">
+      <li>☐ 일을 $\vec F \cdot \vec d$로 정의하고, 수직일 때 0이 되는 이유를 설명할 수 있다.</li>
+      <li>☐ 운동에너지 식 $K = \tfrac{1}{2}m v^2$을 $F = ma$로부터 30초 안에 유도할 수 있다.</li>
+      <li>☐ 중력·스프링 위치에너지를 식으로 적고, 기준점이 임의임을 설명할 수 있다.</li>
+      <li>☐ 일-에너지 정리 $W_{\text{net}} = \Delta K$을 사용해 속도/거리 문제를 풀 수 있다.</li>
+      <li>☐ 보존력·비보존력을 구분하고, 각각의 예 3개씩 들 수 있다.</li>
+      <li>☐ 마찰이 있는 미끄럼틀 문제를 5단계로 풀 수 있다.</li>
+      <li>☐ 일률 식 $P = Fv$를 사용해 자동차·계단 문제를 풀 수 있다.</li>
+      <li>☐ 퍼텐셜 곡선에서 평형점/안정성/반환점을 읽을 수 있다.</li>
+      <li>☐ 인터랙티브 데모 1·2·3을 직접 가지고 놀아봤다.</li>
+      <li>☐ 연습문제 12개 중 8개 이상을 풀이 없이 풀 수 있다.</li>
+      <li>☐ 1분 미니퀴즈 5문항을 모두 맞췄다.</li>
+      <li>☐ 핸드폰 실험 A 또는 C를 직접 시도했다.</li>
+      <li>☐ 자주 틀리는 계산 실수 BEST 10을 한 번 읽어봤다.</li>
+    </ul>
+    하나라도 막히면 해당 섹션으로 돌아가 5분만 더 보세요.
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <strong>학습 시간 가이드</strong> — 처음 끝까지 읽기 ≈ 100분. 데모와 연습문제까지 따라가면 ≈ 3.5시간이 적정.
+    시험 1주 전 복습은 미니퀴즈 + 시험 직전 5분 노트 + 5단계 예제 + 연습문제 8개 위주로 약 90분이면 충분.
+  </div>
+
+  <h3>진단 트리 — "어디에서 막히고 있나?"</h3>
+  <pre><code>  Q. 일(W)을 0으로 결정하기 어렵다?
+       └─ 섹션 1, FAQ Q1로 다시
+  Q. K, U, ΔE_열 부호가 헷갈린다?
+       └─ 자주 틀리는 BEST 10의 #3, #4번
+  Q. 미끄럼틀 + 마찰 문제에서 마찰 거리 헷갈린다?
+       └─ 5단계 예제 + BEST 10의 #5번
+  Q. 수직 원에서 줄 장력 조건 모름?
+       └─ 도전 문제 ⭐ + 응용 1
+  Q. 퍼텐셜 곡선에서 안정/불안정 평형 구분 못한다?
+       └─ 섹션 6 + 도전 문제 ⭐⭐⭐
+  Q. 시험 시간이 부족하다?
+       └─ 시험 직전 5분 노트만 외우면 60% 가능</code></pre>
+
+  <h2>📚 추가 학습 가이드</h2>
+
+  <h3>🎓 단계별 복습 일정 — 일주일/하루/한 시간 전</h3>
+  <table>
+    <thead><tr><th>시점</th><th>해야 할 것</th><th>피해야 할 것</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1주 전</strong></td><td>강의안 통독 1회, 인터랙티브 데모 모두 직접 조작, 연습문제 풀이 시도</td><td>한 번에 다 외우려 하기</td></tr>
+      <tr><td><strong>3일 전</strong></td><td>FAQ + 자주 틀리는 실수 정독, 미니퀴즈로 자가 진단, 막힌 부분 강의안 다시</td><td>아예 새 자료 시작</td></tr>
+      <tr><td><strong>1일 전</strong></td><td>핵심 식 + 시험 직전 5분 노트만, 일찍 잠</td><td>밤샘 공부, 새 유형 풀이 시도</td></tr>
+      <tr><td><strong>1시간 전</strong></td><td>시험 직전 5분 노트만 차분히 읽기</td><td>시험장에서 새 문제 풀어보기, 친구 답 비교</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🧭 학습 우선순위 — 시간이 부족할 때</h3>
+  <p>모든 섹션을 다 보지 못할 때 다음 우선순위로:</p>
+  <ol>
+    <li><strong>핵심 식 + 자주 틀리는 실수</strong> (시험 점수에 직접 영향)</li>
+    <li><strong>인터랙티브 데모 1-2개 직접 조작</strong> (직관 형성)</li>
+    <li><strong>연습문제 5-7개 풀이</strong> (실전 감각)</li>
+    <li><strong>FAQ 정독</strong> (헷갈리는 개념 정리)</li>
+    <li>응용 / 실생활 데이터 (여유 있을 때)</li>
+  </ol>
+
+  <h3>📓 효율적인 노트 정리</h3>
+  <div class="tip">
+    <ul>
+      <li><strong>한 페이지 요약</strong>: 시험 직전 5분 노트의 핵심을 손으로 다시 적기. 손글씨가 기억에 강함.</li>
+      <li><strong>색깔 구분</strong>: 식 (파랑) / 단위 (초록) / 자주 틀림 표시 (빨강) — 시각적 인덱싱.</li>
+      <li><strong>오답 노트</strong>: 연습문제에서 틀린 문제 → 어디서 헷갈렸는지 한 줄 메모. 재시험 직전에만 다시 봄.</li>
+    </ul>
+  </div>
+
+  <h3>🔗 다음 강의 준비 — 자가점검 3문</h3>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>자가점검 1.</strong> 이번 주 가장 중요한 식 한 개를 외우지 않고 유도할 수 있나요?</summary>
+    <p style="margin-top:10px">"왜 그 식이 나오는가"를 설명할 수 있으면 OK. 못 한다면 단계별 사고 과정으로 돌아가 한 번 더 따라가 보세요.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>자가점검 2.</strong> 인터랙티브 데모를 모두 직접 조작해 보았나요?</summary>
+    <p style="margin-top:10px">슬라이더로 극단값(최소, 최대, 0)을 시험해 보세요. 식의 의미가 더 명확해집니다.</p>
+  </details>
+  <details class="note" style="margin:10px 0">
+    <summary><strong>자가점검 3.</strong> 자주 틀리는 계산 실수 BEST 10 중 본인이 평소 자주 하는 것 1-2개를 의식하고 있나요?</summary>
+    <p style="margin-top:10px">시험장에서 그 항목만 한 번 더 의심하면 점수가 한 학점 차이 납니다.</p>
+  </details>
+
+  <h3>🌐 더 많은 자료가 필요할 때</h3>
+  <ul>
+    <li><strong>YouTube</strong>: <em>Khan Academy Korean</em>(한국어 자막), <em>Walter Lewin MIT 8.01/8.02</em>(영어 + 자막), <em>3Blue1Brown</em>(미적분·선형대수 직관 영상)</li>
+    <li><strong>모의 시험</strong>: 한국물리올림피아드(KPhO) 기출, 대학수학능력시험 물리 II</li>
+    <li><strong>오픈코스</strong>: <a href="https://ocw.mit.edu/courses/8-01sc-classical-mechanics-fall-2016/">MIT OCW 8.01</a>, <a href="https://www.edwith.org/">edwith.org</a> 한국어 강의</li>
+  </ul>
+
+  <h3>💪 학습 동기 — 이 주차가 어디로 이어지는가</h3>
+  <div class="note">
+    이번 주 배운 것은 단순히 시험 끝나면 잊는 지식이 아닙니다.
+    <ul>
+      <li>학부 4학년 <strong>자율주행 / 로봇공학 / 모델예측제어(MPC)</strong> 강의에서 그대로 응용</li>
+      <li>대학원 <strong>제어공학 · 동역학 · 항공우주공학</strong> 연구의 출발점</li>
+      <li>실무에서 <strong>전자제품 설계 · 게임 물리 엔진 · 시뮬레이션</strong>에 직접 사용</li>
+    </ul>
+    <strong>지금의 한 시간 투자 = 4학년 한 학기 절약.</strong> 기초가 든든해야 위에 쌓을 게 있습니다.
+  </div>
+
+  <div class="prevnext">
+    <a href="02-newton-laws.html"><small>← 이전</small>W2. 뉴턴 법칙</a>
+    <a href="04-momentum-collision.html" class="next"><small>다음 →</small>W4. 운동량과 충돌</a>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

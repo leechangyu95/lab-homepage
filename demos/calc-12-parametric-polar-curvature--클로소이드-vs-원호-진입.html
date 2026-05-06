@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 클로소이드 vs 원호 진입 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 클로소이드 vs 원호 진입</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/12-parametric-polar-curvature.html">Week 12. 매개변수·극좌표·곡률</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 클로소이드 vs 원호 진입</h4>
+    <p>왼쪽: 두 경로의 평면 자취. 오른쪽: 호 길이 $s$ 에 따른 곡률 $\kappa(s)$. 원호는 점프, 클로소이드는 직선으로 증가 — 운전자가 핸들을 부드럽게 돌릴 수 있는 이유.</p>
+    <canvas id="cl" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>최종 곡률 κ₀ <span class="val" id="clKV">0.6</span><input type="range" id="clK" min="0.1" max="1.5" step="0.05" value="0.6"></label>
+      <label>완화 길이 L <span class="val" id="clLV">2.0</span><input type="range" id="clL" min="0.5" max="4" step="0.1" value="2"></label>
+    </div>
+    <p id="clInfo" style="margin-top:8px;font-family:Consolas,monospace;font-size:12px;color:#0742b8"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cl'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    function loop(){
+      const k0=+document.getElementById('clK').value;
+      const L=+document.getElementById('clL').value;
+      document.getElementById('clKV').textContent=k0.toFixed(2);
+      document.getElementById('clLV').textContent=L.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // left: planar trajectories
+      const Lx0=20,Lx1=W/2-10,Ly0=20,Ly1=H-20;
+      x.strokeStyle='#ddd';x.strokeRect(Lx0,Ly0,Lx1-Lx0,Ly1-Ly0);
+      // straight segment then either circle or clothoid
+      // straight: from (-2,0) to (0,0) along x-axis
+      // arc: starts at (0,0), constant curvature k0, sweep angle theta = k0 * arc_len, length L
+      // clothoid: starts at (0,0), curvature linear from 0 to k0 over length L
+      const xR=[-2.5,2.5],yR=[-2.5,2.5];
+      function px(v){return Lx0+(v-xR[0])/(xR[1]-xR[0])*(Lx1-Lx0);}
+      function py(v){return Ly1-(v-yR[0])/(yR[1]-yR[0])*(Ly1-Ly0);}
+      x.strokeStyle='#888';x.lineWidth=1;
+      x.beginPath();x.moveTo(Lx0,py(0));x.lineTo(Lx1,py(0));x.stroke();
+      x.beginPath();x.moveTo(px(0),Ly0);x.lineTo(px(0),Ly1);x.stroke();
+      // straight (gray)
+      x.strokeStyle='#999';x.lineWidth=2;
+      x.beginPath();x.moveTo(px(-2),py(0));x.lineTo(px(0),py(0));x.stroke();
+      // arc (red): integrate from (0,0) heading 0 with constant kappa
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      let xpos=0,ypos=0,th=0;
+      x.moveTo(px(xpos),py(ypos));
+      const ds=L/300;
+      for(let i=1;i<=300;i++){
+        th+=k0*ds;xpos+=Math.cos(th)*ds;ypos+=Math.sin(th)*ds;
+        x.lineTo(px(xpos),py(ypos));
+      }
+      x.stroke();
+      // clothoid (blue): kappa linear from 0 to k0
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      xpos=0;ypos=0;th=0;
+      x.moveTo(px(xpos),py(ypos));
+      for(let i=1;i<=300;i++){
+        const s=i*ds;const k=k0*s/L;
+        th+=k*ds;xpos+=Math.cos(th)*ds;ypos+=Math.sin(th)*ds;
+        x.lineTo(px(xpos),py(ypos));
+      }
+      x.stroke();
+      // legend
+      x.fillStyle='#999';x.fillRect(Lx0+10,Ly0+10,16,2);x.fillStyle='#222';x.font='12px sans-serif';x.fillText('직선',Lx0+30,Ly0+15);
+      x.fillStyle='#c62828';x.fillRect(Lx0+10,Ly0+26,16,3);x.fillStyle='#222';x.fillText('원호 (곡률 점프)',Lx0+30,Ly0+30);
+      x.fillStyle='#0b5fff';x.fillRect(Lx0+10,Ly0+42,16,3);x.fillStyle='#222';x.fillText('클로소이드 (곡률 선형)',Lx0+30,Ly0+46);
+      // right: curvature vs s
+      const Rx0=W/2+10,Rx1=W-20,Ry0=20,Ry1=H-20;
+      x.strokeStyle='#ddd';x.strokeRect(Rx0,Ry0,Rx1-Rx0,Ry1-Ry0);
+      function pxR(s){return Rx0+s/L*(Rx1-Rx0);}
+      function pyR(k){return Ry1-k/(k0*1.2)*(Ry1-Ry0-20)-10;}
+      x.strokeStyle='#888';x.beginPath();x.moveTo(Rx0,pyR(0));x.lineTo(Rx1,pyR(0));x.stroke();
+      // arc curvature: 0 for s<0, k0 for s>=0
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();
+      x.moveTo(Rx0,pyR(0));x.lineTo(pxR(0),pyR(0));x.lineTo(pxR(0),pyR(k0));x.lineTo(Rx1,pyR(k0));x.stroke();
+      // clothoid curvature: linear
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      x.moveTo(pxR(0),pyR(0));x.lineTo(pxR(L),pyR(k0));x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('곡률 κ(s)',Rx0+10,Ry0+15);
+      x.fillText('호 길이 s →',Rx1-70,Ry1-4);
+      document.getElementById('clInfo').textContent='원호: κ가 0 → '+k0.toFixed(2)+'로 점프 (불연속).   클로소이드: κ가 0 → '+k0.toFixed(2)+'로 선형 증가 (연속).   운전자가 핸들 돌리는 속도 = κ 의 변화율.';
+    }
+    loop();
+    document.getElementById('clK').oninput=loop;
+    document.getElementById('clL').oninput=loop;
+  })();
+  </script>
+</main>
+</body>
+</html>

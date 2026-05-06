@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 보편 근사 정리 — ReLU 뉴런으로 곡선 만들기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 보편 근사 정리 — ReLU 뉴런으로 곡선 만들기</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/07-mlp.html">Week 7. 퍼셉트론과 다층 신경망(MLP)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 보편 근사 정리 — ReLU 뉴런으로 곡선 만들기</h4>
+    <p>은닉층 뉴런 수 $N$개의 ReLU MLP가 어떤 임의의 1차원 곡선을 어떻게 근사하는지 봅니다. 뉴런 수가 늘수록 "꺾임"이 많아져 부드러운 곡선까지 따라잡아요. 단, 깊이를 늘리지 않으면 매우 비효율적입니다.</p>
+    <canvas id="uat" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>은닉 뉴런 수 <span class="val" id="uaNV">8</span><input type="range" id="uaN" min="2" max="60" step="1" value="8"></label>
+      <label>목표 함수 <select id="uaF">
+        <option value="sin">sin(2x)</option>
+        <option value="step">계단 함수</option>
+        <option value="abs">|x|</option>
+        <option value="parab">x²</option>
+      </select></label>
+      <button id="uaTrain">학습</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('uat');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let W1=[],b1=[],w2=[],b2=0;
+    function target(x){
+      const t=document.getElementById('uaF').value;
+      if(t==='sin')return Math.sin(2*x);
+      if(t==='step')return x>0?1:-1;
+      if(t==='abs')return Math.abs(x)-1;
+      if(t==='parab')return x*x-1;
+      return 0;
+    }
+    function init(){
+      const N=+document.getElementById('uaN').value;
+      W1=new Array(N).fill(0).map(()=>(Math.random()-0.5)*4);
+      b1=new Array(N).fill(0).map(()=>(Math.random()-0.5)*2);
+      w2=new Array(N).fill(0).map(()=>(Math.random()-0.5));
+      b2=0;
+    }
+    function forward(x){
+      let s=b2;for(let i=0;i<W1.length;i++){s+=w2[i]*Math.max(0,W1[i]*x+b1[i]);}return s;
+    }
+    function trainStep(){
+      const lr=0.05;
+      for(let it=0;it<100;it++){
+        const x=(Math.random()-0.5)*4;
+        const y=target(x);
+        const h=W1.map((w,i)=>Math.max(0,w*x+b1[i]));
+        const ypred=h.reduce((s,hi,i)=>s+w2[i]*hi,b2);
+        const err=ypred-y;
+        for(let i=0;i<W1.length;i++){
+          const dh=err*w2[i]*((W1[i]*x+b1[i])>0?1:0);
+          W1[i]-=lr*dh*x;b1[i]-=lr*dh;
+          w2[i]-=lr*err*h[i];
+        }
+        b2-=lr*err;
+      }
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const xmin=-2,xmax=2,ymin=-2,ymax=2;
+      const px=x=>40+(x-xmin)/(xmax-xmin)*(W-60);
+      const py=y=>20+(1-(y-ymin)/(ymax-ymin))*(H-40);
+      ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(40,py(0));ctx.lineTo(W-20,py(0));ctx.moveTo(px(0),20);ctx.lineTo(px(0),H-20);ctx.stroke();
+      // target
+      ctx.strokeStyle='#999';ctx.lineWidth=2;ctx.setLineDash([5,3]);ctx.beginPath();
+      for(let i=0;i<=200;i++){const x=xmin+(xmax-xmin)*i/200;const y=target(x);if(i===0)ctx.moveTo(px(x),py(y));else ctx.lineTo(px(x),py(y));}
+      ctx.stroke();ctx.setLineDash([]);
+      // model
+      ctx.strokeStyle='#0b5fff';ctx.beginPath();
+      for(let i=0;i<=200;i++){const x=xmin+(xmax-xmin)*i/200;const y=forward(x);if(i===0)ctx.moveTo(px(x),py(y));else ctx.lineTo(px(x),py(y));}
+      ctx.stroke();
+      ctx.fillStyle='#999';ctx.font='12px sans-serif';ctx.fillText('목표 (점선)',W-130,30);
+      ctx.fillStyle='#0b5fff';ctx.fillText('MLP 출력',W-130,48);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`은닉 뉴런 ${W1.length}개`,12,22);
+    }
+    let timer=null;
+    document.getElementById('uaN').addEventListener('input',()=>{document.getElementById('uaNV').textContent=document.getElementById('uaN').value;init();draw();});
+    document.getElementById('uaF').addEventListener('change',()=>{init();draw();});
+    document.getElementById('uaTrain').addEventListener('click',()=>{
+      if(timer){clearInterval(timer);timer=null;return;}
+      timer=setInterval(()=>{trainStep();draw();},30);
+      setTimeout(()=>{if(timer){clearInterval(timer);timer=null;}},5000);
+    });
+    init();draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

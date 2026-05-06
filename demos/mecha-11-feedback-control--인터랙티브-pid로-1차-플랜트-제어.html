@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: PID로 1차 플랜트 제어 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: PID로 1차 플랜트 제어</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/11-feedback-control.html">Week 11. 피드백 제어 — PID로 시작하는 제어공학</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: PID로 1차 플랜트 제어</h4>
+    <p>플랜트는 1차 시스템 $1/(\tau s+1)$($\tau=0.7$s, 외란이 출력에 더해짐). 슬라이더로 $K_p, K_i, K_d$를 만져보고 다음 시나리오를 차례로 시도해 보세요:</p>
+    <ol style="margin:6px 0 6px 20px;font-size:13px;color:#444">
+      <li><strong>P만</strong> ($K_p$=2, $K_i$=$K_d$=0): 빠르게 따라오지만 정상상태 오차 남음.</li>
+      <li><strong>$K_p$를 더 키움</strong> ($K_p$=15): 오버슈트와 진동이 심해짐. 정상상태 오차도 여전히 0이 아님.</li>
+      <li><strong>I 추가</strong> ($K_p$=2, $K_i$=2): 시간이 지나면 오차가 0으로! 단, 정착이 느려짐.</li>
+      <li><strong>D 추가</strong> ($K_p$=2, $K_i$=2, $K_d$=0.5): 오버슈트 억제, 응답이 깔끔해짐.</li>
+      <li><strong>외란 추가</strong>: 외란 슬라이더를 키우면 P-only는 영구 오차, PI는 자동 보상.</li>
+    </ol>
+    <canvas id="pidDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="pidKpV">2.0</span><input type="range" id="pidKp" min="0" max="20" step="0.1" value="2"></label>
+      <label>Ki <span class="val" id="pidKiV">0.0</span><input type="range" id="pidKi" min="0" max="10" step="0.1" value="0"></label>
+      <label>Kd <span class="val" id="pidKdV">0.0</span><input type="range" id="pidKd" min="0" max="3" step="0.05" value="0"></label>
+      <label>외란 d <span class="val" id="pidDV">0.0</span><input type="range" id="pidD" min="0" max="1" step="0.05" value="0"></label>
+      <label>측정 잡음 <span class="val" id="pidNV">0.0</span><input type="range" id="pidN" min="0" max="0.1" step="0.005" value="0"></label>
+      <button id="pidPreset1">P만</button>
+      <button id="pidPreset2">PID 균형</button>
+      <button id="pidRst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 목표 r=1 &nbsp; 🔵 출력 y &nbsp; 🟠 제어입력 u (× 0.2 스케일)</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pidDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let y=0, integ=0, ePrev=0, t=0, hist=[], raf=null;
+    function reset(){y=0;integ=0;ePrev=0;t=0;hist=[];}
+    document.getElementById('pidRst').onclick=reset;
+    document.getElementById('pidPreset1').onclick=()=>{
+      document.getElementById('pidKp').value=2;
+      document.getElementById('pidKi').value=0;
+      document.getElementById('pidKd').value=0;
+      reset();
+    };
+    document.getElementById('pidPreset2').onclick=()=>{
+      document.getElementById('pidKp').value=2.5;
+      document.getElementById('pidKi').value=2;
+      document.getElementById('pidKd').value=0.5;
+      reset();
+    };
+    function loop(){
+      const Kp=+document.getElementById('pidKp').value;
+      const Ki=+document.getElementById('pidKi').value;
+      const Kd=+document.getElementById('pidKd').value;
+      const dist=+document.getElementById('pidD').value;
+      const noise=+document.getElementById('pidN').value;
+      ['pidKp','pidKi','pidKd','pidD','pidN'].forEach(id=>{
+        document.getElementById(id+'V').textContent=(+document.getElementById(id).value).toFixed(2);
+      });
+      const dt=0.05, tau=0.7, ref=1;
+      // measure (with noise)
+      const yMeas = y + (Math.random()*2-1)*noise;
+      const e = ref - yMeas;
+      integ += e*dt;
+      // anti-windup: simple clamp
+      if(Math.abs(integ)>10)integ=Math.sign(integ)*10;
+      const deriv = (e - ePrev)/dt;
+      ePrev = e;
+      const u = Kp*e + Ki*integ + Kd*deriv;
+      // plant: dy/dt = (-y + u + d)/tau (1st order with output disturbance equiv)
+      y += dt*(-y + u + dist*tau)/tau;
+      hist.push({t,y,u,e});
+      if(hist.length>500)hist.shift();
+      t += dt;
+      // draw
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-40,w=W-70,h=H-70;
+      ctx.strokeStyle='#eee';
+      for(let g=0;g<=4;g++){const yy=oy-g/4*h;ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      function py(v){return oy-(v+0.3)/2*h;}
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      ctx.moveTo(ox,py(1));ctx.lineTo(ox+w,py(1));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';ctx.fillText('r = 1',ox+w-50,py(1)-4);
+      // control input (scaled)
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=1.5;ctx.beginPath();
+      hist.forEach((h0,i)=>{const xx=ox+i/500*w, yy=py(h0.u*0.2);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+      ctx.stroke();
+      // output
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      hist.forEach((h0,i)=>{const xx=ox+i/500*w, yy=py(Math.max(-0.3,Math.min(1.7,h0.y)));if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);});
+      ctx.stroke();
+      // status
+      const yFinal=hist.length>0?hist[hist.length-1].y:0;
+      const err=1-yFinal;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`y = ${yFinal.toFixed(3)},  오차 = ${err.toFixed(3)},  u = ${(hist.length?hist[hist.length-1].u:0).toFixed(2)}`,ox,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 →',W-60,oy+22);
+      raf=requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

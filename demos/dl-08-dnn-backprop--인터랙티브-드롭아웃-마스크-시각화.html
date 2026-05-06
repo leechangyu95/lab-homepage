@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 드롭아웃 마스크 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 드롭아웃 마스크 시각화</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/08-dnn-backprop.html">Week 8. 심층신경망과 역전파</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 드롭아웃 마스크 시각화</h4>
+    <p>뉴런 격자에서 드롭아웃 비율 p에 따라 무작위로 꺼지는(회색) 뉴런을 봅니다. "새 마스크"를 누르면 매번 다른 패턴이 됩니다.</p>
+    <canvas id="dropCanvas" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>드롭아웃 p <span class="val" id="dpV2">0.5</span><input type="range" id="dp2" min="0" max="0.9" step="0.05" value="0.5"></label>
+      <button id="dpNew">새 마스크</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('dropCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let mask=[];
+    function gen(){const N=15*6;mask=new Array(N).fill(0).map(()=>Math.random());draw();}
+    function draw(){
+      const p=+document.getElementById('dp2').value;
+      document.getElementById('dpV2').textContent=p.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cols=15,rows=6,sx=(W-40)/cols,sy=(H-40)/rows;
+      for(let r=0;r<rows;r++)for(let cc=0;cc<cols;cc++){
+        const k=r*cols+cc;const on=mask[k]>p;
+        ctx.fillStyle=on?'#0b5fff':'#bbb';
+        ctx.beginPath();ctx.arc(20+cc*sx+sx/2,20+r*sy+sy/2,Math.min(sx,sy)/2-3,0,Math.PI*2);ctx.fill();
+      }
+    }
+    document.getElementById('dp2').addEventListener('input',draw);
+    document.getElementById('dpNew').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

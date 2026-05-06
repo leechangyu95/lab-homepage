@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1D 충돌 — &quot;운동량은 항상 보존, 에너지는 e=1일 때만&quot; — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">1D 충돌 — &quot;운동량은 항상 보존, 에너지는 e=1일 때만&quot;</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/04-momentum-collision.html">Week 4. 운동량과 충돌</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>1D 충돌 — "운동량은 항상 보존, 에너지는 e=1일 때만"</h4>
+    <p>반발계수 $e$의 정의: 충돌 후 상대속도 / 충돌 전 상대속도(부호 반전). 일반 1D 식:</p>
+    <p>$v_1' = \dfrac{m_1 v_1 + m_2 v_2 - e\,m_2(v_1 - v_2)}{m_1+m_2}$, &nbsp; $v_2' = \dfrac{m_1 v_1 + m_2 v_2 + e\,m_1(v_1 - v_2)}{m_1+m_2}$</p>
+    <canvas id="w4_collisionCanvas" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$m_1$ <span class="val" id="w4_c_m1V">2</span> kg
+        <input type="range" id="w4_c_m1" min="0.5" max="10" step="0.5" value="2"></label>
+      <label>$m_2$ <span class="val" id="w4_c_m2V">3</span> kg
+        <input type="range" id="w4_c_m2" min="0.5" max="10" step="0.5" value="3"></label>
+      <label>$v_1$ <span class="val" id="w4_c_v1V">5</span> m/s
+        <input type="range" id="w4_c_v1" min="-10" max="10" step="0.5" value="5"></label>
+      <label>$v_2$ <span class="val" id="w4_c_v2V">0</span> m/s
+        <input type="range" id="w4_c_v2" min="-10" max="10" step="0.5" value="0"></label>
+      <label>반발계수 $e$ <span class="val" id="w4_c_eV">1.00</span>
+        <input type="range" id="w4_c_e" min="0" max="1" step="0.05" value="1.0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>실험할 것</strong>
+      <ul>
+        <li>$m_1=m_2$, $e=1$, $v_2=0$ → "속도 교환" 결과 확인 ($v_1'=0, v_2'=v_1$)</li>
+        <li>$e=0$ → 두 공이 같은 속도로 붙어감(완전비탄성). 운동량 합은 그대로</li>
+        <li>$m_2 \gg m_1$, $e=1$ → 작은 공 거의 반사($v_1' \approx -v_1$, 벽 충돌)</li>
+        <li>표에서 $\Delta K$가 $e=1$이면 0, $e=0$이면 최대임을 확인</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w4_collisionCanvas');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const m1=+document.getElementById('w4_c_m1').value;
+      const m2=+document.getElementById('w4_c_m2').value;
+      const v1=+document.getElementById('w4_c_v1').value;
+      const v2=+document.getElementById('w4_c_v2').value;
+      const e=+document.getElementById('w4_c_e').value;
+      document.getElementById('w4_c_m1V').textContent=m1.toFixed(1);
+      document.getElementById('w4_c_m2V').textContent=m2.toFixed(1);
+      document.getElementById('w4_c_v1V').textContent=v1.toFixed(1);
+      document.getElementById('w4_c_v2V').textContent=v2.toFixed(1);
+      document.getElementById('w4_c_eV').textContent=e.toFixed(2);
+      const M=m1+m2;
+      const v1p=(m1*v1+m2*v2-e*m2*(v1-v2))/M;
+      const v2p=(m1*v1+m2*v2+e*m1*(v1-v2))/M;
+      const p_b=m1*v1+m2*v2, p_a=m1*v1p+m2*v2p;
+      const K_b=0.5*m1*v1*v1+0.5*m2*v2*v2;
+      const K_a=0.5*m1*v1p*v1p+0.5*m2*v2p*v2p;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // before
+      ctx.fillStyle='#444';ctx.font='bold 13px sans-serif';
+      ctx.fillText('충돌 전',24,28);
+      ctx.fillText('충돌 후',24,170);
+      function ball(cx,cy,m,v,col){
+        const r=8+Math.sqrt(m)*6;
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#333';ctx.lineWidth=1.5;
+        const ax=cx+v*8;
+        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ax,cy);ctx.stroke();
+        const sgn=v>=0?1:-1;
+        ctx.beginPath();ctx.moveTo(ax,cy);
+        ctx.lineTo(ax-sgn*8,cy-5);ctx.lineTo(ax-sgn*8,cy+5);ctx.closePath();ctx.fillStyle='#333';ctx.fill();
+        ctx.fillStyle='#222';ctx.font='11px sans-serif';
+        ctx.fillText('m='+m.toFixed(1)+'  v='+v.toFixed(2),cx-r,cy+r+14);
+      }
+      ball(180,70,m1,v1,'#0b5fff');
+      ball(440,70,m2,v2,'#ff8c00');
+      ball(180,210,m1,v1p,'#0b5fff');
+      ball(440,210,m2,v2p,'#ff8c00');
+      // info
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(20,260,W-40,52);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(20,260,W-40,52);
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('Σp 전 = '+p_b.toFixed(2)+' kg·m/s,  Σp 후 = '+p_a.toFixed(2)+' kg·m/s  (보존)',32,280);
+      const dK=K_a-K_b, lossPct=K_b>0?(-dK/K_b*100):0;
+      ctx.fillText('K 전 = '+K_b.toFixed(2)+' J,  K 후 = '+K_a.toFixed(2)+' J,  ΔK = '+dK.toFixed(2)+' J  (손실 '+lossPct.toFixed(1)+'%)',32,300);
+    }
+    ['w4_c_m1','w4_c_m2','w4_c_v1','w4_c_v2','w4_c_e'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

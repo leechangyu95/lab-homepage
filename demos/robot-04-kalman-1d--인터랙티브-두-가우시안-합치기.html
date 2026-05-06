@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 두 가우시안 합치기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 두 가우시안 합치기</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/04-kalman-1d.html">Lecture 4. 칼만 필터 (1D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 가우시안 합치기</h4>
+    <p>두 측정의 평균과 분산을 조절하세요. 합쳐진 결과(녹색)가 어떻게 더 좁고 정확해지는지 보세요.</p>
+    <canvas id="merge" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>μ₁ <span class="val" id="m1V">-1</span><input type="range" id="m1" min="-3" max="3" step="0.1" value="-1"></label>
+      <label>σ₁ <span class="val" id="s1V">1</span><input type="range" id="s1" min="0.2" max="2.5" step="0.1" value="1"></label>
+      <label>μ₂ <span class="val" id="m2V">1.5</span><input type="range" id="m2" min="-3" max="3" step="0.1" value="1.5"></label>
+      <label>σ₂ <span class="val" id="s2V">0.7</span><input type="range" id="s2" min="0.2" max="2.5" step="0.1" value="0.7"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('merge');
+    if(!c)return;
+    const ctx=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const x0=W/2,y0=H-30,sx=70,peakH=170;
+    function gpdf(xx,mu,sg){return Math.exp(-(xx-mu)*(xx-mu)/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));}
+    function render(){
+      const m1=parseFloat(document.getElementById('m1').value);
+      const s1=parseFloat(document.getElementById('s1').value);
+      const m2=parseFloat(document.getElementById('m2').value);
+      const s2=parseFloat(document.getElementById('s2').value);
+      ['m1','s1','m2','s2'].forEach(k=>{document.getElementById(k+'V').textContent=document.getElementById(k).value;});
+      const sgF=Math.sqrt(1/(1/(s1*s1)+1/(s2*s2)));
+      const muF=(s2*s2*m1+s1*s1*m2)/(s1*s1+s2*s2);
+      const peakMax=Math.max(gpdf(m1,m1,s1),gpdf(m2,m2,s2),gpdf(muF,muF,sgF));
+      const yScale=peakH/peakMax;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#999';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(20,y0);ctx.lineTo(W-20,y0);ctx.stroke();
+      function drawDist(mu,sg,stroke,fill){
+        ctx.fillStyle=fill;
+        ctx.beginPath();
+        const N=200;
+        ctx.moveTo(x0-5*sx,y0);
+        for(let i=0;i<=N;i++){
+          const xx=-5+10*i/N;
+          const px=x0+xx*sx,py=y0-gpdf(xx,mu,sg)*yScale;
+          ctx.lineTo(px,py);
+        }
+        ctx.lineTo(x0+5*sx,y0);
+        ctx.closePath();ctx.fill();
+        ctx.strokeStyle=stroke;ctx.lineWidth=2.5;
+        ctx.beginPath();
+        for(let i=0;i<=N;i++){
+          const xx=-5+10*i/N;
+          const px=x0+xx*sx,py=y0-gpdf(xx,mu,sg)*yScale;
+          if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+      drawDist(m1,s1,'#0b5fff','rgba(11,95,255,0.15)');
+      drawDist(m2,s2,'#ff8c00','rgba(255,140,0,0.15)');
+      drawDist(muF,sgF,'#2e7d32','rgba(46,125,50,0.30)');
+      ctx.font='12px sans-serif';
+      ctx.fillStyle='#0b5fff';ctx.fillText('측정 1 (μ='+m1.toFixed(1)+', σ='+s1.toFixed(1)+')',20,25);
+      ctx.fillStyle='#ff8c00';ctx.fillText('측정 2 (μ='+m2.toFixed(1)+', σ='+s2.toFixed(1)+')',20,42);
+      ctx.fillStyle='#2e7d32';ctx.fillText('합쳐진 결과 (μ='+muF.toFixed(2)+', σ='+sgF.toFixed(2)+')',20,59);
+    }
+    ['m1','s1','m2','s2'].forEach(k=>document.getElementById(k).addEventListener('input',render));
+    render();
+  })();
+  </script>
+</main>
+</body>
+</html>

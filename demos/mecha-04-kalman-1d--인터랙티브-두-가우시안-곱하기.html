@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 두 가우시안 곱하기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 두 가우시안 곱하기</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/04-kalman-1d.html">Week 4. 칼만 필터 (1D) — 측정과 모델의 융합</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 두 가우시안 곱하기</h4>
+    <p>두 측정의 평균과 표준편차를 바꿔보세요. <strong>합쳐진 분포(보라)는 항상 더 좁고</strong>, 분산이 작은 쪽 평균에 더 가깝게 끌려갑니다. 이게 칼만 필터의 모든 마법입니다.</p>
+    <canvas id="mergeMc" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>μ₁ <span class="val" id="m1V">75</span><input type="range" id="m1" min="50" max="100" step="0.5" value="75"></label>
+      <label>σ₁ <span class="val" id="s1V">5</span><input type="range" id="s1" min="1" max="15" step="0.5" value="5"></label>
+      <label>μ₂ <span class="val" id="m2V">79</span><input type="range" id="m2" min="50" max="100" step="0.5" value="79"></label>
+      <label>σ₂ <span class="val" id="s2V">3</span><input type="range" id="s2" min="1" max="15" step="0.5" value="3"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('mergeMc');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function gauss(x,m,s){return Math.exp(-(x-m)*(x-m)/(2*s*s))/(s*Math.sqrt(2*Math.PI));}
+    function draw(){
+      const m1=+document.getElementById('m1').value, s1=+document.getElementById('s1').value;
+      const m2=+document.getElementById('m2').value, s2=+document.getElementById('s2').value;
+      ['m1','s1','m2','s2'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      const v1=s1*s1, v2=s2*s2;
+      const vN=v1*v2/(v1+v2), sN=Math.sqrt(vN);
+      const mN=(v2*m1+v1*m2)/(v1+v2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=40,oy=H-40,w=W-60,h=H-80;
+      const xMin=40,xMax=110;
+      function px(x){return ox+(x-xMin)/(xMax-xMin)*w;}
+      const peakAll=Math.max(gauss(m1,m1,s1),gauss(m2,m2,s2),gauss(mN,mN,sN));
+      function py(p){return oy-p/peakAll*h;}
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.stroke();
+      function curve(m,s,col,fill){
+        ctx.strokeStyle=col;ctx.fillStyle=fill;ctx.lineWidth=2;
+        ctx.beginPath();
+        for(let i=0;i<=300;i++){const xx=xMin+(xMax-xMin)*i/300;const p=gauss(xx,m,s);
+          if(i===0)ctx.moveTo(px(xx),py(p));else ctx.lineTo(px(xx),py(p));}
+        ctx.lineTo(ox+w,oy);ctx.lineTo(ox,oy);ctx.closePath();ctx.fill();
+        ctx.beginPath();
+        for(let i=0;i<=300;i++){const xx=xMin+(xMax-xMin)*i/300;const p=gauss(xx,m,s);
+          if(i===0)ctx.moveTo(px(xx),py(p));else ctx.lineTo(px(xx),py(p));}
+        ctx.stroke();
+      }
+      curve(m1,s1,'#c62828','rgba(198,40,40,0.10)');
+      curve(m2,s2,'#0b5fff','rgba(11,95,255,0.10)');
+      curve(mN,sN,'#7b1fa2','rgba(123,31,162,0.18)');
+      ctx.fillStyle='#222';ctx.font='12px sans-serif';
+      ctx.fillText('x',ox+w-12,oy+15);
+      ctx.fillStyle='#c62828';ctx.fillText(`측정1: μ=${m1.toFixed(1)}, σ=${s1.toFixed(1)}`,ox+10,30);
+      ctx.fillStyle='#0b5fff';ctx.fillText(`측정2: μ=${m2.toFixed(1)}, σ=${s2.toFixed(1)}`,ox+10,48);
+      ctx.fillStyle='#7b1fa2';ctx.font='bold 13px sans-serif';
+      ctx.fillText(`결합: μ=${mN.toFixed(2)}, σ=${sN.toFixed(2)}  ← 항상 두 입력보다 좁음`,ox+10,70);
+    }
+    ['m1','s1','m2','s2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

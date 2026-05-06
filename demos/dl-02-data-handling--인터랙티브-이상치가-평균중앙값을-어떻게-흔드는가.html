@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 이상치가 평균·중앙값을 어떻게 흔드는가 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 이상치가 평균·중앙값을 어떻게 흔드는가</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/02-data-handling.html">Week 2. 데이터 핸들링</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 이상치가 평균·중앙값을 어떻게 흔드는가</h4>
+    <p>같은 데이터에 이상치 한두 개를 추가해 보세요. <strong>평균</strong>은 이상치에 끌려가지만 <strong>중앙값</strong>은 거의 움직이지 않습니다. 그래서 강건 통계(robust statistics)는 중앙값과 IQR을 선호해요.</p>
+    <canvas id="outDet" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>이상치 위치 <span class="val" id="oxV">15</span><input type="range" id="ox" min="0" max="30" step="0.5" value="15"></label>
+      <label>이상치 개수 <span class="val" id="onV">1</span><input type="range" id="on" min="0" max="10" step="1" value="1"></label>
+      <button id="oRegen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('outDet');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let base=[];
+    function gen(){
+      base=[];
+      for(let i=0;i<30;i++){
+        const u=Math.random(),v=Math.random();
+        const z=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+        base.push(5+z*1.2);
+      }
+      draw();
+    }
+    function draw(){
+      const ox=+document.getElementById('ox').value;
+      const on=+document.getElementById('on').value;
+      document.getElementById('oxV').textContent=ox.toFixed(1);
+      document.getElementById('onV').textContent=on;
+      const data=[...base];for(let i=0;i<on;i++)data.push(ox);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const lx=40,rx=W-20,y0=180;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(lx,y0);ctx.lineTo(rx,y0);ctx.stroke();
+      const rng=30;
+      // ticks
+      ctx.fillStyle='#888';ctx.font='11px sans-serif';
+      for(let v=0;v<=rng;v+=5){const x=lx+v/rng*(rx-lx);ctx.beginPath();ctx.moveTo(x,y0-3);ctx.lineTo(x,y0+3);ctx.stroke();ctx.fillText(v,x-5,y0+18);}
+      // points
+      data.forEach((v,i)=>{
+        const x=lx+v/rng*(rx-lx);
+        const isOut=i>=base.length;
+        ctx.fillStyle=isOut?'#c62828':'#0b5fff';
+        ctx.beginPath();ctx.arc(x,y0-15,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.stroke();
+      });
+      const sorted=[...data].sort((a,b)=>a-b);
+      const mean=data.reduce((a,b)=>a+b,0)/data.length;
+      const median=sorted.length%2?sorted[(sorted.length-1)/2]:(sorted[sorted.length/2-1]+sorted[sorted.length/2])/2;
+      const meanX=lx+mean/rng*(rx-lx),medX=lx+median/rng*(rx-lx);
+      ctx.strokeStyle='#ff8c00';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(meanX,40);ctx.lineTo(meanX,y0+20);ctx.stroke();
+      ctx.strokeStyle='#2e7d32';ctx.beginPath();ctx.moveTo(medX,40);ctx.lineTo(medX,y0+20);ctx.stroke();
+      ctx.fillStyle='#ff8c00';ctx.font='13px sans-serif';
+      ctx.fillText(`평균 = ${mean.toFixed(2)}`,meanX-30,30);
+      ctx.fillStyle='#2e7d32';
+      ctx.fillText(`중앙값 = ${median.toFixed(2)}`,medX-40,55);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`정상 데이터 ${base.length}개 + 이상치 ${on}개 (위치 ${ox.toFixed(1)})`,12,255);
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(160,250,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#666';ctx.fillText('정상',170,255);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(220,250,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#666';ctx.fillText('이상치',230,255);
+    }
+    document.getElementById('ox').addEventListener('input',draw);
+    document.getElementById('on').addEventListener('input',draw);
+    document.getElementById('oRegen').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>인터랙티브: 진자(단진자)에서 에너지 드리프트 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">인터랙티브: 진자(단진자)에서 에너지 드리프트</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/04-euler-simulation.html">Week 4. 오일러 방법 &amp; 시뮬레이션</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>인터랙티브: 진자(단진자)에서 에너지 드리프트</h4>
+    <p>이상적인 단진자 $\ddot\theta = -\omega^2 \sin\theta$는 마찰이 없으면 영원히 같은 진폭으로 흔들려야 합니다.
+    오일러로 풀면 매 사이클마다 진폭이 <strong>커지면서 발산</strong>합니다(에너지 증가). RK4로 바꾸면
+    수백 사이클을 돌려도 거의 일정합니다. 직접 비교해 보세요.</p>
+    <canvas id="pend" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$\Delta t$ <span class="val" id="pdtV">0.05</span><input type="range" id="pdt" min="0.005" max="0.15" step="0.005" value="0.05"></label>
+      <label>방법
+        <select id="pmeth">
+          <option value="euler">Explicit Euler</option>
+          <option value="rk4">RK4</option>
+          <option value="semi">Semi-implicit Euler</option>
+        </select>
+      </label>
+      <button id="prun">시작/정지</button>
+      <button id="prst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pend'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const W=c.width,H=c.height, omega2=4.0;
+    let theta=1.0, omega=0.0, t=0, hist=[], running=false, raf=null;
+    const upd=()=>{$('pdtV').textContent=(+$('pdt').value).toFixed(3);};
+    $('pdt').oninput=upd;
+    function f(th,om){return [-omega2*Math.sin(th), om];}
+    function step(){
+      const dt=+$('pdt').value, m=$('pmeth').value;
+      if(m=='euler'){
+        const dth=omega, dom=-omega2*Math.sin(theta);
+        theta += dth*dt; omega += dom*dt;
+      }else if(m=='semi'){
+        omega += -omega2*Math.sin(theta)*dt;
+        theta += omega*dt;
+      }else{ // rk4
+        const k1th=omega,                k1om=-omega2*Math.sin(theta);
+        const k2th=omega+0.5*dt*k1om,    k2om=-omega2*Math.sin(theta+0.5*dt*k1th);
+        const k3th=omega+0.5*dt*k2om,    k3om=-omega2*Math.sin(theta+0.5*dt*k2th);
+        const k4th=omega+dt*k3om,        k4om=-omega2*Math.sin(theta+dt*k3th);
+        theta += dt/6*(k1th+2*k2th+2*k3th+k4th);
+        omega += dt/6*(k1om+2*k2om+2*k3om+k4om);
+      }
+      t+=dt;
+      const E = 0.5*omega*omega + omega2*(1-Math.cos(theta));
+      hist.push({t,theta,E});
+      if(hist.length>800)hist.shift();
+    }
+    function loop(){
+      if(running){step();}
+      draw();
+      raf=requestAnimationFrame(loop);
+    }
+    function reset(){theta=1.0;omega=0.0;t=0;hist=[];}
+    $('prun').onclick=()=>{running=!running;};
+    $('prst').onclick=reset;
+    function draw(){
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // pendulum (left)
+      const px=140, py=120, L=80;
+      x.strokeStyle='#999';x.beginPath();x.moveTo(px-100,py);x.lineTo(px+100,py);x.stroke();
+      const bx=px+L*Math.sin(theta), by=py+L*Math.cos(theta);
+      x.strokeStyle='#333';x.lineWidth=2;x.beginPath();x.moveTo(px,py);x.lineTo(bx,by);x.stroke();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(bx,by,12,0,7);x.fill();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('진자',px-10,py-110);
+      x.fillText('θ = '+theta.toFixed(3)+' rad',10,H-20);
+      x.fillText('ω = '+omega.toFixed(3)+' rad/s',10,H-6);
+      // theta(t) on right
+      const ox=300, oy=20, w=320, h=140;
+      x.strokeStyle='#ccc';x.strokeRect(ox,oy,w,h);
+      x.fillStyle='#444';x.fillText('θ(t)', ox+5, oy+12);
+      const tmax=hist.length>0?Math.max(8,hist[hist.length-1].t):8;
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((p,i)=>{const xx=ox+(p.t/tmax)*w, yy=oy+h/2-p.theta*h/4;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
+      x.stroke();
+      // energy
+      const ox2=300, oy2=180, h2=130;
+      x.strokeStyle='#ccc';x.strokeRect(ox2,oy2,w,h2);
+      x.fillStyle='#444';x.fillText('총에너지 E(t) — 이상적으론 일정해야', ox2+5, oy2+12);
+      const Es=hist.map(p=>p.E);
+      const Emax=Es.length>0?Math.max(...Es,2):2, Emin=Es.length>0?Math.min(...Es,0):0;
+      x.strokeStyle='#c62828';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((p,i)=>{const xx=ox2+(p.t/tmax)*w,
+        yy=oy2+h2-(p.E-Emin)/(Emax-Emin+1e-6)*h2;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});
+      x.stroke();
+      x.fillStyle='#666';x.fillText('E ≈ '+(hist.length>0?hist[hist.length-1].E.toFixed(3):'0'), ox2+w-80, oy2+12);
+    }
+    upd();draw();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

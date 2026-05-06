@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 1차 플랜트 + PID 스텝 응답 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 1차 플랜트 + PID 스텝 응답</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/09-pid-basics.html">Week 9. PID 제어 기초</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1차 플랜트 + PID 스텝 응답</h4>
+    <p>플랜트 $\tau\dot y + y = K u + d$ ($\tau=2$, $K=1$, 외란 $d$)에 PID를 걸었습니다. 슬라이더로 $K_p, K_i, K_d$를 흔들며 응답이 어떻게 변하는지 직접 보세요.
+    오버슈트(%), 정착시간, 정상상태 오차가 라이브로 표시됩니다.</p>
+    <canvas id="pidCv" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>Kp <span class="val" id="kpV">2.0</span><input type="range" id="kp" min="0" max="10" step="0.1" value="2.0"></label>
+      <label>Ki <span class="val" id="kiV">0.5</span><input type="range" id="ki" min="0" max="5" step="0.05" value="0.5"></label>
+      <label>Kd <span class="val" id="kdV">0.1</span><input type="range" id="kd" min="0" max="2" step="0.05" value="0.1"></label>
+      <label>외란 d <span class="val" id="ddV">0</span><input type="range" id="dd" min="-2" max="2" step="0.1" value="0"></label>
+      <button id="rstB" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pidCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{['kp','ki','kd','dd'].forEach(id=>$(id+'V').textContent=(+$(id).value).toFixed(2));};
+    ['kp','ki','kd','dd'].forEach(id=>$(id).oninput=upd);
+    const tau=2.0,Kp_plant=1.0;let y,I,e_p,t,hist;
+    function reset(){y=0;I=0;e_p=null;t=0;hist=[];}
+    reset();$('rstB').onclick=reset;
+    function loop(){
+      const Kp=+$('kp').value,Ki=+$('ki').value,Kd=+$('kd').value,d=+$('dd').value;
+      const r=t<1?0:1.0;const e=r-y;
+      const dt=0.04;I+=e*dt;const dedt=e_p===null?0:(e-e_p)/dt;e_p=e;
+      let u=Kp*e+Ki*I+Kd*dedt;u=Math.max(-3,Math.min(3,u));
+      y+=dt*((Kp_plant*u+d-y)/tau);t+=dt;
+      hist.push({t,r,y,u,e});if(hist.length>500)hist.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h=c.height,pad=42;const xa=tt=>pad+tt/20*(w-2*pad);const ya=v=>h-pad-(v+0.5)/2.0*(h-2*pad-50);
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(pad,ya(0));x.lineTo(w-pad,ya(0));x.moveTo(pad,h-pad);x.lineTo(pad,pad);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('t [s]',w-pad-30,h-pad+18);x.fillText('y, r',pad-30,pad+10);
+      for(let tt=0;tt<=20;tt+=5)x.fillText(tt,xa(tt)-6,h-pad+18);
+      // reference
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=ya(p.r);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();x.setLineDash([]);
+      // y(t)
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=ya(p.y);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      // u(t) bottom thin
+      x.strokeStyle='#f57c00';x.lineWidth=1.5;x.beginPath();
+      hist.forEach((p,i)=>{const xx=xa(p.t),yy=h-32-(p.u+3)/6*30;if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('빨간 점선: 목표 r',12,18);x.fillStyle='#0b5fff';x.fillText('파랑: y(t)',12,34);x.fillStyle='#f57c00';x.fillText('주황 (하단): 입력 u(t)',12,50);
+      // metrics
+      const yMax=Math.max(...hist.map(p=>p.y),0);const yEnd=hist.length?hist[hist.length-1].y:0;
+      const r_=hist.length?hist[hist.length-1].r:0;
+      const overshoot=r_>0.01?Math.max(0,(yMax-r_)/r_*100):0;const ess=r_-yEnd;
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('Overshoot ≈ '+overshoot.toFixed(1)+' %',w-220,18);
+      x.fillText('정상오차 ≈ '+ess.toFixed(3),w-220,36);
+      x.fillText('현재 입력 u = '+(hist.length?hist[hist.length-1].u.toFixed(2):'0'),w-220,54);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

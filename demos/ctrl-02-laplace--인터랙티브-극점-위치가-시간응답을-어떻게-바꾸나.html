@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 극점 위치가 시간응답을 어떻게 바꾸나 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 극점 위치가 시간응답을 어떻게 바꾸나</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/02-laplace.html">Week 2. 라플라스 변환</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 극점 위치가 시간응답을 어떻게 바꾸나</h4>
+    <p>$F(s) = \dfrac{1}{(s-p)}$의 극점 $p = \sigma + j\omega$를 슬라이더로 옮겨 보세요.
+    왼쪽은 s-평면(빨간 점이 극점), 오른쪽은 그에 대응하는 시간응답 $f(t) = e^{\sigma t}\cos(\omega t)$입니다.
+    실수부 $\sigma$가 안정성을, 허수부 $\omega$가 진동수를 결정합니다.</p>
+    <canvas id="splane" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>실수부 σ <span class="val" id="sigV">-0.5</span><input type="range" id="sig" min="-2" max="1" step="0.05" value="-0.5"></label>
+      <label>허수부 ω <span class="val" id="omV">2</span><input type="range" id="om" min="0" max="6" step="0.1" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('splane'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('sigV').textContent=(+$('sig').value).toFixed(2);$('omV').textContent=(+$('om').value).toFixed(1);};
+    ['sig','om'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const sig=+$('sig').value, om=+$('om').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // s-plane on left half (0..300)
+      const cx=150, cy=160, sc=60;
+      x.strokeStyle='#bbb';x.beginPath();
+      x.moveTo(20,cy);x.lineTo(280,cy);x.moveTo(cx,20);x.lineTo(cx,300);x.stroke();
+      x.fillStyle='#666';x.font='11px sans-serif';
+      x.fillText('Re',270,cy-6);x.fillText('Im',cx+6,30);
+      // shaded unstable region (Re>0)
+      x.fillStyle='rgba(198,40,40,0.07)';x.fillRect(cx,20,160,280);
+      x.fillStyle='#c62828';x.font='10px sans-serif';x.fillText('불안정',cx+30,40);
+      // pole and conjugate
+      const px=cx+sig*sc, py1=cy-om*sc, py2=cy+om*sc;
+      x.fillStyle='#c62828';
+      x.beginPath();x.arc(px,py1,7,0,Math.PI*2);x.fill();
+      if(om>0.05){x.beginPath();x.arc(px,py2,7,0,Math.PI*2);x.fill();}
+      x.fillStyle='#444';x.font='12px sans-serif';
+      x.fillText('극점 p = '+sig.toFixed(2)+(om>=0?'+':'')+om.toFixed(1)+'j', 20, 295);
+      // time-domain response on right (320..640)
+      const ox=330, oy=160;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(630,oy);x.moveTo(ox,20);x.lineTo(ox,300);x.stroke();
+      x.fillStyle='#666';x.fillText('t',625,oy-6);x.fillText('f(t)',ox+6,30);
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      let started=false;
+      for(let i=0;i<300;i++){
+        const t=i*0.04, f=Math.exp(sig*t)*Math.cos(om*t);
+        const xx=ox+i, yy=oy-f*60;
+        if(yy<10||yy>310)continue;
+        if(!started){x.moveTo(xx,yy);started=true;}else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';
+      const verdict = sig<-0.01?'안정 (수렴)' : sig>0.01?'불안정 (발산)' : '경계 (지속 진동)';
+      x.fillText('시간응답  e^(σt)·cos(ωt)   →  '+verdict, ox, 295);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

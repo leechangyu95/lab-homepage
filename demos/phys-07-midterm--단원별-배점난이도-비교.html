@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>단원별 배점·난이도 비교 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">단원별 배점·난이도 비교</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/07-midterm.html">Week 7. 중간시험</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>단원별 배점·난이도 비교</h4>
+    <p>막대 길이는 <strong>배점(%)</strong>, 색의 진하기는 <strong>난이도</strong>. 시험 직전 복습 시간을 어디에 쓸지 정할 때 참고하세요.</p>
+    <canvas id="w7_weightDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>표시 모드
+        <select id="w7_weightMode">
+          <option value="weight">배점(%)</option>
+          <option value="difficulty">난이도</option>
+          <option value="rate">정답률</option>
+        </select>
+      </label>
+      <label>강조 단원
+        <select id="w7_weightHi">
+          <option value="-1">없음</option>
+          <option value="0">W1 운동학</option>
+          <option value="1">W2 뉴턴</option>
+          <option value="2">W3 에너지</option>
+          <option value="3">W4 운동량</option>
+          <option value="4">W5 회전</option>
+          <option value="5">W6 단진동</option>
+        </select>
+      </label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>해석 팁</strong> — 배점과 정답률을 함께 보면 "<em>점수당 효율</em>"이 보입니다. 배점은 높은데 정답률이 낮은 단원(W2, W5)이 시험 직전 복습 ROI가 가장 큰 단원이에요.
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w7_weightDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[
+      {n:'W1 운동학',w:12,d:2,r:72,col:'#0b5fff'},
+      {n:'W2 뉴턴',w:22,d:3,r:54,col:'#e91e63'},
+      {n:'W3 에너지',w:22,d:3,r:61,col:'#ff8c00'},
+      {n:'W4 운동량',w:16,d:2,r:68,col:'#43a047'},
+      {n:'W5 회전',w:14,d:4,r:43,col:'#7b1fa2'},
+      {n:'W6 단진동',w:14,d:3,r:57,col:'#00838f'}
+    ];
+    function draw(){
+      const mode=document.getElementById('w7_weightMode').value;
+      const hi=+document.getElementById('w7_weightHi').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ml=80,mt=30,mb=40,mr=20;
+      const bw=(W-ml-mr)/data.length-12;
+      const max=mode==='weight'?25:mode==='difficulty'?5:100;
+      const unit=mode==='weight'?'%':mode==='difficulty'?'★':'%';
+      ctx.fillStyle='#222';ctx.font='bold 14px sans-serif';
+      ctx.fillText(mode==='weight'?'배점(%)':mode==='difficulty'?'난이도(★)':'정답률(%)',ml,20);
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=1;
+      for(let i=0;i<=5;i++){
+        const y=mt+(H-mt-mb)*(1-i/5);
+        ctx.beginPath();ctx.moveTo(ml,y);ctx.lineTo(W-mr,y);ctx.stroke();
+        ctx.fillStyle='#777';ctx.font='11px sans-serif';
+        ctx.fillText((max*i/5).toFixed(0)+unit,4,y+4);
+      }
+      data.forEach((d,i)=>{
+        const v=mode==='weight'?d.w:mode==='difficulty'?d.d:d.r;
+        const x=ml+i*((W-ml-mr)/data.length)+6;
+        const bh=(H-mt-mb)*(v/max);
+        const y=H-mb-bh;
+        ctx.fillStyle=hi===i?d.col:d.col+'aa';
+        if(hi===i){ctx.shadowBlur=12;ctx.shadowColor=d.col;}else{ctx.shadowBlur=0;}
+        ctx.fillRect(x,y,bw,bh);
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#222';ctx.font='12px sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText(d.n,x+bw/2,H-mb+18);
+        ctx.fillText(v+unit,x+bw/2,y-6);
+        ctx.textAlign='left';
+      });
+    }
+    document.getElementById('w7_weightMode').addEventListener('change',draw);
+    document.getElementById('w7_weightHi').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 2D 칼만 필터 측위 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 2D 칼만 필터 측위</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/05-kalman-2d.html">Lecture 5. 칼만 필터 (2D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2D 칼만 필터 측위</h4>
+    <p>로봇(녹색)은 등속 직선으로 움직이다 가끔 방향을 바꿉니다 — CV(constant velocity) 모델이 잘 들어맞는 운동입니다. GPS(빨강) 잡음을 칼만 필터(파랑)가 어떻게 평탄화하는지, 방향 전환 직후 공분산 타원이 어떻게 커졌다 다시 작아지는지 보세요.</p>
+    <canvas id="kf2" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>GPS 잡음 R <span class="val" id="rV">10</span><input type="range" id="r" min="1" max="40" value="10"></label>
+      <label>모델 잡음 Q <span class="val" id="qV">0.05</span><input type="range" id="q" min="0.01" max="0.5" step="0.01" value="0.05"></label>
+      <button id="rst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kf2'),x=c.getContext('2d');
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{sl('rV').textContent=sl('r').value;sl('qV').textContent=sl('q').value;};
+    ['r','q'].forEach(k=>sl(k).oninput=upd);
+    let t, truth, xh, P, hist, nextTurn;
+    function reset(){
+      t=0;
+      truth={x:120, y:200, vx:55, vy:25};
+      xh=[truth.x, truth.y, 0, 0];
+      P=[[10,0,0,0],[0,10,0,0],[0,0,100,0],[0,0,0,100]];
+      hist=[];
+      nextTurn=2.5;
+    }
+    reset();
+    sl('rst').onclick=reset;
+    function loop(){
+      const dt=0.05,R=+sl('r').value,Q=+sl('q').value;
+      // 진짜 로봇: 등속 직선 + 가끔 방향 전환 + 벽 반사
+      truth.x+=truth.vx*dt; truth.y+=truth.vy*dt;
+      if(truth.x<60){truth.x=60; truth.vx=Math.abs(truth.vx);}
+      if(truth.x>580){truth.x=580; truth.vx=-Math.abs(truth.vx);}
+      if(truth.y<60){truth.y=60; truth.vy=Math.abs(truth.vy);}
+      if(truth.y>320){truth.y=320; truth.vy=-Math.abs(truth.vy);}
+      if(t>nextTurn){
+        const ang=Math.random()*2*Math.PI, sp=40+Math.random()*30;
+        truth.vx=sp*Math.cos(ang); truth.vy=sp*Math.sin(ang);
+        nextTurn=t+3+Math.random()*2;
+      }
+      const tx=truth.x, ty=truth.y;
+      const mx=tx+(Math.random()*2-1)*Math.sqrt(R)*1.8;
+      const my=ty+(Math.random()*2-1)*Math.sqrt(R)*1.8;
+      // 예측
+      xh[0]+=xh[2]*dt; xh[1]+=xh[3]*dt;
+      P[0][0]+=2*P[0][2]*dt+P[2][2]*dt*dt+Q;
+      P[1][1]+=2*P[1][3]*dt+P[3][3]*dt*dt+Q;
+      P[0][2]+=P[2][2]*dt; P[1][3]+=P[3][3]*dt;
+      P[2][2]+=Q; P[3][3]+=Q;
+      // 갱신
+      const Sx=P[0][0]+R, Sy=P[1][1]+R;
+      const Kx0=P[0][0]/Sx,Kx2=P[0][2]/Sx;
+      const Ky1=P[1][1]/Sy,Ky3=P[1][3]/Sy;
+      const ex=mx-xh[0],ey=my-xh[1];
+      xh[0]+=Kx0*ex; xh[2]+=Kx2*ex;
+      xh[1]+=Ky1*ey; xh[3]+=Ky3*ey;
+      // 공분산: P22는 옛 P02를 사용해야 하므로 먼저 처리
+      const P02_old=P[0][2], P13_old=P[1][3];
+      P[2][2]-=Kx2*P02_old; P[3][3]-=Ky3*P13_old;
+      P[0][0]*=(1-Kx0); P[0][2]=(1-Kx0)*P02_old;
+      P[1][1]*=(1-Ky1); P[1][3]=(1-Ky1)*P13_old;
+      hist.push({tx,ty,mx,my,ex:xh[0],ey:xh[1]});
+      if(hist.length>200)hist.shift();
+      t+=dt;
+      // 그리기
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.width;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,c.height);x.stroke();}
+      for(let j=0;j<c.height;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(c.width,j);x.stroke();}
+      // 진짜 궤적 (얇은 녹색 선)
+      x.strokeStyle='rgba(46,125,50,0.4)';x.lineWidth=1;x.beginPath();
+      hist.forEach((h,i)=>{if(i==0)x.moveTo(h.tx,h.ty);else x.lineTo(h.tx,h.ty);});x.stroke();
+      // GPS 측정점
+      x.fillStyle='rgba(198,40,40,0.5)';
+      hist.forEach(h=>{x.beginPath();x.arc(h.mx,h.my,2,0,Math.PI*2);x.fill();});
+      // KF 추정 궤적
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{if(i==0)x.moveTo(h.ex,h.ey);else x.lineTo(h.ex,h.ey);});x.stroke();
+      // 공분산 타원
+      const sx_=Math.sqrt(Math.max(P[0][0],0.5))*2.5;
+      const sy_=Math.sqrt(Math.max(P[1][1],0.5))*2.5;
+      x.strokeStyle='rgba(11,95,255,0.6)';x.beginPath();
+      x.ellipse(xh[0],xh[1],sx_,sy_,0,0,Math.PI*2);x.stroke();
+      // 점들
+      x.fillStyle='#2e7d32';x.beginPath();x.arc(tx,ty,5,0,Math.PI*2);x.fill();
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(xh[0],xh[1],4,0,Math.PI*2);x.fill();
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

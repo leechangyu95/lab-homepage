@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 속도가 변하면 같은 조향에서도 반경이 달라진다 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 속도가 변하면 같은 조향에서도 반경이 달라진다</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/03-vehicle-dynamics.html">Week 3. 차량 동역학 기초</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 속도가 변하면 같은 조향에서도 반경이 달라진다</h4>
+    <p>$\delta$를 고정한 채 속도를 끌어올려 보세요. <strong>점선</strong>은 Kinematic 예측($R = L/\tan\delta$),
+    <strong>실선</strong>은 동역학으로 계산한 정상 선회 반경입니다. Understeer는 위로, Oversteer는 아래로 갈라집니다.</p>
+    <canvas id="radiusCv" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>조향각 δ [°] <span class="val" id="d2V">5</span><input type="range" id="d2" min="1" max="15" step="0.5" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('radiusCv'),x=c.getContext('2d'),$=id=>document.getElementById(id);
+    const upd=()=>{$('d2V').textContent=(+$('d2').value).toFixed(1);draw();};
+    $('d2').oninput=upd;
+    const m=1500,g=9.81,lf=1.2,lr=1.6,L=lf+lr;
+    function Kus(Cf,Cr){return lr*m*g/(L*Cf)-lf*m*g/(L*Cr);}
+    function R(vx,delta,K){const Rk=L/Math.tan(delta);return Rk*(1+K*vx*vx/(g*L));}
+    function draw(){
+      const delta=(+$('d2').value)*Math.PI/180;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const w=c.width,h=c.height,pad=42;
+      const xa=v=>pad+v/40*(w-2*pad);const ya=r=>h-pad-Math.min(200,Math.max(0,r))/200*(h-2*pad);
+      x.strokeStyle='#ddd';x.beginPath();x.moveTo(pad,h-pad);x.lineTo(w-pad,h-pad);x.moveTo(pad,pad);x.lineTo(pad,h-pad);x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';x.fillText('vx [m/s]',w-pad-50,h-pad+18);x.fillText('R [m]',6,pad+10);
+      for(let v=0;v<=40;v+=10){x.fillText(v,xa(v)-6,h-pad+18);}
+      for(let r=0;r<=200;r+=50){x.fillText(r,8,ya(r)+4);}
+      const Rk=L/Math.tan(delta);
+      x.strokeStyle='#888';x.setLineDash([5,5]);x.beginPath();x.moveTo(pad,ya(Rk));x.lineTo(w-pad,ya(Rk));x.stroke();x.setLineDash([]);
+      x.fillStyle='#666';x.fillText('Kinematic R='+Rk.toFixed(1),w-pad-160,ya(Rk)-4);
+      const series=[
+        {name:'Understeer',K:Kus(60000,90000),color:'#0b5fff'},
+        {name:'Neutral',   K:Kus(80000,80000),color:'#2e7d32'},
+        {name:'Oversteer', K:Kus(90000,60000),color:'#c62828'},
+      ];
+      series.forEach((s,i)=>{
+        x.strokeStyle=s.color;x.lineWidth=2;x.beginPath();
+        for(let v=2;v<=40;v+=0.5){const r=R(v,delta,s.K);const xx=xa(v),yy=ya(r);if(v==2)x.moveTo(xx,yy);else x.lineTo(xx,yy);}x.stroke();
+        x.fillStyle=s.color;x.fillText(s.name+'  Kus='+s.K.toFixed(3),pad+8,pad+14+i*16);
+      });
+    }
+    upd();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: PWM 듀티 ↔ 평균 전압 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: PWM 듀티 ↔ 평균 전압</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/06-microprocessor.html">Week 6. 마이크로프로세서 프로그래밍 — Arduino로 시작하기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: PWM 듀티 ↔ 평균 전압</h4>
+    <p>듀티 사이클을 바꾸면 사각파의 ON 시간이 달라지고, 부하가 RC LPF처럼 동작하면 평균전압 $V_\text{avg} = V_\text{HIGH} \cdot D$가 부드러운 DC로 보입니다. <strong>PWM 주파수</strong>를 낮추면 부하가 사각파를 그대로 따라가 깜빡이게 됩니다.</p>
+    <canvas id="pwmDemo" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>듀티 사이클 D <span class="val" id="pwDV">50</span> %<input type="range" id="pwD" min="0" max="100" step="1" value="50"></label>
+      <label>PWM 주파수 <span class="val" id="pwFV">2</span> kHz<input type="range" id="pwF" min="0.05" max="10" step="0.05" value="2"></label>
+      <label>부하 LPF τ <span class="val" id="pwTV">2</span> ms<input type="range" id="pwT" min="0.05" max="20" step="0.05" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('pwmDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const D=+document.getElementById('pwD').value/100;
+      const f=+document.getElementById('pwF').value*1000;
+      const tau=+document.getElementById('pwT').value/1000;
+      document.getElementById('pwDV').textContent=(D*100).toFixed(0);
+      document.getElementById('pwFV').textContent=(f/1000).toFixed(2);
+      document.getElementById('pwTV').textContent=(tau*1000).toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=50,oy=H-30,w=W-70,h=H-60;
+      const Twin = 6/Math.max(f,200);
+      const dt=Twin/600, period=1/f;
+      function px(t){return ox+t/Twin*w;}
+      function py(v){return oy-v/5.5*h;}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+w,oy);ctx.moveTo(ox,30);ctx.lineTo(ox,oy);ctx.stroke();
+      // 5V mark
+      ctx.strokeStyle='#ddd';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(ox,py(5));ctx.lineTo(ox+w,py(5));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#999';ctx.font='11px sans-serif';ctx.fillText('5V',ox-25,py(5)+4);
+      // PWM signal
+      ctx.strokeStyle='#666';ctx.lineWidth=1.5;ctx.beginPath();
+      for(let t=0;t<=Twin;t+=dt){const phase=(t%period)/period;const v=phase<D?5:0;
+        const xx=px(t),yy=py(v);if(t===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // RC filtered output
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      let vOut=0;
+      for(let t=0;t<=Twin;t+=dt){const phase=(t%period)/period;const vIn=phase<D?5:0;
+        vOut += dt/tau*(vIn-vOut);
+        const xx=px(t),yy=py(vOut);if(t===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+      ctx.stroke();
+      // ideal average
+      ctx.strokeStyle='#c62828';ctx.setLineDash([5,3]);ctx.beginPath();ctx.moveTo(ox,py(5*D));ctx.lineTo(ox+w,py(5*D));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`V_avg = 5V × ${(D*100).toFixed(0)}% = ${(5*D).toFixed(2)} V`,ox,25);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const ratio=tau*f;
+      ctx.fillText(`τ × f = ${ratio.toFixed(2)}  ${ratio>3?'(LPF가 PWM을 잘 누름 → 매끈)':ratio>0.5?'(중간)':'(LPF가 부족 → 리플)'}`,ox+260,25);
+      ctx.fillStyle='#666';ctx.fillText('— PWM',ox+10,H-10);
+      ctx.fillStyle='#0b5fff';ctx.fillText('— 부하 출력 (RC 필터링)',ox+90,H-10);
+      ctx.fillStyle='#c62828';ctx.fillText('-- 이상적 평균',ox+260,H-10);
+    }
+    ['pwD','pwF','pwT'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

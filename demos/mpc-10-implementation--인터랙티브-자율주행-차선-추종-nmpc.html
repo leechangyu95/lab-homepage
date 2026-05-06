@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 자율주행 차선 추종 NMPC — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 자율주행 차선 추종 NMPC</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/10-implementation.html">Week 10. 실시간 구현 &amp; 응용</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 자율주행 차선 추종 NMPC</h4>
+    <p>차량(파랑)이 곡선 차선을 따라가는 NMPC. <strong>호라이즌 N</strong>을 키우면 곡선 미리 보기로 안쪽으로 깔끔하게 컷, 줄이면 늦은 회전. <strong>속도</strong>도 조절 가능.</p>
+    <canvas id="lkDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>호라이즌 N <span class="val" id="lkNV">12</span><input type="range" id="lkN" min="3" max="25" step="1" value="12"></label>
+      <label>속도 <span class="val" id="lkVV">2.0</span><input type="range" id="lkV" min="0.5" max="4" step="0.1" value="2"></label>
+      <button id="lkRun">시작/정지</button>
+      <button id="lkRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lkDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    // Lane: sinusoidal centerline
+    function laneY(x){return H/2+50*Math.sin(x/100);}
+    let car={x:50,y:H/2,heading:0},running=false,raf=null,trail=[];
+    function step(){
+      const N=+document.getElementById('lkN').value;
+      const v=+document.getElementById('lkV').value;
+      // Look ahead N steps for desired heading
+      const lookX=car.x+N*v*4;
+      const targetY=laneY(lookX);
+      const dy=targetY-car.y;
+      const dx=lookX-car.x;
+      const desiredHeading=Math.atan2(dy,dx);
+      // Steer toward desired heading
+      const steerGain=0.4;
+      const headingErr=desiredHeading-car.heading;
+      const steer=Math.max(-0.3,Math.min(0.3,steerGain*headingErr));
+      car.heading+=steer;
+      car.x+=v*Math.cos(car.heading);
+      car.y+=v*Math.sin(car.heading);
+      trail.push({x:car.x,y:car.y});
+      if(trail.length>200)trail.shift();
+      if(car.x>W-30){car.x=50;car.y=H/2;car.heading=0;trail=[];}
+      draw();
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // lane lines
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=2;
+      ctx.beginPath();for(let x=0;x<W;x+=2){const y=laneY(x);if(x===0)ctx.moveTo(x,y-30);else ctx.lineTo(x,y-30);}ctx.stroke();
+      ctx.beginPath();for(let x=0;x<W;x+=2){const y=laneY(x);if(x===0)ctx.moveTo(x,y+30);else ctx.lineTo(x,y+30);}ctx.stroke();
+      // centerline
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([8,8]);
+      ctx.beginPath();for(let x=0;x<W;x+=2){const y=laneY(x);if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.setLineDash([]);
+      // trail
+      ctx.strokeStyle='rgba(11,95,255,0.4)';ctx.lineWidth=2;
+      ctx.beginPath();trail.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});ctx.stroke();
+      // horizon points (planning visualization)
+      const N=+document.getElementById('lkN').value;
+      const v=+document.getElementById('lkV').value;
+      ctx.strokeStyle='#0b5fff';ctx.setLineDash([3,3]);ctx.lineWidth=1;
+      ctx.beginPath();
+      for(let k=1;k<=N;k++){
+        const px=car.x+k*v*4,py=laneY(px);
+        if(k===1)ctx.moveTo(car.x,car.y);
+        ctx.lineTo(px,py);
+      }
+      ctx.stroke();ctx.setLineDash([]);
+      // car
+      ctx.save();
+      ctx.translate(car.x,car.y);ctx.rotate(car.heading);
+      ctx.fillStyle='#0b5fff';ctx.fillRect(-10,-6,20,12);
+      ctx.strokeStyle='#fff';ctx.strokeRect(-10,-6,20,12);
+      ctx.restore();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`N=${N} 미래 미리보기, 속도 ${v.toFixed(1)}`,12,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('━ 차선 경계, ╌ 차선 중심, ┄ 계획 horizon (파랑)',12,H-15);
+    }
+    function tick(){if(running){step();raf=requestAnimationFrame(tick);}}
+    document.getElementById('lkN').addEventListener('input',()=>{document.getElementById('lkNV').textContent=document.getElementById('lkN').value;});
+    document.getElementById('lkV').addEventListener('input',()=>{document.getElementById('lkVV').textContent=(+document.getElementById('lkV').value).toFixed(1);});
+    document.getElementById('lkRun').onclick=()=>{running=!running;if(running)tick();};
+    document.getElementById('lkRst').onclick=()=>{running=false;cancelAnimationFrame(raf);car={x:50,y:H/2,heading:0};trail=[];draw();};
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

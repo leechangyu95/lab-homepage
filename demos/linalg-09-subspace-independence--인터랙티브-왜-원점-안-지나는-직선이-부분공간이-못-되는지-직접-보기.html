@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 왜 &quot;원점 안 지나는 직선&quot;이 부분공간이 못 되는지 직접 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 왜 &quot;원점 안 지나는 직선&quot;이 부분공간이 못 되는지 직접 보기</h1>
+  <p class="demo-meta">
+    선형대수학 · <a href="../backup-lectures/lectures-linear-algebra/09-subspace-independence.html">Week 9. 부분공간·일차독립</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 왜 "원점 안 지나는 직선"이 부분공간이 못 되는지 직접 보기</h4>
+    <p>아래 직선 위의 두 점 $\mathbf{u}, \mathbf{v}$ 를 마우스로 끌어 보세요.
+       두 점의 합 $\mathbf{u}+\mathbf{v}$ 는 빨간 점으로 표시됩니다.
+       직선 위 두 점을 더했는데 <strong>합이 직선 밖으로 튕겨나가면</strong> "덧셈에 닫혀있지 않다" → 부분공간 자격 박탈.
+       토글 버튼으로 직선의 절편을 0(원점 지나감) ↔ 1(원점 안 지남)로 바꿔보면 차이가 한눈에.</p>
+    <canvas id="subspaceDemo" width="640" height="420"></canvas>
+    <div class="controls">
+      <button id="toggleLine">직선 바꾸기 (현재: y = 2x + 1)</button>
+    </div>
+    <p id="subExplain" style="margin-top:8px;font-size:14px"></p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('subspaceDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=W/2,oy=H/2,scale=40;
+    let intercept=1; // 0 = through origin, 1 = not through origin
+    let u={t:-1.5},v={t:1.0};
+    let dragging=null;
+    function pt(p){return {x:p.t,y:2*p.t+intercept};}
+    function px(p){return [ox+p.x*scale,oy-p.y*scale];}
+    function getMouse(e){const r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)};}
+    function tFromMouse(m){return (m.x-ox)/scale;}
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let i=-10;i<=10;i++){ctx.beginPath();ctx.moveTo(ox+i*scale,0);ctx.lineTo(ox+i*scale,H);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,oy+i*scale);ctx.lineTo(W,oy+i*scale);ctx.stroke();}
+      // axes
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(0,oy);ctx.lineTo(W,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,H);ctx.stroke();
+      // line
+      const tMin=-7,tMax=7;
+      const [x1,y1]=px(pt({t:tMin})),[x2,y2]=px(pt({t:tMax}));
+      ctx.strokeStyle=intercept===0?'#2e7d32':'#fa8c16';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      // origin
+      ctx.fillStyle='#cf1322';ctx.beginPath();ctx.arc(ox,oy,4,0,2*Math.PI);ctx.fill();
+      ctx.fillStyle='#cf1322';ctx.font='12px sans-serif';ctx.fillText('O (원점)',ox+8,oy+15);
+      // u, v points (on line)
+      const U=pt(u),V=pt(v);
+      const [ux,uy]=px(U),[vx,vy]=px(V);
+      function dot(x,y,col,label){
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,7,0,2*Math.PI);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+        ctx.fillStyle=col;ctx.font='bold 14px sans-serif';ctx.fillText(label,x+10,y-8);
+      }
+      dot(ux,uy,'#1677ff','u');
+      dot(vx,vy,'#7b1fa2','v');
+      // u+v
+      const SUM={x:U.x+V.x,y:U.y+V.y};
+      const [sx,sy]=px(SUM);
+      // arrow from origin through u to u+v (parallelogram method)
+      ctx.strokeStyle='#1677ff';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ux,uy);ctx.lineTo(sx,sy);ctx.stroke();
+      ctx.strokeStyle='#7b1fa2';
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(vx,vy);ctx.lineTo(sx,sy);ctx.stroke();
+      ctx.setLineDash([]);
+      dot(sx,sy,'#cf1322','u+v');
+      // verdict
+      const onLine=Math.abs(SUM.y-(2*SUM.x+intercept))<1e-6;
+      const expl=document.getElementById('subExplain');
+      if(intercept===0){
+        expl.innerHTML='<b style="color:#2e7d32">y = 2x  (원점 지남)</b> — u, v 가 직선 위에 있을 때 u+v 도 항상 직선 위. ✓ <b>덧셈 닫힘 → 부분공간</b>.';
+      } else {
+        expl.innerHTML=`<b style="color:#fa8c16">y = 2x + 1  (원점 안 지남)</b> — u+v = (${SUM.x.toFixed(2)}, ${SUM.y.toFixed(2)}). 직선 식에 대입: 2(${SUM.x.toFixed(2)})+1 = ${(2*SUM.x+1).toFixed(2)} ≠ ${SUM.y.toFixed(2)}. <b style="color:#cf1322">→ u+v 가 직선 밖! 닫힘 실패 → 부분공간 아님</b>.`;
+      }
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('● 파랑·보라 점을 마우스로 끌어 옮겨보세요 (직선 위에서만 움직임)',10,H-10);
+    }
+    c.addEventListener('mousedown',e=>{
+      const m=getMouse(e);
+      const [ux,uy]=px(pt(u)),[vx,vy]=px(pt(v));
+      if((m.x-ux)**2+(m.y-uy)**2<400) dragging='u';
+      else if((m.x-vx)**2+(m.y-vy)**2<400) dragging='v';
+    });
+    c.addEventListener('mousemove',e=>{
+      if(!dragging) return;
+      const t=Math.max(-6,Math.min(6,tFromMouse(getMouse(e))));
+      if(dragging==='u') u.t=t; else v.t=t;draw();
+    });
+    window.addEventListener('mouseup',()=>dragging=null);
+    document.getElementById('toggleLine').onclick=()=>{
+      intercept=intercept===0?1:0;
+      document.getElementById('toggleLine').textContent=`직선 바꾸기 (현재: y = 2x ${intercept===0?'':'+ 1'})`;
+      draw();
+    };
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

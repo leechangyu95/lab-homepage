@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 폐루프 MPC vs 개루프 — 외란 회복 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 폐루프 MPC vs 개루프 — 외란 회복</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/05-receding-horizon.html">Week 5. 수신지평선 MPC</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 폐루프 MPC vs 개루프 — 외란 회복</h4>
+    <p>두 컨트롤러가 같은 시스템을 같은 목표로 보냅니다. <strong>중간에 외란</strong>(빨간 화살표)이 들어오면, 폐루프 MPC는 즉시 새 계획으로 복구하지만 개루프는 미리 짜둔 시퀀스를 그대로 적용해 회복 못 해요.</p>
+    <canvas id="rhcl" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>외란 크기 <span class="val" id="dCV">2.0</span><input type="range" id="dC" min="0" max="5" step="0.1" value="2"></label>
+      <label>외란 시점 <span class="val" id="dTV">25</span><input type="range" id="dT" min="5" max="60" step="1" value="25"></label>
+      <button id="rhRun">다시 실행</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rhcl');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function solveOpen(x0,N,r){
+      // greedy-style "open-loop" plan: choose u sequence once at t=0 minimizing cost
+      const dt=0.1;let bestU=[],bestC=Infinity;
+      // Use receding-style search at t=0 only
+      let xs=[x0];const us=[];
+      let xCur=x0;
+      for(let k=0;k<N;k++){
+        let bU=0,bC=Infinity;
+        for(let ug=-100;ug<=100;ug++){const u=ug/50;let xp=xCur,cost=0;
+          for(let i=0;i<10;i++){xp+=dt*(-xp+u);cost+=(xp-r)*(xp-r)+0.05*u*u;}
+          if(cost<bC){bC=cost;bU=u;}}
+        us.push(bU);xCur+=dt*(-xCur+bU);xs.push(xCur);
+      }
+      return us;
+    }
+    function step(x,u,r){const dt=0.1;return x+dt*(-x+u);}
+    function draw(){
+      const dC=+document.getElementById('dC').value;
+      const dT=+document.getElementById('dT').value;
+      document.getElementById('dCV').textContent=dC.toFixed(1);
+      document.getElementById('dTV').textContent=dT;
+      const T=80,r=5,dt=0.1;
+      // Open-loop: plan once at t=0
+      const planU=solveOpen(0,T,r);
+      let xOpen=0;const xsOpen=[];
+      for(let k=0;k<T;k++){xsOpen.push(xOpen);let u=planU[k];if(k===dT)xOpen+=dC;xOpen=step(xOpen,u,r);}
+      // Closed-loop MPC: re-solve at each step, horizon N=15
+      let xCl=0;const xsCl=[];
+      for(let k=0;k<T;k++){
+        xsCl.push(xCl);
+        // Solve current MPC: greedy 1-step
+        let bU=0,bC=Infinity;
+        for(let ug=-100;ug<=100;ug++){const u=ug/50;let xp=xCl,cost=0;
+          for(let i=0;i<15;i++){xp+=dt*(-xp+u);cost+=(xp-r)*(xp-r)+0.05*u*u;}
+          if(cost<bC){bC=cost;bU=u;}}
+        if(k===dT)xCl+=dC;
+        xCl=step(xCl,bU,r);
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.beginPath();ctx.moveTo(40,30);ctx.lineTo(W-20,30);ctx.moveTo(40,H-30);ctx.lineTo(W-20,H-30);ctx.moveTo(40,30);ctx.lineTo(40,H-30);ctx.stroke();
+      const refY=H-30-(r/8)*(H-60);
+      ctx.strokeStyle='#999';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(40,refY);ctx.lineTo(W-20,refY);ctx.stroke();ctx.setLineDash([]);
+      function plot(arr,col){
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();
+        arr.forEach((v,i)=>{const x=40+(i/(T-1))*(W-60);const y=H-30-(v/8)*(H-60);
+          if(!isFinite(y))return;
+          if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+      }
+      plot(xsOpen,'#ff8c00');plot(xsCl,'#0b5fff');
+      // disturbance arrow
+      const dX=40+(dT/(T-1))*(W-60);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(dX,30);ctx.lineTo(dX,H-30);ctx.stroke();
+      ctx.fillStyle='#c62828';ctx.font='12px sans-serif';ctx.fillText('외란 ↓',dX-15,28);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('x(t), 목표=5',12,22);
+      ctx.fillStyle='#0b5fff';ctx.fillText('폐루프 MPC',W-150,22);
+      ctx.fillStyle='#ff8c00';ctx.fillText('개루프 (한 번만 계획)',W-150,40);
+    }
+    document.getElementById('dC').addEventListener('input',draw);
+    document.getElementById('dT').addEventListener('input',draw);
+    document.getElementById('rhRun').addEventListener('click',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

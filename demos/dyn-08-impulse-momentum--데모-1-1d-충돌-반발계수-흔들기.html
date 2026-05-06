@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 1: 1D 충돌 — 반발계수 흔들기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 1: 1D 충돌 — 반발계수 흔들기</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/08-impulse-momentum.html">Week 8. 충격량과 운동량</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 1: 1D 충돌 — 반발계수 흔들기</h4>
+    <p>두 공이 정면 충돌합니다. <strong>반발계수 $e$</strong>를 슬라이더로 바꿔보세요. $e=1$이면 운동에너지가 보존되고, $e=0$이면 두 공이 붙어 같이 움직입니다. 운동량은 모든 경우에 보존됩니다.</p>
+    <canvas id="col1C" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>공 A 속도 v₁ <span class="val" id="c1V1V">3</span><input type="range" id="c1V1" min="-5" max="5" step="0.1" value="3"></label>
+      <label>공 B 속도 v₂ <span class="val" id="c1V2V">-1</span><input type="range" id="c1V2" min="-5" max="5" step="0.1" value="-1"></label>
+      <label>질량비 m₂/m₁ <span class="val" id="c1MV">1</span><input type="range" id="c1M" min="0.1" max="5" step="0.1" value="1"></label>
+      <label>반발계수 e <span class="val" id="c1EV">0.8</span><input type="range" id="c1E" min="0" max="1" step="0.05" value="0.8"></label>
+      <button id="c1Reset">충돌 다시</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('col1C'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const ks=['c1V1','c1V2','c1M','c1E'];
+    const upd=()=>ks.forEach(k=>sl(k+'V').textContent=sl(k).value);
+    ks.forEach(k=>sl(k).oninput=upd);upd();
+    let A={x:200,v:3},B={x:440,v:-1},collided=false,phase='approach';
+    function reset(){
+      A={x:200,v:+sl('c1V1').value};
+      B={x:440,v:+sl('c1V2').value};
+      collided=false;phase='approach';
+    }
+    sl('c1Reset').onclick=reset;
+    ks.forEach(k=>sl(k).addEventListener('change',reset));
+    function loop(){
+      const m1=1,m2=+sl('c1M').value,e=+sl('c1E').value;
+      const dt=0.025;
+      A.x+=A.v*30*dt;B.x+=B.v*30*dt;
+      // collision detection
+      if(!collided && A.x+18>B.x-18 && A.v-B.v>0){
+        const v1=A.v,v2=B.v;
+        const v1p=(m1*v1+m2*v2-m2*e*(v1-v2))/(m1+m2);
+        const v2p=(m1*v1+m2*v2+m1*e*(v1-v2))/(m1+m2);
+        A.v=v1p;B.v=v2p;collided=true;
+      }
+      if(A.x<-30)A.x=c.width+30;if(A.x>c.width+30)A.x=-30;
+      if(B.x<-30)B.x=c.width+30;if(B.x>c.width+30)B.x=-30;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.fillStyle='#bcd6a8';x.fillRect(0,180,c.width,30);
+      // balls
+      function ball(p,r,col,label){
+        x.fillStyle=col;x.beginPath();x.arc(p.x,170,r,0,Math.PI*2);x.fill();x.strokeStyle='#333';x.stroke();
+        x.fillStyle='#fff';x.font='bold 12px sans-serif';x.textAlign='center';x.fillText(label,p.x,174);
+        x.strokeStyle=col;x.lineWidth=2;
+        x.beginPath();x.moveTo(p.x,170);x.lineTo(p.x+p.v*15,170);
+        const a=p.v>0?1:-1;
+        x.lineTo(p.x+p.v*15-a*5,165);x.moveTo(p.x+p.v*15,170);x.lineTo(p.x+p.v*15-a*5,175);x.stroke();
+      }
+      ball(A,18,'#0b5fff','m₁');
+      ball(B,18*Math.sqrt(m2),'#c62828','m₂');
+      // info
+      const v1=+sl('c1V1').value,v2=+sl('c1V2').value;
+      const m1=1;
+      const v1p=(m1*v1+m2*v2-m2*e*(v1-v2))/(m1+m2);
+      const v2p=(m1*v1+m2*v2+m1*e*(v1-v2))/(m1+m2);
+      const p_before=m1*v1+m2*v2,p_after=m1*v1p+m2*v2p;
+      const KE_b=0.5*(m1*v1*v1+m2*v2*v2),KE_a=0.5*(m1*v1p*v1p+m2*v2p*v2p);
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('충돌 전: v₁='+v1.toFixed(2)+', v₂='+v2.toFixed(2),20,25);
+      x.fillText('충돌 후: v₁\'='+v1p.toFixed(2)+', v₂\'='+v2p.toFixed(2),20,43);
+      x.fillText('운동량: '+p_before.toFixed(2)+' = '+p_after.toFixed(2)+' (보존)',20,61);
+      x.fillStyle=Math.abs(KE_b-KE_a)<0.01?'#2e7d32':'#c62828';
+      x.fillText('운동에너지: '+KE_b.toFixed(2)+' → '+KE_a.toFixed(2)+(e<0.99?'  (열·소리로 손실)':'  (보존, 완전탄성)'),20,79);
+      x.fillStyle='#666';x.font='11px sans-serif';x.fillText('* m₁=1로 고정, m₂는 슬라이더, 공 크기로 표시',20,250);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

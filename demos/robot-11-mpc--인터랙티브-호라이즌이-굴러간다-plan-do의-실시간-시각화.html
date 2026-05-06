@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 호라이즌이 굴러간다 — Plan &amp; Do의 실시간 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 호라이즌이 굴러간다 — Plan &amp; Do의 실시간 시각화</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/11-mpc.html">Lecture 11. 모델 예측 제어 (MPC)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 호라이즌이 굴러간다 — Plan & Do의 실시간 시각화</h4>
+    <p>매 스텝마다 N개 미래를 예측(<span style="color:#f57c00">주황 점선 = 계획</span>)하지만 실제로는 첫 입력만 실행(<span style="color:#0b5fff">파랑 = 실현된 궤적</span>). 시간이 한 칸 흐르면 호라이즌이 한 칸 밀리고 새 계획이 나옵니다. 외란을 켜면 예측이 어긋나도 다음 스텝에서 자동 보정되는 게 보입니다.</p>
+    <canvas id="rh" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>호라이즌 N <span class="val" id="rhNV">15</span><input type="range" id="rhN" min="3" max="40" value="15"></label>
+      <label>레퍼런스
+        <select id="rhRef">
+          <option value="step" selected>계단</option>
+          <option value="sine">사인</option>
+          <option value="ramp">램프</option>
+        </select>
+      </label>
+      <label>외란 σ <span class="val" id="rhDV">0.0</span><input type="range" id="rhD" min="0" max="0.6" step="0.02" value="0"></label>
+      <button id="rhRst">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rh'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const Tmax=80;
+    let t,state,past;
+    function init(){t=0;state={p:0,v:0};past=[];}
+    init();
+    document.getElementById('rhRst').onclick=init;
+    function ref(k){
+      const m=document.getElementById('rhRef').value;
+      if(m==='step') return k<20?0:(k<50?2:1);
+      if(m==='sine') return 1.5*Math.sin(k*0.18);
+      return Math.min(2,k*0.04);
+    }
+    function px(k){return 30+k/Tmax*(W-60);}
+    function py(v){return H/2-v*60;}
+    function loop(){
+      const N=+document.getElementById('rhN').value;
+      const dist=+document.getElementById('rhD').value;
+      document.getElementById('rhNV').textContent=N;
+      document.getElementById('rhDV').textContent=dist.toFixed(2);
+      // simple predictive plan: from current state, simulate N steps with PD on tracking
+      const plan=[];
+      let pp=state.p,pv=state.v;
+      const Kp=1.5,Kd=1.2,umax=1.5,dt=0.25;
+      plan.push({k:t,p:pp,v:pv});
+      for(let i=1;i<=N;i++){
+        const r=ref(t+i);
+        let u=Kp*(r-pp)-Kd*pv;
+        u=Math.max(-umax,Math.min(umax,u));
+        pv+=u*dt;pp+=pv*dt;
+        plan.push({k:t+i,p:pp,v:pv});
+      }
+      // execute first plan step (with disturbance)
+      const r=ref(t);
+      let u=Kp*(r-state.p)-Kd*state.v;
+      u=Math.max(-umax,Math.min(umax,u));
+      const w=(Math.random()-0.5)*2*dist;
+      state.v+=(u+w)*dt;state.p+=state.v*dt;
+      past.push({k:t,p:state.p});
+      t++;
+      if(t>Tmax-N-2) init();
+      // render
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // grid
+      x.strokeStyle='#eee';
+      for(let i=0;i<=Tmax;i+=10){const xx=px(i);x.beginPath();x.moveTo(xx,30);x.lineTo(xx,H-30);x.stroke();}
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(30,H/2);x.lineTo(W-30,H/2);x.stroke();
+      // reference
+      x.strokeStyle='#c62828';x.setLineDash([4,4]);x.lineWidth=2;
+      x.beginPath();
+      for(let k=0;k<=Tmax;k++){const v=ref(k);if(k===0)x.moveTo(px(k),py(v));else x.lineTo(px(k),py(v));}
+      x.stroke();x.setLineDash([]);
+      // current-time vertical line
+      x.strokeStyle='rgba(0,0,0,0.35)';x.lineWidth=1.5;x.setLineDash([2,3]);
+      x.beginPath();x.moveTo(px(t),20);x.lineTo(px(t),H-30);x.stroke();x.setLineDash([]);
+      // horizon shading
+      x.fillStyle='rgba(255,140,0,0.08)';
+      x.fillRect(px(t),20,px(t+N)-px(t),H-50);
+      // past actual
+      x.strokeStyle='#0b5fff';x.lineWidth=2.5;x.beginPath();
+      past.forEach((p,i)=>{i?x.lineTo(px(p.k),py(p.p)):x.moveTo(px(p.k),py(p.p));});x.stroke();
+      // plan
+      x.strokeStyle='#f57c00';x.lineWidth=2;x.setLineDash([5,4]);
+      x.beginPath();
+      plan.forEach((p,i)=>{i?x.lineTo(px(p.k),py(p.p)):x.moveTo(px(p.k),py(p.p));});x.stroke();x.setLineDash([]);
+      plan.forEach(p=>{x.fillStyle='rgba(245,124,0,0.6)';x.beginPath();x.arc(px(p.k),py(p.p),2.5,0,Math.PI*2);x.fill();});
+      // current state
+      x.fillStyle='#0b5fff';x.beginPath();x.arc(px(t),py(state.p),5,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('현재 t = '+t,px(t)+6,28);
+      x.fillText('계획된 호라이즌 (N = '+N+')',px(t)+6,H-40);
+      x.fillText('실현된 입력 시퀀스',38,28);
+      requestAnimationFrame(()=>setTimeout(loop,80));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

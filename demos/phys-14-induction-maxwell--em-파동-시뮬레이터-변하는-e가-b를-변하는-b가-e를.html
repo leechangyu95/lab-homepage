@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EM 파동 시뮬레이터 — &quot;변하는 E가 B를, 변하는 B가 E를&quot; — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">EM 파동 시뮬레이터 — &quot;변하는 E가 B를, 변하는 B가 E를&quot;</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/14-induction-maxwell.html">Week 14. 전자기 유도 + 맥스웰 티저</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>EM 파동 시뮬레이터 — "변하는 E가 B를, 변하는 B가 E를"</h4>
+    <p>$\vec E \perp \vec B \perp$ 진행방향. 진폭은 임의이지만 비율은 $E/B = c$로 고정. 식 한 줄: $c = 1/\sqrt{\mu_0\varepsilon_0}$.</p>
+    <canvas id="w14_em" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>주파수 $f$ <span class="val" id="w14_emFV">1.0</span> ×10¹⁴ Hz
+        <input type="range" id="w14_emF" min="0.4" max="3.0" step="0.05" value="1.0"></label>
+      <label>진폭 $E_0$ <span class="val" id="w14_emAV">1.0</span>
+        <input type="range" id="w14_emA" min="0.3" max="1.5" step="0.05" value="1.0"></label>
+      <label>일시정지 <input type="checkbox" id="w14_emPause"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$\vec E$와 $\vec B$가 같은 위상으로 진동 (둘 다 동시에 0, 동시에 최대).</li>
+        <li>두 벡터는 서로 수직, 또 진행방향에도 수직 → <strong>횡파(transverse wave)</strong>.</li>
+        <li>주파수를 0.4 → 3.0으로 올리면 파장 $\lambda = c/f$가 짧아짐. 가시광 범위(약 4~7.5×10¹⁴ Hz).</li>
+        <li>모든 주파수에서 속도는 같음 — 빛의 속도 $c$.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w14_em');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let phase=0;
+    function draw(){
+      const f=+document.getElementById('w14_emF').value;
+      const A=+document.getElementById('w14_emA').value;
+      const paused=document.getElementById('w14_emPause').checked;
+      document.getElementById('w14_emFV').textContent=f.toFixed(2);
+      document.getElementById('w14_emAV').textContent=A.toFixed(2);
+      ctx.fillStyle='#0a0e1a';ctx.fillRect(0,0,W,H);
+      const cy=H/2;
+      // axis
+      ctx.strokeStyle='#445';ctx.lineWidth=1;ctx.beginPath();
+      ctx.moveTo(20,cy);ctx.lineTo(W-20,cy);ctx.stroke();
+      // wave
+      const k=f*0.04, amp=70*A;
+      // E field (vertical, blue)
+      ctx.strokeStyle='#3da9ff';ctx.lineWidth=2;ctx.beginPath();
+      for(let xp=20;xp<=W-20;xp++){
+        const xx=xp-20;
+        const yE=cy-amp*Math.sin(k*xx-phase);
+        if(xp===20)ctx.moveTo(xp,yE);else ctx.lineTo(xp,yE);
+      }
+      ctx.stroke();
+      // B field (horizontal-ish, drawn as separate y series red, offset)
+      ctx.strokeStyle='#ff5050';ctx.lineWidth=2;ctx.beginPath();
+      for(let xp=20;xp<=W-20;xp++){
+        const xx=xp-20;
+        const yB=cy+amp*0.6*Math.sin(k*xx-phase);
+        if(xp===20)ctx.moveTo(xp,yB);else ctx.lineTo(xp,yB);
+      }
+      ctx.stroke();
+      // arrows at fixed x
+      for(let xp=80;xp<W-40;xp+=80){
+        const xx=xp-20;
+        const eE=-amp*Math.sin(k*xx-phase);
+        const eB=amp*0.6*Math.sin(k*xx-phase);
+        // E arrow blue
+        ctx.strokeStyle='#3da9ff';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(xp,cy);ctx.lineTo(xp,cy+eE);ctx.stroke();
+        // B arrow red
+        ctx.strokeStyle='#ff5050';
+        ctx.beginPath();ctx.moveTo(xp,cy);ctx.lineTo(xp,cy+eB);ctx.stroke();
+      }
+      // labels
+      ctx.fillStyle='#3da9ff';ctx.font='bold 13px sans-serif';
+      ctx.fillText('E (전기장)',30,30);
+      ctx.fillStyle='#ff5050';
+      ctx.fillText('B (자기장)',30,50);
+      ctx.fillStyle='#ddd';ctx.font='12px sans-serif';
+      ctx.fillText('→ 진행방향 (속도 c)',W-160,cy-8);
+      ctx.fillText('λ = c/f',W-100,30);
+      if(!paused) phase+=0.05*f;
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

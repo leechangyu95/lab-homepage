@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 1D 칼만 필터 (이동하는 목표) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 1D 칼만 필터 (이동하는 목표)</h1>
+  <p class="demo-meta">
+    로봇공학특론 · <a href="../backup-lectures/lectures/04-kalman-1d.html">Lecture 4. 칼만 필터 (1D)</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 1D 칼만 필터 (이동하는 목표)</h4>
+    <p>목표가 사인파처럼 움직입니다. 측정 잡음 $R$과 모델 잡음 $Q$를 조절하며 추정이 어떻게 변하는지 관찰하세요.</p>
+    <canvas id="kf" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>측정 잡음 R <span class="val" id="rV">3</span><input type="range" id="r" min="0.1" max="10" step="0.1" value="3"></label>
+      <label>모델 잡음 Q <span class="val" id="qV">0.1</span><input type="range" id="q" min="0.01" max="2" step="0.01" value="0.1"></label>
+      <button id="rst">리셋</button>
+    </div>
+    <p style="font-size:13px;color:#666">🟢 진짜 &nbsp; 🔴 측정 &nbsp; 🔵 KF 추정</p>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('kf'),x=c.getContext('2d');
+    let t=0, hist=[];
+    const sl=(id)=>document.getElementById(id);
+    const upd=()=>{sl('rV').textContent=sl('r').value;sl('qV').textContent=sl('q').value;};
+    sl('rst').onclick=()=>{t=0;hist=[];xh=0;P=1;};
+    ['r','q'].forEach(k=>sl(k).oninput=upd);
+    let xh=0,P=1;
+    function loop(){
+      const R=+sl('r').value,Q=+sl('q').value,dt=0.05,A=1,H=1;
+      const truth=20+15*Math.sin(t*0.5);
+      const meas=truth+(Math.random()*2-1)*Math.sqrt(R)*1.5;
+      const xp=A*xh, Pp=A*P*A+Q;
+      const K=Pp*H/(H*Pp*H+R);
+      xh=xp+K*(meas-H*xp);
+      P=(1-K*H)*Pp;
+      hist.push({t,truth,meas,est:xh});
+      if(hist.length>300)hist.shift();
+      t+=dt;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      x.strokeStyle='#eee';for(let i=0;i<c.height;i+=40){x.beginPath();x.moveTo(0,i);x.lineTo(c.width,i);x.stroke();}
+      const sx=v=>v*2, sy=v=>140-(v-20)*5;
+      x.strokeStyle='#2e7d32';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.truth);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#c62828';
+      hist.forEach((h,i)=>{x.beginPath();x.arc(sx(i),sy(h.meas),1.5,0,Math.PI*2);x.fill();});
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      hist.forEach((h,i)=>{const xx=sx(i),yy=sy(h.est);if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);});x.stroke();
+      x.fillStyle='#666';x.font='12px sans-serif';
+      x.fillText('K (현재 칼만 이득) = '+K.toFixed(3),12,260);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

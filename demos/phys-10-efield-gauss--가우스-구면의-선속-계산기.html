@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 가우스 구면의 선속 계산기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 가우스 구면의 선속 계산기</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/10-efield-gauss.html">Week 10. 전기장과 가우스 법칙</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 가우스 구면의 선속 계산기</h4>
+    <p>중심에 점전하 $Q$가 있고 반지름 $R$의 구를 그렸습니다. 그 구를 통과하는 총 선속 $\Phi = Q/\varepsilon_0$이 <strong>구의 반지름과 무관</strong>하게 일정함에 주목.</p>
+    <canvas id="w10_gauss" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>중심 전하 $Q$ <span class="val" id="w10_QV">+5</span> nC
+        <input type="range" id="w10_Q" min="-10" max="10" step="1" value="5"></label>
+      <label>가우스 구의 반지름 $R$ <span class="val" id="w10_RV">2.0</span> m
+        <input type="range" id="w10_R" min="0.5" max="5" step="0.1" value="2"></label>
+      <label>외부 추가 전하 $Q_\text{ext}$ <span class="val" id="w10_QextV">0</span> nC
+        <input type="range" id="w10_Qext" min="-10" max="10" step="1" value="0"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>발견할 것</strong>
+      <ul>
+        <li>$R$을 바꿔도 총 선속 $\Phi$는 일정 — <strong>가우스 법칙의 핵심</strong>.</li>
+        <li>$Q_\text{ext}$를 켜고 끄면 외부 전하는 총 선속에 <em>전혀</em> 영향 안 줌(들어오는 만큼 나감).</li>
+        <li>$R$이 작아지면 표면 위 $E = Q/(4\pi\varepsilon_0 R^2)$이 빠르게 커짐 — 면적과 $E$의 곱이 일정.</li>
+        <li>$Q$ 부호를 바꾸면 화살표가 들어오는 방향(음의 선속)으로 뒤집힘.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('w10_gauss');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const eps0=8.854e-12;
+    function arrow(x1,y1,x2,y2,col,lw){
+      ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw||1.5;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1),hl=7;
+      ctx.beginPath();ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+      ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fill();
+    }
+    function draw(){
+      const Q=+document.getElementById('w10_Q').value*1e-9;
+      const R=+document.getElementById('w10_R').value;
+      const Qext=+document.getElementById('w10_Qext').value*1e-9;
+      document.getElementById('w10_QV').textContent=(Q*1e9>=0?'+':'')+(Q*1e9).toFixed(0);
+      document.getElementById('w10_RV').textContent=R.toFixed(1);
+      document.getElementById('w10_QextV').textContent=(Qext*1e9>=0?'+':'')+(Qext*1e9).toFixed(0);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const sc=50, ox=W/2, oy=H/2;
+      ctx.strokeStyle='#eef0f4';ctx.lineWidth=1;
+      for(let g=-6;g<=6;g++){
+        ctx.beginPath();ctx.moveTo(ox+g*sc,0);ctx.lineTo(ox+g*sc,H);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,oy+g*sc);ctx.lineTo(W,oy+g*sc);ctx.stroke();
+      }
+      // gauss circle
+      ctx.strokeStyle='#7b1fa2';ctx.setLineDash([8,4]);ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.arc(ox,oy,R*sc,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      // E arrows along radii
+      const N=16;
+      for(let i=0;i<N;i++){
+        const a=i*2*Math.PI/N;
+        const cosA=Math.cos(a), sinA=Math.sin(a);
+        const r1=R-0.4, r2=R+0.4;
+        const x1=ox+r1*sc*cosA, y1=oy-r1*sc*sinA;
+        const x2=ox+r2*sc*cosA, y2=oy-r2*sc*sinA;
+        const col=Q>=0?'#c62828':'#1565c0';
+        if(Q>=0) arrow(x1,y1,x2,y2,col,1.7);
+        else arrow(x2,y2,x1,y1,col,1.7);
+      }
+      // central charge
+      ctx.fillStyle=Q>=0?'#c62828':'#1565c0';
+      ctx.beginPath();ctx.arc(ox,oy,11,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+      ctx.fillText(Q>=0?'+':'−',ox,oy+5);
+      // external charge (outside)
+      if(Math.abs(Qext)>1e-15){
+        const epx=ox+(R+1.6)*sc, epy=oy-(R+1.0)*sc;
+        ctx.fillStyle=Qext>=0?'#c62828':'#1565c0';
+        ctx.beginPath();ctx.arc(epx,epy,9,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#fff';ctx.fillText(Qext>=0?'+':'−',epx,epy+5);
+        ctx.fillStyle='#666';ctx.font='11px sans-serif';
+        ctx.fillText('Q_ext (선속 기여 = 0)',epx-50,epy-12);
+      }
+      ctx.textAlign='left';
+      // panel
+      const Phi=Q/eps0; // SI
+      const Esurf=Q/(4*Math.PI*eps0*R*R);
+      const A=4*Math.PI*R*R;
+      ctx.fillStyle='rgba(255,255,255,0.94)';ctx.fillRect(8,8,302,82);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(8,8,302,82);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('Q_enc = '+(Q*1e9).toFixed(1)+' nC',16,28);
+      ctx.fillText('Φ = Q/ε₀ = '+Phi.toExponential(2)+' N·m²/C',16,46);
+      ctx.fillText('표면 E = '+Esurf.toExponential(2)+' N/C',16,64);
+      ctx.fillText('표면적 A = 4πR² = '+A.toFixed(1)+' m²',16,82);
+    }
+    ['w10_Q','w10_R','w10_Qext'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

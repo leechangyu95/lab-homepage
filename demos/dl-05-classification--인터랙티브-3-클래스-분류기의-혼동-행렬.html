@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 3-클래스 분류기의 혼동 행렬 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 3-클래스 분류기의 혼동 행렬</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/05-classification.html">Week 5. 분류 알고리즘 — KNN, SVM, 결정트리</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 3-클래스 분류기의 혼동 행렬</h4>
+    <p>가상의 분류기가 손글씨 숫자 0/1/2를 맞춘 결과를 시뮬레이션. 대각선이 진할수록 좋은 분류기. 비대각선의 진한 칸은 "어디서 헷갈리는가"의 단서.</p>
+    <canvas id="cmDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>혼동 정도 <span class="val" id="cmCV">0.2</span><input type="range" id="cmC" min="0" max="0.5" step="0.02" value="0.2"></label>
+      <button id="cmR">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cmDemo');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let cm=[[0,0,0],[0,0,0],[0,0,0]];
+    function gen(){
+      const conf=+document.getElementById('cmC').value;
+      cm=[[0,0,0],[0,0,0],[0,0,0]];
+      for(let i=0;i<300;i++){
+        const trueClass=i%3;
+        const r=Math.random();
+        let pred=trueClass;
+        if(r<conf){pred=(trueClass+1)%3;}
+        else if(r<conf*1.3){pred=(trueClass+2)%3;}
+        cm[trueClass][pred]++;
+      }
+      draw();
+    }
+    function draw(){
+      const conf=+document.getElementById('cmC').value;
+      document.getElementById('cmCV').textContent=conf.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cellW=80,cellH=70,startX=180,startY=70;
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText('예측',startX+cellW*1.2,30);
+      ctx.save();ctx.translate(60,startY+cellH*1.5);ctx.rotate(-Math.PI/2);ctx.fillText('실제',0,0);ctx.restore();
+      const max=Math.max(...cm.flat());
+      for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+        const t=cm[i][j]/max;
+        const x=startX+j*cellW,y=startY+i*cellH;
+        ctx.fillStyle=`rgba(11,95,255,${t*0.9+0.1})`;
+        ctx.fillRect(x,y,cellW-2,cellH-2);
+        ctx.fillStyle=t>0.5?'#fff':'#222';
+        ctx.font='bold 18px sans-serif';
+        ctx.fillText(cm[i][j],x+cellW/2-10,y+cellH/2+5);
+      }
+      // labels
+      ctx.fillStyle='#666';ctx.font='13px sans-serif';
+      for(let i=0;i<3;i++){
+        ctx.fillText(`클래스 ${i}`,startX-65,startY+i*cellH+cellH/2+5);
+        ctx.fillText(`${i}`,startX+i*cellW+cellW/2-3,startY-8);
+      }
+      // metrics
+      let acc=0,total=0;
+      for(let i=0;i<3;i++){acc+=cm[i][i];for(let j=0;j<3;j++)total+=cm[i][j];}
+      ctx.fillStyle='#222';ctx.font='14px sans-serif';
+      ctx.fillText(`Accuracy: ${(acc/total*100).toFixed(1)}% (${acc}/${total})`,startX,startY+cellH*3+25);
+    }
+    document.getElementById('cmC').addEventListener('input',gen);
+    document.getElementById('cmR').addEventListener('click',gen);
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

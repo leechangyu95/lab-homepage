@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 평활 커패시터 — 리플과 $RC$의 관계 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 평활 커패시터 — 리플과 $RC$의 관계</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/09-diode.html">Week 9. 반도체와 다이오드 — 한 방향만 흐르는 전기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 평활 커패시터 — 리플과 $RC$의 관계</h4>
+    <p>전파 정류된 출력에 평활 커패시터를 달면 골짜기가 메워집니다. $C$나 $R_L$이 클수록 시정수가 길어져 리플이 작아져요. 근사식 $V_{ripple} \approx V_p/(2 f R_L C)$.</p>
+    <canvas id="smoothCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>V_p <span class="val" id="smVpV">10</span> V<input type="range" id="smVp" min="2" max="20" step="0.5" value="10"></label>
+      <label>R_L <span class="val" id="smRLV">1.0</span> kΩ<input type="range" id="smRL" min="0.1" max="10" step="0.1" value="1"></label>
+      <label>C <span class="val" id="smCV">100</span> μF<input type="range" id="smC" min="1" max="2000" step="10" value="100"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('smoothCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const f=60;
+    function draw(){
+      const Vp=+document.getElementById('smVp').value;
+      const RL=+document.getElementById('smRL').value*1000;
+      const Cv=+document.getElementById('smC').value*1e-6;
+      document.getElementById('smVpV').textContent=Vp.toFixed(1);
+      document.getElementById('smRLV').textContent=(RL/1000).toFixed(1);
+      document.getElementById('smCV').textContent=(Cv*1e6).toFixed(0);
+      const tau=RL*Cv;
+      // Simulate over 4 cycles with 60Hz, full-wave so 120Hz output
+      const Tac=1/f,Tspan=Tac*2; // 2 cycles of input
+      const N=600;
+      const dt=Tspan/N;
+      let v=Vp;
+      const arr=[];
+      for(let k=0;k<N;k++){
+        const t=k*dt;
+        const vIn=Math.abs(Vp*Math.sin(2*Math.PI*f*t)); // full wave
+        if(vIn>v){v=vIn;}
+        else{v=v*Math.exp(-dt/tau);} // discharge through RL
+        arr.push({t,vIn,v});
+      }
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      function x(t){return 60+t/Tspan*(W-90);}
+      function y(vv){return H-50-vv/(Vp*1.1)*(H-90);}
+      ctx.strokeStyle='#666';
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(Tspan),y(0));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x(0),y(0));ctx.lineTo(x(0),y(Vp*1.05));ctx.stroke();
+      // Input rectified
+      ctx.strokeStyle='#999';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();
+      arr.forEach((p,i)=>{if(i===0)ctx.moveTo(x(p.t),y(p.vIn));else ctx.lineTo(x(p.t),y(p.vIn));});
+      ctx.stroke();ctx.setLineDash([]);
+      // Smoothed
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      arr.forEach((p,i)=>{if(i===0)ctx.moveTo(x(p.t),y(p.v));else ctx.lineTo(x(p.t),y(p.v));});
+      ctx.stroke();
+      // Compute ripple from second half (settled)
+      const half=arr.slice(N/2);
+      const vmin=Math.min(...half.map(p=>p.v));
+      const vmax=Math.max(...half.map(p=>p.v));
+      const ripple=vmax-vmin;
+      const rapprox=Vp/(2*f*RL*Cv);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`τ = R_L C = ${(tau*1000).toFixed(1)} ms (출력 주기 ${(1/(2*f)*1000).toFixed(2)}ms)`,40,30);
+      ctx.fillText(`V_ripple 측정 ≈ ${ripple.toFixed(2)} V,  근사 ≈ ${rapprox.toFixed(2)} V`,40,52);
+      ctx.fillStyle='#999';ctx.font='12px sans-serif';
+      ctx.fillText('점선: 정류 입력  |  실선: 평활 출력',W-260,28);
+    }
+    ['smVp','smRL','smC'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

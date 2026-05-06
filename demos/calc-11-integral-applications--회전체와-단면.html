@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 회전체와 단면 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 회전체와 단면</h1>
+  <p class="demo-meta">
+    미분적분학 · <a href="../backup-lectures/lectures-calculus/11-integral-applications.html">Week 11. 적분 응용 — 면적·부피·곡선 길이</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 회전체와 단면</h4>
+    <p>곡선을 골라 보세요. 왼쪽에 곡선과 회전축, 오른쪽에 회전체의 단면(원반)이 보입니다. 슬라이더로 단면 위치 $x$ 를 움직이면 그 위치의 원 반지름이 정확히 $f(x)$ 인 것을 확인할 수 있어요.</p>
+    <canvas id="vol" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>곡선
+        <select id="volF">
+          <option value="line" selected>y = 0.6x (원뿔)</option>
+          <option value="parab">y = √(1−(x−1)²) (반구)</option>
+          <option value="cup">y = 0.4 + 0.3x² (컵)</option>
+        </select>
+      </label>
+      <label>단면 x <span class="val" id="volXV">1.00</span><input type="range" id="volX" min="0.1" max="1.9" step="0.01" value="1"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('vol'),x=c.getContext('2d');
+    const W=c.width,H=c.height;
+    const M={l:50,r:20,t:20,b:30};
+    function f(v){
+      const m=document.getElementById('volF').value;
+      if(m==='line')return 0.6*v;
+      if(m==='parab')return v>=0&&v<=2?Math.sqrt(1-(v-1)*(v-1)):NaN;
+      return 0.4+0.3*v*v;
+    }
+    function loop(){
+      const xc=+document.getElementById('volX').value;
+      document.getElementById('volXV').textContent=xc.toFixed(2);
+      x.fillStyle='#fafbfc';x.fillRect(0,0,W,H);
+      // left: curve view
+      const Lx0=40,Lx1=W/2-10,Ly0=20,Ly1=H-20;
+      x.strokeStyle='#ddd';x.strokeRect(Lx0,Ly0,Lx1-Lx0,Ly1-Ly0);
+      const xR=[0,2],yR=[-1.4,1.4];
+      function px(v){return Lx0+(v-xR[0])/(xR[1]-xR[0])*(Lx1-Lx0);}
+      function py(v){return Ly1-(v-yR[0])/(yR[1]-yR[0])*(Ly1-Ly0);}
+      // axis
+      x.strokeStyle='#888';x.lineWidth=1.2;
+      x.beginPath();x.moveTo(Lx0,py(0));x.lineTo(Lx1,py(0));x.stroke();
+      // curve top
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      let first=true;
+      for(let v=xR[0];v<=xR[1];v+=0.01){
+        const yv=f(v);if(!isFinite(yv))continue;
+        if(first){x.moveTo(px(v),py(yv));first=false;}else x.lineTo(px(v),py(yv));
+      }
+      x.stroke();
+      // mirror (rotation symmetric)
+      x.strokeStyle='rgba(11,95,255,0.4)';x.beginPath();
+      first=true;
+      for(let v=xR[0];v<=xR[1];v+=0.01){
+        const yv=f(v);if(!isFinite(yv))continue;
+        if(first){x.moveTo(px(v),py(-yv));first=false;}else x.lineTo(px(v),py(-yv));
+      }
+      x.stroke();
+      // section line
+      const yc=f(xc);
+      x.strokeStyle='#c62828';x.lineWidth=2;x.setLineDash([4,3]);
+      x.beginPath();x.moveTo(px(xc),py(yc));x.lineTo(px(xc),py(-yc));x.stroke();x.setLineDash([]);
+      x.fillStyle='#c62828';x.beginPath();x.arc(px(xc),py(yc),4,0,Math.PI*2);x.fill();
+      x.beginPath();x.arc(px(xc),py(-yc),4,0,Math.PI*2);x.fill();
+      // right: cross-section disk
+      const Rx0=W/2+10,Rx1=W-20,Ry0=20,Ry1=H-20;
+      x.strokeStyle='#ddd';x.strokeRect(Rx0,Ry0,Rx1-Rx0,Ry1-Ry0);
+      const cx=(Rx0+Rx1)/2,cy=(Ry0+Ry1)/2;
+      const scale=80;
+      const r=yc*scale;
+      x.fillStyle='rgba(245,124,0,0.3)';
+      x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fill();
+      x.strokeStyle='#f57c00';x.lineWidth=2;
+      x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.stroke();
+      // axis center
+      x.fillStyle='#222';x.beginPath();x.arc(cx,cy,3,0,Math.PI*2);x.fill();
+      // labels
+      x.fillStyle='#222';x.font='13px sans-serif';
+      x.fillText('y = f(x)',Lx0+10,Ly0+18);
+      x.fillText('단면: 반지름 r = f(x)',Rx0+10,Ry0+18);
+      x.fillStyle='#b35c00';
+      x.fillText('r = '+yc.toFixed(2)+',   π r² = '+(Math.PI*yc*yc).toFixed(3),Rx0+10,Ry1-10);
+      requestAnimationFrame(()=>setTimeout(loop,50));
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: BJT 스위치 — 입력 HIGH/LOW에 따른 모터 ON/OFF — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: BJT 스위치 — 입력 HIGH/LOW에 따른 모터 ON/OFF</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/10-transistor.html">Week 10. 트랜지스터 — 작은 신호로 큰 전류를 다루는 3단자 소자</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: BJT 스위치 — 입력 HIGH/LOW에 따른 모터 ON/OFF</h4>
+    <p>아두이노 핀이 HIGH면 베이스로 충분한 전류 → 포화 → 모터 ON. LOW면 차단 → OFF. 베이스 저항을 너무 크게 두면 포화에 못 들어가 LED/모터가 약하게 켜져요.</p>
+    <canvas id="bjtswCanvas" width="640" height="240"></canvas>
+    <div class="controls">
+      <label>입력
+        <select id="swIn"><option value="5">HIGH (5V)</option><option value="0">LOW (0V)</option></select>
+      </label>
+      <label>R_B <span class="val" id="swRBV">1.0</span> kΩ<input type="range" id="swRB" min="0.1" max="50" step="0.1" value="1"></label>
+      <label>모터 전류 필요 <span class="val" id="swICV">100</span> mA<input type="range" id="swIC" min="10" max="500" step="10" value="100"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bjtswCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const beta=100;
+    function draw(){
+      const Vin=+document.getElementById('swIn').value;
+      const RB=+document.getElementById('swRB').value*1000;
+      const ICneed=+document.getElementById('swIC').value/1000;
+      document.getElementById('swRBV').textContent=(RB/1000).toFixed(1);
+      document.getElementById('swICV').textContent=(ICneed*1000).toFixed(0);
+      let IB=0,state='OFF',color='#999';
+      if(Vin>=0.7){IB=(Vin-0.7)/RB;}
+      const IBneed=ICneed/beta;
+      let actualIC=0;
+      if(IB===0){state='차단 (모터 OFF)';color='#999';actualIC=0;}
+      else if(IB>=IBneed){state='포화 (모터 ON)';color='#1b5e20';actualIC=ICneed;}
+      else{state='능동 영역 (모터 약하게)';color='#f5a623';actualIC=beta*IB;}
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // Motor visualization
+      const mx=W-120,my=80;
+      ctx.beginPath();ctx.arc(mx,my,30,0,Math.PI*2);
+      ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.stroke();
+      const fillRatio=actualIC/(ICneed||1);
+      ctx.fillStyle=color;ctx.globalAlpha=Math.min(1,fillRatio);
+      ctx.beginPath();ctx.arc(mx,my,28,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';
+      ctx.fillText('M',mx-6,my+5);
+      ctx.fillStyle=color;ctx.font='15px sans-serif';
+      ctx.fillText(state,40,40);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`I_B = ${(IB*1e6).toFixed(1)} μA`,40,75);
+      ctx.fillText(`필요 I_B (포화) ≥ I_C/β = ${(IBneed*1e6).toFixed(1)} μA`,40,100);
+      ctx.fillText(`I_C 실제 = ${(actualIC*1000).toFixed(1)} mA / 필요 ${(ICneed*1000).toFixed(0)} mA`,40,125);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      const margin=IB/IBneed;
+      ctx.fillText(IB===0?'베이스 전류 0 → BJT OFF':margin>=2?`마진 ${margin.toFixed(1)}× — 안전한 포화`:margin>=1?`겨우 포화 (마진 ${margin.toFixed(2)}×)`:`R_B 너무 큼: 포화 못 들어감`,40,160);
+      ctx.fillText('실무 가이드: I_B를 필요값의 2~10배로 흘려 포화 마진 확보',40,185);
+    }
+    ['swIn','swRB','swIC'].forEach(id=>{const el=document.getElementById(id);el.addEventListener('input',draw);el.addEventListener('change',draw);});
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

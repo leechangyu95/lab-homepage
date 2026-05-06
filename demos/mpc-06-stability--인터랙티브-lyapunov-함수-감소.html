@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Lyapunov 함수 감소 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Lyapunov 함수 감소</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/06-stability.html">Week 6. 안정성과 가용성</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Lyapunov 함수 감소</h4>
+    <p>2D 시스템의 폐루프 궤적과 Lyapunov 함수 $V(x) = x^\top P x$를 봅니다. 궤적이 어떤 등고선을 가로지를 때마다 $V$가 줄어드는 게 보여요. <strong>$Q/R$ 비율</strong>을 바꾸면 등고선과 수렴 속도가 동시에 변합니다.</p>
+    <canvas id="lyap" width="640" height="340"></canvas>
+    <div class="controls">
+      <label>$\log_{10}(Q/R)$ <span class="val" id="lyRV">1.0</span><input type="range" id="lyR" min="-1" max="3" step="0.1" value="1"></label>
+      <label>초기 X <span class="val" id="lyXV">2.5</span><input type="range" id="lyX" min="-3" max="3" step="0.2" value="2.5"></label>
+      <label>초기 Y <span class="val" id="lyYV">2.0</span><input type="range" id="lyY" min="-3" max="3" step="0.2" value="2"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('lyap');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function dare(QR){
+      const dt=0.1;const A=[[1,dt],[0,1]],B=[[0],[dt]];
+      const Q=[[QR,0],[0,QR*0.1]],R=1;
+      let P=[[QR,0],[0,QR*0.1]];
+      for(let it=0;it<300;it++){
+        // P_new = Q + A'PA - A'PB(R+B'PB)^-1 B'PA
+        const PA=[[P[0][0]*A[0][0]+P[0][1]*A[1][0],P[0][0]*A[0][1]+P[0][1]*A[1][1]],
+                  [P[1][0]*A[0][0]+P[1][1]*A[1][0],P[1][0]*A[0][1]+P[1][1]*A[1][1]]];
+        const ATPA=[[A[0][0]*PA[0][0]+A[1][0]*PA[1][0],A[0][0]*PA[0][1]+A[1][0]*PA[1][1]],
+                    [A[0][1]*PA[0][0]+A[1][1]*PA[1][0],A[0][1]*PA[0][1]+A[1][1]*PA[1][1]]];
+        const PB=[P[0][1]*B[1][0],P[1][1]*B[1][0]];
+        const BTPB=B[1][0]*PB[1];
+        const inv=1/(R+BTPB);
+        const BTPA=[B[1][0]*PA[1][0],B[1][0]*PA[1][1]];
+        const corr=[[BTPA[0]*PB[0]*inv,BTPA[1]*PB[0]*inv],[BTPA[0]*PB[1]*inv,BTPA[1]*PB[1]*inv]];
+        P=[[Q[0][0]+ATPA[0][0]-corr[0][0],Q[0][1]+ATPA[0][1]-corr[0][1]],
+           [Q[1][0]+ATPA[1][0]-corr[1][0],Q[1][1]+ATPA[1][1]-corr[1][1]]];
+      }
+      const PA=[[P[0][0]*A[0][0]+P[0][1]*A[1][0],P[0][0]*A[0][1]+P[0][1]*A[1][1]],
+                [P[1][0]*A[0][0]+P[1][1]*A[1][0],P[1][0]*A[0][1]+P[1][1]*A[1][1]]];
+      const PB=[P[0][1]*B[1][0],P[1][1]*B[1][0]];
+      const BTPB=B[1][0]*PB[1];
+      const inv=1/(R+BTPB);
+      const BTPA=[B[1][0]*PA[1][0],B[1][0]*PA[1][1]];
+      return {K:[BTPA[0]*inv,BTPA[1]*inv],P,A,B,dt};
+    }
+    function draw(){
+      const lr=+document.getElementById('lyR').value;
+      const x0=+document.getElementById('lyX').value;
+      const y0=+document.getElementById('lyY').value;
+      document.getElementById('lyRV').textContent=lr.toFixed(1);
+      document.getElementById('lyXV').textContent=x0.toFixed(1);
+      document.getElementById('lyYV').textContent=y0.toFixed(1);
+      const QR=Math.pow(10,lr);
+      const {K,P,A,B,dt}=dare(QR);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,sc=80;
+      // Lyapunov contours
+      ctx.strokeStyle='#cfd8e3';
+      for(let lev=0.5;lev<=10;lev*=1.6){
+        ctx.beginPath();
+        for(let a=0;a<=2*Math.PI;a+=0.05){
+          // P^{1/2} ellipse for x'Px = lev
+          // Use eigendecomposition approximation: just sample many points
+          const r=1;const xx=Math.cos(a),yy=Math.sin(a);
+          // Solve x'Px=lev in direction (xx,yy)
+          const den=P[0][0]*xx*xx+2*P[0][1]*xx*yy+P[1][1]*yy*yy;
+          const t=Math.sqrt(lev/den);
+          const px=cx+t*xx*sc,py=cy-t*yy*sc;
+          if(a===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();
+      ctx.moveTo(40,cy);ctx.lineTo(W-40,cy);ctx.moveTo(cx,40);ctx.lineTo(cx,H-40);ctx.stroke();
+      // simulate trajectory
+      let x=[x0,y0];const traj=[[...x]];
+      for(let k=0;k<60;k++){
+        const u=-(K[0]*x[0]+K[1]*x[1]);
+        x=[x[0]+dt*x[1],x[1]+dt*u];
+        traj.push([...x]);
+      }
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.beginPath();
+      traj.forEach((p,i)=>{const px=cx+p[0]*sc,py=cy-p[1]*sc;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});
+      ctx.stroke();
+      // points
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(cx+x0*sc,cy-y0*sc,7,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(cx,cy,7,0,Math.PI*2);ctx.fill();
+      // legend
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('Lyapunov 등고선 (회색) + 폐루프 궤적 (파랑)',12,22);
+      ctx.fillStyle='#c62828';ctx.fillText('● 초기점',12,40);
+      ctx.fillStyle='#2e7d32';ctx.fillText('● 원점 (목표)',12,58);
+      // V values along trajectory
+      const V0=P[0][0]*x0*x0+2*P[0][1]*x0*y0+P[1][1]*y0*y0;
+      const Vf=P[0][0]*x[0]*x[0]+2*P[0][1]*x[0]*x[1]+P[1][1]*x[1]*x[1];
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText(`V(x_0) = ${V0.toFixed(2)} → V(x_T) = ${Vf.toExponential(1)} (감소)`,12,H-15);
+    }
+    document.getElementById('lyR').addEventListener('input',draw);
+    document.getElementById('lyX').addEventListener('input',draw);
+    document.getElementById('lyY').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

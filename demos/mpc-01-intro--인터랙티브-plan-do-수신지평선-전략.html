@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Plan &amp; Do (수신지평선 전략) — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Plan &amp; Do (수신지평선 전략)</h1>
+  <p class="demo-meta">
+    모델예측제어 · <a href="../backup-lectures/lectures-mpc/01-intro.html">Week 1. MPC 입문</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Plan &amp; Do (수신지평선 전략)</h4>
+    <p>차(파랑)가 곡선 도로를 따라 목표(빨강)로 향합니다. 매 스텝마다 <strong>호라이즌 N</strong>만큼 앞을 내다보고 점선 경로를 미리 계획한 뒤, 그 <em>첫 한 스텝</em>만 실행합니다. 다음 스텝에서 다시 새 측정값으로 처음부터 계획해요. <strong>속도</strong> 슬라이더로 시뮬레이션 속도를 바꿔보세요.</p>
+    <canvas id="rh" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>호라이즌 N <span class="val" id="rhNV">15</span><input type="range" id="rhN" min="3" max="30" step="1" value="15"></label>
+      <label>속도 <span class="val" id="rhSV">1.0</span>×<input type="range" id="rhS" min="0.2" max="3" step="0.1" value="1"></label>
+      <button id="rhRun">시작/정지</button>
+      <button id="rhRst" class="alt">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rh');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const path=[];for(let i=0;i<200;i++){const t=i/200;path.push({x:40+t*(W-80),y:H/2+60*Math.sin(t*Math.PI*2)});}
+    const goal=path[path.length-1];
+    let pos={x:path[0].x,y:path[0].y},idx=0,running=false,raf=null;
+    function nearest(p){let bd=Infinity,bi=0;path.forEach((q,i)=>{const d=(q.x-p.x)**2+(q.y-p.y)**2;if(d<bd){bd=d;bi=i;}});return bi;}
+    function step(){
+      const N=+document.getElementById('rhN').value;
+      const sp=+document.getElementById('rhS').value;
+      idx=nearest(pos);
+      const target=path[Math.min(path.length-1,idx+Math.max(2,Math.floor(N/4)))];
+      const dx=target.x-pos.x,dy=target.y-pos.y,d=Math.hypot(dx,dy);
+      if(d>1){pos.x+=dx/d*sp*1.5;pos.y+=dy/d*sp*1.5;}
+      draw();
+    }
+    function draw(){
+      const N=+document.getElementById('rhN').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#cfd8e3';ctx.lineWidth=2;ctx.beginPath();
+      path.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+      // planned horizon (dashed)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();
+      ctx.moveTo(pos.x,pos.y);
+      for(let k=1;k<=N;k++){const j=Math.min(path.length-1,idx+k);ctx.lineTo(path[j].x,path[j].y);}
+      ctx.stroke();ctx.setLineDash([]);
+      // first step (solid)
+      const j1=Math.min(path.length-1,idx+1);
+      ctx.strokeStyle='#c62828';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(pos.x,pos.y);ctx.lineTo(path[j1].x,path[j1].y);ctx.stroke();
+      // goal & car
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(goal.x,goal.y,9,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#0b5fff';ctx.beginPath();ctx.arc(pos.x,pos.y,8,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      // legend
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('━ 점선 = 미래 N스텝 계획 (Plan)',12,22);
+      ctx.fillStyle='#c62828';ctx.fillText('━ 실선 = 실제 적용된 첫 스텝 (Do)',12,40);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('호라이즌 N='+N+', 위치 idx='+idx,12,H-10);
+      ctx.fillText('현재 → 목표 거리: '+Math.hypot(pos.x-goal.x,pos.y-goal.y).toFixed(0)+'px',W-220,H-10);
+    }
+    function tick(){if(running){step();raf=requestAnimationFrame(tick);}}
+    document.getElementById('rhN').addEventListener('input',()=>{document.getElementById('rhNV').textContent=document.getElementById('rhN').value;draw();});
+    document.getElementById('rhS').addEventListener('input',()=>{document.getElementById('rhSV').textContent=(+document.getElementById('rhS').value).toFixed(1);});
+    document.getElementById('rhRun').onclick=()=>{running=!running;if(running)tick();};
+    document.getElementById('rhRst').onclick=()=>{running=false;cancelAnimationFrame(raf);pos={x:path[0].x,y:path[0].y};idx=0;draw();};
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

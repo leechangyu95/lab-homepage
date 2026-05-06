@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 두 자동차의 상대속도 시각화 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 두 자동차의 상대속도 시각화</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/05-relative-dependent.html">Week 5. 상대운동과 종속운동</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 두 자동차의 상대속도 시각화</h4>
+    <p>차 A 와 차 B 의 속도 (방향 포함) 를 슬라이더로 바꾸면서 상대속도 $\mathbf{v}_{B/A}$ 를 시각화합니다.</p>
+    <canvas id="d5RelDemo" width="600" height="320"></canvas>
+    <div class="controls">
+      <label>v_A x (m/s) <span class="val" id="d5vAxV">20</span><input type="range" id="d5vAx" min="-30" max="30" step="1" value="20"></label>
+      <label>v_A y (m/s) <span class="val" id="d5vAyV">0</span><input type="range" id="d5vAy" min="-30" max="30" step="1" value="0"></label>
+      <label>v_B x (m/s) <span class="val" id="d5vBxV">15</span><input type="range" id="d5vBx" min="-30" max="30" step="1" value="15"></label>
+      <label>v_B y (m/s) <span class="val" id="d5vByV">10</span><input type="range" id="d5vBy" min="-30" max="30" step="1" value="10"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('d5RelDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const ox=W/2,oy=H/2,scale=4;
+    function arrow(p0,p,col,lw){
+      ctx.strokeStyle=col;ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p.x,p.y);ctx.stroke();
+      const ang=Math.atan2(p.y-p0.y,p.x-p0.x);
+      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(p.x,p.y);
+      ctx.lineTo(p.x-12*Math.cos(ang-0.4),p.y-12*Math.sin(ang-0.4));
+      ctx.lineTo(p.x-12*Math.cos(ang+0.4),p.y-12*Math.sin(ang+0.4));ctx.closePath();ctx.fill();
+    }
+    function draw(){
+      const vAx=+document.getElementById('d5vAx').value,vAy=+document.getElementById('d5vAy').value;
+      const vBx=+document.getElementById('d5vBx').value,vBy=+document.getElementById('d5vBy').value;
+      ['d5vAx','d5vAy','d5vBx','d5vBy'].forEach(k=>document.getElementById(k+'V').textContent=document.getElementById(k).value);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(20,oy);ctx.lineTo(W-20,oy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ox,20);ctx.lineTo(ox,H-20);ctx.stroke();
+      arrow({x:ox,y:oy},{x:ox+vAx*scale,y:oy-vAy*scale},'#1677ff',3);
+      arrow({x:ox,y:oy},{x:ox+vBx*scale,y:oy-vBy*scale},'#fa8c16',3);
+      const rx=vBx-vAx,ry=vBy-vAy;
+      arrow({x:ox+vAx*scale,y:oy-vAy*scale},{x:ox+vBx*scale,y:oy-vBy*scale},'#cf1322',2.5);
+      ctx.fillStyle='#1677ff';ctx.font='bold 14px sans-serif';ctx.fillText(`v_A = (${vAx}, ${vAy})`,30,30);
+      ctx.fillStyle='#fa8c16';ctx.fillText(`v_B = (${vBx}, ${vBy})`,30,50);
+      ctx.fillStyle='#cf1322';ctx.fillText(`v_{B/A} = v_B − v_A = (${rx}, ${ry}), 크기 ${Math.hypot(rx,ry).toFixed(2)} m/s`,30,70);
+    }
+    ['d5vAx','d5vAy','d5vBx','d5vBy'].forEach(k=>document.getElementById(k).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

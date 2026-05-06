@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 데모 2: 극좌표 trace — r과 θ를 직접 흔들어 보기 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 데모 2: 극좌표 trace — r과 θ를 직접 흔들어 보기</h1>
+  <p class="demo-meta">
+    동역학 · <a href="../backup-lectures/lectures-dynamics/04-particle-curvilinear-nt.html">Week 4. 곡선 운동학 — 접선·법선 좌표 &amp; 극좌표</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 데모 2: 극좌표 trace — r과 θ를 직접 흔들어 보기</h4>
+    <p>$r(t)$와 $\theta(t)$를 슬라이더로 직접 만들고, 그 결과의 궤적을 봅니다. <strong>$r$ 일정 + $\theta$ 일정 증가</strong> → 원, <strong>$r$ 선형 증가 + $\theta$ 일정 증가</strong> → 아르키메데스 나선, <strong>$r = \cos(2\theta)$</strong> 같은 식 → 장미 곡선.</p>
+    <canvas id="polarC" width="640" height="360"></canvas>
+    <div class="controls">
+      <label>모드
+        <select id="polarMode">
+          <option value="circle">원: r=상수</option>
+          <option value="spiral" selected>나선: r∝t</option>
+          <option value="rose">장미: r=2cos(3θ)</option>
+          <option value="custom">사인 변동: r=2+sin(3θ)</option>
+        </select>
+      </label>
+      <label>각속도 dθ/dt <span class="val" id="poWV">1</span><input type="range" id="poW" min="0.2" max="3" step="0.05" value="1"></label>
+      <button id="poReset">리셋</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('polarC'),x=c.getContext('2d');
+    const sl=id=>document.getElementById(id);
+    const upd=()=>sl('poWV').textContent=sl('poW').value;
+    sl('poW').oninput=upd;upd();
+    let t=0,trail=[];
+    sl('poReset').onclick=()=>{t=0;trail=[];};
+    sl('polarMode').onchange=()=>{t=0;trail=[];};
+    function loop(){
+      const w=+sl('poW').value,mode=sl('polarMode').value;
+      t+=0.025*w;
+      let r,th=t;
+      if(mode==='circle')r=2;
+      else if(mode==='spiral')r=0.3*t;
+      else if(mode==='rose')r=2*Math.abs(Math.cos(3*th));
+      else r=2+Math.sin(3*th);
+      const cx=c.width/2,cy=c.height/2,scale=50;
+      const px=cx+r*Math.cos(th)*scale,py=cy-r*Math.sin(th)*scale;
+      trail.push({x:px,y:py});if(trail.length>800)trail.shift();
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // axes
+      x.strokeStyle='#e0e0e0';x.beginPath();x.moveTo(0,cy);x.lineTo(c.width,cy);x.moveTo(cx,0);x.lineTo(cx,c.height);x.stroke();
+      // concentric circles
+      x.strokeStyle='#ececec';
+      for(let R=1;R<=4;R++){x.beginPath();x.arc(cx,cy,R*scale,0,Math.PI*2);x.stroke();}
+      // trail
+      x.strokeStyle='#0b5fff';x.lineWidth=1.5;x.beginPath();
+      trail.forEach((p,i)=>{if(i===0)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y);});
+      x.stroke();
+      // r vector
+      x.strokeStyle='#c62828';x.lineWidth=2;x.beginPath();x.moveTo(cx,cy);x.lineTo(px,py);x.stroke();
+      // angle arc
+      x.strokeStyle='#2e7d32';x.beginPath();x.arc(cx,cy,30,0,-th,th>0);x.stroke();
+      // particle
+      x.fillStyle='#1a1a1a';x.beginPath();x.arc(px,py,6,0,Math.PI*2);x.fill();
+      x.fillStyle='#444';x.font='12px Consolas,monospace';x.textAlign='left';
+      x.fillText('r = '+r.toFixed(2)+',  θ = '+(((th*180/Math.PI)%360).toFixed(0))+'°',20,30);
+      x.fillText('직각좌표: x = '+(r*Math.cos(th)).toFixed(2)+',  y = '+(r*Math.sin(th)).toFixed(2),20,48);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

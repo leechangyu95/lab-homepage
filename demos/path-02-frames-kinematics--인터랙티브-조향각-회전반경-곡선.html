@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 조향각 → 회전반경 곡선 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 조향각 → 회전반경 곡선</h1>
+  <p class="demo-meta">
+    경로계획 &amp; 추종 · <a href="../backup-lectures/lectures-path-planning/02-frames-kinematics.html">Week 2. 좌표계 &amp; 차량 기구학 모델</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 조향각 → 회전반경 곡선</h4>
+    <p>슬라이더로 조향각 $\delta$를 움직이면 (a) 차가 그리는 원호와 회전중심, (b) $R$ vs $\delta$ 곡선 위의 현재 위치가
+    동시에 갱신됩니다. δ가 0에 가까워질수록 R이 폭발적으로 커지는(=거의 직진하는) 모습을 눈으로 확인하세요.</p>
+    <canvas id="rdelta" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>조향각 δ° <span class="val" id="dV">15</span><input type="range" id="d" min="1" max="40" step="0.5" value="15"></label>
+      <label>휠베이스 L <span class="val" id="LV">2.7</span><input type="range" id="L" min="1.5" max="4" step="0.1" value="2.7"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rdelta'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    function draw(){
+      const d=+$('d').value, L=+$('L').value;
+      $('dV').textContent=d.toFixed(1); $('LV').textContent=L.toFixed(1);
+      const drad=d*Math.PI/180;
+      const R=L/Math.tan(drad);
+      x.fillStyle='#fafbfc'; x.fillRect(0,0,c.width,c.height);
+      // left: arc visualization
+      x.fillStyle='#1a1a1a'; x.font='bold 14px sans-serif';
+      x.fillText('회전 반경 (스케일 가변)', 20, 22);
+      // car at (320, 280) heading right; turning center above
+      const cx=160, cy=280, scale=Math.min(220/(R+0.01), 80);
+      // turning center at distance R perpendicular to heading
+      const Rp=R*scale;
+      const ox=cx, oy=cy-Rp;
+      // arc
+      x.strokeStyle='#0b5fff'; x.lineWidth=2;
+      x.beginPath();
+      const a0=Math.PI/2, a1=Math.PI/2-1.2;
+      x.arc(ox,oy,Rp,a0,a1,true); x.stroke();
+      // radius line
+      x.strokeStyle='#999'; x.setLineDash([3,3]);
+      x.beginPath(); x.moveTo(ox,oy); x.lineTo(cx,cy); x.stroke(); x.setLineDash([]);
+      x.fillStyle='#666'; x.font='12px sans-serif';
+      x.fillText('R='+R.toFixed(2)+' m', (ox+cx)/2+5,(oy+cy)/2);
+      // turning center
+      x.fillStyle='#c62828'; x.beginPath(); x.arc(ox,oy,5,0,Math.PI*2); x.fill();
+      x.fillText('회전중심', ox+8, oy+4);
+      // car
+      x.save(); x.translate(cx,cy); x.rotate(0);
+      x.fillStyle='#fff'; x.strokeStyle='#0b5fff'; x.lineWidth=2;
+      x.fillRect(-18,-9,36,18); x.strokeRect(-18,-9,36,18);
+      x.save(); x.translate(14,0); x.rotate(-drad);
+      x.fillStyle='#222'; x.fillRect(-5,-3,10,6); x.restore();
+      x.restore();
+      // right: R vs delta curve
+      const px0=320, py0=60, pw=300, ph=280;
+      x.strokeStyle='#ddd'; x.strokeRect(px0,py0,pw,ph);
+      x.fillStyle='#1a1a1a'; x.font='bold 14px sans-serif';
+      x.fillText('R vs δ (L='+L.toFixed(1)+'m)', px0+10, py0+18);
+      // axes
+      x.strokeStyle='#666'; x.lineWidth=1;
+      x.beginPath(); x.moveTo(px0+30,py0+ph-30); x.lineTo(px0+pw-10,py0+ph-30); x.stroke();
+      x.beginPath(); x.moveTo(px0+30,py0+ph-30); x.lineTo(px0+30,py0+30); x.stroke();
+      x.fillStyle='#666'; x.font='11px sans-serif';
+      x.fillText('δ°', px0+pw-15, py0+ph-15);
+      x.fillText('R [m]', px0+5, py0+30);
+      // ticks
+      [10,20,30,40].forEach(t=>{
+        const xx=px0+30+t/40*(pw-40);
+        x.beginPath(); x.moveTo(xx,py0+ph-30); x.lineTo(xx,py0+ph-26); x.stroke();
+        x.fillText(t, xx-5, py0+ph-15);
+      });
+      [10,20,30,40].forEach(t=>{
+        const yy=py0+ph-30-(t/40)*(ph-60);
+        x.beginPath(); x.moveTo(px0+25,yy); x.lineTo(px0+30,yy); x.stroke();
+        x.fillText(t, px0+5, yy+3);
+      });
+      // curve
+      x.strokeStyle='#0b5fff'; x.lineWidth=2; x.beginPath();
+      let first=true;
+      for(let dd=1; dd<=40; dd+=0.3){
+        const Rv=L/Math.tan(dd*Math.PI/180);
+        if(Rv>40) continue;
+        const xx=px0+30+dd/40*(pw-40);
+        const yy=py0+ph-30-Rv/40*(ph-60);
+        if(first){x.moveTo(xx,yy);first=false;} else x.lineTo(xx,yy);
+      }
+      x.stroke();
+      // marker
+      const xm=px0+30+d/40*(pw-40);
+      const ym=py0+ph-30-Math.min(R,40)/40*(ph-60);
+      x.fillStyle='#c62828'; x.beginPath(); x.arc(xm,ym,6,0,Math.PI*2); x.fill();
+      x.font='12px sans-serif'; x.fillStyle='#c62828';
+      x.fillText('현재 (δ='+d.toFixed(1)+'°, R='+R.toFixed(2)+')', xm+8, ym-6);
+    }
+    ['d','L'].forEach(id=>$(id).oninput=draw); draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

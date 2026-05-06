@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 고유벡터 찾기 = &quot;분산이 가장 큰 방향 찾기&quot; — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 고유벡터 찾기 = &quot;분산이 가장 큰 방향 찾기&quot;</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/06-unsupervised.html">Week 6. 비지도학습 — 군집화와 차원 축소</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 고유벡터 찾기 = "분산이 가장 큰 방향 찾기"</h4>
+    <p>타원형 데이터에 후보 축(빨간 직선)을 둡니다. 각도 슬라이더로 축을 회전시키며 그 방향으로 투영했을 때의 <strong>분산</strong>이 어떻게 변하는지 보세요. 분산이 최대가 되는 각도가 곧 첫 번째 주성분(고유벡터) 방향입니다 — "고유분해"라는 어려운 말의 정체는 결국 이 작업입니다.</p>
+    <canvas id="eigfind" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>축 각도 <span class="val" id="efAV">0</span>°<input type="range" id="efA" min="0" max="180" step="1" value="0"></label>
+      <button id="efOpt">최적 각도로 점프</button>
+      <button id="efGen">새 데이터</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('eigfind');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let pts=[];
+    let history=[];
+    function gauss(){const u=Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+    function gen(){
+      pts=[];history=[];
+      const truA=Math.random()*Math.PI;const ca=Math.cos(truA),sa=Math.sin(truA);
+      for(let i=0;i<100;i++){const a=gauss()*2.5,b=gauss()*0.7;pts.push({x:a*ca-b*sa,y:a*sa+b*ca});}
+      draw();
+    }
+    function projVar(angDeg){
+      const a=angDeg*Math.PI/180;const ux=Math.cos(a),uy=Math.sin(a);
+      const projs=pts.map(p=>p.x*ux+p.y*uy);
+      const m=projs.reduce((x,y)=>x+y,0)/projs.length;
+      const v=projs.reduce((x,y)=>x+(y-m)**2,0)/projs.length;
+      return v;
+    }
+    function bestAngle(){
+      let bd=-1,ba=0;
+      for(let a=0;a<180;a++){const v=projVar(a);if(v>bd){bd=v;ba=a;}}
+      return ba;
+    }
+    function draw(){
+      const angDeg=+document.getElementById('efA').value;
+      document.getElementById('efAV').textContent=angDeg;
+      const ang=angDeg*Math.PI/180;
+      const ux=Math.cos(ang),uy=Math.sin(ang);
+      const v=projVar(angDeg);
+      // history of (angle, variance)
+      history.push({a:angDeg,v});if(history.length>500)history.shift();
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      // left: scatter+axis
+      const lx=20,ly=20,lw=W*0.55,lh=H-40;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(lx,ly,lw,lh);
+      const cx=lx+lw/2,cy=ly+lh/2,sc=45;
+      ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(lx,cy);ctx.lineTo(lx+lw,cy);ctx.moveTo(cx,ly);ctx.lineTo(cx,ly+lh);ctx.stroke();
+      // data
+      ctx.fillStyle='#0b5fff';
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(cx+p.x*sc,cy+p.y*sc,3,0,Math.PI*2);ctx.fill();});
+      // candidate axis
+      ctx.strokeStyle='#c62828';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(cx-ux*lw*0.5,cy-uy*lw*0.5);ctx.lineTo(cx+ux*lw*0.5,cy+uy*lw*0.5);ctx.stroke();
+      // projection points
+      ctx.fillStyle='#ff8c00';
+      pts.forEach(p=>{const proj=p.x*ux+p.y*uy;ctx.beginPath();ctx.arc(cx+ux*proj*sc,cy+uy*proj*sc,2.5,0,Math.PI*2);ctx.fill();});
+      ctx.fillStyle='#333';ctx.font='13px sans-serif';
+      ctx.fillText(`각도 ${angDeg}° → 투영 분산 = ${v.toFixed(2)}`,lx+8,ly-4);
+      // right: variance vs angle plot
+      const rx=lx+lw+10,ry=20,rw=W-rx-15,rh=H-40;
+      ctx.strokeStyle='#ccc';ctx.strokeRect(rx,ry,rw,rh);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('분산',rx+4,ry+12);
+      ctx.fillText('각도',rx+rw-30,ry+rh+12);
+      // sample full curve
+      let mx=0;const samples=[];
+      for(let a=0;a<=180;a+=2){const vv=projVar(a);samples.push({a,v:vv});if(vv>mx)mx=vv;}
+      ctx.strokeStyle='#888';ctx.lineWidth=1.5;ctx.beginPath();
+      samples.forEach((s,i)=>{const px=rx+(s.a/180)*rw;const py=ry+rh-(s.v/(mx*1.05))*rh;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});
+      ctx.stroke();
+      // current point
+      const px=rx+(angDeg/180)*rw;const py=ry+rh-(v/(mx*1.05))*rh;
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fill();
+      const ba=bestAngle();
+      const bx=rx+(ba/180)*rw;
+      ctx.strokeStyle='rgba(46,125,50,0.7)';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(bx,ry);ctx.lineTo(bx,ry+rh);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='12px sans-serif';
+      ctx.fillText(`최적 ${ba}° (PC1)`,bx-30,ry+12);
+    }
+    document.getElementById('efA').addEventListener('input',draw);
+    document.getElementById('efOpt').onclick=()=>{document.getElementById('efA').value=bestAngle();draw();};
+    document.getElementById('efGen').onclick=gen;
+    gen();
+  })();
+  </script>
+</main>
+</body>
+</html>

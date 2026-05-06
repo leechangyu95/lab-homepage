@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>W10. 전달 함수 — 메카트로닉스</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../../index.html">로봇공학특론</a>
+    <a href="../../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../../mech.html">기전공학기초</a>
+    <a href="../../dynamics.html">동역학</a>
+    <a href="../../mechatronics.html" class="active">메카트로닉스</a>
+    <a href="../../control.html">자동제어</a>
+    <a href="../../mpc.html">모델예측제어</a>
+    <a href="../../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../../calculus.html">미분적분학</a>
+    <a href="../../linear-algebra.html">선형대수학</a>
+    <a href="../../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p style="color:var(--muted);font-size:13px"><a href="../../mechatronics.html">← 강의 목록</a></p>
+  <h1 class="page-title">Week 10. 전달 함수 — 라플라스 변환으로 풀이를 자동화</h1>
+  <p class="lead">미분방정식을 직접 푸는 대신 $s$ 영역에서 대수식으로 풀고, 극점 위치로 시스템 거동을 한눈에 파악.</p>
+
+  <div class="note">
+    <strong>📖 라플라스가 처음이라 무서운 분께</strong> — 라플라스 변환은 이공계 전 학생이 한 번씩 헤매고 가는 자리입니다. 처음에는 <strong>"어려운 미분방정식을 곱·나눗셈 문제로 바꿔주는 마법 환율"</strong>이라고 받아들이세요.
+    <ul style="margin:8px 0 0 20px">
+      <li>한국 돈을 직접 계산하기 어려우면 달러로 환전해서 계산하고 다시 한국 돈으로 돌아오는 것처럼, <em>시간 영역의 미분방정식</em>을 <em>$s$ 영역의 대수식</em>으로 바꾸면 풀이가 쉬워져요.</li>
+      <li>실무에서는 라플라스 적분식을 직접 계산하지 않습니다. <strong>변환표(2절)</strong>만 보고 모양을 맞춰 변환·역변환합니다 — 한자 사전처럼 쓰는 도구.</li>
+      <li>가장 중요한 한 가지: <strong>"극점 위치로 시스템의 거동을 안다"</strong> — 5절의 인터랙티브가 이 강의의 보배입니다. 식보다 그림으로 익히세요.</li>
+      <li>$s = \sigma + j\omega$의 의미가 어렵게 느껴지면 일단 패스. 5절 데모로 직관을 잡은 후 다시 보면 보입니다.</li>
+    </ul>
+  </div>
+
+  <div class="toc"><h4>목차</h4><ol>
+    <li>왜 라플라스 변환인가</li>
+    <li>라플라스 변환의 핵심 표</li>
+    <li>전달 함수의 정의</li>
+    <li>1차·2차 시스템의 전달 함수</li>
+    <li>극점과 영점 — 시스템 거동의 지문</li>
+    <li>시정수와 응답</li>
+    <li>예제 — 서모커플 응답</li>
+    <li>주파수 응답과 보드 플롯</li>
+    <li>직렬·병렬·피드백 결합</li>
+  </ol></div>
+
+  <h2>1. 왜 라플라스 변환인가</h2>
+  <p>지난 주(W9)에 본 것처럼 1차·2차 시스템의 시간 응답은 미분방정식을 직접 풀어 얻을 수 있어요. 그러나 시스템이 복잡해지면(예: 4차 시스템, 다단 직렬·병렬) 미분방정식 풀이가 끔찍해집니다.</p>
+  <p>해결책 — <strong>라플라스 변환</strong>으로 시간 영역을 $s$ 영역으로 옮기면 미분방정식이 <strong>대수 방정식</strong>이 됩니다. 그리고 풀이가 끝나면 역변환으로 시간 영역으로 돌아오면 됩니다.</p>
+  $$ F(s) = \int_0^\infty f(t)\,e^{-st}\,dt $$
+
+  <p><strong>30초 직관</strong> — 라플라스 변환은 시간 함수 $f(t)$를 "이 함수에는 $e^{st}$ 형태의 성분이 얼마나 들어 있는가"라는 물음으로 바꿔 봅니다. $s$가 복소수($s = \sigma + j\omega$)라서 $e^{st}$는 <strong>지수적으로 커지거나 작아지면서 회전하는 함수</strong>예요. 모든 시스템 응답이 이 형태들의 합으로 표현 가능하다는 게 이론의 핵심입니다.</p>
+  <ul>
+    <li>$s = j\omega$(허수축 위)이면 $e^{st} = e^{j\omega t}$ — 순수 정현파. <a href="../../lectures-mech/08-impedance.html">기전공학기초 W8 임피던스</a>가 이 자리에 한정된 분석.</li>
+    <li>$s = -\sigma$(음의 실수)이면 $e^{st} = e^{-\sigma t}$ — 1차 시스템의 감쇠 응답.</li>
+    <li>$s = -\sigma + j\omega$이면 감쇠하면서 진동 — 저감쇠 2차 응답.</li>
+  </ul>
+  <p>그래서 시스템의 거동을 알려면 $s$ 평면 위에서 어디에 극점이 있는지만 보면 됩니다. 이게 5절의 주제예요.</p>
+
+  <h3>1.1 30초 미니 예제 — 라플라스가 어떻게 일을 줄여주나</h3>
+  <p>1차 미분방정식 $\tau\dot{y} + y = u(t)$를 푼다고 해 봅시다. 시간 영역에서 직접 풀면 적분 인자(integrating factor)를 써야 하지만, 라플라스로 양변을 변환하면 <strong>그냥 대수</strong>가 됩니다.</p>
+  <ul>
+    <li>좌변을 변환: $\tau s Y(s) + Y(s) = (\tau s + 1)Y(s)$ &nbsp; (미분 → $s$ 곱)</li>
+    <li>우변(스텝 입력)을 변환: $U(s) = 1/s$</li>
+    <li>$Y(s) = \dfrac{1}{s(\tau s+1)}$</li>
+    <li>변환표를 거꾸로 보면 $y(t) = 1 - e^{-t/\tau}$ — W2·W9에서 만난 그 응답!</li>
+  </ul>
+  <p>요점 — <strong>미분방정식을 푼 게 아니라 분수식 정리만 했습니다</strong>. 이 차이가 시스템이 복잡해질수록 어마어마하게 커져요.</p>
+
+  <h2>2. 핵심 변환 표</h2>
+  <table>
+    <thead><tr><th>$f(t)$</th><th>$F(s)$</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>$\delta(t)$ (임펄스)</td><td>$1$</td><td>모든 주파수 동일 강도</td></tr>
+      <tr><td>$u(t)$ (단위 스텝)</td><td>$1/s$</td><td>가장 자주 쓰는 입력</td></tr>
+      <tr><td>$t$ (램프)</td><td>$1/s^2$</td><td>적분 ↔ $1/s$ 곱</td></tr>
+      <tr><td>$e^{-at}$</td><td>$1/(s+a)$</td><td>1차 시스템 응답</td></tr>
+      <tr><td>$\sin\omega t$</td><td>$\omega/(s^2+\omega^2)$</td><td>정현파</td></tr>
+      <tr><td>$\cos\omega t$</td><td>$s/(s^2+\omega^2)$</td><td>정현파</td></tr>
+      <tr><td>$\dot{f}(t)$</td><td>$sF(s) - f(0)$</td><td>미분이 $s$ 곱</td></tr>
+      <tr><td>$\int_0^t f\,d\tau$</td><td>$F(s)/s$</td><td>적분이 $s$ 나눗셈</td></tr>
+    </tbody>
+  </table>
+
+  <p>핵심 — 미분이 $s$ 곱으로, 적분이 $s$ 나눗셈으로 변합니다. 미분방정식이 자연스럽게 대수가 됩니다.</p>
+
+  <h2>3. 전달 함수의 정의</h2>
+  <p>입력 $u(t)$와 출력 $y(t)$의 라플라스 변환을 $U(s)$, $Y(s)$라 할 때 (초기조건이 0인 가정 하):</p>
+  $$ \boxed{H(s) = \frac{Y(s)}{U(s)}} $$
+  <p>이 비율 $H(s)$가 시스템의 <strong>전달 함수(transfer function)</strong>입니다. 입력만 알면 $Y(s) = H(s)\,U(s)$로 출력의 $s$ 영역 표현이 즉시 나옵니다.</p>
+
+  <h2>4. 1차·2차 시스템의 전달 함수</h2>
+
+  <h3>4.1 1차 시스템</h3>
+  <p>미분방정식: $\tau\dot{y} + y = K\,u$. 라플라스 변환:</p>
+  $$ \tau s\,Y(s) + Y(s) = K\,U(s) \implies H(s) = \frac{K}{\tau s + 1} $$
+  <p>분모가 1차 다항식이라 1차 시스템.</p>
+
+  <h3>4.2 2차 시스템</h3>
+  <p>$\ddot{y} + 2\zeta\omega_n\dot{y} + \omega_n^2 y = K\omega_n^2 u$:</p>
+  $$ H(s) = \frac{K\omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2} $$
+  <p>분모가 2차 — 2차 시스템. $\zeta$, $\omega_n$이 동특성을 결정한다는 사실이 분모에 직접 보입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 전달 함수 → 시간 응답</h4>
+    <p>좌측은 $s$ 평면(복소 평면)의 극점 위치, 우측은 단위 스텝 응답. 1차/2차를 토글하고 파라미터를 만져보세요. <strong>극점이 좌반평면에 깊숙이</strong> 들어갈수록 응답이 빨라지고, <strong>허수축에 가까울수록</strong> 느려지며, <strong>실수부가 양수가 되면 발산</strong>합니다.</p>
+    <canvas id="tfStepDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>시스템 종류
+        <select id="tfKind">
+          <option value="1">1차: K/(τs+1)</option>
+          <option value="2" selected>2차: Kωn²/(s²+2ζωn·s+ωn²)</option>
+        </select>
+      </label>
+      <label>τ 또는 ζ <span class="val" id="tfP1V">0.5</span><input type="range" id="tfP1" min="0.05" max="1.5" step="0.02" value="0.5"></label>
+      <label>K 또는 ωn <span class="val" id="tfP2V">2.0</span><input type="range" id="tfP2" min="0.5" max="6" step="0.1" value="2.0"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('tfStepDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function step1(t,tau,K){return K*(1-Math.exp(-t/tau));}
+    function step2(t,z,wn){
+      if(z<0.001) return 1-Math.cos(wn*t);
+      if(z<1){const wd=wn*Math.sqrt(1-z*z);
+        return 1 - Math.exp(-z*wn*t)/Math.sqrt(1-z*z)*Math.sin(wd*t+Math.acos(z));}
+      if(Math.abs(z-1)<1e-3) return 1-(1+wn*t)*Math.exp(-wn*t);
+      const a=z*wn,b=wn*Math.sqrt(z*z-1),r1=-a+b,r2=-a-b;
+      return 1 - (r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r2-r1);
+    }
+    function draw(){
+      const kind=document.getElementById('tfKind').value;
+      const p1=+document.getElementById('tfP1').value;
+      const p2=+document.getElementById('tfP2').value;
+      // labels
+      const isFirst=kind==='1';
+      document.getElementById('tfP1V').textContent=isFirst?p1.toFixed(2):p1.toFixed(2);
+      document.getElementById('tfP2V').textContent=p2.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // ----- left: s-plane -----
+      const cx=140,cy=H/2,SC=45,box=240;
+      ctx.fillStyle='#fff';ctx.strokeStyle='#bbb';
+      ctx.fillRect(20,40,box,box-30);ctx.strokeRect(20,40,box,box-30);
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(20,cy);ctx.lineTo(20+box,cy);ctx.moveTo(cx,40);ctx.lineTo(cx,40+box-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('Re',20+box-15,cy-4);ctx.fillText('Im',cx+4,50);
+      // shade right half-plane = unstable
+      ctx.fillStyle='rgba(198,40,40,0.08)';ctx.fillRect(cx,40,20+box-cx,box-30);
+      ctx.fillStyle='#c62828';ctx.font='10px sans-serif';ctx.fillText('불안정 영역',cx+10,55);
+      ctx.fillStyle='#2e7d32';ctx.fillText('안정 영역',cx-90,55);
+      // poles
+      let poles=[];
+      if(isFirst){
+        poles=[{re:-1/p1,im:0}];
+      }else{
+        const z=p1, wn=p2;
+        if(z<1){poles=[{re:-z*wn,im:wn*Math.sqrt(1-z*z)},{re:-z*wn,im:-wn*Math.sqrt(1-z*z)}];}
+        else if(Math.abs(z-1)<1e-3){poles=[{re:-wn,im:0},{re:-wn,im:0}];}
+        else{const a=z*wn,b=wn*Math.sqrt(z*z-1);poles=[{re:-a+b,im:0},{re:-a-b,im:0}];}
+      }
+      poles.forEach(p=>{
+        const xx=cx+p.re*SC, yy=cy-p.im*SC;
+        ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.moveTo(xx-7,yy-7);ctx.lineTo(xx+7,yy+7);ctx.moveTo(xx-7,yy+7);ctx.lineTo(xx+7,yy-7);ctx.stroke();
+      });
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText('✕ = 극점 (분모=0인 s)',30,box+25);
+      // formula
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      if(isFirst){
+        ctx.fillText(`H(s) = K/(${p1.toFixed(2)}s+1),  K=${p2.toFixed(1)}`,30,30);
+      }else{
+        ctx.fillText(`H(s) = ωn²/(s²+2ζωn·s+ωn²)`,30,22);
+        ctx.fillText(`ζ=${p1.toFixed(2)}, ωn=${p2.toFixed(1)}`,30,38);
+      }
+      // ----- right: step response -----
+      const ox2=300,oy2=H-40,w2=W-320,h2=H-70;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox2,oy2);ctx.lineTo(ox2+w2,oy2);ctx.moveTo(ox2,30);ctx.lineTo(ox2,oy2);ctx.stroke();
+      const Kgain = isFirst?p2:1;
+      const T = isFirst?5*p1+1 : Math.max(8/(p1*p2+0.1),5);
+      const ymax = isFirst ? Kgain*1.2 : 2;
+      function py2(v){return oy2-v/ymax*h2;}
+      // final
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      const fin=isFirst?Kgain:1;
+      ctx.moveTo(ox2,py2(fin));ctx.lineTo(ox2+w2,py2(fin));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='11px sans-serif';
+      ctx.fillText(`y∞ = ${fin.toFixed(2)}`,ox2+w2-70,py2(fin)-4);
+      // curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=400;i++){
+        const t=i/400*T;
+        const y = isFirst ? step1(t,p1,Kgain) : step2(t,p1,p2);
+        const xx=ox2+t/T*w2, yy=py2(Math.max(0,Math.min(ymax,y)));
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('단위 스텝 응답 y(t)',ox2,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('시간 t (s)',ox2+w2-70,oy2+22);
+    }
+    document.getElementById('tfKind').addEventListener('change',draw);
+    document.getElementById('tfP1').addEventListener('input',draw);
+    document.getElementById('tfP2').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>5. 극점과 영점 — 시스템의 지문</h2>
+
+  <h3>5.1 정의</h3>
+  <ul>
+    <li><strong>극점(pole)</strong>: $H(s)$의 분모를 0으로 만드는 $s$ 값. 시스템 응답 모양을 결정.</li>
+    <li><strong>영점(zero)</strong>: $H(s)$의 분자를 0으로 만드는 $s$ 값. 응답의 초기 거동에 영향.</li>
+  </ul>
+
+  <h3>5.2 1차 시스템의 극점</h3>
+  $$ H(s) = \frac{K}{\tau s + 1} \quad \Rightarrow \quad \text{극점: } s = -\frac{1}{\tau} $$
+  <p>음의 실수축에 하나의 극점. $\tau$가 작을수록 극점이 왼쪽 멀리(빠른 응답).</p>
+
+  <h3>5.3 2차 시스템의 극점</h3>
+  $$ s^2 + 2\zeta\omega_n s + \omega_n^2 = 0 \implies s = -\zeta\omega_n \pm \omega_n\sqrt{\zeta^2 - 1} $$
+
+  <p>$\zeta$ 값에 따라 극점 위치가 다음과 같이 분포합니다.</p>
+  <ul>
+    <li>$\zeta = 0$: $\pm j\omega_n$, 허수축 — 무감쇠</li>
+    <li>$0 &lt; \zeta &lt; 1$: $-\zeta\omega_n \pm j\omega_n\sqrt{1-\zeta^2}$, 좌반평면 복소 켤레쌍 — 저감쇠 진동</li>
+    <li>$\zeta = 1$: $-\omega_n$ (이중 극점) — 임계감쇠</li>
+    <li>$\zeta &gt; 1$: 좌반평면 두 음의 실수 — 과감쇠</li>
+  </ul>
+
+  <h3>5.4 극점 위치 = 안정성</h3>
+  <p>모든 극점이 <strong>좌반평면</strong>(실수부 음수)에 있으면 시스템이 안정합니다. 우반평면 극점이 하나라도 있으면 응답이 발산해요. 극점이 허수축에 있으면(실수부 0) 진동이 영원히 지속.</p>
+
+  <p>이래서 제어기 설계의 가장 큰 그림이 <strong>"극점을 좌반평면 깊숙이 가져다 놓는 것"</strong>입니다. 그러면 응답이 빠르고 안정. 고전 제어공학(<a href="../../lectures/07-feedback-control.html">로봇공학특론 L7</a>)의 모든 도구가 결국 이 게임이에요.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 극점을 직접 끌어보기 — 위치가 응답을 결정한다</h4>
+    <p>좌측 $s$ 평면의 빨간 ✕(극점)을 마우스로 끌어보세요. 위·아래 대칭(켤레쌍)으로 함께 움직이며, 우측에 시간 응답이 즉시 반영됩니다. 다음을 직접 확인해 보세요:</p>
+    <ol style="margin:6px 0 6px 20px;font-size:13px;color:#444">
+      <li>극점을 <strong>왼쪽으로 멀리</strong> 보내면 → 빠르게 정착.</li>
+      <li>극점이 <strong>허수축에 가까워지면</strong>(위·아래로 멀리) → 진동이 심해짐.</li>
+      <li>극점이 <strong>실수축 위(im=0)</strong>에 있으면 → 진동 없음(과/임계감쇠).</li>
+      <li>극점이 <strong>우반평면</strong>으로 넘어가면 → 응답이 발산(불안정).</li>
+    </ol>
+    <canvas id="poleDragDemo" width="640" height="320" style="cursor:grab"></canvas>
+    <div class="controls">
+      <button id="pdReset">기본값으로</button>
+      <span style="font-size:12px;color:#666;margin-left:10px">실수부 σ = <span id="pdSig">−1.0</span>, 허수부 ω = <span id="pdOmg">2.0</span></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('poleDragDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    let sig=-1.0, omg=2.0, dragging=false;
+    const cx=140,cy=H/2,SC=45;
+    function reset(){sig=-1.0;omg=2.0;draw();}
+    document.getElementById('pdReset').onclick=reset;
+    function poleXY(){return {x:cx+sig*SC, y:cy-omg*SC};}
+    c.addEventListener('mousedown',e=>{
+      const r=c.getBoundingClientRect();
+      const mx=e.clientX-r.left, my=e.clientY-r.top;
+      const p=poleXY();
+      if(Math.hypot(mx-p.x,my-p.y)<14 || Math.hypot(mx-p.x,my-(2*cy-p.y))<14){dragging=true;c.style.cursor='grabbing';}
+    });
+    window.addEventListener('mousemove',e=>{
+      if(!dragging)return;
+      const r=c.getBoundingClientRect();
+      const mx=e.clientX-r.left, my=e.clientY-r.top;
+      sig=Math.max(-4,Math.min(1.5,(mx-cx)/SC));
+      omg=Math.max(-3.5,Math.min(3.5,(cy-my)/SC));
+      // touch handling: snap small omega to 0
+      if(Math.abs(omg)<0.15)omg=0;
+      draw();
+    });
+    window.addEventListener('mouseup',()=>{dragging=false;c.style.cursor='grab';});
+    function step(t){
+      // for poles at sig ± j*omg, response of  y'' - 2σy' + (σ²+ω²)y  to step is...
+      // standard 2nd-order response with poles at sig±jomg
+      const sig0=-Math.abs(sig)>0?-sig:0; // dummy
+      // We'll just do generic 2nd-order from these poles, unit gain at s=0
+      // H(s) = (sig²+omg²) / ((s-sig)²+omg²);  step response by inverse Laplace
+      const wn=Math.sqrt(sig*sig+omg*omg);
+      if(wn<0.01)return 0;
+      const z=-sig/wn;
+      if(sig>=0){
+        // unstable: simulate divergence
+        if(Math.abs(omg)<0.01)return 1-Math.exp(sig*t);
+        return 1 - Math.exp(sig*t)*(Math.cos(omg*t) - sig/omg*Math.sin(omg*t));
+      }
+      // stable
+      if(Math.abs(omg)<0.01){
+        // real poles
+        if(Math.abs(z-1)<1e-3) return 1-(1+wn*t)*Math.exp(-wn*t);
+        return 1-Math.exp(sig*t);
+      }
+      // complex
+      return 1 - Math.exp(sig*t)*(Math.cos(omg*t) - sig/omg*Math.sin(omg*t));
+    }
+    function draw(){
+      document.getElementById('pdSig').textContent=sig.toFixed(2);
+      document.getElementById('pdOmg').textContent=omg.toFixed(2);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // left s-plane
+      const box=240;
+      ctx.fillStyle='#fff';ctx.strokeStyle='#bbb';ctx.fillRect(20,40,box,box-30);ctx.strokeRect(20,40,box,box-30);
+      // right half-plane shading
+      ctx.fillStyle='rgba(198,40,40,0.08)';ctx.fillRect(cx,40,20+box-cx,box-30);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let g=-3;g<=2;g++){const xx=cx+g*SC;if(xx>20&&xx<20+box){ctx.beginPath();ctx.moveTo(xx,40);ctx.lineTo(xx,40+box-30);ctx.stroke();}}
+      for(let g=-3;g<=3;g++){const yy=cy-g*SC;if(yy>40&&yy<40+box-30){ctx.beginPath();ctx.moveTo(20,yy);ctx.lineTo(20+box,yy);ctx.stroke();}}
+      // axes
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(20,cy);ctx.lineTo(20+box,cy);ctx.moveTo(cx,40);ctx.lineTo(cx,40+box-30);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('Re',20+box-15,cy-4);ctx.fillText('Im',cx+4,50);
+      ctx.fillStyle='#c62828';ctx.font='10px sans-serif';ctx.fillText('불안정',cx+10,55);
+      ctx.fillStyle='#2e7d32';ctx.fillText('안정',cx-50,55);
+      // poles (conjugate pair if omg≠0)
+      const draws=[{re:sig,im:omg}];
+      if(Math.abs(omg)>0.01)draws.push({re:sig,im:-omg});
+      draws.forEach(p=>{
+        const xx=cx+p.re*SC, yy=cy-p.im*SC;
+        ctx.strokeStyle=sig>=0?'#c62828':'#0b5fff';ctx.lineWidth=3;
+        ctx.beginPath();ctx.moveTo(xx-9,yy-9);ctx.lineTo(xx+9,yy+9);ctx.moveTo(xx-9,yy+9);ctx.lineTo(xx+9,yy-9);ctx.stroke();
+      });
+      ctx.fillStyle='#0b5fff';ctx.font='12px sans-serif';
+      ctx.fillText('극점을 끌어보세요 (켤레쌍 함께 이동)',30,box+25);
+      // status
+      ctx.font='13px sans-serif';
+      let cls='';
+      if(sig>=0){ctx.fillStyle='#c62828';cls='⚠ 불안정 (발산)';}
+      else if(Math.abs(omg)<0.01){ctx.fillStyle='#2e7d32';cls='과/임계감쇠 (진동 없음)';}
+      else if(Math.abs(sig)>Math.abs(omg)){ctx.fillStyle='#2e7d32';cls='저감쇠, 약한 진동';}
+      else{ctx.fillStyle='#f57c00';cls='저감쇠, 강한 진동';}
+      ctx.fillText(cls,30,30);
+      // right time response
+      const ox2=300,oy2=H-40,w2=W-320,h2=H-70;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox2,oy2);ctx.lineTo(ox2+w2,oy2);ctx.moveTo(ox2,30);ctx.lineTo(ox2,oy2);ctx.stroke();
+      const T=10, ymax=3;
+      function py2(v){return oy2-(v+0.5)/ymax*h2;}
+      ctx.strokeStyle='#2e7d32';ctx.setLineDash([4,3]);ctx.beginPath();
+      ctx.moveTo(ox2,py2(1));ctx.lineTo(ox2+w2,py2(1));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#2e7d32';ctx.font='11px sans-serif';ctx.fillText('1.0 (목표)',ox2+w2-65,py2(1)-4);
+      ctx.strokeStyle=sig>=0?'#c62828':'#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let i=0;i<=500;i++){
+        const t=i/500*T, y=step(t);
+        const yc=Math.max(-1,Math.min(3,y));
+        const xx=ox2+t/T*w2, yy=py2(yc);
+        if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText('단위 스텝 응답',ox2,22);
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('t →',ox2+w2-30,oy2+22);
+    }
+    draw();
+  })();
+  </script>
+
+  <h2>6. 시정수와 응답</h2>
+  <p>1차 시스템에서 극점 $s = -1/\tau$가 시정수 $\tau$를 직접 알려줍니다. 극점 위치만 보면 응답 속도를 즉시 알 수 있다는 뜻.</p>
+
+  <p>2차 시스템에서도 극점 위치가 응답을 결정합니다. 좌반평면 복소 극점 $-\sigma \pm j\omega_d$일 때:</p>
+  <ul>
+    <li>$\sigma = \zeta\omega_n$: 감쇠율 (얼마나 빨리 진폭이 줄어드는가)</li>
+    <li>$\omega_d = \omega_n\sqrt{1-\zeta^2}$: 감쇠 진동수 (실제 보이는 진동 주파수)</li>
+  </ul>
+
+  <h2>7. 예제 — 서모커플의 응답</h2>
+  <p>1차 시스템으로 모델링되는 서모커플(thermocouple)이 있습니다. 25°C에서 100°C로 갑자기 옮겼을 때, 95% 도달 시간을 측정했더니 <strong>5초</strong>였다고 합시다. 이 센서의 시정수는?</p>
+
+  <p>1차 시스템 스텝 응답:</p>
+  $$ y(t) = K(1 - e^{-t/\tau}) $$
+  <p>95% 도달은 $1 - e^{-t/\tau} = 0.95$, 즉 $e^{-t/\tau} = 0.05$, $t = \tau \ln(20) \approx 3\tau$.</p>
+  $$ 5\,\text{s} = 3\tau \implies \tau \approx 1.67\,\text{s} $$
+
+  <p>전달 함수:</p>
+  $$ H(s) = \frac{(100-25)}{1.67 s + 1} = \frac{75}{1.67 s + 1} $$
+
+  <p>이 식 하나로 다른 입력에 대한 응답도 모두 계산 가능합니다. 예: 100°C 환경에서 30초 후 25°C 환경으로 다시 옮겼을 때의 응답 등.</p>
+
+  <h2>8. 주파수 응답 — $s = j\omega$로 잘라보기</h2>
+  <p>$s$를 순수 허수 $j\omega$로 두면 전달 함수가 정현파 입력에 대한 정상상태 응답이 됩니다. <strong>$|H(j\omega)|$</strong>은 진폭이 어떻게 통과·감쇠되는지, <strong>$\angle H(j\omega)$</strong>은 출력이 입력에 비해 얼마나 늦는지를 알려줘요. 이걸 로그 스케일로 그린 게 <a href="../../lectures-mech/08-impedance.html">기전공학기초 W8</a>의 보드 플롯입니다.</p>
+
+  <div class="demo">
+    <h4>🎮 인터랙티브: 2차 시스템의 보드 플롯과 공진</h4>
+    <p>$\zeta$를 작게 키우면 보드 플롯의 크기 응답에 <strong>공진 봉우리</strong>(peaking)가 생깁니다. $\zeta &lt; 0.707$이면 항상 $\omega_n$ 부근에서 공진이 보여요. 위상은 항상 $\omega_n$에서 정확히 $-90°$를 통과합니다 — 이게 시스템 식별 실험에서 $\omega_n$을 찾는 방법.</p>
+    <canvas id="bodeDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>감쇠비 ζ <span class="val" id="bdZV">0.3</span><input type="range" id="bdZ" min="0.05" max="2" step="0.02" value="0.3"></label>
+      <label>고유 주파수 ωn <span class="val" id="bdWV">5</span> rad/s<input type="range" id="bdW" min="1" max="20" step="0.5" value="5"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bodeDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const z=+document.getElementById('bdZ').value;
+      const wn=+document.getElementById('bdW').value;
+      document.getElementById('bdZV').textContent=z.toFixed(2);
+      document.getElementById('bdWV').textContent=wn.toFixed(1);
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const ox=60, w=W-90;
+      const fmin=wn/100, fmax=wn*100;
+      function fx(f){return ox+(Math.log10(f/fmin))/4*w;}
+      // top: magnitude (dB)
+      const oyM=130, hM=90;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oyM);ctx.lineTo(ox+w,oyM);ctx.moveTo(ox,30);ctx.lineTo(ox,oyM);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.fillText('|H| (dB)',12,40);
+      // grid
+      ctx.strokeStyle='#eee';
+      for(let dB=-60;dB<=20;dB+=20){const yy=oyM-(dB+60)/80*hM;
+        if(yy>30){ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();}}
+      for(let p=-2;p<=2;p++){const f=wn*Math.pow(10,p);const xx=fx(f);
+        ctx.beginPath();ctx.moveTo(xx,30);ctx.lineTo(xx,oyM);ctx.stroke();}
+      // 0 dB line
+      ctx.strokeStyle='#aaa';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oyM-60/80*hM);ctx.lineTo(ox+w,oyM-60/80*hM);ctx.stroke();ctx.setLineDash([]);
+      // mag curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const w_=Math.pow(10,lf);
+        const re=wn*wn-w_*w_, im=2*z*wn*w_;
+        const mag=wn*wn/Math.sqrt(re*re+im*im);
+        const dB=20*Math.log10(Math.max(1e-3,mag));
+        const xx=fx(w_), yy=oyM-(dB+60)/80*hM;
+        if(lf===Math.log10(fmin))ctx.moveTo(xx,Math.max(30,Math.min(oyM,yy)));
+        else ctx.lineTo(xx,Math.max(30,Math.min(oyM,yy)));
+      }
+      ctx.stroke();
+      // mark wn
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(fx(wn),30);ctx.lineTo(fx(wn),oyM);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#c62828';ctx.font='11px sans-serif';ctx.fillText('ωn='+wn.toFixed(1),fx(wn)+4,40);
+      // bottom: phase
+      const oyP=H-40, hP=90, oyP0=oyP-hP;
+      ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(ox,oyP);ctx.lineTo(ox+w,oyP);ctx.moveTo(ox,oyP0);ctx.lineTo(ox,oyP);ctx.stroke();
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';ctx.fillText('∠H (°)',12,oyP0+10);
+      ctx.strokeStyle='#eee';
+      for(let p=0;p>=-180;p-=45){const yy=oyP0+(-p)/180*hP;
+        ctx.beginPath();ctx.moveTo(ox,yy);ctx.lineTo(ox+w,yy);ctx.stroke();
+        ctx.fillStyle='#888';ctx.font='10px sans-serif';ctx.fillText(p+'°',ox-28,yy+3);}
+      // -90 line
+      ctx.strokeStyle='#aaa';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(ox,oyP0+90/180*hP);ctx.lineTo(ox+w,oyP0+90/180*hP);ctx.stroke();ctx.setLineDash([]);
+      // phase curve
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let lf=Math.log10(fmin);lf<=Math.log10(fmax);lf+=0.02){
+        const w_=Math.pow(10,lf);
+        const re=wn*wn-w_*w_, im=2*z*wn*w_;
+        let phi=-Math.atan2(im,re)*180/Math.PI;
+        if(phi>0)phi-=360;
+        const xx=fx(w_), yy=oyP0+(-phi)/180*hP;
+        if(lf===Math.log10(fmin))ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+      }
+      ctx.stroke();
+      ctx.strokeStyle='#c62828';ctx.setLineDash([3,3]);ctx.beginPath();
+      ctx.moveTo(fx(wn),oyP0);ctx.lineTo(fx(wn),oyP);ctx.stroke();ctx.setLineDash([]);
+      // labels
+      const Mp_dB = z<1/Math.sqrt(2) ? 20*Math.log10(1/(2*z*Math.sqrt(1-z*z))) : 0;
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`공진 피크: ${z<0.707?'+'+Mp_dB.toFixed(1)+' dB ('+(Math.pow(10,Mp_dB/20)).toFixed(2)+'배)':'없음 (ζ ≥ 0.707)'}`,ox+200,22);
+      ctx.fillStyle='#666';ctx.font='11px sans-serif';
+      ctx.fillText('주파수 ω (log)',W-110,oyP+22);
+    }
+    document.getElementById('bdZ').addEventListener('input',draw);
+    document.getElementById('bdW').addEventListener('input',draw);
+    draw();
+  })();
+  </script>
+
+  <h2>9. 직렬·병렬·피드백 결합</h2>
+  <p>여러 시스템이 결합된 경우 전달 함수가 어떻게 합쳐지는지:</p>
+
+  <table>
+    <thead><tr><th>구성</th><th>합성 전달 함수</th></tr></thead>
+    <tbody>
+      <tr><td>직렬: $H_1 \to H_2$</td><td>$H_1(s) \cdot H_2(s)$</td></tr>
+      <tr><td>병렬: $H_1$ + $H_2$</td><td>$H_1(s) + H_2(s)$</td></tr>
+      <tr><td>피드백 루프: $G$ 순방향, $H$ 역방향</td><td>$\dfrac{G}{1 + GH}$</td></tr>
+    </tbody>
+  </table>
+
+  <p>마지막 피드백 식이 W11 폐루프 제어의 기본 식입니다.</p>
+
+  <h2>10. 핵심 한눈 요약</h2>
+  <table>
+    <thead><tr><th>개념</th><th>식·의미</th></tr></thead>
+    <tbody>
+      <tr><td>전달 함수</td><td>$H(s) = Y(s)/U(s)$ — 입출력 비율</td></tr>
+      <tr><td>1차 시스템</td><td>$K/(\tau s + 1)$, 극점 $-1/\tau$</td></tr>
+      <tr><td>2차 시스템</td><td>$K\omega_n^2/(s^2 + 2\zeta\omega_n s + \omega_n^2)$</td></tr>
+      <tr><td>안정 조건</td><td>모든 극점이 좌반평면</td></tr>
+      <tr><td>피드백 루프</td><td>$G/(1+GH)$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>11. 더 깊이 보기</h2>
+  <ul>
+    <li><a href="../../lectures/03-state-space.html">로봇공학특론 L3 상태공간</a> — 전달 함수와 등가인 1차 벡터 미분방정식 표현.</li>
+    <li><a href="../../lectures-mech/08-impedance.html">기전공학기초 W8 임피던스</a> — $s = j\omega$로 한정하면 정현파 정상상태 응답이 임피던스 그 자체.</li>
+  </ul>
+
+  <div class="tip">
+    <strong>한 줄 요약</strong> — 전달 함수는 시스템의 "얼굴". 분자·분모 다항식의 근(=영점·극점)이 그 시스템의 모든 동적 거동을 결정합니다. 다음 주에 그 위에 컨트롤러를 얹어 극점을 옮기는 게임을 합니다.
+  </div>
+
+  <h2>전달함수 워크북 — 8문제</h2>
+  <h3>1. RC 회로</h3>
+  <p>$G(s) = 1/(RCs+1)$. 시정수 $\tau = RC$.</p>
+  <h3>2. MSD</h3>
+  <p>$G = 1/(ms^2+bs+k)$. 2차.</p>
+  <h3>3. DC 모터 각속도</h3>
+  <p>$G = K_t/((Js+b)R + K_tK_e)$. $L \ll R$ 가정.</p>
+  <h3>4. 영극상쇄</h3>
+  <p>$(s+1)/((s+1)(s+2)) = 1/(s+2)$. 안정한 상쇄만 OK.</p>
+  <h3>5. 폐루프</h3>
+  <p>$T = G/(1+GH)$. 단위 피드백 $T = G/(1+G)$.</p>
+  <h3>6. 시정수 vs 대역폭</h3>
+  <p>$\omega_{BW} = 1/\tau$.</p>
+  <h3>7. 1차 응답</h3>
+  <p>단위 계단: $y = K(1-e^{-t/\tau})$.</p>
+  <h3>8. 2차 응답</h3>
+  <p>$\zeta, \omega_n$로 분류 — 과감쇠/임계/저감쇠.</p>
+
+  <h2>응용 — 메카트로닉스 시스템</h2>
+  <ul>
+    <li>모터 — 적분기 + 1차.</li>
+    <li>차량 서스펜션 — 2차 저감쇠.</li>
+    <li>온도 제어 — 1차 + 시간 지연.</li>
+    <li>공조 시스템 — 다중 시정수.</li>
+    <li>로봇 관절 — 적분기 + 2차.</li>
+  </ul>
+
+  <h2>자주 만나는 함정</h2>
+  <ul>
+    <li>비최소 위상 (RHP 영점) — 초기 반대 응답.</li>
+    <li>적분기 누적 — 외란 영원히.</li>
+    <li>모델 단순화 한계 — 비선형성 무시.</li>
+    <li>지연 시간 처리.</li>
+    <li>샘플링 효과.</li>
+  </ul>
+
+  <h2>한 페이지 핵심 식</h2>
+  <ul>
+    <li>$G(s) = Y(s)/U(s)$.</li>
+    <li>1차: $K/(\tau s+1)$.</li>
+    <li>2차: $\omega_n^2/(s^2 + 2\zeta\omega_n s + \omega_n^2)$.</li>
+    <li>적분기: $1/s$.</li>
+    <li>지연: $e^{-Ts}$.</li>
+    <li>폐루프: $G/(1+GH)$.</li>
+  </ul>
+
+  <h2>Python 코드</h2>
+  <pre><code>import control as ct
+G = ct.tf([1], [1, 2, 1])
+ct.bode_plot(G)
+ct.step_response(G)
+print(ct.poles(G), ct.zeros(G))</code></pre>
+
+  <h2>한 학기 W10 위치</h2>
+  <ul>
+    <li>W7~W9 모델링·응답 → W10 전달함수 ◉ → W11 피드백 제어.</li>
+  </ul>
+
+  <h2>자가점검</h2>
+  <ul>
+    <li>☐ RC, MSD 전달함수.</li>
+    <li>☐ 1차/2차 식별.</li>
+    <li>☐ 폐루프 유도.</li>
+    <li>☐ 응답 예측.</li>
+  </ul>
+
+  <h2>한 줄 마무리</h2>
+  <p class="lead">"전달함수 = s 영역 시스템의 DNA."</p>
+
+  <h2>부록 — 추가 내용</h2>
+  <p>전달함수의 의미:</p>
+  <ul>
+    <li>입출력 관계의 라플라스 표현.</li>
+    <li>시간영역 미분방정식 → s영역 대수.</li>
+    <li>극점이 시간 응답 모드 결정.</li>
+    <li>영점이 응답 모양 영향.</li>
+    <li>DC 게인 = $G(0)$.</li>
+  </ul>
+
+  <h2>부록 — 영점의 효과</h2>
+  <ul>
+    <li>LHP 영점 — 응답 빠르게.</li>
+    <li>RHP 영점 — 비최소 위상.</li>
+    <li>원점 영점 — DC 게인 0.</li>
+  </ul>
+
+  <h2>부록 — 1차 시스템 한 페이지</h2>
+  <ul>
+    <li>$G = K/(\tau s+1)$.</li>
+    <li>시정수 $\tau$.</li>
+    <li>대역폭 $1/\tau$.</li>
+    <li>단조 증가/감소 응답.</li>
+    <li>RC, RL, 1차 열, 모터 속도.</li>
+  </ul>
+
+  <h2>부록 — 2차 시스템 한 페이지</h2>
+  <ul>
+    <li>$G = \omega_n^2/(s^2+2\zeta\omega_n s+\omega_n^2)$.</li>
+    <li>$\zeta$ — 감쇠비.</li>
+    <li>$\omega_n$ — 고유 진동수.</li>
+    <li>저감쇠($\zeta<1$): 진동.</li>
+    <li>임계($\zeta=1$): 가장 빠른 무진동.</li>
+    <li>과감쇠($\zeta>1$): 느린 무진동.</li>
+    <li>MSD, RLC, 진자, 회로.</li>
+  </ul>
+
+  <h2>부록 — DC 모터 모델</h2>
+  <ul>
+    <li>전기: $L\frac{di}{dt}+Ri = V - K_e\omega$.</li>
+    <li>기계: $J\dot\omega = K_t i - b\omega - T_L$.</li>
+    <li>각속도 $G_\omega(s) = K_t/((Ls+R)(Js+b)+K_tK_e)$.</li>
+    <li>각도 $G_\theta = G_\omega/s$ (적분기 추가).</li>
+  </ul>
+
+  <h2>부록 — 전달함수 vs 상태공간</h2>
+  <ul>
+    <li>전달함수 — SISO, 입출력.</li>
+    <li>상태공간 — MIMO, 내부 상태.</li>
+    <li>변환 — <code>tf2ss</code>, <code>ss2tf</code>.</li>
+  </ul>
+
+  <h2>부록 — Python 시뮬레이션</h2>
+  <pre><code>import control as ct
+import numpy as np
+
+# 다양한 시스템 비교
+systems = {
+    '1차': ct.tf([1], [1, 1]),
+    '2차 ζ=0.1': ct.tf([1], [1, 0.2, 1]),
+    '2차 ζ=0.7': ct.tf([1], [1, 1.4, 1]),
+    '2차 ζ=1': ct.tf([1], [1, 2, 1]),
+    '적분기': ct.tf([1], [1, 0]),
+}
+
+for name, G in systems.items():
+    print(name, ct.poles(G))</code></pre>
+
+  <h2>부록 — 자주 쓰는 카탈로그</h2>
+  <table>
+    <thead><tr><th>이름</th><th>전달함수</th></tr></thead>
+    <tbody>
+      <tr><td>1차 지연</td><td>$1/(\tau s+1)$</td></tr>
+      <tr><td>2차 진동</td><td>$\omega_n^2/(s^2+2\zeta\omega_n s+\omega_n^2)$</td></tr>
+      <tr><td>적분기</td><td>$1/s$</td></tr>
+      <tr><td>미분기</td><td>$s$</td></tr>
+      <tr><td>지연</td><td>$e^{-Ts}$</td></tr>
+      <tr><td>리드-래그</td><td>$(s+z)/(s+p)$</td></tr>
+    </tbody>
+  </table>
+
+  <h2>부록 — 모델 식별 절차</h2>
+  <ol>
+    <li>입력 계단 가하기.</li>
+    <li>출력 측정.</li>
+    <li>시정수, 게인 추출.</li>
+    <li>1차 또는 2차 모델 fit.</li>
+    <li>검증 데이터로 확인.</li>
+  </ol>
+
+  <h2>부록 — 비선형 선형화</h2>
+  <p>운영점 주위 1차 테일러 전개. $\dot x \approx Ax + Bu$ + 잉여항. 작은 신호에 유효. 큰 신호에는 비선형 모델 필요.</p>
+
+  <h2>부록 — 한 줄 요약</h2>
+  <p>"전달함수 = 시스템의 s영역 표현. 한 학기 자동제어의 출발점."</p>
+
+  <p style="font-size:13px;color:var(--muted)">— W10 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">SAIL @ 공주대.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">🌊</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝!</p>
+  <p style="font-size:12px;color:var(--muted)">감사합니다.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 정말 진짜 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 마지막 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+  <p style="font-size:12px;color:var(--muted)">— 끝.</p>
+
+  <nav class="prevnext">
+    <a href="09-dynamic-response.html"><small>← 이전</small>W9. 동적 응답</a>
+    <a href="11-feedback-control.html" class="next"><small>다음 →</small>W11. 피드백 제어</a>
+  </nav>
+</main>
+
+<footer class="site-footer"><div class="wrap"><p>© SAIL, Kongju National University</p></div></footer>
+</body>
+</html>

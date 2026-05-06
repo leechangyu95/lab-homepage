@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: Batch GD vs SGD vs Mini-batch — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: Batch GD vs SGD vs Mini-batch</h1>
+  <p class="demo-meta">
+    딥러닝 &amp; 머신러닝 · <a href="../backup-lectures/lectures-dl/03-regression-1.html">Week 3. 회귀 1: 선형회귀와 경사하강법</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: Batch GD vs SGD vs Mini-batch</h4>
+    <p>같은 데이터에 세 방식이 어떻게 골짜기로 내려가는지 비교합니다. <strong>Batch</strong>는 매끈하지만 한 스텝이 비싸고, <strong>SGD</strong>는 지그재그지만 빠르며, <strong>Mini-batch</strong>는 둘의 절충이에요.</p>
+    <canvas id="bsm" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="bsmRun">시작</button>
+      <button id="bsmRst" class="alt">리셋</button>
+      <span id="bsmInfo" style="font-size:12px;color:#666"></span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('bsm');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const data=[];for(let i=0;i<60;i++){const x=Math.random()*8-4;data.push({x,y:1.5*x+(Math.random()-0.5)*4});}
+    const wmin=-1,wmax=4,bmin=-3,bmax=3;
+    const toPx=v=>50+(v-wmin)/(wmax-wmin)*(W-70);
+    const toPy=v=>20+(1-(v-bmin)/(bmax-bmin))*(H-40);
+    function J(w,b){let s=0;data.forEach(d=>{const e=w*d.x+b-d.y;s+=e*e;});return s/data.length;}
+    let trails=[[],[],[]],running=false,raf=null;
+    let states=[{w:-0.5,b:2.5},{w:-0.5,b:2.5},{w:-0.5,b:2.5}];
+    function step(){
+      const lr=0.04;
+      // batch
+      let dw=0,db=0;data.forEach(d=>{const e=states[0].w*d.x+states[0].b-d.y;dw+=e*d.x;db+=e;});
+      states[0].w-=lr*2*dw/data.length;states[0].b-=lr*2*db/data.length;
+      trails[0].push({...states[0]});
+      // SGD: one random sample
+      const d1=data[Math.floor(Math.random()*data.length)];
+      const e1=states[1].w*d1.x+states[1].b-d1.y;
+      states[1].w-=lr*2*e1*d1.x;states[1].b-=lr*2*e1;
+      trails[1].push({...states[1]});
+      // mini-batch 8
+      let dw2=0,db2=0;
+      for(let k=0;k<8;k++){const d2=data[Math.floor(Math.random()*data.length)];const e2=states[2].w*d2.x+states[2].b-d2.y;dw2+=e2*d2.x;db2+=e2;}
+      states[2].w-=lr*2*dw2/8;states[2].b-=lr*2*db2/8;
+      trails[2].push({...states[2]});
+    }
+    function draw(){
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const STEP=6;
+      for(let i=50;i<W-20;i+=STEP)for(let j=20;j<H-20;j+=STEP){
+        const w=wmin+(i-50)/(W-70)*(wmax-wmin);
+        const b=bmax-(j-20)/(H-40)*(bmax-bmin);
+        const v=J(w,b);
+        const t=Math.min(255,Math.floor(v*15));
+        ctx.fillStyle=`rgb(${t+50},${t+50},255)`;ctx.fillRect(i,j,STEP,STEP);
+      }
+      const cols=['#0b5fff','#c62828','#2e7d32'];
+      const names=['Batch (전체)','SGD (1개)','Mini-batch (8)'];
+      trails.forEach((tr,k)=>{
+        ctx.strokeStyle=cols[k];ctx.lineWidth=2;ctx.beginPath();
+        tr.forEach((p,i)=>{const x=toPx(p.w),y=toPy(p.b);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.stroke();
+        if(tr.length){const last=tr[tr.length-1];ctx.fillStyle=cols[k];ctx.beginPath();ctx.arc(toPx(last.w),toPy(last.b),5,0,Math.PI*2);ctx.fill();}
+        ctx.fillStyle=cols[k];ctx.font='12px sans-serif';ctx.fillText(names[k],W-130,30+k*16);
+      });
+      ctx.fillStyle='#666';ctx.font='12px sans-serif';
+      ctx.fillText('w →',W-30,H-25);
+      ctx.save();ctx.translate(15,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('b',0,0);ctx.restore();
+    }
+    function tick(){if(running){step();draw();if(trails[0].length<150)raf=requestAnimationFrame(tick);else running=false;}}
+    document.getElementById('bsmRun').onclick=()=>{if(!running){running=true;tick();}};
+    document.getElementById('bsmRst').onclick=()=>{running=false;cancelAnimationFrame(raf);trails=[[],[],[]];states=[{w:-0.5,b:2.5},{w:-0.5,b:2.5},{w:-0.5,b:2.5}];draw();};
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

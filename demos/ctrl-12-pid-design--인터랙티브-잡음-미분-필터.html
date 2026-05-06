@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 잡음 + 미분 필터 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 잡음 + 미분 필터</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/12-pid-design.html">Week 12. PID 제어기 설계</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 잡음 + 미분 필터</h4>
+    <p>측정 잡음이 있는 시스템에서 미분 항이 어떻게 증폭되는지, 미분 필터로 어떻게 완화되는지 보여줍니다.</p>
+    <canvas id="c12df" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>Kd <span class="val" id="c12dfKdV">1.0</span><input type="range" id="c12dfKd" min="0" max="3" step="0.05" value="1.0"></label>
+      <label>잡음 강도 <span class="val" id="c12dfNV">0.05</span><input type="range" id="c12dfN" min="0" max="0.2" step="0.005" value="0.05"></label>
+      <label>필터 N <span class="val" id="c12dfFV">10</span><input type="range" id="c12dfF" min="1" max="50" step="1" value="10"></label>
+      <label><input type="checkbox" id="c12dfOn" checked> 필터 ON</label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('c12df'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('c12dfKdV').textContent=(+$('c12dfKd').value).toFixed(2);$('c12dfNV').textContent=(+$('c12dfN').value).toFixed(3);$('c12dfFV').textContent=$('c12dfF').value;};
+    ['c12dfKd','c12dfN','c12dfF'].forEach(id=>$(id).oninput=upd);
+    function loop(){
+      const Kd=+$('c12dfKd').value, sigN=+$('c12dfN').value, N=+$('c12dfF').value;
+      const Kp=2;
+      const flt=$('c12dfOn').checked;
+      const dt=0.01, M=600;
+      let y=0,yd=0,prevE=0,fD=0;
+      const histY=[], histU=[];
+      for(let k=0;k<M;k++){
+        const r = 1.0;
+        const noise = (Math.random()-0.5)*2*sigN;
+        const ym = y + noise;
+        const e = r - ym;
+        let dE = (e - prevE)/dt;
+        if(flt){
+          const tau_d = Kd/(N*Kp);
+          fD += dt/(tau_d+dt) * (dE - fD);
+          dE = fD;
+        }
+        prevE = e;
+        const u = Kp*e + Kd*dE;
+        const uc = Math.max(-5,Math.min(5,u));
+        const ydd = uc - 0.4*yd - y;
+        yd += ydd*dt; y += yd*dt;
+        histY.push(y); histU.push(uc);
+      }
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      const ox=40;
+      // y plot top
+      const oy1=140, w=560, h1=110;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy1);x.lineTo(ox+w,oy1);x.moveTo(ox,oy1-h1);x.lineTo(ox,oy1);x.stroke();
+      x.strokeStyle='#0b5fff';x.lineWidth=2;x.beginPath();
+      histY.forEach((v,i)=>{const xx=ox+i*w/M, yy=oy1-Math.max(-1,Math.min(2,v))*h1*0.5;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      x.fillStyle='#444';x.font='12px sans-serif';x.fillText('출력 y',ox,15);
+      // u plot bottom
+      const oy2=290, h2=110;
+      x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy2);x.lineTo(ox+w,oy2);x.moveTo(ox,oy2-h2);x.lineTo(ox,oy2);x.stroke();
+      x.strokeStyle='#c62828';x.lineWidth=1.5;x.beginPath();
+      histU.forEach((v,i)=>{const xx=ox+i*w/M, yy=oy2-h2/2 - v*h2/8;
+        if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();
+      x.fillStyle='#444';x.fillText('제어 입력 u (잡음에 의한 떨림 정도 확인)',ox,oy2-h2-5);
+      x.fillStyle=flt?'#2e7d32':'#c62828';
+      x.fillText(flt?'미분 필터 ON (N='+N+')':'미분 필터 OFF',ox,oy2+18);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: RRT가 트리를 어떻게 키우는지 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: RRT가 트리를 어떻게 키우는지</h1>
+  <p class="demo-meta">
+    메카트로닉스 · <a href="../backup-lectures/lectures-mechatronics/13-path-planning.html">Week 13. 경로 계획(Path Planning) — 시작에서 목표까지의 길 찾기</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: RRT가 트리를 어떻게 키우는지</h4>
+    <p>"성장" 버튼을 누르면 한 스텝씩 트리가 자랍니다. <strong>랜덤 점</strong> → <strong>가장 가까운 노드</strong> → <strong>그 방향으로 일정 거리만큼 새 노드 추가</strong>. 격자 기반 A*가 모든 칸을 평가하는 것과 달리 RRT는 자유공간을 빠르게 "찔러" 채워가요. 이래서 고차원에서도 동작합니다.</p>
+    <canvas id="rrtDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <button id="rrtStep">1 스텝</button>
+      <button id="rrtRun">자동 성장 (50 스텝)</button>
+      <button id="rrtRst">리셋</button>
+      <label>스텝 길이 <span class="val" id="rrtSV">25</span><input type="range" id="rrtS" min="10" max="60" step="5" value="25"></label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rrtDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const start={x:60,y:H-60}, goal={x:W-60,y:60};
+    const obstacles=[
+      {x:200,y:80,w:80,h:140},
+      {x:380,y:140,w:60,h:160},
+      {x:300,y:280,w:120,h:30}
+    ];
+    let nodes=[{x:start.x,y:start.y,parent:-1}];
+    let pathFound=false;
+    function reset(){nodes=[{x:start.x,y:start.y,parent:-1}];pathFound=false;draw();}
+    document.getElementById('rrtRst').onclick=reset;
+    function inObstacle(x,y){
+      for(const o of obstacles){if(x>o.x&&x<o.x+o.w&&y>o.y&&y<o.y+o.h)return true;}
+      return false;
+    }
+    function lineHitsObstacle(x1,y1,x2,y2){
+      const N=20;
+      for(let i=0;i<=N;i++){const t=i/N;const x=x1+t*(x2-x1),y=y1+t*(y2-y1);
+        if(inObstacle(x,y))return true;}
+      return false;
+    }
+    function step(){
+      if(pathFound)return;
+      const stepLen=+document.getElementById('rrtS').value;
+      // sample
+      let rx=Math.random()*W, ry=Math.random()*H;
+      // bias toward goal 10%
+      if(Math.random()<0.1){rx=goal.x;ry=goal.y;}
+      // nearest
+      let bestI=0,bestD=Infinity;
+      for(let i=0;i<nodes.length;i++){
+        const d=Math.hypot(nodes[i].x-rx,nodes[i].y-ry);
+        if(d<bestD){bestD=d;bestI=i;}
+      }
+      const near=nodes[bestI];
+      const ang=Math.atan2(ry-near.y, rx-near.x);
+      const nx=near.x+stepLen*Math.cos(ang);
+      const ny=near.y+stepLen*Math.sin(ang);
+      if(nx<0||nx>W||ny<0||ny>H)return;
+      if(inObstacle(nx,ny))return;
+      if(lineHitsObstacle(near.x,near.y,nx,ny))return;
+      nodes.push({x:nx,y:ny,parent:bestI});
+      if(Math.hypot(nx-goal.x,ny-goal.y)<stepLen && !lineHitsObstacle(nx,ny,goal.x,goal.y)){
+        nodes.push({x:goal.x,y:goal.y,parent:nodes.length-1});
+        pathFound=true;
+      }
+    }
+    document.getElementById('rrtStep').onclick=()=>{step();draw();};
+    document.getElementById('rrtRun').onclick=()=>{
+      let i=0;
+      const itv=setInterval(()=>{
+        if(pathFound||i>=50){clearInterval(itv);return;}
+        step();draw();i++;
+      },40);
+    };
+    document.getElementById('rrtS').addEventListener('input',()=>{
+      document.getElementById('rrtSV').textContent=document.getElementById('rrtS').value;
+    });
+    function draw(){
+      document.getElementById('rrtSV').textContent=document.getElementById('rrtS').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      // obstacles
+      ctx.fillStyle='#444';obstacles.forEach(o=>ctx.fillRect(o.x,o.y,o.w,o.h));
+      // tree edges
+      ctx.strokeStyle='#90caf9';ctx.lineWidth=1;
+      for(let i=1;i<nodes.length;i++){
+        const n=nodes[i],p=nodes[n.parent];
+        ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(n.x,n.y);ctx.stroke();
+      }
+      // tree nodes
+      ctx.fillStyle='#0b5fff';
+      nodes.forEach(n=>{ctx.beginPath();ctx.arc(n.x,n.y,2.5,0,Math.PI*2);ctx.fill();});
+      // path
+      if(pathFound){
+        ctx.strokeStyle='#7b1fa2';ctx.lineWidth=3;ctx.beginPath();
+        let i=nodes.length-1;
+        ctx.moveTo(nodes[i].x,nodes[i].y);
+        while(nodes[i].parent>=0){i=nodes[i].parent;ctx.lineTo(nodes[i].x,nodes[i].y);}
+        ctx.stroke();
+      }
+      // start, goal
+      ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(start.x,start.y,10,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+      ctx.fillText('S',start.x,start.y+5);
+      ctx.fillStyle='#c62828';ctx.beginPath();ctx.arc(goal.x,goal.y,10,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.fillText('G',goal.x,goal.y+5);
+      ctx.textAlign='left';
+      // status
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(8,8,200,40);
+      ctx.strokeStyle='#bbb';ctx.strokeRect(8,8,200,40);
+      ctx.fillStyle=pathFound?'#2e7d32':'#666';ctx.font='13px sans-serif';
+      ctx.fillText(`노드 ${nodes.length}개 ${pathFound?'· 경로 발견!':'· 탐색 중'}`,14,30);
+    }
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

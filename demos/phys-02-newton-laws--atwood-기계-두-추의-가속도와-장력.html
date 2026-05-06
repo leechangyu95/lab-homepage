@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>⚖️ Atwood 기계 — 두 추의 가속도와 장력 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">⚖️ Atwood 기계 — 두 추의 가속도와 장력</h1>
+  <p class="demo-meta">
+    기초물리학 · <a href="../backup-lectures/lectures-physics/02-newton-laws.html">Week 2. 뉴턴 운동법칙</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>⚖️ Atwood 기계 — 두 추의 가속도와 장력</h4>
+    <p>도르래 양쪽에 매달린 두 질량의 차이가 가속도를 결정합니다. 두 질량을 같게 만들면 가속도 0(정지).</p>
+    <canvas id="atwoodDemo" width="640" height="320"></canvas>
+    <div class="controls">
+      <label>$m_1$ <span class="val" id="at_m1V">3</span> kg
+        <input type="range" id="at_m1" min="1" max="20" step="0.5" value="3"></label>
+      <label>$m_2$ <span class="val" id="at_m2V">5</span> kg
+        <input type="range" id="at_m2" min="1" max="20" step="0.5" value="5"></label>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <strong>관찰 포인트</strong>
+      <ul>
+        <li>$m_1 = m_2$ → 가속도 0, 두 추가 정지.</li>
+        <li>$m_1 \ll m_2$ → 가속도가 $g$에 가까워짐 (한쪽이 자유낙하에 근사).</li>
+        <li>장력 $T = 2m_1m_2 g/(m_1+m_2)$ — 두 질량의 조화평균에 비례.</li>
+        <li>$m_1=m_2$일 때 $T = mg$, 즉 정지 상태에서 줄이 두 추의 무게를 그대로 받음.</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('atwoodDemo');if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    function draw(){
+      const m1=+document.getElementById('at_m1').value;
+      const m2=+document.getElementById('at_m2').value;
+      document.getElementById('at_m1V').textContent=m1;
+      document.getElementById('at_m2V').textContent=m2;
+      const g=9.8;
+      const a=Math.abs(m2-m1)*g/(m1+m2);
+      const T=2*m1*m2*g/(m1+m2);
+      const dir=m2>m1?'m₂ 하강 / m₁ 상승':m1>m2?'m₁ 하강 / m₂ 상승':'정지';
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      const px=W/2,py=70;
+      ctx.strokeStyle='#666';ctx.fillStyle='#9e9e9e';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(px,py,22,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#000';ctx.beginPath();ctx.moveTo(px,py-32);ctx.lineTo(px,py-22);ctx.stroke();
+      ctx.fillStyle='#444';ctx.fillRect(px-30,py-42,60,10);
+      const sep=85;
+      const off=Math.min(50,Math.abs(m2-m1)*8);
+      const y1=py+100+(m1<m2?off:-off);
+      const y2=py+100+(m2<m1?off:-off);
+      ctx.strokeStyle='#333';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(px-22,py);ctx.lineTo(px-sep,y1);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(px+22,py);ctx.lineTo(px+sep,y2);ctx.stroke();
+      function box(cx,cy,m,c){
+        const sz=Math.min(54,28+m*1.4);
+        ctx.fillStyle=c;ctx.fillRect(cx-sz/2,cy,sz,sz);
+        ctx.strokeStyle='#333';ctx.strokeRect(cx-sz/2,cy,sz,sz);
+        ctx.fillStyle='#fff';ctx.font='13px sans-serif';
+        ctx.fillText(m+' kg',cx-19,cy+sz/2+4);
+      }
+      box(px-sep,y1,m1,'#0b5fff');
+      box(px+sep,y2,m2,'#ff8c00');
+      ctx.fillStyle='#222';ctx.font='bold 13px sans-serif';
+      ctx.fillText('m₁',px-sep-26,y1-6);
+      ctx.fillText('m₂',px+sep+12,y2-6);
+      const ix=15,iy=15,iw=200,ih=96;
+      ctx.fillStyle='rgba(255,255,255,0.96)';ctx.fillRect(ix,iy,iw,ih);
+      ctx.strokeStyle='#cfd8e3';ctx.strokeRect(ix,iy,iw,ih);
+      ctx.fillStyle='#444';ctx.font='13px sans-serif';
+      let y=iy+20;
+      ctx.fillText('가속도 a = '+a.toFixed(2)+' m/s²',ix+10,y);y+=18;
+      ctx.fillText('장력 T = '+T.toFixed(1)+' N',ix+10,y);y+=18;
+      ctx.fillText('m₁ 무게 = '+(m1*g).toFixed(1)+' N',ix+10,y);y+=22;
+      ctx.fillStyle='#7b1fa2';ctx.font='bold 12px sans-serif';
+      ctx.fillText(dir,ix+10,y);
+    }
+    ['at_m1','at_m2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: 같은 모터, 두 가지 제어 구조 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: 같은 모터, 두 가지 제어 구조</h1>
+  <p class="demo-meta">
+    자동제어 · <a href="../backup-lectures/lectures-control/13-motor-manipulator.html">Week 13. PID 응용 ① — DC 모터 &amp; 로봇 팔</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: 같은 모터, 두 가지 제어 구조</h4>
+    <p>단순화된 모터 (위치 = 속도의 적분, 속도 = 토크의 1차 응답).
+    위쪽은 위치 PID 단일 루프, 아래는 위치 → 속도 캐스케이드.
+    같은 위치 명령에 두 구조가 어떻게 다른지 보세요.</p>
+    <canvas id="cas" width="640" height="380"></canvas>
+    <div class="controls">
+      <label>위치 Kp <span class="val" id="cKpV">2.0</span><input type="range" id="cKp" min="0" max="10" step="0.1" value="2.0"></label>
+      <label>위치 Kd <span class="val" id="cKdV">0.5</span><input type="range" id="cKd" min="0" max="3" step="0.05" value="0.5"></label>
+      <label>속도 Kp (캐스케이드) <span class="val" id="cKvV">5.0</span><input type="range" id="cKv" min="0" max="20" step="0.2" value="5.0"></label>
+      <button id="cStep">위치 명령 변경</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('cas'),x=c.getContext('2d');
+    const $=id=>document.getElementById(id);
+    const upd=()=>{$('cKpV').textContent=(+$('cKp').value).toFixed(1);$('cKdV').textContent=(+$('cKd').value).toFixed(2);$('cKvV').textContent=(+$('cKv').value).toFixed(1);};
+    ['cKp','cKd','cKv'].forEach(id=>$(id).oninput=upd);
+    let ref=2; $('cStep').onclick=()=>{ref=ref>0?-2:2;};
+    function loop(){
+      const Kp=+$('cKp').value, Kd=+$('cKd').value, Kv=+$('cKv').value;
+      x.fillStyle='#fafbfc';x.fillRect(0,0,c.width,c.height);
+      // simulate two systems
+      const dt=0.02, N=400;
+      // single PID:  τ ω' + ω = u_torque ;  θ' = ω    → PID on θ
+      let th1=0, om1=0, prevE1=0;
+      const histT1=[], histR=[];
+      // cascade:   outer P-D on θ → ω_cmd ; inner P on (ω_cmd - ω) → u_torque
+      let th2=0, om2=0;
+      const histT2=[], histW2=[], histWcmd=[];
+      const tau_motor=0.3;
+      for(let k=0;k<N;k++){
+        // single
+        const e1=ref-th1, dE1=(e1-prevE1)/dt; prevE1=e1;
+        let u1=Kp*e1 + Kd*dE1;
+        u1=Math.max(-5,Math.min(5,u1));
+        const om1d=(u1 - om1)/tau_motor;
+        om1+=om1d*dt; th1+=om1*dt;
+        histT1.push(th1); histR.push(ref);
+        // cascade: outer Kp on (ref-th2), with derivative of measurement (D on -ẏ)
+        const om_cmd = Kp*(ref-th2) - Kd*om2;
+        const u2 = Kv*(om_cmd - om2);
+        const u2c=Math.max(-5,Math.min(5,u2));
+        const om2d=(u2c - om2)/tau_motor;
+        om2+=om2d*dt; th2+=om2*dt;
+        histT2.push(th2); histW2.push(om2); histWcmd.push(om_cmd);
+      }
+      const drawPlot=(yOff,title,curves)=>{
+        const ox=40, oy=yOff+150, w=560, h=130;
+        x.strokeStyle='#bbb';x.beginPath();x.moveTo(ox,oy);x.lineTo(ox+w,oy);x.moveTo(ox,oy-h);x.lineTo(ox,oy);x.stroke();
+        x.strokeStyle='#c62828';x.setLineDash([3,3]);x.beginPath();
+        histR.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-v*h/4-h/2;
+          if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();x.setLineDash([]);
+        curves.forEach(({arr,col})=>{
+          x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+          arr.forEach((v,i)=>{const xx=ox+i*w/N, yy=oy-Math.max(-3,Math.min(3,v))*h/4-h/2;
+            if(i==0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}); x.stroke();});
+        x.fillStyle='#444';x.font='13px sans-serif';x.fillText(title,ox,yOff+15);
+      };
+      drawPlot(0,'단일 위치 PID',[{arr:histT1,col:'#0b5fff'}]);
+      drawPlot(190,'캐스케이드 (위치 → 속도)',[{arr:histT2,col:'#0b5fff'},{arr:histW2,col:'#2e7d32'},{arr:histWcmd,col:'#f57c00'}]);
+      x.fillStyle='#666';x.font='10px sans-serif';
+      x.fillText('파랑: 위치 θ',520,200);x.fillText('녹색: 측정 ω',520,213);x.fillText('주황: 속도 명령 ω_cmd',520,226);
+      requestAnimationFrame(loop);
+    }
+    upd();loop();
+  })();
+  </script>
+</main>
+</body>
+</html>

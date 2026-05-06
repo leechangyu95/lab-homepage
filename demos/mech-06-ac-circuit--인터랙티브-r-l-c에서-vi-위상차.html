@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎮 인터랙티브: R, L, C에서 V–I 위상차 — Demo</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/syntax.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+ onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  body{background:#fafbfc}
+  .demo-meta{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .demo-meta a{color:var(--accent-d)}
+  .back-link{display:inline-block;margin-bottom:12px;color:var(--muted);
+    text-decoration:none;font-size:13px}
+  .back-link:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <h1><a href="../index.html">🌊 Study Page</a></h1>
+  <nav>
+    <a href="../index.html">로봇공학특론</a>
+    <a href="../dl.html">딥러닝 &amp; 머신러닝</a>
+    <a href="../mech.html">기전공학기초</a>
+    <a href="../dynamics.html">동역학</a>
+    <a href="../mechatronics.html">메카트로닉스</a>
+    <a href="../control.html">자동제어</a>
+    <a href="../mpc.html">모델예측제어</a>
+    <a href="../path-planning.html">경로계획 &amp; 추종</a>
+    <a href="../calculus.html">미분적분학</a>
+    <a href="../linear-algebra.html">선형대수학</a>
+    <a href="../physics.html">기초물리학</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <a href="index.html" class="back-link">← Demos</a>
+  <h1 class="page-title">🎮 인터랙티브: R, L, C에서 V–I 위상차</h1>
+  <p class="demo-meta">
+    기전공학기초 · <a href="../backup-lectures/lectures-mech/06-ac-circuit.html">Week 6. 교류회로 — 정현파와 페이저</a>에서 추출된 인터랙티브 데모.
+  </p>
+  <div class="demo">
+    <h4>🎮 인터랙티브: R, L, C에서 V–I 위상차</h4>
+    <p>같은 정현파 전압을 R, L, C에 인가하고 전류 파형을 함께 봅니다. 저항은 동위상, 인덕터는 전류가 90° 뒤짐(lag), 커패시터는 전류가 90° 앞섬(lead).</p>
+    <canvas id="rlcCanvas" width="640" height="280"></canvas>
+    <div class="controls">
+      <label>소자
+        <select id="rlcSel"><option value="R">저항 (R)</option><option value="L">인덕터 (L)</option><option value="C">커패시터 (C)</option></select>
+      </label>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const c=document.getElementById('rlcCanvas');
+    if(!c)return;
+    const ctx=c.getContext('2d'),W=c.width,H=c.height;
+    const Tspan=4*Math.PI;
+    function draw(){
+      const sel=document.getElementById('rlcSel').value;
+      ctx.fillStyle='#fafbfc';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(60,H/2);ctx.lineTo(W-20,H/2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(60,30);ctx.lineTo(60,H-30);ctx.stroke();
+      function x(t){return 60+t/Tspan*(W-90);}
+      function y(v){return H/2 - v*((H-60)/2/1.2);}
+      // Voltage: cos(t)
+      ctx.strokeStyle='#0b5fff';ctx.lineWidth=2.5;ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=0.02){
+        const v=Math.cos(t);
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();
+      // Current depending on element
+      let phase=0,label='',mnemonic='';
+      if(sel==='R'){phase=0;label='I in phase with V';mnemonic='V-I 동위상';}
+      else if(sel==='L'){phase=-Math.PI/2;label='I lags V by 90° (ELI)';mnemonic='전류가 90° 뒤짐';}
+      else if(sel==='C'){phase=+Math.PI/2;label='I leads V by 90° (ICE)';mnemonic='전류가 90° 앞섬';}
+      ctx.strokeStyle='#c62828';ctx.lineWidth=2.5;ctx.setLineDash([6,3]);ctx.beginPath();
+      for(let t=0;t<=Tspan;t+=0.02){
+        const v=Math.cos(t+phase);
+        if(t===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#0b5fff';ctx.font='13px sans-serif';
+      ctx.fillText('전압 v(t) = cos(t)',70,28);
+      ctx.fillStyle='#c62828';
+      ctx.fillText(`전류 i(t) ↔ ${label}`,260,28);
+      ctx.fillStyle='#222';ctx.font='13px sans-serif';
+      ctx.fillText(`소자: ${sel} — ${mnemonic}`,70,H-15);
+    }
+    document.getElementById('rlcSel').addEventListener('change',draw);
+    draw();
+  })();
+  </script>
+</main>
+</body>
+</html>
